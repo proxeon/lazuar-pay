@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Messaging/Infrastructure/DependencyInjection.cs
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -12,7 +13,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddMessagingModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default");
+        // Bind to Messaging-specific connection pool
+        var connectionString = configuration.GetConnectionString("MessagingConnection");
 
         services.AddDbContext<MessagingDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -22,14 +24,10 @@ public static class DependencyInjection
 
         services.AddScoped<ITenantReplicaRepository, TenantReplicaRepository>();
 
-        // Register Transient Integration Event Handlers for memory event bus resolution
         services.AddTransient<TenantCreatedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
 
-        // Register local schema background worker for Outbox
         services.AddHostedService<MessagingOutboxPublisherJob>();
-
-        // Register local schema background worker for Inbox
         services.AddHostedService<MessagingInboxConsumerJob>();
 
         return services;

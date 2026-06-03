@@ -1,3 +1,4 @@
+// apps/lazuar-api/BuildingBlocks/Infrastructure/OutboxPublisherJob.cs
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -29,10 +30,25 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                 var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
                 var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
 
+                // 1. Resolve table metadata dynamically from the active DbContext EF model
+                var entityType = db.Model.FindEntityType(typeof(OutboxMessage));
+                var schema = entityType?.GetSchema() ?? "public";
+                var tableName = entityType?.GetTableName() ?? "OutboxMessages";
+
+                // 2. Open an explicit transaction to lock the records during processing
+                await using var transaction = await db.Database.BeginTransactionAsync(stoppingToken);
+
+                // 3. Query PostgreSQL with pessimistic locking (FOR UPDATE SKIP LOCKED)
+                var sql = $"""
+                    SELECT * FROM "{schema}"."{tableName}"
+                    WHERE "ProcessedAt" IS NULL
+                    ORDER BY "OccurredOn"
+                    LIMIT 20
+                    FOR UPDATE SKIP LOCKED;
+                """;
+
                 var messages = await db.Set<OutboxMessage>()
-                    .Where(m => m.ProcessedAt == null)
-                    .OrderBy(m => m.OccurredOn)
-                    .Take(20)
+                    .FromSqlRaw(sql)
                     .ToListAsync(stoppingToken);
 
                 if (messages.Count > 0)
@@ -62,7 +78,9 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                         }
                     }
 
+                    // 4. Save modifications and commit the transaction to release database locks
                     await db.SaveChangesAsync(stoppingToken);
+                    await transaction.CommitAsync(stoppingToken);
                 }
             }
             catch (Exception ex)

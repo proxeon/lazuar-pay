@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Tenant/Infrastructure/DependencyInjection.cs
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +10,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddTenantModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default");
+        // Bind to Tenant-specific connection pool
+        var connectionString = configuration.GetConnectionString("TenantConnection");
 
         services.AddDbContext<TenantDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -18,8 +20,6 @@ public static class DependencyInjection
             }));
 
         services.AddScoped<ITenantQueryService, TenantQueryService>();
-
-        // Register local schema background worker for Outbox
         services.AddHostedService<TenantOutboxPublisherJob>();
 
         return services;
