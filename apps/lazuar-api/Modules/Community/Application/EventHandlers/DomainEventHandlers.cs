@@ -10,7 +10,8 @@ public class DomainEventHandlers :
     INotificationHandler<SubscriptionCancelledDomainEvent>,
     INotificationHandler<CheckoutInitiatedDomainEvent>,
     INotificationHandler<MagicLinkRequestedDomainEvent>,
-    INotificationHandler<OneOffReminderRequestedDomainEvent>
+    INotificationHandler<OneOffReminderRequestedDomainEvent>,
+    INotificationHandler<SubscriptionRenewalDueDomainEvent>
 {
     private readonly IEventBus _eventBus;
 
@@ -73,6 +74,22 @@ public class DomainEventHandlers :
                 notification.ClientProfileId,
                 notification.TemplateId,
                 notification.CustomMessage,
+                notification.Channel
+            )
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Handle the automated schedule reminder from the background job
+    // -------------------------------------------------------------------------
+    public async Task Handle(SubscriptionRenewalDueDomainEvent notification, CancellationToken ct)
+    {
+        await _eventBus.PublishAsync(
+            new CommunityRenewalReminderDueIntegrationEvent(
+                notification.OrganizationId,
+                notification.SubscriptionId,
+                notification.ClientProfileId,
+                notification.TemplateId,
                 notification.Channel
             )
         );
