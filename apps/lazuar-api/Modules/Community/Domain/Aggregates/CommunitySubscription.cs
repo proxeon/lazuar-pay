@@ -145,4 +145,29 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         AddDomainEvent(new MagicLinkRequestedDomainEvent(Id, OrganizationId, ClientProfileId, magicLinkUrl));
     }
+
+    /// <summary>
+    /// Dispatches a domain event to instruct the Messaging module to send a one-off reminder
+    /// to this subscriber.
+    /// </summary>
+    public void SendOneOffReminder(Guid? templateId, string? customMessage, string channel)
+    {
+        if (!templateId.HasValue && string.IsNullOrWhiteSpace(customMessage))
+        {
+            throw new InvalidOperationException("Either a template ID or a custom message must be provided to send a reminder.");
+        }
+
+        if (string.IsNullOrWhiteSpace(channel))
+        {
+            throw new ArgumentException("Channel cannot be empty.", nameof(channel));
+        }
+
+        AddDomainEvent(new OneOffReminderRequestedDomainEvent(
+            Id,
+            OrganizationId,
+            ClientProfileId,
+            templateId,
+            customMessage,
+            channel.ToUpperInvariant()));
+    }
 }
