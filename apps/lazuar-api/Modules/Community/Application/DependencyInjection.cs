@@ -1,6 +1,8 @@
 namespace Modules.Community.Application;
 
+/// <summary>
+/// Marker class for MediatR assembly scanning.
+/// </summary>
 public static class DependencyInjection
 {
-    // Marker class for MediatR assembly scanning and Architecture Tests
 }
