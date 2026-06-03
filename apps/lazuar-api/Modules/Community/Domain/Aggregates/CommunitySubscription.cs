@@ -1,0 +1,138 @@
+using BuildingBlocks.Domain;
+using Modules.Community.Domain.Entities;
+using Modules.Community.Domain.Events;
+using Modules.Community.Domain.Rules;
+
+namespace Modules.Community.Domain.Aggregates;
+
+public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
+{
+    public Guid Id { get; private set; }
+    public Guid OrganizationId { get; set; } // Settable via EF / PlatformDbContext
+    public Guid ClientProfileId { get; private set; } // CRM Reference
+    public Guid PlanId { get; private set; }
+
+    public string Status { get; private set; }
+    public DateTime? CurrentPeriodEnd { get; private set; }
+    public DateTime? NextRenewalDate { get; private set; }
+
+    public string Source { get; private set; }
+    public string? PreferredChannel { get; private set; }
+    public bool IsReminderOnly { get; private set; }
+    public string? AdminNotes { get; private set; }
+    public DateTime? RemindersPausedUntil { get; private set; }
+
+    public DateTime CreatedAt { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
+
+    private readonly List<PaymentRecord> _paymentRecords = new();
+    public IReadOnlyCollection<PaymentRecord> PaymentRecords => _paymentRecords.AsReadOnly();
+
+    private CommunitySubscription() { } // For EF Core
+
+    public CommunitySubscription(
+        Guid organizationId, Guid clientProfileId, Guid planId, 
+        string source, bool isReminderOnly, string? preferredChannel, string? adminNotes = null)
+    {
+        Id = Guid.CreateVersion7();
+        OrganizationId = organizationId;
+        ClientProfileId = clientProfileId;
+        PlanId = planId;
+        Status = "PENDING";
+        Source = source;
+        IsReminderOnly = isReminderOnly;
+        PreferredChannel = preferredChannel;
+        AdminNotes = adminNotes;
+        CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void InitiateCheckout()
+    {
+        // Notify outbox so Messaging module can start the abandoned cart timer
+        AddDomainEvent(new CheckoutInitiatedDomainEvent(Id, OrganizationId, ClientProfileId));
+    }
+
+    public void Activate(
+        DateTime periodStart, DateTime periodEnd, decimal amount, 
+        string currency, string paymentMethod, string? externalReference, string recordedBy, string? receiptUrl = null)
+    {
+        CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
+
+        bool isFirstPayment = Status == "PENDING";
+
+        Status = "ACTIVE";
+        CurrentPeriodEnd = periodEnd;
+        NextRenewalDate = periodEnd;
+        UpdatedAt = DateTime.UtcNow;
+
+        var payment = new PaymentRecord(
+            Id, amount, currency, paymentMethod, externalReference, 
+            recordedBy, periodStart, periodEnd, 
+            isFirstPayment ? "Initial subscription payment" : "Renewal payment", 
+            receiptUrl);
+
+        _paymentRecords.Add(payment);
+
+        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, isFirstPayment));
+    }
+
+    public void MarkAsPastDue()
+    {
+        CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "PAST_DUE", IsReminderOnly));
+        
+        Status = "PAST_DUE";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Cancel()
+    {
+        CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "CANCELLED", IsReminderOnly));
+
+        Status = "CANCELLED";
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SubscriptionCancelledDomainEvent(Id, OrganizationId, ClientProfileId));
+    }
+
+    public void Expire()
+    {
+        CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "EXPIRED", IsReminderOnly));
+
+        Status = "EXPIRED";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ExtendGracePeriod(int days)
+    {
+        var baseDate = NextRenewalDate ?? CurrentPeriodEnd ?? DateTime.UtcNow;
+        var newDate = baseDate.AddDays(days);
+
+        // Treat extending grace period as returning to active temporarily
+        if (Status != "ACTIVE")
+        {
+            CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
+            Status = "ACTIVE";
+        }
+
+        CurrentPeriodEnd = newDate;
+        NextRenewalDate = newDate;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void PauseReminders(DateTime? pauseUntil)
+    {
+        RemindersPausedUntil = pauseUntil;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateProfile(bool isReminderOnly, string? preferredChannel, string? adminNotes, DateTime? nextRenewalDate)
+    {
+        IsReminderOnly = isReminderOnly;
+        PreferredChannel = preferredChannel;
+        AdminNotes = adminNotes;
+        if (nextRenewalDate.HasValue) NextRenewalDate = nextRenewalDate.Value;
+        
+        UpdatedAt = DateTime.UtcNow;
+    }
+}
