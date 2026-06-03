@@ -18,9 +18,10 @@ tasks:
       - docker-compose down -v
 
   dev:
-    desc: Start Hybrid Development Mode (launches Docker dependencies, then runs C# Hot-Reload Watcher)
+    desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
     deps: [infra:up]
     cmds:
+      - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
   # ==========================================
@@ -32,6 +33,13 @@ tasks:
     dir: apps/lazuar-api
     cmds:
       - dotnet build Lazuar.slnx
+
+  api:db:migrate:
+    desc: Apply all pending migrations for Tenant and Messaging contexts sequentially
+    dir: apps/lazuar-api/src/Lazuar.Api
+    cmds:
+      - dotnet ef database update --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:init:
     desc: Generate the initial EF Core migrations for the Tenant and Messaging modules

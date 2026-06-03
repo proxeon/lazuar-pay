@@ -7,7 +7,6 @@ using BuildingBlocks.Infrastructure;
 using Modules.Tenant.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Lazuar.Api;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,15 +39,6 @@ builder.Services.AddTenantModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var tenantDb = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
-    await tenantDb.Database.MigrateAsync();
-
-    var messagingDb = scope.ServiceProvider.GetRequiredService<MessagingDbContext>();
-    await messagingDb.Database.MigrateAsync();
-}
 
 app.UseExceptionHandler();
 app.UseMessagingSubscriptions();
