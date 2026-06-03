@@ -28,6 +28,9 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     private readonly List<PaymentRecord> _paymentRecords = new();
     public IReadOnlyCollection<PaymentRecord> PaymentRecords => _paymentRecords.AsReadOnly();
 
+    private readonly List<ReminderDispatchLog> _reminderLogs = new();
+    public IReadOnlyCollection<ReminderDispatchLog> ReminderLogs => _reminderLogs.AsReadOnly();
+
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
     private CommunitySubscription() { } // For EF Core
 #pragma warning restore CS8618
@@ -136,20 +139,11 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// Requests a magic link to access the subscriber portal.
-    /// Emits a domain event that drops into the outbox, instructing the Messaging module
-    /// to format and send the email asynchronously.
-    /// </summary>
     public void RequestMagicLink(string magicLinkUrl)
     {
         AddDomainEvent(new MagicLinkRequestedDomainEvent(Id, OrganizationId, ClientProfileId, magicLinkUrl));
     }
 
-    /// <summary>
-    /// Dispatches a domain event to instruct the Messaging module to send a one-off reminder
-    /// to this subscriber.
-    /// </summary>
     public void SendOneOffReminder(Guid? templateId, string? customMessage, string channel)
     {
         if (!templateId.HasValue && string.IsNullOrWhiteSpace(customMessage))
@@ -169,5 +163,11 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
             templateId,
             customMessage,
             channel.ToUpperInvariant()));
+    }
+
+    // Handles idempotency log creation
+    public void RecordReminderDispatched(Guid scheduleId, DateTime targetRenewalDate)
+    {
+        _reminderLogs.Add(new ReminderDispatchLog(Id, scheduleId, targetRenewalDate));
     }
 }

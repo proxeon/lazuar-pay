@@ -42,15 +42,20 @@ public class CommunityLifecycleJob : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<CommunityDbContext>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var now = DateTime.UtcNow;
+        bool requiresSave = false;
 
         // 1. Transition to PAST_DUE
         var overdue = await db.Subscriptions
             .Where(s => s.Status == "ACTIVE" && s.NextRenewalDate != null && s.NextRenewalDate < now)
             .ToListAsync(ct);
 
-        foreach (var sub in overdue)
+        if (overdue.Any())
         {
-            sub.MarkAsPastDue();
+            foreach (var sub in overdue)
+            {
+                sub.MarkAsPastDue();
+            }
+            requiresSave = true;
         }
 
         // 2. Expire old PAST_DUE subscriptions based on Grace Period
@@ -64,12 +69,11 @@ public class CommunityLifecycleJob : BackgroundService
             if (item.Sub.NextRenewalDate!.Value.AddDays(item.Plan.GracePeriodDays) < now)
             {
                 item.Sub.Expire();
+                requiresSave = true;
             }
         }
 
         // 3. Dynamic Reminder Schedules
-        var currentHourMinute = now.ToString("HH:mm");
-        
         var activeSchedules = await db.ReminderSchedules
             .Where(r => r.IsEnabled)
             .ToListAsync(ct);
@@ -83,6 +87,7 @@ public class CommunityLifecycleJob : BackgroundService
             var targetRenewalDate = now.Date.AddDays(-schedule.DaysRelativeToDue);
 
             var query = db.Subscriptions
+                .Include(s => s.ReminderLogs) // <-- Eager load the dispatch logs
                 .Where(s => s.OrganizationId == schedule.OrganizationId
                          && (s.Status == "ACTIVE" || s.Status == "PAST_DUE")
                          && s.NextRenewalDate != null
@@ -98,6 +103,17 @@ public class CommunityLifecycleJob : BackgroundService
 
             foreach (var sub in subscriptionsToRemind)
             {
+                // IDEMPOTENCY CHECK: Did we already send this exact schedule for this exact cycle?
+                if (sub.ReminderLogs.Any(l => l.ScheduleId == schedule.Id && l.TargetRenewalDate.Date == targetRenewalDate.Date))
+                {
+                    continue;
+                }
+
+                // Mutate domain state to record that we dispatched it
+                sub.RecordReminderDispatched(schedule.Id, targetRenewalDate);
+                requiresSave = true;
+
+                // Fire the event to the outbox
                 await mediator.Publish(new SubscriptionRenewalDueDomainEvent(
                     sub.Id, 
                     sub.OrganizationId, 
@@ -108,7 +124,7 @@ public class CommunityLifecycleJob : BackgroundService
             }
         }
 
-        if (overdue.Any() || pastDue.Any())
+        if (requiresSave)
         {
             await db.SaveChangesAsync(ct);
         }

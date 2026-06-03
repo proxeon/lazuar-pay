@@ -42,6 +42,12 @@ public class CommunitySubscriptionConfiguration : IEntityTypeConfiguration<Commu
                .WithOne()
                .HasForeignKey(x => x.SubscriptionId)
                .OnDelete(DeleteBehavior.Cascade);
+               
+        // Child collection: ReminderDispatchLogs
+        builder.HasMany(x => x.ReminderLogs)
+               .WithOne()
+               .HasForeignKey(x => x.SubscriptionId)
+               .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -75,5 +81,17 @@ public class CommunityReminderScheduleConfiguration : IEntityTypeConfiguration<C
                .HasForeignKey(x => x.PlanId)
                .OnDelete(DeleteBehavior.SetNull)
                .IsRequired(false);
+    }
+}
+
+// ReminderDispatchLog configuration to enforce idempotency at the DB level
+public class ReminderDispatchLogConfiguration : IEntityTypeConfiguration<ReminderDispatchLog>
+{
+    public void Configure(EntityTypeBuilder<ReminderDispatchLog> builder)
+    {
+        builder.HasKey(x => x.Id);
+        
+        // Ensure a schedule only fires exactly once per target renewal date per subscription
+        builder.HasIndex(x => new { x.SubscriptionId, x.ScheduleId, x.TargetRenewalDate }).IsUnique();
     }
 }
