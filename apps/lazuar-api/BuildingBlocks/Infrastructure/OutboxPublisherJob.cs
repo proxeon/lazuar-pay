@@ -59,8 +59,8 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                     {
                         try
                         {
-                            var typeOfEvent = Type.GetType(message.Type);
-                            if (typeOfEvent == null) throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved.");
+                            var typeOfEvent = TypeResolver.Resolve(message.Type);
+                            if (typeOfEvent == null) throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved by the TypeResolver.");
 
                             var integrationEvent = JsonSerializer.Deserialize(message.Data, typeOfEvent);
                             if (integrationEvent is IIntegrationEvent @event)

@@ -40,6 +40,9 @@ builder.Services.AddMessagingModule(builder.Configuration);
 
 var app = builder.Build();
 
+// Decouple Database Migrations from API Pipeline. We Delete the database
+// migration invocation scope and Introduce Automated DB Migration CLI Task
+
 app.UseExceptionHandler();
 app.UseMessagingSubscriptions();
 

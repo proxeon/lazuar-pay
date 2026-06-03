@@ -1,23 +1,27 @@
 using Dapper;
 using System.Data;
 using Modules.Tenant.Contracts;
-using Microsoft.EntityFrameworkCore;
+using BuildingBlocks.Application;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Modules.Tenant.Infrastructure;
 
 public class TenantQueryService : ITenantQueryService
 {
-    private readonly TenantDbContext _dbContext;
+    private readonly ISqlConnectionFactory _connectionFactory;
 
-    public TenantQueryService(TenantDbContext dbContext)
+    public TenantQueryService([FromKeyedServices("TenantSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
-        _dbContext = dbContext;
+        _connectionFactory = connectionFactory;
     }
 
     public async Task<TenantSnapshotDto?> GetTenantByIdAsync(Guid tenantId)
     {
-        var connection = _dbContext.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Open) await connection.OpenAsync();
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) 
+        {
+            connection.Open();
+        }
 
         const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM tenant.Organizations WHERE \"Id\" = @Id LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<TenantSnapshotDto>(sql, new { Id = tenantId });
@@ -25,8 +29,11 @@ public class TenantQueryService : ITenantQueryService
 
     public async Task<TenantSnapshotDto?> GetTenantBySlugAsync(string slug)
     {
-        var connection = _dbContext.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Open) await connection.OpenAsync();
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) 
+        {
+            connection.Open();
+        }
 
         const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM tenant.Organizations WHERE \"Slug\" = @Slug LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<TenantSnapshotDto>(sql, new { Slug = slug.ToLower().Trim() });

@@ -59,8 +59,8 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                     {
                         try
                         {
-                            var eventType = Type.GetType(message.Type);
-                            if (eventType == null) throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved.");
+                            var eventType = TypeResolver.Resolve(message.Type);
+                            if (eventType == null) throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved by the TypeResolver.");
 
                             var inboxEvent = JsonSerializer.Deserialize(message.Data, eventType);
                             if (inboxEvent is INotification notification)
