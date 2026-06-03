@@ -2,6 +2,7 @@ using BuildingBlocks.Application;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application.Commands;
 
@@ -60,22 +61,27 @@ public static class Endpoints
         // Public: Initiate Checkout
         publicGroup.MapPost("/checkout/{subscriptionId:guid}", async (
             Guid subscriptionId,
-            Guid orgId, // In reality, resolve from tenant slug
+            [FromQuery] Guid orgId, // Passed by frontend based on Tenant Slug
+            [FromBody] InitiateCheckoutRequestDto req,
             IMediator mediator) =>
         {
-            var command = new InitiateSubscriptionCheckoutCommand(orgId, subscriptionId);
-            await mediator.Send(command);
+            var command = new InitiateSubscriptionCheckoutCommand(
+                orgId, 
+                subscriptionId, 
+                req.SuccessUrl, 
+                req.CancelUrl);
             
-            // NOTE: In the real implementation, this endpoint would then call the Payments module
-            // to get the actual Stripe/Billplz URL. Since we are using events, the command above 
-            // just drops the "Initiated" event into the outbox for the abandoned cart timer.
+            // Calls Community module, which cross-queries Payments module, returns the actual URL
+            var url = await mediator.Send(command);
             
-            return Results.Ok(new { status = "checkout_initiated" });
+            return Results.Ok(new { url });
         });
 
         return endpoints;
     }
 }
+
+public record InitiateCheckoutRequestDto(string SuccessUrl, string CancelUrl);
 
 public record CreatePlanRequestDto(
     string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
