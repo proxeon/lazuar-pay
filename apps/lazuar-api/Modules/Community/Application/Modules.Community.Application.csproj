@@ -6,5 +6,6 @@
     <ProjectReference Include="..\Domain\Modules.Community.Domain.csproj" />
     <ProjectReference Include="..\Contracts\Modules.Community.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\Payments\Contracts\Modules.Payments.Contracts.csproj" />
   </ItemGroup>
 </Project>

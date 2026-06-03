@@ -1,23 +1,9 @@
 using BuildingBlocks.Application;
 using MediatR;
 using Modules.Community.Application.Commands;
+using Modules.Payments.Contracts.Events;
 
 namespace Modules.Community.Application.IntegrationEvents;
-
-// -------------------------------------------------------------------------
-// PROXY CONTRACT: This record conceptually belongs to `Modules.Payments.Contracts`.
-// We define it here temporarily until the Payments module is migrated.
-// -------------------------------------------------------------------------
-public record GatewayPaymentCompletedIntegrationEvent(
-    Guid OrganizationId,
-    string GatewayTransactionId,
-    decimal AmountPaid,
-    string Currency,
-    Dictionary<string, string> Metadata) : IIntegrationEvent
-{
-    public Guid Id { get; init; } = Guid.CreateVersion7();
-    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
-}
 
 // -------------------------------------------------------------------------
 // INBOX HANDLER

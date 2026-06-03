@@ -8,6 +8,7 @@ using Modules.Community.Application.IntegrationEvents;
 using Modules.Community.Infrastructure.Repositories;
 using Modules.Community.Infrastructure.Services;
 using Modules.Community.Infrastructure.Workers;
+using Modules.Payments.Contracts.Events; 
 
 namespace Modules.Community.Infrastructure;
 
