@@ -21,4 +21,7 @@
       <Project Path="Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj" />
     </Folder>
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj" />
+  </Folder>
 </Solution>
