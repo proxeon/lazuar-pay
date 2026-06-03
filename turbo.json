@@ -4,14 +4,38 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "**/*.cs",
+        "**/*.csproj",
+        "**/*.sln",
+        "**/*.props",
+        "**/*.targets"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "bin/**",
+        "obj/**",
+        "dist/**"
+      ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "**/*.cs",
+        "**/*.csproj"
+      ]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "**/*.cs",
+        "**/*.csproj"
+      ]
     },
     "dev": {
       "cache": false,
