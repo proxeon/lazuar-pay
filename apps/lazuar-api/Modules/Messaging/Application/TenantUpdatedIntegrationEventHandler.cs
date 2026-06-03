@@ -1,25 +1,30 @@
+using System.Text.Json;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
+using Modules.Messaging.Infrastructure;
 using Modules.Tenant.Contracts;
 
 namespace Modules.Messaging.Application;
 
 public class TenantUpdatedIntegrationEventHandler : IIntegrationEventHandler<TenantUpdatedIntegrationEvent>
 {
-    private readonly ITenantReplicaRepository _repository;
+    private readonly MessagingDbContext _context;
 
-    public TenantUpdatedIntegrationEventHandler(ITenantReplicaRepository repository)
+    public TenantUpdatedIntegrationEventHandler(MessagingDbContext context)
     {
-        _repository = repository;
+        _context = context;
     }
 
     public async Task HandleAsync(TenantUpdatedIntegrationEvent @event)
     {
-        var replica = await _repository.GetByIdAsync(@event.TenantId);
-        if (replica != null)
+        var inboxMessage = new InboxMessage
         {
-            replica.Update(@event.Name, @event.Slug, @event.IsActive);
-            _repository.Update(replica);
-            await _repository.SaveChangesAsync();
-        }
+            Id = @event.Id,
+            Type = typeof(TenantUpdatedIntegrationEvent).AssemblyQualifiedName ?? typeof(TenantUpdatedIntegrationEvent).FullName!,
+            Data = JsonSerializer.Serialize(@event)
+        };
+
+        await _context.InboxMessages.AddAsync(inboxMessage);
+        await _context.SaveChangesAsync();
     }
 }

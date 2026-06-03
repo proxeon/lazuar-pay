@@ -26,8 +26,11 @@ public static class DependencyInjection
         services.AddTransient<TenantCreatedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
 
-        // Register local background worker for Outbox
+        // Register local schema background worker for Outbox
         services.AddHostedService<MessagingOutboxPublisherJob>();
+
+        // Register local schema background worker for Inbox
+        services.AddHostedService<MessagingInboxConsumerJob>();
 
         return services;
     }

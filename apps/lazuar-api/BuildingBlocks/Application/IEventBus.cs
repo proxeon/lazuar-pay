@@ -1,6 +1,8 @@
+using MediatR;
+
 namespace BuildingBlocks.Application;
 
-public interface IIntegrationEvent
+public interface IIntegrationEvent : INotification
 {
     Guid Id { get; }
     DateTime OccurredOn { get; }
