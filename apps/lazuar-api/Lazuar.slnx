@@ -9,6 +9,12 @@
     <Project Path="SharedKernel/SharedKernel.csproj" />
   </Folder>
   <Folder Name="/Modules/">
+    <Folder Name="/Modules/Community/">
+      <Project Path="Modules/Community/Contracts/Modules.Community.Contracts.csproj" />
+      <Project Path="Modules/Community/Domain/Modules.Community.Domain.csproj" />
+      <Project Path="Modules/Community/Application/Modules.Community.Application.csproj" />
+      <Project Path="Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj" />
+    </Folder>
     <Folder Name="/Modules/Tenant/">
       <Project Path="Modules/Tenant/Contracts/Modules.Tenant.Contracts.csproj" />
       <Project Path="Modules/Tenant/Domain/Modules.Tenant.Domain.csproj" />

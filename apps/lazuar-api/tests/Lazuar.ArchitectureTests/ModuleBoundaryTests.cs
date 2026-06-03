@@ -10,11 +10,14 @@ public class ModuleBoundaryTests
 {
     private static readonly Assembly TenantApplicationAssembly = typeof(Modules.Tenant.Application.DependencyInjection).Assembly;
     private static readonly Assembly MessagingApplicationAssembly = typeof(Modules.Messaging.Application.DependencyInjection).Assembly;
+    private static readonly Assembly CommunityApplicationAssembly = typeof(Modules.Community.Application.DependencyInjection).Assembly;
 
     private const string TenantNamespace = "Modules.Tenant";
     private const string MessagingNamespace = "Modules.Messaging";
+    private const string CommunityNamespace = "Modules.Community";
     private const string UserAccessNamespace = "Modules.UserAccess";
     private const string CrmNamespace = "Modules.CRM";
+    private const string PaymentsNamespace = "Modules.Payments";
 
     [Test]
     public void TenantModule_ShouldNotDependOn_MessagingModuleInternalLayers()
@@ -47,6 +50,30 @@ public class ModuleBoundaryTests
     }
 
     [Test]
+    public void CommunityModule_ShouldNotDependOn_OtherModulesInternalLayers()
+    {
+        var result = Types.InAssembly(CommunityApplicationAssembly)
+            .Should()
+            .NotHaveDependencyOnAny(
+                $"{TenantNamespace}.Domain",
+                $"{TenantNamespace}.Application",
+                $"{TenantNamespace}.Infrastructure",
+                $"{MessagingNamespace}.Domain",
+                $"{MessagingNamespace}.Application",
+                $"{MessagingNamespace}.Infrastructure",
+                $"{CrmNamespace}.Domain",
+                $"{CrmNamespace}.Application",
+                $"{CrmNamespace}.Infrastructure",
+                $"{PaymentsNamespace}.Domain",
+                $"{PaymentsNamespace}.Application",
+                $"{PaymentsNamespace}.Infrastructure"
+            )
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue("Community module must not bypass boundaries to depend on internal layers of other modules.");
+    }
+
+    [Test]
     public void Domain_ShouldNotHave_ExternalDependencies()
     {
         var domainAssembly = typeof(BuildingBlocks.Domain.Entity).Assembly;
@@ -59,8 +86,10 @@ public class ModuleBoundaryTests
                 "SharedKernel",
                 TenantNamespace,
                 MessagingNamespace,
+                CommunityNamespace,
                 UserAccessNamespace,
-                CrmNamespace
+                CrmNamespace,
+                PaymentsNamespace
             )
             .GetResult();
 
