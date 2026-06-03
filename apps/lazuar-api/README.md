@@ -1,7 +1,7 @@
 
 # Lazuar API — .NET 10 Modular Monolith
 
-This directory houses the backend engine of the Lazuar Platform—a robust, highly decoupled **Modular Monolith** built on **.NET 10.0**. The architecture is structured around DDD (Domain-Driven Design), CQRS (Command Query Responsibility Segregation), and Clean Architecture principles, enforced through physical compilation boundaries (`.csproj`).
+This directory houses the backend engine of the Lazuar Platform—a robust, strictly decoupled **Modular Monolith** built on **.NET 10.0**. The architecture is structured around strategic Domain-Driven Design (DDD), CQRS (Command Query Responsibility Segregation), and Clean Architecture principles, enforced through physical compilation boundaries (`.csproj`) and programmatic architectural guards.
 
 ---
 
@@ -46,7 +46,7 @@ dotnet format
 
 ## 2. Shared Foundations: BuildingBlocks vs. SharedKernel
 
-To maintain clean boundaries, we separate cross-cutting code into two distinct foundational layers:
+To maintain strictly decoupled, independent module boundaries, cross-cutting code is separated into two distinct foundational layers:
 
 ```
                       ┌───────────────────────┐
@@ -55,19 +55,20 @@ To maintain clean boundaries, we separate cross-cutting code into two distinct f
                                   │
                                   ▼
                       ┌───────────────────────┐
-                      │       SharedKernel    │ (Ubiquitous Business Concepts)
+                      │       SharedKernel    │ (Cross-Cutting Domain-Agnostic Types)
                       └───────────────────────┘
 ```
 
 ### BuildingBlocks
 * **Purpose:** Contains purely technical, infrastructure-focused, and generic utility code.
-* **Domain Awareness:** **Completely blind to the business domain.** It must never import any classes or refer to concepts belonging to your business vertical (such as "Tenant", "Booking", or "Subscriber").
+* **Domain Awareness:** **Completely blind to the business domain.** It must never import any classes or refer to concepts belonging to your business vertical (such as "Tenant", "Billing", or "User").
 * **Examples:** Cryptographic hashing, JWT generation, S3 storage wrappers, MediatR command/query base interfaces, and global exception handlers.
 
 ### SharedKernel
-* **Purpose:** Holds ubiquitous business concepts, database entities, and identifiers that are naturally shared and referenced across multiple operational modules.
-* **Domain Awareness:** **Strictly business-domain aware.** It contains the foundational data schemas that glue the platform together.
-* **Examples:** `OrganizationEntity`, `BranchEntity`, `UserEntity`, and `ClientProfileEntity`.
+* **Purpose:** Holds business-neutral types, global value objects, system identifiers, and markers that are naturally shared across multiple modules.
+* **Domain Awareness:** **Completely free of write-model business entities.** To ensure strict architectural decoupling, business entities (such as `OrganizationEntity` or `UserEntity`) must never live here. They reside strictly within their authoritative module domains.
+* **Examples:** `SharedKernelMarker`, generic primitive IDs, common audit markers, and base value objects.
+* **Verification:** Enforced programmatically in CI/CD via NUnit architectural unit tests.
 
 ---
 
@@ -89,6 +90,7 @@ The `BuildingBlocks` folder is divided into three physical projects to enforce C
 * **Role:** Establishes application layer contracts and the CQRS command/query pipeline abstractions.
 * **Core Abstractions:**
   * `ICommand` & `IQuery`: Pipeline wrappers for MediatR.
+  * `IIntegrationEvent`: Pure asynchronous messaging abstractions inheriting from MediatR's `INotification`.
   * `IEmailService` & `IMessagingService`: Port definitions for external communications.
   * `IExecutionContextAccessor`: Resolves claims (Tenant ID, User ID) from the active context.
 
@@ -96,15 +98,15 @@ The `BuildingBlocks` folder is divided into three physical projects to enforce C
 * **Dependency:** References `BuildingBlocks.Application`.
 * **Role:** Implements the concrete technical adapters required by the application layer. This is where external I/O, database systems, and security layers are introduced.
 * **Core Abstractions:**
-  * `PlatformDbContext`: Implements database-level multi-tenancy filters and automated Auditing.
-  * `JwtService` & `PasswordService`: Cryptographic security engines.
-  * `R2StorageService`: Concrete Cloudflare S3-compatible adapter.
+  * `PlatformDbContext`: Abstract database context base class. It intercepts operations to automatically apply multi-tenancy context filters and serializes raised domain events into the active context's private `OutboxMessages` schema table on every `SaveChangesAsync` call.
+  * `InboxConsumerJob`: Base background service that processes local inbox messages using `IMediator` to dispatch them locally to use-case handlers.
+  * `OutboxPublisherJob`: Base background worker that reads, processes, and dispatches outbox records asynchronously via the `IEventBus`.
 
 ---
 
 ## 4. The 4-Layer Module Architecture
 
-Each operational module (such as `Tenant` and `Messaging`) is physically divided into four `.csproj` projects. This layered separation prevents domain and database leaks:
+Each operational module (such as `Tenant` and `Messaging`) is physically divided into four `.csproj` projects. This layered separation prevents domain, database, and transaction leaks:
 
 ```
    ┌────────────────────────────────────────────────────────┐
@@ -129,7 +131,7 @@ Each operational module (such as `Tenant` and `Messaging`) is physically divided
 
 ### 1. `Contracts` (The Module's Public Interface)
 * **Why it's needed:** This acts as the module's public contract boundary. Other modules are only allowed to reference this project.
-* **What it contains:** Public query interfaces (`ITenantQueryService`), read DTOs, and integration events.
+* **What it contains:** Read-only data-transfer objects (DTOs) and public Integration Events.
 * **Purpose:** It completely hides the internal domain details and database implementations, ensuring modules remain loosely coupled.
 
 ### 2. `Domain` (The Heart of the Module)
@@ -139,12 +141,12 @@ Each operational module (such as `Tenant` and `Messaging`) is physically divided
 
 ### 3. `Application` (The Use Case Orchestrator)
 * **Why it's needed:** Implements the actual use cases of the module. It coordinates loading aggregates, executing domain rules, and persisting changes.
-* **What it contains:** Command/Query Handlers, MediatR behaviors, and background jobs.
-* **Purpose:** Translates incoming client inputs into domain operations, ensuring the domain remains clean and task-focused.
+* **What it contains:** Command/Query Handlers, MediatR notification handlers (for processing inbox messages), and validator models.
+* **Purpose:** Translates incoming client inputs or integration messages into domain operations, ensuring the domain remains clean and task-focused.
 
 ### 4. `Infrastructure` (The Physical Execution Layer)
-* **Why it's needed:** Integrates the module with physical systems (databases, external messaging, files).
-* **What it contains:** Module-specific DbContexts, EF Core entity mappings, database migrations, and external API connectors (such as WhatsApp/Telegram integrations).
+* **Why it's needed:** Integrates the module with physical systems (databases, external messaging, files) and maps the outbox/inbox worker loops.
+* **What it contains:** Module-specific DbContexts (mapped to private schemas like `tenant` and `messaging` with isolated EF migration tables), repository implementations, and background `OutboxPublisherJob` and `InboxConsumerJob` workers.
 * **Purpose:** Isolates data access and external libraries, allowing the rest of the module to remain highly stable.
 
 ---
@@ -177,14 +179,39 @@ When adding a new module (for example, `Billing`), follow this structured, compi
   </Folder>
   ```
 
-### Phase C: Implementation baseline
+### Phase C: Implementation Baseline
 - [ ] Create a `DependencyInjection.cs` marker class inside `Modules.Billing.Application` to allow MediatR assembly scanning.
-- [ ] Create a `DependencyInjection.cs` class inside `Modules.Billing.Infrastructure` to register your module services:
+- [ ] Create a `BillingDbContext.cs` inside `Modules.Billing.Infrastructure` inheriting from `PlatformDbContext` mapped to a private schema:
+  ```csharp
+  protected override void OnModelCreating(ModelBuilder modelBuilder) {
+      base.OnModelCreating(modelBuilder);
+      modelBuilder.HasDefaultSchema("billing");
+      // Map domain entities and local Inbox/Outbox tables here
+  }
+  ```
+- [ ] Implement module background workers:
+  - [ ] Create `BillingOutboxPublisherJob` inheriting from `OutboxPublisherJob<BillingDbContext>`.
+  - [ ] Create `BillingInboxConsumerJob` inheriting from `InboxConsumerJob<BillingDbContext>`.
+- [ ] Create a `DependencyInjection.cs` class inside `Modules.Billing.Infrastructure` to register your module services, database contexts, and workers:
   ```csharp
   public static class DependencyInjection {
-      public static IServiceCollection AddBillingModule(this IServiceCollection services) {
-          // Register repositories and services here
+      public static IServiceCollection AddBillingModule(this IServiceCollection services, IConfiguration configuration) {
+          var connectionString = configuration.GetConnectionString("Default");
+          services.AddDbContext<BillingDbContext>(options =>
+              options.UseNpgsql(connectionString, npgsqlOptions => {
+                  npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "billing");
+              }));
+              
+          // Register repositories and background services
+          services.AddHostedService<BillingOutboxPublisherJob>();
+          services.AddHostedService<BillingInboxConsumerJob>();
           return services;
+      }
+      
+      public static IApplicationBuilder UseBillingSubscriptions(this IApplicationBuilder app) {
+          var eventBus = app.ApplicationServices.GetRequiredService<IEventBus>();
+          // Subscribe to external integration events here
+          return app;
       }
   }
   ```
@@ -211,10 +238,16 @@ When adding a new module (for example, `Billing`), follow this structured, compi
     ```
   - [ ] Register your module services:
     ```csharp
-    builder.Services.AddBillingModule();
+    builder.Services.AddBillingModule(builder.Configuration);
+    ```
+  - [ ] Register your cross-module event subscriptions:
+    ```csharp
+    app.UseBillingSubscriptions();
     ```
   - [ ] Map your API endpoints under the `/api/v1` group:
     ```csharp
     apiGroup.MapBillingEndpoints();
     ```
+- [ ] Open `tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj` and reference the new Billing domain projects.
+- [ ] Update `ModuleBoundaryTests.cs` to include the `Modules.Billing` namespace within architectural boundaries.
 - [ ] Run `pnpm build` to compile the solution and verify that the build succeeds without error.
