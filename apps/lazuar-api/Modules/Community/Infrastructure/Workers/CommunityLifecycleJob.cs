@@ -7,10 +7,6 @@ using Modules.Community.Domain.Events;
 
 namespace Modules.Community.Infrastructure.Workers;
 
-/// <summary>
-/// Reclaims background job logic from the old Messaging module.
-/// Transitions Community subscriptions based on domain rules.
-/// </summary>
 public class CommunityLifecycleJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -24,7 +20,7 @@ public class CommunityLifecycleJob : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Poll every 6 hours
+        // Poll every 1 hour to catch specific TimeOfDay schedules
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -36,7 +32,7 @@ public class CommunityLifecycleJob : BackgroundService
                 _logger.LogError(ex, "Error processing community lifecycle job.");
             }
 
-            await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
+            await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
         }
     }
 
@@ -71,17 +67,45 @@ public class CommunityLifecycleJob : BackgroundService
             }
         }
 
-        // 3. Trigger 3-Day Renewal Reminders (Domain Event -> Outbox -> Integration Event)
-        var renewalTargetDate = now.AddDays(3).Date;
-        var upcomingRenewals = await db.Subscriptions
-            .Where(s => s.Status == "ACTIVE" && s.NextRenewalDate != null && s.NextRenewalDate.Value.Date == renewalTargetDate)
+        // 3. Dynamic Reminder Schedules
+        var currentHourMinute = now.ToString("HH:mm");
+        
+        var activeSchedules = await db.ReminderSchedules
+            .Where(r => r.IsEnabled)
             .ToListAsync(ct);
 
-        foreach (var sub in upcomingRenewals)
+        foreach (var schedule in activeSchedules)
         {
-            // Publish via Domain Event to ensure it enters the Outbox transactionally
-            await mediator.Publish(new SubscriptionRenewalDueDomainEvent(
-                sub.Id, sub.OrganizationId, sub.ClientProfileId, sub.NextRenewalDate!.Value), ct);
+            // Only process schedules that match the current hour (rough matching for hourly polling)
+            if (!schedule.TimeOfDay.StartsWith(now.ToString("HH"))) continue;
+
+            // Calculate the exact date the subscription should be due to trigger this reminder
+            var targetRenewalDate = now.Date.AddDays(-schedule.DaysRelativeToDue);
+
+            var query = db.Subscriptions
+                .Where(s => s.OrganizationId == schedule.OrganizationId
+                         && (s.Status == "ACTIVE" || s.Status == "PAST_DUE")
+                         && s.NextRenewalDate != null
+                         && s.NextRenewalDate.Value.Date == targetRenewalDate
+                         && (s.RemindersPausedUntil == null || s.RemindersPausedUntil < now));
+
+            if (schedule.PlanId.HasValue)
+            {
+                query = query.Where(s => s.PlanId == schedule.PlanId.Value);
+            }
+
+            var subscriptionsToRemind = await query.ToListAsync(ct);
+
+            foreach (var sub in subscriptionsToRemind)
+            {
+                await mediator.Publish(new SubscriptionRenewalDueDomainEvent(
+                    sub.Id, 
+                    sub.OrganizationId, 
+                    sub.ClientProfileId, 
+                    sub.NextRenewalDate!.Value, 
+                    schedule.TemplateId, 
+                    schedule.Channel), ct);
+            }
         }
 
         if (overdue.Any() || pastDue.Any())

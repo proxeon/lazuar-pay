@@ -1,13 +1,10 @@
 using BuildingBlocks.Application;
 using Modules.Community.Contracts;
 using Modules.CRM.Contracts;
+using Modules.Messaging.Contracts;
 
 namespace Modules.Messaging.Application.EventHandlers;
 
-/// <summary>
-/// Listens to integration events from the Community module via the Inbox.
-/// Executes the notification/messaging logic asynchronously.
-/// </summary>
 public class CommunityIntegrationEventHandlers : 
     IIntegrationEventHandler<CommunitySubscriptionActivatedIntegrationEvent>,
     IIntegrationEventHandler<CommunitySubscriptionCancelledIntegrationEvent>,
@@ -18,13 +15,24 @@ public class CommunityIntegrationEventHandlers :
 {
     private readonly ICrmQueryService _crmQueryService;
     private readonly IEmailService _emailService;
+    private readonly IMessageTemplateQueryService _templateService;
 
     public CommunityIntegrationEventHandlers(
         ICrmQueryService crmQueryService, 
-        IEmailService emailService)
+        IEmailService emailService,
+        IMessageTemplateQueryService templateService)
     {
         _crmQueryService = crmQueryService;
         _emailService = emailService;
+        _templateService = templateService;
+    }
+
+    private string RenderTemplate(string template, ClientProfileDto profile)
+    {
+        if (string.IsNullOrEmpty(template)) return "";
+        return template
+            .Replace("{{customer_name}}", profile.FullName)
+            .Replace("{{business_name}}", "Our Community"); // Can be expanded later
     }
 
     public async Task HandleAsync(CommunitySubscriptionActivatedIntegrationEvent @event)
@@ -32,8 +40,11 @@ public class CommunityIntegrationEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var subject = @event.IsFirstPayment ? "Welcome to the Community! 🎉" : "Subscription Renewed Successfully";
-        var body = $"Hi {profile.FullName},<br><br>Your community subscription is now active.";
+        var templateName = @event.IsFirstPayment ? "Community Welcome" : "Community Payment Success";
+        var template = await _templateService.GetTemplateByNameAsync(@event.OrganizationId, templateName);
+
+        var subject = template != null ? RenderTemplate(template.Subject, profile) : "Subscription Active";
+        var body = template != null ? RenderTemplate(template.Body, profile) : $"Hi {profile.FullName}, your subscription is now active.";
 
         await _emailService.SendEmailAsync(profile.Email, subject, body);
     }
@@ -43,14 +54,16 @@ public class CommunityIntegrationEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var body = $"Hi {profile.FullName},<br><br>Your subscription has been cancelled. You will retain access until the end of your billing cycle.";
+        var template = await _templateService.GetTemplateByNameAsync(@event.OrganizationId, "Community Subscription Cancelled");
+
+        var subject = template != null ? RenderTemplate(template.Subject, profile) : "Subscription Cancelled";
+        var body = template != null ? RenderTemplate(template.Body, profile) : $"Hi {profile.FullName}, your subscription has been cancelled.";
         
-        await _emailService.SendEmailAsync(profile.Email, "Subscription Cancelled", body);
+        await _emailService.SendEmailAsync(profile.Email, subject, body);
     }
 
     public Task HandleAsync(CommunityCheckoutInitiatedIntegrationEvent @event)
     {
-        // Abandoned Cart logic
         return Task.CompletedTask;
     }
 
@@ -59,9 +72,13 @@ public class CommunityIntegrationEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var body = $"Hi {profile.FullName},<br><br>This is a reminder that your community subscription is due for renewal soon.";
+        var templates = await _templateService.GetTemplatesAsync(new[] { @event.TemplateId });
+        var template = templates.FirstOrDefault();
 
-        await _emailService.SendEmailAsync(profile.Email, "Action Required: Renewal Due", body);
+        var subject = template != null ? RenderTemplate(template.Subject, profile) : "Renewal Reminder";
+        var body = template != null ? RenderTemplate(template.Body, profile) : $"Hi {profile.FullName}, your subscription is due soon.";
+
+        await _emailService.SendEmailAsync(profile.Email, subject, body);
     }
 
     public async Task HandleAsync(CommunityMagicLinkRequestedIntegrationEvent @event)
@@ -74,31 +91,29 @@ public class CommunityIntegrationEventHandlers :
         await _emailService.SendEmailAsync(profile.Email, "Your Subscriber Portal Access", body);
     }
 
-    // ----------------------------------------------------------------------
-    // Handle the one-off manual reminder requested by the Admin
-    // ----------------------------------------------------------------------
     public async Task HandleAsync(CommunityOneOffReminderRequestedIntegrationEvent @event)
     {
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
         string subject = "Important Update Regarding Your Subscription";
-        string body;
+        string body = "";
 
-        // If the admin typed a custom message in the UI, use it directly
         if (!string.IsNullOrWhiteSpace(@event.CustomMessage))
         {
             body = $"Hi {profile.FullName},<br><br>{@event.CustomMessage}";
         }
-        // If the admin selected a saved template, we use the ID 
-        // (In Phase 5, we will fetch the TemplateEntity from the DB here to render it)
         else if (@event.TemplateId.HasValue)
         {
-            body = $"Hi {profile.FullName},<br><br>This is a notification regarding your community subscription.";
+            var templates = await _templateService.GetTemplatesAsync(new[] { @event.TemplateId.Value });
+            var template = templates.FirstOrDefault();
+
+            subject = template != null ? RenderTemplate(template.Subject, profile) : subject;
+            body = template != null ? RenderTemplate(template.Body, profile) : $"Hi {profile.FullName}, this is a notification regarding your subscription.";
         }
         else
         {
-            return; // Nothing to send
+            return;
         }
 
         await _emailService.SendEmailAsync(profile.Email, subject, body);

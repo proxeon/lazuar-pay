@@ -23,7 +23,21 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = "SELECT \"Id\", \"Name\" FROM messaging.\"MessageTemplates\" WHERE \"Id\" = ANY(@Ids)";
+        const string sql = "SELECT \"Id\", \"Name\", \"Subject\", \"Body\" FROM messaging.\"MessageTemplates\" WHERE \"Id\" = ANY(@Ids)";
         return await connection.QueryAsync<MessageTemplateDto>(sql, new { Ids = ids });
+    }
+
+    public async Task<MessageTemplateDto?> GetTemplateByNameAsync(Guid organizationId, string name)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""Id"", ""Name"", ""Subject"", ""Body"" 
+            FROM messaging.""MessageTemplates"" 
+            WHERE ""OrganizationId"" = @OrgId AND ""Name"" = @Name 
+            LIMIT 1";
+            
+        return await connection.QuerySingleOrDefaultAsync<MessageTemplateDto>(sql, new { OrgId = organizationId, Name = name });
     }
 }
