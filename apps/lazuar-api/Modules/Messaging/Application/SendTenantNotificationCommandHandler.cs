@@ -3,7 +3,10 @@ using Modules.Tenant.Contracts;
 
 namespace Modules.Messaging.Application;
 
-public record SendTenantNotificationCommand(Guid TenantId, string Message) : ICommand;
+public record SendTenantNotificationCommand(Guid TenantId, string Message) : ICommand
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+}
 
 public class SendTenantNotificationCommandHandler : ICommandHandler<SendTenantNotificationCommand>
 {

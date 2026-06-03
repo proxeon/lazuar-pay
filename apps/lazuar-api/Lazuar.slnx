@@ -17,6 +17,7 @@
     </Folder>
     <Folder Name="/Modules/Messaging/">
       <Project Path="Modules/Messaging/Contracts/Modules.Messaging.Contracts.csproj" />
+      <Project Path="Modules/Messaging/Domain/Modules.Messaging.Domain.csproj" />
       <Project Path="Modules/Messaging/Application/Modules.Messaging.Application.csproj" />
       <Project Path="Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj" />
     </Folder>

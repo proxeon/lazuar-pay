@@ -10,6 +10,7 @@
         "**/*.cs",
         "**/*.csproj",
         "**/*.sln",
+        "**/*.slnx",
         "**/*.props",
         "**/*.targets"
       ],
@@ -19,6 +20,18 @@
         "bin/**",
         "obj/**",
         "dist/**"
+      ]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "**/*.cs",
+        "**/*.csproj",
+        "**/*.slnx"
+      ],
+      "outputs": [
+        "TestResults/**"
       ]
     },
     "lint": {
