@@ -23,8 +23,23 @@ public class CrmQueryService : ICrmQueryService
             connection.Open();
         }
 
-        // We use Dapper for fast, read-only queries from the CRM schema
-        const string sql = "SELECT \"Id\", \"FullName\", \"Email\", \"Phone\" FROM \"ClientProfiles\" WHERE \"Id\" = @Id LIMIT 1";
+        const string sql = "SELECT \"Id\", \"FullName\", \"Email\", \"Phone\" FROM crm.\"ClientProfiles\" WHERE \"Id\" = @Id LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<ClientProfileDto>(sql, new { Id = profileId });
+    }
+
+    public async Task<IEnumerable<ClientProfileDto>> GetClientProfilesAsync(IEnumerable<Guid> profileIds)
+    {
+        var ids = profileIds.Distinct().ToList();
+        if (ids.Count == 0) return Enumerable.Empty<ClientProfileDto>();
+
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) 
+        {
+            connection.Open();
+        }
+
+        // Postgres allows ANY(@Ids) for array parameters
+        const string sql = "SELECT \"Id\", \"FullName\", \"Email\", \"Phone\" FROM crm.\"ClientProfiles\" WHERE \"Id\" = ANY(@Ids)";
+        return await connection.QueryAsync<ClientProfileDto>(sql, new { Ids = ids });
     }
 }

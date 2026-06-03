@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application.Commands;
+using Modules.Community.Application.Queries;
+// Resolve TenantSlug to OrgId for public endpoints
+using Modules.Tenant.Contracts; 
 
 namespace Modules.Community.Infrastructure;
 
@@ -15,7 +18,51 @@ public static class Endpoints
         var admin = endpoints.MapGroup("/admin/community").RequireAuthorization("OrgAdmin");
         var publicGroup = endpoints.MapGroup("/public/community");
 
-        // Admin: Create Plan
+        // ==========================================
+        // QUERIES (READ MODELS) - Phase 3 additions
+        // ==========================================
+
+        admin.MapGet("/plans", async (
+            IExecutionContextAccessor ctx, 
+            ICommunityQueryService queryService) =>
+        {
+            var plans = await queryService.GetAdminPlansAsync(ctx.TenantId);
+            return Results.Ok(plans);
+        });
+
+        admin.MapGet("/plans/{id:guid}", async (
+            Guid id,
+            IExecutionContextAccessor ctx, 
+            ICommunityQueryService queryService) =>
+        {
+            var plan = await queryService.GetAdminPlanByIdAsync(ctx.TenantId, id);
+            return plan != null ? Results.Ok(plan) : Results.NotFound();
+        });
+
+        admin.MapGet("/subscribers", async (
+            IExecutionContextAccessor ctx, 
+            ICommunityQueryService queryService) =>
+        {
+            var subscribers = await queryService.GetSubscribersAsync(ctx.TenantId);
+            return Results.Ok(subscribers);
+        });
+
+        publicGroup.MapGet("/{tenantSlug}/plans", async (
+            string tenantSlug, 
+            ITenantQueryService tenantQueryService, 
+            ICommunityQueryService queryService) =>
+        {
+            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+
+            var plans = await queryService.GetPublicPlansAsync(tenant.Id);
+            return Results.Ok(plans);
+        });
+
+        // ==========================================
+        // COMMANDS (WRITE MODELS)
+        // ==========================================
+
         admin.MapPost("/plans", async (
             CreatePlanRequestDto req, 
             IExecutionContextAccessor ctx, 
@@ -32,7 +79,6 @@ public static class Endpoints
             return Results.Ok(new { id });
         });
 
-        // Admin: Record Manual Payment
         admin.MapPost("/subscribers/{id:guid}/payments", async (
             Guid id, 
             RecordPaymentRequestDto req, 
@@ -47,7 +93,6 @@ public static class Endpoints
             return Results.Ok(new { status = "paid" });
         });
 
-        // Admin: Cancel Subscription
         admin.MapPost("/subscribers/{id:guid}/cancel", async (
             Guid id, 
             IExecutionContextAccessor ctx, 
@@ -58,22 +103,24 @@ public static class Endpoints
             return Results.Ok(new { status = "cancelled" });
         });
 
-        // Public: Initiate Checkout
         publicGroup.MapPost("/checkout/{subscriptionId:guid}", async (
             Guid subscriptionId,
-            [FromQuery] Guid orgId, // Passed by frontend based on Tenant Slug
+            [FromQuery] string tenant,
             [FromBody] InitiateCheckoutRequestDto req,
+            ITenantQueryService tenantQueryService,
             IMediator mediator) =>
         {
+            // Resolve orgId from the query param string "tenant"
+            var org = await tenantQueryService.GetTenantBySlugAsync(tenant);
+            if (org == null) return Results.NotFound(new { error = "Business not found." });
+
             var command = new InitiateSubscriptionCheckoutCommand(
-                orgId, 
+                org.Id, 
                 subscriptionId, 
                 req.SuccessUrl, 
                 req.CancelUrl);
             
-            // Calls Community module, which cross-queries Payments module, returns the actual URL
             var url = await mediator.Send(command);
-            
             return Results.Ok(new { url });
         });
 

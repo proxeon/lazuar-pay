@@ -5,6 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Application\Modules.Community.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Tenant\Contracts\Modules.Tenant.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
