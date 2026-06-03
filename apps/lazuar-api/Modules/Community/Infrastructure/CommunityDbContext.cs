@@ -12,6 +12,7 @@ public class CommunityDbContext : PlatformDbContext
     public DbSet<CommunityPlan> Plans { get; set; } = null!;
     public DbSet<CommunitySubscription> Subscriptions { get; set; } = null!;
     public DbSet<PaymentRecord> PaymentRecords { get; set; } = null!;
+    public DbSet<CommunityReminderSchedule> ReminderSchedules { get; set; } = null!;
     
     // Platform Box pattern tables
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;

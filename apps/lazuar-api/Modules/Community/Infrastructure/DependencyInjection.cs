@@ -34,6 +34,10 @@ public static class DependencyInjection
         // Repositories & Services
         services.AddScoped<ICommunityPlanRepository, CommunityPlanRepository>();
         services.AddScoped<ICommunitySubscriptionRepository, CommunitySubscriptionRepository>();
+        
+        // Register Reminder Schedule Repository
+        services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
+        
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
 
@@ -51,7 +55,9 @@ public static class DependencyInjection
     public static IApplicationBuilder UseCommunitySubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBus>();
+        
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
+        
         return app;
     }
 }

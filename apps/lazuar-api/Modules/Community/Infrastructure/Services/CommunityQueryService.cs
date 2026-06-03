@@ -5,6 +5,7 @@ using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Application.Queries;
 using Modules.CRM.Contracts;
+using Modules.Messaging.Contracts;
 
 namespace Modules.Community.Infrastructure.Services;
 
@@ -12,8 +13,9 @@ public class CommunityQueryService : ICommunityQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
     private readonly ICrmQueryService _crmQueryService;
+    private readonly IMessageTemplateQueryService _messageTemplateQueryService;
 
-    // DTOs to map raw SQL results (JSONB columns return as strings in Dapper/Npgsql)
+    // DTOs to map raw SQL results
     private record RawPlanDto(
         Guid Id, string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
         decimal Price, string Interval, string Features, string Methodology, string Faq,
@@ -29,12 +31,19 @@ public class CommunityQueryService : ICommunityQueryService
         DateTime? NextBillingDate, DateTime CreatedAt
     );
 
+    private record RawReminderScheduleDto(
+        Guid Id, Guid? PlanId, string? PlanName, Guid TemplateId, 
+        string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt
+    );
+
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
-        ICrmQueryService crmQueryService)
+        ICrmQueryService crmQueryService,
+        IMessageTemplateQueryService messageTemplateQueryService)
     {
         _connectionFactory = connectionFactory;
         _crmQueryService = crmQueryService;
+        _messageTemplateQueryService = messageTemplateQueryService;
     }
 
     public async Task<IEnumerable<CommunityPlanDto>> GetAdminPlansAsync(Guid organizationId)
@@ -109,7 +118,6 @@ public class CommunityQueryService : ICommunityQueryService
         using var connection = _connectionFactory.CreateConnection();
         connection.Open();
 
-        // 1. Fetch Subscriptions from community schema
         const string sql = @"
             SELECT 
                 s.""Id"", s.""OrganizationId"", s.""ClientProfileId"", s.""PlanId"",
@@ -134,35 +142,22 @@ public class CommunityQueryService : ICommunityQueryService
 
         var now = DateTime.UtcNow;
 
-        // 3. In-memory Stitching
         return subList.Select(s =>
         {
             profileDict.TryGetValue(s.ClientProfileId, out var profile);
             
-            var daysOverdue = (s.Status is "PAST_DUE" or "EXPIRED" or "CANCELLED" /* if cancelled while due */)
+            var daysOverdue = (s.Status is "PAST_DUE" or "EXPIRED" or "CANCELLED")
                               && s.NextBillingDate.HasValue
                 ? Math.Max(0, (int)(now - s.NextBillingDate.Value).TotalDays)
                 : (int?)null;
 
             return new CommunitySubscriptionDto(
-                Id: s.Id,
-                ClientProfileId: s.ClientProfileId,
-                CustomerName: profile?.FullName ?? "Unknown",
-                CustomerEmail: profile?.Email ?? "",
-                CustomerPhone: profile?.Phone ?? "",
-                PlanId: s.PlanId,
-                PlanName: s.PlanName,
-                PlanPrice: s.PlanPrice,
-                Status: s.Status,
-                Source: s.Source,
-                IsReminderOnly: s.IsReminderOnly,
-                PreferredChannel: s.PreferredChannel,
-                AdminNotes: s.AdminNotes,
-                RemindersPausedUntil: s.RemindersPausedUntil,
-                CurrentPeriodEnd: s.CurrentPeriodEnd,
-                NextBillingDate: s.NextBillingDate,
-                DaysOverdue: daysOverdue,
-                CreatedAt: s.CreatedAt
+                Id: s.Id, ClientProfileId: s.ClientProfileId, CustomerName: profile?.FullName ?? "Unknown",
+                CustomerEmail: profile?.Email ?? "", CustomerPhone: profile?.Phone ?? "", PlanId: s.PlanId,
+                PlanName: s.PlanName, PlanPrice: s.PlanPrice, Status: s.Status, Source: s.Source,
+                IsReminderOnly: s.IsReminderOnly, PreferredChannel: s.PreferredChannel, AdminNotes: s.AdminNotes,
+                RemindersPausedUntil: s.RemindersPausedUntil, CurrentPeriodEnd: s.CurrentPeriodEnd,
+                NextBillingDate: s.NextBillingDate, DaysOverdue: daysOverdue, CreatedAt: s.CreatedAt
             );
         });
     }
@@ -195,41 +190,106 @@ public class CommunityQueryService : ICommunityQueryService
             : (int?)null;
 
         return new CommunitySubscriptionDto(
-            Id: rawSub.Id,
-            ClientProfileId: rawSub.ClientProfileId,
-            CustomerName: profile?.FullName ?? "Unknown",
-            CustomerEmail: profile?.Email ?? "",
-            CustomerPhone: profile?.Phone ?? "",
-            PlanId: rawSub.PlanId,
-            PlanName: rawSub.PlanName,
-            PlanPrice: rawSub.PlanPrice,
-            Status: rawSub.Status,
-            Source: rawSub.Source,
-            IsReminderOnly: rawSub.IsReminderOnly,
-            PreferredChannel: rawSub.PreferredChannel,
-            AdminNotes: rawSub.AdminNotes,
-            RemindersPausedUntil: rawSub.RemindersPausedUntil,
-            CurrentPeriodEnd: rawSub.CurrentPeriodEnd,
-            NextBillingDate: rawSub.NextBillingDate,
-            DaysOverdue: daysOverdue,
-            CreatedAt: rawSub.CreatedAt
+            Id: rawSub.Id, ClientProfileId: rawSub.ClientProfileId, CustomerName: profile?.FullName ?? "Unknown",
+            CustomerEmail: profile?.Email ?? "", CustomerPhone: profile?.Phone ?? "", PlanId: rawSub.PlanId,
+            PlanName: rawSub.PlanName, PlanPrice: rawSub.PlanPrice, Status: rawSub.Status, Source: rawSub.Source,
+            IsReminderOnly: rawSub.IsReminderOnly, PreferredChannel: rawSub.PreferredChannel, AdminNotes: rawSub.AdminNotes,
+            RemindersPausedUntil: rawSub.RemindersPausedUntil, CurrentPeriodEnd: rawSub.CurrentPeriodEnd,
+            NextBillingDate: rawSub.NextBillingDate, DaysOverdue: daysOverdue, CreatedAt: rawSub.CreatedAt
+        );
+    }
+
+    public async Task<IEnumerable<CommunityReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+
+        const string sql = @"
+            SELECT 
+                r.""Id"", r.""PlanId"", p.""Name"" as PlanName, r.""TemplateId"", 
+                r.""Channel"", r.""DaysRelativeToDue"", r.""TimeOfDay"", r.""IsEnabled"", r.""CreatedAt""
+            FROM community.""ReminderSchedules"" r
+            LEFT JOIN community.""Plans"" p ON r.""PlanId"" = p.""Id""
+            WHERE r.""OrganizationId"" = @OrgId
+            ORDER BY r.""DaysRelativeToDue"", r.""TimeOfDay""";
+
+        var rawSchedules = await connection.QueryAsync<RawReminderScheduleDto>(sql, new { OrgId = organizationId });
+        var scheduleList = rawSchedules.ToList();
+
+        if (scheduleList.Count == 0) return Enumerable.Empty<CommunityReminderScheduleDto>();
+
+        // Cross-module query to Messaging without DB Joins
+        var templateIds = scheduleList.Select(x => x.TemplateId).Distinct();
+        var templates = await _messageTemplateQueryService.GetTemplatesAsync(templateIds);
+        var templateDict = templates.ToDictionary(t => t.Id);
+
+        return scheduleList.Select(r => 
+        {
+            var templateName = templateDict.TryGetValue(r.TemplateId, out var t) ? t.Name : "Unknown Template";
+            return new CommunityReminderScheduleDto(
+                r.Id, r.PlanId, r.PlanName, r.TemplateId, templateName, 
+                r.Channel, r.DaysRelativeToDue, r.TimeOfDay, r.IsEnabled, r.CreatedAt);
+        });
+    }
+
+    public async Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+
+        const string subSql = @"
+            SELECT 
+                s.""Status"", s.""IsReminderOnly"", s.""CreatedAt"", s.""UpdatedAt"",
+                p.""Price"", p.""Interval""
+            FROM community.""Subscriptions"" s
+            JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
+            WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'";
+
+        var subs = (await connection.QueryAsync<dynamic>(subSql, new { OrgId = organizationId })).ToList();
+
+        const string revSql = @"
+            SELECT COALESCE(SUM(""Amount""), 0) 
+            FROM community.""PaymentRecords"" 
+            WHERE ""OrganizationId"" = @OrgId AND ""Status"" = 'CONFIRMED'";
+
+        var totalRevenue = await connection.ExecuteScalarAsync<decimal>(revSql, new { OrgId = organizationId });
+
+        var now = DateTime.UtcNow;
+        var thirtyDaysAgo = now.AddDays(-30);
+
+        var activeSubs = subs.Where(s => (string)s.Status == "ACTIVE" || (string)s.Status == "PAST_DUE").ToList();
+
+        var mrr = activeSubs
+            .Where(s => !(bool)s.IsReminderOnly)
+            .Sum(s => (string)s.Interval == "yr" ? (decimal)s.Price / 12m : (decimal)s.Price);
+
+        var cancelledLast30 = subs.Count(s => (string)s.Status == "CANCELLED" && (DateTime)s.UpdatedAt >= thirtyDaysAgo);
+        var newActiveLast30 = activeSubs.Count(s => (DateTime)s.CreatedAt >= thirtyDaysAgo);
+        var netNewSubscribers = newActiveLast30 - cancelledLast30;
+
+        var active30DaysAgo = activeSubs.Count + cancelledLast30 - newActiveLast30;
+        double churnRate = active30DaysAgo > 0 ? Math.Round((double)cancelledLast30 / active30DaysAgo * 100, 2) : 0;
+
+        var truePlatformActive = activeSubs.Count(s => !(bool)s.IsReminderOnly);
+        double arpu = truePlatformActive > 0 ? (double)(mrr / truePlatformActive) : 0;
+
+        return new CommunitySubscriberStatsDto(
+            (double)mrr,
+            activeSubs.Count,
+            subs.Count(s => (string)s.Status == "PAST_DUE"),
+            subs.Count(s => (string)s.Status == "CANCELLED"),
+            netNewSubscribers,
+            churnRate,
+            arpu,
+            (double)totalRevenue
         );
     }
 
     private static CommunityPlanDto MapToPlanDto(RawPlanDto raw, int enrolledCount)
     {
-        var features = string.IsNullOrEmpty(raw.Features) 
-            ? new List<string>() 
-            : JsonSerializer.Deserialize<List<string>>(raw.Features) ?? new List<string>();
-
-        var faq = string.IsNullOrEmpty(raw.Faq) 
-            ? new List<CommunityFaqItemDto>() 
-            : JsonSerializer.Deserialize<List<CommunityFaqItemDto>>(raw.Faq) ?? new List<CommunityFaqItemDto>();
-
-        var spotsRemaining = raw.MaxCapacity.HasValue
-            ? Math.Max(0, raw.MaxCapacity.Value - enrolledCount)
-            : (int?)null;
-
+        var features = string.IsNullOrEmpty(raw.Features) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(raw.Features) ?? new List<string>();
+        var faq = string.IsNullOrEmpty(raw.Faq) ? new List<CommunityFaqItemDto>() : JsonSerializer.Deserialize<List<CommunityFaqItemDto>>(raw.Faq) ?? new List<CommunityFaqItemDto>();
+        var spotsRemaining = raw.MaxCapacity.HasValue ? Math.Max(0, raw.MaxCapacity.Value - enrolledCount) : (int?)null;
         var isFull = raw.MaxCapacity.HasValue && enrolledCount >= raw.MaxCapacity.Value;
 
         return new CommunityPlanDto(

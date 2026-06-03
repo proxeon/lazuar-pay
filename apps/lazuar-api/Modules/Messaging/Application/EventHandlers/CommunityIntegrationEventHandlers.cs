@@ -13,7 +13,8 @@ public class CommunityIntegrationEventHandlers :
     IIntegrationEventHandler<CommunitySubscriptionCancelledIntegrationEvent>,
     IIntegrationEventHandler<CommunityCheckoutInitiatedIntegrationEvent>,
     IIntegrationEventHandler<CommunityRenewalReminderDueIntegrationEvent>,
-    IIntegrationEventHandler<CommunityMagicLinkRequestedIntegrationEvent>
+    IIntegrationEventHandler<CommunityMagicLinkRequestedIntegrationEvent>,
+    IIntegrationEventHandler<CommunityOneOffReminderRequestedIntegrationEvent>
 {
     private readonly ICrmQueryService _crmQueryService;
     private readonly IEmailService _emailService;
@@ -28,11 +29,9 @@ public class CommunityIntegrationEventHandlers :
 
     public async Task HandleAsync(CommunitySubscriptionActivatedIntegrationEvent @event)
     {
-        // 1. Fetch cross-module read model data
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        // 2. Execute Messaging Logic
         var subject = @event.IsFirstPayment ? "Welcome to the Community! 🎉" : "Subscription Renewed Successfully";
         var body = $"Hi {profile.FullName},<br><br>Your community subscription is now active.";
 
@@ -51,8 +50,7 @@ public class CommunityIntegrationEventHandlers :
 
     public Task HandleAsync(CommunityCheckoutInitiatedIntegrationEvent @event)
     {
-        // In the full implementation, this will insert an AutomationQueueEntity
-        // into the messaging database with a 12-hour delay for Abandoned Cart recovery.
+        // Abandoned Cart logic
         return Task.CompletedTask;
     }
 
@@ -74,5 +72,35 @@ public class CommunityIntegrationEventHandlers :
         var body = $"Hi {profile.FullName},<br><br>Click the link below to access your subscriber portal to manage or cancel your subscription. This link expires in 24 hours.<br><br><a href=\"{@event.MagicLinkUrl}\">Access Portal</a><br><br>— Lazuar Support";
 
         await _emailService.SendEmailAsync(profile.Email, "Your Subscriber Portal Access", body);
+    }
+
+    // ----------------------------------------------------------------------
+    // Handle the one-off manual reminder requested by the Admin
+    // ----------------------------------------------------------------------
+    public async Task HandleAsync(CommunityOneOffReminderRequestedIntegrationEvent @event)
+    {
+        var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
+        if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
+
+        string subject = "Important Update Regarding Your Subscription";
+        string body;
+
+        // If the admin typed a custom message in the UI, use it directly
+        if (!string.IsNullOrWhiteSpace(@event.CustomMessage))
+        {
+            body = $"Hi {profile.FullName},<br><br>{@event.CustomMessage}";
+        }
+        // If the admin selected a saved template, we use the ID 
+        // (In Phase 5, we will fetch the TemplateEntity from the DB here to render it)
+        else if (@event.TemplateId.HasValue)
+        {
+            body = $"Hi {profile.FullName},<br><br>This is a notification regarding your community subscription.";
+        }
+        else
+        {
+            return; // Nothing to send
+        }
+
+        await _emailService.SendEmailAsync(profile.Email, subject, body);
     }
 }

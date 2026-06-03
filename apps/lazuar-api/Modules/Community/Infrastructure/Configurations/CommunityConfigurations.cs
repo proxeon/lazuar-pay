@@ -57,3 +57,23 @@ public class PaymentRecordConfiguration : IEntityTypeConfiguration<PaymentRecord
                .IsUnique();
     }
 }
+
+public class CommunityReminderScheduleConfiguration : IEntityTypeConfiguration<CommunityReminderSchedule>
+{
+    public void Configure(EntityTypeBuilder<CommunityReminderSchedule> builder)
+    {
+        builder.HasKey(x => x.Id);
+        
+        builder.HasIndex(x => new { x.OrganizationId, x.DaysRelativeToDue });
+        
+        // TemplateId is cross-module (Messaging), so it's a raw Guid. No FK.
+        builder.Property(x => x.TemplateId).IsRequired();
+
+        // Optional PlanId FK
+        builder.HasOne<CommunityPlan>()
+               .WithMany()
+               .HasForeignKey(x => x.PlanId)
+               .OnDelete(DeleteBehavior.SetNull)
+               .IsRequired(false);
+    }
+}

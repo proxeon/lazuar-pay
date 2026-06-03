@@ -45,10 +45,6 @@ public class CommunitySubscriptionRepository : ICommunitySubscriptionRepository
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
-    /// <summary>
-    /// Fetches the most recent active or past_due subscription for a given client profile.
-    /// Used during the Magic Link generation flow.
-    /// </summary>
     public async Task<CommunitySubscription?> GetActiveByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default)
     {
         return await _context.Subscriptions
@@ -62,6 +58,36 @@ public class CommunitySubscriptionRepository : ICommunitySubscriptionRepository
     public void Add(CommunitySubscription subscription)
     {
         _context.Subscriptions.Add(subscription);
+    }
+
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+    {
+        await _context.SaveChangesAsync(ct);
+    }
+}
+
+public class CommunityReminderScheduleRepository : ICommunityReminderScheduleRepository
+{
+    private readonly CommunityDbContext _context;
+
+    public CommunityReminderScheduleRepository(CommunityDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<CommunityReminderSchedule?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.ReminderSchedules.FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
+    public void Add(CommunityReminderSchedule schedule)
+    {
+        _context.ReminderSchedules.Add(schedule);
+    }
+
+    public void Remove(CommunityReminderSchedule schedule)
+    {
+        _context.ReminderSchedules.Remove(schedule);
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
