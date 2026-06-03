@@ -44,6 +44,9 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
+// Register cross-module event subscriptions
+app.UseMessagingSubscriptions();
+
 // Map Module endpoints under /api/v1
 var apiGroup = app.MapGroup("/api/v1");
 apiGroup.MapTenantEndpoints();
