@@ -20,17 +20,23 @@
       <Project Path="Modules/CRM/Contracts/Modules.CRM.Contracts.csproj" />
       <Project Path="Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj" />
     </Folder>
-    <Folder Name="/Modules/Tenant/">
-      <Project Path="Modules/Tenant/Contracts/Modules.Tenant.Contracts.csproj" />
-      <Project Path="Modules/Tenant/Domain/Modules.Tenant.Domain.csproj" />
-      <Project Path="Modules/Tenant/Application/Modules.Tenant.Application.csproj" />
-      <Project Path="Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj" />
-    </Folder>
     <Folder Name="/Modules/Messaging/">
       <Project Path="Modules/Messaging/Contracts/Modules.Messaging.Contracts.csproj" />
       <Project Path="Modules/Messaging/Domain/Modules.Messaging.Domain.csproj" />
       <Project Path="Modules/Messaging/Application/Modules.Messaging.Application.csproj" />
       <Project Path="Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj" />
+    </Folder>
+    <Folder Name="/Modules/Payments/">
+      <Project Path="Modules/Payments/Contracts/Modules.Payments.Contracts.csproj" />
+      <Project Path="Modules/Payments/Domain/Modules.Payments.Domain.csproj" />
+      <Project Path="Modules/Payments/Application/Modules.Payments.Application.csproj" />
+      <Project Path="Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj" />
+    </Folder>
+    <Folder Name="/Modules/Tenant/">
+      <Project Path="Modules/Tenant/Contracts/Modules.Tenant.Contracts.csproj" />
+      <Project Path="Modules/Tenant/Domain/Modules.Tenant.Domain.csproj" />
+      <Project Path="Modules/Tenant/Application/Modules.Tenant.Application.csproj" />
+      <Project Path="Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj" />
     </Folder>
     <Folder Name="/Modules/UserAccess/">
       <Project Path="Modules/UserAccess/Domain/Modules.UserAccess.Domain.csproj" />

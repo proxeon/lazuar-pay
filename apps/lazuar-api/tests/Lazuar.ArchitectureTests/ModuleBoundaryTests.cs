@@ -11,6 +11,7 @@ public class ModuleBoundaryTests
     private static readonly Assembly TenantApplicationAssembly = typeof(Modules.Tenant.Application.DependencyInjection).Assembly;
     private static readonly Assembly MessagingApplicationAssembly = typeof(Modules.Messaging.Application.DependencyInjection).Assembly;
     private static readonly Assembly CommunityApplicationAssembly = typeof(Modules.Community.Application.DependencyInjection).Assembly;
+    private static readonly Assembly PaymentsApplicationAssembly = typeof(Modules.Payments.Application.DependencyInjection).Assembly;
 
     private const string TenantNamespace = "Modules.Tenant";
     private const string MessagingNamespace = "Modules.Messaging";
@@ -71,6 +72,33 @@ public class ModuleBoundaryTests
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue("Community module must not bypass boundaries to depend on internal layers of other modules.");
+    }
+
+    [Test]
+    public void PaymentsModule_ShouldNotDependOn_OtherModulesInternalLayers()
+    {
+        var result = Types.InAssembly(PaymentsApplicationAssembly)
+            .Should()
+            .NotHaveDependencyOnAny(
+                $"{TenantNamespace}.Domain",
+                $"{TenantNamespace}.Application",
+                $"{TenantNamespace}.Infrastructure",
+                $"{MessagingNamespace}.Domain",
+                $"{MessagingNamespace}.Application",
+                $"{MessagingNamespace}.Infrastructure",
+                $"{CommunityNamespace}.Domain",
+                $"{CommunityNamespace}.Application",
+                $"{CommunityNamespace}.Infrastructure",
+                $"{CrmNamespace}.Domain",
+                $"{CrmNamespace}.Application",
+                $"{CrmNamespace}.Infrastructure",
+                $"{UserAccessNamespace}.Domain",
+                $"{UserAccessNamespace}.Application",
+                $"{UserAccessNamespace}.Infrastructure"
+            )
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue("Payments module must not bypass boundaries to depend on internal layers of other modules.");
     }
 
     [Test]

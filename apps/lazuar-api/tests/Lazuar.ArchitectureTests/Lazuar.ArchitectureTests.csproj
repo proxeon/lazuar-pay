@@ -33,6 +33,12 @@
     <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\CRM\Infrastructure\Modules.CRM.Infrastructure.csproj" />
 
+    <!-- Payments Module -->
+    <ProjectReference Include="..\..\Modules\Payments\Contracts\Modules.Payments.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Domain\Modules.Payments.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Application\Modules.Payments.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Infrastructure\Modules.Payments.Infrastructure.csproj" />
+
     <!-- UserAccess Module -->
     <ProjectReference Include="..\..\Modules\UserAccess\Domain\Modules.UserAccess.Domain.csproj" />
   </ItemGroup>
