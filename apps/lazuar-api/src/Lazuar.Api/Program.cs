@@ -2,8 +2,10 @@ using Serilog;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Configuration;
 using Modules.Tenant.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Modules.Community.Infrastructure;
@@ -18,6 +20,23 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
+// --- Configure Options ---
+builder.Services.AddOptions<ResendOptions>()
+    .BindConfiguration(ResendOptions.SectionName);
+
+// --- Configure HttpClients ---
+builder.Services.AddHttpClient("Resend", (sp, client) =>
+{
+    client.BaseAddress = new Uri("https://api.resend.com/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+    
+    var options = sp.GetRequiredService<IOptions<ResendOptions>>().Value;
+    if (!string.IsNullOrEmpty(options.ApiKey))
+    {
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
+    }
+});
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IExecutionContextAccessor, ExecutionContextAccessor>();
 builder.Services.AddSingleton<DatabaseJobTrigger>();
@@ -25,7 +44,7 @@ builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
-builder.Services.AddSingleton<IEmailService, ConsoleEmailService>();
+builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

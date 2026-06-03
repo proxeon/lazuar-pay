@@ -30,6 +30,7 @@
 
     <!-- Microsoft Extensions -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     
     <!-- Testing Libraries (NUnit, FluentAssertions, NSubstitute, NetArchTest) -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
