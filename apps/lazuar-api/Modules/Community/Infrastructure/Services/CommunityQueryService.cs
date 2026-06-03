@@ -167,6 +167,55 @@ public class CommunityQueryService : ICommunityQueryService
         });
     }
 
+    public async Task<CommunitySubscriptionDto?> GetPortalSubscriptionAsync(Guid organizationId, Guid subscriptionId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        connection.Open();
+
+        const string sql = @"
+            SELECT 
+                s.""Id"", s.""OrganizationId"", s.""ClientProfileId"", s.""PlanId"",
+                p.""Name"" as ""PlanName"", p.""Price"" as ""PlanPrice"",
+                s.""Status"", s.""Source"", s.""IsReminderOnly"", s.""PreferredChannel"",
+                s.""AdminNotes"", s.""RemindersPausedUntil"", s.""CurrentPeriodEnd"",
+                s.""NextRenewalDate"" as ""NextBillingDate"", s.""CreatedAt""
+            FROM community.""Subscriptions"" s
+            JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
+            WHERE s.""Id"" = @SubId AND s.""OrganizationId"" = @OrgId 
+            LIMIT 1";
+
+        var rawSub = await connection.QuerySingleOrDefaultAsync<RawSubDto>(sql, new { SubId = subscriptionId, OrgId = organizationId });
+        if (rawSub == null) return null;
+
+        var profile = await _crmQueryService.GetClientProfileAsync(rawSub.ClientProfileId);
+        
+        var now = DateTime.UtcNow;
+        var daysOverdue = (rawSub.Status is "PAST_DUE" or "EXPIRED" or "CANCELLED") && rawSub.NextBillingDate.HasValue
+            ? Math.Max(0, (int)(now - rawSub.NextBillingDate.Value).TotalDays)
+            : (int?)null;
+
+        return new CommunitySubscriptionDto(
+            Id: rawSub.Id,
+            ClientProfileId: rawSub.ClientProfileId,
+            CustomerName: profile?.FullName ?? "Unknown",
+            CustomerEmail: profile?.Email ?? "",
+            CustomerPhone: profile?.Phone ?? "",
+            PlanId: rawSub.PlanId,
+            PlanName: rawSub.PlanName,
+            PlanPrice: rawSub.PlanPrice,
+            Status: rawSub.Status,
+            Source: rawSub.Source,
+            IsReminderOnly: rawSub.IsReminderOnly,
+            PreferredChannel: rawSub.PreferredChannel,
+            AdminNotes: rawSub.AdminNotes,
+            RemindersPausedUntil: rawSub.RemindersPausedUntil,
+            CurrentPeriodEnd: rawSub.CurrentPeriodEnd,
+            NextBillingDate: rawSub.NextBillingDate,
+            DaysOverdue: daysOverdue,
+            CreatedAt: rawSub.CreatedAt
+        );
+    }
+
     private static CommunityPlanDto MapToPlanDto(RawPlanDto raw, int enrolledCount)
     {
         var features = string.IsNullOrEmpty(raw.Features) 

@@ -12,6 +12,7 @@ public interface ICommunityPlanRepository
 public interface ICommunitySubscriptionRepository
 {
     Task<CommunitySubscription?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<CommunitySubscription?> GetActiveByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default);
     void Add(CommunitySubscription subscription);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

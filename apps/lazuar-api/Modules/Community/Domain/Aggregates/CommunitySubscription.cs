@@ -28,7 +28,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     private readonly List<PaymentRecord> _paymentRecords = new();
     public IReadOnlyCollection<PaymentRecord> PaymentRecords => _paymentRecords.AsReadOnly();
 
-#pragma warning disable CS8618
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
     private CommunitySubscription() { } // For EF Core
 #pragma warning restore CS8618
 
@@ -134,5 +134,15 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         if (nextRenewalDate.HasValue) NextRenewalDate = nextRenewalDate.Value;
         
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Requests a magic link to access the subscriber portal.
+    /// Emits a domain event that drops into the outbox, instructing the Messaging module
+    /// to format and send the email asynchronously.
+    /// </summary>
+    public void RequestMagicLink(string magicLinkUrl)
+    {
+        AddDomainEvent(new MagicLinkRequestedDomainEvent(Id, OrganizationId, ClientProfileId, magicLinkUrl));
     }
 }

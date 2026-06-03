@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Modules.Community.Application;
 using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
-// Resolve TenantSlug to OrgId for public endpoints
-using Modules.Tenant.Contracts; 
+using Modules.Tenant.Contracts;
 
 namespace Modules.Community.Infrastructure;
 
@@ -19,7 +19,7 @@ public static class Endpoints
         var publicGroup = endpoints.MapGroup("/public/community");
 
         // ==========================================
-        // QUERIES (READ MODELS) - Phase 3 additions
+        // QUERIES (READ MODELS) 
         // ==========================================
 
         admin.MapGet("/plans", async (
@@ -110,7 +110,6 @@ public static class Endpoints
             ITenantQueryService tenantQueryService,
             IMediator mediator) =>
         {
-            // Resolve orgId from the query param string "tenant"
             var org = await tenantQueryService.GetTenantBySlugAsync(tenant);
             if (org == null) return Results.NotFound(new { error = "Business not found." });
 
@@ -122,6 +121,68 @@ public static class Endpoints
             
             var url = await mediator.Send(command);
             return Results.Ok(new { url });
+        });
+
+        // ==========================================
+        // SUBSCRIBER PORTAL (SELF-SERVICE)
+        // ==========================================
+        
+        publicGroup.MapPost("/{tenantSlug}/portal/magic-link", async (
+            string tenantSlug,
+            [FromBody] MagicLinkRequestDto req,
+            HttpRequest httpReq,
+            ITenantQueryService tenantQueryService,
+            IMediator mediator) =>
+        {
+            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+
+            var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}";
+            
+            var command = new RequestMagicLinkCommand(tenant.Id, tenantSlug, req.Email, baseUrl);
+            await mediator.Send(command);
+
+            return Results.Ok(new { status = "sent" }); // Always return success for security
+        });
+
+        publicGroup.MapGet("/{tenantSlug}/portal", async (
+            string tenantSlug,
+            [FromQuery] string token,
+            ITenantQueryService tenantQueryService,
+            IMagicLinkTokenService tokenService,
+            IMediator mediator) =>
+        {
+            var subId = tokenService.ValidateToken(token);
+            if (!subId.HasValue) return Results.Unauthorized();
+
+            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+
+            var query = new GetPortalSubscriptionQuery(tenant.Id, subId.Value);
+            var sub = await mediator.Send(query);
+
+            if (sub == null) return Results.Unauthorized();
+
+            return Results.Ok(new { subscription = sub });
+        });
+
+        publicGroup.MapPost("/{tenantSlug}/portal/cancel", async (
+            string tenantSlug,
+            [FromQuery] string token,
+            ITenantQueryService tenantQueryService,
+            IMagicLinkTokenService tokenService,
+            IMediator mediator) =>
+        {
+            var subId = tokenService.ValidateToken(token);
+            if (!subId.HasValue) return Results.Unauthorized();
+
+            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            if (tenant == null || !tenant.IsActive) return Results.NotFound();
+
+            var command = new CancelSubscriptionCommand(tenant.Id, subId.Value);
+            await mediator.Send(command);
+
+            return Results.Ok(new { status = "cancelled" });
         });
 
         return endpoints;
@@ -140,3 +201,5 @@ public record FaqRequestDto(string Id, string Question, string Answer);
 
 public record RecordPaymentRequestDto(
     decimal Amount, string PaymentMethod, string? ReferenceNumber, string? ReceiptFile);
+
+public record MagicLinkRequestDto(string Email);

@@ -23,4 +23,9 @@ public interface ICommunityQueryService
     Task<CommunityPlanDto?> GetAdminPlanByIdAsync(Guid organizationId, Guid planId);
     Task<IEnumerable<CommunityPlanDto>> GetPublicPlansAsync(Guid organizationId);
     Task<IEnumerable<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId);
+    
+    /// <summary>
+    /// Fetches a specific subscription to display in the public subscriber portal.
+    /// </summary>
+    Task<CommunitySubscriptionDto?> GetPortalSubscriptionAsync(Guid organizationId, Guid subscriptionId);
 }

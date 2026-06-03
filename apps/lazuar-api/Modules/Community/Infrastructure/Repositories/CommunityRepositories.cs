@@ -45,6 +45,20 @@ public class CommunitySubscriptionRepository : ICommunitySubscriptionRepository
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
+    /// <summary>
+    /// Fetches the most recent active or past_due subscription for a given client profile.
+    /// Used during the Magic Link generation flow.
+    /// </summary>
+    public async Task<CommunitySubscription?> GetActiveByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default)
+    {
+        return await _context.Subscriptions
+            .Where(s => s.OrganizationId == organizationId 
+                     && s.ClientProfileId == clientProfileId 
+                     && (s.Status == "ACTIVE" || s.Status == "PAST_DUE"))
+            .OrderByDescending(s => s.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+    }
+
     public void Add(CommunitySubscription subscription)
     {
         _context.Subscriptions.Add(subscription);

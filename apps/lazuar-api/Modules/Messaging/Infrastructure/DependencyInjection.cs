@@ -42,10 +42,12 @@ public static class DependencyInjection
         eventBus.Subscribe<TenantCreatedIntegrationEvent, TenantCreatedIntegrationEventHandler>();
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();
 
+        // Community Event Subscriptions
         eventBus.Subscribe<CommunitySubscriptionActivatedIntegrationEvent, CommunityIntegrationEventHandlers>();
         eventBus.Subscribe<CommunitySubscriptionCancelledIntegrationEvent, CommunityIntegrationEventHandlers>();
         eventBus.Subscribe<CommunityCheckoutInitiatedIntegrationEvent, CommunityIntegrationEventHandlers>();
         eventBus.Subscribe<CommunityRenewalReminderDueIntegrationEvent, CommunityIntegrationEventHandlers>();
+        eventBus.Subscribe<CommunityMagicLinkRequestedIntegrationEvent, CommunityIntegrationEventHandlers>();
 
         return app;
     }

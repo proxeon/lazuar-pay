@@ -12,7 +12,8 @@ public class CommunityIntegrationEventHandlers :
     IIntegrationEventHandler<CommunitySubscriptionActivatedIntegrationEvent>,
     IIntegrationEventHandler<CommunitySubscriptionCancelledIntegrationEvent>,
     IIntegrationEventHandler<CommunityCheckoutInitiatedIntegrationEvent>,
-    IIntegrationEventHandler<CommunityRenewalReminderDueIntegrationEvent>
+    IIntegrationEventHandler<CommunityRenewalReminderDueIntegrationEvent>,
+    IIntegrationEventHandler<CommunityMagicLinkRequestedIntegrationEvent>
 {
     private readonly ICrmQueryService _crmQueryService;
     private readonly IEmailService _emailService;
@@ -33,7 +34,7 @@ public class CommunityIntegrationEventHandlers :
 
         // 2. Execute Messaging Logic
         var subject = @event.IsFirstPayment ? "Welcome to the Community! 🎉" : "Subscription Renewed Successfully";
-        var body = $"Hi {profile.FullName},\n\nYour community subscription is now active.";
+        var body = $"Hi {profile.FullName},<br><br>Your community subscription is now active.";
 
         await _emailService.SendEmailAsync(profile.Email, subject, body);
     }
@@ -43,7 +44,7 @@ public class CommunityIntegrationEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var body = $"Hi {profile.FullName},\n\nYour subscription has been cancelled. You will retain access until the end of your billing cycle.";
+        var body = $"Hi {profile.FullName},<br><br>Your subscription has been cancelled. You will retain access until the end of your billing cycle.";
         
         await _emailService.SendEmailAsync(profile.Email, "Subscription Cancelled", body);
     }
@@ -60,8 +61,18 @@ public class CommunityIntegrationEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var body = $"Hi {profile.FullName},\n\nThis is a reminder that your community subscription is due for renewal soon.";
+        var body = $"Hi {profile.FullName},<br><br>This is a reminder that your community subscription is due for renewal soon.";
 
         await _emailService.SendEmailAsync(profile.Email, "Action Required: Renewal Due", body);
+    }
+
+    public async Task HandleAsync(CommunityMagicLinkRequestedIntegrationEvent @event)
+    {
+        var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
+        if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
+
+        var body = $"Hi {profile.FullName},<br><br>Click the link below to access your subscriber portal to manage or cancel your subscription. This link expires in 24 hours.<br><br><a href=\"{@event.MagicLinkUrl}\">Access Portal</a><br><br>— Lazuar Support";
+
+        await _emailService.SendEmailAsync(profile.Email, "Your Subscriber Portal Access", body);
     }
 }
