@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Tenant/Infrastructure/TenantDbContext.cs
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
@@ -39,12 +40,20 @@ public class TenantDbContext : PlatformDbContext
         {
             builder.ToTable("OutboxMessages");
             builder.HasKey(x => x.Id);
+
+            // Add high-performance partial index for active outbox messages
+            builder.HasIndex(x => new { x.ProcessedAt, x.OccurredOn })
+                   .HasFilter("\"ProcessedAt\" IS NULL");
         });
 
         modelBuilder.Entity<InboxMessage>(builder =>
         {
             builder.ToTable("InboxMessages");
             builder.HasKey(x => x.Id);
+
+            // Add high-performance partial index for active inbox messages
+            builder.HasIndex(x => new { x.ProcessedAt, x.ReceivedAt })
+                   .HasFilter("\"ProcessedAt\" IS NULL");
         });
     }
 }
