@@ -1,2 +1,23 @@
 <Solution>
+  <Folder Name="/BuildingBlocks/">
+    <Project Path="BuildingBlocks/Domain/BuildingBlocks.Domain.csproj" />
+    <Project Path="BuildingBlocks/Application/BuildingBlocks.Application.csproj" />
+    <Project Path="BuildingBlocks/Infrastructure/BuildingBlocks.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/SharedKernel/">
+    <Project Path="SharedKernel/SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/Modules/">
+    <Folder Name="/Modules/Tenant/">
+      <Project Path="Modules/Tenant/Contracts/Modules.Tenant.Contracts.csproj" />
+      <Project Path="Modules/Tenant/Domain/Modules.Tenant.Domain.csproj" />
+      <Project Path="Modules/Tenant/Application/Modules.Tenant.Application.csproj" />
+      <Project Path="Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj" />
+    </Folder>
+    <Folder Name="/Modules/Messaging/">
+      <Project Path="Modules/Messaging/Contracts/Modules.Messaging.Contracts.csproj" />
+      <Project Path="Modules/Messaging/Application/Modules.Messaging.Application.csproj" />
+      <Project Path="Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj" />
+    </Folder>
+  </Folder>
 </Solution>
