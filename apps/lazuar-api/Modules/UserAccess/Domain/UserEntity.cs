@@ -1,6 +1,6 @@
 using BuildingBlocks.Domain;
 
-namespace SharedKernel;
+namespace Modules.UserAccess.Domain;
 
 public class UserEntity : Entity
 {

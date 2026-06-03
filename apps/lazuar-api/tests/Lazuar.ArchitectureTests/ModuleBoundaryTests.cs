@@ -13,11 +13,12 @@ public class ModuleBoundaryTests
 
     private const string TenantNamespace = "Modules.Tenant";
     private const string MessagingNamespace = "Modules.Messaging";
+    private const string UserAccessNamespace = "Modules.UserAccess";
+    private const string CrmNamespace = "Modules.CRM";
 
     [Test]
     public void TenantModule_ShouldNotDependOn_MessagingModuleInternalLayers()
     {
-        // Tenant can only depend on Messaging.Contracts, never Domain, Application, or Infrastructure
         var result = Types.InAssembly(TenantApplicationAssembly)
             .Should()
             .NotHaveDependencyOnAny(
@@ -33,7 +34,6 @@ public class ModuleBoundaryTests
     [Test]
     public void MessagingModule_ShouldNotDependOn_TenantModuleInternalLayers()
     {
-        // Messaging can only depend on Tenant.Contracts, never Domain, Application, or Infrastructure
         var result = Types.InAssembly(MessagingApplicationAssembly)
             .Should()
             .NotHaveDependencyOnAny(
@@ -58,10 +58,27 @@ public class ModuleBoundaryTests
                 "BuildingBlocks.Infrastructure",
                 "SharedKernel",
                 TenantNamespace,
-                MessagingNamespace
+                MessagingNamespace,
+                UserAccessNamespace,
+                CrmNamespace
             )
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue("Domain projects must remain completely free of application or infrastructure dependencies.");
+    }
+
+    [Test]
+    public void SharedKernel_ShouldNotContain_DomainEntitiesOrAggregateRoots()
+    {
+        var sharedKernelAssembly = typeof(SharedKernel.SharedKernelMarker).Assembly;
+
+        var failingTypes = Types.InAssembly(sharedKernelAssembly)
+            .That()
+            .Inherit(typeof(BuildingBlocks.Domain.Entity))
+            .Or()
+            .ImplementInterface(typeof(BuildingBlocks.Domain.IAggregateRoot))
+            .GetTypes();
+
+        failingTypes.Should().BeEmpty("SharedKernel must remain strictly domain-agnostic and contain zero entities or aggregate roots.");
     }
 }

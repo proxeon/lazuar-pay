@@ -16,6 +16,8 @@
     <ProjectReference Include="..\..\Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\UserAccess\Domain\Modules.UserAccess.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

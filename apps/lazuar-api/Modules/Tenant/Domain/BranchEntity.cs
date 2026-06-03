@@ -1,6 +1,6 @@
 using BuildingBlocks.Domain;
 
-namespace SharedKernel;
+namespace Modules.Tenant.Domain;
 
 public class BranchEntity : Entity
 {

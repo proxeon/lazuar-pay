@@ -21,6 +21,12 @@
       <Project Path="Modules/Messaging/Application/Modules.Messaging.Application.csproj" />
       <Project Path="Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj" />
     </Folder>
+    <Folder Name="/Modules/UserAccess/">
+      <Project Path="Modules/UserAccess/Domain/Modules.UserAccess.Domain.csproj" />
+    </Folder>
+    <Folder Name="/Modules/CRM/">
+      <Project Path="Modules/CRM/Domain/Modules.CRM.Domain.csproj" />
+    </Folder>
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj" />

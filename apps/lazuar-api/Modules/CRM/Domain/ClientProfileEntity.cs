@@ -1,6 +1,6 @@
 using BuildingBlocks.Domain;
 
-namespace SharedKernel;
+namespace Modules.CRM.Domain;
 
 public class ClientProfileEntity : Entity
 {
