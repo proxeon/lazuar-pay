@@ -17,15 +17,31 @@ public record CommunitySubscriptionDto(
     DateTime? CurrentPeriodEnd, DateTime? NextBillingDate, int? DaysOverdue, DateTime CreatedAt
 );
 
+public record CommunityReminderScheduleDto(
+    Guid Id, Guid? PlanId, string? PlanName, Guid TemplateId, string TemplateName, 
+    string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt
+);
+
+public record CommunitySubscriberStatsDto(
+    double Mrr,
+    int ActiveSubscribers,
+    int PastDueSubscribers,
+    int CancelledSubscribers,
+    int NetNewLast30Days,
+    double ChurnRatePercentage,
+    double AverageRevenuePerUser,
+    double TotalRevenueCollected
+);
+
 public interface ICommunityQueryService
 {
     Task<IEnumerable<CommunityPlanDto>> GetAdminPlansAsync(Guid organizationId);
     Task<CommunityPlanDto?> GetAdminPlanByIdAsync(Guid organizationId, Guid planId);
     Task<IEnumerable<CommunityPlanDto>> GetPublicPlansAsync(Guid organizationId);
-    Task<IEnumerable<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId);
     
-    /// <summary>
-    /// Fetches a specific subscription to display in the public subscriber portal.
-    /// </summary>
+    Task<IEnumerable<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId);
     Task<CommunitySubscriptionDto?> GetPortalSubscriptionAsync(Guid organizationId, Guid subscriptionId);
+
+    Task<IEnumerable<CommunityReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId);
+    Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId);
 }

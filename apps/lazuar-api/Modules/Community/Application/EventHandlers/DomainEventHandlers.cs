@@ -9,7 +9,8 @@ public class DomainEventHandlers :
     INotificationHandler<SubscriptionActivatedDomainEvent>,
     INotificationHandler<SubscriptionCancelledDomainEvent>,
     INotificationHandler<CheckoutInitiatedDomainEvent>,
-    INotificationHandler<MagicLinkRequestedDomainEvent>
+    INotificationHandler<MagicLinkRequestedDomainEvent>,
+    INotificationHandler<OneOffReminderRequestedDomainEvent>
 {
     private readonly IEventBus _eventBus;
 
@@ -59,6 +60,20 @@ public class DomainEventHandlers :
                 notification.OrganizationId,
                 notification.ClientProfileId,
                 notification.MagicLinkUrl
+            )
+        );
+    }
+
+    public async Task Handle(OneOffReminderRequestedDomainEvent notification, CancellationToken ct)
+    {
+        await _eventBus.PublishAsync(
+            new CommunityOneOffReminderRequestedIntegrationEvent(
+                notification.OrganizationId,
+                notification.SubscriptionId,
+                notification.ClientProfileId,
+                notification.TemplateId,
+                notification.CustomMessage,
+                notification.Channel
             )
         );
     }

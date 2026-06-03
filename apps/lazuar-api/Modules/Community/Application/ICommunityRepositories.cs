@@ -16,3 +16,11 @@ public interface ICommunitySubscriptionRepository
     void Add(CommunitySubscription subscription);
     Task SaveChangesAsync(CancellationToken ct = default);
 }
+
+public interface ICommunityReminderScheduleRepository
+{
+    Task<CommunityReminderSchedule?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    void Add(CommunityReminderSchedule schedule);
+    void Remove(CommunityReminderSchedule schedule);
+    Task SaveChangesAsync(CancellationToken ct = default);
+}
