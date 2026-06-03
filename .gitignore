@@ -36,3 +36,50 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+
+# ----------------------------------------------------------------------
+# .NET / C# (API & Types)
+# ----------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+*.suo
+
+# ----------------------------------------------------------------------
+# Environment Variables (Secrets)
+# ----------------------------------------------------------------------
+# Ignore all .env files (local config/secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Exception: Keep example files
+!.env.example
+
+# ----------------------------------------------------------------------
+# IDEs & OS
+# ----------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+
+# ----------------------------------------------------------------------
+# Miscellaneous
+# ----------------------------------------------------------------------
+
+plan/

@@ -1,0 +1,57 @@
+# Taskfile.yml (Monorepo Root)
+version: '3'
+
+tasks:
+  infra:up:
+    desc: Start local Docker dependencies (PostgreSQL, MinIO, Mailpit) in the background
+    cmds:
+      - docker-compose up db minio minio-provisioner mailpit -d
+
+  infra:down:
+    desc: Stop and remove local Docker containers
+    cmds:
+      - docker-compose down
+
+  infra:reset:
+    desc: "Stop containers and completely wipe local database/storage volumes (Warning: destructive)"
+    cmds:
+      - docker-compose down -v
+
+  dev:
+    desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
+    deps: [infra:up]
+    cmds:
+      - task: api:db:migrate
+      - pnpm --filter lazuar-api dev
+
+  # ==========================================
+  # .NET API Tasks
+  # ==========================================
+
+  api:build:
+    desc: Build the .NET API solution
+    dir: apps/lazuar-api
+    cmds:
+      - dotnet build Lazuar.slnx
+
+  api:db:migrate:
+    desc: Apply all pending migrations for Tenant and Messaging contexts sequentially
+    dir: apps/lazuar-api/src/Lazuar.Api
+    cmds:
+      - dotnet ef database update --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+
+  api:migrations:init:
+    desc: Generate the initial EF Core migrations for the Tenant and Messaging modules
+    dir: apps/lazuar-api/src/Lazuar.Api
+    cmds:
+      - dotnet ef migrations add InitialTenantSchema --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialMessagingSchema --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+
+  api:migrations:add:
+    desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"
+    dir: apps/lazuar-api/src/Lazuar.Api
+    requires:
+      vars: [MODULE, NAME]
+    cmds:
+      - dotnet ef migrations add {{.NAME}} --context {{.MODULE}}DbContext --project ../../Modules/{{.MODULE}}/Infrastructure/Modules.{{.MODULE}}.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
