@@ -30,7 +30,7 @@ public record FaqItemDto(string Id, string Question, string Answer);
 public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
 {
     private readonly ICommunityPlanRepository _planRepository;
-    private readonly ICommunitySubscriptionRepository _uow; // Reusing for SaveChanges
+    private readonly ICommunitySubscriptionRepository _uow;
 
     public CreatePlanCommandHandler(
         ICommunityPlanRepository planRepository, 
@@ -59,7 +59,8 @@ public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
             request.Interval,
             request.GracePeriodDays,
             request.MaxCapacity,
-            request.DisplayOrder);
+            request.DisplayOrder,
+            request.Methodology);
 
         if (request.Features.Any())
             plan.UpdateFeatures(request.Features);

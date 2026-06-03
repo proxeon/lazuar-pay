@@ -28,7 +28,9 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     private readonly List<PaymentRecord> _paymentRecords = new();
     public IReadOnlyCollection<PaymentRecord> PaymentRecords => _paymentRecords.AsReadOnly();
 
+#pragma warning disable CS8618
     private CommunitySubscription() { } // For EF Core
+#pragma warning restore CS8618
 
     public CommunitySubscription(
         Guid organizationId, Guid clientProfileId, Guid planId, 
@@ -49,7 +51,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
 
     public void InitiateCheckout()
     {
-        // Notify outbox so Messaging module can start the abandoned cart timer
         AddDomainEvent(new CheckoutInitiatedDomainEvent(Id, OrganizationId, ClientProfileId));
     }
 
@@ -108,7 +109,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         var baseDate = NextRenewalDate ?? CurrentPeriodEnd ?? DateTime.UtcNow;
         var newDate = baseDate.AddDays(days);
 
-        // Treat extending grace period as returning to active temporarily
         if (Status != "ACTIVE")
         {
             CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));

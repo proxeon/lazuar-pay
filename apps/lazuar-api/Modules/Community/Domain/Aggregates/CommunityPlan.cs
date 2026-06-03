@@ -36,12 +36,15 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
+#pragma warning disable CS8618
     private CommunityPlan() { } // For EF Core
+#pragma warning restore CS8618
 
     public CommunityPlan(
         Guid organizationId, string slug, string name, string audience, 
         string shortDescription, string longDescription, decimal price, 
-        string interval, int gracePeriodDays, int? maxCapacity, int displayOrder)
+        string interval, int gracePeriodDays, int? maxCapacity, int displayOrder, 
+        string methodology)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
 
@@ -57,6 +60,7 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
         GracePeriodDays = gracePeriodDays;
         MaxCapacity = maxCapacity;
         DisplayOrder = displayOrder;
+        Methodology = methodology;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
@@ -65,7 +69,7 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public void UpdateDetails(
         string name, string audience, string shortDesc, string longDesc, 
         decimal price, string interval, int gracePeriodDays, int? maxCapacity, 
-        int displayOrder, bool isActive)
+        int displayOrder, bool isActive, string methodology) // <-- Added methodology here
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
 
@@ -79,6 +83,7 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
         MaxCapacity = maxCapacity;
         DisplayOrder = displayOrder;
         IsActive = isActive;
+        Methodology = methodology;
         UpdatedAt = DateTime.UtcNow;
     }
 

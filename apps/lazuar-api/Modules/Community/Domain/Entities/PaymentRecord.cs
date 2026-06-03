@@ -22,7 +22,9 @@ public class PaymentRecord : Entity
     public string Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
     private PaymentRecord() { } // For EF Core
+#pragma warning restore CS8618
 
     internal PaymentRecord(
         Guid subscriptionId, decimal amount, string currency, 

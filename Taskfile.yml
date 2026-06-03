@@ -28,25 +28,34 @@ tasks:
   # .NET API Tasks
   # ==========================================
 
+  api:restore:
+    desc: Restore the .NET API solution dependencies
+    dir: apps/lazuar-api
+    cmds:
+      - dotnet restore Lazuar.slnx
+
   api:build:
     desc: Build the .NET API solution
+    deps: [api:restore]
     dir: apps/lazuar-api
     cmds:
       - dotnet build Lazuar.slnx
 
   api:db:migrate:
-    desc: Apply all pending migrations for Tenant and Messaging contexts sequentially
+    desc: Apply all pending migrations for all modular contexts sequentially
     dir: apps/lazuar-api/src/Lazuar.Api
     cmds:
       - dotnet ef database update --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:init:
-    desc: Generate the initial EF Core migrations for the Tenant and Messaging modules
+    desc: Generate the initial EF Core migrations for all core modules
     dir: apps/lazuar-api/src/Lazuar.Api
     cmds:
       - dotnet ef migrations add InitialTenantSchema --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialMessagingSchema --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialCommunitySchema --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:
     desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"

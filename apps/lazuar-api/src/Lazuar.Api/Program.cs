@@ -6,6 +6,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Tenant.Infrastructure;
 using Modules.Messaging.Infrastructure;
+using Modules.Community.Infrastructure;
 using Lazuar.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,10 +34,13 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
 });
 
+// Register Module Services
 builder.Services.AddTenantModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
+builder.Services.AddCommunityModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -44,11 +48,17 @@ var app = builder.Build();
 // migration invocation scope and Introduce Automated DB Migration CLI Task
 
 app.UseExceptionHandler();
+
+// Register Cross-Module Event Subscriptions
 app.UseMessagingSubscriptions();
+app.UseCommunitySubscriptions();
 
 var apiGroup = app.MapGroup("/api/v1");
+
+// Map Minimal API Endpoints
 apiGroup.MapTenantEndpoints();
 apiGroup.MapMessagingEndpoints();
+apiGroup.MapCommunityEndpoints();
 
 app.Run();
 
