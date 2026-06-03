@@ -2,7 +2,7 @@ using BuildingBlocks.Domain;
 
 namespace Modules.Tenant.Domain;
 
-public class BranchEntity : Entity
+public class BranchEntity : Entity, IMustHaveTenant
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }

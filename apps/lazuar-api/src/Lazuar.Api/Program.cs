@@ -7,9 +7,7 @@ using BuildingBlocks.Infrastructure;
 using Modules.Tenant.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Lazuar.Api;
-// Add these two usings for the database creator
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,27 +48,15 @@ builder.Services.AddMessagingModule(builder.Configuration);
 var app = builder.Build();
 
 // ==========================================
-// Auto-create Database Tables on Startup (Multi-DbContext Support)
+// Auto-create Database Tables on Startup via Migrations
 // ==========================================
 using (var scope = app.Services.CreateScope())
 {
-    // 1. EnsureCreated() works for the first context. It creates the physical DB and Tenant tables.
     var tenantDb = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
-    tenantDb.Database.EnsureCreated();
+    await tenantDb.Database.MigrateAsync();
 
-    // 2. For subsequent contexts, we must force table creation.
     var messagingDb = scope.ServiceProvider.GetRequiredService<MessagingDbContext>();
-    var messagingCreator = messagingDb.GetService<IRelationalDatabaseCreator>();
-    
-    try
-    {
-        messagingCreator.CreateTables();
-    }
-    catch 
-    {
-        // Suppress error on subsequent hot-reloads where the tables already exist.
-        // Postgres will throw "42P07: relation already exists" which is safe to ignore here.
-    }
+    await messagingDb.Database.MigrateAsync();
 }
 // ==========================================
 

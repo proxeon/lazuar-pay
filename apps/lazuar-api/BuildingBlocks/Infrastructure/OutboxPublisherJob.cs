@@ -30,15 +30,12 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                 var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
                 var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
 
-                // 1. Resolve table metadata dynamically from the active DbContext EF model
                 var entityType = db.Model.FindEntityType(typeof(OutboxMessage));
                 var schema = entityType?.GetSchema() ?? "public";
                 var tableName = entityType?.GetTableName() ?? "OutboxMessages";
 
-                // 2. Open an explicit transaction to lock the records during processing
                 await using var transaction = await db.Database.BeginTransactionAsync(stoppingToken);
 
-                // 3. Query PostgreSQL with pessimistic locking (FOR UPDATE SKIP LOCKED)
                 var sql = $"""
                     SELECT * FROM "{schema}"."{tableName}"
                     WHERE "ProcessedAt" IS NULL
@@ -57,19 +54,23 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                     {
                         try
                         {
-                            var eventType = Type.GetType(message.Type);
-                            if (eventType == null)
+                            var typeOfEvent = Type.GetType(message.Type);
+                            if (typeOfEvent == null)
                             {
                                 throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved.");
                             }
 
-                            var integrationEvent = JsonSerializer.Deserialize(message.Data, eventType);
+                            var integrationEvent = JsonSerializer.Deserialize(message.Data, typeOfEvent);
+                            
                             if (integrationEvent is IIntegrationEvent @event)
                             {
                                 await eventBus.PublishAsync(@event);
+                                message.ProcessedAt = DateTime.UtcNow;
                             }
-
-                            message.ProcessedAt = DateTime.UtcNow;
+                            else
+                            {
+                                throw new InvalidOperationException($"Message {message.Id} is not a valid IIntegrationEvent. Domain Events should not be serialized to the Outbox.");
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -78,7 +79,6 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                         }
                     }
 
-                    // 4. Save modifications and commit the transaction to release database locks
                     await db.SaveChangesAsync(stoppingToken);
                     await transaction.CommitAsync(stoppingToken);
                 }

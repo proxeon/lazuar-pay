@@ -1,4 +1,5 @@
 // apps/lazuar-api/Modules/Tenant/Infrastructure/TenantDbContext.cs
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
@@ -13,8 +14,8 @@ public class TenantDbContext : PlatformDbContext
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
-    public TenantDbContext(DbContextOptions<TenantDbContext> options, IExecutionContextAccessor executionContext) 
-        : base(options, executionContext)
+    public TenantDbContext(DbContextOptions<TenantDbContext> options, IExecutionContextAccessor executionContext, IMediator mediator) 
+        : base(options, executionContext, mediator)
     {
     }
 

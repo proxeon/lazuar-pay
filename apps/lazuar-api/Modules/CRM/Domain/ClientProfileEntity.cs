@@ -2,7 +2,7 @@ using BuildingBlocks.Domain;
 
 namespace Modules.CRM.Domain;
 
-public class ClientProfileEntity : Entity
+public class ClientProfileEntity : Entity, IMustHaveTenant
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }

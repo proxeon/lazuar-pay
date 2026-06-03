@@ -1,4 +1,5 @@
 // apps/lazuar-api/Modules/Messaging/Infrastructure/MessagingDbContext.cs
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
@@ -12,8 +13,8 @@ public class MessagingDbContext : PlatformDbContext
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
-    public MessagingDbContext(DbContextOptions<MessagingDbContext> options, IExecutionContextAccessor executionContext) 
-        : base(options, executionContext)
+    public MessagingDbContext(DbContextOptions<MessagingDbContext> options, IExecutionContextAccessor executionContext, IMediator mediator) 
+        : base(options, executionContext, mediator)
     {
     }
 
