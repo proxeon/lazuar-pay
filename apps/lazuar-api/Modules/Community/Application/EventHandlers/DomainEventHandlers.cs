@@ -1,6 +1,5 @@
 using BuildingBlocks.Application;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 using Modules.Community.Contracts;
 using Modules.Community.Domain.Events;
 
@@ -17,26 +16,18 @@ public class DomainEventHandlers :
     private readonly IEventBus _eventBus;
     private readonly ICommunitySubscriptionRepository _subscriptionRepository;
     private readonly ICommunityPlanRepository _planRepository;
-    private readonly IConfiguration _configuration;
+    private readonly ICommunityLinkService _linkService;
 
     public DomainEventHandlers(
         IEventBus eventBus,
         ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository,
-        IConfiguration configuration)
+        ICommunityLinkService linkService)
     {
         _eventBus = eventBus;
         _subscriptionRepository = subscriptionRepository;
         _planRepository = planRepository;
-        _configuration = configuration;
-    }
-
-    private string GetCommunityBaseUrl()
-    {
-        var apiBaseUrl = _configuration["App:ApiBaseUrl"] ?? "";
-        return apiBaseUrl.Contains("lazuar.com") 
-            ? "https://community.lazuar.com" 
-            : "http://localhost:3020";
+        _linkService = linkService;
     }
 
     public async Task Handle(SubscriptionActivatedDomainEvent notification, CancellationToken ct)
@@ -46,7 +37,6 @@ public class DomainEventHandlers :
 
         if (sub == null || plan == null) return;
 
-        // Grab the most recent payment record amount, fallback to plan price
         var latestPayment = sub.PaymentRecords.OrderByDescending(p => p.CreatedAt).FirstOrDefault();
         var amountPaid = latestPayment?.Amount ?? plan.Price;
 
@@ -89,7 +79,7 @@ public class DomainEventHandlers :
 
         if (sub == null || plan == null) return;
 
-        var baseUrl = GetCommunityBaseUrl();
+        var baseUrl = _linkService.GetCommunityBaseUrl();
         var renewalLink = sub.IsReminderOnly 
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
             : $"{baseUrl}/{plan.Slug}/checkout";

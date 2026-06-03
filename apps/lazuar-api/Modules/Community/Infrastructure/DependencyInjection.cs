@@ -40,6 +40,7 @@ public static class DependencyInjection
         
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
+        services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
 
         // Background Workers
         services.AddHostedService<CommunityInboxConsumerJob>();
