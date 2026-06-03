@@ -1,6 +1,7 @@
 using BuildingBlocks.Application;
 using MediatR;
 using Modules.Payments.Contracts.Queries;
+using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.Commands;
 
@@ -17,15 +18,18 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
 {
     private readonly ICommunitySubscriptionRepository _repository;
     private readonly ICommunityPlanRepository _planRepository;
+    private readonly ICrmQueryService _crmQueryService;
     private readonly IMediator _mediator;
 
     public InitiateSubscriptionCheckoutCommandHandler(
         ICommunitySubscriptionRepository repository,
         ICommunityPlanRepository planRepository,
+        ICrmQueryService crmQueryService,
         IMediator mediator)
     {
         _repository = repository;
         _planRepository = planRepository;
+        _crmQueryService = crmQueryService;
         _mediator = mediator;
     }
 
@@ -44,7 +48,11 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         subscription.InitiateCheckout();
         await _repository.SaveChangesAsync(ct);
 
-        // 2. Cross-Module Query to get the Checkout URL synchronously
+        // 2. Fetch Customer Data via CRM Read Model (Cross-module query without DB Join)
+        var customerProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
+        var customerEmail = customerProfile?.Email ?? "";
+
+        // 3. Cross-Module Query to get the Checkout URL synchronously
         var metadata = new Dictionary<string, string>
         {
             ["type"] = "community_subscription",
@@ -54,7 +62,9 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         var query = new GenerateCheckoutSessionQuery(
             request.OrganizationId,
             plan.Price,
-            "MYR", // Currency is hardcoded to MYR for now, could be fetched from tenant config
+            "MYR", // Currency can be hardcoded or fetched from Org settings
+            plan.Name, // Pre-fill Product Name
+            customerEmail, // Pre-fill Customer Email
             request.SuccessUrl,
             request.CancelUrl,
             metadata);

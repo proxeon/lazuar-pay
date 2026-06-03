@@ -11,6 +11,8 @@ public record GenerateCheckoutSessionQuery(
     Guid TenantId,
     decimal Amount,
     string Currency,
+    string ProductName,
+    string CustomerEmail,
     string SuccessUrl,
     string CancelUrl,
     Dictionary<string, string> Metadata) : IQuery<string>;

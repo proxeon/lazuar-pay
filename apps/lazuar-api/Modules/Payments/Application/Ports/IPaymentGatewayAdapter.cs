@@ -21,6 +21,8 @@ public interface IPaymentGatewayAdapter
         Guid tenantId, 
         decimal amount, 
         string currency, 
+        string productName,
+        string customerEmail,
         string successUrl, 
         string cancelUrl, 
         Dictionary<string, string> metadata);

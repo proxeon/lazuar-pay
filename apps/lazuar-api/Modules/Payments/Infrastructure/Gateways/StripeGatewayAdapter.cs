@@ -18,6 +18,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
     public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency, 
+        string productName, string customerEmail,
         string successUrl, string cancelUrl, Dictionary<string, string> metadata)
     {
         try
@@ -31,6 +32,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             var options = new SessionCreateOptions
             {
                 Mode = "payment",
+                CustomerEmail = !string.IsNullOrWhiteSpace(customerEmail) ? customerEmail : null,
                 LineItems = new List<SessionLineItemOptions>
                 {
                     new SessionLineItemOptions
@@ -41,7 +43,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                             UnitAmountDecimal = amount * 100, // Convert to cents
                             ProductData = new SessionLineItemPriceDataProductDataOptions
                             {
-                                Name = "Lazuar Payment"
+                                Name = string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName
                             },
                         },
                         Quantity = 1,

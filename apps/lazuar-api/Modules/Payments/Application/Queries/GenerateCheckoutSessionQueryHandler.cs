@@ -33,6 +33,8 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
             request.TenantId,
             request.Amount,
             request.Currency,
+            request.ProductName,
+            request.CustomerEmail,
             request.SuccessUrl,
             request.CancelUrl,
             request.Metadata);
