@@ -7,9 +7,9 @@ namespace Modules.Tenant.Infrastructure;
 
 public class TenantQueryService : ITenantQueryService
 {
-    private readonly DbContext _dbContext;
+    private readonly TenantDbContext _dbContext;
 
-    public TenantQueryService(DbContext dbContext)
+    public TenantQueryService(TenantDbContext dbContext)
     {
         _dbContext = dbContext;
     }

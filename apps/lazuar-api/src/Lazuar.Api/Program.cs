@@ -36,9 +36,9 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
 });
 
-// Register Modules
-builder.Services.AddTenantModule();
-builder.Services.AddMessagingModule();
+// Register Modules with isolated configuration contexts
+builder.Services.AddTenantModule(builder.Configuration);
+builder.Services.AddMessagingModule(builder.Configuration);
 
 var app = builder.Build();
 
