@@ -1,0 +1,93 @@
+# docker-compose.yml (Monorepo Root)
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: lazuar-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lazuar_mvp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lazuar_mvp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lazuar-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: lazuar-storage
+    ports:
+      - "9000:9000"     # S3 API Port
+      - "9001:9001"     # MinIO Web Console Port
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadminpassword
+    entrypoint: sh -c "minio server /data --console-address :9001"
+    volumes:
+      - miniodata:/data
+    networks:
+      - lazuar-network
+
+  # Background job to auto-provision your Cloudflare R2 bucket locally on MinIO startup
+  minio-provisioner:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      sh -c "
+      sleep 2;
+      mc alias set localminio http://minio:9000 minioadmin minioadminpassword;
+      mc mb --ignore-existing localminio/lazuar-media;
+      mc anonymous set public localminio/lazuar-media;
+      exit 0;
+      "
+    networks:
+      - lazuar-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: lazuar-mail
+    ports:
+      - "1025:1025"     # SMTP Server Port
+      - "8025:8025"     # Web Dashboard UI Port
+    networks:
+      - lazuar-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/lazuar-api/Dockerfile
+    container_name: lazuar-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development # Switch to Dev mode inside container
+      - ConnectionStrings__TenantConnection=Host=db;Port=5432;Database=lazuar_mvp;Username=postgres;Password=postgres;Maximum Pool Size=50;
+      - ConnectionStrings__MessagingConnection=Host=db;Port=5432;Database=lazuar_mvp;Username=postgres;Password=postgres;Maximum Pool Size=20;
+      - R2__AccountId=
+      - R2__AccessKey=minioadmin
+      - R2__SecretKey=minioadminpassword
+      - R2__BucketName=lazuar-media
+      - R2__ServiceUrl=http://minio:9000
+      - R2__PublicUrl=http://localhost:9000/lazuar-media
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - lazuar-network
+
+volumes:
+  pgdata:
+  miniodata:
+
+networks:
+  lazuar-network:
+    name: lazuar-network

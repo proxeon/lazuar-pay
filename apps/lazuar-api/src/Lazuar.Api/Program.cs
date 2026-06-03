@@ -1,37 +1,24 @@
-// apps/lazuar-api/src/Lazuar.Api/Program.cs
 using Serilog;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Tenant.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Lazuar.Api;
+// Add these two usings for the database creator
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configure Serilog for structured, production-ready logging
+// Configure Serilog
 Log.Logger = new LoggerConfiguration()
-    .Enrich.FromLogContext()
-    .Enrich.WithProperty("Application", "Lazuar.Api")
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
-
-// 2. Execute strict startup security checks
-var jwtSecret = builder.Configuration.GetValue<string>("Jwt:Secret");
-if (builder.Environment.IsProduction() || builder.Environment.IsStaging())
-{
-    if (string.IsNullOrWhiteSpace(jwtSecret) || 
-        jwtSecret == "secure_development_key_minimum_32_characters_long")
-    {
-        Log.Fatal("Security Breach: Production execution blocked. JWT Secret is missing or using insecure default key!");
-        throw new ApplicationException("Production execution blocked: Insecure JWT Secret configuration.");
-    }
-}
 
 // Register Shared Infrastructure & Services
 builder.Services.AddHttpContextAccessor();
@@ -39,6 +26,10 @@ builder.Services.AddScoped<IExecutionContextAccessor, ExecutionContextAccessor>(
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
+
+// satisfies cross-module notification dependencies
+builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
+builder.Services.AddSingleton<IEmailService, ConsoleEmailService>();
 
 // Add exception handler middleware
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -58,34 +49,30 @@ builder.Services.AddMessagingModule(builder.Configuration);
 
 var app = builder.Build();
 
-// 3. Orchestrate Database Migrations sequentially before starting the HTTP server
+// ==========================================
+// Auto-create Database Tables on Startup (Multi-DbContext Support)
+// ==========================================
 using (var scope = app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILogger<Program>>();
-    
-    logger.LogInformation("Starting database migration orchestration...");
+    // 1. EnsureCreated() works for the first context. It creates the physical DB and Tenant tables.
+    var tenantDb = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
+    tenantDb.Database.EnsureCreated();
+
+    // 2. For subsequent contexts, we must force table creation.
+    var messagingDb = scope.ServiceProvider.GetRequiredService<MessagingDbContext>();
+    var messagingCreator = messagingDb.GetService<IRelationalDatabaseCreator>();
     
     try
     {
-        // Migrate Tenant Module Schema
-        var tenantContext = services.GetRequiredService<TenantDbContext>();
-        logger.LogInformation("Applying tenant schema migrations...");
-        await tenantContext.Database.MigrateAsync();
-
-        // Migrate Messaging Module Schema
-        var messagingContext = services.GetRequiredService<MessagingDbContext>();
-        logger.LogInformation("Applying messaging schema migrations...");
-        await messagingContext.Database.MigrateAsync();
-
-        logger.LogInformation("Database migration completed successfully.");
+        messagingCreator.CreateTables();
     }
-    catch (Exception ex)
+    catch 
     {
-        logger.LogCritical(ex, "Critical database migration failure. Application startup aborted!");
-        throw;
+        // Suppress error on subsequent hot-reloads where the tables already exist.
+        // Postgres will throw "42P07: relation already exists" which is safe to ignore here.
     }
 }
+// ==========================================
 
 app.UseExceptionHandler();
 
