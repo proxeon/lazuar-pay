@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="src/Lazuar.Api/Lazuar.Api.csproj" />
   <Folder Name="/BuildingBlocks/">
     <Project Path="BuildingBlocks/Domain/BuildingBlocks.Domain.csproj" />
     <Project Path="BuildingBlocks/Application/BuildingBlocks.Application.csproj" />
