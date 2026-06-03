@@ -17,6 +17,11 @@ tasks:
     cmds:
       - docker-compose down -v
 
+  infra:logs:
+    desc: View and follow logs from local Docker infrastructure containers
+    cmds:
+      - docker-compose logs -f
+
   dev:
     desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
     deps: [infra:up]
