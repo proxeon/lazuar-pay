@@ -10,6 +10,7 @@ using Modules.Tenant.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
+using Modules.Payments.Infrastructure;
 using Lazuar.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,6 +56,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
 });
 
 // Register Module Services
@@ -62,6 +64,7 @@ builder.Services.AddTenantModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddCrmModule(builder.Configuration);
+builder.Services.AddPaymentsModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -80,6 +83,7 @@ var apiGroup = app.MapGroup("/api/v1");
 apiGroup.MapTenantEndpoints();
 apiGroup.MapMessagingEndpoints();
 apiGroup.MapCommunityEndpoints();
+apiGroup.MapPaymentsEndpoints();
 
 app.Run();
 
