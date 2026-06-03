@@ -4,28 +4,37 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Building Blocks & Shared Kernel -->
     <ProjectReference Include="..\..\BuildingBlocks\Domain\BuildingBlocks.Domain.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\..\SharedKernel\SharedKernel.csproj" />
     
+    <!-- Tenant Module -->
     <ProjectReference Include="..\..\Modules\Tenant\Contracts\Modules.Tenant.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Tenant\Domain\Modules.Tenant.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Tenant\Application\Modules.Tenant.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Tenant\Infrastructure\Modules.Tenant.Infrastructure.csproj" />
     
+    <!-- Messaging Module -->
     <ProjectReference Include="..\..\Modules\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
     
+    <!-- Community Module -->
     <ProjectReference Include="..\..\Modules\Community\Contracts\Modules.Community.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Community\Domain\Modules.Community.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Community\Application\Modules.Community.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Community\Infrastructure\Modules.Community.Infrastructure.csproj" />
 
-    <ProjectReference Include="..\..\Modules\UserAccess\Domain\Modules.UserAccess.Domain.csproj" />
+    <!-- CRM Module -->
+    <ProjectReference Include="..\..\Modules\CRM\Contracts\Modules.CRM.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\CRM\Infrastructure\Modules.CRM.Infrastructure.csproj" />
+
+    <!-- UserAccess Module -->
+    <ProjectReference Include="..\..\Modules\UserAccess\Domain\Modules.UserAccess.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

@@ -7,6 +7,7 @@ using BuildingBlocks.Infrastructure;
 using Modules.Tenant.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Modules.Community.Infrastructure;
+using Modules.CRM.Infrastructure;
 using Lazuar.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,6 +42,7 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddTenantModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
+builder.Services.AddCrmModule(builder.Configuration);
 
 var app = builder.Build();
 

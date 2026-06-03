@@ -1,11 +1,12 @@
-// apps/lazuar-api/Modules/Messaging/Infrastructure/DependencyInjection.cs
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using Modules.Messaging.Application;
+using Modules.Messaging.Application.EventHandlers;
 using Modules.Tenant.Contracts;
+using Modules.Community.Contracts;
 
 namespace Modules.Messaging.Infrastructure;
 
@@ -13,7 +14,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddMessagingModule(this IServiceCollection services, IConfiguration configuration)
     {
-        // Bind to Messaging-specific connection pool
         var connectionString = configuration.GetConnectionString("MessagingConnection");
 
         services.AddDbContext<MessagingDbContext>(options =>
@@ -24,8 +24,10 @@ public static class DependencyInjection
 
         services.AddScoped<ITenantReplicaRepository, TenantReplicaRepository>();
 
+        // Register Inbox Handlers
         services.AddTransient<TenantCreatedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
+        services.AddTransient<CommunityIntegrationEventHandlers>();
 
         services.AddHostedService<MessagingOutboxPublisherJob>();
         services.AddHostedService<MessagingInboxConsumerJob>();
@@ -39,6 +41,11 @@ public static class DependencyInjection
         
         eventBus.Subscribe<TenantCreatedIntegrationEvent, TenantCreatedIntegrationEventHandler>();
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();
+
+        eventBus.Subscribe<CommunitySubscriptionActivatedIntegrationEvent, CommunityIntegrationEventHandlers>();
+        eventBus.Subscribe<CommunitySubscriptionCancelledIntegrationEvent, CommunityIntegrationEventHandlers>();
+        eventBus.Subscribe<CommunityCheckoutInitiatedIntegrationEvent, CommunityIntegrationEventHandlers>();
+        eventBus.Subscribe<CommunityRenewalReminderDueIntegrationEvent, CommunityIntegrationEventHandlers>();
 
         return app;
     }
