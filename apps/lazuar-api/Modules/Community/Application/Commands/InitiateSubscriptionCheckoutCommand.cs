@@ -54,7 +54,7 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         var query = new GenerateCheckoutSessionQuery(
             request.OrganizationId,
             plan.Price,
-            "MYR", // Currency can be hardcoded or fetched from Org settings
+            "MYR", // Currency is hardcoded to MYR for now, could be fetched from tenant config
             request.SuccessUrl,
             request.CancelUrl,
             metadata);
