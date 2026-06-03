@@ -1,26 +1,25 @@
 using System.Text.Json;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
-using Modules.Messaging.Infrastructure;
 using Modules.Tenant.Contracts;
 
-namespace Modules.Messaging.Application;
+namespace Modules.Messaging.Infrastructure;
 
-public class TenantUpdatedIntegrationEventHandler : IIntegrationEventHandler<TenantUpdatedIntegrationEvent>
+public class TenantCreatedIntegrationEventHandler : IIntegrationEventHandler<TenantCreatedIntegrationEvent>
 {
     private readonly MessagingDbContext _context;
 
-    public TenantUpdatedIntegrationEventHandler(MessagingDbContext context)
+    public TenantCreatedIntegrationEventHandler(MessagingDbContext context)
     {
         _context = context;
     }
 
-    public async Task HandleAsync(TenantUpdatedIntegrationEvent @event)
+    public async Task HandleAsync(TenantCreatedIntegrationEvent @event)
     {
         var inboxMessage = new InboxMessage
         {
             Id = @event.Id,
-            Type = typeof(TenantUpdatedIntegrationEvent).AssemblyQualifiedName ?? typeof(TenantUpdatedIntegrationEvent).FullName!,
+            Type = typeof(TenantCreatedIntegrationEvent).AssemblyQualifiedName ?? typeof(TenantCreatedIntegrationEvent).FullName!,
             Data = JsonSerializer.Serialize(@event)
         };
 
