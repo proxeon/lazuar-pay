@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7-labs
+
 # ==========================================
 # 1. Build Stage
 # ==========================================
@@ -10,27 +12,9 @@ COPY ["apps/lazuar-api/Directory.Packages.props", "apps/lazuar-api/"]
 COPY ["apps/lazuar-api/global.json", "apps/lazuar-api/"]
 COPY ["apps/lazuar-api/Lazuar.slnx", "apps/lazuar-api/"]
 
-# Copy project files keeping folder structures for efficient cache restoration
-COPY ["apps/lazuar-api/BuildingBlocks/Domain/BuildingBlocks.Domain.csproj", "apps/lazuar-api/BuildingBlocks/Domain/"]
-COPY ["apps/lazuar-api/BuildingBlocks/Application/BuildingBlocks.Application.csproj", "apps/lazuar-api/BuildingBlocks/Application/"]
-COPY ["apps/lazuar-api/BuildingBlocks/Infrastructure/BuildingBlocks.Infrastructure.csproj", "apps/lazuar-api/BuildingBlocks/Infrastructure/"]
-
-COPY ["apps/lazuar-api/SharedKernel/SharedKernel.csproj", "apps/lazuar-api/SharedKernel/"]
-
-COPY ["apps/lazuar-api/Modules/Tenant/Contracts/Modules.Tenant.Contracts.csproj", "apps/lazuar-api/Modules/Tenant/Contracts/"]
-COPY ["apps/lazuar-api/Modules/Tenant/Domain/Modules.Tenant.Domain.csproj", "apps/lazuar-api/Modules/Tenant/Domain/"]
-COPY ["apps/lazuar-api/Modules/Tenant/Application/Modules.Tenant.Application.csproj", "apps/lazuar-api/Modules/Tenant/Application/"]
-COPY ["apps/lazuar-api/Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj", "apps/lazuar-api/Modules/Tenant/Infrastructure/"]
-
-COPY ["apps/lazuar-api/Modules/Messaging/Contracts/Modules.Messaging.Contracts.csproj", "apps/lazuar-api/Modules/Messaging/Contracts/"]
-COPY ["apps/lazuar-api/Modules/Messaging/Domain/Modules.Messaging.Domain.csproj", "apps/lazuar-api/Modules/Messaging/Domain/"]
-COPY ["apps/lazuar-api/Modules/Messaging/Application/Modules.Messaging.Application.csproj", "apps/lazuar-api/Modules/Messaging/Application/"]
-COPY ["apps/lazuar-api/Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj", "apps/lazuar-api/Modules/Messaging/Infrastructure/"]
-
-COPY ["apps/lazuar-api/Modules/UserAccess/Domain/Modules.UserAccess.Domain.csproj", "apps/lazuar-api/Modules/UserAccess/Domain/"]
-COPY ["apps/lazuar-api/Modules/CRM/Domain/Modules.CRM.Domain.csproj", "apps/lazuar-api/Modules/CRM/Domain/"]
-
-COPY ["apps/lazuar-api/src/Lazuar.Api/Lazuar.Api.csproj", "apps/lazuar-api/src/Lazuar.Api/"]
+# Dynamically copy ALL .csproj files while preserving their folder structure!
+# This eliminates the need to manually update the Dockerfile when adding new modules.
+COPY --parents apps/lazuar-api/**/*.csproj ./
 
 # Restore dependencies
 RUN dotnet restore "apps/lazuar-api/src/Lazuar.Api/Lazuar.Api.csproj"

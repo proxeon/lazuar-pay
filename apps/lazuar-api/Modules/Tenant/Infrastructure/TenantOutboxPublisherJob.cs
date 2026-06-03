@@ -6,8 +6,8 @@ namespace Modules.Tenant.Infrastructure;
 
 public class TenantOutboxPublisherJob : OutboxPublisherJob<TenantDbContext>
 {
-    public TenantOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<TenantOutboxPublisherJob> logger) 
-        : base(scopeFactory, logger)
+    public TenantOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<TenantOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger) 
+        : base(scopeFactory, logger, jobTrigger)
     {
     }
 }

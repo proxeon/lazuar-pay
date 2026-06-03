@@ -6,8 +6,8 @@ namespace Modules.Messaging.Infrastructure;
 
 public class MessagingOutboxPublisherJob : OutboxPublisherJob<MessagingDbContext>
 {
-    public MessagingOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<MessagingOutboxPublisherJob> logger) 
-        : base(scopeFactory, logger)
+    public MessagingOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<MessagingOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger) 
+        : base(scopeFactory, logger, jobTrigger)
     {
     }
 }

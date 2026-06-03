@@ -1,4 +1,3 @@
-// apps/lazuar-api/BuildingBlocks/Infrastructure/InboxConsumerJob.cs
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -12,33 +11,34 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger _logger;
+    private readonly DatabaseJobTrigger _jobTrigger;
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(5);
 
-    protected InboxConsumerJob(IServiceScopeFactory scopeFactory, ILogger logger)
+    protected InboxConsumerJob(IServiceScopeFactory scopeFactory, ILogger logger, DatabaseJobTrigger jobTrigger)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _jobTrigger = jobTrigger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            int messagesProcessed = 0;
+
             try
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
                 var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-                // 1. Resolve table metadata dynamically from the active DbContext EF model
                 var entityType = db.Model.FindEntityType(typeof(InboxMessage));
                 var schema = entityType?.GetSchema() ?? "public";
                 var tableName = entityType?.GetTableName() ?? "InboxMessages";
 
-                // 2. Open an explicit transaction
                 await using var transaction = await db.Database.BeginTransactionAsync(stoppingToken);
 
-                // 3. Query PostgreSQL with pessimistic locking (FOR UPDATE SKIP LOCKED)
                 var sql = $"""
                     SELECT * FROM "{schema}"."{tableName}"
                     WHERE "ProcessedAt" IS NULL
@@ -51,17 +51,16 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                     .FromSqlRaw(sql)
                     .ToListAsync(stoppingToken);
 
-                if (messages.Count > 0)
+                messagesProcessed = messages.Count;
+
+                if (messagesProcessed > 0)
                 {
                     foreach (var message in messages)
                     {
                         try
                         {
                             var eventType = Type.GetType(message.Type);
-                            if (eventType == null)
-                            {
-                                throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved.");
-                            }
+                            if (eventType == null) throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved.");
 
                             var inboxEvent = JsonSerializer.Deserialize(message.Data, eventType);
                             if (inboxEvent is INotification notification)
@@ -78,7 +77,6 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                         }
                     }
 
-                    // 4. Save modifications and commit transaction
                     await db.SaveChangesAsync(stoppingToken);
                     await transaction.CommitAsync(stoppingToken);
                 }
@@ -88,7 +86,20 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                 _logger.LogError(ex, "Error occurred executing inbox background worker.");
             }
 
-            await Task.Delay(_pollInterval, stoppingToken);
+            // Phase 2 Optimization:
+            if (messagesProcessed == 20)
+            {
+                await Task.Yield();
+                continue;
+            }
+
+            try
+            {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                cts.CancelAfter(_pollInterval);
+                await _jobTrigger.WaitAsync(cts.Token);
+            }
+            catch (OperationCanceledException) { }
         }
     }
 }

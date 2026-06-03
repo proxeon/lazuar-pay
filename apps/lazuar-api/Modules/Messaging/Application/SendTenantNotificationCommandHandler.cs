@@ -4,7 +4,7 @@ namespace Modules.Messaging.Application;
 
 public record SendTenantNotificationCommand(Guid TenantId, string Message) : ICommand
 {
-    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid Id { get; init; } = Guid.CreateVersion7();
 }
 
 public class SendTenantNotificationCommandHandler : ICommandHandler<SendTenantNotificationCommand>

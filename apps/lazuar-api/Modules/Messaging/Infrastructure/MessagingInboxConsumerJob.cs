@@ -6,8 +6,8 @@ namespace Modules.Messaging.Infrastructure;
 
 public class MessagingInboxConsumerJob : InboxConsumerJob<MessagingDbContext>
 {
-    public MessagingInboxConsumerJob(IServiceScopeFactory scopeFactory, ILogger<MessagingInboxConsumerJob> logger) 
-        : base(scopeFactory, logger)
+    public MessagingInboxConsumerJob(IServiceScopeFactory scopeFactory, ILogger<MessagingInboxConsumerJob> logger, DatabaseJobTrigger jobTrigger) 
+        : base(scopeFactory, logger, jobTrigger)
     {
     }
 }

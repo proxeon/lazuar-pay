@@ -81,4 +81,19 @@ public class ModuleBoundaryTests
 
         failingTypes.Should().BeEmpty("SharedKernel must remain strictly domain-agnostic and contain zero entities or aggregate roots.");
     }
+
+    [Test]
+    public void DomainEvents_ShouldNotInherit_IntegrationEvents()
+    {
+        var domainAssembly = typeof(BuildingBlocks.Domain.Entity).Assembly;
+        
+        var result = Types.InAssembly(domainAssembly)
+            .That()
+            .ImplementInterface(typeof(BuildingBlocks.Domain.IDomainEvent))
+            .Should()
+            .NotImplementInterface(typeof(BuildingBlocks.Application.IIntegrationEvent))
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue("Domain events must be strictly internal and not double as Integration events.");
+    }
 }

@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Messaging/Infrastructure/MessagingDbContext.cs
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
@@ -13,41 +12,31 @@ public class MessagingDbContext : PlatformDbContext
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
-    public MessagingDbContext(DbContextOptions<MessagingDbContext> options, IExecutionContextAccessor executionContext, IMediator mediator) 
-        : base(options, executionContext, mediator)
+    public MessagingDbContext(
+        DbContextOptions<MessagingDbContext> options, 
+        IExecutionContextAccessor executionContext, 
+        IMediator mediator, 
+        DatabaseJobTrigger jobTrigger) : base(options, executionContext, mediator, jobTrigger)
     {
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
         modelBuilder.HasDefaultSchema("messaging");
 
-        modelBuilder.Entity<TenantReplica>(builder =>
-        {
-            builder.ToTable("TenantReplicas");
-            builder.HasKey(x => x.Id);
-        });
-
+        modelBuilder.Entity<TenantReplica>(builder => { builder.ToTable("TenantReplicas"); builder.HasKey(x => x.Id); });
         modelBuilder.Entity<OutboxMessage>(builder =>
         {
             builder.ToTable("OutboxMessages");
             builder.HasKey(x => x.Id);
-
-            // Add high-performance partial index for active outbox messages
-            builder.HasIndex(x => new { x.ProcessedAt, x.OccurredOn })
-                   .HasFilter("\"ProcessedAt\" IS NULL");
+            builder.HasIndex(x => new { x.ProcessedAt, x.OccurredOn }).HasFilter("\"ProcessedAt\" IS NULL");
         });
-
         modelBuilder.Entity<InboxMessage>(builder =>
         {
             builder.ToTable("InboxMessages");
             builder.HasKey(x => x.Id);
-
-            // Add high-performance partial index for active inbox messages
-            builder.HasIndex(x => new { x.ProcessedAt, x.ReceivedAt })
-                   .HasFilter("\"ProcessedAt\" IS NULL");
+            builder.HasIndex(x => new { x.ProcessedAt, x.ReceivedAt }).HasFilter("\"ProcessedAt\" IS NULL");
         });
     }
 }

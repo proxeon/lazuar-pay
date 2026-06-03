@@ -248,6 +248,7 @@ When adding a new module (for example, `Billing`), follow this structured, compi
     ```csharp
     apiGroup.MapBillingEndpoints();
     ```
+- [ ] **NOTE**: Because our `Dockerfile` uses Docker BuildKit's `--parents` feature, you **do not** need to manually update the Dockerfile when adding new `.csproj` files!
 - [ ] Open `tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj` and reference the new Billing domain projects.
 - [ ] Update `ModuleBoundaryTests.cs` to include the `Modules.Billing` namespace within architectural boundaries.
 - [ ] Run `pnpm build` to compile the solution and verify that the build succeeds without error.

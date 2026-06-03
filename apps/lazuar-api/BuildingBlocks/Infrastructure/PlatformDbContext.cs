@@ -9,18 +9,23 @@ public abstract class PlatformDbContext : DbContext
 {
     protected readonly IExecutionContextAccessor ExecutionContext;
     protected readonly IMediator Mediator;
+    protected readonly DatabaseJobTrigger JobTrigger;
 
-    protected PlatformDbContext(DbContextOptions options, IExecutionContextAccessor executionContext, IMediator mediator) : base(options)
+    protected PlatformDbContext(
+        DbContextOptions options, 
+        IExecutionContextAccessor executionContext, 
+        IMediator mediator, 
+        DatabaseJobTrigger jobTrigger) : base(options)
     {
         ExecutionContext = executionContext;
         Mediator = mediator;
+        JobTrigger = jobTrigger;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         
-        // Dynamically apply the Global Query Filter to all entities implementing IMustHaveTenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(IMustHaveTenant).IsAssignableFrom(entityType.ClrType))
@@ -41,7 +46,6 @@ public abstract class PlatformDbContext : DbContext
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // 1. Automatically populate OrganizationId for Multi-Tenancy
         foreach (var entry in ChangeTracker.Entries())
         {
             if (entry.State == EntityState.Added && entry.Entity is IMustHaveTenant tenantEntity)
@@ -53,7 +57,6 @@ public abstract class PlatformDbContext : DbContext
             }
         }
 
-        // 2. Pre-commit Domain Event Dispatch (Synchronous/In-Transaction)
         var entitiesWithEvents = ChangeTracker.Entries<Entity>()
             .Where(entry => entry.Entity.DomainEvents.Any())
             .Select(entry => entry.Entity)
@@ -66,12 +69,18 @@ public abstract class PlatformDbContext : DbContext
             
             foreach (var domainEvent in events)
             {
-                // Handlers for these can mutate other entities in the same transaction
-                // or explicitly add an IIntegrationEvent to the DbSet<OutboxMessage>
                 await Mediator.Publish(domainEvent, cancellationToken);
             }
         }
 
-        return await base.SaveChangesAsync(cancellationToken);
+        var result = await base.SaveChangesAsync(cancellationToken);
+        
+        // Phase 2: If rows were modified, wake up the background workers instantly!
+        if (result > 0)
+        {
+            JobTrigger.Trigger();
+        }
+
+        return result;
     }
 }

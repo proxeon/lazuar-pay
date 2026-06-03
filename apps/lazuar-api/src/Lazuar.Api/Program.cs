@@ -11,29 +11,24 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
-// Register Shared Infrastructure & Services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IExecutionContextAccessor, ExecutionContextAccessor>();
+builder.Services.AddSingleton<DatabaseJobTrigger>();
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
-
-// satisfies cross-module notification dependencies
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ConsoleEmailService>();
 
-// Add exception handler middleware
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// Register MediatR across all modules
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
@@ -41,15 +36,11 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
 });
 
-// Register Modules with isolated configuration contexts
 builder.Services.AddTenantModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 
 var app = builder.Build();
 
-// ==========================================
-// Auto-create Database Tables on Startup via Migrations
-// ==========================================
 using (var scope = app.Services.CreateScope())
 {
     var tenantDb = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
@@ -58,14 +49,10 @@ using (var scope = app.Services.CreateScope())
     var messagingDb = scope.ServiceProvider.GetRequiredService<MessagingDbContext>();
     await messagingDb.Database.MigrateAsync();
 }
-// ==========================================
 
 app.UseExceptionHandler();
-
-// Register cross-module event subscriptions
 app.UseMessagingSubscriptions();
 
-// Map Module endpoints under /api/v1
 var apiGroup = app.MapGroup("/api/v1");
 apiGroup.MapTenantEndpoints();
 apiGroup.MapMessagingEndpoints();
