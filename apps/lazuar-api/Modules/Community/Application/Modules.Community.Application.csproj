@@ -7,5 +7,6 @@
     <ProjectReference Include="..\Contracts\Modules.Community.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\Payments\Contracts\Modules.Payments.Contracts.csproj" />
+    <ProjectReference Include="..\..\CRM\Contracts\Modules.CRM.Contracts.csproj" />
   </ItemGroup>
 </Project>

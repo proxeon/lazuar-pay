@@ -26,6 +26,7 @@ public static class DependencyInjection
 
         // Gateways
         services.AddScoped<IPaymentGatewayAdapter, StripeGatewayAdapter>();
+        services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
         // Background Workers

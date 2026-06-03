@@ -25,7 +25,8 @@ public interface IPaymentGatewayAdapter
         string customerEmail,
         string successUrl, 
         string cancelUrl, 
-        Dictionary<string, string> metadata);
+        Dictionary<string, string> metadata,
+        string? merchantId);
         
     Task<GatewayWebhookParsedResult> ParseWebhookAsync(
         string webhookSecret,

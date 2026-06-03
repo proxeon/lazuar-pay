@@ -19,7 +19,8 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency, 
         string productName, string customerEmail,
-        string successUrl, string cancelUrl, Dictionary<string, string> metadata)
+        string successUrl, string cancelUrl, Dictionary<string, string> metadata, 
+        string? merchantId)
     {
         try
         {
@@ -70,18 +71,14 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     {
         try
         {
-            // 1. Get Signature
             var signatureHeader = headers.Keys.FirstOrDefault(k => k.Equals("Stripe-Signature", StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrEmpty(signatureHeader) || !headers.TryGetValue(signatureHeader, out var signature))
             {
                 return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), "Missing Stripe-Signature header."));
             }
 
-            // 2. Validate Signature & Parse Event
             var stripeEvent = EventUtility.ConstructEvent(rawBody, signature, webhookSecret);
 
-            // 3. Process the event
-            // FIX: Using the string literal directly to avoid Stripe.Events namespace issues
             if (stripeEvent.Type == "checkout.session.completed")
             {
                 if (stripeEvent.Data.Object is Session session)
