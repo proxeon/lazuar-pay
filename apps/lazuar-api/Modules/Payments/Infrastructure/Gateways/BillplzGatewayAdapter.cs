@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
@@ -189,15 +190,10 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrEmpty(body)) return result;
 
-        foreach (var pair in body.Split('&'))
+        var parsed = QueryHelpers.ParseQuery(body);
+        foreach (var parameter in parsed)
         {
-            var parts = pair.Split('=', 2);
-            if (parts.Length == 2)
-            {
-                var key = Uri.UnescapeDataString(parts[0]);
-                var value = Uri.UnescapeDataString(parts[1]);
-                result[key] = value;
-            }
+            result[parameter.Key] = parameter.Value.ToString();
         }
         return result;
     }
