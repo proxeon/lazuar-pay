@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Infrastructure;
 
-public class InMemoryEventBus : IEventBus
+public class InMemoryEventBus : IEventBus, IEventBusSubscriptions
 {
     private readonly ConcurrentDictionary<string, List<Type>> _handlers = new();
     private readonly IServiceProvider _serviceProvider;
