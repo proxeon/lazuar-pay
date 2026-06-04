@@ -31,7 +31,9 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
-                var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+                
+                // Resolve the singleton InMemoryEventBus specifically to execute the actual local dispatching
+                var eventBus = scope.ServiceProvider.GetRequiredService<InMemoryEventBus>();
 
                 var entityType = db.Model.FindEntityType(typeof(OutboxMessage));
                 var schema = entityType?.GetSchema() ?? "public";
