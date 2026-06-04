@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,26 +19,22 @@ public class CommunityQueryService : ICommunityQueryService
     private readonly ICrmQueryService _crmQueryService;
     private readonly IMessageTemplateQueryService _messageTemplateQueryService;
 
-    // DTOs to map raw SQL results
     private record RawPlanDto(
         Guid Id, string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
         decimal Price, string Interval, string Features, string Methodology, string Faq,
         bool IsActive, int DisplayOrder, int? MaxCapacity, int GracePeriodDays,
-        string? TelegramInviteLink, string? WeeklyMeetingLink
-    );
+        string? TelegramInviteLink, string? WeeklyMeetingLink);
 
     private record RawSubDto(
         Guid Id, Guid OrganizationId, Guid ClientProfileId, Guid PlanId,
         string PlanName, decimal PlanPrice, string Status, string Source,
         bool IsReminderOnly, string? PreferredChannel, string? AdminNotes,
         DateTime? RemindersPausedUntil, DateTime? CurrentPeriodEnd,
-        DateTime? NextBillingDate, DateTime CreatedAt
-    );
+        DateTime? NextBillingDate, DateTime CreatedAt);
 
     private record RawReminderScheduleDto(
         Guid Id, Guid? PlanId, string? PlanName, Guid TemplateId, 
-        string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt
-    );
+        string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt);
 
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
@@ -49,7 +49,7 @@ public class CommunityQueryService : ICommunityQueryService
     public async Task<IEnumerable<CommunityPlanDto>> GetAdminPlansAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
             SELECT * FROM community.""Plans"" 
@@ -73,7 +73,7 @@ public class CommunityQueryService : ICommunityQueryService
     public async Task<CommunityPlanDto?> GetAdminPlanByIdAsync(Guid organizationId, Guid planId)
     {
         using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"SELECT * FROM community.""Plans"" WHERE ""Id"" = @PlanId AND ""OrganizationId"" = @OrgId LIMIT 1";
         var rawPlan = await connection.QuerySingleOrDefaultAsync<RawPlanDto>(sql, new { PlanId = planId, OrgId = organizationId });
@@ -92,7 +92,7 @@ public class CommunityQueryService : ICommunityQueryService
     public async Task<IEnumerable<CommunityPlanDto>> GetPublicPlansAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
             SELECT * FROM community.""Plans"" 
@@ -116,7 +116,7 @@ public class CommunityQueryService : ICommunityQueryService
     public async Task<IEnumerable<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
             SELECT 
@@ -135,7 +135,6 @@ public class CommunityQueryService : ICommunityQueryService
 
         if (subList.Count == 0) return Enumerable.Empty<CommunitySubscriptionDto>();
 
-        // 2. Fetch Customer Details from CRM schema via cross-module contract
         var profileIds = subList.Select(x => x.ClientProfileId).Distinct();
         var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
         var profileDict = profiles.ToDictionary(p => p.Id);
@@ -165,7 +164,7 @@ public class CommunityQueryService : ICommunityQueryService
     public async Task<CommunitySubscriptionDto?> GetPortalSubscriptionAsync(Guid organizationId, Guid subscriptionId)
     {
         using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
             SELECT 
@@ -202,7 +201,7 @@ public class CommunityQueryService : ICommunityQueryService
     public async Task<IEnumerable<CommunityReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
             SELECT 
@@ -218,7 +217,6 @@ public class CommunityQueryService : ICommunityQueryService
 
         if (scheduleList.Count == 0) return Enumerable.Empty<CommunityReminderScheduleDto>();
 
-        // Cross-module query to Messaging without DB Joins
         var templateIds = scheduleList.Select(x => x.TemplateId).Distinct();
         var templates = await _messageTemplateQueryService.GetTemplatesAsync(templateIds);
         var templateDict = templates.ToDictionary(t => t.Id);
@@ -235,7 +233,7 @@ public class CommunityQueryService : ICommunityQueryService
     public async Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
-        connection.Open();
+        if (connection.State != ConnectionState.Open) connection.Open();
 
         const string subSql = @"
             SELECT 
@@ -283,6 +281,29 @@ public class CommunityQueryService : ICommunityQueryService
             arpu,
             (double)totalRevenue
         );
+    }
+
+    public async Task<IEnumerable<DeliveryHistoryItem>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT 
+                ""Id"",
+                ""Channel"",
+                ""RecipientIdentifier"" as Recipient,
+                ""TemplateName"",
+                ""Subject"",
+                ""Status"",
+                ""ErrorMessage"",
+                ""CreatedAt""
+            FROM messaging.""MessageLogs""
+            WHERE ""OrganizationId"" = @OrgId AND ""BookingId"" = @SubId
+            ORDER BY ""CreatedAt"" DESC
+            LIMIT 50";
+
+        return await connection.QueryAsync<DeliveryHistoryItem>(sql, new { OrgId = organizationId, SubId = subscriptionId });
     }
 
     private static CommunityPlanDto MapToPlanDto(RawPlanDto raw, int enrolledCount)

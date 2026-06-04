@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application;
 using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
+using Modules.Payments.Application.Queries;
+using Modules.Payments.Application.Commands;
 using Modules.Tenant.Contracts;
 
 namespace Modules.Community.Infrastructure;
@@ -51,6 +53,25 @@ public static class Endpoints
             return Results.Ok(subscribers);
         });
 
+        admin.MapGet("/subscribers/export", async (
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var query = new GetSubscribersExportQuery(ctx.TenantId);
+            var fileBytes = await mediator.Send(query);
+            var filename = $"Subscribers_Export_{DateTime.UtcNow:yyyyMMdd}.csv";
+            return Results.File(fileBytes, "text/csv", filename);
+        });
+
+        admin.MapGet("/subscribers/{id:guid}/reminders", async (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            ICommunityQueryService queryService) =>
+        {
+            var history = await queryService.GetReminderHistoryAsync(ctx.TenantId, id);
+            return Results.Ok(history);
+        });
+
         admin.MapGet("/stats", async (
             IExecutionContextAccessor ctx, 
             ICommunityQueryService queryService) =>
@@ -65,6 +86,15 @@ public static class Endpoints
         {
             var schedules = await queryService.GetReminderSchedulesAsync(ctx.TenantId);
             return Results.Ok(schedules);
+        });
+
+        admin.MapGet("/payment-config", async (
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var query = new GetPaymentConfigQuery(ctx.TenantId);
+            var config = await mediator.Send(query);
+            return Results.Ok(config);
         });
 
         publicGroup.MapGet("/{tenantSlug}/plans", async (
@@ -131,7 +161,28 @@ public static class Endpoints
         });
 
         // --- Subscribers ---
+        admin.MapPost("/subscribers", async (CreateSubscriberRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            var command = new CreateSubscriberCommand(
+                ctx.TenantId, req.Name, req.Email, req.Phone, req.PlanId,
+                req.Source ?? "MANUAL_ENTRY", req.IsReminderOnly ?? false, req.PreferredChannel,
+                req.AmountPaid, req.PaymentMethod, req.ReferenceNumber, req.Notes, "ADMIN");
+
+            var id = await mediator.Send(command);
+            return Results.Ok(new { id });
+        });
+
         admin.MapPost("/subscribers/{id:guid}/payments", async (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            var command = new RecordSubscriptionPaymentCommand(
+                ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod, 
+                req.ReferenceNumber, "ADMIN", req.ReceiptFile);
+
+            await mediator.Send(command);
+            return Results.Ok(new { status = "paid" });
+        });
+
+        admin.MapPost("/subscribers/{id:guid}/record-payment", async (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new RecordSubscriptionPaymentCommand(
                 ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod, 
@@ -196,6 +247,14 @@ public static class Endpoints
         {
             await mediator.Send(new DeleteReminderScheduleCommand(ctx.TenantId, id));
             return Results.Ok(new { status = "deleted" });
+        });
+
+        admin.MapPut("/payment-config", async (UpdatePaymentConfigCommand req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            var command = new UpdatePaymentConfigCommand(
+                ctx.TenantId, req.GatewayType, req.ApiKey, req.MerchantId, req.WebhookSecret, req.SecretKey, req.IsActive);
+            await mediator.Send(command);
+            return Results.Ok(new { status = "saved" });
         });
 
         // ==========================================
@@ -288,9 +347,15 @@ public static class Endpoints
     }
 }
 
-public record PublicCheckoutRequestDto(
-    string TenantSlug,
-    string PlanSlug,
+public record CreateSubscriberRequestDto(
     string Name,
     string Email,
-    string Phone);
+    string Phone,
+    Guid PlanId,
+    string? Source,
+    bool? IsReminderOnly,
+    string? PreferredChannel,
+    decimal? AmountPaid,
+    string? PaymentMethod,
+    string? ReferenceNumber,
+    string? Notes);
