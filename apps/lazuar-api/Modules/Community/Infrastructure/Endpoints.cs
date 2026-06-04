@@ -74,6 +74,15 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<DeliveryHistoryItemDto>)history.ToList());
         });
 
+        admin.MapGet("/subscribers/{id:guid}/payments", async Task<Ok<ICollection<PaymentRecordDto>>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            ICommunityQueryService queryService) =>
+        {
+            var history = await queryService.GetPaymentHistoryAsync(ctx.TenantId, id);
+            return TypedResults.Ok((ICollection<PaymentRecordDto>)history.ToList());
+        });
+
         admin.MapGet("/stats", async Task<Ok<CommunitySubscriberStatsDto>> (
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>

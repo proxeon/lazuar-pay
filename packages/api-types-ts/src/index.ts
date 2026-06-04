@@ -235,7 +235,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AdminCommunityApi_getPaymentHistory"];
         put?: never;
         post: operations["AdminCommunityApi_recordPaymentViaPayments"];
         delete?: never;
@@ -649,6 +649,24 @@ export interface components {
             count: number;
             /** Format: double */
             total_amount: number;
+        };
+        "Models.Community.PaymentRecordDto": {
+            id: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            payment_method: string;
+            reference_number?: string;
+            receipt_url?: string;
+            recorded_by?: string;
+            /** Format: date-time */
+            period_start: string;
+            /** Format: date-time */
+            period_end: string;
+            status: string;
+            notes?: string;
+            /** Format: date-time */
+            created_at: string;
         };
         "Models.Community.PublicCheckoutRequestDto": {
             tenant_slug: string;
@@ -2161,6 +2179,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityApi_getPaymentHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Models.Community.PaymentRecordDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

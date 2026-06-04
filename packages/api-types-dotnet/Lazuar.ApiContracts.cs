@@ -666,6 +666,57 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PaymentRecordDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("payment_method")]
+        public string Payment_method { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reference_number")]
+        public string? Reference_number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("receipt_url")]
+        public string? Receipt_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recorded_by")]
+        public string? Recorded_by { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("period_start")]
+        public System.DateTimeOffset Period_start { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("period_end")]
+        public System.DateTimeOffset Period_end { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("notes")]
+        public string? Notes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PublicCheckoutRequestDto
     {
 

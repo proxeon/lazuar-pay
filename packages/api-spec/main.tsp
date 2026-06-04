@@ -1,3 +1,4 @@
+// packages/api-spec/main.tsp
 import "@typespec/http";
 import "@typespec/openapi";
 import "@typespec/openapi3";
@@ -97,6 +98,21 @@ namespace Models.Community {
     current_period_end?: utcDateTime;
     next_billing_date?: utcDateTime;
     days_overdue?: int32;
+    created_at: utcDateTime;
+  }
+
+  model PaymentRecordDto {
+    id: string; // GUID
+    amount: float64;
+    currency: string;
+    payment_method: string;
+    reference_number?: string;
+    receipt_url?: string;
+    recorded_by?: string;
+    period_start: utcDateTime;
+    period_end: utcDateTime;
+    status: string;
+    notes?: string;
     created_at: utcDateTime;
   }
 
@@ -393,6 +409,12 @@ namespace AdminCommunityApi {
     @header contentType: "text/csv";
     @body content: bytes;
   } | ProblemDetailsResponse;
+
+  @get
+  @route("/subscribers/{id}/payments")
+  op getPaymentHistory(
+    @path id: string,
+  ): Models.Community.PaymentRecordDto[] | ProblemDetailsResponse;
 
   @get
   @route("/subscribers/{id}/reminders")

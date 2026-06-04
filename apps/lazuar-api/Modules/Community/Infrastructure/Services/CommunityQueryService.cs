@@ -47,6 +47,11 @@ public class CommunityQueryService : ICommunityQueryService
         Guid Id, string Channel, string Recipient, string? TemplateName, 
         string? Subject, string Status, string? ErrorMessage, DateTime CreatedAt);
 
+    private record RawPaymentRecordDto(
+        Guid Id, decimal Amount, string Currency, string PaymentMethod,
+        string? ReferenceNumber, string? ReceiptUrl, string RecordedBy,
+        DateTime PeriodStart, DateTime PeriodEnd, string Status, string? Notes, DateTime CreatedAt);
+
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
         ICrmQueryService crmQueryService,
@@ -412,6 +417,41 @@ public class CommunityQueryService : ICommunityQueryService
             Subject = r.Subject,
             Status = r.Status,
             Error_message = r.ErrorMessage,
+            Created_at = new DateTimeOffset(r.CreatedAt)
+        });
+    }
+
+    public async Task<IEnumerable<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT 
+                pr.""Id"", pr.""Amount"", pr.""Currency"", pr.""PaymentMethod"",
+                pr.""ExternalReference"" as ReferenceNumber, pr.""ReceiptUrl"",
+                pr.""RecordedBy"", pr.""PeriodStart"", pr.""PeriodEnd"",
+                pr.""Status"", pr.""Notes"", pr.""CreatedAt""
+            FROM community.""PaymentRecords"" pr
+            JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
+            WHERE s.""OrganizationId"" = @OrgId AND pr.""SubscriptionId"" = @SubId
+            ORDER BY pr.""CreatedAt"" DESC";
+
+        var rawLogs = await connection.QueryAsync<RawPaymentRecordDto>(sql, new { OrgId = organizationId, SubId = subscriptionId });
+
+        return rawLogs.Select(r => new PaymentRecordDto
+        {
+            Id = r.Id.ToString(),
+            Amount = (double)r.Amount,
+            Currency = r.Currency,
+            Payment_method = r.PaymentMethod,
+            Reference_number = r.ReferenceNumber,
+            Receipt_url = r.ReceiptUrl,
+            Recorded_by = r.RecordedBy,
+            Period_start = new DateTimeOffset(r.PeriodStart),
+            Period_end = new DateTimeOffset(r.PeriodEnd),
+            Status = r.Status,
+            Notes = r.Notes,
             Created_at = new DateTimeOffset(r.CreatedAt)
         });
     }

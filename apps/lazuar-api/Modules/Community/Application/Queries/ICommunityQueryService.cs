@@ -18,4 +18,5 @@ public interface ICommunityQueryService
     Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId);
     
     Task<IEnumerable<DeliveryHistoryItemDto>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId);
+    Task<IEnumerable<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId);
 }
