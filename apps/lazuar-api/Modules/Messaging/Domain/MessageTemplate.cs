@@ -16,12 +16,12 @@ public class MessageTemplate : Entity, IMustHaveTenant
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
-#pragma warning disable CS8618
+    #pragma warning disable CS8618
     private MessageTemplate() { }
-#pragma warning restore CS8618
+    #pragma warning restore CS8618
 
     public MessageTemplate(
-        Guid organizationId, string name, string channel, 
+        Guid organizationId, string name, string channel,
         string subject, string body, bool isDefault, string? metaTemplateName = null)
     {
         Id = Guid.CreateVersion7();
@@ -33,6 +33,22 @@ public class MessageTemplate : Entity, IMustHaveTenant
         IsDefault = isDefault;
         MetaTemplateName = metaTemplateName;
         CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateContent(string subject, string body)
+    {
+        Subject = subject;
+        Body = body;
+        IsDefault = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResetToDefault(string subject, string body)
+    {
+        Subject = subject;
+        Body = body;
+        IsDefault = true;
         UpdatedAt = DateTime.UtcNow;
     }
 }

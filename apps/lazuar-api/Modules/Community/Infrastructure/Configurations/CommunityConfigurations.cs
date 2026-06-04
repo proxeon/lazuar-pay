@@ -1,7 +1,11 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Modules.Community.Domain.Aggregates;
 using Modules.Community.Domain.Entities;
+using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Infrastructure.Configurations;
 
@@ -14,9 +18,45 @@ public class CommunityPlanConfiguration : IEntityTypeConfiguration<CommunityPlan
         
         builder.Property(x => x.Price).HasPrecision(10, 2);
 
-        // Store value objects and primitive collections as JSONB in PostgreSQL
-        builder.Property(x => x.Features).HasColumnType("jsonb");
-        builder.Property(x => x.Faq).HasColumnType("jsonb");
+        // Standardize JSON serialization options
+        var jsonOptions = new JsonSerializerOptions 
+        { 
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+        };
+
+        // Value converters to transform lists into raw JSON strings for SQL parameters
+        var featuresConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
+        );
+
+        var faqConverter = new ValueConverter<IReadOnlyCollection<FaqItem>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<FaqItem>>(v, jsonOptions) ?? new List<FaqItem>()
+        );
+
+        // Value comparers for change tracking (ensuring correct dirty checks in EF Core)
+        var featuresComparer = new ValueComparer<IReadOnlyCollection<string>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
+        var faqComparer = new ValueComparer<IReadOnlyCollection<FaqItem>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
+        // Map column mappings and assign converters
+        builder.Property(x => x.Features)
+               .HasConversion(featuresConverter, featuresComparer)
+               .HasColumnType("jsonb");
+
+        builder.Property(x => x.Faq)
+               .HasConversion(faqConverter, faqComparer)
+               .HasColumnType("jsonb");
     }
 }
 
@@ -27,23 +67,19 @@ public class CommunitySubscriptionConfiguration : IEntityTypeConfiguration<Commu
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => x.OrganizationId);
         
-        // CRUCIAL: Do NOT define foreign keys to ClientProfile. Treat as raw Guid.
         builder.HasIndex(x => x.ClientProfileId);
         builder.Property(x => x.ClientProfileId).IsRequired();
 
-        // PlanId is local to this module, so we can configure the foreign key
         builder.HasOne<CommunityPlan>()
                .WithMany()
                .HasForeignKey(x => x.PlanId)
                .OnDelete(DeleteBehavior.Restrict);
 
-        // Child collection: PaymentRecords
         builder.HasMany(x => x.PaymentRecords)
                .WithOne()
                .HasForeignKey(x => x.SubscriptionId)
                .OnDelete(DeleteBehavior.Cascade);
                
-        // Child collection: ReminderDispatchLogs
         builder.HasMany(x => x.ReminderLogs)
                .WithOne()
                .HasForeignKey(x => x.SubscriptionId)
@@ -72,10 +108,8 @@ public class CommunityReminderScheduleConfiguration : IEntityTypeConfiguration<C
         
         builder.HasIndex(x => new { x.OrganizationId, x.DaysRelativeToDue });
         
-        // TemplateId is cross-module (Messaging), so it's a raw Guid. No FK.
         builder.Property(x => x.TemplateId).IsRequired();
 
-        // Optional PlanId FK
         builder.HasOne<CommunityPlan>()
                .WithMany()
                .HasForeignKey(x => x.PlanId)
@@ -84,14 +118,12 @@ public class CommunityReminderScheduleConfiguration : IEntityTypeConfiguration<C
     }
 }
 
-// ReminderDispatchLog configuration to enforce idempotency at the DB level
 public class ReminderDispatchLogConfiguration : IEntityTypeConfiguration<ReminderDispatchLog>
 {
     public void Configure(EntityTypeBuilder<ReminderDispatchLog> builder)
     {
         builder.HasKey(x => x.Id);
         
-        // Ensure a schedule only fires exactly once per target renewal date per subscription
         builder.HasIndex(x => new { x.SubscriptionId, x.ScheduleId, x.TargetRenewalDate }).IsUnique();
     }
 }

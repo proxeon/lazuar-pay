@@ -52,7 +52,7 @@ public static class AutomationRuleSeeder
         await db.SaveChangesAsync();
     }
 
-    private static List<MessageTemplate> GetDefaultTemplates(Guid orgId) => new()
+    public static List<MessageTemplate> GetDefaultTemplates(Guid orgId) => new()
     {
         new(orgId, "Booking Confirmation", "ALL", "Your booking {{booking_ref}} is confirmed!", "Hi {{customer_name}},\n\nYour booking has been confirmed!\n\n📅 {{appointment_time}}\n📍 {{branch_name}}\n💆 {{service_name}}\n🔖 {{booking_ref}}\n💰 RM {{total_price}}\n\n— {{business_name}}", true, "booking_confirmation"),
         new(orgId, "Appointment Reminder", "ALL", "Reminder: Your appointment is tomorrow — {{booking_ref}}", "Hi {{customer_name}},\n\nYour appointment is coming up tomorrow.\n\n📅 {{appointment_time}}\n📍 {{branch_name}}\n🔖 {{booking_ref}}\n\n— {{business_name}}", true, "appointment_reminder"),

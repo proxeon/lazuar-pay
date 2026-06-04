@@ -14,6 +14,7 @@ using Modules.Community.Application.Queries;
 using Modules.Payments.Application.Queries;
 using Modules.Payments.Application.Commands;
 using Modules.Tenant.Contracts;
+using Modules.Messaging.Contracts; // <-- ADDED
 
 namespace Modules.Community.Infrastructure;
 
@@ -25,11 +26,10 @@ public static class Endpoints
         var publicGroup = endpoints.MapGroup("/public/community");
 
         // ==========================================
-        // QUERIES (READ MODELS) 
+        // QUERIES (READ MODELS)
         // ==========================================
-
         admin.MapGet("/plans", async (
-            IExecutionContextAccessor ctx, 
+            IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var plans = await queryService.GetAdminPlansAsync(ctx.TenantId);
@@ -38,7 +38,7 @@ public static class Endpoints
 
         admin.MapGet("/plans/{id:guid}", async (
             Guid id,
-            IExecutionContextAccessor ctx, 
+            IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var plan = await queryService.GetAdminPlanByIdAsync(ctx.TenantId, id);
@@ -46,7 +46,7 @@ public static class Endpoints
         });
 
         admin.MapGet("/subscribers", async (
-            IExecutionContextAccessor ctx, 
+            IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var subscribers = await queryService.GetSubscribersAsync(ctx.TenantId);
@@ -73,7 +73,7 @@ public static class Endpoints
         });
 
         admin.MapGet("/stats", async (
-            IExecutionContextAccessor ctx, 
+            IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var stats = await queryService.GetSubscriberStatsAsync(ctx.TenantId);
@@ -81,7 +81,7 @@ public static class Endpoints
         });
 
         admin.MapGet("/reminder-schedules", async (
-            IExecutionContextAccessor ctx, 
+            IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var schedules = await queryService.GetReminderSchedulesAsync(ctx.TenantId);
@@ -98,13 +98,12 @@ public static class Endpoints
         });
 
         publicGroup.MapGet("/{tenantSlug}/plans", async (
-            string tenantSlug, 
-            ITenantQueryService tenantQueryService, 
+            string tenantSlug,
+            ITenantQueryService tenantQueryService,
             ICommunityQueryService queryService) =>
         {
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
-
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             return Results.Ok(plans);
         });
@@ -117,7 +116,6 @@ public static class Endpoints
         {
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
-
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             var plan = plans.FirstOrDefault(p => p.Slug == slug);
             return plan != null ? Results.Ok(plan) : Results.NotFound(new { error = "Plan not found." });
@@ -126,17 +124,15 @@ public static class Endpoints
         // ==========================================
         // COMMANDS (WRITE MODELS)
         // ==========================================
-
         // --- Plans ---
         admin.MapPost("/plans", async (CreatePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CreatePlanCommand(
-                ctx.TenantId, req.Slug, req.Name, req.Audience, req.ShortDescription, 
-                req.LongDescription, req.Price, req.Interval, req.GracePeriodDays, 
-                req.MaxCapacity, req.DisplayOrder, req.Features, req.Methodology, 
+                ctx.TenantId, req.Slug, req.Name, req.Audience, req.ShortDescription,
+                req.LongDescription, req.Price, req.Interval, req.GracePeriodDays,
+                req.MaxCapacity, req.DisplayOrder, req.Features, req.Methodology,
                 req.Faq.Select(f => new FaqItemDto(f.Id, f.Question, f.Answer)).ToList(),
                 req.TelegramInviteLink, req.WeeklyMeetingLink);
-
             var id = await mediator.Send(command);
             return Results.Ok(new { id });
         });
@@ -144,12 +140,11 @@ public static class Endpoints
         admin.MapPut("/plans/{id:guid}", async (Guid id, UpdatePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new UpdatePlanCommand(
-                ctx.TenantId, id, req.Slug, req.Name, req.Audience, req.ShortDescription, 
-                req.LongDescription, req.Price, req.Interval, req.Features, req.Methodology, 
-                req.Faq?.Select(f => new FaqItemDto(f.Id, f.Question, f.Answer)).ToList(), 
-                req.IsActive, req.DisplayOrder, req.MaxCapacity, req.GracePeriodDays, 
+                ctx.TenantId, id, req.Slug, req.Name, req.Audience, req.ShortDescription,
+                req.LongDescription, req.Price, req.Interval, req.Features, req.Methodology,
+                req.Faq?.Select(f => new FaqItemDto(f.Id, f.Question, f.Answer)).ToList(),
+                req.IsActive, req.DisplayOrder, req.MaxCapacity, req.GracePeriodDays,
                 req.TelegramInviteLink, req.WeeklyMeetingLink);
-
             await mediator.Send(command);
             return Results.Ok(new { status = "updated" });
         });
@@ -167,7 +162,6 @@ public static class Endpoints
                 ctx.TenantId, req.Name, req.Email, req.Phone, req.PlanId,
                 req.Source ?? "MANUAL_ENTRY", req.IsReminderOnly ?? false, req.PreferredChannel,
                 req.AmountPaid, req.PaymentMethod, req.ReferenceNumber, req.Notes, "ADMIN");
-
             var id = await mediator.Send(command);
             return Results.Ok(new { id });
         });
@@ -175,9 +169,8 @@ public static class Endpoints
         admin.MapPost("/subscribers/{id:guid}/payments", async (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new RecordSubscriptionPaymentCommand(
-                ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod, 
+                ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod,
                 req.ReferenceNumber, "ADMIN", req.ReceiptFile);
-
             await mediator.Send(command);
             return Results.Ok(new { status = "paid" });
         });
@@ -185,9 +178,8 @@ public static class Endpoints
         admin.MapPost("/subscribers/{id:guid}/record-payment", async (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new RecordSubscriptionPaymentCommand(
-                ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod, 
+                ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod,
                 req.ReferenceNumber, "ADMIN", req.ReceiptFile);
-
             await mediator.Send(command);
             return Results.Ok(new { status = "paid" });
         });
@@ -229,7 +221,7 @@ public static class Endpoints
         admin.MapPost("/reminder-schedules", async (CreateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CreateReminderScheduleCommand(
-                ctx.TenantId, req.PlanId, req.TemplateId, req.Channel, 
+                ctx.TenantId, req.PlanId, req.TemplateId, req.Channel,
                 req.DaysRelativeToDue, req.TimeOfDay, req.IsEnabled);
             var id = await mediator.Send(command);
             return Results.Ok(new { id });
@@ -238,7 +230,7 @@ public static class Endpoints
         admin.MapPut("/reminder-schedules/{id:guid}", async (Guid id, UpdateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             await mediator.Send(new UpdateReminderScheduleCommand(
-                ctx.TenantId, id, req.PlanId, req.TemplateId, req.Channel, 
+                ctx.TenantId, id, req.PlanId, req.TemplateId, req.Channel,
                 req.DaysRelativeToDue, req.TimeOfDay, req.IsEnabled));
             return Results.Ok(new { status = "updated" });
         });
@@ -258,25 +250,63 @@ public static class Endpoints
         });
 
         // ==========================================
+        // MESSAGING & TEMPLATES (NEW)
+        // ==========================================
+        admin.MapGet("/templates", async (
+            IExecutionContextAccessor ctx,
+            IMessageTemplateQueryService templateService) =>
+        {
+            var templates = await templateService.GetAllTemplatesAsync(ctx.TenantId);
+            return Results.Ok(templates);
+        });
+
+        admin.MapPut("/templates/{id:guid}", async (
+            Guid id,
+            UpdateTemplateRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            await mediator.Send(new UpdateMessageTemplateCommand(ctx.TenantId, id, req.Subject, req.Body));
+            return Results.Ok(new { status = "updated" });
+        });
+
+        admin.MapDelete("/templates/{id:guid}", async (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            await mediator.Send(new ResetMessageTemplateCommand(ctx.TenantId, id));
+            return Results.Ok(new { status = "reset" });
+        });
+
+        admin.MapPost("/reminders/test", async (
+            TestReminderRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            await mediator.Send(new SendTestReminderCommand(ctx.TenantId, req.TemplateName, req.Channel));
+            return Results.Ok(new { success = true, sent_to = "admin@lazuars.io" });
+        });
+
+        // ==========================================
         // PUBLIC ENROLLMENT FLOW
         // ==========================================
-
         publicGroup.MapPost("/checkout", async (
             PublicCheckoutRequestDto req,
             ITenantQueryService tenantQueryService,
             IMediator mediator) =>
         {
             var tenant = await tenantQueryService.GetTenantBySlugAsync(req.TenantSlug);
-            if (tenant == null || !tenant.IsActive) 
+            if (tenant == null || !tenant.IsActive)
                 return Results.NotFound(new { error = "Business not found." });
-
+            
             var command = new RegisterPublicSubscriberCommand(
                 tenant.Id,
                 req.PlanSlug,
                 req.Name,
                 req.Email,
                 req.Phone);
-
+            
             var checkoutUrl = await mediator.Send(command);
             return Results.Ok(new { url = checkoutUrl });
         });
@@ -284,7 +314,6 @@ public static class Endpoints
         // ==========================================
         // SUBSCRIBER PORTAL (SELF-SERVICE)
         // ==========================================
-        
         publicGroup.MapPost("/{tenantSlug}/portal/magic-link", async (
             string tenantSlug,
             [FromBody] MagicLinkRequestDto req,
@@ -294,12 +323,10 @@ public static class Endpoints
         {
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
-
-            var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}";
             
+            var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}";
             var command = new RequestMagicLinkCommand(tenant.Id, tenantSlug, req.Email, baseUrl);
             await mediator.Send(command);
-
             return Results.Ok(new { status = "sent" });
         });
 
@@ -312,15 +339,14 @@ public static class Endpoints
         {
             var subId = tokenService.ValidateToken(token);
             if (!subId.HasValue) return Results.Unauthorized();
-
+            
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
-
+            
             var query = new GetPortalSubscriptionQuery(tenant.Id, subId.Value);
             var sub = await mediator.Send(query);
-
             if (sub == null) return Results.Unauthorized();
-
+            
             return Results.Ok(new { subscription = sub });
         });
 
@@ -333,13 +359,12 @@ public static class Endpoints
         {
             var subId = tokenService.ValidateToken(token);
             if (!subId.HasValue) return Results.Unauthorized();
-
+            
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return Results.NotFound();
-
+            
             var command = new CancelSubscriptionCommand(tenant.Id, subId.Value);
             await mediator.Send(command);
-
             return Results.Ok(new { status = "cancelled" });
         });
 
@@ -350,7 +375,6 @@ public static class Endpoints
 // ==========================================
 // DTOs (Fully Resolved)
 // ==========================================
-
 public record CreatePlanRequestDto(
     string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
     decimal Price, string Interval, List<string> Features, string Methodology,
@@ -358,9 +382,9 @@ public record CreatePlanRequestDto(
     string? TelegramInviteLink, string? WeeklyMeetingLink);
 
 public record UpdatePlanRequestDto(
-    string? Slug, string? Name, string? Audience, string? ShortDescription, string? LongDescription, 
-    decimal? Price, string? Interval, List<string>? Features, string? Methodology, 
-    List<FaqRequestDto>? Faq, bool? IsActive, int? DisplayOrder, int? MaxCapacity, int? GracePeriodDays, 
+    string? Slug, string? Name, string? Audience, string? ShortDescription, string? LongDescription,
+    decimal? Price, string? Interval, List<string>? Features, string? Methodology,
+    List<FaqRequestDto>? Faq, bool? IsActive, int? DisplayOrder, int? MaxCapacity, int? GracePeriodDays,
     string? TelegramInviteLink, string? WeeklyMeetingLink);
 
 public record FaqRequestDto(string Id, string Question, string Answer);
@@ -392,3 +416,7 @@ public record PublicCheckoutRequestDto(
     string TenantSlug, string PlanSlug, string Name, string Email, string Phone);
 
 public record MagicLinkRequestDto(string Email);
+
+// --- NEW DTOs for Messaging Endpoints ---
+public record UpdateTemplateRequestDto(string Subject, string Body);
+public record TestReminderRequestDto(string TemplateName, string? Channel);
