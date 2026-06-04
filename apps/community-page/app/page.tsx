@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, Users } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { getPlans } from "@/lib/api";
+import { serverClient, TENANT_SLUG } from "@/lib/api-client";
 
 export default async function CatalogPage() {
-  const plans = await getPlans();
+  const { data: plans, error } = await serverClient.GET("/public/community/{tenantSlug}/plans", {
+    params: { path: { tenantSlug: TENANT_SLUG } },
+    next: { revalidate: 60 } // Cache and revalidate every 60 seconds
+  });
+
+  if (error || !plans) {
+    return <div className="p-8 text-center text-red-500">Failed to load community programs.</div>;
+  }
 
   return (
     <main className="w-full max-w-5xl mx-auto px-4 py-12 md:py-20 flex-1">
@@ -26,9 +33,7 @@ export default async function CatalogPage() {
             aria-disabled={pkg.is_full}
           >
             <Card className={`flex flex-col h-full transition-all duration-200 bg-card border-border/60 rounded-none ${
-              pkg.is_full
-                ? "opacity-60 border-border/40"
-                : "hover:border-foreground/40 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] dark:hover:shadow-none"
+              pkg.is_full ? "opacity-60 border-border/40" : "hover:border-foreground/40 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] dark:hover:shadow-none"
             }`}>
               <CardHeader className="pb-5">
                 <div className="mb-4 flex items-center justify-between">
@@ -36,7 +41,6 @@ export default async function CatalogPage() {
                     {pkg.audience}
                   </span>
 
-                  {/* Capacity Badge */}
                   {pkg.spots_remaining !== null && (
                     pkg.is_full ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase bg-red-50 text-red-600 rounded-none dark:bg-red-950 dark:text-red-400">
@@ -53,22 +57,16 @@ export default async function CatalogPage() {
                   {pkg.name}
                 </CardTitle>
               </CardHeader>
-
               <CardContent className="flex-1 pb-8">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {pkg.short_description}
-                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{pkg.short_description}</p>
               </CardContent>
-
               <CardFooter className="pt-0 mt-auto flex items-center justify-between border-t border-border/60 bg-zinc-50/50 dark:bg-zinc-900/20 pb-4 pt-4 rounded-none">
                 {pkg.is_full ? (
                   <span className="text-sm font-semibold text-muted-foreground">Enrollment Closed</span>
                 ) : (
                   <span className="text-sm font-semibold text-foreground tracking-wide">View Details</span>
                 )}
-                {!pkg.is_full && (
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-all group-hover:translate-x-1" />
-                )}
+                {!pkg.is_full && <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-all group-hover:translate-x-1" />}
               </CardFooter>
             </Card>
           </Link>

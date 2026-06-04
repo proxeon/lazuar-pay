@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getPlanBySlug } from "@/lib/api";
+import { serverClient, TENANT_SLUG } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
 export default async function SuccessPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const pkg = await getPlanBySlug(resolvedParams.slug);
+  
+  const { data: pkg, error } = await serverClient.GET("/public/community/{tenantSlug}/plans/{slug}", {
+    params: { path: { tenantSlug: TENANT_SLUG, slug: resolvedParams.slug } },
+    next: { revalidate: 60 }
+  });
 
-  if (!pkg) {
+  if (error || !pkg) {
     notFound();
   }
 

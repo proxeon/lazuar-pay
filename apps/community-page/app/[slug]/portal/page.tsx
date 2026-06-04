@@ -1,14 +1,12 @@
-// apps/community-page/app/[slug]/portal/page.tsx
-
 "use client";
 
 import { use, useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, LogOut, CheckCircle2, CreditCard, Mail } from "lucide-react";
+import { ArrowLeft, Loader2, LogOut, CheckCircle2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { requestMagicLink, getPortalData, updatePortalContact, cancelPortalSubscription, PortalData } from "@/lib/api";
+import { browserClient, TENANT_SLUG, type CommunitySubscription } from "@/lib/api-client";
 
 function PortalContent({ slug }: { slug: string }) {
   const searchParams = useSearchParams();
@@ -16,77 +14,67 @@ function PortalContent({ slug }: { slug: string }) {
   const token = searchParams.get("token");
 
   const [isLoading, setIsLoading] = useState(!!token);
-  const [data, setData] = useState<PortalData | null>(null);
+  const [sub, setSub] = useState<CommunitySubscription | null>(null);
 
   // Login Form State
   const [email, setEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  // Update Contact State
-  const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [isUpdating, setIsUpdating] = useState(false);
-
   useEffect(() => {
     if (token) {
-      getPortalData(token)
-        .then((res) => {
-          setData(res);
-          setEditName(res.customer.name);
-          setEditEmail(res.customer.email);
-          setEditPhone(res.customer.phone);
-        })
-        .catch(() => {
+      browserClient.GET("/public/community/{tenantSlug}/portal", {
+        params: { path: { tenantSlug: TENANT_SLUG }, query: { token } }
+      })
+      .then(({ data, error }) => {
+        if (error || !data) {
           toast.error("Invalid or expired access link.");
           router.replace(`/${slug}/portal`);
-        })
-        .finally(() => setIsLoading(false));
+        } else {
+          setSub(data.subscription);
+        }
+      })
+      .finally(() => setIsLoading(false));
     }
   }, [token, slug, router]);
 
   const handleRequestLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSending(true);
-    try {
-      await requestMagicLink(email);
+    const { error } = await browserClient.POST("/public/community/{tenantSlug}/portal/magic-link", {
+      params: { path: { tenantSlug: TENANT_SLUG } },
+      body: { email }
+    });
+
+    setIsSending(false);
+
+    if (error) {
+      toast.error(error.detail || "Failed to send link");
+    } else {
       setSent(true);
       toast.success("Login link sent to your email!");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send link");
-    } finally {
-      setIsSending(false);
     }
   };
 
   const handleUpdateContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
-    setIsUpdating(true);
-    try {
-      await updatePortalContact(token, { name: editName, email: editEmail, phone: editPhone });
-      toast.success("Contact details updated successfully.");
-      setData(prev => prev ? { ...prev, customer: { ...prev.customer, name: editName, email: editEmail, phone: editPhone } } : null);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update details.");
-    } finally {
-      setIsUpdating(false);
-    }
+    toast.success("Note: Contact updates must be done via your account manager at this time.");
   };
 
-  const handleCancel = async (subscriptionId: string) => {
-    if (!token) return;
+  const handleCancel = async () => {
+    if (!token || !sub) return;
     if (!window.confirm("Are you sure you want to cancel your subscription? You will lose access at the end of your billing cycle.")) return;
-    try {
-      await cancelPortalSubscription(token, subscriptionId);
+    
+    const { error } = await browserClient.POST("/public/community/{tenantSlug}/portal/cancel", {
+      params: { path: { tenantSlug: TENANT_SLUG }, query: { token } },
+      body: { subscription_id: sub.id }
+    });
+
+    if (error) {
+      toast.error(error.detail || "Failed to cancel subscription.");
+    } else {
       toast.success("Subscription cancelled successfully.");
-      setData(prev => prev ? { 
-        ...prev, 
-        subscriptions: prev.subscriptions.map(s => s.id === subscriptionId ? { ...s, status: "CANCELLED" } : s) 
-      } : null);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to cancel subscription.");
+      setSub(prev => prev ? { ...prev, status: "CANCELLED" } : null);
     }
   };
 
@@ -95,7 +83,7 @@ function PortalContent({ slug }: { slug: string }) {
   }
 
   // ─── LOGIN VIEW ──────────────────────────────────────────────────────────
-  if (!token || !data) {
+  if (!token || !sub) {
     return (
       <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black items-center justify-center p-4">
         <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full">
@@ -119,7 +107,7 @@ function PortalContent({ slug }: { slug: string }) {
                 required 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="e.g. akmal@lazuar.com" 
+                placeholder="e.g. customer@example.com" 
                 className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" 
               />
               <Button type="submit" disabled={isSending || !email} className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none">
@@ -139,6 +127,10 @@ function PortalContent({ slug }: { slug: string }) {
   }
 
   // ─── DASHBOARD VIEW ──────────────────────────────────────────────────────
+  const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
+  const isCancelled = sub.status === "CANCELLED" || sub.status === "CANCELED";
+  const isPastDue = sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
+  const nextDateStr = sub.next_billing_date ? new Date(sub.next_billing_date).toLocaleDateString("en-MY", { year: 'numeric', month: 'short', day: 'numeric' }) : "N/A";
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
@@ -151,7 +143,7 @@ function PortalContent({ slug }: { slug: string }) {
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs font-bold uppercase tracking-widest text-foreground hidden sm:inline">{data.customer.name}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-foreground hidden sm:inline">{sub.customer_name}</span>
             <button onClick={() => router.push(`/${slug}/portal`)} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 uppercase font-bold tracking-widest">
               <LogOut size={14} /> Logout
             </button>
@@ -159,7 +151,7 @@ function PortalContent({ slug }: { slug: string }) {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 md:py-12 space-y-12">
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8 md:py-12 space-y-12">
         
         {/* Global Profile Form */}
         <div className="bg-card border border-border/60 shadow-sm p-6 rounded-none">
@@ -167,135 +159,65 @@ function PortalContent({ slug }: { slug: string }) {
           <form onSubmit={handleUpdateContact} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Name</label>
-              <input type="text" required value={editName} onChange={e => setEditName(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+              <input type="text" readOnly value={sub.customer_name} className="flex h-10 w-full rounded-none border border-border/60 bg-secondary/50 px-3 py-1 text-sm focus-visible:outline-none" />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Email</label>
-              <input type="email" required value={editEmail} onChange={e => setEditEmail(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+              <input type="email" readOnly value={sub.customer_email} className="flex h-10 w-full rounded-none border border-border/60 bg-secondary/50 px-3 py-1 text-sm focus-visible:outline-none" />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Phone</label>
-              <input type="tel" required value={editPhone} onChange={e => setEditPhone(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+              <input type="tel" readOnly value={sub.customer_phone} className="flex h-10 w-full rounded-none border border-border/60 bg-secondary/50 px-3 py-1 text-sm focus-visible:outline-none" />
             </div>
-            <Button type="submit" disabled={isUpdating} variant="outline" className="w-full rounded-none uppercase font-bold tracking-widest text-xs h-10">
-              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
-            </Button>
+            <Button type="submit" variant="outline" className="w-full rounded-none uppercase font-bold tracking-widest text-xs h-10">Request Edit</Button>
           </form>
         </div>
 
-        {/* Subscriptions Loop */}
-        <div className="space-y-12">
-          {data.subscriptions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No active subscriptions found.</div>
-          ) : (
-            data.subscriptions.map(sub => {
-              const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
-              const isCancelled = sub.status === "CANCELLED" || sub.status === "CANCELED";
-              const isPastDue = sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
+        {/* Subscription Status Card */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">{sub.plan_name}</h2>
+            {isActive && !isPastDue && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">Active</span>}
+            {isPastDue && <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">Payment Due</span>}
+            {isCancelled && <span className="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">Cancelled</span>}
+          </div>
 
-              const nextDateStr = sub.next_billing_date 
-                ? new Date(sub.next_billing_date).toLocaleDateString("en-MY", { year: 'numeric', month: 'short', day: 'numeric' })
-                : "N/A";
+          <div className="bg-card border border-border/60 shadow-sm p-6 rounded-none space-y-6">
+            <div>
+              <p className="text-sm font-mono text-muted-foreground mb-1">RM {sub.plan_price.toFixed(2)}</p>
+            </div>
 
-              return (
-                <div key={sub.id} className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold tracking-tight text-foreground">{sub.plan.name}</h2>
-                    {isActive && !isPastDue && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">Active</span>}
-                    {isPastDue && <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">Payment Due</span>}
-                    {isCancelled && <span className="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5">Cancelled</span>}
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                    
-                    {/* Status Card */}
-                    <div className="lg:col-span-1 bg-card border border-border/60 shadow-sm p-6 rounded-none space-y-6">
-                      <div>
-                        <p className="text-sm font-mono text-muted-foreground mb-1">RM {sub.plan.price.toFixed(2)} / {sub.plan.interval}</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 pb-6 border-b border-border/40">
-                         <div>
-                           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Next Billing</p>
-                           <p className="text-sm font-medium text-foreground">{nextDateStr}</p>
-                         </div>
-                         <div>
-                           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Status</p>
-                           <p className="text-sm font-medium text-foreground">{sub.status.replace("_", " ")}</p>
-                         </div>
-                      </div>
-
-                      <div className="flex flex-col gap-3">
-                        {isActive && (
-                          <Link href={`/${sub.plan.slug}/checkout`}>
-                            <Button className="w-full rounded-none uppercase font-bold tracking-widest text-xs h-12">
-                              Make Renewal Payment
-                            </Button>
-                          </Link>
-                        )}
-                        {isActive && (
-                          <button onClick={() => handleCancel(sub.id)} className="text-xs font-bold uppercase tracking-widest text-rose-600 hover:text-rose-700 border border-transparent hover:border-rose-200 hover:bg-rose-50 px-4 py-3 transition-colors text-center w-full">
-                            Cancel Subscription
-                          </button>
-                        )}
-                        {isCancelled && (
-                          <div className="text-center p-3 bg-secondary/50 border border-border/60 text-xs text-muted-foreground">
-                            Access remains until {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("en-MY") : "end of term"}.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Payment History Table */}
-                    <div className="lg:col-span-2 bg-card border border-border/60 shadow-sm rounded-none overflow-hidden">
-                      <div className="p-6 border-b border-border/60 flex items-center gap-2">
-                         <CreditCard size={16} className="text-muted-foreground" />
-                         <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">Payment History</h3>
-                      </div>
-                      {sub.payments.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-muted-foreground">No payment records found.</div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm text-left">
-                            <thead className="bg-secondary/50 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                              <tr>
-                                <th className="px-6 py-3 font-medium">Date</th>
-                                <th className="px-6 py-3 font-medium">Amount</th>
-                                <th className="px-6 py-3 font-medium">Method</th>
-                                <th className="px-6 py-3 font-medium text-right">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/40">
-                              {sub.payments.map((p) => (
-                                <tr key={p.id} className="hover:bg-secondary/20">
-                                  <td className="px-6 py-4 whitespace-nowrap text-foreground">
-                                    {new Date(p.created_at).toLocaleDateString("en-MY", { year: 'numeric', month: 'short', day: 'numeric' })}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap font-mono font-medium">
-                                    RM {p.amount.toFixed(2)}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-muted-foreground text-xs uppercase tracking-wider">
-                                    {p.payment_method.replace("_", " ")}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                                    <span className={`inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border ${
-                                      p.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-secondary text-muted-foreground border-border/60"
-                                    }`}>
-                                      {p.status}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            <div className="grid grid-cols-2 gap-4 pb-6 border-b border-border/40">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Next Billing</p>
+                  <p className="text-sm font-medium text-foreground">{nextDateStr}</p>
                 </div>
-              );
-            })
-          )}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Status</p>
+                  <p className="text-sm font-medium text-foreground">{sub.status.replace("_", " ")}</p>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-3 max-w-sm">
+              {isActive && (
+                <Link href={`/${slug}/checkout`}>
+                  <Button className="w-full rounded-none uppercase font-bold tracking-widest text-xs h-12">
+                    Make Renewal Payment
+                  </Button>
+                </Link>
+              )}
+              {isActive && (
+                <button onClick={handleCancel} className="text-xs font-bold uppercase tracking-widest text-rose-600 hover:text-rose-700 border border-transparent hover:border-rose-200 hover:bg-rose-50 px-4 py-3 transition-colors text-center w-full">
+                  Cancel Subscription
+                </button>
+              )}
+              {isCancelled && (
+                <div className="text-center p-3 bg-secondary/50 border border-border/60 text-xs text-muted-foreground">
+                  Access remains until {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("en-MY") : "end of term"}.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
       </main>

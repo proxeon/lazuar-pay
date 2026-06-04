@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, LockKeyhole, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { getPlanBySlug, createCheckoutSession, CommunityPlan } from "@/lib/api";
+import { browserClient, TENANT_SLUG, type CommunityPlan } from "@/lib/api-client";
 
 export default function CheckoutPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
@@ -18,19 +18,17 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   const [isFull, setIsFull] = useState(false);
 
   useEffect(() => {
-    getPlanBySlug(resolvedParams.slug)
-      .then(data => {
-        if (!data) {
-          router.replace("/");
-          return;
-        }
-        setPkg(data);
-        if (data.is_full) {
-          setIsFull(true);
-        }
-        setIsLoading(false);
-      })
-      .catch(() => router.replace("/"));
+    browserClient.GET("/public/community/{tenantSlug}/plans/{slug}", {
+      params: { path: { tenantSlug: TENANT_SLUG, slug: resolvedParams.slug } }
+    }).then(({ data, error }) => {
+      if (error || !data) {
+        router.replace("/");
+        return;
+      }
+      setPkg(data);
+      if (data.is_full) setIsFull(true);
+      setIsLoading(false);
+    });
   }, [resolvedParams.slug, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -38,20 +36,23 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     setIsSubmitting(true);
 
     const formData = new FormData(e.currentTarget);
-    const data = {
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      plan_slug: resolvedParams.slug
-    };
+    
+    const { data, error } = await browserClient.POST("/public/community/checkout", {
+      body: {
+        tenant_slug: TENANT_SLUG,
+        plan_slug: resolvedParams.slug,
+        name: formData.get("name") as string,
+        email: formData.get("email") as string,
+        phone: formData.get("phone") as string
+      }
+    });
 
-    try {
-      const checkoutUrl = await createCheckoutSession(data);
-      toast.success("Details secured.", { description: "Routing to secure payment gateway..." });
-      window.location.href = checkoutUrl;
-    } catch (error: any) {
-      toast.error("Checkout Failed", { description: error.message });
+    if (error) {
+      toast.error("Checkout Failed", { description: error.detail || "An error occurred" });
       setIsSubmitting(false);
+    } else if (data) {
+      toast.success("Details secured.", { description: "Routing to secure payment gateway..." });
+      window.location.href = data.url;
     }
   };
 
@@ -59,7 +60,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-muted-foreground" /></div>;
   }
 
-  // ─── Full Program Guard ────────────────────────────────────
   if (isFull) {
     return (
       <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
@@ -82,11 +82,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
               <strong>{pkg.name}</strong> has reached maximum capacity and is currently not accepting new enrollments.
               Please check back later or contact us to join the waitlist for the next intake.
             </p>
-            <Link href={`/${pkg.slug}`}>
-              <Button variant="outline" className="rounded-none">
-                ← Back to Program Details
-              </Button>
-            </Link>
+            <Link href={`/${pkg.slug}`}><Button variant="outline" className="rounded-none">← Back to Program Details</Button></Link>
           </div>
         </main>
       </div>
@@ -101,10 +97,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
             <span className="text-sm font-medium">Back</span>
           </Link>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <LockKeyhole className="h-3.5 w-3.5" />
-            <span className="text-xs font-semibold uppercase tracking-widest">Secure Checkout</span>
-          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground"><LockKeyhole className="h-3.5 w-3.5" /><span className="text-xs font-semibold uppercase tracking-widest">Secure Checkout</span></div>
         </div>
       </header>
 
@@ -119,16 +112,16 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-semibold text-foreground">Full Name</label>
-                <input id="name" name="name" type="text" required placeholder="e.g. Akmal Firdaus" className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <input id="name" name="name" type="text" required placeholder="e.g. Akmal Firdaus" className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors" />
               </div>
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-semibold text-foreground">Email Address</label>
-                <input id="email" name="email" type="email" required placeholder="e.g. akmal@lazuar.com" className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <input id="email" name="email" type="email" required placeholder="e.g. akmal@lazuar.com" className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors" />
                 <p className="text-[11px] text-muted-foreground">Your receipt and portal access will be sent here.</p>
               </div>
               <div className="space-y-2">
                 <label htmlFor="phone" className="text-sm font-semibold text-foreground">WhatsApp Number</label>
-                <input id="phone" name="phone" type="tel" required placeholder="+60 12-345 6789" className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <input id="phone" name="phone" type="tel" required placeholder="+60 12-345 6789" className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors" />
                 <p className="text-[11px] text-muted-foreground">Used for weekly class links and reminders.</p>
               </div>
               <div className="pt-4">
@@ -160,11 +153,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                   <span className="text-xl font-bold tracking-tighter text-foreground">RM {pkg.price.toFixed(2)}</span>
                 </div>
               </div>
-              {pkg.spots_remaining !== null && !pkg.is_full && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 text-center font-medium">
-                  🔥 {pkg.spots_remaining} spots remaining
-                </p>
-              )}
             </div>
           </div>
         </div>
