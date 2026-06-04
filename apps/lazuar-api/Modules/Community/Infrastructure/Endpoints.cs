@@ -14,7 +14,7 @@ using Modules.Community.Application.Queries;
 using Modules.Payments.Application.Queries;
 using Modules.Payments.Application.Commands;
 using Modules.Tenant.Contracts;
-using Modules.Messaging.Contracts; // <-- ADDED
+using Modules.Messaging.Contracts;
 
 namespace Modules.Community.Infrastructure;
 
@@ -241,10 +241,11 @@ public static class Endpoints
             return Results.Ok(new { status = "deleted" });
         });
 
-        admin.MapPut("/payment-config", async (UpdatePaymentConfigCommand req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        // Refactored to map explicit API Request DTO, resolving collection_id binding
+        admin.MapPut("/payment-config", async (SavePaymentConfigRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new UpdatePaymentConfigCommand(
-                ctx.TenantId, req.GatewayType, req.ApiKey, req.MerchantId, req.WebhookSecret, req.SecretKey, req.IsActive);
+                ctx.TenantId, req.GatewayType, req.ApiKey, req.CollectionId, req.WebhookSecret, req.SecretKey, req.IsActive);
             await mediator.Send(command);
             return Results.Ok(new { status = "saved" });
         });
@@ -417,6 +418,14 @@ public record PublicCheckoutRequestDto(
 
 public record MagicLinkRequestDto(string Email);
 
-// --- NEW DTOs for Messaging Endpoints ---
 public record UpdateTemplateRequestDto(string Subject, string Body);
 public record TestReminderRequestDto(string TemplateName, string? Channel);
+
+// API DTO designed specifically to parse incoming settings payload from community-admin
+public record SavePaymentConfigRequestDto(
+    string GatewayType,
+    string? ApiKey,
+    string? CollectionId, // Correctly deserializes collection_id via snake_case
+    string? WebhookSecret,
+    string? SecretKey,
+    bool IsActive);
