@@ -1,4 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Dapper;
+using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Contracts;
 using Modules.CRM.Contracts;
 using Modules.Messaging.Contracts;
@@ -16,18 +23,20 @@ public class CommunityIntegrationEventHandlers :
     private readonly ICrmQueryService _crmQueryService;
     private readonly IEmailService _emailService;
     private readonly IMessageTemplateQueryService _templateService;
+    private readonly ISqlConnectionFactory _connectionFactory;
 
     public CommunityIntegrationEventHandlers(
         ICrmQueryService crmQueryService, 
         IEmailService emailService,
-        IMessageTemplateQueryService templateService)
+        IMessageTemplateQueryService templateService,
+        [FromKeyedServices("MessagingSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
         _crmQueryService = crmQueryService;
         _emailService = emailService;
         _templateService = templateService;
+        _connectionFactory = connectionFactory;
     }
 
-    // Accepts a dynamic dictionary and replaces all placeholders
     private string RenderTemplate(string template, Dictionary<string, string> variables)
     {
         if (string.IsNullOrEmpty(template)) return "";
@@ -35,7 +44,7 @@ public class CommunityIntegrationEventHandlers :
         var result = template;
         foreach (var (key, value) in variables)
         {
-            var placeholder = $"{{{{{key}}}}}"; // e.g. {{customer_name}}
+            var placeholder = $"{{{{{key}}}}}";
             result = result.Replace(placeholder, value ?? "", StringComparison.OrdinalIgnoreCase);
         }
         
@@ -68,25 +77,50 @@ public class CommunityIntegrationEventHandlers :
 
     public async Task HandleAsync(CommunitySubscriptionCancelledIntegrationEvent @event)
     {
+        // 1. Send cancellation confirmation email to the subscriber
         var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
-        if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
-
-        var template = await _templateService.GetTemplateByNameAsync(@event.OrganizationId, "Community Subscription Cancelled");
-
-        var variables = new Dictionary<string, string>
+        if (profile != null && !string.IsNullOrEmpty(profile.Email))
         {
-            ["customer_name"] = profile.FullName,
-            ["business_name"] = "Our Community",
-            ["plan_name"] = @event.PlanName,
-            ["current_period_end"] = @event.CurrentPeriodEnd.HasValue 
-                ? @event.CurrentPeriodEnd.Value.ToString("dd MMM yyyy") 
-                : "the end of your billing cycle"
-        };
+            var template = await _templateService.GetTemplateByNameAsync(@event.OrganizationId, "Community Subscription Cancelled");
 
-        var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Cancelled";
-        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.FullName}, your subscription to {@event.PlanName} has been cancelled.";
-        
-        await _emailService.SendEmailAsync(profile.Email, subject, body);
+            var variables = new Dictionary<string, string>
+            {
+                ["customer_name"] = profile.FullName,
+                ["business_name"] = "Our Community",
+                ["plan_name"] = @event.PlanName,
+                ["current_period_end"] = @event.CurrentPeriodEnd.HasValue 
+                    ? @event.CurrentPeriodEnd.Value.ToString("dd MMM yyyy") 
+                    : "the end of your billing cycle"
+            };
+
+            var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Cancelled";
+            var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.FullName}, your subscription to {@event.PlanName} has been cancelled.";
+            
+            await _emailService.SendEmailAsync(profile.Email, subject, body);
+        }
+
+        // 2. NEW: Clean up local Messaging queue using boundary-safe Dapper query.
+        // Cancelling pending checkouts (manually or via 3-day lifecycle cleanup) stops any active abandoned cart drips.
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) 
+        {
+            connection.Open();
+        }
+
+        const string sql = @"
+            UPDATE messaging.""AutomationQueue"" 
+            SET ""Status"" = 'CANCELLED', ""ProcessedAt"" = @Now, ""LastError"" = @Reason
+            WHERE ""OrganizationId"" = @OrgId 
+              AND ""BookingId"" = @SubId 
+              AND ""Status"" = 'PENDING'";
+
+        await connection.ExecuteAsync(sql, new
+        {
+            OrgId = @event.OrganizationId,
+            SubId = @event.SubscriptionId,
+            Now = DateTime.UtcNow,
+            Reason = "Subscription was cancelled or checkout expired."
+        });
     }
 
     public Task HandleAsync(CommunityCheckoutInitiatedIntegrationEvent @event)
