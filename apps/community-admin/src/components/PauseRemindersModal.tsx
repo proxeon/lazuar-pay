@@ -1,10 +1,8 @@
-// apps/community-admin/src/components/PauseRemindersModal.tsx
-
 import { useState } from "react";
 import { X, Loader2, BellOff, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
-import type { Subscriber } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Subscriber } from "../lib/api-client";
 
 interface PauseRemindersModalProps {
   sub: Subscriber;
@@ -26,39 +24,51 @@ export default function PauseRemindersModal({ sub, onClose, onSuccess }: PauseRe
     e.preventDefault();
     setIsSubmitting(true);
 
-    try {
-      let pauseUntil: string | null = null;
+    let pauseUntil: string | undefined = undefined;
 
-      if (mode === "PRESET") {
-        const days = parseInt(presetDuration, 10);
-        const date = new Date();
-        date.setDate(date.getDate() + days);
-        pauseUntil = date.toISOString();
-      } else {
-        if (!customDate) throw new Error("Please select a date.");
-        pauseUntil = new Date(`${customDate}T23:59:59Z`).toISOString();
+    if (mode === "PRESET") {
+      const days = parseInt(presetDuration, 10);
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      pauseUntil = date.toISOString();
+    } else {
+      if (!customDate) {
+          toast.error("Please select a date.");
+          setIsSubmitting(false);
+          return;
       }
+      pauseUntil = new Date(`${customDate}T23:59:59Z`).toISOString();
+    }
 
-      await api.pauseReminders(sub.id, { pause_until: pauseUntil });
-      toast.success("Reminders paused successfully.");
-      onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to pause reminders.");
-    } finally {
-      setIsSubmitting(false);
+    const { error } = await client.POST("/admin/community/subscribers/{id}/pause-reminders", {
+        params: { path: { id: sub.id } },
+        body: { pause_until: pauseUntil }
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+        toast.error(error.detail || "Failed to pause reminders.");
+    } else {
+        toast.success("Reminders paused successfully.");
+        onSuccess();
     }
   };
 
   const handleResume = async () => {
     setIsSubmitting(true);
-    try {
-      await api.pauseReminders(sub.id, { pause_until: null });
-      toast.success("Reminders resumed.");
-      onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to resume reminders.");
-    } finally {
-      setIsSubmitting(false);
+    const { error } = await client.POST("/admin/community/subscribers/{id}/pause-reminders", {
+        params: { path: { id: sub.id } },
+        body: { pause_until: undefined }
+    });
+    
+    setIsSubmitting(false);
+    
+    if (error) {
+        toast.error(error.detail || "Failed to resume reminders.");
+    } else {
+        toast.success("Reminders resumed.");
+        onSuccess();
     }
   };
 

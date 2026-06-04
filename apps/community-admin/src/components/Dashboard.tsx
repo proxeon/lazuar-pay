@@ -1,7 +1,6 @@
-// apps/community-admin/src/components/Dashboard.tsx
-
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type CommunityStatsResponse } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { CommunityStatsResponse } from "../lib/api-client";
 import { DollarSign, Users, Menu, Activity, RefreshCw, UserPlus, Zap } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
@@ -10,10 +9,13 @@ const PIE_COLORS = ['#0f172a', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 export default function Dashboard({ isMobile, toggleSidebar }: any) {
   const queryClient = useQueryClient();
 
-  // Fetch the robust analytics data from Phase 2.1
   const { data: stats, isLoading, isFetching } = useQuery<CommunityStatsResponse>({
     queryKey: ["community-stats"],
-    queryFn: api.getStats,
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/community/stats");
+      if (error) throw new Error(error.detail || "Failed to fetch stats");
+      return data as CommunityStatsResponse;
+    },
   });
 
   return (
@@ -21,10 +23,7 @@ export default function Dashboard({ isMobile, toggleSidebar }: any) {
       <header className="flex items-center justify-between pb-2">
         <div className="flex items-center gap-3">
           {isMobile && (
-            <button 
-              onClick={toggleSidebar} 
-              className="p-1.5 hover:bg-secondary rounded-none transition-colors"
-            >
+            <button onClick={toggleSidebar} className="p-1.5 hover:bg-secondary rounded-none transition-colors">
               <Menu size={20} />
             </button>
           )}
@@ -49,154 +48,65 @@ export default function Dashboard({ isMobile, toggleSidebar }: any) {
       {isLoading || !stats ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
           {[...Array(8)].map((_, i) => (
-            <div 
-              key={i} 
-              className="h-[130px] bg-card rounded-none border border-border/60 p-5 flex flex-col justify-between" 
-            />
+            <div key={i} className="h-[130px] bg-card rounded-none border border-border/60 p-5 flex flex-col justify-between" />
           ))}
         </div>
       ) : (
         <>
-          {/* Top Metric Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Platform MRR"
-              value={`RM ${stats.mrr.toFixed(2)}`}
-              icon={DollarSign}
-              description="Excludes Invoice-Only tracking"
-              theme="default"
-            />
-            <StatCard
-              title="Active Members"
-              value={stats.active_subscribers}
-              icon={Users}
-              description="Subscribers with unhindered access"
-              theme="active"
-            />
-            <StatCard
-              title="Net New (30 Days)"
-              value={stats.net_new_last_30_days > 0 ? `+${stats.net_new_last_30_days}` : stats.net_new_last_30_days}
-              icon={UserPlus}
-              description="New minus cancelled last 30 days"
-              theme="default"
-            />
-            <StatCard
-              title="Churn Rate (30 Days)"
-              value={`${stats.churn_rate_percentage}%`}
-              icon={Activity}
-              description="Percentage of users lost"
-              theme={stats.churn_rate_percentage > 10 ? "danger" : "default"}
-            />
+            <StatCard title="Platform MRR" value={`RM ${stats.mrr.toFixed(2)}`} icon={DollarSign} description="Excludes Invoice-Only tracking" theme="default" />
+            <StatCard title="Active Members" value={stats.active_subscribers} icon={Users} description="Subscribers with unhindered access" theme="active" />
+            <StatCard title="Net New (30 Days)" value={stats.net_new_last_30_days > 0 ? `+${stats.net_new_last_30_days}` : stats.net_new_last_30_days} icon={UserPlus} description="New minus cancelled last 30 days" theme="default" />
+            <StatCard title="Churn Rate (30 Days)" value={`${stats.churn_rate_percentage}%`} icon={Activity} description="Percentage of users lost" theme={stats.churn_rate_percentage > 10 ? "danger" : "default"} />
           </div>
 
-          {/* Secondary Metric Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard
-              title="Average Rev Per User"
-              value={`RM ${stats.average_revenue_per_user.toFixed(2)}`}
-              icon={DollarSign}
-              description="ARPU across active platform users"
-              theme="default"
-            />
-            <StatCard
-              title="Total Cash Collected"
-              value={`RM ${stats.total_revenue_collected.toFixed(2)}`}
-              icon={DollarSign}
-              description="All-time confirmed payments"
-              theme="default"
-            />
-            <StatCard
-              title="Reminder Effectiveness"
-              value={`${stats.reminder_effectiveness_percentage}%`}
-              icon={Zap}
-              description="Paid within 48h of automated reminder"
-              theme={stats.reminder_effectiveness_percentage > 50 ? "active" : "warning"}
-            />
+            <StatCard title="Average Rev Per User" value={`RM ${stats.average_revenue_per_user.toFixed(2)}`} icon={DollarSign} description="ARPU across active platform users" theme="default" />
+            <StatCard title="Total Cash Collected" value={`RM ${stats.total_revenue_collected.toFixed(2)}`} icon={DollarSign} description="All-time confirmed payments" theme="default" />
+            <StatCard title="Reminder Effectiveness" value={`${stats.reminder_effectiveness_percentage}%`} icon={Zap} description="Paid within 48h of automated reminder" theme={stats.reminder_effectiveness_percentage > 50 ? "active" : "warning"} />
           </div>
 
-          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            
-            {/* Cash Flow Bar Chart */}
             <div className="lg:col-span-2 bg-card border border-border/60 p-5 shadow-sm rounded-none flex flex-col">
               <h3 className="text-xs font-bold uppercase tracking-widest text-foreground mb-6">6-Month Cash Flow Trend</h3>
               <div className="flex-1 min-h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.cash_flow_trend} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                    <XAxis 
-                      dataKey="month" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fontSize: 10, fill: '#64748b' }} 
-                      dy={10}
-                    />
-                    <YAxis 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fontSize: 10, fill: '#64748b' }}
-                      tickFormatter={(val) => `RM${val}`}
-                    />
-                    <Tooltip 
-                      cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                      contentStyle={{ borderRadius: '0', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 'bold' }}
-                      formatter={(val: number) => [`RM ${val.toFixed(2)}`, "Cash Collected"]}
-                    />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `RM${val}`} />
+                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '0', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 'bold' }} formatter={(val: number) => [`RM ${val.toFixed(2)}`, "Cash Collected"]} />
                     <Bar dataKey="amount" fill="#0f172a" radius={[2, 2, 0, 0]} maxBarSize={50} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Payment Method Donut Chart */}
             <div className="lg:col-span-1 bg-card border border-border/60 p-5 shadow-sm rounded-none flex flex-col">
               <h3 className="text-xs font-bold uppercase tracking-widest text-foreground mb-2">Payment Methods</h3>
               <p className="text-[10px] text-muted-foreground mb-4">Breakdown of all-time transactions.</p>
-              
               <div className="flex-1 min-h-[200px] w-full relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={stats.payment_methods}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="count"
-                      nameKey="method"
-                      stroke="none"
-                    >
-                      {stats.payment_methods.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                      ))}
+                    <Pie data={stats.payment_methods} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="count" nameKey="method" stroke="none">
+                      {stats.payment_methods.map((_, index) => <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '0', border: '1px solid #e2e8f0', fontSize: '11px', fontWeight: 'bold' }}
-                      formatter={(val: number, name: string) => [
-                        `${val} transactions`, 
-                        name.replace(/_/g, ' ')
-                      ]}
-                    />
+                    <Tooltip contentStyle={{ borderRadius: '0', border: '1px solid #e2e8f0', fontSize: '11px', fontWeight: 'bold' }} formatter={(val: number, name: string) => [`${val} transactions`, name.replace(/_/g, ' ')]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Custom Legend */}
               <div className="flex flex-col gap-2 mt-4">
                 {stats.payment_methods.map((method, index) => (
                   <div key={method.method} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }} />
-                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {method.method.replace(/_/g, ' ')}
-                      </span>
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{method.method.replace(/_/g, ' ')}</span>
                     </div>
                     <span className="text-xs font-bold font-mono">RM {method.total_amount.toFixed(0)}</span>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
         </>
       )}
@@ -230,9 +140,7 @@ function StatCard({ title, value, icon: Icon, description, theme = "default" }: 
   }
 
   return (
-    <div
-      className={`p-5 rounded-none border h-[130px] shadow-sm flex flex-col justify-between transition-all duration-200 ${cardStyle}`}
-    >
+    <div className={`p-5 rounded-none border h-[130px] shadow-sm flex flex-col justify-between transition-all duration-200 ${cardStyle}`}>
       <div className="flex justify-between items-start gap-2">
         <div className="flex flex-col gap-0.5">
           <span className="text-[12px] font-medium text-muted-foreground leading-none truncate max-w-[140px]">{title}</span>

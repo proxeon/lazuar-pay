@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
-import type { Subscriber, MessageTemplate } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Subscriber, MessageTemplate } from "../lib/api-client";
 
 interface SendReminderModalProps {
   sub: Subscriber;
@@ -19,7 +19,11 @@ export default function SendReminderModal({ sub, onClose }: SendReminderModalPro
 
   const { data: templates } = useQuery<MessageTemplate[]>({
     queryKey: ["messaging-templates"],
-    queryFn: api.getTemplates,
+    queryFn: async () => {
+        const { data, error } = await client.GET("/admin/community/templates");
+        if (error) throw new Error(error.detail || "Failed to fetch templates");
+        return data ?? [];
+    },
   });
 
   const communityTemplates = useMemo(() => {
@@ -34,33 +38,27 @@ export default function SendReminderModal({ sub, onClose }: SendReminderModalPro
     e.preventDefault();
     setIsSending(true);
 
-    try {
-      const reqChannel = channel === "DEFAULT" ? undefined : channel;
-      
-      // Fix: Send template_id instead of template_name to match backend DTO
-      const payload = mode === "TEMPLATE" 
-        ? { template_id: selectedTemplate?.id, channel: reqChannel }
-        : { custom_message: customMessage.trim(), channel: reqChannel };
+    const reqChannel = channel === "DEFAULT" ? undefined : channel;
 
-      const res = await api.sendReminder(sub.id, payload);
-      
-      const successes = res.details?.filter((d: any) => d.success)?.length || 0;
-      // We check if "successes" count is returned, but if the endpoint doesn't return a details array,
-      // a 200 OK from the API implies it was dispatched to the outbox successfully.
-      if (res.status === "sent" || successes > 0) {
-        toast.success(`Reminder scheduled to send.`);
-        onClose();
-      } else {
-        toast.error("Failed to send reminder. Check contact info.");
+    const { error } = await client.POST("/admin/community/subscribers/{id}/send-reminder", {
+      params: { path: { id: sub.id } },
+      body: {
+        template_id: mode === "TEMPLATE" ? selectedTemplate?.id : undefined,
+        custom_message: mode === "CUSTOM" ? customMessage.trim() : undefined,
+        channel: reqChannel
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send reminder.");
-    } finally {
-      setIsSending(false);
+    });
+
+    setIsSending(false);
+
+    if (error) {
+      toast.error(error.detail || "Failed to send reminder. Check contact info.");
+    } else {
+      toast.success(`Reminder scheduled to send.`);
+      onClose();
     }
   };
 
-  // Naive client-side variable replacement for preview
   const generatePreview = () => {
     let text = mode === "TEMPLATE" ? (selectedTemplate?.body || "") : customMessage;
     if (!text) return "Select a template or type a message to see preview...";
@@ -89,62 +87,30 @@ export default function SendReminderModal({ sub, onClose }: SendReminderModalPro
         </div>
 
         <div className="p-5 flex-1 overflow-y-auto space-y-5">
-          {/* Mode Toggle */}
           <div className="flex bg-secondary/50 border border-border/60 p-1 rounded-none">
-            <button 
-              type="button"
-              onClick={() => setMode("TEMPLATE")}
-              className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "TEMPLATE" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Use Template
-            </button>
-            <button 
-              type="button"
-              onClick={() => setMode("CUSTOM")}
-              className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "CUSTOM" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Custom Message
-            </button>
+            <button type="button" onClick={() => setMode("TEMPLATE")} className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "TEMPLATE" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Use Template</button>
+            <button type="button" onClick={() => setMode("CUSTOM")} className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "CUSTOM" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Custom Message</button>
           </div>
 
           <form id="reminder-form" onSubmit={handleSubmit} className="space-y-4">
-            
             {mode === "TEMPLATE" ? (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Select Template</label>
-                <select 
-                  required 
-                  value={templateName} 
-                  onChange={e => setTemplateName(e.target.value)} 
-                  className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
+                <select required value={templateName} onChange={e => setTemplateName(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                   <option value="" disabled>Select a template...</option>
-                  {communityTemplates.map(t => (
-                    <option key={t.id} value={t.name}>{t.name}</option>
-                  ))}
+                  {communityTemplates.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                 </select>
               </div>
             ) : (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Custom Message Body</label>
-                <textarea 
-                  required 
-                  value={customMessage} 
-                  onChange={e => setCustomMessage(e.target.value)} 
-                  rows={4} 
-                  placeholder="Type your message here. You can use {{customer_name}}, {{plan_name}}..." 
-                  className="flex w-full rounded-none border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y font-mono" 
-                />
+                <textarea required value={customMessage} onChange={e => setCustomMessage(e.target.value)} rows={4} placeholder="Type your message here. You can use {{customer_name}}, {{plan_name}}..." className="flex w-full rounded-none border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y font-mono" />
               </div>
             )}
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Delivery Channel</label>
-              <select 
-                value={channel} 
-                onChange={e => setChannel(e.target.value)} 
-                className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
+              <select value={channel} onChange={e => setChannel(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                 <option value="DEFAULT">Auto (Use their preference or both)</option>
                 <option value="WHATSAPP">WhatsApp Only</option>
                 <option value="EMAIL">Email Only</option>
@@ -152,7 +118,6 @@ export default function SendReminderModal({ sub, onClose }: SendReminderModalPro
               </select>
             </div>
 
-            {/* Preview Box */}
             <div className="space-y-1.5 pt-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Message Preview</label>
               <div className="w-full min-h-[100px] rounded-none border border-border/60 bg-secondary/30 px-3 py-3 text-sm text-foreground shadow-inner font-mono whitespace-pre-wrap leading-relaxed">

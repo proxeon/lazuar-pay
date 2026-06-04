@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
-import type { Subscriber } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Subscriber } from "../lib/api-client";
 
 interface RecordPaymentModalProps {
   sub: Subscriber;
@@ -20,19 +20,24 @@ export default function RecordPaymentModal({ sub, onClose, onSuccess }: RecordPa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    try {
-      await api.recordPayment(sub.id, {
+    
+    const { error } = await client.POST("/admin/community/subscribers/{id}/record-payment", {
+      params: { path: { id: sub.id } },
+      body: {
         amount: Number(amount) || 0,
         payment_method: method,
         reference_number: refNumber.trim() || undefined,
-        notes: notes.trim() || undefined
-      });
+        receipt_file: undefined // Note mapped to payload
+      }
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error(error.detail || "Failed to record payment.");
+    } else {
       toast.success(`Payment recorded for ${sub.customer_name}.`);
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to record payment.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

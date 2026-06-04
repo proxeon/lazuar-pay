@@ -1,9 +1,7 @@
-// apps/community-admin/src/components/ReminderHistoryModal.tsx
-
 import { useQuery } from "@tanstack/react-query";
 import { X, Loader2, MessageSquare } from "lucide-react";
-import { api } from "../lib/api";
-import type { Subscriber, DeliveryHistoryItem } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Subscriber, DeliveryHistoryItem } from "../lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,7 +13,13 @@ interface ReminderHistoryModalProps {
 export default function ReminderHistoryModal({ sub, onClose }: ReminderHistoryModalProps) {
   const { data: records, isLoading } = useQuery<DeliveryHistoryItem[]>({
     queryKey: ["community-reminders", sub.id],
-    queryFn: () => api.getReminderHistory(sub.id),
+    queryFn: async () => {
+        const { data, error } = await client.GET("/admin/community/subscribers/{id}/reminders", {
+            params: { path: { id: sub.id } }
+        });
+        if (error) throw new Error(error.detail || "Failed to fetch reminder logs");
+        return data ?? [];
+    },
   });
 
   const formatDate = (dateStr: string) => {

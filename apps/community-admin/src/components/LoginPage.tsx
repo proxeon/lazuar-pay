@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api } from "../lib/api";
+import { client } from "../lib/api-client";
 
 interface LoginPageProps {
   onLogin: (token: string, user: { email: string; name?: string; role: string }) => void;
@@ -17,14 +17,20 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const result = await api.login(email, password);
+      const { data, error: apiError } = await client.POST("/platform/auth/login", {
+        body: { email, password }
+      });
 
-      if (!result.token) {
-        throw new Error(result.message || "Login failed");
+      if (apiError) {
+        throw new Error(apiError.detail || "Invalid credentials. Please try again.");
       }
 
-      const user = result.user || { email, role: "SUPER_ADMIN" };
-      onLogin(result.token, {
+      if (!data?.token) {
+        throw new Error("Login failed. No token received.");
+      }
+
+      const user = data.user || { email, role: "SUPER_ADMIN" };
+      onLogin(data.token, {
         email: user.email || email,
         name: user.name,
         role: user.role,
@@ -40,20 +46,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     <div className="flex h-screen w-full items-center justify-center bg-zinc-50 dark:bg-black font-sans">
       <div className="w-full max-w-[380px] mx-4">
         <div className="bg-card border border-border/60 rounded-none p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-none">
-          {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-xl font-bold tracking-tight text-foreground uppercase">Community Admin</h1>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mt-2">Sign in to manage your MRR engine.</p>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-none">
               <p className="text-xs font-bold tracking-wide uppercase text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <label htmlFor="email" className="text-[11px] font-bold uppercase tracking-widest text-foreground">Email</label>
@@ -94,10 +97,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </div>
           </form>
         </div>
-
-        <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-6">
-          Use your Lazuar staff credentials to sign in.
-        </p>
       </div>
     </div>
   );

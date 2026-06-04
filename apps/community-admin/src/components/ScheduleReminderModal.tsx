@@ -1,11 +1,9 @@
-// apps/community-admin/src/components/ScheduleReminderModal.tsx
-
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Loader2, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
-import type { Subscriber, MessageTemplate } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Subscriber, MessageTemplate } from "../lib/api-client";
 
 interface ScheduleReminderModalProps {
   sub: Subscriber;
@@ -18,15 +16,17 @@ export default function ScheduleReminderModal({ sub, onClose }: ScheduleReminder
   const [customMessage, setCustomMessage] = useState("");
   const [channel, setChannel] = useState("DEFAULT");
   
-  // Schedule state
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  
   const [isScheduling, setIsScheduling] = useState(false);
 
   const { data: templates } = useQuery<MessageTemplate[]>({
     queryKey: ["messaging-templates"],
-    queryFn: api.getTemplates,
+    queryFn: async () => {
+        const { data, error } = await client.GET("/admin/community/templates");
+        if (error) throw new Error(error.detail || "Failed to fetch templates");
+        return data ?? [];
+    },
   });
 
   const communityTemplates = useMemo(() => {
@@ -39,44 +39,33 @@ export default function ScheduleReminderModal({ sub, onClose }: ScheduleReminder
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!date || !time) {
-      toast.error("Please provide both date and time.");
-      return;
-    }
-
+    if (!date || !time) { toast.error("Please provide both date and time."); return; }
     setIsScheduling(true);
 
-    try {
-      // Create local Date and convert to UTC ISO string
-      const localDate = new Date(`${date}T${time}`);
-      if (isNaN(localDate.getTime())) {
-          toast.error("Invalid date or time selected.");
-          setIsScheduling(false);
-          return;
+    const localDate = new Date(`${date}T${time}`);
+    if (isNaN(localDate.getTime())) { toast.error("Invalid date or time selected."); setIsScheduling(false); return; }
+    if (localDate.getTime() < Date.now()) { toast.error("Scheduled time must be in the future."); setIsScheduling(false); return; }
+
+    const scheduled_at = localDate.toISOString();
+    const reqChannel = channel === "DEFAULT" ? undefined : channel;
+
+    const { error } = await client.POST("/admin/community/reminders/schedule-one-off", {
+      body: {
+        subscriber_id: sub.id,
+        template_id: mode === "TEMPLATE" ? selectedTemplate?.id : undefined,
+        custom_message: mode === "CUSTOM" ? customMessage.trim() : undefined,
+        channel: reqChannel,
+        scheduled_at
       }
+    });
 
-      if (localDate.getTime() < Date.now()) {
-          toast.error("Scheduled time must be in the future.");
-          setIsScheduling(false);
-          return;
-      }
+    setIsScheduling(false);
 
-      const scheduled_at = localDate.toISOString();
-      const reqChannel = channel === "DEFAULT" ? undefined : channel;
-      
-      const payload = mode === "TEMPLATE" 
-        ? { subscriber_id: sub.id, template_id: selectedTemplate?.id, channel: reqChannel, scheduled_at }
-        : { subscriber_id: sub.id, custom_message: customMessage.trim(), channel: reqChannel, scheduled_at };
-
-      await api.scheduleOneOff(payload);
-      
+    if (error) {
+      toast.error(error.detail || "Failed to schedule reminder.");
+    } else {
       toast.success(`Reminder scheduled successfully for ${localDate.toLocaleString()}.`);
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to schedule reminder.");
-    } finally {
-      setIsScheduling(false);
     }
   };
 
@@ -122,31 +111,14 @@ export default function ScheduleReminderModal({ sub, onClose }: ScheduleReminder
             </div>
 
             <div className="flex bg-secondary/50 border border-border/60 p-1 rounded-none mt-2">
-              <button 
-                type="button"
-                onClick={() => setMode("TEMPLATE")}
-                className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "TEMPLATE" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Use Template
-              </button>
-              <button 
-                type="button"
-                onClick={() => setMode("CUSTOM")}
-                className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "CUSTOM" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Custom Message
-              </button>
+              <button type="button" onClick={() => setMode("TEMPLATE")} className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "TEMPLATE" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Use Template</button>
+              <button type="button" onClick={() => setMode("CUSTOM")} className={`flex-1 text-xs font-bold uppercase tracking-widest py-2 transition-colors ${mode === "CUSTOM" ? "bg-background border border-border/60 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Custom Message</button>
             </div>
             
             {mode === "TEMPLATE" ? (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Select Template</label>
-                <select 
-                  required 
-                  value={templateName} 
-                  onChange={e => setTemplateName(e.target.value)} 
-                  className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
+                <select required value={templateName} onChange={e => setTemplateName(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                   <option value="" disabled>Select a template...</option>
                   {communityTemplates.map(t => (
                     <option key={t.id} value={t.name}>{t.name}</option>
@@ -156,24 +128,13 @@ export default function ScheduleReminderModal({ sub, onClose }: ScheduleReminder
             ) : (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Custom Message Body</label>
-                <textarea 
-                  required 
-                  value={customMessage} 
-                  onChange={e => setCustomMessage(e.target.value)} 
-                  rows={4} 
-                  placeholder="Type your message here. You can use {{customer_name}}, {{plan_name}}..." 
-                  className="flex w-full rounded-none border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y font-mono" 
-                />
+                <textarea required value={customMessage} onChange={e => setCustomMessage(e.target.value)} rows={4} placeholder="Type your message here. You can use {{customer_name}}, {{plan_name}}..." className="flex w-full rounded-none border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y font-mono" />
               </div>
             )}
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Delivery Channel</label>
-              <select 
-                value={channel} 
-                onChange={e => setChannel(e.target.value)} 
-                className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
+              <select value={channel} onChange={e => setChannel(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                 <option value="DEFAULT">Auto (Use their preference or both)</option>
                 <option value="WHATSAPP">WhatsApp Only</option>
                 <option value="EMAIL">Email Only</option>
@@ -181,7 +142,6 @@ export default function ScheduleReminderModal({ sub, onClose }: ScheduleReminder
               </select>
             </div>
 
-            {/* Preview Box */}
             <div className="space-y-1.5 pt-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Message Preview</label>
               <div className="w-full min-h-[100px] rounded-none border border-border/60 bg-secondary/30 px-3 py-3 text-sm text-foreground shadow-inner font-mono whitespace-pre-wrap leading-relaxed">

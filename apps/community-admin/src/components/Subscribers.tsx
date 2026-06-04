@@ -1,9 +1,7 @@
-// apps/community-admin/src/components/Subscribers.tsx
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
-import type { Subscriber } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Subscriber } from "../lib/api-client";
 import { Menu, MoreHorizontal, Check, Calendar, XCircle, RefreshCw, Plus, History, Globe, UserCog, DownloadCloud, Send, Edit, CalendarClock, MessageSquare, BellOff } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +18,6 @@ import PauseRemindersModal from "./PauseRemindersModal";
 export default function Subscribers({ isMobile, toggleSidebar }: any) {
   const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState<'ALL' | 'ACTIVE' | 'OVERDUE' | 'CANCELED'>('ALL');
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const [isExporting, setIsExporting] = useState(false);
@@ -45,21 +42,31 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
     }
   };
 
-  const { data: subs, isLoading, isFetching } = useQuery<Subscriber[]>({
+  const { data: subscribers = [], isLoading, isFetching } = useQuery<Subscriber[]>({
     queryKey: ["community-subs"],
-    queryFn: api.getSubscribers,
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/community/subscribers");
+      if (error) throw new Error(error.detail || "Failed to fetch subscribers");
+      return data ?? [];
+    },
   });
-
-  useEffect(() => {
-    if (subs) {
-      setSubscribers(subs);
-    }
-  }, [subs]);
 
   const handleExportCsv = async () => {
     setIsExporting(true);
     try {
-      await api.exportSubscribersCsv();
+      const { data, error } = await client.GET("/admin/community/subscribers/export", {
+        parseAs: "blob"
+      });
+      if (error) throw new Error(error.detail || "Export failed");
+
+      const url = window.URL.createObjectURL(data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Subscribers_Export.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
       toast.success("CSV Export downloaded successfully.");
     } catch (err: any) {
       toast.error("Export failed", { description: err.message });
@@ -76,19 +83,14 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
     if (isNaN(days) || days <= 0) { toast.error("Invalid number of days."); return; }
 
     toast.promise(
-      api.extendGracePeriod(id, days).then((res) => {
-        setSubscribers(prev => prev.map(s => {
-          if (s.id === id) {
-            const currentOverdue = s.next_billing_date ? new Date(s.next_billing_date) : new Date();
-            const newDate = new Date(currentOverdue.getTime() + days * 24 * 60 * 60 * 1000);
-            return { ...s, status: "ACTIVE" as const, days_overdue: undefined, next_billing_date: newDate.toISOString() };
-          }
-          return s;
-        }));
+      client.POST("/admin/community/subscribers/{id}/extend-grace", {
+        params: { path: { id } },
+        body: { days }
+      }).then(({ error }) => {
+        if (error) throw new Error(error.detail || "Failed to extend grace limit.");
         queryClient.invalidateQueries({ queryKey: ["community-subs"] });
-        return res;
       }),
-      { loading: `Extending grace period by ${days} days...`, success: `Deferred billing schedule for ${name} by ${days} days.`, error: "Failed to extend grace limit." }
+      { loading: `Extending grace period by ${days} days...`, success: `Deferred billing schedule for ${name} by ${days} days.`, error: (err) => err.message }
     );
   };
 
@@ -97,15 +99,13 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
     if (!window.confirm(`Are you sure you want to cancel the subscription for ${name}? They will lose access.`)) return;
 
     toast.promise(
-      api.cancelSubscription(id).then((res) => {
-        setSubscribers(prev => prev.map(s => {
-          if (s.id === id) return { ...s, status: "CANCELED" as const, days_overdue: undefined, next_billing_date: "" };
-          return s;
-        }));
+      client.POST("/admin/community/subscribers/{id}/cancel", {
+        params: { path: { id } }
+      }).then(({ error }) => {
+        if (error) throw new Error(error.detail || "Failed to cancel subscription.");
         queryClient.invalidateQueries({ queryKey: ["community-subs"] });
-        return res;
       }),
-      { loading: "Cancelling subscription...", success: `Suspended billing parameters for ${name}.`, error: "Failed to update cancellation." }
+      { loading: "Cancelling subscription...", success: `Suspended billing parameters for ${name}.`, error: (err) => err.message }
     );
   };
 
@@ -146,9 +146,7 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
     <div className="flex-1 w-full p-4 md:p-8 mx-auto max-w-[1240px] flex flex-col gap-6">
       <header className="flex items-center justify-between pb-2 flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          {isMobile && (
-            <button onClick={toggleSidebar} className="p-1.5 hover:bg-secondary rounded-none transition-colors"><Menu size={20} /></button>
-          )}
+          {isMobile && <button onClick={toggleSidebar} className="p-1.5 hover:bg-secondary rounded-none transition-colors"><Menu size={20} /></button>}
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight text-foreground">Subscribers</h1>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mt-1">Manage active profiles and manually intercept recurring states.</p>
@@ -156,25 +154,13 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["community-subs"] })}
-            disabled={isFetching}
-            className="p-2 border border-border/60 bg-card hover:bg-secondary rounded-none transition-colors text-foreground flex items-center justify-center disabled:opacity-50"
-            title="Refresh Subscribers"
-          >
+          <button onClick={() => queryClient.invalidateQueries({ queryKey: ["community-subs"] })} disabled={isFetching} className="p-2 border border-border/60 bg-card hover:bg-secondary rounded-none transition-colors text-foreground flex items-center justify-center disabled:opacity-50" title="Refresh Subscribers">
             <RefreshCw size={16} className={isFetching ? "animate-spin text-muted-foreground" : ""} />
           </button>
-          <button
-            onClick={handleExportCsv}
-            disabled={isExporting}
-            className="inline-flex items-center h-10 px-4 bg-background border border-border/60 text-foreground text-sm font-bold tracking-wide uppercase rounded-none hover:bg-secondary transition-colors disabled:opacity-50"
-          >
+          <button onClick={handleExportCsv} disabled={isExporting} className="inline-flex items-center h-10 px-4 bg-background border border-border/60 text-foreground text-sm font-bold tracking-wide uppercase rounded-none hover:bg-secondary transition-colors disabled:opacity-50">
             <DownloadCloud className={`w-4 h-4 mr-2 ${isExporting ? 'animate-pulse' : ''}`} /> Export CSV
           </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center h-10 px-4 bg-foreground text-background text-sm font-bold tracking-wide uppercase rounded-none hover:bg-foreground/90 transition-colors"
-          >
+          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center h-10 px-4 bg-foreground text-background text-sm font-bold tracking-wide uppercase rounded-none hover:bg-foreground/90 transition-colors">
             <Plus className="w-4 h-4 mr-2" /> Add Subscriber
           </button>
         </div>
@@ -183,22 +169,13 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
       {/* State Filter Tabs */}
       <div className="flex border-b border-border/60 gap-2 overflow-x-auto scrollbar-none">
         {tabsConfig.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setSelectedTab(tab.id)}
-            className={`pb-2.5 px-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all duration-150 whitespace-nowrap -mb-[2px] flex items-center gap-2 focus:outline-none ${
-              selectedTab === tab.id ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
+          <button key={tab.id} onClick={() => setSelectedTab(tab.id)} className={`pb-2.5 px-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all duration-150 whitespace-nowrap -mb-[2px] flex items-center gap-2 focus:outline-none ${selectedTab === tab.id ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             <span>{tab.label}</span>
-            <span className={`px-1.5 py-0.5 rounded-none text-[10px] leading-none ${
-              tab.id === selectedTab ? "bg-foreground text-background" : tab.alert ? "bg-amber-100 text-amber-800 border border-amber-200" : "bg-secondary text-muted-foreground border border-border/60"
-            }`}>{tab.count}</span>
+            <span className={`px-1.5 py-0.5 rounded-none text-[10px] leading-none ${tab.id === selectedTab ? "bg-foreground text-background" : tab.alert ? "bg-amber-100 text-amber-800 border border-amber-200" : "bg-secondary text-muted-foreground border border-border/60"}`}>{tab.count}</span>
           </button>
         ))}
       </div>
 
-      {/* Main Table Interface */}
       <div className="bg-card border border-border/60 rounded-none shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
@@ -219,8 +196,6 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
               filteredSubscribers.map((sub) => {
                 const isOverdue = sub.status === "GRACE_PERIOD" || sub.status === "SUSPENDED" || sub.status === "PAST_DUE";
                 const isRemindersPaused = sub.reminders_paused_until && new Date(sub.reminders_paused_until).getTime() > Date.now();
-                
-                // Phase 3.2: Special styling for Unpaid Invoices (Reminder Only + Past Due)
                 const isUnpaidInvoice = sub.is_reminder_only && isOverdue;
 
                 return (
@@ -230,17 +205,8 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
                       <div className="text-[11px] text-muted-foreground font-mono mt-1 tracking-tight">{sub.customer_phone || sub.customer_email}</div>
                       <div className="flex items-center flex-wrap gap-1.5 mt-1">
                         {renderSourceBadge(sub.source)}
-                        
-                        {/* Feature 3.3 Reminder-Only Badge */}
-                        {sub.is_reminder_only && (
-                          <span className="text-[9px] uppercase tracking-widest bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-900 px-1.5 py-0.5 inline-block rounded-none">
-                            Invoice Tracking
-                          </span>
-                        )}
-
-                        {isRemindersPaused && (
-                           <span className="text-[9px] uppercase tracking-widest bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-1.5 py-0.5 inline-flex items-center gap-1 rounded-none"><BellOff size={10} /> Paused</span>
-                        )}
+                        {sub.is_reminder_only && <span className="text-[9px] uppercase tracking-widest bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-900 px-1.5 py-0.5 inline-block rounded-none">Invoice Tracking</span>}
+                        {isRemindersPaused && <span className="text-[9px] uppercase tracking-widest bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-1.5 py-0.5 inline-flex items-center gap-1 rounded-none"><BellOff size={10} /> Paused</span>}
                       </div>
                     </TableCell>
                     <TableCell className="align-middle">
@@ -254,47 +220,19 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
                       </div>
                       <div className={`text-xs mt-1.5 flex items-center gap-1.5 ${isOverdue ? "text-amber-600 dark:text-amber-500 font-semibold" : "text-foreground"}`}>
                         <span className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Next Due:</span>
-                        <span className={isOverdue ? "font-bold" : "font-mono"}>
-                          {sub.next_billing_date ? new Date(sub.next_billing_date).toLocaleDateString("en-MY", { year: 'numeric', month: 'short', day: 'numeric' }) : "N/A"}
-                        </span>
-                        {sub.days_overdue && (
-                          <span className="ml-1 text-[10px] uppercase tracking-wider bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-1.5 py-0.5 rounded-none font-bold">{sub.days_overdue}d overdue</span>
-                        )}
+                        <span className={isOverdue ? "font-bold" : "font-mono"}>{sub.next_billing_date ? new Date(sub.next_billing_date).toLocaleDateString("en-MY", { year: 'numeric', month: 'short', day: 'numeric' }) : "N/A"}</span>
+                        {sub.days_overdue && <span className="ml-1 text-[10px] uppercase tracking-wider bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 px-1.5 py-0.5 rounded-none font-bold">{sub.days_overdue}d overdue</span>}
                       </div>
-                      {sub.total_payments !== undefined && sub.total_payments > 0 && (
-                        <div className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
-                          <span className="font-medium uppercase tracking-widest text-[9px]">Payments:</span>
-                          <span className="font-mono font-medium">{sub.total_payments}</span>
-                          {sub.last_payment_date && (
-                              <>
-                                <span className="text-border mx-0.5">•</span>
-                                <span className="font-medium uppercase tracking-widest text-[9px]">Last:</span>
-                                <span className="font-mono">{new Date(sub.last_payment_date).toLocaleDateString("en-MY", { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                              </>
-                          )}
-                        </div>
-                      )}
                     </TableCell>
                     <TableCell className="align-middle">
-                      {/* Phase 3.2 Specific logic for UNPAID INVOICE display */}
                       {isUnpaidInvoice ? (
-                        <Badge className="text-[10px] font-bold border py-0.5 px-2 tracking-widest uppercase rounded-none bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-400 dark:border-amber-700 hover:bg-amber-100">
-                          UNPAID INVOICE
-                        </Badge>
+                        <Badge className="text-[10px] font-bold border py-0.5 px-2 tracking-widest uppercase rounded-none bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-400 dark:border-amber-700 hover:bg-amber-100">UNPAID INVOICE</Badge>
                       ) : (
-                        <Badge className={`text-[10px] font-bold border py-0.5 px-2 tracking-widest uppercase rounded-none ${
-                          sub.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900 hover:bg-emerald-50"
-                            : sub.status === "GRACE_PERIOD" || sub.status === "PAST_DUE" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900 hover:bg-amber-50"
-                            : sub.status === "SUSPENDED" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900 hover:bg-rose-50"
-                            : sub.status === "PENDING" ? "bg-secondary text-muted-foreground border-border/60 hover:bg-secondary"
-                            : "bg-zinc-100 text-zinc-400 border-border/60 dark:bg-zinc-900 dark:text-zinc-500 line-through hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                        }`}>{sub.status.replace("_", " ")}</Badge>
+                        <Badge className={`text-[10px] font-bold border py-0.5 px-2 tracking-widest uppercase rounded-none ${sub.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900 hover:bg-emerald-50" : sub.status === "GRACE_PERIOD" || sub.status === "PAST_DUE" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900 hover:bg-amber-50" : sub.status === "SUSPENDED" ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900 hover:bg-rose-50" : sub.status === "PENDING" ? "bg-secondary text-muted-foreground border-border/60 hover:bg-secondary" : "bg-zinc-100 text-zinc-400 border-border/60 dark:bg-zinc-900 dark:text-zinc-500 line-through hover:bg-zinc-100 dark:hover:bg-zinc-900"}`}>{sub.status.replace("_", " ")}</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right align-middle">
-                      <button onClick={(e) => handleMenuClick(e, sub.id)} className="p-1.5 rounded-none hover:bg-secondary border border-transparent hover:border-border/60 text-muted-foreground hover:text-foreground transition-colors inline-flex">
-                        <MoreHorizontal size={14} />
-                      </button>
+                      <button onClick={(e) => handleMenuClick(e, sub.id)} className="p-1.5 rounded-none hover:bg-secondary border border-transparent hover:border-border/60 text-muted-foreground hover:text-foreground transition-colors inline-flex"><MoreHorizontal size={14} /></button>
                     </TableCell>
                   </TableRow>
                 );
@@ -304,7 +242,6 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
         </Table>
       </div>
 
-      {/* Action Menu */}
       {openMenuId && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
@@ -338,70 +275,14 @@ export default function Subscribers({ isMobile, toggleSidebar }: any) {
       )}
 
       {/* Modals */}
-      {showAddModal && (
-        <AddSubscriberModal onClose={() => setShowAddModal(false)} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["community-subs"] }); setShowAddModal(false); }} />
-      )}
-      
-      {editSub && (
-        <EditSubscriberModal 
-          sub={editSub} 
-          onClose={() => setEditSub(null)} 
-          onSuccess={() => { 
-            queryClient.invalidateQueries({ queryKey: ["community-subs"] }); 
-            setEditSub(null); 
-          }} 
-        />
-      )}
-
-      {recordPaymentSub && (
-        <RecordPaymentModal 
-          sub={recordPaymentSub} 
-          onClose={() => setRecordPaymentSub(null)} 
-          onSuccess={() => { 
-            queryClient.invalidateQueries({ queryKey: ["community-subs"] }); 
-            setRecordPaymentSub(null); 
-          }} 
-        />
-      )}
-
-      {historySub && (
-        <PaymentHistoryModal 
-          sub={historySub}
-          onClose={() => setHistorySub(null)}
-        />
-      )}
-
-      {reminderHistorySub && (
-        <ReminderHistoryModal 
-          sub={reminderHistorySub}
-          onClose={() => setReminderHistorySub(null)}
-        />
-      )}
-
-      {reminderSub && (
-        <SendReminderModal
-          sub={reminderSub}
-          onClose={() => setReminderSub(null)}
-        />
-      )}
-
-      {scheduleSub && (
-        <ScheduleReminderModal
-          sub={scheduleSub}
-          onClose={() => setScheduleSub(null)}
-        />
-      )}
-
-      {pauseReminderSub && (
-        <PauseRemindersModal
-          sub={pauseReminderSub}
-          onClose={() => setPauseReminderSub(null)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["community-subs"] });
-            setPauseReminderSub(null);
-          }}
-        />
-      )}
+      {showAddModal && <AddSubscriberModal onClose={() => setShowAddModal(false)} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["community-subs"] }); setShowAddModal(false); }} />}
+      {editSub && <EditSubscriberModal sub={editSub} onClose={() => setEditSub(null)} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["community-subs"] }); setEditSub(null); }} />}
+      {recordPaymentSub && <RecordPaymentModal sub={recordPaymentSub} onClose={() => setRecordPaymentSub(null)} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["community-subs"] }); setRecordPaymentSub(null); }} />}
+      {historySub && <PaymentHistoryModal sub={historySub} onClose={() => setHistorySub(null)} />}
+      {reminderHistorySub && <ReminderHistoryModal sub={reminderHistorySub} onClose={() => setReminderHistorySub(null)} />}
+      {reminderSub && <SendReminderModal sub={reminderSub} onClose={() => setReminderSub(null)} />}
+      {scheduleSub && <ScheduleReminderModal sub={scheduleSub} onClose={() => setScheduleSub(null)} />}
+      {pauseReminderSub && <PauseRemindersModal sub={pauseReminderSub} onClose={() => setPauseReminderSub(null)} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["community-subs"] }); setPauseReminderSub(null); }} />}
     </div>
   );
 }

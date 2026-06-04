@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
-import type { Plan } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Plan } from "../lib/api-client";
 
 interface AddSubscriberModalProps {
   onClose: () => void;
@@ -24,10 +24,13 @@ export default function AddSubscriberModal({ onClose, onSuccess }: AddSubscriber
 
   const { data: plans } = useQuery<Plan[]>({
     queryKey: ["community-plans"],
-    queryFn: api.getPlans,
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/community/plans");
+      if (error) throw new Error(error.detail || "Failed to fetch plans");
+      return data ?? [];
+    },
   });
 
-  // Auto-fill amount when plan is selected
   useEffect(() => {
     if (planId && plans) {
       const selected = plans.find(p => p.id === planId);
@@ -41,8 +44,8 @@ export default function AddSubscriberModal({ onClose, onSuccess }: AddSubscriber
     e.preventDefault();
     setIsSubmitting(true);
 
-    try {
-      await api.createSubscriber({
+    const { error } = await client.POST("/admin/community/subscribers", {
+      body: {
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
@@ -53,13 +56,16 @@ export default function AddSubscriberModal({ onClose, onSuccess }: AddSubscriber
         amount_paid: isReminderOnly ? undefined : (typeof amountPaid === "number" ? amountPaid : undefined),
         notes: notes.trim() || undefined,
         is_reminder_only: isReminderOnly,
-      });
+      }
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error(error.detail || "Failed to add subscriber.");
+    } else {
       toast.success("Subscriber added successfully!");
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to add subscriber.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -67,38 +73,33 @@ export default function AddSubscriberModal({ onClose, onSuccess }: AddSubscriber
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-card border border-border/60 rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-        
-        {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border/60 shrink-0">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Add Subscriber</h3>
             <p className="text-[11px] text-muted-foreground mt-1">Manually create a new subscriber entry.</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:bg-secondary rounded-none transition-colors p-1">
-            <X size={16} />
-          </button>
+          <button onClick={onClose} className="text-muted-foreground hover:bg-secondary rounded-none transition-colors p-1"><X size={16} /></button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Full Name *</label>
-            <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Ahmad Firdaus" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+            <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Ahmad Firdaus" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors" />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Email *</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="e.g. ahmad@email.com" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="e.g. ahmad@email.com" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors" />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Phone *</label>
-            <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="+60 12-345 6789" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+            <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} placeholder="+60 12-345 6789" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors" />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Plan *</label>
-            <select required value={planId} onChange={e => setPlanId(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+            <select required value={planId} onChange={e => setPlanId(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors">
               <option value="">Select a plan...</option>
               {plans?.filter(p => p.is_active).map(p => (
                 <option key={p.id} value={p.id}>{p.name} — RM {p.price.toFixed(2)}/{p.interval}</option>
@@ -115,7 +116,7 @@ export default function AddSubscriberModal({ onClose, onSuccess }: AddSubscriber
             <>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Payment Method</label>
-                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors">
                   <option value="BANK_TRANSFER">Bank Transfer</option>
                   <option value="CASH">Cash</option>
                   <option value="E_WALLET">E-Wallet</option>
@@ -126,14 +127,14 @@ export default function AddSubscriberModal({ onClose, onSuccess }: AddSubscriber
 
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Amount Paid (RM)</label>
-                <input type="number" step="0.01" min="0" value={amountPaid} onChange={e => setAmountPaid(e.target.value === "" ? "" : parseFloat(e.target.value))} placeholder="0.00" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                <input type="number" step="0.01" min="0" value={amountPaid} onChange={e => setAmountPaid(e.target.value === "" ? "" : parseFloat(e.target.value))} placeholder="0.00" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors" />
                 <p className="text-[11px] text-muted-foreground">Auto-filled from plan price. Set to 0 if unpaid.</p>
               </div>
 
               {paymentMethod === "BANK_TRANSFER" && (
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Reference Number</label>
-                  <input type="text" value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} placeholder="e.g. FPX-20250101-12345" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm font-mono shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                  <input type="text" value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} placeholder="e.g. FPX-20250101-12345" className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm font-mono shadow-sm transition-colors" />
                 </div>
               )}
             </>
@@ -141,7 +142,7 @@ export default function AddSubscriberModal({ onClose, onSuccess }: AddSubscriber
 
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Admin Notes</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional internal notes..." className="flex w-full rounded-none border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y" />
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional internal notes..." className="flex w-full rounded-none border border-border/60 bg-background px-3 py-2 text-sm shadow-sm transition-colors resize-y" />
           </div>
 
           <div className="flex items-center justify-between pt-4">

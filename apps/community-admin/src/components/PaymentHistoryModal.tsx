@@ -1,9 +1,7 @@
-// apps/community-admin/src/components/PaymentHistoryModal.tsx
-
 import { useQuery } from "@tanstack/react-query";
 import { X, Loader2 } from "lucide-react";
-import { api } from "../lib/api";
-import type { Subscriber, PaymentRecord } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Subscriber, PaymentRecord } from "../lib/api-client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,7 +13,14 @@ interface PaymentHistoryModalProps {
 export default function PaymentHistoryModal({ sub, onClose }: PaymentHistoryModalProps) {
   const { data: records, isLoading } = useQuery<PaymentRecord[]>({
     queryKey: ["community-payments", sub.id],
-    queryFn: () => api.getPaymentHistory(sub.id),
+    queryFn: async () => {
+        // Fallback to raw fetch since endpoint mapping wasn't added to TypeSpec in Phase 1
+        const res = await fetch(`${client.baseUrl}/admin/community/subscribers/${sub.id}/payments`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("community_admin_token")}` }
+        });
+        if (!res.ok) throw new Error("Failed to fetch payment history");
+        return await res.json();
+    },
   });
 
   const formatMethod = (method: string) => {

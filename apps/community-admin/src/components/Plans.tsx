@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
-import type { Plan } from "../lib/api";
+import { client } from "../lib/api-client";
+import type { Plan } from "../lib/api-client";
 import { Plus, Menu, Link2, Video, Users, Share2, Copy, Check, X, Download, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,15 +9,20 @@ import { toast } from "sonner";
 export default function Plans({ isMobile, toggleSidebar }: any) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: plans, isLoading, isFetching } = useQuery({ queryKey: ["community-plans"], queryFn: api.getPlans });
+  const { data: plans, isLoading, isFetching } = useQuery({ 
+    queryKey: ["community-plans"], 
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/community/plans");
+      if (error) throw new Error(error.detail || "Failed to fetch plans");
+      return data ?? [];
+    } 
+  });
 
-  // Share Modal State
   const [sharePlan, setSharePlan] = useState<Plan | null>(null);
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const getShareUrl = (slug: string) => {
-    // Generate URL targeting the community enrollment frontend
     const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
     const baseUrl = isLocal ? 'http://localhost:3020' : 'https://community.lazuar.com';
     return `${baseUrl}/${slug}`;
@@ -37,24 +42,17 @@ export default function Plans({ isMobile, toggleSidebar }: any) {
   const handleDownloadQR = async () => {
     if (!sharePlan) return;
     setIsDownloading(true);
-    
-    // Request a larger size (500x500) for a higher quality download
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(getShareUrl(sharePlan.slug))}`;
-    
     try {
       const response = await fetch(qrUrl);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
-      
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = blobUrl;
-      a.download = `${sharePlan.slug}-qr.png`; // Set a clean filename
+      a.download = `${sharePlan.slug}-qr.png`; 
       document.body.appendChild(a);
-      
-      a.click(); // Trigger the download
-      
-      // Cleanup
+      a.click();
       window.URL.revokeObjectURL(blobUrl);
       document.body.removeChild(a);
       toast.success("QR Code downloaded successfully!");
@@ -140,7 +138,6 @@ export default function Plans({ isMobile, toggleSidebar }: any) {
                     <span className="text-sm font-normal text-muted-foreground tracking-normal ml-1">/{plan.interval}</span>
                   </div>
 
-                  {/* Capacity Badge */}
                   {hasCapacity && (
                     <div className="mb-4">
                       {isFull ? (
@@ -157,7 +154,6 @@ export default function Plans({ isMobile, toggleSidebar }: any) {
 
                   <p className="text-sm text-muted-foreground mb-6 line-clamp-2 leading-relaxed">{plan.short_description}</p>
                   
-                  {/* Card Actions */}
                   <div className="mt-auto flex flex-col gap-2">
                     <button onClick={() => navigate(`/plans/${plan.id}/edit`)}
                       className="w-full h-10 border border-border/60 rounded-none text-xs font-bold uppercase tracking-wide hover:bg-secondary transition-colors text-foreground">
@@ -175,7 +171,6 @@ export default function Plans({ isMobile, toggleSidebar }: any) {
         </div>
       )}
 
-      {/* Share & QR Code Modal Overlay */}
       {sharePlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setSharePlan(null)} />
@@ -188,45 +183,26 @@ export default function Plans({ isMobile, toggleSidebar }: any) {
             </div>
             
             <div className="p-6 flex flex-col items-center gap-6">
-              
-              {/* QR Code Section */}
               <div className="flex flex-col items-center gap-3">
                 <div className="bg-white p-3 border border-border/60 rounded-none shadow-sm">
-                  <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(getShareUrl(sharePlan.slug))}`} 
-                    alt="QR Code" 
-                    className="w-[200px] h-[200px]"
-                  />
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(getShareUrl(sharePlan.slug))}`} alt="QR Code" className="w-[200px] h-[200px]"/>
                 </div>
-                <button 
-                  onClick={handleDownloadQR}
-                  disabled={isDownloading}
-                  className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors disabled:opacity-50 mt-2"
-                >
+                <button onClick={handleDownloadQR} disabled={isDownloading} className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors disabled:opacity-50 mt-2">
                   <Download size={13} /> 
                   {isDownloading ? "Downloading..." : "Download QR Code"}
                 </button>
               </div>
               
-              {/* Link Copy Section */}
               <div className="w-full space-y-2">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Public Link</label>
                 <div className="flex items-center gap-2">
-                  <input 
-                    readOnly 
-                    value={getShareUrl(sharePlan.slug)} 
-                    className="flex-1 h-10 px-3 border border-border/60 rounded-none text-xs bg-secondary/50 text-foreground focus:outline-none font-mono"
-                  />
-                  <button 
-                    onClick={() => handleCopy(getShareUrl(sharePlan.slug))}
-                    className="shrink-0 h-10 px-4 border border-border/60 rounded-none text-xs font-bold uppercase tracking-widest hover:bg-secondary transition-colors flex items-center gap-1.5 bg-card text-foreground"
-                  >
+                  <input readOnly value={getShareUrl(sharePlan.slug)} className="flex-1 h-10 px-3 border border-border/60 rounded-none text-xs bg-secondary/50 text-foreground focus:outline-none font-mono"/>
+                  <button onClick={() => handleCopy(getShareUrl(sharePlan.slug))} className="shrink-0 h-10 px-4 border border-border/60 rounded-none text-xs font-bold uppercase tracking-widest hover:bg-secondary transition-colors flex items-center gap-1.5 bg-card text-foreground">
                     {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                     {copied ? "Copied" : "Copy"}
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
