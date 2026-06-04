@@ -2,31 +2,31 @@
   "runtime": "Net80",
   "documentGenerator": {
     "fromDocument": {
-      "url": "../api-spec/dist/openapi.yaml",
-      "output": null
+      "url": "../api-spec/dist/openapi.yaml"
     }
   },
   "codeGenerators": {
     "openApiToCSharpClient": {
       "generateClientClasses": false,
       "generateClientInterfaces": false,
+      "generateExceptionClasses": false,
       "generateDtoTypes": true,
-      "generateOptionalParameters": false,
-      "generateNullableReferenceTypes": true,
       "namespace": "Lazuar.ApiTypes",
       "classStyle": "Record",
       "jsonLibrary": "SystemTextJson",
-      "dateType": "System.DateOnly",
+      "generateOptionalPropertiesAsNullable": true,
+      "generateNullableReferenceTypes": true,
+      "generateDefaultValues": false,
+      "generateDataAnnotations": false,
+      "dateType": "System.DateTimeOffset",
       "dateTimeType": "System.DateTimeOffset",
       "timeType": "System.TimeSpan",
-      "arrayType": "System.Collections.Generic.ICollection",
-      "arrayInstanceType": "System.Collections.ObjectModel.Collection",
-      "dictionaryType": "System.Collections.Generic.IDictionary",
+      "timeSpanType": "System.TimeSpan",
+      "arrayType": "System.Collections.Generic.List",
+      "arrayInstanceType": "System.Collections.Generic.List",
+      "dictionaryType": "System.Collections.Generic.Dictionary",
       "dictionaryInstanceType": "System.Collections.Generic.Dictionary",
-      "enumNameGeneratorType": null,
-      "generateDefaultValues": true,
-      "output": "Generated/Models.cs",
-      "newLineBehavior": "Auto"
+      "output": "Lazuar.ApiContracts.cs"
     }
   }
 }

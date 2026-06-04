@@ -45,5 +45,5 @@
   <Folder Name="/Tests/">
     <Project Path="tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj" />
   </Folder>
-  <Project Path="packages/api-types-dotnet/Lazuar.ApiContracts.csproj" />
+  <Project Path="../../packages/api-types-dotnet/Lazuar.ApiContracts.csproj" />
 </Solution>
