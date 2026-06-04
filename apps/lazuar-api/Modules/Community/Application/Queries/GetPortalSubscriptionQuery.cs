@@ -1,4 +1,5 @@
 using BuildingBlocks.Application;
+using Lazuar.ApiTypes;
 
 namespace Modules.Community.Application.Queries;
 

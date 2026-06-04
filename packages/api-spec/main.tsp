@@ -543,11 +543,15 @@ namespace PublicCommunityApi {
     @path slug: string,
   ): Models.Community.CommunityPlanDto | ProblemDetailsResponse;
 
+  model CheckoutResponse {
+    url: string;
+  }
+
   @post
   @route("/checkout")
-  op initiateCheckout(@body body: Models.Community.PublicCheckoutRequestDto): {
-    url: string;
-  } | ProblemDetailsResponse;
+  op initiateCheckout(
+    @body body: Models.Community.PublicCheckoutRequestDto,
+  ): CheckoutResponse | ProblemDetailsResponse;
 
   @post
   @route("/{tenantSlug}/portal/magic-link")
@@ -556,19 +560,26 @@ namespace PublicCommunityApi {
     @body body: Models.Community.MagicLinkRequestDto,
   ): Models.Core.StatusResponse | ProblemDetailsResponse;
 
+  model PortalDataResponse {
+    subscription: Models.Community.CommunitySubscriptionDto;
+  }
+
   @get
   @route("/{tenantSlug}/portal")
-  op getPortalData(@path tenantSlug: string, @query token: string): {
-    subscription: Models.Community.CommunitySubscriptionDto;
-  } | ProblemDetailsResponse;
+  op getPortalData(
+    @path tenantSlug: string,
+    @query token: string,
+  ): PortalDataResponse | ProblemDetailsResponse;
+
+  model CancelPortalRequest {
+    subscription_id: string;
+  }
 
   @post
   @route("/{tenantSlug}/portal/cancel")
   op cancelPortalSubscription(
     @path tenantSlug: string,
     @query token: string,
-    @body body: {
-      subscription_id: string;
-    },
+    @body body: CancelPortalRequest,
   ): Models.Core.StatusResponse | ProblemDetailsResponse;
 }

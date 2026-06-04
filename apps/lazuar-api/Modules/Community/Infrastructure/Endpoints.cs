@@ -6,6 +6,7 @@ using BuildingBlocks.Application;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application;
@@ -15,6 +16,7 @@ using Modules.Payments.Application.Queries;
 using Modules.Payments.Application.Commands;
 using Modules.Tenant.Contracts;
 using Modules.Messaging.Contracts;
+using Lazuar.ApiTypes;
 
 namespace Modules.Community.Infrastructure;
 
@@ -28,29 +30,29 @@ public static class Endpoints
         // ==========================================
         // QUERIES (READ MODELS)
         // ==========================================
-        admin.MapGet("/plans", async (
+        admin.MapGet("/plans", async Task<Ok<ICollection<CommunityPlanDto>>> (
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var plans = await queryService.GetAdminPlansAsync(ctx.TenantId);
-            return Results.Ok(plans);
+            return TypedResults.Ok((ICollection<CommunityPlanDto>)plans.ToList());
         });
 
-        admin.MapGet("/plans/{id:guid}", async (
+        admin.MapGet("/plans/{id:guid}", async Task<Results<Ok<CommunityPlanDto>, NotFound>> (
             Guid id,
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var plan = await queryService.GetAdminPlanByIdAsync(ctx.TenantId, id);
-            return plan != null ? Results.Ok(plan) : Results.NotFound();
+            return plan != null ? TypedResults.Ok(plan) : TypedResults.NotFound();
         });
 
-        admin.MapGet("/subscribers", async (
+        admin.MapGet("/subscribers", async Task<Ok<ICollection<CommunitySubscriptionDto>>> (
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var subscribers = await queryService.GetSubscribersAsync(ctx.TenantId);
-            return Results.Ok(subscribers);
+            return TypedResults.Ok((ICollection<CommunitySubscriptionDto>)subscribers.ToList());
         });
 
         admin.MapGet("/subscribers/export", async (
@@ -63,268 +65,270 @@ public static class Endpoints
             return Results.File(fileBytes, "text/csv", filename);
         });
 
-        admin.MapGet("/subscribers/{id:guid}/reminders", async (
+        admin.MapGet("/subscribers/{id:guid}/reminders", async Task<Ok<ICollection<DeliveryHistoryItemDto>>> (
             Guid id,
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var history = await queryService.GetReminderHistoryAsync(ctx.TenantId, id);
-            return Results.Ok(history);
+            return TypedResults.Ok((ICollection<DeliveryHistoryItemDto>)history.ToList());
         });
 
-        admin.MapGet("/stats", async (
+        admin.MapGet("/stats", async Task<Ok<CommunitySubscriberStatsDto>> (
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var stats = await queryService.GetSubscriberStatsAsync(ctx.TenantId);
-            return Results.Ok(stats);
+            return TypedResults.Ok(stats);
         });
 
-        admin.MapGet("/reminder-schedules", async (
+        admin.MapGet("/reminder-schedules", async Task<Ok<ICollection<CommunityReminderScheduleDto>>> (
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
             var schedules = await queryService.GetReminderSchedulesAsync(ctx.TenantId);
-            return Results.Ok(schedules);
+            return TypedResults.Ok((ICollection<CommunityReminderScheduleDto>)schedules.ToList());
         });
 
-        admin.MapGet("/payment-config", async (
+        admin.MapGet("/payment-config", async Task<Results<Ok<PaymentConfigDto>, NotFound>> (
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
             var query = new GetPaymentConfigQuery(ctx.TenantId);
             var config = await mediator.Send(query);
-            return Results.Ok(config);
+            return config != null ? TypedResults.Ok(config) : TypedResults.NotFound();
         });
 
-        publicGroup.MapGet("/{tenantSlug}/plans", async (
+        publicGroup.MapGet("/{tenantSlug}/plans", async Task<Results<Ok<ICollection<CommunityPlanDto>>, NotFound>> (
             string tenantSlug,
             ITenantQueryService tenantQueryService,
             ICommunityQueryService queryService) =>
         {
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
-            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+            if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
-            return Results.Ok(plans);
+            return TypedResults.Ok((ICollection<CommunityPlanDto>)plans.ToList());
         });
 
-        publicGroup.MapGet("/{tenantSlug}/plans/{slug}", async (
+        publicGroup.MapGet("/{tenantSlug}/plans/{slug}", async Task<Results<Ok<CommunityPlanDto>, NotFound>> (
             string tenantSlug,
             string slug,
             ITenantQueryService tenantQueryService,
             ICommunityQueryService queryService) =>
         {
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
-            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+            if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             var plan = plans.FirstOrDefault(p => p.Slug == slug);
-            return plan != null ? Results.Ok(plan) : Results.NotFound(new { error = "Plan not found." });
+            return plan != null ? TypedResults.Ok(plan) : TypedResults.NotFound();
         });
 
         // ==========================================
         // COMMANDS (WRITE MODELS)
         // ==========================================
         // --- Plans ---
-        admin.MapPost("/plans", async (CreatePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/plans", async Task<Ok<IdResponse>> (CreatePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CreatePlanCommand(
-                ctx.TenantId, req.Slug, req.Name, req.Audience, req.ShortDescription,
-                req.LongDescription, req.Price, req.Interval, req.GracePeriodDays,
-                req.MaxCapacity, req.DisplayOrder, req.Features, req.Methodology,
-                req.Faq.Select(f => new FaqItemDto(f.Id, f.Question, f.Answer)).ToList(),
-                req.TelegramInviteLink, req.WeeklyMeetingLink);
+                ctx.TenantId, req.Slug, req.Name, req.Audience, req.Short_description,
+                req.Long_description, (decimal)req.Price, req.Interval, req.Grace_period_days,
+                req.Max_capacity, req.Display_order, req.Features?.ToList() ?? new List<string>(), req.Methodology,
+                req.Faq?.Select(f => new Modules.Community.Application.Commands.FaqItemDto(f.Id, f.Question, f.Answer)).ToList() ?? new List<Modules.Community.Application.Commands.FaqItemDto>(),
+                req.Telegram_invite_link, req.Weekly_meeting_link);
             var id = await mediator.Send(command);
-            return Results.Ok(new { id });
+            return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         });
 
-        admin.MapPut("/plans/{id:guid}", async (Guid id, UpdatePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPut("/plans/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, UpdatePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new UpdatePlanCommand(
-                ctx.TenantId, id, req.Slug, req.Name, req.Audience, req.ShortDescription,
-                req.LongDescription, req.Price, req.Interval, req.Features, req.Methodology,
-                req.Faq?.Select(f => new FaqItemDto(f.Id, f.Question, f.Answer)).ToList(),
-                req.IsActive, req.DisplayOrder, req.MaxCapacity, req.GracePeriodDays,
-                req.TelegramInviteLink, req.WeeklyMeetingLink);
+                ctx.TenantId, id, req.Slug, req.Name, req.Audience, req.Short_description,
+                req.Long_description, req.Price.HasValue ? (decimal)req.Price.Value : null, req.Interval, req.Features?.ToList(), req.Methodology,
+                req.Faq?.Select(f => new Modules.Community.Application.Commands.FaqItemDto(f.Id, f.Question, f.Answer)).ToList(),
+                req.Is_active, req.Display_order, req.Max_capacity, req.Grace_period_days,
+                req.Telegram_invite_link, req.Weekly_meeting_link);
             await mediator.Send(command);
-            return Results.Ok(new { status = "updated" });
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
         });
 
-        admin.MapDelete("/plans/{id:guid}", async (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapDelete("/plans/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             await mediator.Send(new ArchivePlanCommand(ctx.TenantId, id));
-            return Results.Ok(new { status = "archived" });
+            return TypedResults.Ok(new StatusResponse { Status = "archived" });
         });
 
         // --- Subscribers ---
-        admin.MapPost("/subscribers", async (CreateSubscriberRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/subscribers", async Task<Ok<IdResponse>> (CreateSubscriberRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CreateSubscriberCommand(
-                ctx.TenantId, req.Name, req.Email, req.Phone, req.PlanId,
-                req.Source ?? "MANUAL_ENTRY", req.IsReminderOnly ?? false, req.PreferredChannel,
-                req.AmountPaid, req.PaymentMethod, req.ReferenceNumber, req.Notes, "ADMIN");
+                ctx.TenantId, req.Name, req.Email, req.Phone, Guid.Parse(req.Plan_id),
+                req.Source ?? "MANUAL_ENTRY", req.Is_reminder_only ?? false, req.Preferred_channel,
+                req.Amount_paid.HasValue ? (decimal)req.Amount_paid.Value : null, req.Payment_method, req.Reference_number, req.Notes, "ADMIN");
             var id = await mediator.Send(command);
-            return Results.Ok(new { id });
+            return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         });
 
-        admin.MapPost("/subscribers/{id:guid}/payments", async (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/subscribers/{id:guid}/payments", async Task<Ok<StatusResponse>> (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new RecordSubscriptionPaymentCommand(
-                ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod,
-                req.ReferenceNumber, "ADMIN", req.ReceiptFile);
+                ctx.TenantId, id, (decimal)req.Amount, "MYR", req.Payment_method,
+                req.Reference_number, "ADMIN", req.Receipt_file);
             await mediator.Send(command);
-            return Results.Ok(new { status = "paid" });
+            return TypedResults.Ok(new StatusResponse { Status = "paid" });
         });
 
-        admin.MapPost("/subscribers/{id:guid}/record-payment", async (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/subscribers/{id:guid}/record-payment", async Task<Ok<StatusResponse>> (Guid id, RecordPaymentRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new RecordSubscriptionPaymentCommand(
-                ctx.TenantId, id, req.Amount, "MYR", req.PaymentMethod,
-                req.ReferenceNumber, "ADMIN", req.ReceiptFile);
+                ctx.TenantId, id, (decimal)req.Amount, "MYR", req.Payment_method,
+                req.Reference_number, "ADMIN", req.Receipt_file);
             await mediator.Send(command);
-            return Results.Ok(new { status = "paid" });
+            return TypedResults.Ok(new StatusResponse { Status = "paid" });
         });
 
-        admin.MapPost("/subscribers/{id:guid}/cancel", async (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/subscribers/{id:guid}/cancel", async Task<Ok<StatusResponse>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CancelSubscriptionCommand(ctx.TenantId, id);
             await mediator.Send(command);
-            return Results.Ok(new { status = "cancelled" });
+            return TypedResults.Ok(new StatusResponse { Status = "cancelled" });
         });
 
-        admin.MapPut("/subscribers/{id:guid}", async (Guid id, UpdateSubscriberProfileRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPut("/subscribers/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, UpdateSubscriberProfileRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             await mediator.Send(new UpdateSubscriberProfileCommand(
-                ctx.TenantId, id, req.IsReminderOnly, req.PreferredChannel, req.AdminNotes, req.NextRenewalDate));
-            return Results.Ok(new { status = "updated" });
+                ctx.TenantId, id, req.Is_reminder_only, req.Preferred_channel, req.Admin_notes, req.Next_renewal_date?.UtcDateTime));
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
         });
 
-        admin.MapPost("/subscribers/{id:guid}/extend-grace", async (Guid id, ExtendGraceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/subscribers/{id:guid}/extend-grace", async Task<Ok<StatusResponse>> (Guid id, ExtendGraceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             await mediator.Send(new ExtendGracePeriodCommand(ctx.TenantId, id, req.Days));
-            return Results.Ok(new { status = "extended" });
+            return TypedResults.Ok(new StatusResponse { Status = "extended" });
         });
 
-        admin.MapPost("/subscribers/{id:guid}/pause-reminders", async (Guid id, PauseRemindersRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/subscribers/{id:guid}/pause-reminders", async Task<Ok<StatusResponse>> (Guid id, PauseRemindersRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
-            await mediator.Send(new PauseRemindersCommand(ctx.TenantId, id, req.PauseUntil));
-            return Results.Ok(new { status = "paused" });
+            await mediator.Send(new PauseRemindersCommand(ctx.TenantId, id, req.Pause_until?.UtcDateTime));
+            return TypedResults.Ok(new StatusResponse { Status = "paused" });
         });
 
-        admin.MapPost("/subscribers/{id:guid}/send-reminder", async (Guid id, SendOneOffReminderRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/subscribers/{id:guid}/send-reminder", async Task<Ok<StatusResponse>> (Guid id, SendOneOffReminderRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
+            Guid? templateId = !string.IsNullOrEmpty(req.Template_id) ? Guid.Parse(req.Template_id) : null;
             await mediator.Send(new SendOneOffReminderCommand(
-                ctx.TenantId, id, req.TemplateId, req.CustomMessage, req.Channel ?? "EMAIL"));
-            return Results.Ok(new { status = "sent" });
+                ctx.TenantId, id, templateId, req.Custom_message, req.Channel ?? "EMAIL"));
+            return TypedResults.Ok(new StatusResponse { Status = "sent" });
         });
 
-        // --- Schedule Future One-Off Reminder (Phase 3 Fix) ---
-        admin.MapPost("/reminders/schedule-one-off", async (ScheduleOneOffRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/reminders/schedule-one-off", async Task<Ok<StatusResponse>> (ScheduleOneOffRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
-            var command = new ScheduleOneOffReminderCommand(
-                ctx.TenantId, req.SubscriberId, req.TemplateId, req.CustomMessage, req.Channel ?? "DEFAULT", req.ScheduledAt);
-            await mediator.Send(command);
-            return Results.Ok(new { status = "scheduled" });
+            Guid? templateId = !string.IsNullOrEmpty(req.Template_id) ? Guid.Parse(req.Template_id) : null;
+            await mediator.Send(new ScheduleOneOffReminderCommand(
+                ctx.TenantId, Guid.Parse(req.Subscriber_id), templateId, req.Custom_message, req.Channel ?? "DEFAULT", req.Scheduled_at.UtcDateTime));
+            return TypedResults.Ok(new StatusResponse { Status = "scheduled" });
         });
 
         // --- Reminder Schedules ---
-        admin.MapPost("/reminder-schedules", async (CreateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPost("/reminder-schedules", async Task<Ok<IdResponse>> (CreateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
+            Guid? planId = !string.IsNullOrEmpty(req.Plan_id) ? Guid.Parse(req.Plan_id) : null;
             var command = new CreateReminderScheduleCommand(
-                ctx.TenantId, req.PlanId, req.TemplateId, req.Channel,
-                req.DaysRelativeToDue, req.TimeOfDay, req.IsEnabled);
+                ctx.TenantId, planId, Guid.Parse(req.Template_id), req.Channel,
+                req.Days_relative_to_due, req.Time_of_day, req.Is_enabled);
             var id = await mediator.Send(command);
-            return Results.Ok(new { id });
+            return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         });
 
-        admin.MapPut("/reminder-schedules/{id:guid}", async (Guid id, UpdateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPut("/reminder-schedules/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, UpdateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
+            Guid? planId = !string.IsNullOrEmpty(req.Plan_id) ? Guid.Parse(req.Plan_id) : null;
+            Guid? templateId = !string.IsNullOrEmpty(req.Template_id) ? Guid.Parse(req.Template_id) : null;
             await mediator.Send(new UpdateReminderScheduleCommand(
-                ctx.TenantId, id, req.PlanId, req.TemplateId, req.Channel,
-                req.DaysRelativeToDue, req.TimeOfDay, req.IsEnabled));
-            return Results.Ok(new { status = "updated" });
+                ctx.TenantId, id, planId, templateId, req.Channel,
+                req.Days_relative_to_due, req.Time_of_day, req.Is_enabled));
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
         });
 
-        admin.MapDelete("/reminder-schedules/{id:guid}", async (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapDelete("/reminder-schedules/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             await mediator.Send(new DeleteReminderScheduleCommand(ctx.TenantId, id));
-            return Results.Ok(new { status = "deleted" });
+            return TypedResults.Ok(new StatusResponse { Status = "deleted" });
         });
 
-        // Refactored to map explicit API Request DTO, resolving collection_id binding
-        admin.MapPut("/payment-config", async (SavePaymentConfigRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        admin.MapPut("/payment-config", async Task<Ok<StatusResponse>> (SavePaymentConfigRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new UpdatePaymentConfigCommand(
-                ctx.TenantId, req.GatewayType, req.ApiKey, req.CollectionId, req.WebhookSecret, req.SecretKey, req.IsActive);
+                ctx.TenantId, req.Gateway_type, req.Api_key, req.Collection_id, req.Webhook_secret, req.Secret_key, req.Is_active);
             await mediator.Send(command);
-            return Results.Ok(new { status = "saved" });
+            return TypedResults.Ok(new StatusResponse { Status = "saved" });
         });
 
         // ==========================================
-        // MESSAGING & TEMPLATES (NEW)
+        // MESSAGING & TEMPLATES
         // ==========================================
-        admin.MapGet("/templates", async (
+        admin.MapGet("/templates", async Task<Ok<ICollection<MessageTemplateDto>>> (
             IExecutionContextAccessor ctx,
             IMessageTemplateQueryService templateService) =>
         {
             var templates = await templateService.GetAllTemplatesAsync(ctx.TenantId);
-            return Results.Ok(templates);
+            return TypedResults.Ok((ICollection<MessageTemplateDto>)templates.ToList());
         });
 
-        admin.MapPut("/templates/{id:guid}", async (
+        admin.MapPut("/templates/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id,
             UpdateTemplateRequestDto req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
             await mediator.Send(new UpdateMessageTemplateCommand(ctx.TenantId, id, req.Subject, req.Body));
-            return Results.Ok(new { status = "updated" });
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
         });
 
-        admin.MapDelete("/templates/{id:guid}", async (
+        admin.MapDelete("/templates/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
             await mediator.Send(new ResetMessageTemplateCommand(ctx.TenantId, id));
-            return Results.Ok(new { status = "reset" });
+            return TypedResults.Ok(new StatusResponse { Status = "reset" });
         });
 
-        admin.MapPost("/reminders/test", async (
+        admin.MapPost("/reminders/test", async Task<Ok<TestReminderResponse>> (
             TestReminderRequestDto req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
-            await mediator.Send(new SendTestReminderCommand(ctx.TenantId, req.TemplateName, req.Channel));
-            return Results.Ok(new { success = true, sent_to = "admin@lazuars.io" });
+            await mediator.Send(new SendTestReminderCommand(ctx.TenantId, req.Template_name, req.Channel));
+            return TypedResults.Ok(new TestReminderResponse { Success = true, Sent_to = "admin@lazuars.io" });
         });
 
         // ==========================================
         // PUBLIC ENROLLMENT FLOW
         // ==========================================
-        publicGroup.MapPost("/checkout", async (
+        publicGroup.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, NotFound>> (
             PublicCheckoutRequestDto req,
             ITenantQueryService tenantQueryService,
             IMediator mediator) =>
         {
-            var tenant = await tenantQueryService.GetTenantBySlugAsync(req.TenantSlug);
+            var tenant = await tenantQueryService.GetTenantBySlugAsync(req.Tenant_slug);
             if (tenant == null || !tenant.IsActive)
-                return Results.NotFound(new { error = "Business not found." });
+                return TypedResults.NotFound();
             
             var command = new RegisterPublicSubscriberCommand(
                 tenant.Id,
-                req.PlanSlug,
+                req.Plan_slug,
                 req.Name,
                 req.Email,
                 req.Phone);
             
             var checkoutUrl = await mediator.Send(command);
-            return Results.Ok(new { url = checkoutUrl });
+            return TypedResults.Ok(new CheckoutResponse { Url = checkoutUrl });
         });
 
         // ==========================================
         // SUBSCRIBER PORTAL (SELF-SERVICE)
         // ==========================================
-        publicGroup.MapPost("/{tenantSlug}/portal/magic-link", async (
+        publicGroup.MapPost("/{tenantSlug}/portal/magic-link", async Task<Results<Ok<StatusResponse>, NotFound>> (
             string tenantSlug,
             [FromBody] MagicLinkRequestDto req,
             HttpRequest httpReq,
@@ -332,15 +336,15 @@ public static class Endpoints
             IMediator mediator) =>
         {
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
-            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+            if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}";
             var command = new RequestMagicLinkCommand(tenant.Id, tenantSlug, req.Email, baseUrl);
             await mediator.Send(command);
-            return Results.Ok(new { status = "sent" });
+            return TypedResults.Ok(new StatusResponse { Status = "sent" });
         });
 
-        publicGroup.MapGet("/{tenantSlug}/portal", async (
+        publicGroup.MapGet("/{tenantSlug}/portal", async Task<Results<Ok<PortalDataResponse>, NotFound, UnauthorizedHttpResult>> (
             string tenantSlug,
             [FromQuery] string token,
             ITenantQueryService tenantQueryService,
@@ -348,96 +352,40 @@ public static class Endpoints
             IMediator mediator) =>
         {
             var subId = tokenService.ValidateToken(token);
-            if (!subId.HasValue) return Results.Unauthorized();
+            if (!subId.HasValue) return TypedResults.Unauthorized();
             
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
-            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+            if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             var query = new GetPortalSubscriptionQuery(tenant.Id, subId.Value);
             var sub = await mediator.Send(query);
-            if (sub == null) return Results.Unauthorized();
+            if (sub == null) return TypedResults.Unauthorized();
             
-            return Results.Ok(new { subscription = sub });
+            return TypedResults.Ok(new PortalDataResponse { Subscription = sub });
         });
 
-        publicGroup.MapPost("/{tenantSlug}/portal/cancel", async (
+        publicGroup.MapPost("/{tenantSlug}/portal/cancel", async Task<Results<Ok<StatusResponse>, NotFound, UnauthorizedHttpResult>> (
             string tenantSlug,
             [FromQuery] string token,
+            [FromBody] CancelPortalRequest req,
             ITenantQueryService tenantQueryService,
             IMagicLinkTokenService tokenService,
             IMediator mediator) =>
         {
             var subId = tokenService.ValidateToken(token);
-            if (!subId.HasValue) return Results.Unauthorized();
+            if (!subId.HasValue) return TypedResults.Unauthorized();
             
             var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
-            if (tenant == null || !tenant.IsActive) return Results.NotFound();
+            if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
+            // SECURITY: Ensure the requested cancellation matches the token's authenticated ID
+            if (Guid.Parse(req.Subscription_id) != subId.Value) return TypedResults.Unauthorized();
+
             var command = new CancelSubscriptionCommand(tenant.Id, subId.Value);
             await mediator.Send(command);
-            return Results.Ok(new { status = "cancelled" });
+            return TypedResults.Ok(new StatusResponse { Status = "cancelled" });
         });
 
         return endpoints;
     }
 }
-
-// ==========================================
-// DTOs (Fully Resolved)
-// ==========================================
-public record CreatePlanRequestDto(
-    string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
-    decimal Price, string Interval, List<string> Features, string Methodology,
-    List<FaqRequestDto> Faq, int DisplayOrder, int? MaxCapacity, int GracePeriodDays,
-    string? TelegramInviteLink, string? WeeklyMeetingLink);
-
-public record UpdatePlanRequestDto(
-    string? Slug, string? Name, string? Audience, string? ShortDescription, string? LongDescription,
-    decimal? Price, string? Interval, List<string>? Features, string? Methodology,
-    List<FaqRequestDto>? Faq, bool? IsActive, int? DisplayOrder, int? MaxCapacity, int? GracePeriodDays,
-    string? TelegramInviteLink, string? WeeklyMeetingLink);
-
-public record FaqRequestDto(string Id, string Question, string Answer);
-
-public record RecordPaymentRequestDto(
-    decimal Amount, string PaymentMethod, string? ReferenceNumber, string? ReceiptFile);
-
-public record UpdateSubscriberProfileRequestDto(
-    bool IsReminderOnly, string? PreferredChannel, string? AdminNotes, DateTime? NextRenewalDate);
-
-public record ExtendGraceRequestDto(int Days);
-
-public record PauseRemindersRequestDto(DateTime? PauseUntil);
-
-public record SendOneOffReminderRequestDto(Guid? TemplateId, string? CustomMessage, string? Channel);
-
-public record ScheduleOneOffRequestDto(
-    Guid SubscriberId, Guid? TemplateId, string? CustomMessage, string? Channel, DateTime ScheduledAt);
-
-public record CreateReminderScheduleRequestDto(
-    Guid? PlanId, Guid TemplateId, string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled);
-
-public record UpdateReminderScheduleRequestDto(
-    Guid? PlanId, Guid? TemplateId, string? Channel, int? DaysRelativeToDue, string? TimeOfDay, bool? IsEnabled);
-
-public record CreateSubscriberRequestDto(
-    string Name, string Email, string Phone, Guid PlanId,
-    string? Source, bool? IsReminderOnly, string? PreferredChannel,
-    decimal? AmountPaid, string? PaymentMethod, string? ReferenceNumber, string? Notes);
-
-public record PublicCheckoutRequestDto(
-    string TenantSlug, string PlanSlug, string Name, string Email, string Phone);
-
-public record MagicLinkRequestDto(string Email);
-
-public record UpdateTemplateRequestDto(string Subject, string Body);
-public record TestReminderRequestDto(string TemplateName, string? Channel);
-
-// API DTO designed specifically to parse incoming settings payload from community-admin
-public record SavePaymentConfigRequestDto(
-    string GatewayType,
-    string? ApiKey,
-    string? CollectionId, // Correctly deserializes collection_id via snake_case
-    string? WebhookSecret,
-    string? SecretKey,
-    bool IsActive);

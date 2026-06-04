@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Queries;
+using Lazuar.ApiTypes;
 
 namespace Modules.Payments.Infrastructure.Queries;
 
@@ -24,13 +25,15 @@ public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery,
 
         if (config == null) return null;
 
-        return new PaymentConfigDto(
-            config.GatewayType,
-            MaskSecret(config.ApiKey),
-            config.MerchantId,
-            MaskSecret(config.WebhookSecret),
-            MaskSecret(config.ApiKey), 
-            config.IsActive);
+        return new PaymentConfigDto
+        {
+            Gateway_type = config.GatewayType,
+            Api_key = MaskSecret(config.ApiKey),
+            Merchant_id = config.MerchantId,
+            Webhook_secret = MaskSecret(config.WebhookSecret),
+            Secret_key = MaskSecret(config.ApiKey), 
+            Is_active = config.IsActive
+        };
     }
 
     private static string? MaskSecret(string? value)

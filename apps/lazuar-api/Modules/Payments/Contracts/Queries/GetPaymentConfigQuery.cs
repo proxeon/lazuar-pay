@@ -1,14 +1,7 @@
 using System;
 using BuildingBlocks.Application;
+using Lazuar.ApiTypes;
 
 namespace Modules.Payments.Application.Queries;
 
 public record GetPaymentConfigQuery(Guid OrganizationId) : IQuery<PaymentConfigDto?>;
-
-public record PaymentConfigDto(
-    string GatewayType,
-    string? ApiKey,
-    string? MerchantId,
-    string? WebhookSecret,
-    string? SecretKey,
-    bool IsActive);

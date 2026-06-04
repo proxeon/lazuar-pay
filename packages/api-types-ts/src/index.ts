@@ -765,6 +765,15 @@ export interface components {
             subject: string;
             body: string;
         };
+        "PublicCommunityApi.CancelPortalRequest": {
+            subscription_id: string;
+        };
+        "PublicCommunityApi.CheckoutResponse": {
+            url: string;
+        };
+        "PublicCommunityApi.PortalDataResponse": {
+            subscription: components["schemas"]["Models.Community.CommunitySubscriptionDto"];
+        };
     };
     responses: never;
     parameters: never;
@@ -2837,9 +2846,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        url: string;
-                    };
+                    "application/json": components["schemas"]["PublicCommunityApi.CheckoutResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -3043,9 +3050,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        subscription: components["schemas"]["Models.Community.CommunitySubscriptionDto"];
-                    };
+                    "application/json": components["schemas"]["PublicCommunityApi.PortalDataResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -3108,9 +3113,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    subscription_id: string;
-                };
+                "application/json": components["schemas"]["PublicCommunityApi.CancelPortalRequest"];
             };
         };
         responses: {

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -17,6 +18,10 @@ using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Lazuar.Api;
+using Lazuar.ApiTypes;
+
+// Resolve the ambiguous reference between Lazuar.ApiTypes and Microsoft.AspNetCore.Mvc
+using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -164,7 +169,7 @@ app.UseCommunitySubscriptions();
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
 // --- Fallback Auth Handlers for Local Dev/Admin Panel ---
-apiGroup.MapPost("/platform/auth/login", (
+apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<ProblemDetails>> (
     [FromBody] LoginRequest req,
     IConfiguration config,
     IJwtService jwtService) =>
@@ -173,7 +178,13 @@ apiGroup.MapPost("/platform/auth/login", (
     
     if (string.IsNullOrEmpty(email))
     {
-        return Results.Json(new { error = "Email address is required." }, statusCode: 400);
+        return TypedResults.BadRequest(new ProblemDetails 
+        {
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+            Title = "Validation Failed",
+            Status = 400,
+            Detail = "Email address is required."
+        });
     }
 
     if ((email == "admin@lazuars.io" || email == "sysadmin@lazuars.io" || email == "admin@yourdomain.com") 
@@ -194,31 +205,37 @@ apiGroup.MapPost("/platform/auth/login", (
 
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
 
-        return Results.Ok(new
+        return TypedResults.Ok(new LoginResponse
         {
-            token,
-            user = new
+            Token = token,
+            User = new AuthUser
             {
-                email = email,
-                name = "Administrator",
-                role = "SUPER_ADMIN"
+                Email = email,
+                Name = "Administrator",
+                Role = "SUPER_ADMIN"
             }
         });
     }
 
-    return Results.Json(new { error = "Invalid email or password." }, statusCode: 401);
+    return TypedResults.BadRequest(new ProblemDetails 
+    {
+        Type = "https://tools.ietf.org/html/rfc7235#section-3.1",
+        Title = "Unauthorized",
+        Status = 401,
+        Detail = "Invalid email or password."
+    });
 });
 
-apiGroup.MapGet("/platform/auth/me", (ClaimsPrincipal principal) =>
+apiGroup.MapGet("/platform/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResult> (ClaimsPrincipal principal) =>
 {
     var email = principal.FindFirst(ClaimTypes.Email)?.Value;
-    if (string.IsNullOrEmpty(email)) return Results.Unauthorized();
+    if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
 
-    return Results.Ok(new
+    return TypedResults.Ok(new AuthUser
     {
-        email,
-        name = "Administrator",
-        role = "SUPER_ADMIN"
+        Email = email,
+        Name = "Administrator",
+        Role = "SUPER_ADMIN"
     });
 }).RequireAuthorization();
 
@@ -229,7 +246,5 @@ apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();
 
 app.Run();
-
-public record LoginRequest(string Email, string Password);
 
 public partial class Program { }

@@ -1,55 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Lazuar.ApiTypes;
 
 namespace Modules.Community.Application.Queries;
-
-public record DeliveryHistoryItem(
-    Guid Id,
-    string Channel,
-    string Recipient,
-    string? TemplateName,
-    string? Subject,
-    string Status,
-    string? ErrorMessage,
-    DateTime CreatedAt);
-
-public record CommunityFaqItemDto(string Id, string Question, string Answer);
-
-public record CommunityPlanDto(
-    Guid Id, string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
-    decimal Price, string Interval, List<string> Features, string Methodology, List<CommunityFaqItemDto> Faq,
-    bool IsActive, int DisplayOrder, int? MaxCapacity, int GracePeriodDays,
-    string? TelegramInviteLink, string? WeeklyMeetingLink, 
-    int EnrolledCount, int? SpotsRemaining, bool IsFull);
-
-public record CommunitySubscriptionDto(
-    Guid Id, Guid ClientProfileId, string CustomerName, string CustomerEmail, string CustomerPhone,
-    Guid PlanId, string PlanName, decimal PlanPrice, string Status, string Source,
-    bool IsReminderOnly, string? PreferredChannel, string? AdminNotes, DateTime? RemindersPausedUntil,
-    DateTime? CurrentPeriodEnd, DateTime? NextBillingDate, int? DaysOverdue, DateTime CreatedAt);
-
-public record CommunityReminderScheduleDto(
-    Guid Id, Guid? PlanId, string? PlanName, Guid TemplateId, string TemplateName, 
-    string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt);
-
-// Added CashFlow & Methods Data Models
-public record CashFlowTrendDto(string Month, decimal Amount);
-
-public record PaymentMethodDto(string Method, int Count, decimal TotalAmount);
-
-public record CommunitySubscriberStatsDto(
-    double Mrr,
-    int ActiveSubscribers,
-    int PastDueSubscribers,
-    int CancelledSubscribers,
-    int NetNewLast30Days,
-    double ChurnRatePercentage,
-    double AverageRevenuePerUser,
-    double ReminderEffectivenessPercentage,
-    double TotalRevenueCollected,
-    IEnumerable<CashFlowTrendDto> CashFlowTrend,
-    IEnumerable<PaymentMethodDto> PaymentMethods);
 
 public interface ICommunityQueryService
 {
@@ -63,5 +17,5 @@ public interface ICommunityQueryService
     Task<IEnumerable<CommunityReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId);
     Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId);
     
-    Task<IEnumerable<DeliveryHistoryItem>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId);
+    Task<IEnumerable<DeliveryHistoryItemDto>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId);
 }
