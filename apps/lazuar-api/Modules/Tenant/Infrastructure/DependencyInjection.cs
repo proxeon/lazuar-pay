@@ -26,8 +26,8 @@ public static class DependencyInjection
 
         services.AddScoped<ITenantQueryService, TenantQueryService>();
 
-        // Overrides global IEventBus with scoped outbox-backed writer for Tenant DbContext
-        services.AddScoped<IEventBus, OutboxEventBus<TenantDbContext>>();
+        // Overrides global IEventBus with keyed scoped outbox-backed writer for Tenant DbContext
+        services.AddKeyedScoped<IEventBus, OutboxEventBus<TenantDbContext>>("TenantEventBus");
 
         services.AddHostedService<TenantOutboxPublisherJob>();
 

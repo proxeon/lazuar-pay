@@ -40,8 +40,8 @@ public static class DependencyInjection
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
 
-        // Overrides global IEventBus with scoped outbox-backed writer for Community DbContext
-        services.AddScoped<IEventBus, OutboxEventBus<CommunityDbContext>>();
+        // Overrides global IEventBus with keyed scoped outbox-backed writer for Community DbContext
+        services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunityDbContext>>("CommunityEventBus");
 
         // Background Workers
         services.AddHostedService<CommunityInboxConsumerJob>();

@@ -1,5 +1,6 @@
 using BuildingBlocks.Application;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Contracts;
 using Modules.Community.Domain.Events;
 
@@ -19,7 +20,7 @@ public class DomainEventHandlers :
     private readonly ICommunityLinkService _linkService;
 
     public DomainEventHandlers(
-        IEventBus eventBus,
+        [FromKeyedServices("CommunityEventBus")] IEventBus eventBus,
         ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository,
         ICommunityLinkService linkService)

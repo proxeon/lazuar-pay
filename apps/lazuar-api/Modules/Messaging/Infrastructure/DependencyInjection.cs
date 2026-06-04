@@ -34,8 +34,8 @@ public static class DependencyInjection
         // Register cross-module read service for Community module to access templates
         services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();
 
-        // Overrides global IEventBus with scoped outbox-backed writer for Messaging DbContext
-        services.AddScoped<IEventBus, OutboxEventBus<MessagingDbContext>>();
+        // Overrides global IEventBus with keyed scoped outbox-backed writer for Messaging DbContext
+        services.AddKeyedScoped<IEventBus, OutboxEventBus<MessagingDbContext>>("MessagingEventBus");
 
         // Register Inbox Handlers
         services.AddTransient<TenantCreatedIntegrationEventHandler>();

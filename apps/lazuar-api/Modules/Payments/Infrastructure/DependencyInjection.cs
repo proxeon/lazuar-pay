@@ -31,8 +31,8 @@ public static class DependencyInjection
         services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
-        // Overrides global IEventBus with scoped outbox-backed writer for Payments DbContext
-        services.AddScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>();
+        // Overrides global IEventBus with keyed scoped outbox-backed writer for Payments DbContext
+        services.AddKeyedScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>("PaymentsEventBus");
 
         // Background Workers
         services.AddHostedService<PaymentsInboxConsumerJob>();

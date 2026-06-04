@@ -22,7 +22,7 @@ public static class DependencyInjection
             }));
 
         // Override default global event bus to hook up with the transactional outbox of CrmDbContext
-        services.AddScoped<IEventBus, OutboxEventBus<CrmDbContext>>();
+        services.AddKeyedScoped<IEventBus, OutboxEventBus<CrmDbContext>>("CrmEventBus");
 
         // Register Query Service
         services.AddScoped<ICrmQueryService, CrmQueryService>();

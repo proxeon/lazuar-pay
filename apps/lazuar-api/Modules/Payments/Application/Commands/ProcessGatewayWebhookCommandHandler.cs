@@ -1,4 +1,5 @@
 using BuildingBlocks.Application;
+using Microsoft.Extensions.DependencyInjection;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Events;
 using Modules.Payments.Domain.Entities;
@@ -16,7 +17,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         ITenantPaymentConfigRepository configRepository,
         IPaymentWebhookLogRepository logRepository,
         IPaymentGatewayFactory gatewayFactory,
-        IEventBus eventBus)
+        [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus)
     {
         _configRepository = configRepository;
         _logRepository = logRepository;
