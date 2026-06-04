@@ -1,5 +1,3 @@
-// apps/community-admin/src/lib/api.ts
-
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
 const TENANT_SLUG = import.meta.env.VITE_TENANT_SLUG || "lazuar-hq";
 
@@ -140,7 +138,6 @@ export interface TestReminderRequest {
   channel?: string;
 }
 
-// Phase 2.1: Robust Analytics Interface
 export interface CommunityStatsResponse {
   mrr: number;
   active_subscribers: number;
@@ -446,12 +443,12 @@ export const api = {
   },
 
   // ==========================================
-  // Reminder Schedules
+  // Reminder Schedules (Pluralized Standard)
   // ==========================================
 
   getReminderSchedule: async (): Promise<ReminderSchedule[]> => {
     try {
-      const res = await fetch(`${API_URL}/admin/community/reminder-schedule?tenant=${TENANT_SLUG}`, { headers: getHeaders() });
+      const res = await fetch(`${API_URL}/admin/community/reminder-schedules?tenant=${TENANT_SLUG}`, { headers: getHeaders() });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || err.message || "Failed to fetch reminder schedule");
@@ -464,7 +461,7 @@ export const api = {
 
   createReminderSchedule: async (data: any) => {
     try {
-      const res = await fetch(`${API_URL}/admin/community/reminder-schedule?tenant=${TENANT_SLUG}`, {
+      const res = await fetch(`${API_URL}/admin/community/reminder-schedules?tenant=${TENANT_SLUG}`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify(data)
@@ -481,7 +478,7 @@ export const api = {
 
   updateReminderSchedule: async (id: string, data: any) => {
     try {
-      const res = await fetch(`${API_URL}/admin/community/reminder-schedule/${id}?tenant=${TENANT_SLUG}`, {
+      const res = await fetch(`${API_URL}/admin/community/reminder-schedules/${id}?tenant=${TENANT_SLUG}`, {
         method: "PUT",
         headers: getHeaders(),
         body: JSON.stringify(data)
@@ -498,7 +495,7 @@ export const api = {
 
   deleteReminderSchedule: async (id: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/community/reminder-schedule/${id}?tenant=${TENANT_SLUG}`, {
+      const res = await fetch(`${API_URL}/admin/community/reminder-schedules/${id}?tenant=${TENANT_SLUG}`, {
         method: "DELETE",
         headers: getHeaders(),
       });
@@ -547,12 +544,12 @@ export const api = {
   },
 
   // ==========================================
-  // 4. Interactive State Machine Action Hooks
+  // 4. Interactive State Machine Action Hooks (Payments API Route Standardized)
   // ==========================================
 
   recordPayment: async (id: string, data: { amount: number; payment_method: string; reference_number?: string; notes?: string; receipt_file?: string }) => {
     try {
-      const res = await fetch(`${API_URL}/admin/community/subscribers/${id}/record-payment?tenant=${TENANT_SLUG}`, {
+      const res = await fetch(`${API_URL}/admin/community/subscribers/${id}/payments?tenant=${TENANT_SLUG}`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify(data)

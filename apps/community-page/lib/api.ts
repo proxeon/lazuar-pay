@@ -49,6 +49,7 @@ export interface PortalData {
 }
 
 export async function getPlans(): Promise<CommunityPlan[]> {
+  // GET /public/community/{tenantSlug}/plans (Route param standardized)
   const res = await fetch(`${SERVER_API_URL}/public/community/${TENANT_SLUG}/plans`, {
     cache: "no-store"
   });
@@ -57,6 +58,7 @@ export async function getPlans(): Promise<CommunityPlan[]> {
 }
 
 export async function getPlanBySlug(slug: string): Promise<CommunityPlan | null> {
+  // GET /public/community/{tenantSlug}/plans/{slug} (Route param standardized)
   const res = await fetch(`${SERVER_API_URL}/public/community/${TENANT_SLUG}/plans/${slug}`, {
     cache: "no-store"
   });
@@ -68,6 +70,7 @@ export async function getPlanBySlug(slug: string): Promise<CommunityPlan | null>
 }
 
 export async function createCheckoutSession(data: { plan_slug: string; name: string; email: string; phone: string }): Promise<string> {
+  // POST /public/community/checkout (Payload contract matched)
   const res = await fetch(`${CLIENT_API_URL}/public/community/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -90,6 +93,7 @@ export async function createCheckoutSession(data: { plan_slug: string; name: str
 // ========================================================
 
 export async function requestMagicLink(email: string): Promise<void> {
+  // POST /public/community/{tenantSlug}/portal/magic-link (Route param standardized)
   const res = await fetch(`${CLIENT_API_URL}/public/community/${TENANT_SLUG}/portal/magic-link`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -99,13 +103,15 @@ export async function requestMagicLink(email: string): Promise<void> {
 }
 
 export async function getPortalData(token: string): Promise<PortalData> {
+  // GET /public/community/{tenantSlug}/portal?token={token} (Route param standardized)
   const res = await fetch(`${CLIENT_API_URL}/public/community/${TENANT_SLUG}/portal?token=${encodeURIComponent(token)}`);
   if (!res.ok) throw new Error("Unauthorized or expired link");
   return res.json();
 }
 
 export async function updatePortalContact(token: string, data: { name: string; email: string; phone: string }): Promise<void> {
-  const res = await fetch(`${CLIENT_API_URL}/public/community/portal/contact?tenant=${TENANT_SLUG}&token=${encodeURIComponent(token)}`, {
+  // PUT /public/community/{tenantSlug}/portal/contact?token={token} (Route param standardized)
+  const res = await fetch(`${CLIENT_API_URL}/public/community/${TENANT_SLUG}/portal/contact?token=${encodeURIComponent(token)}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -114,6 +120,7 @@ export async function updatePortalContact(token: string, data: { name: string; e
 }
 
 export async function cancelPortalSubscription(token: string, subscriptionId: string): Promise<void> {
+  // POST /public/community/{tenantSlug}/portal/cancel?token={token} (Route param standardized)
   const res = await fetch(`${CLIENT_API_URL}/public/community/${TENANT_SLUG}/portal/cancel?token=${encodeURIComponent(token)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
