@@ -120,7 +120,7 @@ export interface DeliveryHistoryItem {
 }
 
 export interface SendReminderRequest {
-  template_name?: string;
+  template_id?: string; // <-- Changed from template_name
   custom_message?: string;
   channel?: string;
 }
@@ -547,7 +547,7 @@ export const api = {
   },
 
   // ==========================================
-  // 4. Interactive State Machine Action Hooks (Payments API Route Standardized)
+  // 4. Interactive State Machine Action Hooks
   // ==========================================
 
   recordPayment: async (id: string, data: { amount: number; payment_method: string; reference_number?: string; notes?: string; receipt_file?: string }) => {

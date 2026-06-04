@@ -1,5 +1,3 @@
-// apps/community-admin/src/components/SendReminderModal.tsx
-
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X, Loader2, Send } from "lucide-react";
@@ -39,15 +37,18 @@ export default function SendReminderModal({ sub, onClose }: SendReminderModalPro
     try {
       const reqChannel = channel === "DEFAULT" ? undefined : channel;
       
+      // Fix: Send template_id instead of template_name to match backend DTO
       const payload = mode === "TEMPLATE" 
-        ? { template_name: templateName, channel: reqChannel }
+        ? { template_id: selectedTemplate?.id, channel: reqChannel }
         : { custom_message: customMessage.trim(), channel: reqChannel };
 
       const res = await api.sendReminder(sub.id, payload);
       
       const successes = res.details?.filter((d: any) => d.success)?.length || 0;
-      if (successes > 0) {
-        toast.success(`Reminder sent successfully via ${successes} channel(s).`);
+      // We check if "successes" count is returned, but if the endpoint doesn't return a details array,
+      // a 200 OK from the API implies it was dispatched to the outbox successfully.
+      if (res.status === "sent" || successes > 0) {
+        toast.success(`Reminder scheduled to send.`);
         onClose();
       } else {
         toast.error("Failed to send reminder. Check contact info.");
