@@ -23,7 +23,8 @@ public class TenantQueryService : ITenantQueryService
             connection.Open();
         }
 
-        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM tenant.Organizations WHERE \"Id\" = @Id LIMIT 1";
+        // Added double quotes around "Organizations" to preserve case-sensitivity
+        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM tenant.\"Organizations\" WHERE \"Id\" = @Id LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<TenantSnapshotDto>(sql, new { Id = tenantId });
     }
 
@@ -35,7 +36,8 @@ public class TenantQueryService : ITenantQueryService
             connection.Open();
         }
 
-        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM tenant.Organizations WHERE \"Slug\" = @Slug LIMIT 1";
+        // Added double quotes around "Organizations" to preserve case-sensitivity
+        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM tenant.\"Organizations\" WHERE \"Slug\" = @Slug LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<TenantSnapshotDto>(sql, new { Slug = slug.ToLower().Trim() });
     }
 }

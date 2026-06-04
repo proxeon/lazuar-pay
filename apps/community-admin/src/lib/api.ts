@@ -352,7 +352,10 @@ export const api = {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || err.message || "Failed to fetch payment config");
       }
-      return await res.json();
+      
+      // Safely parse empty responses
+      const text = await res.text();
+      return text ? JSON.parse(text) : {};
     } catch (err: any) {
       throw new Error(err.message || "Failed to process request");
     }
