@@ -132,12 +132,18 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         CurrentPeriodEnd = newDate;
         NextRenewalDate = newDate;
         UpdatedAt = DateTime.UtcNow;
+
+        // Trigger decoupled audit log
+        AddDomainEvent(new SubscriptionGracePeriodExtendedDomainEvent(Id, OrganizationId, ClientProfileId, days, newDate));
     }
 
     public void PauseReminders(DateTime? pauseUntil)
     {
         RemindersPausedUntil = pauseUntil;
         UpdatedAt = DateTime.UtcNow;
+
+        // Trigger decoupled audit log
+        AddDomainEvent(new SubscriptionRemindersPausedDomainEvent(Id, OrganizationId, ClientProfileId, pauseUntil));
     }
 
     public void UpdateProfile(bool isReminderOnly, string? preferredChannel, string? adminNotes, DateTime? nextRenewalDate)
@@ -148,6 +154,9 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         if (nextRenewalDate.HasValue) NextRenewalDate = nextRenewalDate.Value;
         
         UpdatedAt = DateTime.UtcNow;
+
+        // Trigger decoupled audit log
+        AddDomainEvent(new SubscriptionProfileUpdatedDomainEvent(Id, OrganizationId, ClientProfileId, isReminderOnly, preferredChannel, nextRenewalDate));
     }
 
     public void RequestMagicLink(string magicLinkUrl)

@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using BuildingBlocks.Domain;
+using Modules.Community.Domain.Events;
 using Modules.Community.Domain.Rules;
 using Modules.Community.Domain.ValueObjects;
 
@@ -7,7 +10,7 @@ namespace Modules.Community.Domain.Aggregates;
 public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
 {
     public Guid Id { get; private set; }
-    public Guid OrganizationId { get; set; } // Settable via EF / PlatformDbContext interceptor
+    public Guid OrganizationId { get; set; }
 
     public string Slug { get; private set; }
     public string Name { get; private set; }
@@ -15,7 +18,7 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public string ShortDescription { get; private set; }
     public string LongDescription { get; private set; }
     public decimal Price { get; private set; }
-    public string Interval { get; private set; } // "mo", "yr"
+    public string Interval { get; private set; }
     
     private readonly List<string> _features = new();
     public IReadOnlyCollection<string> Features => _features.AsReadOnly();
@@ -37,7 +40,7 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime UpdatedAt { get; private set; }
 
 #pragma warning disable CS8618
-    private CommunityPlan() { } // For EF Core
+    private CommunityPlan() { }
 #pragma warning restore CS8618
 
     public CommunityPlan(
@@ -69,7 +72,7 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public void UpdateDetails(
         string name, string audience, string shortDesc, string longDesc, 
         decimal price, string interval, int gracePeriodDays, int? maxCapacity, 
-        int displayOrder, bool isActive, string methodology) // <-- Added methodology here
+        int displayOrder, bool isActive, string methodology)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
 
@@ -85,6 +88,9 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
         IsActive = isActive;
         Methodology = methodology;
         UpdatedAt = DateTime.UtcNow;
+
+        // Trigger decoupled audit log
+        AddDomainEvent(new PlanUpdatedDomainEvent(Id, OrganizationId, Slug, Name, Price));
     }
 
     public void SetFulfillmentLinks(string? telegramLink, string? meetingLink)
@@ -118,5 +124,8 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     {
         IsActive = false;
         UpdatedAt = DateTime.UtcNow;
+
+        // Trigger decoupled audit log
+        AddDomainEvent(new PlanArchivedDomainEvent(Id, OrganizationId, Slug));
     }
 }
