@@ -3,22 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
-using Modules.Payments.Infrastructure;
+using Modules.Payments.Application.Commands;
 using Modules.Payments.Domain.Aggregates;
 
-namespace Modules.Payments.Application.Commands;
-
-public record UpdatePaymentConfigCommand(
-    Guid OrganizationId,
-    string GatewayType,
-    string? ApiKey,
-    string? MerchantId,
-    string? WebhookSecret,
-    string? SecretKey,
-    bool IsActive) : ICommand
-{
-    public Guid Id { get; init; } = Guid.CreateVersion7();
-}
+namespace Modules.Payments.Infrastructure.Commands;
 
 public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentConfigCommand>
 {

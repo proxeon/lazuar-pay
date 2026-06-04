@@ -11,6 +11,7 @@ public class MessagingDbContext : PlatformDbContext
     public DbSet<TenantReplica> TenantReplicas { get; set; } = null!;
     public DbSet<MessageTemplate> MessageTemplates { get; set; } = null!;
     public DbSet<AutomationRule> AutomationRules { get; set; } = null!;
+    public DbSet<AutomationQueue> AutomationQueue { get; set; } = null!;
     
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -50,6 +51,20 @@ public class MessagingDbContext : PlatformDbContext
             builder.HasOne<MessageTemplate>()
                    .WithMany()
                    .HasForeignKey(x => x.TemplateId)
+                   .OnDelete(DeleteBehavior.SetNull)
+                   .IsRequired(false);
+        });
+
+        modelBuilder.Entity<AutomationQueue>(builder =>
+        {
+            builder.ToTable("AutomationQueue");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.Status, x.ScheduledAt });
+            builder.HasIndex(x => x.OrganizationId);
+
+            builder.HasOne<AutomationRule>()
+                   .WithMany()
+                   .HasForeignKey(x => x.AutomationRuleId)
                    .OnDelete(DeleteBehavior.SetNull)
                    .IsRequired(false);
         });

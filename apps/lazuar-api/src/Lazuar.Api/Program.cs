@@ -55,11 +55,18 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddMediatR(cfg =>
 {
+    // Register Application Assemblies
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
+
+    // CRUCIAL MONOLITH FIX: Register Infrastructure Assemblies so MediatR discovers newly moved handlers
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly);
 });
 
 // Register Module Services

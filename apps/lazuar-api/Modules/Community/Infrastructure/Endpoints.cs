@@ -347,15 +347,48 @@ public static class Endpoints
     }
 }
 
+// ==========================================
+// DTOs (Fully Resolved)
+// ==========================================
+
+public record CreatePlanRequestDto(
+    string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
+    decimal Price, string Interval, List<string> Features, string Methodology,
+    List<FaqRequestDto> Faq, int DisplayOrder, int? MaxCapacity, int GracePeriodDays,
+    string? TelegramInviteLink, string? WeeklyMeetingLink);
+
+public record UpdatePlanRequestDto(
+    string? Slug, string? Name, string? Audience, string? ShortDescription, string? LongDescription, 
+    decimal? Price, string? Interval, List<string>? Features, string? Methodology, 
+    List<FaqRequestDto>? Faq, bool? IsActive, int? DisplayOrder, int? MaxCapacity, int? GracePeriodDays, 
+    string? TelegramInviteLink, string? WeeklyMeetingLink);
+
+public record FaqRequestDto(string Id, string Question, string Answer);
+
+public record RecordPaymentRequestDto(
+    decimal Amount, string PaymentMethod, string? ReferenceNumber, string? ReceiptFile);
+
+public record UpdateSubscriberProfileRequestDto(
+    bool IsReminderOnly, string? PreferredChannel, string? AdminNotes, DateTime? NextRenewalDate);
+
+public record ExtendGraceRequestDto(int Days);
+
+public record PauseRemindersRequestDto(DateTime? PauseUntil);
+
+public record SendOneOffReminderRequestDto(Guid? TemplateId, string? CustomMessage, string? Channel);
+
+public record CreateReminderScheduleRequestDto(
+    Guid? PlanId, Guid TemplateId, string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled);
+
+public record UpdateReminderScheduleRequestDto(
+    Guid? PlanId, Guid? TemplateId, string? Channel, int? DaysRelativeToDue, string? TimeOfDay, bool? IsEnabled);
+
 public record CreateSubscriberRequestDto(
-    string Name,
-    string Email,
-    string Phone,
-    Guid PlanId,
-    string? Source,
-    bool? IsReminderOnly,
-    string? PreferredChannel,
-    decimal? AmountPaid,
-    string? PaymentMethod,
-    string? ReferenceNumber,
-    string? Notes);
+    string Name, string Email, string Phone, Guid PlanId,
+    string? Source, bool? IsReminderOnly, string? PreferredChannel,
+    decimal? AmountPaid, string? PaymentMethod, string? ReferenceNumber, string? Notes);
+
+public record PublicCheckoutRequestDto(
+    string TenantSlug, string PlanSlug, string Name, string Email, string Phone);
+
+public record MagicLinkRequestDto(string Email);

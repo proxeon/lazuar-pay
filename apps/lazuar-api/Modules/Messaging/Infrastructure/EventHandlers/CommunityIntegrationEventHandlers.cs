@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
-using Dapper;
-using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Contracts;
 using Modules.CRM.Contracts;
 using Modules.Messaging.Contracts;
 
-namespace Modules.Messaging.Application.EventHandlers;
+namespace Modules.Messaging.Infrastructure.EventHandlers;
 
 public class CommunityIntegrationEventHandlers : 
     IIntegrationEventHandler<CommunitySubscriptionActivatedIntegrationEvent>,
@@ -23,18 +22,18 @@ public class CommunityIntegrationEventHandlers :
     private readonly ICrmQueryService _crmQueryService;
     private readonly IEmailService _emailService;
     private readonly IMessageTemplateQueryService _templateService;
-    private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly MessagingDbContext _context;
 
     public CommunityIntegrationEventHandlers(
         ICrmQueryService crmQueryService, 
         IEmailService emailService,
         IMessageTemplateQueryService templateService,
-        [FromKeyedServices("MessagingSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
+        MessagingDbContext context)
     {
         _crmQueryService = crmQueryService;
         _emailService = emailService;
         _templateService = templateService;
-        _connectionFactory = connectionFactory;
+        _context = context;
     }
 
     private string RenderTemplate(string template, Dictionary<string, string> variables)
@@ -99,28 +98,31 @@ public class CommunityIntegrationEventHandlers :
             await _emailService.SendEmailAsync(profile.Email, subject, body);
         }
 
-        // 2. NEW: Clean up local Messaging queue using boundary-safe Dapper query.
-        // Cancelling pending checkouts (manually or via 3-day lifecycle cleanup) stops any active abandoned cart drips.
-        using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) 
+        // 2. Clean up local Messaging queue using Entity Framework Context (Clean Architecture compliant)
+        var pendingReminders = await _context.AutomationRules
+            .IgnoreQueryFilters()
+            .Join(_context.Set<Modules.Messaging.Domain.AutomationQueue>().IgnoreQueryFilters(),
+                r => r.Id,
+                q => q.AutomationRuleId,
+                (r, q) => new { Rule = r, Queue = q })
+            .Where(x => x.Rule.OrganizationId == @event.OrganizationId 
+                     && x.Queue.BookingId == @event.SubscriptionId 
+                     && x.Queue.Status == "PENDING"
+                     && x.Rule.TriggerType == "COMMUNITY_ABANDONED")
+            .Select(x => x.Queue)
+            .ToListAsync();
+
+        if (pendingReminders.Any())
         {
-            connection.Open();
+            foreach (var item in pendingReminders)
+            {
+                item.Status = "CANCELLED";
+                item.ProcessedAt = DateTime.UtcNow;
+                item.LastError = "Subscription was cancelled or checkout expired.";
+            }
+
+            await _context.SaveChangesAsync();
         }
-
-        const string sql = @"
-            UPDATE messaging.""AutomationQueue"" 
-            SET ""Status"" = 'CANCELLED', ""ProcessedAt"" = @Now, ""LastError"" = @Reason
-            WHERE ""OrganizationId"" = @OrgId 
-              AND ""BookingId"" = @SubId 
-              AND ""Status"" = 'PENDING'";
-
-        await connection.ExecuteAsync(sql, new
-        {
-            OrgId = @event.OrganizationId,
-            SubId = @event.SubscriptionId,
-            Now = DateTime.UtcNow,
-            Reason = "Subscription was cancelled or checkout expired."
-        });
     }
 
     public Task HandleAsync(CommunityCheckoutInitiatedIntegrationEvent @event)

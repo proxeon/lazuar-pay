@@ -5,7 +5,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Modules.Community.Domain.Events;
 
-namespace Modules.Community.Application.EventHandlers;
+namespace Modules.Community.Infrastructure.EventHandlers;
 
 public class CommunityAuditDomainEventHandlers :
     INotificationHandler<SubscriptionGracePeriodExtendedDomainEvent>,

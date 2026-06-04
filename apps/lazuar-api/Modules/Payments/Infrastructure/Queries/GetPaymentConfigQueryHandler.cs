@@ -3,19 +3,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
-using Modules.Payments.Infrastructure;
+using Modules.Payments.Application.Queries;
 
-namespace Modules.Payments.Application.Queries;
-
-public record GetPaymentConfigQuery(Guid OrganizationId) : IQuery<PaymentConfigDto?>;
-
-public record PaymentConfigDto(
-    string GatewayType,
-    string? ApiKey,
-    string? MerchantId,
-    string? WebhookSecret,
-    string? SecretKey,
-    bool IsActive);
+namespace Modules.Payments.Infrastructure.Queries;
 
 public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery, PaymentConfigDto?>
 {
@@ -39,7 +29,7 @@ public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery,
             MaskSecret(config.ApiKey),
             config.MerchantId,
             MaskSecret(config.WebhookSecret),
-            MaskSecret(config.ApiKey), // Mapping secret key placeholder for UI
+            MaskSecret(config.ApiKey), 
             config.IsActive);
     }
 
