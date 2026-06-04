@@ -27,6 +27,21 @@ public class CommunityDbContext : PlatformDbContext
     {
     }
 
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Intercept any new PaymentRecord entities added to the tracked navigation collection.
+        // Force their state to Added to prevent the EF Core tracking bug from executing an UPDATE statement.
+        foreach (var entry in ChangeTracker.Entries<PaymentRecord>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

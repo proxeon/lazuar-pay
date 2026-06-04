@@ -44,15 +44,16 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
         var isProd = apiBaseUrl.Contains("lazuar.com");
         var endpoint = isProd ? ProductionApiUrl : SandboxApiUrl;
-        
-        // Billplz requires a specific webhook URL per-bill
-        var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}";
-
-        var amountCents = (int)(amount * 100);
 
         // Billplz only allows two references. We map our metadata to them.
         metadata.TryGetValue("type", out var type);
         var ref1 = metadata.TryGetValue("subscription_id", out var subId) ? subId : tenantId.ToString();
+
+        // Pass metadata dynamically via query parameters because Billplz does not return reference fields in the POST callback payload
+        var queryParams = $"?type={Uri.EscapeDataString(type ?? "payment")}&subscription_id={Uri.EscapeDataString(ref1)}";
+        var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}{queryParams}";
+
+        var amountCents = (int)(amount * 100);
 
         var payload = new Dictionary<string, object>
         {
@@ -140,8 +141,9 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             var isPaid = paid.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                          state.Equals("paid", StringComparison.OrdinalIgnoreCase);
 
-            var reference1 = formData.GetValueOrDefault("reference_1", "");
-            var reference2 = formData.GetValueOrDefault("reference_2", "");
+            // Extract metadata from custom Query headers appended by the API webhook router endpoint
+            var reference1 = headers.GetValueOrDefault("Query-subscription_id", "");
+            var reference2 = headers.GetValueOrDefault("Query-type", "");
 
             // Reconstruct the metadata dictionary
             var metadata = new Dictionary<string, string>();

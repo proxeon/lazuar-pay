@@ -13,7 +13,7 @@ public static class Endpoints
     {
         var group = endpoints.MapGroup("/webhooks/payments");
 
-        // The URL explicitly contains the Tenant ID. Stripe sends webhooks here!
+        // The URL explicitly contains the Tenant ID. Stripe/Billplz sends webhooks here!
         group.MapPost("/{gatewayType}/{tenantId:guid}", async (
             string gatewayType,
             Guid tenantId,
@@ -29,6 +29,13 @@ public static class Endpoints
             foreach (var header in context.Request.Headers)
             {
                 headers[header.Key] = header.Value.ToString();
+            }
+
+            // Append query string parameters to the headers dictionary so that stateless adapters (like Billplz)
+            // can read checkout metadata from the callback URL itself.
+            foreach (var queryParam in context.Request.Query)
+            {
+                headers[$"Query-{queryParam.Key}"] = queryParam.Value.ToString();
             }
 
             var command = new ProcessGatewayWebhookCommand(

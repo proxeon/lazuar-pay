@@ -16,7 +16,11 @@ public class InMemoryEventBus : IEventBus, IEventBusSubscriptions
 
     public async Task PublishAsync<TEvent>(TEvent @event) where TEvent : IIntegrationEvent
     {
-        var eventName = typeof(TEvent).Name;
+        if (@event == null) return;
+
+        // Use runtime type name instead of compile-time generic parameter (typeof(TEvent).Name)
+        // This prevents static compiler dispatch issues when events are invoked through interface casts
+        var eventName = @event.GetType().Name;
         if (!_handlers.TryGetValue(eventName, out var handlers)) return;
 
         using var scope = _serviceProvider.CreateScope();
