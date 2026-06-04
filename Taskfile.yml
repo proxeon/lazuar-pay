@@ -29,6 +29,13 @@ tasks:
       - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
+  # Need to use better description and task name
+  fe:
+    desc: Full dev stack (Docker infra + mprocs for frontends)
+    # deps: [dev]
+    cmds:
+      - mprocs -c mprocs-dev.yaml
+
   # ==========================================
   # .NET API Tasks
   # ==========================================

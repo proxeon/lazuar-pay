@@ -1,0 +1,4 @@
+# mprocs-dev.yaml
+procs:
+  community-dash: cd apps/community-admin && pnpm dev
+  community-page: cd apps/community-page && pnpm dev
