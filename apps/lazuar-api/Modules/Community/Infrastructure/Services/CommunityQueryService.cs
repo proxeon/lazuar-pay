@@ -19,6 +19,7 @@ public class CommunityQueryService : ICommunityQueryService
     private readonly ICrmQueryService _crmQueryService;
     private readonly IMessageTemplateQueryService _messageTemplateQueryService;
 
+    // Type-safe Positional Data Transfer Objects (DTOs)
     private record RawPlanDto(
         Guid Id, string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
         decimal Price, string Interval, string Features, string Methodology, string Faq,
@@ -36,10 +37,12 @@ public class CommunityQueryService : ICommunityQueryService
         Guid Id, Guid? PlanId, string? PlanName, Guid TemplateId, 
         string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt);
 
-    // Private Sub/Stats DTOs strictly avoiding dynamics issues 
     private record SubStatsDto(string Status, bool IsReminderOnly, DateTime CreatedAt, DateTime UpdatedAt, decimal Price, string Interval);
     private record RawCashFlowTrendDto(string Month, decimal Amount);
     private record RawPaymentMethodDto(string Method, int Count, decimal TotalAmount);
+    
+    // Explicit Record to capture enrollment capacities safely (avoids dynamic type casting limits)
+    private record PlanEnrollmentCountDto(Guid PlanId, int Count);
 
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
@@ -69,13 +72,13 @@ public class CommunityQueryService : ICommunityQueryService
         var rawPlans = await connection.QueryAsync<RawPlanDto>(sql, new { OrgId = organizationId });
 
         const string countsSql = @"
-            SELECT ""PlanId"", COUNT(*) as Count 
+            SELECT ""PlanId"", COUNT(*)::int as ""Count"" 
             FROM community.""Subscriptions"" 
             WHERE ""OrganizationId"" = @OrgId AND ""Status"" IN ('ACTIVE', 'PAST_DUE')
             GROUP BY ""PlanId""";
             
-        var enrollmentCounts = (await connection.QueryAsync(countsSql, new { OrgId = organizationId }))
-            .ToDictionary(row => (Guid)row.PlanId, row => (int)row.Count);
+        var enrollmentCounts = (await connection.QueryAsync<PlanEnrollmentCountDto>(countsSql, new { OrgId = organizationId }))
+            .ToDictionary(row => row.PlanId, row => row.Count);
 
         return rawPlans.Select(p => MapToPlanDto(p, enrollmentCounts.GetValueOrDefault(p.Id, 0)));
     }
@@ -99,7 +102,7 @@ public class CommunityQueryService : ICommunityQueryService
         if (rawPlan == null) return null;
 
         const string countSql = @"
-            SELECT COUNT(*) FROM community.""Subscriptions"" 
+            SELECT COUNT(*)::int FROM community.""Subscriptions"" 
             WHERE ""PlanId"" = @PlanId AND ""OrganizationId"" = @OrgId AND ""Status"" IN ('ACTIVE', 'PAST_DUE')";
             
         var enrolledCount = await connection.ExecuteScalarAsync<int>(countSql, new { PlanId = planId, OrgId = organizationId });
@@ -125,13 +128,13 @@ public class CommunityQueryService : ICommunityQueryService
         var rawPlans = await connection.QueryAsync<RawPlanDto>(sql, new { OrgId = organizationId });
 
         const string countsSql = @"
-            SELECT ""PlanId"", COUNT(*) as Count 
+            SELECT ""PlanId"", COUNT(*)::int as ""Count"" 
             FROM community.""Subscriptions"" 
             WHERE ""OrganizationId"" = @OrgId AND ""Status"" IN ('ACTIVE', 'PAST_DUE')
             GROUP BY ""PlanId""";
             
-        var enrollmentCounts = (await connection.QueryAsync(countsSql, new { OrgId = organizationId }))
-            .ToDictionary(row => (Guid)row.PlanId, row => (int)row.Count);
+        var enrollmentCounts = (await connection.QueryAsync<PlanEnrollmentCountDto>(countsSql, new { OrgId = organizationId }))
+            .ToDictionary(row => row.PlanId, row => row.Count);
 
         return rawPlans.Select(p => MapToPlanDto(p, enrollmentCounts.GetValueOrDefault(p.Id, 0)));
     }
