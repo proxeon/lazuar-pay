@@ -1,69 +1,53 @@
 using System;
-using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Dapper;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Modules.CRM.Contracts;
+using Modules.CRM.Domain;
 
 namespace Modules.CRM.Infrastructure;
 
 public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientProfileCommand, Guid>
 {
-    private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly CrmDbContext _dbContext;
 
-    public CreateClientProfileCommandHandler([FromKeyedServices("CrmSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
+    public CreateClientProfileCommandHandler(CrmDbContext dbContext)
     {
-        _connectionFactory = connectionFactory;
+        _dbContext = dbContext;
     }
 
     public async Task<Guid> Handle(CreateClientProfileCommand request, CancellationToken cancellationToken)
     {
-        using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) 
-        {
-            connection.Open();
-        }
-
         var emailNormalized = request.Email.Trim().ToLowerInvariant();
         var phoneNormalized = NormalizePhone(request.Phone);
 
-        // 1. Look up existing profile by Email or Phone to ensure idempotency
-        const string selectSql = @"
-            SELECT ""Id"" FROM crm.""ClientProfiles"" 
-            WHERE ""OrganizationId"" = @OrgId 
-              AND (""Email"" = @Email OR ""Phone"" = @Phone) 
-            LIMIT 1";
+        // 1. Check for existing profile by email or phone across database boundary (Idempotency)
+        var existingProfile = await _dbContext.ClientProfiles
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId 
+                && (p.Email == emailNormalized || p.Phone == phoneNormalized), cancellationToken);
 
-        var existingId = await connection.QuerySingleOrDefaultAsync<Guid?>(selectSql, new
+        if (existingProfile != null)
         {
-            OrgId = request.OrganizationId,
-            Email = emailNormalized,
-            Phone = phoneNormalized
-        });
-
-        if (existingId.HasValue)
-        {
-            return existingId.Value;
+            return existingProfile.Id;
         }
 
-        // 2. Insert new profile if not found
-        var newId = Guid.CreateVersion7();
-        const string insertSql = @"
-            INSERT INTO crm.""ClientProfiles"" (""Id"", ""OrganizationId"", ""FullName"", ""Email"", ""Phone"", ""ConsentedToMarketing"")
-            VALUES (@Id, @OrgId, @FullName, @Email, @Phone, true)";
-
-        await connection.ExecuteAsync(insertSql, new
+        // 2. Map and insert new CRM Profile
+        var profile = new ClientProfileEntity
         {
-            Id = newId,
-            OrgId = request.OrganizationId,
+            Id = Guid.CreateVersion7(),
+            OrganizationId = request.OrganizationId,
             FullName = request.FullName.Trim(),
             Email = emailNormalized,
-            Phone = phoneNormalized
-        });
+            Phone = phoneNormalized,
+            ConsentedToMarketing = true
+        };
 
-        return newId;
+        await _dbContext.ClientProfiles.AddAsync(profile, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return profile.Id;
     }
 
     private static string NormalizePhone(string phone)

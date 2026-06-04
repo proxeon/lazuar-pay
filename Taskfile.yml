@@ -29,10 +29,8 @@ tasks:
       - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
-  # Need to use better description and task name
   fe:
     desc: Full dev stack (Docker infra + mprocs for frontends)
-    # deps: [dev]
     cmds:
       - mprocs -c mprocs-dev.yaml
 
@@ -61,6 +59,7 @@ tasks:
       - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:init:
     desc: Generate the initial EF Core migrations for all core modules
@@ -70,6 +69,7 @@ tasks:
       - dotnet ef migrations add InitialMessagingSchema --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialCommunitySchema --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialPaymentsSchema --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialCrmSchema --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:
     desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"

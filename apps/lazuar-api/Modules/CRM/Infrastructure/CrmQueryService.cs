@@ -1,27 +1,31 @@
-using Dapper;
-using System.Data;
-using BuildingBlocks.Application;
-using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Modules.CRM.Contracts;
 
 namespace Modules.CRM.Infrastructure;
 
 public class CrmQueryService : ICrmQueryService
 {
-    private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly CrmDbContext _dbContext;
 
-    public CrmQueryService([FromKeyedServices("CrmSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
+    public CrmQueryService(CrmDbContext dbContext)
     {
-        _connectionFactory = connectionFactory;
+        _dbContext = dbContext;
     }
 
     public async Task<ClientProfileDto?> GetClientProfileAsync(Guid profileId)
     {
-        using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) connection.Open();
+        var profile = await _dbContext.ClientProfiles
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == profileId);
 
-        const string sql = "SELECT \"Id\", \"FullName\", \"Email\", \"Phone\" FROM crm.\"ClientProfiles\" WHERE \"Id\" = @Id LIMIT 1";
-        return await connection.QuerySingleOrDefaultAsync<ClientProfileDto>(sql, new { Id = profileId });
+        if (profile == null) return null;
+
+        return new ClientProfileDto(profile.Id, profile.FullName, profile.Email, profile.Phone);
     }
 
     public async Task<IEnumerable<ClientProfileDto>> GetClientProfilesAsync(IEnumerable<Guid> profileIds)
@@ -29,28 +33,26 @@ public class CrmQueryService : ICrmQueryService
         var ids = profileIds.Distinct().ToList();
         if (ids.Count == 0) return Enumerable.Empty<ClientProfileDto>();
 
-        using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) connection.Open();
+        var profiles = await _dbContext.ClientProfiles
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync();
 
-        const string sql = "SELECT \"Id\", \"FullName\", \"Email\", \"Phone\" FROM crm.\"ClientProfiles\" WHERE \"Id\" = ANY(@Ids)";
-        return await connection.QueryAsync<ClientProfileDto>(sql, new { Ids = ids });
+        return profiles.Select(p => new ClientProfileDto(p.Id, p.FullName, p.Email, p.Phone));
     }
 
     public async Task<ClientProfileDto?> GetClientProfileByEmailAsync(Guid organizationId, string email)
     {
-        using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) connection.Open();
+        var normalizedEmail = email.Trim().ToLowerInvariant();
 
-        const string sql = @"
-            SELECT ""Id"", ""FullName"", ""Email"", ""Phone"" 
-            FROM crm.""ClientProfiles"" 
-            WHERE ""OrganizationId"" = @OrgId AND ""Email"" = @Email 
-            LIMIT 1";
-            
-        return await connection.QuerySingleOrDefaultAsync<ClientProfileDto>(sql, new 
-        { 
-            OrgId = organizationId, 
-            Email = email.Trim().ToLowerInvariant() 
-        });
+        var profile = await _dbContext.ClientProfiles
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Email == normalizedEmail);
+
+        if (profile == null) return null;
+
+        return new ClientProfileDto(profile.Id, profile.FullName, profile.Email, profile.Phone);
     }
 }

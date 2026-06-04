@@ -21,7 +21,7 @@ using Lazuar.Api;
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
+    .WriteTo.Console()
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -133,6 +133,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.CRM.Infrastructure.DependencyInjection).Assembly);
 });
 
 // Register Module Services
@@ -143,9 +144,6 @@ builder.Services.AddCrmModule(builder.Configuration);
 builder.Services.AddPaymentsModule(builder.Configuration);
 
 var app = builder.Build();
-
-// Decouple Database Migrations from API Pipeline. We Delete the database
-// migration invocation scope and Introduce Automated DB Migration CLI Task
 
 app.UseExceptionHandler();
 
@@ -173,7 +171,6 @@ apiGroup.MapPost("/platform/auth/login", (
         return Results.Json(new { error = "Email address is required." }, statusCode: 400);
     }
 
-    // Accept baseline passwords as mapped in configuration documentation
     if ((email == "admin@lazuars.io" || email == "sysadmin@lazuars.io" || email == "admin@yourdomain.com") 
         && req.Password == "Password123!")
     {
@@ -185,8 +182,8 @@ apiGroup.MapPost("/platform/auth/login", (
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "018f3a3f-3610-73bf-baef-c07a3c3df9ee"),
-            new Claim(ClaimTypes.Email, email), // References local non-null validated string
-            new Claim("org_id", "7d97963c-063c-4598-86cc-9ddd9d47d9b1"), // Base Tenant ID
+            new Claim(ClaimTypes.Email, email),
+            new Claim("org_id", "7d97963c-063c-4598-86cc-9ddd9d47d9b1"),
             new Claim(ClaimTypes.Role, "SUPER_ADMIN")
         };
 
