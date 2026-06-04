@@ -101,3 +101,33 @@ tasks:
       - |
         echo "Querying active ngrok tunnels..."
         curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | sed 's/"public_url":"//' || echo "No active ngrok agents detected. Ensure ngrok is running."
+
+
+  # ─── CODE GENERATION (TypeSpec -> OpenAPI -> Clients) ──────────────────────
+
+  gen:
+    desc: Run the full code-generation pipeline
+    cmds:
+      - task: gen:spec
+      - task: gen:types-ts
+      - task: gen:types-dotnet
+    sources:
+      - "packages/api-spec/*.tsp"
+    generates:
+      - "packages/api-spec/dist/openapi.yaml"
+
+  gen:spec:
+    desc: Compile TypeSpec to OpenAPI.yaml
+    dir: packages/api-spec
+    cmds:
+      - pnpm build
+
+  gen:types-ts:
+    desc: Generate TypeScript types for Frontend apps
+    cmds:
+      - pnpm --filter @repo/api-types-ts generate
+
+  gen:types-dotnet:
+    desc: Generate C# DTOs for the Backend API
+    cmds:
+      - pnpm --filter @repo/api-types-dotnet generate

@@ -1,0 +1,15 @@
+{
+  "name": "lazuar-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "npx tsp compile .",
+    "watch": "npx tsp compile . --watch"
+  },
+  "dependencies": {
+    "@typespec/compiler": "~0.62",
+    "@typespec/http": "~0.62",
+    "@typespec/openapi": "~0.62",
+    "@typespec/openapi3": "~0.62"
+  }
+}
