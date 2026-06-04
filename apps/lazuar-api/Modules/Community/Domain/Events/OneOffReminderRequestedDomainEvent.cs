@@ -8,8 +8,11 @@ public record OneOffReminderRequestedDomainEvent(
     Guid ClientProfileId,
     Guid? TemplateId,
     string? CustomMessage,
-    string Channel) : IDomainEvent
+    string Channel,
+    DateTime? ScheduledAt = null) : IDomainEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
-    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    
+    // Allow future scheduling for the Outbox Job Queue
+    public DateTime OccurredOn { get; init; } = ScheduledAt ?? DateTime.UtcNow;
 }

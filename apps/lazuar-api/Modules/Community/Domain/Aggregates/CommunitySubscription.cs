@@ -185,6 +185,28 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
             channel.ToUpperInvariant()));
     }
 
+    public void ScheduleOneOffReminder(Guid? templateId, string? customMessage, string channel, DateTime scheduledAt)
+    {
+        if (!templateId.HasValue && string.IsNullOrWhiteSpace(customMessage))
+        {
+            throw new InvalidOperationException("Either a template ID or a custom message must be provided to schedule a reminder.");
+        }
+
+        if (string.IsNullOrWhiteSpace(channel))
+        {
+            throw new ArgumentException("Channel cannot be empty.", nameof(channel));
+        }
+
+        AddDomainEvent(new OneOffReminderRequestedDomainEvent(
+            Id,
+            OrganizationId,
+            ClientProfileId,
+            templateId,
+            customMessage,
+            channel.ToUpperInvariant(),
+            scheduledAt));
+    }
+
     public void RecordReminderDispatched(Guid scheduleId, DateTime targetRenewalDate)
     {
         _reminderLogs.Add(new ReminderDispatchLog(Id, scheduleId, targetRenewalDate));

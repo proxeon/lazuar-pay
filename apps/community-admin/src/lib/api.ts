@@ -120,14 +120,14 @@ export interface DeliveryHistoryItem {
 }
 
 export interface SendReminderRequest {
-  template_id?: string; // <-- Changed from template_name
+  template_id?: string;
   custom_message?: string;
   channel?: string;
 }
 
 export interface ScheduleOneOffRequest {
   subscriber_id: string;
-  template_name?: string;
+  template_id?: string;
   custom_message?: string;
   channel?: string;
   scheduled_at: string;

@@ -66,7 +66,7 @@ export default function ScheduleReminderModal({ sub, onClose }: ScheduleReminder
       const reqChannel = channel === "DEFAULT" ? undefined : channel;
       
       const payload = mode === "TEMPLATE" 
-        ? { subscriber_id: sub.id, template_name: templateName, channel: reqChannel, scheduled_at }
+        ? { subscriber_id: sub.id, template_id: selectedTemplate?.id, channel: reqChannel, scheduled_at }
         : { subscriber_id: sub.id, custom_message: customMessage.trim(), channel: reqChannel, scheduled_at };
 
       await api.scheduleOneOff(payload);

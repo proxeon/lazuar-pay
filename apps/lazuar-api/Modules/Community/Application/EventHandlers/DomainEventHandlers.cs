@@ -129,7 +129,8 @@ public class DomainEventHandlers :
                 notification.ClientProfileId,
                 notification.TemplateId,
                 notification.CustomMessage,
-                notification.Channel
+                notification.Channel,
+                notification.OccurredOn
             )
         );
     }

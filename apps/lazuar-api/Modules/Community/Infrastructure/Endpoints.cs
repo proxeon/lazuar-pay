@@ -217,6 +217,15 @@ public static class Endpoints
             return Results.Ok(new { status = "sent" });
         });
 
+        // --- Schedule Future One-Off Reminder (Phase 3 Fix) ---
+        admin.MapPost("/reminders/schedule-one-off", async (ScheduleOneOffRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            var command = new ScheduleOneOffReminderCommand(
+                ctx.TenantId, req.SubscriberId, req.TemplateId, req.CustomMessage, req.Channel ?? "DEFAULT", req.ScheduledAt);
+            await mediator.Send(command);
+            return Results.Ok(new { status = "scheduled" });
+        });
+
         // --- Reminder Schedules ---
         admin.MapPost("/reminder-schedules", async (CreateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
@@ -401,6 +410,9 @@ public record ExtendGraceRequestDto(int Days);
 public record PauseRemindersRequestDto(DateTime? PauseUntil);
 
 public record SendOneOffReminderRequestDto(Guid? TemplateId, string? CustomMessage, string? Channel);
+
+public record ScheduleOneOffRequestDto(
+    Guid SubscriberId, Guid? TemplateId, string? CustomMessage, string? Channel, DateTime ScheduledAt);
 
 public record CreateReminderScheduleRequestDto(
     Guid? PlanId, Guid TemplateId, string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled);
