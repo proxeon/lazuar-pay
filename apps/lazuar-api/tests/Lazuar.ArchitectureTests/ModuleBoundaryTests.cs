@@ -210,7 +210,7 @@ public class ModuleBoundaryTests
 
         var result = dbContextTypes
             .Should()
-            .BeInternal()
+            .NotBePublic() // Corrected NetArchTest condition for non-public access verification
             .Or()
             .ResideInNamespaceEndingWith("Infrastructure")
             .GetResult();
