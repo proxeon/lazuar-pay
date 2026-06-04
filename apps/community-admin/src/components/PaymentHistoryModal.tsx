@@ -14,12 +14,12 @@ export default function PaymentHistoryModal({ sub, onClose }: PaymentHistoryModa
   const { data: records, isLoading } = useQuery<PaymentRecord[]>({
     queryKey: ["community-payments", sub.id],
     queryFn: async () => {
-        // Fallback to raw fetch since endpoint mapping wasn't added to TypeSpec in Phase 1
-        const res = await fetch(`${client.baseUrl}/admin/community/subscribers/${sub.id}/payments`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("community_admin_token")}` }
+        const { data, error } = await client.GET("/admin/community/subscribers/{id}/payments", {
+            params: { path: { id: sub.id } }
         });
-        if (!res.ok) throw new Error("Failed to fetch payment history");
-        return await res.json();
+        
+        if (error) throw new Error(error.detail || "Failed to fetch payment history");
+        return data ?? [];
     },
   });
 

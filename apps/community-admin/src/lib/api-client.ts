@@ -27,20 +27,4 @@ export type ReminderSchedule = components["schemas"]["Models.Community.Community
 export type CommunityStatsResponse = components["schemas"]["Models.Community.CommunitySubscriberStatsDto"];
 export type DeliveryHistoryItem = components["schemas"]["Models.Community.DeliveryHistoryItemDto"];
 export type PaymentConfig = components["schemas"]["Models.Community.PaymentConfigDto"];
-
-// Awaiting backend mapping in TypeSpec for payment ledger histories. 
-// Using a manual interface to maintain component compatibility.
-export interface PaymentRecord {
-  id: string;
-  amount: number;
-  currency: string;
-  payment_method: string;
-  reference_number?: string;
-  receipt_url?: string;
-  recorded_by?: string;
-  period_start: string;
-  period_end: string;
-  status: string;
-  notes?: string;
-  created_at: string;
-}
+export type PaymentRecord = components["schemas"]["Models.Community.PaymentRecordDto"];
