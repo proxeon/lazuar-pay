@@ -34,6 +34,9 @@ public static class DependencyInjection
         // Register cross-module read service for Community module to access templates
         services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();
 
+        // Overrides global IEventBus with scoped outbox-backed writer for Messaging DbContext
+        services.AddScoped<IEventBus, OutboxEventBus<MessagingDbContext>>();
+
         // Register Inbox Handlers
         services.AddTransient<TenantCreatedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
@@ -47,7 +50,7 @@ public static class DependencyInjection
 
     public static IApplicationBuilder UseMessagingSubscriptions(this IApplicationBuilder app)
     {
-        var eventBus = app.ApplicationServices.GetRequiredService<IEventBus>();
+        var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         
         eventBus.Subscribe<TenantCreatedIntegrationEvent, TenantCreatedIntegrationEventHandler>();
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();

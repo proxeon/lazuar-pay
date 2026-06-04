@@ -34,13 +34,14 @@ public static class DependencyInjection
         // Repositories & Services
         services.AddScoped<ICommunityPlanRepository, CommunityPlanRepository>();
         services.AddScoped<ICommunitySubscriptionRepository, CommunitySubscriptionRepository>();
-        
-        // Register Reminder Schedule Repository
         services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
         
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
+
+        // Overrides global IEventBus with scoped outbox-backed writer for Community DbContext
+        services.AddScoped<IEventBus, OutboxEventBus<CommunityDbContext>>();
 
         // Background Workers
         services.AddHostedService<CommunityInboxConsumerJob>();
@@ -55,7 +56,7 @@ public static class DependencyInjection
 
     public static IApplicationBuilder UseCommunitySubscriptions(this IApplicationBuilder app)
     {
-        var eventBus = app.ApplicationServices.GetRequiredService<IEventBus>();
+        var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
         

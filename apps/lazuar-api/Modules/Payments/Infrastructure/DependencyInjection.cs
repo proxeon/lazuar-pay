@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Infrastructure.Gateways;
 using Modules.Payments.Infrastructure.Repositories;
@@ -28,6 +30,9 @@ public static class DependencyInjection
         services.AddScoped<IPaymentGatewayAdapter, StripeGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
+
+        // Overrides global IEventBus with scoped outbox-backed writer for Payments DbContext
+        services.AddScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>();
 
         // Background Workers
         services.AddHostedService<PaymentsInboxConsumerJob>();

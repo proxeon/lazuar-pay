@@ -41,11 +41,14 @@ builder.Services.AddHttpClient("Resend", (sp, client) =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IExecutionContextAccessor, ExecutionContextAccessor>();
 builder.Services.AddSingleton<DatabaseJobTrigger>();
-builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
+
+// Configure the singleton in-memory event bus and its subscription contract
+builder.Services.AddSingleton<InMemoryEventBus>();
+builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
