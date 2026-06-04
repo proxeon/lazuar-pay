@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application;
@@ -5,6 +8,7 @@ namespace Modules.Community.Application;
 public interface ICommunityPlanRepository
 {
     Task<CommunityPlan?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<CommunityPlan?> GetBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default);
     Task<bool> IsSlugUniqueAsync(Guid organizationId, string slug, CancellationToken ct = default);
     void Add(CommunityPlan plan);
 }

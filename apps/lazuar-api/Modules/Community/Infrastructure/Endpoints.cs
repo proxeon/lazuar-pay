@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -73,6 +77,20 @@ public static class Endpoints
 
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             return Results.Ok(plans);
+        });
+
+        publicGroup.MapGet("/{tenantSlug}/plans/{slug}", async (
+            string tenantSlug,
+            string slug,
+            ITenantQueryService tenantQueryService,
+            ICommunityQueryService queryService) =>
+        {
+            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            if (tenant == null || !tenant.IsActive) return Results.NotFound(new { error = "Business not found." });
+
+            var plans = await queryService.GetPublicPlansAsync(tenant.Id);
+            var plan = plans.FirstOrDefault(p => p.Slug == slug);
+            return plan != null ? Results.Ok(plan) : Results.NotFound(new { error = "Plan not found." });
         });
 
         // ==========================================
@@ -180,22 +198,28 @@ public static class Endpoints
             return Results.Ok(new { status = "deleted" });
         });
 
-        // --- Public Checkout ---
-        publicGroup.MapPost("/checkout/{subscriptionId:guid}", async (
-            Guid subscriptionId,
-            [FromQuery] string tenant,
-            [FromBody] InitiateCheckoutRequestDto req,
+        // ==========================================
+        // PUBLIC ENROLLMENT FLOW
+        // ==========================================
+
+        publicGroup.MapPost("/checkout", async (
+            PublicCheckoutRequestDto req,
             ITenantQueryService tenantQueryService,
             IMediator mediator) =>
         {
-            var org = await tenantQueryService.GetTenantBySlugAsync(tenant);
-            if (org == null) return Results.NotFound(new { error = "Business not found." });
+            var tenant = await tenantQueryService.GetTenantBySlugAsync(req.TenantSlug);
+            if (tenant == null || !tenant.IsActive) 
+                return Results.NotFound(new { error = "Business not found." });
 
-            var command = new InitiateSubscriptionCheckoutCommand(
-                org.Id, subscriptionId, req.SuccessUrl, req.CancelUrl);
-            
-            var url = await mediator.Send(command);
-            return Results.Ok(new { url });
+            var command = new RegisterPublicSubscriberCommand(
+                tenant.Id,
+                req.PlanSlug,
+                req.Name,
+                req.Email,
+                req.Phone);
+
+            var checkoutUrl = await mediator.Send(command);
+            return Results.Ok(new { url = checkoutUrl });
         });
 
         // ==========================================
@@ -217,7 +241,7 @@ public static class Endpoints
             var command = new RequestMagicLinkCommand(tenant.Id, tenantSlug, req.Email, baseUrl);
             await mediator.Send(command);
 
-            return Results.Ok(new { status = "sent" }); // Always return success for security
+            return Results.Ok(new { status = "sent" });
         });
 
         publicGroup.MapGet("/{tenantSlug}/portal", async (
@@ -264,42 +288,9 @@ public static class Endpoints
     }
 }
 
-// ==========================================
-// DTOs
-// ==========================================
-
-public record InitiateCheckoutRequestDto(string SuccessUrl, string CancelUrl);
-
-public record CreatePlanRequestDto(
-    string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
-    decimal Price, string Interval, List<string> Features, string Methodology,
-    List<FaqRequestDto> Faq, int DisplayOrder, int? MaxCapacity, int GracePeriodDays,
-    string? TelegramInviteLink, string? WeeklyMeetingLink);
-
-public record UpdatePlanRequestDto(
-    string? Slug, string? Name, string? Audience, string? ShortDescription, string? LongDescription, 
-    decimal? Price, string? Interval, List<string>? Features, string? Methodology, 
-    List<FaqRequestDto>? Faq, bool? IsActive, int? DisplayOrder, int? MaxCapacity, int? GracePeriodDays, 
-    string? TelegramInviteLink, string? WeeklyMeetingLink);
-
-public record FaqRequestDto(string Id, string Question, string Answer);
-
-public record RecordPaymentRequestDto(
-    decimal Amount, string PaymentMethod, string? ReferenceNumber, string? ReceiptFile);
-
-public record UpdateSubscriberProfileRequestDto(
-    bool IsReminderOnly, string? PreferredChannel, string? AdminNotes, DateTime? NextRenewalDate);
-
-public record ExtendGraceRequestDto(int Days);
-
-public record PauseRemindersRequestDto(DateTime? PauseUntil);
-
-public record SendOneOffReminderRequestDto(Guid? TemplateId, string? CustomMessage, string? Channel);
-
-public record CreateReminderScheduleRequestDto(
-    Guid? PlanId, Guid TemplateId, string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled);
-
-public record UpdateReminderScheduleRequestDto(
-    Guid? PlanId, Guid? TemplateId, string? Channel, int? DaysRelativeToDue, string? TimeOfDay, bool? IsEnabled);
-
-public record MagicLinkRequestDto(string Email);
+public record PublicCheckoutRequestDto(
+    string TenantSlug,
+    string PlanSlug,
+    string Name,
+    string Email,
+    string Phone);

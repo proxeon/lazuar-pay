@@ -1,5 +1,3 @@
-// apps/community-page/lib/api.ts
-
 const SERVER_API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 const CLIENT_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 const TENANT_SLUG = process.env.NEXT_PUBLIC_TENANT_SLUG || "lazuar-hq";
@@ -51,7 +49,7 @@ export interface PortalData {
 }
 
 export async function getPlans(): Promise<CommunityPlan[]> {
-  const res = await fetch(`${SERVER_API_URL}/public/community/plans?tenant=${TENANT_SLUG}`, {
+  const res = await fetch(`${SERVER_API_URL}/public/community/${TENANT_SLUG}/plans`, {
     cache: "no-store"
   });
   if (!res.ok) throw new Error("Failed to fetch plans");
@@ -59,7 +57,7 @@ export async function getPlans(): Promise<CommunityPlan[]> {
 }
 
 export async function getPlanBySlug(slug: string): Promise<CommunityPlan | null> {
-  const res = await fetch(`${SERVER_API_URL}/public/community/plans/${slug}?tenant=${TENANT_SLUG}`, {
+  const res = await fetch(`${SERVER_API_URL}/public/community/${TENANT_SLUG}/plans/${slug}`, {
     cache: "no-store"
   });
   if (!res.ok) {
@@ -73,7 +71,13 @@ export async function createCheckoutSession(data: { plan_slug: string; name: str
   const res = await fetch(`${CLIENT_API_URL}/public/community/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...data, tenant_slug: TENANT_SLUG }),
+    body: JSON.stringify({ 
+      tenant_slug: TENANT_SLUG,
+      plan_slug: data.plan_slug,
+      name: data.name,
+      email: data.email,
+      phone: data.phone
+    }),
   });
 
   const json = await res.json();
@@ -86,16 +90,16 @@ export async function createCheckoutSession(data: { plan_slug: string; name: str
 // ========================================================
 
 export async function requestMagicLink(email: string): Promise<void> {
-  const res = await fetch(`${CLIENT_API_URL}/public/community/portal/magic-link`, {
+  const res = await fetch(`${CLIENT_API_URL}/public/community/${TENANT_SLUG}/portal/magic-link`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tenant_slug: TENANT_SLUG, email }),
+    body: JSON.stringify({ email }),
   });
   if (!res.ok) throw new Error("Failed to request magic link");
 }
 
 export async function getPortalData(token: string): Promise<PortalData> {
-  const res = await fetch(`${CLIENT_API_URL}/public/community/portal?tenant=${TENANT_SLUG}&token=${encodeURIComponent(token)}`);
+  const res = await fetch(`${CLIENT_API_URL}/public/community/${TENANT_SLUG}/portal?token=${encodeURIComponent(token)}`);
   if (!res.ok) throw new Error("Unauthorized or expired link");
   return res.json();
 }
@@ -110,7 +114,7 @@ export async function updatePortalContact(token: string, data: { name: string; e
 }
 
 export async function cancelPortalSubscription(token: string, subscriptionId: string): Promise<void> {
-  const res = await fetch(`${CLIENT_API_URL}/public/community/portal/cancel?tenant=${TENANT_SLUG}&token=${encodeURIComponent(token)}`, {
+  const res = await fetch(`${CLIENT_API_URL}/public/community/${TENANT_SLUG}/portal/cancel?token=${encodeURIComponent(token)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ subscription_id: subscriptionId })

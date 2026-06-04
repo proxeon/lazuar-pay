@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using BuildingBlocks.Domain;
 using Modules.Community.Domain.Entities;
 using Modules.Community.Domain.Events;
@@ -8,8 +10,8 @@ namespace Modules.Community.Domain.Aggregates;
 public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
 {
     public Guid Id { get; private set; }
-    public Guid OrganizationId { get; set; } // Settable via EF / PlatformDbContext
-    public Guid ClientProfileId { get; private set; } // CRM Reference
+    public Guid OrganizationId { get; set; }
+    public Guid ClientProfileId { get; private set; }
     public Guid PlanId { get; private set; }
 
     public string Status { get; private set; }
@@ -22,6 +24,9 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public string? AdminNotes { get; private set; }
     public DateTime? RemindersPausedUntil { get; private set; }
 
+    public string? PaymentGatewaySessionId { get; private set; }
+    public string? GatewaySubscriptionId { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -31,8 +36,8 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     private readonly List<ReminderDispatchLog> _reminderLogs = new();
     public IReadOnlyCollection<ReminderDispatchLog> ReminderLogs => _reminderLogs.AsReadOnly();
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
-    private CommunitySubscription() { } // For EF Core
+#pragma warning disable CS8618
+    private CommunitySubscription() { }
 #pragma warning restore CS8618
 
     public CommunitySubscription(
@@ -55,6 +60,12 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public void InitiateCheckout()
     {
         AddDomainEvent(new CheckoutInitiatedDomainEvent(Id, OrganizationId, ClientProfileId));
+    }
+
+    public void SetPaymentGatewaySessionId(string sessionId)
+    {
+        PaymentGatewaySessionId = sessionId;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void Activate(
@@ -165,7 +176,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
             channel.ToUpperInvariant()));
     }
 
-    // Handles idempotency log creation
     public void RecordReminderDispatched(Guid scheduleId, DateTime targetRenewalDate)
     {
         _reminderLogs.Add(new ReminderDispatchLog(Id, scheduleId, targetRenewalDate));

@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Modules.Community.Application;
 using Modules.Community.Domain.Aggregates;
@@ -16,6 +20,11 @@ public class CommunityPlanRepository : ICommunityPlanRepository
     public async Task<CommunityPlan?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Plans.FirstOrDefaultAsync(p => p.Id == id, ct);
+    }
+
+    public async Task<CommunityPlan?> GetBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default)
+    {
+        return await _context.Plans.FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Slug == slug, ct);
     }
 
     public async Task<bool> IsSlugUniqueAsync(Guid organizationId, string slug, CancellationToken ct = default)
