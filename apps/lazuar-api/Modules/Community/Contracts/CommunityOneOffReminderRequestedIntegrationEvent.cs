@@ -9,8 +9,13 @@ public record CommunityOneOffReminderRequestedIntegrationEvent(
     Guid? TemplateId,
     string? CustomMessage,
     string Channel,
-    DateTime? ScheduledAt = null) : IIntegrationEvent
+    DateTime? ScheduledAt,
+    string PlanName,
+    decimal PlanPrice,
+    string RenewalLink) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
+    
+    // Maintain outbox scheduling capability
     public DateTime OccurredOn { get; init; } = ScheduledAt ?? DateTime.UtcNow;
 }

@@ -47,6 +47,9 @@ public class CommunityIntegrationEventHandlers :
             result = result.Replace(placeholder, value ?? "", StringComparison.OrdinalIgnoreCase);
         }
         
+        // Convert literal "\n" strings (from DB seeds) AND standard linebreaks to HTML <br>
+        result = result.Replace("\\n", "<br>").Replace("\n", "<br>");
+        
         return result;
     }
 
@@ -172,6 +175,7 @@ public class CommunityIntegrationEventHandlers :
 
         if (!string.IsNullOrWhiteSpace(@event.CustomMessage))
         {
+            // Custom messages automatically convert \n to <br> now!
             body = $"Hi {profile.FullName},<br><br>{@event.CustomMessage}";
         }
         else if (@event.TemplateId.HasValue)
@@ -179,10 +183,14 @@ public class CommunityIntegrationEventHandlers :
             var templates = await _templateService.GetTemplatesAsync(new[] { @event.TemplateId.Value });
             var template = templates.FirstOrDefault();
 
+            // Populate the rich variables dictionary for manual reminders!
             var variables = new Dictionary<string, string>
             {
                 ["customer_name"] = profile.FullName,
-                ["business_name"] = "Our Community"
+                ["business_name"] = "Our Community",
+                ["plan_name"] = @event.PlanName,
+                ["total_price"] = @event.PlanPrice.ToString("F2"),
+                ["renewal_link"] = @event.RenewalLink
             };
 
             subject = template != null ? RenderTemplate(template.Subject, variables) : subject;

@@ -122,6 +122,16 @@ public class DomainEventHandlers :
 
     public async Task Handle(OneOffReminderRequestedDomainEvent notification, CancellationToken ct)
     {
+        var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
+        var plan = sub != null ? await _planRepository.GetByIdAsync(sub.PlanId, ct) : null;
+
+        if (sub == null || plan == null) return;
+
+        var baseUrl = _linkService.GetCommunityBaseUrl();
+        var renewalLink = sub.IsReminderOnly 
+            ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
+            : $"{baseUrl}/{plan.Slug}/checkout";
+
         await _eventBus.PublishAsync(
             new CommunityOneOffReminderRequestedIntegrationEvent(
                 notification.OrganizationId,
@@ -130,7 +140,10 @@ public class DomainEventHandlers :
                 notification.TemplateId,
                 notification.CustomMessage,
                 notification.Channel,
-                notification.OccurredOn
+                notification.ScheduledAt,
+                plan.Name,
+                plan.Price,
+                renewalLink
             )
         );
     }
