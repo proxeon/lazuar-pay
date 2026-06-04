@@ -3,6 +3,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
@@ -50,6 +55,60 @@ builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
+// --- Configure JWT Authentication ---
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var secret = builder.Configuration["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "lazuar-api",
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "lazuar-clients",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+    };
+});
+
+// --- Configure Authorization Policy for Modules ---
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("OrgAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("SUPER_ADMIN", "ADMIN");
+    });
+});
+
+// --- Configure CORS Services ---
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        var corsOrigins = builder.Configuration["App:CorsOrigins"];
+        if (!string.IsNullOrEmpty(corsOrigins))
+        {
+            var origins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            policy.WithOrigins(origins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        }
+    });
+});
+
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -83,11 +142,76 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
+app.UseCors();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 // Register Cross-Module Event Subscriptions
 app.UseMessagingSubscriptions();
 app.UseCommunitySubscriptions();
 
-var apiGroup = app.MapGroup("/api/v1");
+var apiGroup = app.MapGroup("/api/v1").RequireCors();
+
+// --- Fallback Auth Handlers for Local Dev/Admin Panel ---
+apiGroup.MapPost("/platform/auth/login", (
+    [FromBody] LoginRequest req,
+    IConfiguration config,
+    IJwtService jwtService) =>
+{
+    var email = req.Email?.Trim().ToLowerInvariant();
+    
+    if (string.IsNullOrEmpty(email))
+    {
+        return Results.Json(new { error = "Email address is required." }, statusCode: 400);
+    }
+
+    // Accept baseline passwords as mapped in configuration documentation
+    if ((email == "admin@lazuars.io" || email == "sysadmin@lazuars.io" || email == "admin@yourdomain.com") 
+        && req.Password == "Password123!")
+    {
+        var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+        var issuer = config["Jwt:Issuer"] ?? "lazuar-api";
+        var audience = config["Jwt:Audience"] ?? "lazuar-clients";
+        var expiryHours = config.GetValue<int>("Jwt:ExpiryHours", 24);
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "018f3a3f-3610-73bf-baef-c07a3c3df9ee"),
+            new Claim(ClaimTypes.Email, email), // References local non-null validated string
+            new Claim("org_id", "7d97963c-063c-4598-86cc-9ddd9d47d9b1"), // Base Tenant ID
+            new Claim(ClaimTypes.Role, "SUPER_ADMIN")
+        };
+
+        var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
+
+        return Results.Ok(new
+        {
+            token,
+            user = new
+            {
+                email = email,
+                name = "Administrator",
+                role = "SUPER_ADMIN"
+            }
+        });
+    }
+
+    return Results.Json(new { error = "Invalid email or password." }, statusCode: 401);
+});
+
+apiGroup.MapGet("/platform/auth/me", (ClaimsPrincipal principal) =>
+{
+    var email = principal.FindFirst(ClaimTypes.Email)?.Value;
+    if (string.IsNullOrEmpty(email)) return Results.Unauthorized();
+
+    return Results.Ok(new
+    {
+        email,
+        name = "Administrator",
+        role = "SUPER_ADMIN"
+    });
+}).RequireAuthorization();
 
 // Map Minimal API Endpoints
 apiGroup.MapTenantEndpoints();
@@ -96,5 +220,7 @@ apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();
 
 app.Run();
+
+public record LoginRequest(string Email, string Password);
 
 public partial class Program { }
