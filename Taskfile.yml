@@ -30,7 +30,7 @@ tasks:
       - pnpm --filter lazuar-api dev
 
   fe:
-    desc: Full dev stack (Docker infra + mprocs for frontends)
+    desc: Full dev stack (Docker infra + mprocs for frontends and tunnels)
     cmds:
       - mprocs -c mprocs-dev.yaml
 
@@ -78,3 +78,24 @@ tasks:
       vars: [MODULE, NAME]
     cmds:
       - dotnet ef migrations add {{.NAME}} --context {{.MODULE}}DbContext --project ../../Modules/{{.MODULE}}/Infrastructure/Modules.{{.MODULE}}.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+
+  # ==========================================
+  # Ngrok Tunnel Tasks
+  # ==========================================
+
+  tunnel:api:
+    desc: Start ngrok tunnel for the .NET API on port 8080 (rewrites host-headers)
+    cmds:
+      - ngrok http 8080 --host-header="localhost:8080"
+
+  tunnel:fe:
+    desc: Start ngrok tunnel for Next.js community-page on port 3020 (rewrites host-headers)
+    cmds:
+      - ngrok http 3020 --host-header="localhost:3020"
+
+  tunnel:status:
+    desc: Query the local ngrok agent API to print active public tunnel URLs
+    cmds:
+      - |
+        echo "Querying active ngrok tunnels..."
+        curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | sed 's/"public_url":"//' || echo "No active ngrok agents detected. Ensure ngrok is running."
