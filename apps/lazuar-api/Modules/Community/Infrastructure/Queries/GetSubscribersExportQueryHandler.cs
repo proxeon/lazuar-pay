@@ -15,6 +15,9 @@ public class GetSubscribersExportQueryHandler : IQueryHandler<GetSubscribersExpo
 {
     private readonly ISqlConnectionFactory _connectionFactory;
 
+    // Secure local DTO to prevent dynamic/casing binder exceptions.
+    private record ExportRow(string Name, string Email, string Phone, string Plan, string Status, DateTime Joined, DateTime? NextDue, string Source, bool IsReminderOnly);
+
     public GetSubscribersExportQueryHandler(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
@@ -43,22 +46,22 @@ public class GetSubscribersExportQueryHandler : IQueryHandler<GetSubscribersExpo
             WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'
             ORDER BY s.""CreatedAt"" DESC";
 
-        var rows = await connection.QueryAsync(sql, new { OrgId = request.OrganizationId });
+        var rows = await connection.QueryAsync<ExportRow>(sql, new { OrgId = request.OrganizationId });
 
         var sb = new StringBuilder();
         sb.AppendLine("Name,Email,Phone,Plan,Status,Joined,Next Due,Source,Reminder Only");
 
         foreach (var r in rows)
         {
-            var name = ((string)r.name).Replace("\"", "\"\"");
-            var email = (string)r.email;
-            var phone = string.IsNullOrWhiteSpace((string)r.phone) ? "" : $"=\"{(string)r.phone}\"";
-            var plan = ((string)r.plan).Replace("\"", "\"\"");
-            var status = (string)r.status;
-            var joined = ((DateTime)r.joined).ToString("yyyy-MM-dd");
-            var nextDue = r.nextdue != null ? ((DateTime)r.nextdue).ToString("yyyy-MM-dd") : "";
-            var source = (string)r.source;
-            var reminderOnly = (bool)r.isreminderonly ? "Yes" : "No";
+            var name = (r.Name ?? "").Replace("\"", "\"\"");
+            var email = r.Email ?? "";
+            var phone = string.IsNullOrWhiteSpace(r.Phone) ? "" : $"=\"{r.Phone}\"";
+            var plan = (r.Plan ?? "").Replace("\"", "\"\"");
+            var status = r.Status ?? "";
+            var joined = r.Joined.ToString("yyyy-MM-dd");
+            var nextDue = r.NextDue != null ? r.NextDue.Value.ToString("yyyy-MM-dd") : "";
+            var source = r.Source ?? "";
+            var reminderOnly = r.IsReminderOnly ? "Yes" : "No";
 
             sb.AppendLine($"\"{name}\",\"{email}\",{phone},\"{plan}\",\"{status}\",\"{joined}\",\"{nextDue}\",\"{source}\",\"{reminderOnly}\"");
         }

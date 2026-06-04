@@ -33,6 +33,11 @@ public record CommunityReminderScheduleDto(
     Guid Id, Guid? PlanId, string? PlanName, Guid TemplateId, string TemplateName, 
     string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt);
 
+// Added CashFlow & Methods Data Models
+public record CashFlowTrendDto(string Month, decimal Amount);
+
+public record PaymentMethodDto(string Method, int Count, decimal TotalAmount);
+
 public record CommunitySubscriberStatsDto(
     double Mrr,
     int ActiveSubscribers,
@@ -41,7 +46,10 @@ public record CommunitySubscriberStatsDto(
     int NetNewLast30Days,
     double ChurnRatePercentage,
     double AverageRevenuePerUser,
-    double TotalRevenueCollected);
+    double ReminderEffectivenessPercentage,
+    double TotalRevenueCollected,
+    IEnumerable<CashFlowTrendDto> CashFlowTrend,
+    IEnumerable<PaymentMethodDto> PaymentMethods);
 
 public interface ICommunityQueryService
 {
@@ -55,6 +63,5 @@ public interface ICommunityQueryService
     Task<IEnumerable<CommunityReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId);
     Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId);
     
-    // Cross-schema log read mapping
     Task<IEnumerable<DeliveryHistoryItem>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId);
 }

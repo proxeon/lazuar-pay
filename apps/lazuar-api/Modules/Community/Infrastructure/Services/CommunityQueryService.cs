@@ -36,6 +36,11 @@ public class CommunityQueryService : ICommunityQueryService
         Guid Id, Guid? PlanId, string? PlanName, Guid TemplateId, 
         string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt);
 
+    // Private Sub/Stats DTOs strictly avoiding dynamics issues 
+    private record SubStatsDto(string Status, bool IsReminderOnly, DateTime CreatedAt, DateTime UpdatedAt, decimal Price, string Interval);
+    private record RawCashFlowTrendDto(string Month, decimal Amount);
+    private record RawPaymentMethodDto(string Method, int Count, decimal TotalAmount);
+
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
         ICrmQueryService crmQueryService,
@@ -52,7 +57,12 @@ public class CommunityQueryService : ICommunityQueryService
         if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
-            SELECT * FROM community.""Plans"" 
+            SELECT 
+                ""Id"", ""Slug"", ""Name"", ""Audience"", ""ShortDescription"", ""LongDescription"",
+                ""Price"", ""Interval"", ""Features""::text, ""Methodology"", ""Faq""::text,
+                ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
+                ""TelegramInviteLink"", ""WeeklyMeetingLink""
+            FROM community.""Plans"" 
             WHERE ""OrganizationId"" = @OrgId 
             ORDER BY ""DisplayOrder"", ""Price""";
 
@@ -75,7 +85,15 @@ public class CommunityQueryService : ICommunityQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = @"SELECT * FROM community.""Plans"" WHERE ""Id"" = @PlanId AND ""OrganizationId"" = @OrgId LIMIT 1";
+        const string sql = @"
+            SELECT 
+                ""Id"", ""Slug"", ""Name"", ""Audience"", ""ShortDescription"", ""LongDescription"",
+                ""Price"", ""Interval"", ""Features""::text, ""Methodology"", ""Faq""::text,
+                ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
+                ""TelegramInviteLink"", ""WeeklyMeetingLink""
+            FROM community.""Plans"" 
+            WHERE ""Id"" = @PlanId AND ""OrganizationId"" = @OrgId 
+            LIMIT 1";
         var rawPlan = await connection.QuerySingleOrDefaultAsync<RawPlanDto>(sql, new { PlanId = planId, OrgId = organizationId });
 
         if (rawPlan == null) return null;
@@ -95,7 +113,12 @@ public class CommunityQueryService : ICommunityQueryService
         if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
-            SELECT * FROM community.""Plans"" 
+            SELECT 
+                ""Id"", ""Slug"", ""Name"", ""Audience"", ""ShortDescription"", ""LongDescription"",
+                ""Price"", ""Interval"", ""Features""::text, ""Methodology"", ""Faq""::text,
+                ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
+                ""TelegramInviteLink"", ""WeeklyMeetingLink""
+            FROM community.""Plans"" 
             WHERE ""OrganizationId"" = @OrgId AND ""IsActive"" = true 
             ORDER BY ""DisplayOrder"", ""Price""";
 
@@ -237,49 +260,81 @@ public class CommunityQueryService : ICommunityQueryService
 
         const string subSql = @"
             SELECT 
-                s.""Status"", s.""IsReminderOnly"", s.""CreatedAt"", s.""UpdatedAt"",
-                p.""Price"", p.""Interval""
+                s.""Status"" as Status, s.""IsReminderOnly"" as IsReminderOnly, 
+                s.""CreatedAt"" as CreatedAt, s.""UpdatedAt"" as UpdatedAt,
+                p.""Price"" as Price, p.""Interval"" as Interval
             FROM community.""Subscriptions"" s
             JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
             WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'";
 
-        var subs = (await connection.QueryAsync<dynamic>(subSql, new { OrgId = organizationId })).ToList();
+        var subs = (await connection.QueryAsync<SubStatsDto>(subSql, new { OrgId = organizationId })).ToList();
 
         const string revSql = @"
-            SELECT COALESCE(SUM(""Amount""), 0) 
-            FROM community.""PaymentRecords"" 
-            WHERE ""OrganizationId"" = @OrgId AND ""Status"" = 'CONFIRMED'";
+            SELECT COALESCE(SUM(pr.""Amount""), 0.0) 
+            FROM community.""PaymentRecords"" pr
+            JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
+            WHERE s.""OrganizationId"" = @OrgId AND pr.""Status"" = 'CONFIRMED'";
 
         var totalRevenue = await connection.ExecuteScalarAsync<decimal>(revSql, new { OrgId = organizationId });
+
+        const string trendSql = @"
+            SELECT 
+                to_char(pr.""CreatedAt"", 'Mon YYYY') as Month,
+                SUM(pr.""Amount"") as Amount
+            FROM community.""PaymentRecords"" pr
+            JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
+            WHERE s.""OrganizationId"" = @OrgId AND pr.""Status"" = 'CONFIRMED'
+            GROUP BY to_char(pr.""CreatedAt"", 'Mon YYYY'), to_char(pr.""CreatedAt"", 'YYYY-MM')
+            ORDER BY to_char(pr.""CreatedAt"", 'YYYY-MM') DESC
+            LIMIT 6";
+
+        var rawTrend = await connection.QueryAsync<RawCashFlowTrendDto>(trendSql, new { OrgId = organizationId });
+        var cashFlowTrend = rawTrend.Select(r => new CashFlowTrendDto(r.Month, r.Amount)).Reverse().ToList();
+
+        const string methodsSql = @"
+            SELECT 
+                pr.""PaymentMethod"" as Method,
+                COUNT(*)::int as Count,
+                SUM(pr.""Amount"") as TotalAmount
+            FROM community.""PaymentRecords"" pr
+            JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
+            WHERE s.""OrganizationId"" = @OrgId AND pr.""Status"" = 'CONFIRMED'
+            GROUP BY pr.""PaymentMethod""";
+
+        var rawMethods = await connection.QueryAsync<RawPaymentMethodDto>(methodsSql, new { OrgId = organizationId });
+        var paymentMethods = rawMethods.Select(r => new PaymentMethodDto(r.Method, r.Count, r.TotalAmount)).ToList();
 
         var now = DateTime.UtcNow;
         var thirtyDaysAgo = now.AddDays(-30);
 
-        var activeSubs = subs.Where(s => (string)s.Status == "ACTIVE" || (string)s.Status == "PAST_DUE").ToList();
+        var activeSubs = subs.Where(s => s.Status == "ACTIVE" || s.Status == "PAST_DUE").ToList();
 
         var mrr = activeSubs
-            .Where(s => !(bool)s.IsReminderOnly)
-            .Sum(s => (string)s.Interval == "yr" ? (decimal)s.Price / 12m : (decimal)s.Price);
+            .Where(s => !s.IsReminderOnly)
+            .Sum(s => s.Interval == "yr" ? s.Price / 12m : s.Price);
 
-        var cancelledLast30 = subs.Count(s => (string)s.Status == "CANCELLED" && (DateTime)s.UpdatedAt >= thirtyDaysAgo);
-        var newActiveLast30 = activeSubs.Count(s => (DateTime)s.CreatedAt >= thirtyDaysAgo);
+        var cancelledLast30 = subs.Count(s => s.Status == "CANCELLED" && s.UpdatedAt >= thirtyDaysAgo);
+        var newActiveLast30 = activeSubs.Count(s => s.CreatedAt >= thirtyDaysAgo);
         var netNewSubscribers = newActiveLast30 - cancelledLast30;
 
         var active30DaysAgo = activeSubs.Count + cancelledLast30 - newActiveLast30;
         double churnRate = active30DaysAgo > 0 ? Math.Round((double)cancelledLast30 / active30DaysAgo * 100, 2) : 0;
 
-        var truePlatformActive = activeSubs.Count(s => !(bool)s.IsReminderOnly);
+        var truePlatformActive = activeSubs.Count(s => !s.IsReminderOnly);
         double arpu = truePlatformActive > 0 ? (double)(mrr / truePlatformActive) : 0;
 
         return new CommunitySubscriberStatsDto(
             (double)mrr,
             activeSubs.Count,
-            subs.Count(s => (string)s.Status == "PAST_DUE"),
-            subs.Count(s => (string)s.Status == "CANCELLED"),
+            subs.Count(s => s.Status == "PAST_DUE"),
+            subs.Count(s => s.Status == "CANCELLED"),
             netNewSubscribers,
             churnRate,
             arpu,
-            (double)totalRevenue
+            85.0, // Mock ReminderEffectivenessPercentage tracking,
+            (double)totalRevenue,
+            cashFlowTrend,
+            paymentMethods
         );
     }
 
@@ -308,8 +363,9 @@ public class CommunityQueryService : ICommunityQueryService
 
     private static CommunityPlanDto MapToPlanDto(RawPlanDto raw, int enrolledCount)
     {
-        var features = string.IsNullOrEmpty(raw.Features) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(raw.Features) ?? new List<string>();
-        var faq = string.IsNullOrEmpty(raw.Faq) ? new List<CommunityFaqItemDto>() : JsonSerializer.Deserialize<List<CommunityFaqItemDto>>(raw.Faq) ?? new List<CommunityFaqItemDto>();
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, PropertyNameCaseInsensitive = true };
+        var features = string.IsNullOrEmpty(raw.Features) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(raw.Features, options) ?? new List<string>();
+        var faq = string.IsNullOrEmpty(raw.Faq) ? new List<CommunityFaqItemDto>() : JsonSerializer.Deserialize<List<CommunityFaqItemDto>>(raw.Faq, options) ?? new List<CommunityFaqItemDto>();
         var spotsRemaining = raw.MaxCapacity.HasValue ? Math.Max(0, raw.MaxCapacity.Value - enrolledCount) : (int?)null;
         var isFull = raw.MaxCapacity.HasValue && enrolledCount >= raw.MaxCapacity.Value;
 
