@@ -22,6 +22,7 @@ using Lazuar.ApiTypes;
 
 // Resolve the ambiguous reference between Lazuar.ApiTypes and Microsoft.AspNetCore.Mvc
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +33,6 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Serilog.Events.LogEventLevel.Warning)
     .WriteTo.Console()
     .CreateLogger();
-
 
 builder.Host.UseSerilog();
 
@@ -84,6 +84,19 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "lazuar-clients",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
+    
+    // --> ADDED: Instruct the middleware to read the token from the cookie
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            if (context.Request.Cookies.TryGetValue("lazuar_auth", out var token))
+            {
+                context.Token = token;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // --- Configure Authorization Policy for Modules ---
@@ -108,7 +121,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(origins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials();
+                  .AllowCredentials(); // REQUIRED for cookies to work across ports!
         }
         else
         {
@@ -119,7 +132,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Configure JSON payload naming policies exclusively
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower;
@@ -131,14 +143,12 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddMediatR(cfg =>
 {
-    // Register Application Assemblies
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
 
-    // CRUCIAL MONOLITH FIX: Register Infrastructure Assemblies so MediatR discovers newly moved handlers
     cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
@@ -156,35 +166,26 @@ builder.Services.AddPaymentsModule(builder.Configuration);
 var app = builder.Build();
 
 app.UseExceptionHandler();
-
 app.UseCors();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Register Cross-Module Event Subscriptions
 app.UseMessagingSubscriptions();
 app.UseCommunitySubscriptions();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
-// --- Fallback Auth Handlers for Local Dev/Admin Panel ---
+// --- Auth Handlers for Local Dev/Admin Panel ---
 apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<ProblemDetails>> (
     [FromBody] LoginRequest req,
     IConfiguration config,
-    IJwtService jwtService) =>
+    IJwtService jwtService,
+    HttpContext ctx) =>
 {
     var email = req.Email?.Trim().ToLowerInvariant();
     
     if (string.IsNullOrEmpty(email))
     {
-        return TypedResults.BadRequest(new ProblemDetails 
-        {
-            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-            Title = "Validation Failed",
-            Status = 400,
-            Detail = "Email address is required."
-        });
+        return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = "Email is required." });
     }
 
     if ((email == "admin@lazuars.io" || email == "sysadmin@lazuars.io" || email == "admin@yourdomain.com") 
@@ -205,25 +206,29 @@ apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<P
 
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
 
+        // --> ADDED: Issue the HttpOnly Cookie
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !app.Environment.IsDevelopment(), // Secure true in Prod, false in Local Dev
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTime.UtcNow.AddHours(expiryHours)
+        };
+        ctx.Response.Cookies.Append("lazuar_auth", token, cookieOptions);
+
         return TypedResults.Ok(new LoginResponse
         {
-            Token = token,
-            User = new AuthUser
-            {
-                Email = email,
-                Name = "Administrator",
-                Role = "SUPER_ADMIN"
-            }
+            User = new AuthUser { Email = email, Name = "Administrator", Role = "SUPER_ADMIN" }
         });
     }
 
-    return TypedResults.BadRequest(new ProblemDetails 
-    {
-        Type = "https://tools.ietf.org/html/rfc7235#section-3.1",
-        Title = "Unauthorized",
-        Status = 401,
-        Detail = "Invalid email or password."
-    });
+    return TypedResults.BadRequest(new ProblemDetails { Status = 401, Detail = "Invalid email or password." });
+});
+
+apiGroup.MapPost("/platform/auth/logout", (HttpContext ctx) => 
+{
+    ctx.Response.Cookies.Delete("lazuar_auth");
+    return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
 });
 
 apiGroup.MapGet("/platform/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResult> (ClaimsPrincipal principal) =>
@@ -231,12 +236,7 @@ apiGroup.MapGet("/platform/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResul
     var email = principal.FindFirst(ClaimTypes.Email)?.Value;
     if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
 
-    return TypedResults.Ok(new AuthUser
-    {
-        Email = email,
-        Name = "Administrator",
-        Role = "SUPER_ADMIN"
-    });
+    return TypedResults.Ok(new AuthUser { Email = email, Name = "Administrator", Role = "SUPER_ADMIN" });
 }).RequireAuthorization();
 
 // Map Minimal API Endpoints

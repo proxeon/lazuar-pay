@@ -8,7 +8,6 @@ model LoginRequest {
 }
 
 model LoginResponse {
-  token: string;
   user: AuthUser;
 }
 

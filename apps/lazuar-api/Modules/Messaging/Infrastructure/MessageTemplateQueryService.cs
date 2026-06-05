@@ -12,15 +12,15 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
 
-    // Updated to include RequiredVariables and OptionalVariables
+    // FIX: Added '?' to RequiredVariables and OptionalVariables to safely handle SQL NULLs
     private record RawMessageTemplate(
         Guid Id, 
         string Name, 
         string Subject, 
         string Body, 
         bool IsDefault, 
-        string RequiredVariables, 
-        string OptionalVariables, 
+        string? RequiredVariables, 
+        string? OptionalVariables, 
         DateTime UpdatedAt);
 
     public MessageTemplateQueryService([FromKeyedServices("MessagingSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)

@@ -9,6 +9,7 @@ import Settings from "./components/Settings";
 import Communications from "./components/Communications";
 import LoginPage from "./components/LoginPage";
 import { Toaster } from "sonner";
+import { client } from "./lib/api-client";
 
 interface User {
   email: string;
@@ -45,7 +46,6 @@ export default function App() {
       if (isMobileViewport) {
         setIsSidebarOpen(false);
       } else {
-        // Retrieve persistent preference when switching back to desktop
         const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
         setIsSidebarOpen(savedState === "collapsed" ? false : true);
       }
@@ -65,30 +65,40 @@ export default function App() {
     }
   }, [isSidebarOpen, isMobile]);
 
+  // Check Session via HttpOnly Cookie automatically
   useEffect(() => {
-    const token = localStorage.getItem("community_admin_token");
-    const storedUser = localStorage.getItem("community_admin_user");
-    if (token && storedUser) {
+    async function verifySession() {
       try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem("community_admin_token");
-        localStorage.removeItem("community_admin_user");
+        const { data, error } = await client.GET("/platform/auth/me");
+        if (data && !error) {
+          setUser({
+            email: data.email,
+            name: data.name,
+            role: data.role
+          });
+        }
+      } catch (err) {
+        // Silently fail, user remains null, prompting LoginPage
+      } finally {
+        setIsLoading(false);
       }
     }
-    setIsLoading(false);
+    
+    verifySession();
   }, []);
 
-  function handleLogin(token: string, userData: User) {
-    localStorage.setItem("community_admin_token", token);
-    localStorage.setItem("community_admin_user", JSON.stringify(userData));
+  function handleLogin(userData: User) {
     setUser(userData);
   }
 
-  function handleLogout() {
-    localStorage.removeItem("community_admin_token");
-    localStorage.removeItem("community_admin_user");
-    setUser(null);
+  async function handleLogout() {
+    try {
+      await client.POST("/platform/auth/logout");
+    } catch (e) {
+      console.error("Logout request failed", e);
+    } finally {
+      setUser(null);
+    }
   }
 
   if (isLoading) {
@@ -105,7 +115,6 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-zinc-50 dark:bg-black font-sans text-foreground relative">
-      {/* Sidebar Component - Kept fully intact with persistent state variables */}
       <Sidebar
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
@@ -114,7 +123,6 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Content Workspace */}
       <main className="flex-1 flex flex-col overflow-y-auto w-full relative">
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -127,7 +135,6 @@ export default function App() {
           <Route path="/settings" element={<Settings isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
         </Routes>
 
-        {/* Mobile View Toggle Mask */}
         {isMobile && isSidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm transition-opacity duration-150" 
@@ -136,13 +143,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Toast Notification Container */}
-      <Toaster 
-        position="bottom-right" 
-        richColors 
-        theme="light"
-        closeButton
-      />
+      <Toaster position="bottom-right" richColors theme="light" closeButton />
     </div>
   );
 }

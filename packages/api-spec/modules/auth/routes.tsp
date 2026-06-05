@@ -1,4 +1,3 @@
-// packages/api-spec/modules/auth/routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -14,6 +13,11 @@ interface AuthOperations {
   login(
     @body body: LoginRequest,
   ): LoginResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/logout")
+  logout(
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
   @get

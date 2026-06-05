@@ -16,7 +16,7 @@ namespace Modules.Messaging.Infrastructure.Migrations
                 table: "MessageTemplates",
                 type: "jsonb",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "[]");
 
             migrationBuilder.AddColumn<string>(
                 name: "RequiredVariables",
@@ -24,7 +24,7 @@ namespace Modules.Messaging.Infrastructure.Migrations
                 table: "MessageTemplates",
                 type: "jsonb",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "[]");
         }
 
         /// <inheritdoc />

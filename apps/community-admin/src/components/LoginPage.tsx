@@ -2,7 +2,7 @@ import { useState } from "react";
 import { client } from "../lib/api-client";
 
 interface LoginPageProps {
-  onLogin: (token: string, user: { email: string; name?: string; role: string }) => void;
+  onLogin: (user: { email: string; name?: string; role: string }) => void;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
@@ -25,16 +25,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         throw new Error(apiError.detail || "Invalid credentials. Please try again.");
       }
 
-      if (!data?.token) {
-        throw new Error("Login failed. No token received.");
+      if (data && data.user) {
+        onLogin({
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+        });
       }
-
-      const user = data.user || { email, role: "SUPER_ADMIN" };
-      onLogin(data.token, {
-        email: user.email || email,
-        name: user.name,
-        role: user.role,
-      });
     } catch (err: any) {
       setError(err.message || "Invalid credentials. Please try again.");
     } finally {

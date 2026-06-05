@@ -75,9 +75,6 @@ namespace Lazuar.ApiTypes
     public partial class LoginResponse
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("token")]
-        public string Token { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("user")]
         public AuthUser User { get; set; } = new AuthUser();
 
