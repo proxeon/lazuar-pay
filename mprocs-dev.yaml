@@ -6,6 +6,12 @@ procs:
   community-page:
     shell: cd apps/community-page && pnpm dev
     autostart: true
+  one-admin:
+    shell: cd apps/one-admin && pnpm dev
+    autostart: true
+  one-page:
+    shell: cd apps/one-page && pnpm dev
+    autostart: true
   ngrok-api-tunnel:
     shell: task tunnel:api
     autostart: false # Set to true if you want the API tunnel to open automatically
