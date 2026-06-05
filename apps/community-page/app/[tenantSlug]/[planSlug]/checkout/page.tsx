@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, LockKeyhole, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { browserClient, TENANT_SLUG, type CommunityPlan } from "@/lib/api-client";
+import { browserClient, type CommunityPlan } from "@/lib/api-client";
 
-export default function CheckoutPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug: string; planSlug: string }> }) {
   const resolvedParams = use(params);
+  const { tenantSlug, planSlug } = resolvedParams;
   const router = useRouter();
 
   const [pkg, setPkg] = useState<CommunityPlan | null>(null);
@@ -19,17 +20,17 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
   useEffect(() => {
     browserClient.GET("/public/community/{tenantSlug}/plans/{slug}", {
-      params: { path: { tenantSlug: TENANT_SLUG, slug: resolvedParams.slug } }
+      params: { path: { tenantSlug: tenantSlug, slug: planSlug } }
     }).then(({ data, error }) => {
       if (error || !data) {
-        router.replace("/");
+        router.replace(`/${tenantSlug}`);
         return;
       }
       setPkg(data);
       if (data.is_full) setIsFull(true);
       setIsLoading(false);
     });
-  }, [resolvedParams.slug, router]);
+  }, [tenantSlug, planSlug, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -39,8 +40,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     
     const { data, error } = await browserClient.POST("/public/community/checkout", {
       body: {
-        tenant_slug: TENANT_SLUG,
-        plan_slug: resolvedParams.slug,
+        tenant_slug: tenantSlug,
+        plan_slug: planSlug,
         name: formData.get("name") as string,
         email: formData.get("email") as string,
         phone: formData.get("phone") as string
@@ -65,7 +66,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
       <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
         <header className="sticky top-0 z-40 w-full bg-card border-b border-border/60">
           <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href={`/${pkg.slug}`} className="inline-flex items-center gap-2 -ml-2 px-2 py-1.5 text-muted-foreground hover:text-foreground transition-all group" aria-label="Go back">
+            <Link href={`/${tenantSlug}/${planSlug}`} className="inline-flex items-center gap-2 -ml-2 px-2 py-1.5 text-muted-foreground hover:text-foreground transition-all group" aria-label="Go back">
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
               <span className="text-sm font-medium">Back</span>
             </Link>
@@ -82,7 +83,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
               <strong>{pkg.name}</strong> has reached maximum capacity and is currently not accepting new enrollments.
               Please check back later or contact us to join the waitlist for the next intake.
             </p>
-            <Link href={`/${pkg.slug}`}><Button variant="outline" className="rounded-none">← Back to Program Details</Button></Link>
+            <Link href={`/${tenantSlug}/${planSlug}`}><Button variant="outline" className="rounded-none">← Back to Program Details</Button></Link>
           </div>
         </main>
       </div>
@@ -93,7 +94,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
       <header className="sticky top-0 z-40 w-full bg-card border-b border-border/60">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href={`/${pkg.slug}`} className="inline-flex items-center gap-2 -ml-2 px-2 py-1.5 text-muted-foreground hover:text-foreground transition-all group" aria-label="Go back">
+          <Link href={`/${tenantSlug}/${planSlug}`} className="inline-flex items-center gap-2 -ml-2 px-2 py-1.5 text-muted-foreground hover:text-foreground transition-all group" aria-label="Go back">
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
             <span className="text-sm font-medium">Back</span>
           </Link>

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Check, ArrowLeft, ShieldCheck, Users, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FaqAccordion } from "@/components/faq-accordion";
-import { serverClient, TENANT_SLUG } from "@/lib/api-client";
+import { serverClient } from "@/lib/api-client";
 
 const GENERAL_FAQ = [
   { id: "faq-cancel", question: "Can I cancel my subscription at any time?", answer: "Yes. You can cancel anytime — no lock-in contracts. Your access remains active until the end of your current billing period." },
@@ -13,11 +13,12 @@ const GENERAL_FAQ = [
   { id: "faq-refund", question: "Is there a refund policy?", answer: "We offer a full refund within the first 7 days if you're not satisfied. After that, you can simply cancel to stop future charges." },
 ];
 
-export default async function PackageDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PackageDetailPage({ params }: { params: Promise<{ tenantSlug: string; planSlug: string }> }) {
   const resolvedParams = await params;
+  const { tenantSlug, planSlug } = resolvedParams;
   
   const { data: pkg, error } = await serverClient.GET("/public/community/{tenantSlug}/plans/{slug}", {
-    params: { path: { tenantSlug: TENANT_SLUG, slug: resolvedParams.slug } },
+    params: { path: { tenantSlug: tenantSlug, slug: planSlug } },
     next: { revalidate: 60 }
   });
 
@@ -33,8 +34,8 @@ export default async function PackageDetailPage({ params }: { params: Promise<{ 
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black pb-28 lg:pb-0">
       <header className="sticky top-0 z-40 w-full bg-card border-b border-border/60">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center">
-          <Link href="/" className="inline-flex items-center -ml-2 px-2 py-1.5 hover:opacity-70 transition-opacity">
-            <span className="text-[15px] font-bold tracking-tight text-foreground">Lazuar</span>
+          <Link href={`/${tenantSlug}`} className="inline-flex items-center -ml-2 px-2 py-1.5 hover:opacity-70 transition-opacity">
+            <span className="text-[15px] font-bold tracking-tight text-foreground">Community Catalog</span>
           </Link>
         </div>
       </header>
@@ -100,7 +101,7 @@ export default async function PackageDetailPage({ params }: { params: Promise<{ 
               {isFull ? (
                 <Button size="lg" disabled className="w-full h-14 text-sm font-bold tracking-wide uppercase rounded-none opacity-50 cursor-not-allowed">Enrollment Closed</Button>
               ) : (
-                <Link href={`/${pkg.slug}/checkout`} className="block w-full">
+                <Link href={`/${tenantSlug}/${planSlug}/checkout`} className="block w-full">
                   <Button size="lg" className="w-full h-14 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none">Continue</Button>
                 </Link>
               )}
@@ -128,7 +129,7 @@ export default async function PackageDetailPage({ params }: { params: Promise<{ 
           {isFull ? (
             <Button disabled className="h-12 px-8 text-sm font-bold tracking-wide uppercase shrink-0 rounded-none opacity-50 cursor-not-allowed">Closed</Button>
           ) : (
-            <Link href={`/${pkg.slug}/checkout`}>
+            <Link href={`/${tenantSlug}/${planSlug}/checkout`}>
               <Button className="h-12 px-8 text-sm font-bold tracking-wide uppercase shrink-0 shadow-sm bg-foreground text-background hover:bg-foreground/90 rounded-none">Continue</Button>
             </Link>
           )}

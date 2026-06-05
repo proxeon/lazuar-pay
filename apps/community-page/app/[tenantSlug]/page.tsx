@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { ArrowRight, Users } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { serverClient, TENANT_SLUG } from "@/lib/api-client";
+import { serverClient } from "@/lib/api-client";
 
-export default async function CatalogPage() {
+export default async function CatalogPage({ params }: { params: Promise<{ tenantSlug: string }> }) {
+  const resolvedParams = await params;
+  
   const { data: plans, error } = await serverClient.GET("/public/community/{tenantSlug}/plans", {
-    params: { path: { tenantSlug: TENANT_SLUG } },
+    params: { path: { tenantSlug: resolvedParams.tenantSlug } },
     next: { revalidate: 60 } // Cache and revalidate every 60 seconds
   });
 
   if (error || !plans) {
-    return <div className="p-8 text-center text-red-500">Failed to load community programs.</div>;
+    return <div className="p-8 text-center text-red-500">Failed to load community programs for this tenant.</div>;
   }
 
   return (
@@ -27,7 +29,7 @@ export default async function CatalogPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((pkg) => (
           <Link
-            href={pkg.is_full ? "#" : `/${pkg.slug}`}
+            href={pkg.is_full ? "#" : `/${resolvedParams.tenantSlug}/${pkg.slug}`}
             key={pkg.id}
             className={`block group ${pkg.is_full ? "pointer-events-none" : ""}`}
             aria-disabled={pkg.is_full}

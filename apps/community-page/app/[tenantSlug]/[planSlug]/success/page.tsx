@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { serverClient, TENANT_SLUG } from "@/lib/api-client";
+import { serverClient } from "@/lib/api-client";
 import { notFound } from "next/navigation";
 
-export default async function SuccessPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SuccessPage({ params }: { params: Promise<{ tenantSlug: string; planSlug: string }> }) {
   const resolvedParams = await params;
+  const { tenantSlug, planSlug } = resolvedParams;
   
   const { data: pkg, error } = await serverClient.GET("/public/community/{tenantSlug}/plans/{slug}", {
-    params: { path: { tenantSlug: TENANT_SLUG, slug: resolvedParams.slug } },
+    params: { path: { tenantSlug: tenantSlug, slug: planSlug } },
     next: { revalidate: 60 }
   });
 
@@ -26,7 +27,7 @@ export default async function SuccessPage({ params }: { params: Promise<{ slug: 
         <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
           You are now subscribed to <strong>{pkg.name}</strong>. Please check your email and WhatsApp for your private community links and instructions.
         </p>
-        <Link href={`/${pkg.slug}`} className="block w-full">
+        <Link href={`/${tenantSlug}/${planSlug}`} className="block w-full">
           <Button className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none">
             Return to Program
           </Button>

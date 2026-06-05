@@ -6,9 +6,9 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, LogOut, CheckCircle2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { browserClient, TENANT_SLUG, type CommunitySubscription } from "@/lib/api-client";
+import { browserClient, type CommunitySubscription } from "@/lib/api-client";
 
-function PortalContent({ slug }: { slug: string }) {
+function PortalContent({ tenantSlug }: { tenantSlug: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -24,25 +24,25 @@ function PortalContent({ slug }: { slug: string }) {
   useEffect(() => {
     if (token) {
       browserClient.GET("/public/community/{tenantSlug}/portal", {
-        params: { path: { tenantSlug: TENANT_SLUG }, query: { token } }
+        params: { path: { tenantSlug }, query: { token } }
       })
       .then(({ data, error }) => {
         if (error || !data) {
           toast.error("Invalid or expired access link.");
-          router.replace(`/${slug}/portal`);
+          router.replace(`/${tenantSlug}/portal`);
         } else {
           setSub(data.subscription);
         }
       })
       .finally(() => setIsLoading(false));
     }
-  }, [token, slug, router]);
+  }, [token, tenantSlug, router]);
 
   const handleRequestLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSending(true);
     const { error } = await browserClient.POST("/public/community/{tenantSlug}/portal/magic-link", {
-      params: { path: { tenantSlug: TENANT_SLUG } },
+      params: { path: { tenantSlug } },
       body: { email }
     });
 
@@ -66,7 +66,7 @@ function PortalContent({ slug }: { slug: string }) {
     if (!window.confirm("Are you sure you want to cancel your subscription? You will lose access at the end of your billing cycle.")) return;
     
     const { error } = await browserClient.POST("/public/community/{tenantSlug}/portal/cancel", {
-      params: { path: { tenantSlug: TENANT_SLUG }, query: { token } },
+      params: { path: { tenantSlug }, query: { token } },
       body: { subscription_id: sub.id }
     });
 
@@ -117,8 +117,8 @@ function PortalContent({ slug }: { slug: string }) {
           )}
 
           <div className="mt-8 text-center">
-            <Link href={`/${slug}`} className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground">
-              ← Return to Program
+            <Link href={`/${tenantSlug}`} className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+              ← Return to Catalog
             </Link>
           </div>
         </div>
@@ -137,14 +137,14 @@ function PortalContent({ slug }: { slug: string }) {
       <header className="sticky top-0 z-40 w-full bg-card border-b border-border/60">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Link href={`/${slug}`} className="inline-flex items-center gap-2 -ml-2 px-2 py-1.5 text-muted-foreground hover:text-foreground transition-all group">
+            <Link href={`/${tenantSlug}`} className="inline-flex items-center gap-2 -ml-2 px-2 py-1.5 text-muted-foreground hover:text-foreground transition-all group">
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-              <span className="text-sm font-medium hidden sm:inline">Back</span>
+              <span className="text-sm font-medium hidden sm:inline">Back to Catalog</span>
             </Link>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs font-bold uppercase tracking-widest text-foreground hidden sm:inline">{sub.customer_name}</span>
-            <button onClick={() => router.push(`/${slug}/portal`)} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 uppercase font-bold tracking-widest">
+            <button onClick={() => router.push(`/${tenantSlug}/portal`)} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 uppercase font-bold tracking-widest">
               <LogOut size={14} /> Logout
             </button>
           </div>
@@ -200,11 +200,9 @@ function PortalContent({ slug }: { slug: string }) {
 
             <div className="flex flex-col gap-3 max-w-sm">
               {isActive && (
-                <Link href={`/${slug}/checkout`}>
-                  <Button className="w-full rounded-none uppercase font-bold tracking-widest text-xs h-12">
-                    Make Renewal Payment
-                  </Button>
-                </Link>
+                <div className="text-center p-3 bg-secondary/50 border border-border/60 text-xs text-muted-foreground">
+                  Renewal links are sent to your email and WhatsApp 3 days before your billing date.
+                </div>
               )}
               {isActive && (
                 <button onClick={handleCancel} className="text-xs font-bold uppercase tracking-widest text-rose-600 hover:text-rose-700 border border-transparent hover:border-rose-200 hover:bg-rose-50 px-4 py-3 transition-colors text-center w-full">
@@ -225,11 +223,11 @@ function PortalContent({ slug }: { slug: string }) {
   );
 }
 
-export default function PortalPage({ params }: { params: Promise<{ slug: string }> }) {
+export default function PortalPage({ params }: { params: Promise<{ tenantSlug: string }> }) {
   const resolvedParams = use(params);
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-muted-foreground" /></div>}>
-      <PortalContent slug={resolvedParams.slug} />
+      <PortalContent tenantSlug={resolvedParams.tenantSlug} />
     </Suspense>
   );
 }
