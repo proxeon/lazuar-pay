@@ -8,6 +8,8 @@ model MessageTemplateDto {
   subject: string;
   body: string;
   is_default: boolean;
+  required_variables: string[];
+  optional_variables: string[];
   updated_at: utcDateTime;
 }
 

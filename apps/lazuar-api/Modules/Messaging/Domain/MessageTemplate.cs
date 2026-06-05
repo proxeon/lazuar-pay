@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BuildingBlocks.Domain;
 
 namespace Modules.Messaging.Domain;
@@ -13,6 +14,13 @@ public class MessageTemplate : Entity, IMustHaveTenant
     public string Body { get; private set; } = "";
     public bool IsDefault { get; private set; }
     public string? MetaTemplateName { get; private set; }
+    
+    private readonly List<string> _requiredVariables = new();
+    public IReadOnlyCollection<string> RequiredVariables => _requiredVariables.AsReadOnly();
+    
+    private readonly List<string> _optionalVariables = new();
+    public IReadOnlyCollection<string> OptionalVariables => _optionalVariables.AsReadOnly();
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -22,7 +30,8 @@ public class MessageTemplate : Entity, IMustHaveTenant
 
     public MessageTemplate(
         Guid organizationId, string name, string channel,
-        string subject, string body, bool isDefault, string? metaTemplateName = null)
+        string subject, string body, bool isDefault, string? metaTemplateName = null,
+        IEnumerable<string>? requiredVariables = null, IEnumerable<string>? optionalVariables = null)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -32,6 +41,10 @@ public class MessageTemplate : Entity, IMustHaveTenant
         Body = body;
         IsDefault = isDefault;
         MetaTemplateName = metaTemplateName;
+        
+        if (requiredVariables != null) _requiredVariables.AddRange(requiredVariables);
+        if (optionalVariables != null) _optionalVariables.AddRange(optionalVariables);
+        
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -44,11 +57,18 @@ public class MessageTemplate : Entity, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void ResetToDefault(string subject, string body)
+    public void ResetToDefault(string subject, string body, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables)
     {
         Subject = subject;
         Body = body;
         IsDefault = true;
+        
+        _requiredVariables.Clear();
+        if (requiredVariables != null) _requiredVariables.AddRange(requiredVariables);
+        
+        _optionalVariables.Clear();
+        if (optionalVariables != null) _optionalVariables.AddRange(optionalVariables);
+        
         UpdatedAt = DateTime.UtcNow;
     }
 }

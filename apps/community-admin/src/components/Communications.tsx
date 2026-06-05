@@ -261,14 +261,9 @@ function TemplateEditor({ template, onSave, isSaving, onCancel, onReset, isReset
   const [subject, setSubject] = useState(template.subject);
   const [body, setBody] = useState(template.body);
 
-  let requiredVars: string[] = [];
-  let optionalVars: string[] = [];
-
-  if (template.name === "Community Welcome") { requiredVars = ["{{group_link}}"]; optionalVars = ["{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{meeting_link}}"]; } 
-  else if (template.name === "Community Payment Success") { requiredVars = ["{{total_price}}"]; optionalVars = ["{{customer_name}}", "{{business_name}}", "{{plan_name}}"]; } 
-  else if (template.name === "Community Payment Failed") { requiredVars = ["{{renewal_link}}"]; optionalVars = ["{{customer_name}}", "{{business_name}}", "{{plan_name}}"]; } 
-  else if (template.name.includes("Community Renewal")) { requiredVars = ["{{renewal_link}}"]; optionalVars = ["{{customer_name}}", "{{business_name}}", "{{plan_name}}"]; } 
-  else { optionalVars = ["{{customer_name}}", "{{business_name}}"]; }
+  // Dynamically pull variables from the API DTO instead of hardcoding
+  const requiredVars = template.required_variables || [];
+  const optionalVars = template.optional_variables || [];
 
   useEffect(() => { setSubject(template.subject); setBody(template.body); }, [template]);
 
@@ -286,10 +281,28 @@ function TemplateEditor({ template, onSave, isSaving, onCancel, onReset, isReset
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="bg-secondary/30 p-4 border border-border/60 mb-2">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center justify-between"><span>Available Variables</span><span className="text-[9px] text-muted-foreground/70 normal-case tracking-normal font-normal">* Indicates a required system variable</span></h4>
+        <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center justify-between">
+          <span>Available Variables</span>
+          {requiredVars.length > 0 && (
+            <span className="text-[9px] text-muted-foreground/70 normal-case tracking-normal font-normal">
+              * Indicates a required system variable
+            </span>
+          )}
+        </h4>
         <div className="flex flex-wrap gap-2">
-          {requiredVars.map(v => <span key={v} className="text-[11px] font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-1.5 py-0.5" title="Required Variable">{v} *</span>)}
-          {optionalVars.map(v => <span key={v} className="text-[11px] font-mono text-foreground bg-background border border-border/60 px-1.5 py-0.5">{v}</span>)}
+          {requiredVars.map(v => (
+            <span key={v} className="text-[11px] font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-1.5 py-0.5" title="Required Variable">
+              {v} *
+            </span>
+          ))}
+          {optionalVars.map(v => (
+            <span key={v} className="text-[11px] font-mono text-foreground bg-background border border-border/60 px-1.5 py-0.5">
+              {v}
+            </span>
+          ))}
+          {requiredVars.length === 0 && optionalVars.length === 0 && (
+             <span className="text-[11px] font-mono text-muted-foreground italic">No variables available for this template.</span>
+          )}
         </div>
       </div>
       <div className="space-y-2">

@@ -45,9 +45,9 @@ public class ResetMessageTemplateCommandHandler : IRequestHandler<ResetMessageTe
         var defaultTemplate = defaultTemplates.FirstOrDefault(t => t.Name == template.Name);
 
         if (defaultTemplate != null)
-            template.ResetToDefault(defaultTemplate.Subject, defaultTemplate.Body);
+            template.ResetToDefault(defaultTemplate.Subject, defaultTemplate.Body, defaultTemplate.RequiredVariables, defaultTemplate.OptionalVariables);
         else
-            template.ResetToDefault("", "");
+            template.ResetToDefault("", "", Array.Empty<string>(), Array.Empty<string>());
 
         await _context.SaveChangesAsync(cancellationToken);
     }

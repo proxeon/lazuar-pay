@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Messaging.Domain;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Modules.Messaging.Infrastructure;
 
@@ -40,6 +43,31 @@ public class MessagingDbContext : PlatformDbContext
             builder.ToTable("MessageTemplates");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
+
+            var jsonOptions = new JsonSerializerOptions 
+            { 
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+            };
+
+            var stringListConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
+            );
+            
+            var stringListComparer = new ValueComparer<IReadOnlyCollection<string>>(
+                (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList()
+            );
+
+            builder.Property(x => x.RequiredVariables)
+                   .HasConversion(stringListConverter, stringListComparer)
+                   .HasColumnType("jsonb");
+                   
+            builder.Property(x => x.OptionalVariables)
+                   .HasConversion(stringListConverter, stringListComparer)
+                   .HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<AutomationRule>(builder =>

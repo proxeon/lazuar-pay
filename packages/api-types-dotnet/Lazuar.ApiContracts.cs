@@ -1131,6 +1131,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_default")]
         public bool Is_default { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("required_variables")]
+        public System.Collections.Generic.List<string> Required_variables { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("optional_variables")]
+        public System.Collections.Generic.List<string> Optional_variables { get; set; } = new System.Collections.Generic.List<string>();
+
         [System.Text.Json.Serialization.JsonPropertyName("updated_at")]
         public System.DateTimeOffset Updated_at { get; set; } = default!;
 

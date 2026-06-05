@@ -777,6 +777,8 @@ export interface components {
             subject: string;
             body: string;
             is_default: boolean;
+            required_variables: string[];
+            optional_variables: string[];
             /** Format: date-time */
             updated_at: string;
         };
