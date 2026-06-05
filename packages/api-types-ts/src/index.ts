@@ -11,8 +11,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getPaymentConfig"];
-        put: operations["AdminCommunityApi_savePaymentConfig"];
+        get: operations["AdminCommunityOperations_getPaymentConfig"];
+        put: operations["AdminCommunityOperations_savePaymentConfig"];
         post?: never;
         delete?: never;
         options?: never;
@@ -27,9 +27,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getPlans"];
+        get: operations["AdminCommunityOperations_getPlans"];
         put?: never;
-        post: operations["AdminCommunityApi_createPlan"];
+        post: operations["AdminCommunityOperations_createPlan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -43,10 +43,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getPlanById"];
-        put: operations["AdminCommunityApi_updatePlan"];
+        get: operations["AdminCommunityOperations_getPlanById"];
+        put: operations["AdminCommunityOperations_updatePlan"];
         post?: never;
-        delete: operations["AdminCommunityApi_archivePlan"];
+        delete: operations["AdminCommunityOperations_archivePlan"];
         options?: never;
         head?: never;
         patch?: never;
@@ -59,9 +59,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getReminderSchedules"];
+        get: operations["AdminCommunityOperations_getReminderSchedules"];
         put?: never;
-        post: operations["AdminCommunityApi_createReminderSchedule"];
+        post: operations["AdminCommunityOperations_createReminderSchedule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -76,9 +76,9 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["AdminCommunityApi_updateReminderSchedule"];
+        put: operations["AdminCommunityOperations_updateReminderSchedule"];
         post?: never;
-        delete: operations["AdminCommunityApi_deleteReminderSchedule"];
+        delete: operations["AdminCommunityOperations_deleteReminderSchedule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -93,7 +93,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AdminCommunityApi_scheduleOneOffReminder"];
+        post: operations["AdminCommunityOperations_scheduleOneOffReminder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -109,7 +109,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AdminCommunityApi_testReminder"];
+        post: operations["AdminCommunityOperations_testReminder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -123,7 +123,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getStats"];
+        get: operations["AdminCommunityOperations_getStats"];
         put?: never;
         post?: never;
         delete?: never;
@@ -139,9 +139,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getSubscribers"];
+        get: operations["AdminCommunityOperations_getSubscribers"];
         put?: never;
-        post: operations["AdminCommunityApi_createSubscriber"];
+        post: operations["AdminCommunityOperations_createSubscriber"];
         delete?: never;
         options?: never;
         head?: never;
@@ -155,7 +155,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_exportSubscribers"];
+        get: operations["AdminCommunityOperations_exportSubscribers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -172,7 +172,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["AdminCommunityApi_updateSubscriberProfile"];
+        put: operations["AdminCommunityOperations_updateSubscriberProfile"];
         post?: never;
         delete?: never;
         options?: never;
@@ -189,7 +189,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AdminCommunityApi_cancelSubscription"];
+        post: operations["AdminCommunityOperations_cancelSubscription"];
         delete?: never;
         options?: never;
         head?: never;
@@ -205,7 +205,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AdminCommunityApi_extendGrace"];
+        post: operations["AdminCommunityOperations_extendGrace"];
         delete?: never;
         options?: never;
         head?: never;
@@ -221,7 +221,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AdminCommunityApi_pauseReminders"];
+        post: operations["AdminCommunityOperations_pauseReminders"];
         delete?: never;
         options?: never;
         head?: never;
@@ -235,9 +235,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getPaymentHistory"];
+        get: operations["AdminCommunityOperations_getPaymentHistory"];
         put?: never;
-        post: operations["AdminCommunityApi_recordPaymentViaPayments"];
+        post: operations["AdminCommunityOperations_recordPaymentViaPayments"];
         delete?: never;
         options?: never;
         head?: never;
@@ -253,7 +253,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AdminCommunityApi_recordPayment"];
+        post: operations["AdminCommunityOperations_recordPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -267,7 +267,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getReminderHistory"];
+        get: operations["AdminCommunityOperations_getReminderHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -285,7 +285,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AdminCommunityApi_sendReminder"];
+        post: operations["AdminCommunityOperations_sendReminder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -299,7 +299,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommunityApi_getTemplates"];
+        get: operations["AdminCommunityOperations_getTemplates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -316,9 +316,9 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["AdminCommunityApi_updateTemplate"];
+        put: operations["AdminCommunityOperations_updateTemplate"];
         post?: never;
-        delete: operations["AdminCommunityApi_resetTemplate"];
+        delete: operations["AdminCommunityOperations_resetTemplate"];
         options?: never;
         head?: never;
         patch?: never;
@@ -333,7 +333,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AuthApi_login"];
+        post: operations["AuthOperations_login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -347,7 +347,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AuthApi_getMe"];
+        get: operations["AuthOperations_getMe"];
         put?: never;
         post?: never;
         delete?: never;
@@ -365,7 +365,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["PublicCommunityApi_initiateCheckout"];
+        post: operations["PublicCommunityOperations_initiateCheckout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -379,7 +379,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["PublicCommunityApi_getPublicPlans"];
+        get: operations["PublicCommunityOperations_getPublicPlans"];
         put?: never;
         post?: never;
         delete?: never;
@@ -395,7 +395,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["PublicCommunityApi_getPlanBySlug"];
+        get: operations["PublicCommunityOperations_getPlanBySlug"];
         put?: never;
         post?: never;
         delete?: never;
@@ -411,7 +411,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["PublicCommunityApi_getPortalData"];
+        get: operations["PublicCommunityOperations_getPortalData"];
         put?: never;
         post?: never;
         delete?: never;
@@ -429,7 +429,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["PublicCommunityApi_cancelPortalSubscription"];
+        post: operations["PublicCommunityOperations_cancelPortalSubscription"];
         delete?: never;
         options?: never;
         head?: never;
@@ -445,7 +445,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["PublicCommunityApi_requestMagicLink"];
+        post: operations["PublicCommunityOperations_requestMagicLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -456,25 +456,31 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        "Models.Auth.AuthUser": {
+        "Auth.AuthUser": {
             email: string;
             name: string;
             role: string;
         };
-        "Models.Auth.LoginRequest": {
+        "Auth.LoginRequest": {
             email: string;
             password?: string;
         };
-        "Models.Auth.LoginResponse": {
+        "Auth.LoginResponse": {
             token: string;
-            user: components["schemas"]["Models.Auth.AuthUser"];
+            user: components["schemas"]["Auth.AuthUser"];
         };
-        "Models.Community.CashFlowTrendDto": {
+        "Community.CancelPortalRequest": {
+            subscription_id: string;
+        };
+        "Community.CashFlowTrendDto": {
             month: string;
             /** Format: double */
             amount: number;
         };
-        "Models.Community.CommunityPlanDto": {
+        "Community.CheckoutResponse": {
+            url: string;
+        };
+        "Community.CommunityPlanDto": {
             id: string;
             slug: string;
             name: string;
@@ -486,7 +492,7 @@ export interface components {
             interval: string;
             features: string[];
             methodology: string;
-            faq: components["schemas"]["Models.Community.FaqItemDto"][];
+            faq: components["schemas"]["Community.FaqItemDto"][];
             is_active: boolean;
             /** Format: int32 */
             display_order: number;
@@ -502,7 +508,7 @@ export interface components {
             spots_remaining?: number;
             is_full: boolean;
         };
-        "Models.Community.CommunityReminderScheduleDto": {
+        "Community.CommunityReminderScheduleDto": {
             id: string;
             plan_id?: string;
             plan_name?: string;
@@ -516,7 +522,7 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        "Models.Community.CommunitySubscriberStatsDto": {
+        "Community.CommunitySubscriberStatsDto": {
             /** Format: double */
             mrr: number;
             /** Format: int32 */
@@ -535,10 +541,10 @@ export interface components {
             reminder_effectiveness_percentage: number;
             /** Format: double */
             total_revenue_collected: number;
-            cash_flow_trend: components["schemas"]["Models.Community.CashFlowTrendDto"][];
-            payment_methods: components["schemas"]["Models.Community.PaymentMethodDto"][];
+            cash_flow_trend: components["schemas"]["Community.CashFlowTrendDto"][];
+            payment_methods: components["schemas"]["Community.PaymentMethodDto"][];
         };
-        "Models.Community.CommunitySubscriptionDto": {
+        "Community.CommunitySubscriptionDto": {
             id: string;
             client_profile_id: string;
             customer_name: string;
@@ -564,7 +570,7 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        "Models.Community.CreatePlanRequestDto": {
+        "Community.CreatePlanRequestDto": {
             slug: string;
             name: string;
             audience: string;
@@ -575,7 +581,7 @@ export interface components {
             interval: string;
             features: string[];
             methodology: string;
-            faq: components["schemas"]["Models.Community.FaqItemDto"][];
+            faq: components["schemas"]["Community.FaqItemDto"][];
             /** Format: int32 */
             display_order: number;
             /** Format: int32 */
@@ -585,7 +591,7 @@ export interface components {
             telegram_invite_link?: string;
             weekly_meeting_link?: string;
         };
-        "Models.Community.CreateReminderScheduleRequestDto": {
+        "Community.CreateReminderScheduleRequestDto": {
             plan_id?: string;
             template_id: string;
             channel: string;
@@ -594,7 +600,7 @@ export interface components {
             time_of_day: string;
             is_enabled: boolean;
         };
-        "Models.Community.CreateSubscriberRequestDto": {
+        "Community.CreateSubscriberRequestDto": {
             name: string;
             email: string;
             phone: string;
@@ -608,7 +614,7 @@ export interface components {
             reference_number?: string;
             notes?: string;
         };
-        "Models.Community.DeliveryHistoryItemDto": {
+        "Community.DeliveryHistoryItemDto": {
             id: string;
             channel: string;
             recipient: string;
@@ -619,23 +625,23 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        "Models.Community.ExtendGraceRequestDto": {
+        "Community.ExtendGraceRequestDto": {
             /** Format: int32 */
             days: number;
         };
-        "Models.Community.FaqItemDto": {
+        "Community.FaqItemDto": {
             id: string;
             question: string;
             answer: string;
         };
-        "Models.Community.MagicLinkRequestDto": {
+        "Community.MagicLinkRequestDto": {
             email: string;
         };
-        "Models.Community.PauseRemindersRequestDto": {
+        "Community.PauseRemindersRequestDto": {
             /** Format: date-time */
             pause_until?: string;
         };
-        "Models.Community.PaymentConfigDto": {
+        "Community.PaymentConfigDto": {
             gateway_type: string;
             api_key?: string;
             merchant_id?: string;
@@ -643,14 +649,14 @@ export interface components {
             secret_key?: string;
             is_active: boolean;
         };
-        "Models.Community.PaymentMethodDto": {
+        "Community.PaymentMethodDto": {
             method: string;
             /** Format: int32 */
             count: number;
             /** Format: double */
             total_amount: number;
         };
-        "Models.Community.PaymentRecordDto": {
+        "Community.PaymentRecordDto": {
             id: string;
             /** Format: double */
             amount: number;
@@ -668,21 +674,24 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        "Models.Community.PublicCheckoutRequestDto": {
+        "Community.PortalDataResponse": {
+            subscription: components["schemas"]["Community.CommunitySubscriptionDto"];
+        };
+        "Community.PublicCheckoutRequestDto": {
             tenant_slug: string;
             plan_slug: string;
             name: string;
             email: string;
             phone: string;
         };
-        "Models.Community.RecordPaymentRequestDto": {
+        "Community.RecordPaymentRequestDto": {
             /** Format: double */
             amount: number;
             payment_method: string;
             reference_number?: string;
             receipt_file?: string;
         };
-        "Models.Community.SavePaymentConfigRequestDto": {
+        "Community.SavePaymentConfigRequestDto": {
             gateway_type: string;
             api_key?: string;
             collection_id?: string;
@@ -690,7 +699,7 @@ export interface components {
             secret_key?: string;
             is_active: boolean;
         };
-        "Models.Community.ScheduleOneOffRequestDto": {
+        "Community.ScheduleOneOffRequestDto": {
             subscriber_id: string;
             template_id?: string;
             custom_message?: string;
@@ -698,12 +707,12 @@ export interface components {
             /** Format: date-time */
             scheduled_at: string;
         };
-        "Models.Community.SendOneOffReminderRequestDto": {
+        "Community.SendOneOffReminderRequestDto": {
             template_id?: string;
             custom_message?: string;
             channel?: string;
         };
-        "Models.Community.UpdatePlanRequestDto": {
+        "Community.UpdatePlanRequestDto": {
             slug?: string;
             name?: string;
             audience?: string;
@@ -714,7 +723,7 @@ export interface components {
             interval?: string;
             features?: string[];
             methodology?: string;
-            faq?: components["schemas"]["Models.Community.FaqItemDto"][];
+            faq?: components["schemas"]["Community.FaqItemDto"][];
             is_active?: boolean;
             /** Format: int32 */
             display_order?: number;
@@ -725,7 +734,7 @@ export interface components {
             telegram_invite_link?: string;
             weekly_meeting_link?: string;
         };
-        "Models.Community.UpdateReminderScheduleRequestDto": {
+        "Community.UpdateReminderScheduleRequestDto": {
             plan_id?: string;
             template_id?: string;
             channel?: string;
@@ -734,18 +743,18 @@ export interface components {
             time_of_day?: string;
             is_enabled?: boolean;
         };
-        "Models.Community.UpdateSubscriberProfileRequestDto": {
+        "Community.UpdateSubscriberProfileRequestDto": {
             is_reminder_only: boolean;
             preferred_channel?: string;
             admin_notes?: string;
             /** Format: date-time */
             next_renewal_date?: string;
         };
-        "Models.Core.IdResponse": {
+        "Core.IdResponse": {
             id: string;
         };
         /** RFC 7807 Standardized Error Response */
-        "Models.Core.ProblemDetails": {
+        "Core.ProblemDetails": {
             type?: string;
             title?: string;
             /** Format: int32 */
@@ -753,16 +762,16 @@ export interface components {
             detail?: string;
             instance?: string;
         };
-        "Models.Core.StatusResponse": {
+        "Core.StatusResponse": {
             status: string;
         };
         /** RFC 7807 Extended Validation Error Response */
-        "Models.Core.ValidationProblemDetails": {
+        "Core.ValidationProblemDetails": {
             errors?: {
                 [key: string]: string[];
             };
-        } & components["schemas"]["Models.Core.ProblemDetails"];
-        "Models.Messaging.MessageTemplateDto": {
+        } & components["schemas"]["Core.ProblemDetails"];
+        "Messaging.MessageTemplateDto": {
             id: string;
             name: string;
             subject: string;
@@ -771,26 +780,17 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
-        "Models.Messaging.TestReminderRequestDto": {
+        "Messaging.TestReminderRequestDto": {
             template_name: string;
             channel?: string;
         };
-        "Models.Messaging.TestReminderResponse": {
+        "Messaging.TestReminderResponse": {
             success: boolean;
             sent_to: string;
         };
-        "Models.Messaging.UpdateTemplateRequestDto": {
+        "Messaging.UpdateTemplateRequestDto": {
             subject: string;
             body: string;
-        };
-        "PublicCommunityApi.CancelPortalRequest": {
-            subscription_id: string;
-        };
-        "PublicCommunityApi.CheckoutResponse": {
-            url: string;
-        };
-        "PublicCommunityApi.PortalDataResponse": {
-            subscription: components["schemas"]["Models.Community.CommunitySubscriptionDto"];
         };
     };
     responses: never;
@@ -801,7 +801,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    AdminCommunityApi_getPaymentConfig: {
+    AdminCommunityOperations_getPaymentConfig: {
         parameters: {
             query?: never;
             header?: never;
@@ -816,7 +816,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.PaymentConfigDto"];
+                    "application/json": components["schemas"]["Community.PaymentConfigDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -825,7 +825,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -834,7 +834,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -843,7 +843,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -852,7 +852,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -861,12 +861,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_savePaymentConfig: {
+    AdminCommunityOperations_savePaymentConfig: {
         parameters: {
             query?: never;
             header?: never;
@@ -875,7 +875,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.SavePaymentConfigRequestDto"];
+                "application/json": components["schemas"]["Community.SavePaymentConfigRequestDto"];
             };
         };
         responses: {
@@ -885,7 +885,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -894,7 +894,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -903,7 +903,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -912,7 +912,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -921,7 +921,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -930,12 +930,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_getPlans: {
+    AdminCommunityOperations_getPlans: {
         parameters: {
             query?: never;
             header?: never;
@@ -950,7 +950,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.CommunityPlanDto"][];
+                    "application/json": components["schemas"]["Community.CommunityPlanDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -959,7 +959,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -968,7 +968,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -977,7 +977,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -986,7 +986,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -995,12 +995,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_createPlan: {
+    AdminCommunityOperations_createPlan: {
         parameters: {
             query?: never;
             header?: never;
@@ -1009,7 +1009,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.CreatePlanRequestDto"];
+                "application/json": components["schemas"]["Community.CreatePlanRequestDto"];
             };
         };
         responses: {
@@ -1019,7 +1019,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.IdResponse"];
+                    "application/json": components["schemas"]["Core.IdResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1028,7 +1028,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1037,7 +1037,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1046,7 +1046,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1055,7 +1055,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1064,12 +1064,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_getPlanById: {
+    AdminCommunityOperations_getPlanById: {
         parameters: {
             query?: never;
             header?: never;
@@ -1086,7 +1086,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.CommunityPlanDto"];
+                    "application/json": components["schemas"]["Community.CommunityPlanDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1095,7 +1095,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1104,7 +1104,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1113,7 +1113,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1122,7 +1122,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1131,12 +1131,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_updatePlan: {
+    AdminCommunityOperations_updatePlan: {
         parameters: {
             query?: never;
             header?: never;
@@ -1147,7 +1147,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.UpdatePlanRequestDto"];
+                "application/json": components["schemas"]["Community.UpdatePlanRequestDto"];
             };
         };
         responses: {
@@ -1157,7 +1157,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1166,7 +1166,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1175,7 +1175,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1184,7 +1184,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1193,7 +1193,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1202,284 +1202,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_archivePlan: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    AdminCommunityApi_getReminderSchedules: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Community.CommunityReminderScheduleDto"][];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    AdminCommunityApi_createReminderSchedule: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Models.Community.CreateReminderScheduleRequestDto"];
-            };
-        };
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.IdResponse"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    AdminCommunityApi_updateReminderSchedule: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Models.Community.UpdateReminderScheduleRequestDto"];
-            };
-        };
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    AdminCommunityApi_deleteReminderSchedule: {
+    AdminCommunityOperations_archivePlan: {
         parameters: {
             query?: never;
             header?: never;
@@ -1496,7 +1224,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1505,7 +1233,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1514,7 +1242,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1523,7 +1251,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1532,7 +1260,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1541,150 +1269,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_scheduleOneOffReminder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Models.Community.ScheduleOneOffRequestDto"];
-            };
-        };
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    AdminCommunityApi_testReminder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Models.Messaging.TestReminderRequestDto"];
-            };
-        };
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Messaging.TestReminderResponse"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    AdminCommunityApi_getStats: {
+    AdminCommunityOperations_getReminderSchedules: {
         parameters: {
             query?: never;
             header?: never;
@@ -1699,7 +1289,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.CommunitySubscriberStatsDto"];
+                    "application/json": components["schemas"]["Community.CommunityReminderScheduleDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1708,7 +1298,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1717,7 +1307,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1726,7 +1316,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1735,7 +1325,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1744,12 +1334,357 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_getSubscribers: {
+    AdminCommunityOperations_createReminderSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Community.CreateReminderScheduleRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.IdResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_updateReminderSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Community.UpdateReminderScheduleRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_deleteReminderSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_scheduleOneOffReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Community.ScheduleOneOffRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_testReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Messaging.TestReminderRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Messaging.TestReminderResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_getStats: {
         parameters: {
             query?: never;
             header?: never;
@@ -1764,7 +1699,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.CommunitySubscriptionDto"][];
+                    "application/json": components["schemas"]["Community.CommunitySubscriberStatsDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1773,7 +1708,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1782,7 +1717,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1791,7 +1726,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1800,7 +1735,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1809,12 +1744,77 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_createSubscriber: {
+    AdminCommunityOperations_getSubscribers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Community.CommunitySubscriptionDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_createSubscriber: {
         parameters: {
             query?: never;
             header?: never;
@@ -1823,7 +1823,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.CreateSubscriberRequestDto"];
+                "application/json": components["schemas"]["Community.CreateSubscriberRequestDto"];
             };
         };
         responses: {
@@ -1833,7 +1833,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.IdResponse"];
+                    "application/json": components["schemas"]["Core.IdResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1842,7 +1842,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1851,7 +1851,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1860,7 +1860,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1869,7 +1869,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1878,12 +1878,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_exportSubscribers: {
+    AdminCommunityOperations_exportSubscribers: {
         parameters: {
             query?: never;
             header?: never;
@@ -1907,7 +1907,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1916,7 +1916,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1925,7 +1925,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -1934,7 +1934,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -1943,12 +1943,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_updateSubscriberProfile: {
+    AdminCommunityOperations_updateSubscriberProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -1959,7 +1959,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.UpdateSubscriberProfileRequestDto"];
+                "application/json": components["schemas"]["Community.UpdateSubscriberProfileRequestDto"];
             };
         };
         responses: {
@@ -1969,7 +1969,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -1978,7 +1978,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -1987,7 +1987,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -1996,7 +1996,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2005,7 +2005,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2014,12 +2014,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_cancelSubscription: {
+    AdminCommunityOperations_cancelSubscription: {
         parameters: {
             query?: never;
             header?: never;
@@ -2036,7 +2036,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2045,7 +2045,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2054,7 +2054,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2063,7 +2063,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2072,7 +2072,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2081,12 +2081,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_extendGrace: {
+    AdminCommunityOperations_extendGrace: {
         parameters: {
             query?: never;
             header?: never;
@@ -2097,7 +2097,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.ExtendGraceRequestDto"];
+                "application/json": components["schemas"]["Community.ExtendGraceRequestDto"];
             };
         };
         responses: {
@@ -2107,7 +2107,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2116,7 +2116,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2125,7 +2125,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2134,7 +2134,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2143,7 +2143,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2152,12 +2152,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_pauseReminders: {
+    AdminCommunityOperations_pauseReminders: {
         parameters: {
             query?: never;
             header?: never;
@@ -2168,7 +2168,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.PauseRemindersRequestDto"];
+                "application/json": components["schemas"]["Community.PauseRemindersRequestDto"];
             };
         };
         responses: {
@@ -2178,7 +2178,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2187,7 +2187,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2196,7 +2196,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2205,7 +2205,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2214,7 +2214,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2223,12 +2223,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_getPaymentHistory: {
+    AdminCommunityOperations_getPaymentHistory: {
         parameters: {
             query?: never;
             header?: never;
@@ -2245,7 +2245,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.PaymentRecordDto"][];
+                    "application/json": components["schemas"]["Community.PaymentRecordDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2254,7 +2254,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2263,7 +2263,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2272,7 +2272,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2281,7 +2281,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2290,12 +2290,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_recordPaymentViaPayments: {
+    AdminCommunityOperations_recordPaymentViaPayments: {
         parameters: {
             query?: never;
             header?: never;
@@ -2306,7 +2306,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.RecordPaymentRequestDto"];
+                "application/json": components["schemas"]["Community.RecordPaymentRequestDto"];
             };
         };
         responses: {
@@ -2316,7 +2316,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2325,7 +2325,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2334,7 +2334,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2343,7 +2343,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2352,7 +2352,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2361,12 +2361,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_recordPayment: {
+    AdminCommunityOperations_recordPayment: {
         parameters: {
             query?: never;
             header?: never;
@@ -2377,7 +2377,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.RecordPaymentRequestDto"];
+                "application/json": components["schemas"]["Community.RecordPaymentRequestDto"];
             };
         };
         responses: {
@@ -2387,7 +2387,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2396,7 +2396,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2405,7 +2405,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2414,7 +2414,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2423,7 +2423,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2432,12 +2432,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_getReminderHistory: {
+    AdminCommunityOperations_getReminderHistory: {
         parameters: {
             query?: never;
             header?: never;
@@ -2454,7 +2454,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.DeliveryHistoryItemDto"][];
+                    "application/json": components["schemas"]["Community.DeliveryHistoryItemDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2463,7 +2463,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2472,7 +2472,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2481,7 +2481,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2490,7 +2490,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2499,12 +2499,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_sendReminder: {
+    AdminCommunityOperations_sendReminder: {
         parameters: {
             query?: never;
             header?: never;
@@ -2515,7 +2515,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.SendOneOffReminderRequestDto"];
+                "application/json": components["schemas"]["Community.SendOneOffReminderRequestDto"];
             };
         };
         responses: {
@@ -2525,7 +2525,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2534,7 +2534,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2543,7 +2543,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2552,7 +2552,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2561,7 +2561,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2570,12 +2570,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_getTemplates: {
+    AdminCommunityOperations_getTemplates: {
         parameters: {
             query?: never;
             header?: never;
@@ -2590,7 +2590,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Messaging.MessageTemplateDto"][];
+                    "application/json": components["schemas"]["Messaging.MessageTemplateDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2599,7 +2599,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2608,7 +2608,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2617,7 +2617,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2626,7 +2626,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2635,12 +2635,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_updateTemplate: {
+    AdminCommunityOperations_updateTemplate: {
         parameters: {
             query?: never;
             header?: never;
@@ -2651,7 +2651,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Messaging.UpdateTemplateRequestDto"];
+                "application/json": components["schemas"]["Messaging.UpdateTemplateRequestDto"];
             };
         };
         responses: {
@@ -2661,7 +2661,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2670,7 +2670,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2679,7 +2679,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2688,7 +2688,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2697,7 +2697,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2706,12 +2706,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AdminCommunityApi_resetTemplate: {
+    AdminCommunityOperations_resetTemplate: {
         parameters: {
             query?: never;
             header?: never;
@@ -2728,7 +2728,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2737,7 +2737,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2746,7 +2746,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2755,7 +2755,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2764,7 +2764,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2773,12 +2773,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AuthApi_login: {
+    AuthOperations_login: {
         parameters: {
             query?: never;
             header?: never;
@@ -2787,7 +2787,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Auth.LoginRequest"];
+                "application/json": components["schemas"]["Auth.LoginRequest"];
             };
         };
         responses: {
@@ -2797,7 +2797,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Auth.LoginResponse"];
+                    "application/json": components["schemas"]["Auth.LoginResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2806,7 +2806,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2815,7 +2815,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2824,7 +2824,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2833,7 +2833,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2842,12 +2842,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    AuthApi_getMe: {
+    AuthOperations_getMe: {
         parameters: {
             query?: never;
             header?: never;
@@ -2862,7 +2862,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Auth.AuthUser"];
+                    "application/json": components["schemas"]["Auth.AuthUser"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2871,7 +2871,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2880,7 +2880,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2889,7 +2889,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2898,7 +2898,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2907,12 +2907,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    PublicCommunityApi_initiateCheckout: {
+    PublicCommunityOperations_initiateCheckout: {
         parameters: {
             query?: never;
             header?: never;
@@ -2921,7 +2921,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.PublicCheckoutRequestDto"];
+                "application/json": components["schemas"]["Community.PublicCheckoutRequestDto"];
             };
         };
         responses: {
@@ -2931,7 +2931,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicCommunityApi.CheckoutResponse"];
+                    "application/json": components["schemas"]["Community.CheckoutResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2940,7 +2940,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -2949,7 +2949,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -2958,7 +2958,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -2967,7 +2967,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -2976,12 +2976,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    PublicCommunityApi_getPublicPlans: {
+    PublicCommunityOperations_getPublicPlans: {
         parameters: {
             query?: never;
             header?: never;
@@ -2998,7 +2998,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.CommunityPlanDto"][];
+                    "application/json": components["schemas"]["Community.CommunityPlanDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -3007,7 +3007,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -3016,7 +3016,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -3025,7 +3025,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -3034,7 +3034,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -3043,12 +3043,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    PublicCommunityApi_getPlanBySlug: {
+    PublicCommunityOperations_getPlanBySlug: {
         parameters: {
             query?: never;
             header?: never;
@@ -3066,7 +3066,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Community.CommunityPlanDto"];
+                    "application/json": components["schemas"]["Community.CommunityPlanDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -3075,7 +3075,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -3084,7 +3084,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -3093,7 +3093,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -3102,7 +3102,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -3111,12 +3111,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    PublicCommunityApi_getPortalData: {
+    PublicCommunityOperations_getPortalData: {
         parameters: {
             query: {
                 token: string;
@@ -3135,7 +3135,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicCommunityApi.PortalDataResponse"];
+                    "application/json": components["schemas"]["Community.PortalDataResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -3144,7 +3144,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -3153,7 +3153,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -3162,7 +3162,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -3171,7 +3171,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -3180,12 +3180,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    PublicCommunityApi_cancelPortalSubscription: {
+    PublicCommunityOperations_cancelPortalSubscription: {
         parameters: {
             query: {
                 token: string;
@@ -3198,7 +3198,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PublicCommunityApi.CancelPortalRequest"];
+                "application/json": components["schemas"]["Community.CancelPortalRequest"];
             };
         };
         responses: {
@@ -3208,7 +3208,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -3217,7 +3217,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -3226,7 +3226,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -3235,7 +3235,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -3244,7 +3244,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -3253,12 +3253,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
     };
-    PublicCommunityApi_requestMagicLink: {
+    PublicCommunityOperations_requestMagicLink: {
         parameters: {
             query?: never;
             header?: never;
@@ -3269,7 +3269,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Models.Community.MagicLinkRequestDto"];
+                "application/json": components["schemas"]["Community.MagicLinkRequestDto"];
             };
         };
         responses: {
@@ -3279,7 +3279,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.StatusResponse"];
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -3288,7 +3288,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is unauthorized. */
@@ -3297,7 +3297,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Access is forbidden. */
@@ -3306,7 +3306,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description The server cannot find the requested resource. */
@@ -3315,7 +3315,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
             /** @description Server error */
@@ -3324,7 +3324,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Models.Core.ProblemDetails"];
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
                 };
             };
         };
