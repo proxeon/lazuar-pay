@@ -6,15 +6,12 @@ import LoginPage from "./components/LoginPage";
 import Launchpad from "./components/Launchpad";
 import Profile from "./components/Profile";
 import Security from "./components/Security";
-import Ledger from "./components/Ledger";
 
 const SIDEBAR_STATE_KEY = "one_page_sidebar_state";
 
-// Layout wrapper for authenticated routes (includes Sidebar)
 function PrivateLayout() {
   const [isMobile, setIsMobile] = useState(false);
   
-  // Initialize state from localStorage on desktop viewports
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== "undefined") {
       const isMobileViewport = window.innerWidth < 768;
@@ -26,7 +23,6 @@ function PrivateLayout() {
     return true;
   });
 
-  // Monitor screen resizing
   useEffect(() => {
     const checkMobile = () => {
       const isMobileViewport = window.innerWidth < 768;
@@ -45,7 +41,6 @@ function PrivateLayout() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Persist sidebar state changes on desktop views
   useEffect(() => {
     if (!isMobile) {
       localStorage.setItem(
@@ -86,7 +81,6 @@ export default function App() {
           <Route path="/launchpad" element={<Launchpad />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/security" element={<Security />} />
-          <Route path="/ledger" element={<Ledger />} />
         </Route>
 
         {/* Fallback for unknown routes */}

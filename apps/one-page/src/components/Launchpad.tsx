@@ -23,7 +23,7 @@ interface EcosystemApp {
 const ecosystemApps: EcosystemApp[] = [
   {
     id: "app_funnel",
-    name: "Funnel Engine",
+    name: "Funnel",
     subModule: "FUNNEL",
     category: "ACQUISITION",
     status: "ACTIVE",
@@ -33,7 +33,7 @@ const ecosystemApps: EcosystemApp[] = [
   },
   {
     id: "app_event",
-    name: "Event Portal",
+    name: "Event",
     subModule: "EVENT",
     category: "ACQUISITION",
     status: "ACTIVE",
@@ -43,7 +43,7 @@ const ecosystemApps: EcosystemApp[] = [
   },
   {
     id: "app_consult",
-    name: "Consult System",
+    name: "Consult",
     subModule: "CONSULT",
     category: "ACQUISITION",
     status: "ACTIVE",
@@ -53,7 +53,7 @@ const ecosystemApps: EcosystemApp[] = [
   },
   {
     id: "app_vault",
-    name: "Resource Vault",
+    name: "Vault",
     subModule: "VAULT",
     category: "FULFILLMENT",
     status: "ACTIVE",
@@ -63,7 +63,7 @@ const ecosystemApps: EcosystemApp[] = [
   },
   {
     id: "app_academy",
-    name: "Academy Platform",
+    name: "Academy",
     subModule: "ACADEMY",
     category: "FULFILLMENT",
     status: "ACTIVE",
@@ -74,7 +74,7 @@ const ecosystemApps: EcosystemApp[] = [
   },
   {
     id: "app_community",
-    name: "Member Community",
+    name: "Community",
     subModule: "COMMUNITY",
     category: "RETENTION",
     status: "ACTIVE",
@@ -84,20 +84,20 @@ const ecosystemApps: EcosystemApp[] = [
   },
   {
     id: "app_broadcast",
-    name: "Broadcast Center",
+    name: "Broadcast",
     subModule: "BROADCAST",
     category: "RETENTION",
-    status: "PAUSED",
+    status: "ACTIVE",
     devPort: 3010,
     productionSubdomain: "broadcast",
     description: "Distribute news, updates, and targeted newsletters to active databases."
   },
   {
     id: "app_affiliate",
-    name: "Affiliate Engine",
+    name: "Affiliate",
     subModule: "AFFILIATE",
     category: "RETENTION",
-    status: "EXPIRED",
+    status: "ACTIVE",
     devPort: 3010,
     productionSubdomain: "affiliate",
     description: "Enable viral distribution loops and track referral statistics."
@@ -176,7 +176,7 @@ function AccessCard({ app, onClick }: { app: EcosystemApp; onClick: () => void }
     <div 
       onClick={onClick}
       className={cn(
-        "group flex flex-col aspect-square bg-white border border-[#e5e5e5] rounded-none shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] transition-all duration-200",
+        "group flex flex-col h-[340px] w-full bg-white border border-[#e5e5e5] rounded-none shadow-sm hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] transition-all duration-200",
         app.status === "ACTIVE" 
           ? "cursor-pointer hover:border-[#a1a1aa] hover:-translate-y-1" 
           : "opacity-70 cursor-not-allowed grayscale-[20%]"

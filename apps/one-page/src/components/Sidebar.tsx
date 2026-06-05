@@ -3,7 +3,6 @@ import {
   LayoutDashboard, 
   User, 
   ShieldCheck, 
-  ReceiptText, 
   Settings, 
   LogOut, 
   PanelLeftClose, 
@@ -36,12 +35,11 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Updated Core Routes
+  // Menu items list with Ledger route completely removed
   const menuItems = [
     { icon: LayoutDashboard, label: "Launchpad", path: "/launchpad" },
     { icon: User, label: "Profile", path: "/profile" },
     { icon: ShieldCheck, label: "Security", path: "/security" },
-    { icon: ReceiptText, label: "Billing Ledger", path: "/ledger" },
   ];
 
   return (
@@ -92,7 +90,6 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
 
       <nav className="flex-1 space-y-[2px] overflow-x-hidden p-3 py-4 text-sm font-medium">
         {menuItems.map((item, index) => {
-          // Dynamic Active State checking
           const isActive = location.pathname.startsWith(item.path);
 
           return (
