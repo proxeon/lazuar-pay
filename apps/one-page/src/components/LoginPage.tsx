@@ -19,17 +19,18 @@ const AppleIcon = () => (
   </svg>
 );
 
-type AuthMode = "password" | "magic_link" | "magic_link_sent";
+type AuthMode = "password" | "register" | "magic_link" | "magic_link_sent";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("password");
   const [isLoading, setIsLoading] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Simulates a standard password or OAuth login
-  const handleLogin = (e?: React.FormEvent) => {
+  // Simulates a standard password, registration, or OAuth login
+  const handleAuth = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsLoading(true);
     
@@ -57,17 +58,17 @@ export default function LoginPage() {
       <div className="w-full max-w-[380px] mx-4 animate-in fade-in zoom-in-95 duration-300">
         
         {/* The Auth Card */}
-        <div className="bg-white border border-[#e5e5e5] p-8 shadow-sm">
+        <div className="bg-white border border-[#e5e5e5] p-8 rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
           
           {/* STATE 1: Standard Password Login */}
           {mode === "password" && (
-            <>
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <div className="text-center mb-8">
                 <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Sign in to Lazuar</h1>
                 <p className="text-[13px] text-[#71717a] mt-1.5">Welcome back to your ecosystem.</p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleAuth} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email</label>
                   <input
@@ -75,7 +76,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="flex h-11 w-full border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
                     placeholder="name@example.com"
                   />
                 </div>
@@ -90,7 +91,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="flex h-11 w-full border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
                     placeholder="••••••••"
                   />
                 </div>
@@ -98,7 +99,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-11 bg-[#09090b] text-white text-sm font-semibold tracking-wide flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2"
+                  className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2"
                 >
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Sign In"}
                 </button>
@@ -110,20 +111,111 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2.5">
-                <button type="button" onClick={() => handleLogin()} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm">
+                <button type="button" onClick={() => handleAuth()} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm rounded-none">
                   <GoogleIcon /> Google
                 </button>
-                <button type="button" onClick={() => handleLogin()} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm">
+                <button type="button" onClick={() => handleAuth()} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm rounded-none">
                   <AppleIcon /> Apple
                 </button>
-                <button type="button" onClick={() => setMode("magic_link")} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm">
+                <button type="button" onClick={() => setMode("magic_link")} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm rounded-none">
                   <Mail size={16} /> Passwordless / Magic Link
                 </button>
               </div>
-            </>
+
+              <div className="mt-8 text-center">
+                <p className="text-[12px] text-[#71717a]">
+                  Don't have an account?{" "}
+                  <button type="button" onClick={() => setMode("register")} className="text-[#09090b] font-semibold hover:underline">
+                    Sign up
+                  </button>
+                </p>
+              </div>
+            </div>
           )}
 
-          {/* STATE 2: Magic Link Form */}
+          {/* STATE 2: Register Account */}
+          {mode === "register" && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="text-center mb-8">
+                <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Create an account</h1>
+                <p className="text-[13px] text-[#71717a] mt-1.5">Join the Lazuar ecosystem today.</p>
+              </div>
+
+              <form onSubmit={handleAuth} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    placeholder="e.g. Akmal Firdaus"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    placeholder="name@example.com"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    placeholder="Create a secure password"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2"
+                >
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Create Account"}
+                </button>
+              </form>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-[#e5e5e5]" /></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-[#a1a1aa] font-medium tracking-widest text-[10px]">Or register with</span></div>
+              </div>
+
+              <div className="space-y-2.5">
+                <button type="button" onClick={() => handleAuth()} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm rounded-none">
+                  <GoogleIcon /> Google
+                </button>
+                <button type="button" onClick={() => handleAuth()} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm rounded-none">
+                  <AppleIcon /> Apple
+                </button>
+                <button type="button" onClick={() => setMode("magic_link")} disabled={isLoading} className="w-full h-11 border border-[#e5e5e5] bg-white text-[#09090b] text-[13px] font-medium flex items-center justify-center gap-2 hover:bg-[#fafafa] disabled:opacity-50 transition-colors shadow-sm rounded-none">
+                  <Mail size={16} /> Passwordless / Magic Link
+                </button>
+              </div>
+
+              <div className="mt-8 text-center">
+                <p className="text-[12px] text-[#71717a]">
+                  Already have an account?{" "}
+                  <button type="button" onClick={() => setMode("password")} className="text-[#09090b] font-semibold hover:underline">
+                    Sign in
+                  </button>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* STATE 3: Magic Link Form */}
           {mode === "magic_link" && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="text-center mb-8">
@@ -139,7 +231,7 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="flex h-11 w-full border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
                     placeholder="name@example.com"
                   />
                 </div>
@@ -147,7 +239,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading || !email}
-                  className="w-full h-11 bg-[#09090b] text-white text-sm font-semibold tracking-wide flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors"
+                  className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors"
                 >
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Send Magic Link"}
                 </button>
@@ -155,13 +247,13 @@ export default function LoginPage() {
 
               <div className="mt-6 text-center">
                 <button type="button" onClick={() => setMode("password")} className="text-[12px] font-medium text-[#71717a] hover:text-[#09090b] flex items-center justify-center gap-1.5 mx-auto transition-colors">
-                  <ArrowLeft size={14} /> Back to password login
+                  <ArrowLeft size={14} /> Back to standard login
                 </button>
               </div>
             </div>
           )}
 
-          {/* STATE 3: Magic Link Success */}
+          {/* STATE 4: Magic Link Success */}
           {mode === "magic_link_sent" && (
             <div className="animate-in fade-in zoom-in-95 duration-300 text-center py-4">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 mb-6">
