@@ -17,36 +17,61 @@ tasks:
     cmds:
       - docker-compose down -v
 
+  infra:logs:
+    desc: View and follow logs from local Docker infrastructure containers
+    cmds:
+      - docker-compose logs -f
+
   dev:
     desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
     deps: [infra:up]
     cmds:
-      - task: api:db:migrate
+      # We dont need to run "task: api:db:migrate" all the time. Only run this
+      # on fresh db. Otherwise we will get error "Entity XYZ already exist".
+      # - task: api:db:migrate
       - pnpm --filter lazuar-api dev
+
+  fe:
+    desc: Full dev stack (Docker infra + mprocs for frontends and tunnels)
+    cmds:
+      - mprocs -c mprocs-dev.yaml
 
   # ==========================================
   # .NET API Tasks
   # ==========================================
 
+  api:restore:
+    desc: Restore the .NET API solution dependencies
+    dir: apps/lazuar-api
+    cmds:
+      - dotnet restore Lazuar.slnx
+
   api:build:
     desc: Build the .NET API solution
+    deps: [api:restore]
     dir: apps/lazuar-api
     cmds:
       - dotnet build Lazuar.slnx
 
   api:db:migrate:
-    desc: Apply all pending migrations for Tenant and Messaging contexts sequentially
+    desc: Apply all pending migrations for all modular contexts sequentially
     dir: apps/lazuar-api/src/Lazuar.Api
     cmds:
       - dotnet ef database update --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:init:
-    desc: Generate the initial EF Core migrations for the Tenant and Messaging modules
+    desc: Generate the initial EF Core migrations for all core modules
     dir: apps/lazuar-api/src/Lazuar.Api
     cmds:
       - dotnet ef migrations add InitialTenantSchema --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialMessagingSchema --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialCommunitySchema --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialPaymentsSchema --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialCrmSchema --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:
     desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"
@@ -55,3 +80,54 @@ tasks:
       vars: [MODULE, NAME]
     cmds:
       - dotnet ef migrations add {{.NAME}} --context {{.MODULE}}DbContext --project ../../Modules/{{.MODULE}}/Infrastructure/Modules.{{.MODULE}}.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+
+  # ==========================================
+  # Ngrok Tunnel Tasks
+  # ==========================================
+
+  tunnel:api:
+    desc: Start ngrok tunnel for the .NET API on port 8080 (rewrites host-headers)
+    cmds:
+      - ngrok http 8080 --host-header="localhost:8080"
+
+  tunnel:fe:
+    desc: Start ngrok tunnel for Next.js community-page on port 3020 (rewrites host-headers)
+    cmds:
+      - ngrok http 3020 --host-header="localhost:3020"
+
+  tunnel:status:
+    desc: Query the local ngrok agent API to print active public tunnel URLs
+    cmds:
+      - |
+        echo "Querying active ngrok tunnels..."
+        curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | sed 's/"public_url":"//' || echo "No active ngrok agents detected. Ensure ngrok is running."
+
+
+  # ─── CODE GENERATION (TypeSpec -> OpenAPI -> Clients) ──────────────────────
+
+  gen:
+    desc: Run the full code-generation pipeline
+    cmds:
+      - task: gen:spec
+      - task: gen:types-ts
+      - task: gen:types-dotnet
+    sources:
+      - "packages/api-spec/*.tsp"
+    generates:
+      - "packages/api-spec/dist/openapi.yaml"
+
+  gen:spec:
+    desc: Compile TypeSpec to OpenAPI.yaml
+    dir: packages/api-spec
+    cmds:
+      - pnpm build
+
+  gen:types-ts:
+    desc: Generate TypeScript types for Frontend apps
+    cmds:
+      - pnpm --filter @repo/api-types-ts generate
+
+  gen:types-dotnet:
+    desc: Generate C# DTOs for the Backend API
+    cmds:
+      - pnpm --filter @repo/api-types-dotnet generate

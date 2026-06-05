@@ -31,7 +31,8 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
-                var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+                
+                var eventBus = scope.ServiceProvider.GetRequiredService<InMemoryEventBus>();
 
                 var entityType = db.Model.FindEntityType(typeof(OutboxMessage));
                 var schema = entityType?.GetSchema() ?? "public";
@@ -39,9 +40,10 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
 
                 await using var transaction = await db.Database.BeginTransactionAsync(stoppingToken);
 
+                // UPGRADE: Added "OccurredOn" <= NOW() to enable future-scheduled job queue capabilities!
                 var sql = $"""
                     SELECT * FROM "{schema}"."{tableName}"
-                    WHERE "ProcessedAt" IS NULL
+                    WHERE "ProcessedAt" IS NULL AND "OccurredOn" <= NOW()
                     ORDER BY "OccurredOn"
                     LIMIT 20
                     FOR UPDATE SKIP LOCKED;
@@ -89,21 +91,19 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                 _logger.LogError(ex, "Error occurred executing outbox background worker.");
             }
 
-            // Phase 2 Optimization: If we processed a full batch (20), there might be more right now. Loop instantly!
             if (messagesProcessed == 20)
             {
                 await Task.Yield();
                 continue;
             }
 
-            // Otherwise, wait until the DbContext triggers us, or fallback after 5 seconds
             try
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
                 cts.CancelAfter(_pollInterval);
                 await _jobTrigger.WaitAsync(cts.Token);
             }
-            catch (OperationCanceledException) { /* Timeout reached naturally or stopped */ }
+            catch (OperationCanceledException) { }
         }
     }
 }

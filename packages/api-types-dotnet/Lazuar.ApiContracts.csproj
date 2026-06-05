@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Lazuar.ApiTypes</RootNamespace>
+    <AssemblyName>Lazuar.ApiTypes</AssemblyName>
+    
+    <!-- 1. Disable the auto-inclusion of all .cs files in the directory -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 2. Explicitly tell the compiler to ONLY compile the NSwag generated file -->
+    <Compile Include="Lazuar.ApiContracts.cs" />
+  </ItemGroup>
+
+</Project>

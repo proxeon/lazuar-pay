@@ -2,6 +2,8 @@ using NUnit.Framework;
 using FluentAssertions;
 using NetArchTest.Rules;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
+using BuildingBlocks.Infrastructure;
 
 namespace Lazuar.ArchitectureTests;
 
@@ -10,11 +12,22 @@ public class ModuleBoundaryTests
 {
     private static readonly Assembly TenantApplicationAssembly = typeof(Modules.Tenant.Application.DependencyInjection).Assembly;
     private static readonly Assembly MessagingApplicationAssembly = typeof(Modules.Messaging.Application.DependencyInjection).Assembly;
+    private static readonly Assembly CommunityApplicationAssembly = typeof(Modules.Community.Application.DependencyInjection).Assembly;
+    private static readonly Assembly PaymentsApplicationAssembly = typeof(Modules.Payments.Application.DependencyInjection).Assembly;
+
+    // Infrastructure assembly definitions for DbContext architecture checks
+    private static readonly Assembly TenantInfrastructureAssembly = typeof(Modules.Tenant.Infrastructure.DependencyInjection).Assembly;
+    private static readonly Assembly MessagingInfrastructureAssembly = typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly;
+    private static readonly Assembly CommunityInfrastructureAssembly = typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly;
+    private static readonly Assembly CrmInfrastructureAssembly = typeof(Modules.CRM.Infrastructure.DependencyInjection).Assembly;
+    private static readonly Assembly PaymentsInfrastructureAssembly = typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly;
 
     private const string TenantNamespace = "Modules.Tenant";
     private const string MessagingNamespace = "Modules.Messaging";
+    private const string CommunityNamespace = "Modules.Community";
     private const string UserAccessNamespace = "Modules.UserAccess";
     private const string CrmNamespace = "Modules.CRM";
+    private const string PaymentsNamespace = "Modules.Payments";
 
     [Test]
     public void TenantModule_ShouldNotDependOn_MessagingModuleInternalLayers()
@@ -47,6 +60,84 @@ public class ModuleBoundaryTests
     }
 
     [Test]
+    public void CommunityModule_ShouldNotDependOn_OtherModulesInternalLayers()
+    {
+        var result = Types.InAssembly(CommunityApplicationAssembly)
+            .Should()
+            .NotHaveDependencyOnAny(
+                $"{TenantNamespace}.Domain",
+                $"{TenantNamespace}.Application",
+                $"{TenantNamespace}.Infrastructure",
+                $"{MessagingNamespace}.Domain",
+                $"{MessagingNamespace}.Application",
+                $"{MessagingNamespace}.Infrastructure",
+                $"{CrmNamespace}.Domain",
+                $"{CrmNamespace}.Application",
+                $"{CrmNamespace}.Infrastructure",
+                $"{PaymentsNamespace}.Domain",
+                $"{PaymentsNamespace}.Application",
+                $"{PaymentsNamespace}.Infrastructure"
+            )
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue("Community module must not bypass boundaries to depend on internal layers of other modules.");
+    }
+
+    [Test]
+    public void PaymentsModule_ShouldNotDependOn_OtherModulesInternalLayers()
+    {
+        var result = Types.InAssembly(PaymentsApplicationAssembly)
+            .Should()
+            .NotHaveDependencyOnAny(
+                $"{TenantNamespace}.Domain",
+                $"{TenantNamespace}.Application",
+                $"{TenantNamespace}.Infrastructure",
+                $"{MessagingNamespace}.Domain",
+                $"{MessagingNamespace}.Application",
+                $"{MessagingNamespace}.Infrastructure",
+                $"{CommunityNamespace}.Domain",
+                $"{CommunityNamespace}.Application",
+                $"{CommunityNamespace}.Infrastructure",
+                $"{CrmNamespace}.Domain",
+                $"{CrmNamespace}.Application",
+                $"{CrmNamespace}.Infrastructure",
+                $"{UserAccessNamespace}.Domain",
+                $"{UserAccessNamespace}.Application",
+                $"{UserAccessNamespace}.Infrastructure"
+            )
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue("Payments module must not bypass boundaries to depend on internal layers of other modules.");
+    }
+
+    [Test]
+    public void CrmModule_ShouldNotDependOn_OtherModulesInternalLayers()
+    {
+        var result = Types.InAssembly(CrmInfrastructureAssembly)
+            .Should()
+            .NotHaveDependencyOnAny(
+                $"{TenantNamespace}.Domain",
+                $"{TenantNamespace}.Application",
+                $"{TenantNamespace}.Infrastructure",
+                $"{MessagingNamespace}.Domain",
+                $"{MessagingNamespace}.Application",
+                $"{MessagingNamespace}.Infrastructure",
+                $"{CommunityNamespace}.Domain",
+                $"{CommunityNamespace}.Application",
+                $"{CommunityNamespace}.Infrastructure",
+                $"{PaymentsNamespace}.Domain",
+                $"{PaymentsNamespace}.Application",
+                $"{PaymentsNamespace}.Infrastructure",
+                $"{UserAccessNamespace}.Domain",
+                $"{UserAccessNamespace}.Application",
+                $"{UserAccessNamespace}.Infrastructure"
+            )
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue("CRM module must not bypass boundaries to depend on internal layers of other modules.");
+    }
+
+    [Test]
     public void Domain_ShouldNotHave_ExternalDependencies()
     {
         var domainAssembly = typeof(BuildingBlocks.Domain.Entity).Assembly;
@@ -59,8 +150,10 @@ public class ModuleBoundaryTests
                 "SharedKernel",
                 TenantNamespace,
                 MessagingNamespace,
+                CommunityNamespace,
                 UserAccessNamespace,
-                CrmNamespace
+                CrmNamespace,
+                PaymentsNamespace
             )
             .GetResult();
 
@@ -95,5 +188,34 @@ public class ModuleBoundaryTests
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue("Domain events must be strictly internal and not double as Integration events.");
+    }
+
+    [Test]
+    public void DatabaseContextClasses_ShouldResideInInfrastructure_OrBeMarkedInternal()
+    {
+        var assemblies = new[]
+        {
+            TenantInfrastructureAssembly,
+            MessagingInfrastructureAssembly,
+            CommunityInfrastructureAssembly,
+            CrmInfrastructureAssembly,
+            PaymentsInfrastructureAssembly
+        };
+
+        var dbContextTypes = Types.InAssemblies(assemblies)
+            .That()
+            .Inherit(typeof(DbContext))
+            .Or()
+            .Inherit(typeof(PlatformDbContext));
+
+        var result = dbContextTypes
+            .Should()
+            .NotBePublic() // Corrected NetArchTest condition for non-public access verification
+            .Or()
+            .ResideInNamespaceEndingWith("Infrastructure")
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(
+            "To prevent connection and transaction leaks, all DbContext classes must remain internal or reside strictly within their module's Infrastructure namespace.");
     }
 }

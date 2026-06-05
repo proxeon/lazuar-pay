@@ -16,7 +16,4 @@ public interface IIntegrationEventHandler<in TEvent> where TEvent : IIntegration
 public interface IEventBus
 {
     Task PublishAsync<TEvent>(TEvent @event) where TEvent : IIntegrationEvent;
-    void Subscribe<TEvent, THandler>() 
-        where TEvent : IIntegrationEvent 
-        where THandler : IIntegrationEventHandler<TEvent>;
 }

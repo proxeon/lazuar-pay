@@ -1,0 +1,9 @@
+{
+  "name": "@repo/api-types-dotnet",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "generate": "dotnet tool restore && DOTNET_ROLL_FORWARD=Major dotnet nswag run nswag.json",
+    "build": "DOTNET_ROLL_FORWARD=Major dotnet build"
+  }
+}

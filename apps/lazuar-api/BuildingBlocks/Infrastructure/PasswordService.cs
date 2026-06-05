@@ -1,4 +1,5 @@
 using BuildingBlocks.Application;
+using Microsoft.Extensions.Configuration;
 
 namespace BuildingBlocks.Infrastructure;
 
@@ -10,6 +11,13 @@ public interface IPasswordService
 
 public class PasswordService : IPasswordService
 {
-    public string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password, workFactor: 11);
+    private readonly int _workFactor;
+
+    public PasswordService(IConfiguration configuration)
+    {
+        _workFactor = configuration.GetValue<int>("Security:PasswordWorkFactor", 11);
+    }
+
+    public string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password, workFactor: _workFactor);
     public bool Verify(string password, string hash) => BCrypt.Net.BCrypt.Verify(password, hash);
 }

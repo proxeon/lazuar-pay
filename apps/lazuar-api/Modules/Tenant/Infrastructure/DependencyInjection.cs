@@ -25,6 +25,10 @@ public static class DependencyInjection
             new NpgsqlConnectionFactory(connectionString));
 
         services.AddScoped<ITenantQueryService, TenantQueryService>();
+
+        // Overrides global IEventBus with keyed scoped outbox-backed writer for Tenant DbContext
+        services.AddKeyedScoped<IEventBus, OutboxEventBus<TenantDbContext>>("TenantEventBus");
+
         services.AddHostedService<TenantOutboxPublisherJob>();
 
         return services;
