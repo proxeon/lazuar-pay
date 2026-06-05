@@ -1,7 +1,17 @@
 import { cn } from "../lib/utils";
-import { LayoutDashboard, Users, BarChart3, ChevronLeft, ChevronRight, Settings, LogOut, PanelLeftClose, PanelLeft, PanelLeftOpen } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  User, 
+  ShieldCheck, 
+  ReceiptText, 
+  Settings, 
+  LogOut, 
+  PanelLeftClose, 
+  PanelLeftOpen 
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,6 +22,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   const expanded = isMobile ? true : isOpen;
 
@@ -25,10 +36,12 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Updated Core Routes
   const menuItems = [
-    { icon: LayoutDashboard, label: "Overview", active: true },
-    { icon: Users, label: "Audience", active: false },
-    { icon: BarChart3, label: "Performance", active: false },
+    { icon: LayoutDashboard, label: "Launchpad", path: "/launchpad" },
+    { icon: User, label: "Profile", path: "/profile" },
+    { icon: ShieldCheck, label: "Security", path: "/security" },
+    { icon: ReceiptText, label: "Billing Ledger", path: "/ledger" },
   ];
 
   return (
@@ -72,38 +85,44 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
             transition={{ duration: 0.2 }}
             className="whitespace-nowrap text-[14px] font-semibold tracking-tight text-[#09090b]"
           >
-            Metrics.app
+            Lazuar One
           </motion.span>
         </div>
       </div>
 
       <nav className="flex-1 space-y-[2px] overflow-x-hidden p-3 py-4 text-sm font-medium">
-        {menuItems.map((item, index) => (
-          <button
-            key={index}
-            onClick={() => isMobile && setIsOpen(false)}
-            title={!expanded ? item.label : undefined}
-            className={cn(
-              "flex h-8 w-full items-center rounded-md transition-colors overflow-hidden relative focus:outline-none",
-              item.active
-                ? "bg-[#f4f4f5] text-[#09090b]"
-                : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
-            )}
-          >
-            <div className="flex h-full w-[40px] shrink-0 items-center justify-center">
-              <item.icon className="shrink-0" size={15} strokeWidth={item.active ? 2.5 : 2} />
-            </div>
-            
-            <motion.div
-              initial={false}
-              animate={{ opacity: expanded ? 1 : 0, filter: expanded ? "blur(0px)" : "blur(2px)" }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="whitespace-nowrap text-[13px] font-medium leading-none"
+        {menuItems.map((item, index) => {
+          // Dynamic Active State checking
+          const isActive = location.pathname.startsWith(item.path);
+
+          return (
+            <Link
+              key={index}
+              to={item.path}
+              onClick={() => isMobile && setIsOpen(false)}
+              title={!expanded ? item.label : undefined}
+              className={cn(
+                "flex h-8 w-full items-center rounded-md transition-colors overflow-hidden relative focus:outline-none",
+                isActive
+                  ? "bg-[#f4f4f5] text-[#09090b]"
+                  : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
+              )}
             >
-              {item.label}
-            </motion.div>
-          </button>
-        ))}
+              <div className="flex h-full w-[40px] shrink-0 items-center justify-center">
+                <item.icon className="shrink-0" size={15} strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              
+              <motion.div
+                initial={false}
+                animate={{ opacity: expanded ? 1 : 0, filter: expanded ? "blur(0px)" : "blur(2px)" }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="whitespace-nowrap text-[13px] font-medium leading-none"
+              >
+                {item.label}
+              </motion.div>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="shrink-0 border-t border-[#e5e5e5] p-3 overflow-visible relative">
@@ -115,7 +134,7 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
           >
             <div className="flex w-[40px] shrink-0 items-center justify-center">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-[#f4f4f5] border border-[#e5e5e5] text-[10px] font-semibold text-[#52525b] group-hover:bg-white transition-colors">
-                AU
+                AF
               </div>
             </div>
             <motion.div
@@ -124,8 +143,8 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="flex flex-col gap-[2px]"
             >
-              <span className="whitespace-nowrap text-[13px] font-medium leading-none text-[#09090b]">Admin User</span>
-              <span className="whitespace-nowrap text-[11px] font-medium leading-none text-[#71717a]">admin@metrics.io</span>
+              <span className="whitespace-nowrap text-[13px] font-medium leading-none text-[#09090b]">Akmal Firdaus</span>
+              <span className="whitespace-nowrap text-[11px] font-medium leading-none text-[#71717a]">akmal@lazuar.com</span>
             </motion.div>
           </button>
           
@@ -142,17 +161,25 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
                 )}
               >
                   <div className="px-2 py-1.5 border-b border-[#f4f4f5] mb-1">
-                    <span className="block text-[13px] font-medium text-[#09090b]">Admin User</span>
-                    <span className="block text-[11px] text-[#71717a]">admin@metrics.io</span>
+                    <span className="block text-[13px] font-medium text-[#09090b]">Akmal Firdaus</span>
+                    <span className="block text-[11px] text-[#71717a]">akmal@lazuar.com</span>
                   </div>
-                  <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none focus:bg-[#f4f4f5]">
+                  <Link 
+                    to="/profile"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none focus:bg-[#f4f4f5]"
+                  >
                     <Settings size={14} />
                     Settings
-                  </button>
-                  <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors focus:outline-none focus:bg-red-50">
+                  </Link>
+                  <Link 
+                    to="/login"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors focus:outline-none focus:bg-red-50"
+                  >
                     <LogOut size={14} />
                     Log out
-                  </button>
+                  </Link>
               </motion.div>
             )}
           </AnimatePresence>

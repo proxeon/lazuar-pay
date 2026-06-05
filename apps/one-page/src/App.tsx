@@ -1,20 +1,23 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Toaster } from "sonner";
 import Sidebar from "./components/Sidebar";
-import Dashboard from "./components/Dashboard";
+import LoginPage from "./components/LoginPage";
+import Launchpad from "./components/Launchpad";
+import Profile from "./components/Profile";
+import Security from "./components/Security";
+import Ledger from "./components/Ledger"; // <-- ADDED
 
-export default function App() {
+// Layout wrapper for authenticated routes (includes Sidebar)
+function PrivateLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setIsSidebarOpen(!mobile);
     };
     
     checkMobile();
@@ -27,10 +30,7 @@ export default function App() {
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} isMobile={isMobile} />
       
       <main className="flex-1 flex flex-col overflow-y-auto w-full relative">
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
-        </Routes>
+        <Outlet />
         
         {isMobile && isSidebarOpen && (
           <div 
@@ -40,5 +40,30 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <>
+      <Routes>
+        {/* Public Boundary (No Sidebar) */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Private Boundary (Wrapped with Sidebar) */}
+        <Route element={<PrivateLayout />}>
+          <Route path="/" element={<Navigate to="/launchpad" replace />} />
+          <Route path="/launchpad" element={<Launchpad />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/security" element={<Security />} />
+          <Route path="/ledger" element={<Ledger />} />
+        </Route>
+
+        {/* Fallback for unknown routes */}
+        <Route path="*" element={<Navigate to="/launchpad" replace />} />
+      </Routes>
+      
+      <Toaster position="bottom-right" richColors theme="light" closeButton />
+    </>
   );
 }
