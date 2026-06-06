@@ -3,15 +3,18 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import Users from "./components/Users";
-import type { MockUser } from "./components/Users"; // Exclusively import as type
+import type { MockUser } from "./components/Users";
 import UserDetailsPage from "./components/UserDetailsPage";
+import Onboard from "./components/Onboard";
+import type { OnboardingRequest } from "./components/Onboard"; // Imported as type
+import OnboardDetailsPage from "./components/OnboardDetailsPage"; // Imported new page
 
 const SIDEBAR_STATE_KEY = "one_admin_sidebar_state";
 
 export default function App() {
   const [isMobile, setIsMobile] = useState(false);
 
-  // Elevate Users State globally so changes sync perfectly across navigation boundaries
+  // 1. Elevated Global Clients Directory State
   const [users, setUsers] = useState<MockUser[]>([
     {
       id: "usr_018f3a3f-3610-73bf-baef-c07a3c3df9ee",
@@ -39,6 +42,24 @@ export default function App() {
       isActive: false, 
       authorizedApps: ["VAULT"],
       createdAt: "2025-02-12T11:45:00Z",
+    }
+  ]);
+
+  // 2. Elevated Global Onboarding Approvals State
+  const [pendingRequests, setPendingRequests] = useState<OnboardingRequest[]>([
+    {
+      id: "req_018f3a3f-3610-73bf-baef-c07a3c3df9fa",
+      name: "John Doe",
+      email: "john.doe@gmail.com",
+      requestedApps: ["FUNNEL", "COMMUNITY"],
+      createdAt: "2025-02-14T10:00:00Z",
+    },
+    {
+      id: "req_018f3a3f-3610-73bf-baef-c07a3c3df9fb",
+      name: "Sarah Connor",
+      email: "sarah.connor@sky.net",
+      requestedApps: ["VAULT", "ACADEMY"],
+      createdAt: "2025-02-15T12:30:00Z",
     }
   ]);
 
@@ -89,9 +110,12 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           
-          {/* Passed global states as props */}
           <Route path="/users" element={<Users users={users} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/users/:id" element={<UserDetailsPage users={users} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
+          
+          {/* Synchronized state parameters passed to Onboard routes */}
+          <Route path="/onboard" element={<Onboard pendingRequests={pendingRequests} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
+          <Route path="/onboard/:id" element={<OnboardDetailsPage pendingRequests={pendingRequests} setPendingRequests={setPendingRequests} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
         </Routes>
         
         {isMobile && isSidebarOpen && (

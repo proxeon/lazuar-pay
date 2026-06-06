@@ -2,6 +2,7 @@ import { cn } from "../lib/utils";
 import { 
   LayoutDashboard, 
   Users, 
+  UserPlus, // Imported new icon
   Settings, 
   LogOut, 
   PanelLeftClose, 
@@ -34,9 +35,10 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Performance option completely removed
+  // Updated menuItems array with Onboarding positioned between Overview and Users
   const menuItems = [
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
+    { icon: UserPlus, label: "Onboarding", path: "/onboard" },
     { icon: Users, label: "Users", path: "/users" },
   ];
 
