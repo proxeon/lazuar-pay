@@ -13,6 +13,9 @@ public class ClientProfileConfiguration : IEntityTypeConfiguration<ClientProfile
         builder.HasKey(x => x.Id);
         
         builder.HasIndex(x => new { x.OrganizationId, x.Email, x.Phone }).IsUnique();
+        
+        // Index for fast lookup by Global Identity
+        builder.HasIndex(x => x.GlobalUserId);
 
         builder.Property(x => x.FullName).IsRequired().HasMaxLength(255);
         builder.Property(x => x.Email).IsRequired().HasMaxLength(255);

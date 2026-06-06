@@ -30,6 +30,13 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
 
         if (existingProfile != null)
         {
+            // If an old guest profile exists, but the user is now logged in via Lazuar One, bind the IDs!
+            if (existingProfile.GlobalUserId == null && request.GlobalUserId.HasValue)
+            {
+                existingProfile.GlobalUserId = request.GlobalUserId.Value;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+
             return existingProfile.Id;
         }
 
@@ -38,6 +45,7 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
         {
             Id = Guid.CreateVersion7(),
             OrganizationId = request.OrganizationId,
+            GlobalUserId = request.GlobalUserId,
             FullName = request.FullName.Trim(),
             Email = emailNormalized,
             Phone = phoneNormalized,

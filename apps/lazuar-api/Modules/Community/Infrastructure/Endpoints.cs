@@ -14,7 +14,7 @@ using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
 using Modules.Payments.Application.Queries;
 using Modules.Payments.Application.Commands;
-using Modules.One.Contracts;
+using Modules.One.Contracts; 
 using Modules.Messaging.Contracts;
 using Lazuar.ApiTypes;
 
@@ -110,10 +110,10 @@ public static class Endpoints
 
         publicGroup.MapGet("/{tenantSlug}/plans", async Task<Results<Ok<ICollection<CommunityPlanDto>>, NotFound>> (
             string tenantSlug,
-            IOneQueryService oneQueryService,
+            IOneQueryService oneQueryService, 
             ICommunityQueryService queryService) =>
         {
-            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug); 
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             return TypedResults.Ok((ICollection<CommunityPlanDto>)plans.ToList());
@@ -122,10 +122,10 @@ public static class Endpoints
         publicGroup.MapGet("/{tenantSlug}/plans/{slug}", async Task<Results<Ok<CommunityPlanDto>, NotFound>> (
             string tenantSlug,
             string slug,
-            IOneQueryService oneQueryService,
+            IOneQueryService oneQueryService, 
             ICommunityQueryService queryService) =>
         {
-            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug); 
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             var plan = plans.FirstOrDefault(p => p.Slug == slug);
@@ -316,19 +316,24 @@ public static class Endpoints
         // ==========================================
         publicGroup.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, NotFound>> (
             PublicCheckoutRequestDto req,
-            IOneQueryService oneQueryService,
+            IOneQueryService oneQueryService, 
+            IExecutionContextAccessor ctx, // <-- ADDED: Inject Context Accessor
             IMediator mediator) =>
         {
-            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(req.Tenant_slug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(req.Tenant_slug); 
             if (tenant == null || !tenant.IsActive)
                 return TypedResults.NotFound();
+            
+            // --> ADDED: Resolve Global User ID from the context if the user has an active Lazuar One cookie
+            var globalUserId = ctx.UserId != Guid.Empty ? ctx.UserId : (Guid?)null;
             
             var command = new RegisterPublicSubscriberCommand(
                 tenant.Id,
                 req.Plan_slug,
                 req.Name,
                 req.Email,
-                req.Phone);
+                req.Phone,
+                globalUserId); // <-- ADDED: Pass to the command
             
             var checkoutUrl = await mediator.Send(command);
             return TypedResults.Ok(new CheckoutResponse { Url = checkoutUrl });
@@ -341,10 +346,10 @@ public static class Endpoints
             string tenantSlug,
             [FromBody] MagicLinkRequestDto req,
             HttpRequest httpReq,
-            IOneQueryService oneQueryService,
+            IOneQueryService oneQueryService, 
             IMediator mediator) =>
         {
-            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug); 
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}";
@@ -356,14 +361,14 @@ public static class Endpoints
         publicGroup.MapGet("/{tenantSlug}/portal", async Task<Results<Ok<PortalDataResponse>, NotFound, UnauthorizedHttpResult>> (
             string tenantSlug,
             [FromQuery] string token,
-            IOneQueryService oneQueryService,
+            IOneQueryService oneQueryService, 
             IMagicLinkTokenService tokenService,
             IMediator mediator) =>
         {
             var subId = tokenService.ValidateToken(token);
             if (!subId.HasValue) return TypedResults.Unauthorized();
             
-            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug); 
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             var query = new GetPortalSubscriptionQuery(tenant.Id, subId.Value);
@@ -377,14 +382,14 @@ public static class Endpoints
             string tenantSlug,
             [FromQuery] string token,
             [FromBody] CancelPortalRequest req,
-            IOneQueryService oneQueryService,
+            IOneQueryService oneQueryService, 
             IMagicLinkTokenService tokenService,
             IMediator mediator) =>
         {
             var subId = tokenService.ValidateToken(token);
             if (!subId.HasValue) return TypedResults.Unauthorized();
             
-            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug); 
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             // SECURITY: Ensure the requested cancellation matches the token's authenticated ID
