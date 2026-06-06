@@ -7,7 +7,7 @@ using BuildingBlocks.Infrastructure;
 using Modules.Messaging.Application;
 using Modules.Messaging.Infrastructure.EventHandlers;
 using Modules.Messaging.Contracts;
-using Modules.Tenant.Contracts;
+using Modules.One.Contracts;
 using Modules.Community.Contracts;
 
 namespace Modules.Messaging.Infrastructure;
@@ -38,7 +38,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<IEventBus, OutboxEventBus<MessagingDbContext>>("MessagingEventBus");
 
         // Register Inbox Handlers
-        services.AddTransient<TenantCreatedIntegrationEventHandler>();
+        services.AddTransient<TenantProvisionedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
         services.AddTransient<CommunityIntegrationEventHandlers>();
 
@@ -52,7 +52,8 @@ public static class DependencyInjection
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         
-        eventBus.Subscribe<TenantCreatedIntegrationEvent, TenantCreatedIntegrationEventHandler>();
+        // Tenant Event Subscriptions
+        eventBus.Subscribe<TenantProvisionedIntegrationEvent, TenantProvisionedIntegrationEventHandler>();
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();
 
         // Community Event Subscriptions

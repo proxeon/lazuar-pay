@@ -1,6 +1,6 @@
 using BuildingBlocks.Application;
 
-namespace Modules.Tenant.Contracts;
+namespace Modules.One.Contracts;
 
 public record TenantUpdatedIntegrationEvent(Guid TenantId, string Name, string Slug, bool IsActive) : IIntegrationEvent
 {

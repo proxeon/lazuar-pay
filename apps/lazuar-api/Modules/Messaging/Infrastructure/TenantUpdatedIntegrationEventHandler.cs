@@ -1,7 +1,7 @@
 using System.Text.Json;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
-using Modules.Tenant.Contracts;
+using Modules.One.Contracts;
 
 namespace Modules.Messaging.Infrastructure;
 

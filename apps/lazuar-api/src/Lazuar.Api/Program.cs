@@ -12,7 +12,7 @@ using System.Security.Claims;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
-using Modules.Tenant.Infrastructure;
+using Modules.One.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
@@ -85,7 +85,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
     
-    // --> ADDED: Instruct the middleware to read the token from the cookie
+    // Read the token from the cookie
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -144,12 +144,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Application.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Application.DependencyInjection).Assembly); // <-- Changed
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
 
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly); // <-- Changed
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly);
@@ -157,7 +157,7 @@ builder.Services.AddMediatR(cfg =>
 });
 
 // Register Module Services
-builder.Services.AddTenantModule(builder.Configuration);
+builder.Services.AddOneModule(builder.Configuration); // <-- Changed
 builder.Services.AddMessagingModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddCrmModule(builder.Configuration);
@@ -206,11 +206,11 @@ apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<P
 
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
 
-        // --> ADDED: Issue the HttpOnly Cookie
+        // Issue the HttpOnly Cookie
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = !app.Environment.IsDevelopment(), // Secure true in Prod, false in Local Dev
+            Secure = !app.Environment.IsDevelopment(),
             SameSite = SameSiteMode.Lax,
             Expires = DateTime.UtcNow.AddHours(expiryHours)
         };
@@ -240,7 +240,7 @@ apiGroup.MapGet("/platform/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResul
 }).RequireAuthorization();
 
 // Map Minimal API Endpoints
-apiGroup.MapTenantEndpoints();
+// apiGroup.MapOneEndpoints(); <-- Commented out until we create the endpoints for One
 apiGroup.MapMessagingEndpoints();
 apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();

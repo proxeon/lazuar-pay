@@ -1,10 +1,10 @@
 using MediatR;
 using Modules.Messaging.Domain;
-using Modules.Tenant.Contracts;
+using Modules.One.Contracts;
 
 namespace Modules.Messaging.Application;
 
-public class TenantCreatedEventHandler : INotificationHandler<TenantCreatedIntegrationEvent>
+public class TenantCreatedEventHandler : INotificationHandler<TenantProvisionedIntegrationEvent>
 {
     private readonly ITenantReplicaRepository _repository;
 
@@ -13,7 +13,7 @@ public class TenantCreatedEventHandler : INotificationHandler<TenantCreatedInteg
         _repository = repository;
     }
 
-    public async Task Handle(TenantCreatedIntegrationEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(TenantProvisionedIntegrationEvent notification, CancellationToken cancellationToken)
     {
         var existing = await _repository.GetByIdAsync(notification.TenantId);
         if (existing == null)

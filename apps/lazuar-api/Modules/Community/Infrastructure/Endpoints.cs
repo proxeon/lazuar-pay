@@ -14,7 +14,7 @@ using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
 using Modules.Payments.Application.Queries;
 using Modules.Payments.Application.Commands;
-using Modules.Tenant.Contracts;
+using Modules.One.Contracts;
 using Modules.Messaging.Contracts;
 using Lazuar.ApiTypes;
 
@@ -110,10 +110,10 @@ public static class Endpoints
 
         publicGroup.MapGet("/{tenantSlug}/plans", async Task<Results<Ok<ICollection<CommunityPlanDto>>, NotFound>> (
             string tenantSlug,
-            ITenantQueryService tenantQueryService,
+            IOneQueryService oneQueryService,
             ICommunityQueryService queryService) =>
         {
-            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             return TypedResults.Ok((ICollection<CommunityPlanDto>)plans.ToList());
@@ -122,10 +122,10 @@ public static class Endpoints
         publicGroup.MapGet("/{tenantSlug}/plans/{slug}", async Task<Results<Ok<CommunityPlanDto>, NotFound>> (
             string tenantSlug,
             string slug,
-            ITenantQueryService tenantQueryService,
+            IOneQueryService oneQueryService,
             ICommunityQueryService queryService) =>
         {
-            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             var plans = await queryService.GetPublicPlansAsync(tenant.Id);
             var plan = plans.FirstOrDefault(p => p.Slug == slug);
@@ -316,10 +316,10 @@ public static class Endpoints
         // ==========================================
         publicGroup.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, NotFound>> (
             PublicCheckoutRequestDto req,
-            ITenantQueryService tenantQueryService,
+            IOneQueryService oneQueryService,
             IMediator mediator) =>
         {
-            var tenant = await tenantQueryService.GetTenantBySlugAsync(req.Tenant_slug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(req.Tenant_slug);
             if (tenant == null || !tenant.IsActive)
                 return TypedResults.NotFound();
             
@@ -341,10 +341,10 @@ public static class Endpoints
             string tenantSlug,
             [FromBody] MagicLinkRequestDto req,
             HttpRequest httpReq,
-            ITenantQueryService tenantQueryService,
+            IOneQueryService oneQueryService,
             IMediator mediator) =>
         {
-            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}";
@@ -356,14 +356,14 @@ public static class Endpoints
         publicGroup.MapGet("/{tenantSlug}/portal", async Task<Results<Ok<PortalDataResponse>, NotFound, UnauthorizedHttpResult>> (
             string tenantSlug,
             [FromQuery] string token,
-            ITenantQueryService tenantQueryService,
+            IOneQueryService oneQueryService,
             IMagicLinkTokenService tokenService,
             IMediator mediator) =>
         {
             var subId = tokenService.ValidateToken(token);
             if (!subId.HasValue) return TypedResults.Unauthorized();
             
-            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             var query = new GetPortalSubscriptionQuery(tenant.Id, subId.Value);
@@ -377,14 +377,14 @@ public static class Endpoints
             string tenantSlug,
             [FromQuery] string token,
             [FromBody] CancelPortalRequest req,
-            ITenantQueryService tenantQueryService,
+            IOneQueryService oneQueryService,
             IMagicLinkTokenService tokenService,
             IMediator mediator) =>
         {
             var subId = tokenService.ValidateToken(token);
             if (!subId.HasValue) return TypedResults.Unauthorized();
             
-            var tenant = await tenantQueryService.GetTenantBySlugAsync(tenantSlug);
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
             // SECURITY: Ensure the requested cancellation matches the token's authenticated ID

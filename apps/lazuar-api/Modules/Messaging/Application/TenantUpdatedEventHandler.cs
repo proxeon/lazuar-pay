@@ -1,5 +1,5 @@
 using MediatR;
-using Modules.Tenant.Contracts;
+using Modules.One.Contracts;
 
 namespace Modules.Messaging.Application;
 

@@ -1,4 +1,4 @@
-namespace Modules.Tenant.Application;
+namespace Modules.One.Application;
 
 public static class DependencyInjection
 {

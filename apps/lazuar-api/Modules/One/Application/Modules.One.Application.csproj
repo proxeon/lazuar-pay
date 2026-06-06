@@ -3,8 +3,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Domain\Modules.Tenant.Domain.csproj" />
-    <ProjectReference Include="..\Contracts\Modules.Tenant.Contracts.csproj" />
+    <ProjectReference Include="..\Domain\Modules.One.Domain.csproj" />
+    <ProjectReference Include="..\Contracts\Modules.One.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
   </ItemGroup>
 </Project>

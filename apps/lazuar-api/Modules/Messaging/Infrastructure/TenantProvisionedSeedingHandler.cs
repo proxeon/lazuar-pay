@@ -4,22 +4,22 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Modules.Tenant.Contracts;
+using Modules.One.Contracts;
 
 namespace Modules.Messaging.Infrastructure;
 
-public class TenantCreatedSeedingHandler : INotificationHandler<TenantCreatedIntegrationEvent>
+public class TenantProvisionedSeedingHandler : INotificationHandler<TenantProvisionedIntegrationEvent>
 {
     private readonly MessagingDbContext _context;
-    private readonly ILogger<TenantCreatedSeedingHandler> _logger;
+    private readonly ILogger<TenantProvisionedSeedingHandler> _logger;
 
-    public TenantCreatedSeedingHandler(MessagingDbContext context, ILogger<TenantCreatedSeedingHandler> logger)
+    public TenantProvisionedSeedingHandler(MessagingDbContext context, ILogger<TenantProvisionedSeedingHandler> logger)
     {
         _context = context;
         _logger = logger;
     }
 
-    public async Task Handle(TenantCreatedIntegrationEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(TenantProvisionedIntegrationEvent notification, CancellationToken cancellationToken)
     {
         _logger.LogInformation("[Messaging] Provisioning triggers seeding sequence for Tenant: {TenantId} ({Name})", notification.TenantId, notification.Name);
 
