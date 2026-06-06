@@ -1,10 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom"; // Added for routing navigation
 import { Menu, Plus, UserCheck, Settings, SearchX } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "../lib/utils";
-
 import CreateUserModal from "./CreateUserModal";
-import UserDetailsSlideout from "./UserDetailsSlideout";
 
 // --- TYPES ---
 export type UserRole = "CLIENT";
@@ -15,49 +12,20 @@ export interface MockUser {
   email: string;
   role: UserRole;
   isActive: boolean;
-  authorizedApps: string[]; // List of apps this client can access
+  authorizedApps: string[];
   createdAt: string;
 }
 
 interface UsersProps {
+  users: MockUser[];
+  setUsers: React.Dispatch<React.SetStateAction<MockUser[]>>;
   isMobile?: boolean;
   toggleSidebar?: () => void;
 }
 
-export default function Users({ isMobile, toggleSidebar }: UsersProps) {
-  // --- STATE ---
-  const [users, setUsers] = useState<MockUser[]>([
-    {
-      id: "usr_018f3a3f-3610-73bf-baef-c07a3c3df9ee",
-      name: "Ahmad Firdaus",
-      email: "ahmad.firdaus@gmail.com",
-      role: "CLIENT",
-      isActive: true,
-      authorizedApps: ["COMMUNITY", "VAULT", "ACADEMY"],
-      createdAt: "2025-01-10T04:20:00Z",
-    },
-    {
-      id: "usr_018f3a3f-3610-73bf-baef-c07a3c3df9ef",
-      name: "Siti Aminah",
-      email: "siti.aminah@yahoo.com",
-      role: "CLIENT",
-      isActive: true,
-      authorizedApps: ["FUNNEL", "CONSULT", "COMMUNITY"],
-      createdAt: "2025-02-05T09:15:00Z",
-    },
-    {
-      id: "usr_018f3a3f-3610-73bf-baef-c07a3c3df9f0",
-      name: "Chong Wei",
-      email: "chong.wei@outlook.com",
-      role: "CLIENT",
-      isActive: false,
-      authorizedApps: ["VAULT"],
-      createdAt: "2025-02-12T11:45:00Z",
-    }
-  ]);
-
+export default function Users({ users, setUsers, isMobile, toggleSidebar }: UsersProps) {
+  const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<MockUser | null>(null);
 
   // --- HANDOFF LOGIC ---
   const handleUserCreated = (userData: { name: string; email: string; role: UserRole; authorizedApps: string[] }) => {
@@ -73,22 +41,6 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
 
     setUsers((prev) => [newUser, ...prev]);
     setShowCreateModal(false);
-    toast.success("Client account registered successfully.");
-  };
-
-  const handleUpdateStatus = (userId: string, status: boolean) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, isActive: status } : u))
-    );
-    setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, isActive: status } : prev));
-  };
-
-  const handleUpdateApps = (userId: string, authorizedApps: string[]) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, authorizedApps } : u))
-    );
-    setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, authorizedApps } : prev));
-    toast.success("Client app permissions updated successfully.");
   };
 
   const formatDate = (isoString: string) => {
@@ -164,7 +116,6 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
                       <p className="text-[11px] font-mono text-[#71717a] mt-0.5">{user.email}</p>
                     </td>
 
-                    {/* App Authorization List Column */}
                     <td className="p-5">
                       <div className="flex flex-wrap gap-1 max-w-[280px]">
                         {user.authorizedApps.length === 0 ? (
@@ -199,9 +150,10 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
                       {formatDate(user.createdAt)}
                     </td>
 
+                    {/* Navigation Trigger to new page instead of slideout overlay */}
                     <td className="p-5 whitespace-nowrap text-right">
                       <button 
-                        onClick={() => setSelectedUser(user)}
+                        onClick={() => navigate(`/users/${user.id}`)}
                         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-none border border-[#e5e5e5] bg-white text-[#09090b] text-[11px] font-bold uppercase tracking-widest hover:bg-[#f4f4f5] hover:border-[#a1a1aa] transition-colors focus:outline-none"
                       >
                         <Settings size={13} />
@@ -216,23 +168,12 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
         </div>
       </div>
 
-      {/* --- OVERLAYS --- */}
       {showCreateModal && (
         <CreateUserModal 
           onClose={() => setShowCreateModal(false)}
           onSuccess={handleUserCreated}
         />
       )}
-
-      {selectedUser && (
-        <UserDetailsSlideout 
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onUpdateStatus={(status) => handleUpdateStatus(selectedUser.id, status)}
-          onUpdateApps={(apps) => handleUpdateApps(selectedUser.id, apps)}
-        />
-      )}
-
     </div>
   );
 }
