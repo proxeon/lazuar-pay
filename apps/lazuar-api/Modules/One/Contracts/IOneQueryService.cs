@@ -8,4 +8,8 @@ public interface IOneQueryService
 {
     Task<WorkspaceSnapshotDto?> GetWorkspaceByIdAsync(Guid tenantId);
     Task<WorkspaceSnapshotDto?> GetWorkspaceBySlugAsync(string slug);
+    
+    // New Security Helpers for Middleware
+    Task<Guid?> GetTenantIdBySlugAsync(string slug);
+    Task<bool> HasTenantAccessAsync(Guid globalUserId, Guid tenantId);
 }

@@ -18,6 +18,7 @@ using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Lazuar.Api;
+using Lazuar.Api.Middleware;
 using Lazuar.ApiTypes;
 
 // Resolve the ambiguous reference between Lazuar.ApiTypes and Microsoft.AspNetCore.Mvc
@@ -36,11 +37,9 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// --- Configure Options ---
 builder.Services.AddOptions<ResendOptions>()
     .BindConfiguration(ResendOptions.SectionName);
 
-// --- Configure HttpClients ---
 builder.Services.AddHttpClient("Resend", (sp, client) =>
 {
     client.BaseAddress = new Uri("https://api.resend.com/");
@@ -61,11 +60,9 @@ builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 
-// Configure the singleton in-memory event bus and its subscription contract
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
-// --- Configure JWT Authentication ---
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -85,7 +82,6 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
     
-    // Read the token from the cookie
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -99,7 +95,6 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// --- Configure Authorization Policy for Modules ---
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("OrgAdmin", policy =>
@@ -109,7 +104,6 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-// --- Configure CORS Services ---
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -121,7 +115,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(origins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials(); // REQUIRED for cookies to work across ports!
+                  .AllowCredentials();
         }
         else
         {
@@ -144,20 +138,19 @@ builder.Services.AddProblemDetails();
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Application.DependencyInjection).Assembly); // <-- Changed
+    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
 
-    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly); // <-- Changed
+    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.CRM.Infrastructure.DependencyInjection).Assembly);
 });
 
-// Register Module Services
-builder.Services.AddOneModule(builder.Configuration); // <-- Changed
+builder.Services.AddOneModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddCrmModule(builder.Configuration);
@@ -168,13 +161,16 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
+
+// Execute custom tenant security checks before Authorizing endpoints
+app.UseMiddleware<TenantSecurityMiddleware>();
+
 app.UseAuthorization();
 app.UseMessagingSubscriptions();
 app.UseCommunitySubscriptions();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
-// --- Auth Handlers for Local Dev/Admin Panel ---
 apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<ProblemDetails>> (
     [FromBody] LoginRequest req,
     IConfiguration config,
@@ -196,24 +192,27 @@ apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<P
         var audience = config["Jwt:Audience"] ?? "lazuar-clients";
         var expiryHours = config.GetValue<int>("Jwt:ExpiryHours", 24);
 
+        // --> CHANGED: Hardcoded org_id removed. Added is_system_admin
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, "018f3a3f-3610-73bf-baef-c07a3c3df9ee"),
             new Claim(ClaimTypes.Email, email),
-            new Claim("org_id", "7d97963c-063c-4598-86cc-9ddd9d47d9b1"),
-            new Claim(ClaimTypes.Role, "SUPER_ADMIN")
+            new Claim(ClaimTypes.Role, "SUPER_ADMIN"),
+            new Claim("is_system_admin", "true")
         };
 
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
 
-        // Issue the HttpOnly Cookie
+        // --> CHANGED: Environment-aware cookie domain sharing
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Secure = !app.Environment.IsDevelopment(),
             SameSite = SameSiteMode.Lax,
+            Domain = app.Environment.IsDevelopment() ? null : ".lazuar.com",
             Expires = DateTime.UtcNow.AddHours(expiryHours)
         };
+        
         ctx.Response.Cookies.Append("lazuar_auth", token, cookieOptions);
 
         return TypedResults.Ok(new LoginResponse
@@ -240,7 +239,7 @@ apiGroup.MapGet("/platform/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResul
 }).RequireAuthorization();
 
 // Map Minimal API Endpoints
-// apiGroup.MapOneEndpoints(); <-- Commented out until we create the endpoints for One
+// apiGroup.MapOneEndpoints(); 
 apiGroup.MapMessagingEndpoints();
 apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();

@@ -32,4 +32,22 @@ public class OneQueryService : IOneQueryService
         const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM one.\"Organizations\" WHERE \"Slug\" = @Slug LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<WorkspaceSnapshotDto>(sql, new { Slug = slug.ToLower().Trim() });
     }
+
+    public async Task<Guid?> GetTenantIdBySlugAsync(string slug)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = "SELECT \"Id\" FROM one.\"Organizations\" WHERE \"Slug\" = @Slug AND \"IsActive\" = true LIMIT 1";
+        return await connection.QuerySingleOrDefaultAsync<Guid?>(sql, new { Slug = slug.ToLower().Trim() });
+    }
+
+    public async Task<bool> HasTenantAccessAsync(Guid globalUserId, Guid tenantId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = "SELECT EXISTS(SELECT 1 FROM one.\"TenantMemberships\" WHERE \"GlobalUserId\" = @Uid AND \"OrganizationId\" = @OrgId)";
+        return await connection.ExecuteScalarAsync<bool>(sql, new { Uid = globalUserId, OrgId = tenantId });
+    }
 }
