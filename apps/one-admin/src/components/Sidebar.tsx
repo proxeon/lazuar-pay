@@ -1,7 +1,16 @@
 import { cn } from "../lib/utils";
-import { LayoutDashboard, Users, BarChart3, ChevronLeft, ChevronRight, Settings, LogOut, PanelLeftClose, PanelLeft, PanelLeftOpen } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Users, 
+  BarChart3, 
+  Settings, 
+  LogOut, 
+  PanelLeftClose, 
+  PanelLeftOpen 
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,6 +21,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   const expanded = isMobile ? true : isOpen;
 
@@ -25,10 +35,11 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Updated to list "Users" mapping to "/users"
   const menuItems = [
-    { icon: LayoutDashboard, label: "Overview", active: true },
-    { icon: Users, label: "Audience", active: false },
-    { icon: BarChart3, label: "Performance", active: false },
+    { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
+    { icon: Users, label: "Users", path: "/users" },
+    { icon: BarChart3, label: "Performance", path: "/performance" },
   ];
 
   return (
@@ -78,32 +89,37 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-[2px] overflow-x-hidden p-3 py-4 text-sm font-medium">
-        {menuItems.map((item, index) => (
-          <button
-            key={index}
-            onClick={() => isMobile && setIsOpen(false)}
-            title={!expanded ? item.label : undefined}
-            className={cn(
-              "flex h-8 w-full items-center rounded-md transition-colors overflow-hidden relative focus:outline-none",
-              item.active
-                ? "bg-[#f4f4f5] text-[#09090b]"
-                : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
-            )}
-          >
-            <div className="flex h-full w-[40px] shrink-0 items-center justify-center">
-              <item.icon className="shrink-0" size={15} strokeWidth={item.active ? 2.5 : 2} />
-            </div>
-            
-            <motion.div
-              initial={false}
-              animate={{ opacity: expanded ? 1 : 0, filter: expanded ? "blur(0px)" : "blur(2px)" }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="whitespace-nowrap text-[13px] font-medium leading-none"
+        {menuItems.map((item, index) => {
+          const isActive = location.pathname.startsWith(item.path);
+
+          return (
+            <Link
+              key={index}
+              to={item.path}
+              onClick={() => isMobile && setIsOpen(false)}
+              title={!expanded ? item.label : undefined}
+              className={cn(
+                "flex h-8 w-full items-center rounded-md transition-colors overflow-hidden relative focus:outline-none",
+                isActive
+                  ? "bg-[#f4f4f5] text-[#09090b]"
+                  : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
+              )}
             >
-              {item.label}
-            </motion.div>
-          </button>
-        ))}
+              <div className="flex h-full w-[40px] shrink-0 items-center justify-center">
+                <item.icon className="shrink-0" size={15} strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              
+              <motion.div
+                initial={false}
+                animate={{ opacity: expanded ? 1 : 0, filter: expanded ? "blur(0px)" : "blur(2px)" }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="whitespace-nowrap text-[13px] font-medium leading-none"
+              >
+                {item.label}
+              </motion.div>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="shrink-0 border-t border-[#e5e5e5] p-3 overflow-visible relative">
