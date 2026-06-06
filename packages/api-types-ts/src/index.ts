@@ -324,7 +324,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/platform/auth/login": {
+    "/one/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -333,14 +333,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AuthOperations_login"];
+        post: operations["OneOperations_login"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/platform/auth/logout": {
+    "/one/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -349,23 +349,55 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AuthOperations_logout"];
+        post: operations["OneOperations_logout"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/platform/auth/me": {
+    "/one/auth/me": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["AuthOperations_getMe"];
+        get: operations["OneOperations_getMe"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/one/me/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OneOperations_getMyEntitlements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/one/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OneOperations_createWorkspace"];
         delete?: never;
         options?: never;
         head?: never;
@@ -472,18 +504,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        "Auth.AuthUser": {
-            email: string;
-            name: string;
-            role: string;
-        };
-        "Auth.LoginRequest": {
-            email: string;
-            password?: string;
-        };
-        "Auth.LoginResponse": {
-            user: components["schemas"]["Auth.AuthUser"];
-        };
         "Community.CancelPortalRequest": {
             subscription_id: string;
         };
@@ -808,6 +828,29 @@ export interface components {
         "Messaging.UpdateTemplateRequestDto": {
             subject: string;
             body: string;
+        };
+        "One.AuthUser": {
+            email: string;
+            name: string;
+            role: string;
+            is_system_admin: boolean;
+        };
+        "One.CreateWorkspaceRequestDto": {
+            name: string;
+            slug: string;
+        };
+        "One.EntitlementDto": {
+            workspace_id: string;
+            workspace_name: string;
+            workspace_slug: string;
+            role: string;
+        };
+        "One.LoginRequest": {
+            email: string;
+            password?: string;
+        };
+        "One.LoginResponse": {
+            user: components["schemas"]["One.AuthUser"];
         };
     };
     responses: never;
@@ -2795,7 +2838,7 @@ export interface operations {
             };
         };
     };
-    AuthOperations_login: {
+    OneOperations_login: {
         parameters: {
             query?: never;
             header?: never;
@@ -2804,7 +2847,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Auth.LoginRequest"];
+                "application/json": components["schemas"]["One.LoginRequest"];
             };
         };
         responses: {
@@ -2814,7 +2857,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Auth.LoginResponse"];
+                    "application/json": components["schemas"]["One.LoginResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2864,7 +2907,7 @@ export interface operations {
             };
         };
     };
-    AuthOperations_logout: {
+    OneOperations_logout: {
         parameters: {
             query?: never;
             header?: never;
@@ -2929,7 +2972,7 @@ export interface operations {
             };
         };
     };
-    AuthOperations_getMe: {
+    OneOperations_getMe: {
         parameters: {
             query?: never;
             header?: never;
@@ -2944,7 +2987,141 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Auth.AuthUser"];
+                    "application/json": components["schemas"]["One.AuthUser"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_getMyEntitlements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.EntitlementDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_createWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["One.CreateWorkspaceRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.IdResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

@@ -1,4 +1,3 @@
-// packages/api-spec/main.tsp
 import "@typespec/http";
 import "@typespec/openapi";
 import "@typespec/openapi3";
@@ -6,9 +5,9 @@ import "@typespec/openapi3";
 // 1. Core/Shared Types
 import "./common/models.tsp";
 
-// 2. Auth Module
-import "./modules/auth/models.tsp";
-import "./modules/auth/routes.tsp";
+// 2. One Module (Replaces Auth and Tenant)
+import "./modules/one/models.tsp";
+import "./modules/one/routes.tsp";
 
 // 3. Messaging Module
 import "./modules/messaging/models.tsp";
