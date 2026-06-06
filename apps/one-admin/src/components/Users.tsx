@@ -15,6 +15,7 @@ export interface MockUser {
   email: string;
   role: UserRole;
   isActive: boolean;
+  authorizedApps: string[]; // List of apps this client can access
   createdAt: string;
 }
 
@@ -32,6 +33,7 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
       email: "ahmad.firdaus@gmail.com",
       role: "CLIENT",
       isActive: true,
+      authorizedApps: ["COMMUNITY", "VAULT", "ACADEMY"],
       createdAt: "2025-01-10T04:20:00Z",
     },
     {
@@ -40,6 +42,7 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
       email: "siti.aminah@yahoo.com",
       role: "CLIENT",
       isActive: true,
+      authorizedApps: ["FUNNEL", "CONSULT", "COMMUNITY"],
       createdAt: "2025-02-05T09:15:00Z",
     },
     {
@@ -47,7 +50,8 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
       name: "Chong Wei",
       email: "chong.wei@outlook.com",
       role: "CLIENT",
-      isActive: false, // Suspended account example
+      isActive: false,
+      authorizedApps: ["VAULT"],
       createdAt: "2025-02-12T11:45:00Z",
     }
   ]);
@@ -56,13 +60,14 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
   const [selectedUser, setSelectedUser] = useState<MockUser | null>(null);
 
   // --- HANDOFF LOGIC ---
-  const handleUserCreated = (userData: { name: string; email: string; role: UserRole }) => {
+  const handleUserCreated = (userData: { name: string; email: string; role: UserRole; authorizedApps: string[] }) => {
     const newUser: MockUser = {
       id: `usr_${crypto.randomUUID()}`,
       name: userData.name,
       email: userData.email,
-      role: userData.role, // Defaults to "CLIENT" from the modal
+      role: userData.role,
       isActive: true,
+      authorizedApps: userData.authorizedApps,
       createdAt: new Date().toISOString(),
     };
 
@@ -75,11 +80,17 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, isActive: status } : u))
     );
-    // Sync slideout preview state if open
     setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, isActive: status } : prev));
   };
 
-  // --- UTILS ---
+  const handleUpdateApps = (userId: string, authorizedApps: string[]) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, authorizedApps } : u))
+    );
+    setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, authorizedApps } : prev));
+    toast.success("Client app permissions updated successfully.");
+  };
+
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -91,7 +102,7 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
   return (
     <div className="flex-1 w-full p-4 md:p-8 mx-auto max-w-[1240px] flex flex-col gap-6 animate-in fade-in duration-300">
       
-      {/* Header & Action Bar */}
+      {/* Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between pb-2 gap-4">
         <div className="flex items-center gap-3">
           {isMobile && (
@@ -131,7 +142,7 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
             <thead>
               <tr className="border-b border-[#e5e5e5] bg-[#fafafa]">
                 <th className="h-10 px-5 font-bold uppercase tracking-widest text-[#71717a] text-[10px]">Client</th>
-                <th className="h-10 px-5 font-bold uppercase tracking-widest text-[#71717a] text-[10px]">System Access</th>
+                <th className="h-10 px-5 font-bold uppercase tracking-widest text-[#71717a] text-[10px]">Entitled Apps</th>
                 <th className="h-10 px-5 font-bold uppercase tracking-widest text-[#71717a] text-[10px]">Status</th>
                 <th className="h-10 px-5 font-bold uppercase tracking-widest text-[#71717a] text-[10px]">Registered</th>
                 <th className="h-10 px-5 font-bold uppercase tracking-widest text-[#71717a] text-[10px] text-right">Actions</th>
@@ -148,21 +159,30 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
               ) : (
                 users.map((user) => (
                   <tr key={user.id} className="hover:bg-[#fafafa]/50 transition-colors group">
-                    
-                    {/* Client Profile Info */}
                     <td className="p-5 whitespace-nowrap">
                       <p className="font-semibold text-[#09090b] text-[14px]">{user.name}</p>
                       <p className="text-[11px] font-mono text-[#71717a] mt-0.5">{user.email}</p>
                     </td>
 
-                    {/* Standardized Default Client Role Badge */}
-                    <td className="p-5 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-none bg-[#f4f4f5] text-[#52525b] text-[9px] font-bold uppercase tracking-widest border border-[#e5e5e5]">
-                        Client Profile
-                      </span>
+                    {/* App Authorization List Column */}
+                    <td className="p-5">
+                      <div className="flex flex-wrap gap-1 max-w-[280px]">
+                        {user.authorizedApps.length === 0 ? (
+                          <span className="text-[10px] text-[#a1a1aa] font-mono uppercase tracking-wider">None</span>
+                        ) : user.authorizedApps.length === 8 ? (
+                          <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-bold uppercase tracking-widest font-mono">
+                            All Access
+                          </span>
+                        ) : (
+                          user.authorizedApps.map(app => (
+                            <span key={app} className="px-1.5 py-0.5 bg-zinc-50 border border-zinc-200 text-[#52525b] text-[9px] font-bold uppercase tracking-wider font-mono">
+                              {app}
+                            </span>
+                          ))
+                        )}
+                      </div>
                     </td>
 
-                    {/* Status Badge */}
                     <td className="p-5 whitespace-nowrap">
                       {user.isActive ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-none border border-emerald-200 bg-emerald-50 text-[9px] font-bold uppercase tracking-widest text-emerald-700">
@@ -175,12 +195,10 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
                       )}
                     </td>
 
-                    {/* Created Date */}
                     <td className="p-5 whitespace-nowrap text-[#52525b] font-mono text-[12px]">
                       {formatDate(user.createdAt)}
                     </td>
 
-                    {/* Actions */}
                     <td className="p-5 whitespace-nowrap text-right">
                       <button 
                         onClick={() => setSelectedUser(user)}
@@ -211,6 +229,7 @@ export default function Users({ isMobile, toggleSidebar }: UsersProps) {
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onUpdateStatus={(status) => handleUpdateStatus(selectedUser.id, status)}
+          onUpdateApps={(apps) => handleUpdateApps(selectedUser.id, apps)}
         />
       )}
 

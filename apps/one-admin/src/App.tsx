@@ -4,17 +4,34 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import Users from "./components/Users";
 
+const SIDEBAR_STATE_KEY = "one_admin_sidebar_state";
+
 export default function App() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Initialize sidebar state from localStorage if on desktop viewports
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      const isMobileViewport = window.innerWidth < 768;
+      if (isMobileViewport) return false;
+      
+      const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
+      return savedState === "collapsed" ? false : true;
+    }
+    return true;
+  });
+
+  // Track viewport sizes and update mobile layout boundaries
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
+      const isMobileViewport = window.innerWidth < 768;
+      setIsMobile(isMobileViewport);
+      
+      if (isMobileViewport) {
         setIsSidebarOpen(false);
       } else {
-        setIsSidebarOpen(true);
+        const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
+        setIsSidebarOpen(savedState === "collapsed" ? false : true);
       }
     };
     
@@ -22,6 +39,16 @@ export default function App() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Persist sidebar toggle configuration to local storage (only on desktop views)
+  useEffect(() => {
+    if (!isMobile) {
+      localStorage.setItem(
+        SIDEBAR_STATE_KEY,
+        isSidebarOpen ? "expanded" : "collapsed"
+      );
+    }
+  }, [isSidebarOpen, isMobile]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f5f5f5] font-sans text-[#1a1a1a]">

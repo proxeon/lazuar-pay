@@ -10,21 +10,63 @@ interface UserDetailsSlideoutProps {
   user: MockUser | null;
   onClose: () => void;
   onUpdateStatus: (status: boolean) => void;
+  onUpdateApps: (apps: string[]) => void;
 }
+
+const APP_CATEGORIES = [
+  {
+    category: "ACQUISITION",
+    apps: [
+      { id: "FUNNEL", name: "Funnel" },
+      { id: "EVENT", name: "Event" },
+      { id: "CONSULT", name: "Consult" }
+    ]
+  },
+  {
+    category: "FULFILLMENT",
+    apps: [
+      { id: "VAULT", name: "Vault" },
+      { id: "ACADEMY", name: "Academy" }
+    ]
+  },
+  {
+    category: "RETENTION",
+    apps: [
+      { id: "COMMUNITY", name: "Community" },
+      { id: "BROADCAST", name: "Broadcast" },
+      { id: "AFFILIATE", name: "Affiliate" }
+    ]
+  }
+];
 
 export default function UserDetailsSlideout({ 
   user, 
   onClose, 
-  onUpdateStatus
+  onUpdateStatus,
+  onUpdateApps
 }: UserDetailsSlideoutProps) {
   const [showResetModal, setShowResetModal] = useState(false);
 
   if (!user) return null;
 
-  // Callback executed when the child ResetPasswordModal completes
   const handleResetSuccess = (newPassword: string) => {
     setShowResetModal(false);
     toast.success(`Password for ${user.email} updated successfully in UserAccess storage.`);
+  };
+
+  // Toggle entitlements from the slide-out
+  const handleAppPermissionToggle = (appId: string) => {
+    const isCurrentlyEntitled = user.authorizedApps.includes(appId);
+    let updatedApps: string[];
+
+    if (isCurrentlyEntitled) {
+      updatedApps = user.authorizedApps.filter(id => id !== appId);
+    } else {
+      updatedApps = [...user.authorizedApps, appId];
+    }
+    
+    // Call the parent state modification callback
+    onUpdateApps(updatedApps);
   };
 
   return (
@@ -70,32 +112,57 @@ export default function UserDetailsSlideout({
               <span className="text-[#71717a]">Date Registered</span>
               <span className="text-[#09090b]">{new Date(user.createdAt).toLocaleDateString()}</span>
             </div>
-            <div className="flex justify-between items-center text-[12px] font-mono">
-              <span className="text-[#71717a]">Security Standard</span>
-              <span className="text-emerald-700 bg-emerald-50 px-1 font-bold border border-emerald-100 flex items-center gap-1 text-[9px] uppercase tracking-wider">
-                <Shield size={10} /> BCrypt (Factor 11)
-              </span>
+          </section>
+
+          {/* Interactive Entitlement Grid */}
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#a1a1aa] mb-1 border-b border-[#f4f4f5] pb-1">
+              Ecosystem Entitlements
+            </h3>
+
+            <div className="space-y-5">
+              {APP_CATEGORIES.map(categoryGroup => (
+                <div key={categoryGroup.category} className="space-y-2">
+                  <span className="text-[9px] font-bold tracking-widest text-[#71717a] uppercase">{categoryGroup.category}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {categoryGroup.apps.map(app => {
+                      const isEntitled = user.authorizedApps.includes(app.id);
+                      return (
+                        <label 
+                          key={app.id}
+                          onClick={() => handleAppPermissionToggle(app.id)}
+                          className={cn(
+                            "flex items-center justify-between p-2 border cursor-pointer select-none transition-colors",
+                            isEntitled 
+                              ? "bg-emerald-50/50 border-emerald-300 text-emerald-900" 
+                              : "border-[#e5e5e5] bg-white text-[#71717a] hover:bg-[#fafafa]"
+                          )}
+                        >
+                          <span className="text-[11px] font-medium">{app.name}</span>
+                          <input 
+                            type="checkbox" 
+                            readOnly 
+                            checked={isEntitled}
+                            className="h-3 w-3 border-zinc-300 text-[#09090b] accent-[#09090b] pointer-events-none"
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
           {/* Configuration Actions */}
           <section className="space-y-5">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#a1a1aa] mb-3 border-b border-[#f4f4f5] pb-1">
-              Account Management
+              Account Control
             </h3>
 
-            <div className="p-4 border border-[#e5e5e5] bg-[#fafafa]/50 space-y-2">
-              <p className="text-[12px] text-[#09090b] font-semibold">Client Portal Access</p>
-              <p className="text-[11px] text-[#71717a] leading-relaxed">
-                This account holds standard client credentials and can log in at <code className="font-mono text-[#09090b]">http://localhost:3001</code> to view portal resources.
-              </p>
-            </div>
-
-            {/* Explicit spacing setup */}
             <div className="pt-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] block mb-3">Credential Security</label>
               
-              {/* space-y-3 enforces exactly 12px margin-top on the second button */}
               <div className="space-y-3">
                 {/* Reset Password Button */}
                 <button 

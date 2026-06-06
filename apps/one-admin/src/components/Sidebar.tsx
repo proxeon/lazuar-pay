@@ -2,7 +2,6 @@ import { cn } from "../lib/utils";
 import { 
   LayoutDashboard, 
   Users, 
-  BarChart3, 
   Settings, 
   LogOut, 
   PanelLeftClose, 
@@ -35,11 +34,10 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Updated to list "Users" mapping to "/users"
+  // Performance option completely removed
   const menuItems = [
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
     { icon: Users, label: "Users", path: "/users" },
-    { icon: BarChart3, label: "Performance", path: "/performance" },
   ];
 
   return (
@@ -81,9 +79,9 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
             initial={false}
             animate={{ width: expanded ? "auto" : 0, opacity: expanded ? 1 : 0 }}
             transition={{ duration: 0.2 }}
-            className="whitespace-nowrap text-[14px] font-semibold tracking-tight text-[#09090b]"
+            className="whitespace-nowrap text-[14px] font-semibold tracking-tight text-[#09090b] truncate"
           >
-            Metrics.app
+            Lazuar One Admin
           </motion.span>
         </div>
       </div>
