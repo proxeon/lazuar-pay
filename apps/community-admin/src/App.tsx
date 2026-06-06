@@ -7,7 +7,6 @@ import PlanForm from "./components/PlanForm";
 import Subscribers from "./components/Subscribers";
 import Settings from "./components/Settings";
 import Communications from "./components/Communications";
-import LoginPage from "./components/LoginPage";
 import { Toaster } from "sonner";
 import { client } from "./lib/api-client";
 
@@ -22,12 +21,10 @@ const SIDEBAR_STATE_KEY = "community_admin_sidebar_state";
 export default function App() {
   const [isMobile, setIsMobile] = useState(false);
   
-  // Initialize state from localStorage on desktop viewports
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== "undefined") {
       const isMobileViewport = window.innerWidth < 768;
       if (isMobileViewport) return false;
-      
       const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
       return savedState === "collapsed" ? false : true;
     }
@@ -37,80 +34,59 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Monitor screen resizing and adjust sidebar responsiveness
   useEffect(() => {
     const checkMobile = () => {
       const isMobileViewport = window.innerWidth < 768;
       setIsMobile(isMobileViewport);
-      
-      if (isMobileViewport) {
-        setIsSidebarOpen(false);
-      } else {
-        const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
-        setIsSidebarOpen(savedState === "collapsed" ? false : true);
-      }
+      if (isMobileViewport) setIsSidebarOpen(false);
+      else setIsSidebarOpen(localStorage.getItem(SIDEBAR_STATE_KEY) !== "collapsed");
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Persist sidebar state changes on desktop views
   useEffect(() => {
     if (!isMobile) {
-      localStorage.setItem(
-        SIDEBAR_STATE_KEY,
-        isSidebarOpen ? "expanded" : "collapsed"
-      );
+      localStorage.setItem(SIDEBAR_STATE_KEY, isSidebarOpen ? "expanded" : "collapsed");
     }
   }, [isSidebarOpen, isMobile]);
 
-  // Check Session via HttpOnly Cookie automatically
+  // Centralized Admin SSO Check
   useEffect(() => {
     async function verifySession() {
       try {
-        const { data, error } = await client.GET("/platform/auth/me");
-        if (data && !error) {
-          setUser({
-            email: data.email,
-            name: data.name,
-            role: data.role
-          });
+        const { data, error } = await client.GET("/one/auth/me");
+        if (error || !data) {
+          throw new Error("Unauthorized");
         }
-      } catch (err) {
-        // Silently fail, user remains null, prompting LoginPage
-      } finally {
+        setUser({
+          email: data.email,
+          name: data.name,
+          role: data.role
+        });
         setIsLoading(false);
+      } catch (err) {
+        // Unauthenticated -> Hard redirect to Lazuar One Admin
+        const returnUrl = encodeURIComponent(window.location.href);
+        window.location.href = `http://localhost:3000/login?returnUrl=${returnUrl}`;
       }
     }
     
     verifySession();
   }, []);
 
-  function handleLogin(userData: User) {
-    setUser(userData);
-  }
-
   async function handleLogout() {
-    try {
-      await client.POST("/platform/auth/logout");
-    } catch (e) {
-      console.error("Logout request failed", e);
-    } finally {
-      setUser(null);
-    }
+    await client.POST("/one/auth/logout");
+    window.location.href = "http://localhost:3000/login";
   }
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50 dark:bg-black text-foreground">
-        <div className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Loading...</div>
+        <div className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Authenticating Session...</div>
       </div>
     );
-  }
-
-  if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
@@ -136,13 +112,9 @@ export default function App() {
         </Routes>
 
         {isMobile && isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm transition-opacity duration-150" 
-            onClick={() => setIsSidebarOpen(false)} 
-          />
+          <div className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm transition-opacity duration-150" onClick={() => setIsSidebarOpen(false)} />
         )}
       </main>
-
       <Toaster position="bottom-right" richColors theme="light" closeButton />
     </div>
   );
