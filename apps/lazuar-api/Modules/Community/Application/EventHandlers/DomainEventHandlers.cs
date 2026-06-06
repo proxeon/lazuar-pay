@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Contracts;
 using Modules.Community.Domain.Events;
+using Modules.CRM.Contracts; // <-- ADDED
 
 namespace Modules.Community.Application.EventHandlers;
 
@@ -18,23 +19,27 @@ public class DomainEventHandlers :
     private readonly ICommunitySubscriptionRepository _subscriptionRepository;
     private readonly ICommunityPlanRepository _planRepository;
     private readonly ICommunityLinkService _linkService;
+    private readonly ICrmQueryService _crmQueryService;
 
     public DomainEventHandlers(
         [FromKeyedServices("CommunityEventBus")] IEventBus eventBus,
         ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository,
-        ICommunityLinkService linkService)
+        ICommunityLinkService linkService,
+        ICrmQueryService crmQueryService) 
     {
         _eventBus = eventBus;
         _subscriptionRepository = subscriptionRepository;
         _planRepository = planRepository;
         _linkService = linkService;
+        _crmQueryService = crmQueryService;
     }
 
     public async Task Handle(SubscriptionActivatedDomainEvent notification, CancellationToken ct)
     {
         var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
         var plan = sub != null ? await _planRepository.GetByIdAsync(sub.PlanId, ct) : null;
+        var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
 
         if (sub == null || plan == null) return;
 
@@ -46,6 +51,7 @@ public class DomainEventHandlers :
                 notification.OrganizationId,
                 notification.SubscriptionId,
                 notification.ClientProfileId,
+                profile?.GlobalUserId, // <-- ADDED: Pass the GlobalUserId
                 notification.IsFirstPayment,
                 plan.Name,
                 plan.TelegramInviteLink ?? "(link coming soon)",
@@ -54,7 +60,8 @@ public class DomainEventHandlers :
             )
         );
     }
-
+    
+    // ... rest of the handlers remain exactly the same ...
     public async Task Handle(SubscriptionCancelledDomainEvent notification, CancellationToken ct)
     {
         var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);

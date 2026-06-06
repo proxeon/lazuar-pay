@@ -37,9 +37,11 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
+// --- Configure Options ---
 builder.Services.AddOptions<ResendOptions>()
     .BindConfiguration(ResendOptions.SectionName);
 
+// --- Configure HttpClients ---
 builder.Services.AddHttpClient("Resend", (sp, client) =>
 {
     client.BaseAddress = new Uri("https://api.resend.com/");
@@ -60,9 +62,11 @@ builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 
+// Configure the singleton in-memory event bus and its subscription contract
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
+// --- Configure JWT Authentication ---
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -82,6 +86,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
     
+    // Read the token from the HttpOnly cookie
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -95,6 +100,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// --- Configure Authorization Policy for Modules ---
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("OrgAdmin", policy =>
@@ -104,6 +110,7 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
+// --- Configure CORS Services ---
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -115,7 +122,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(origins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials();
+                  .AllowCredentials(); // REQUIRED for cookies to work across ports!
         }
         else
         {
@@ -150,6 +157,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.CRM.Infrastructure.DependencyInjection).Assembly);
 });
 
+// Register Module Services
 builder.Services.AddOneModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
@@ -166,80 +174,16 @@ app.UseAuthentication();
 app.UseMiddleware<TenantSecurityMiddleware>();
 
 app.UseAuthorization();
+
+// Register integration event subscriptions
+app.UseOneSubscriptions();
 app.UseMessagingSubscriptions();
 app.UseCommunitySubscriptions();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
-apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<ProblemDetails>> (
-    [FromBody] LoginRequest req,
-    IConfiguration config,
-    IJwtService jwtService,
-    HttpContext ctx) =>
-{
-    var email = req.Email?.Trim().ToLowerInvariant();
-    
-    if (string.IsNullOrEmpty(email))
-    {
-        return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = "Email is required." });
-    }
-
-    if ((email == "admin@lazuars.io" || email == "sysadmin@lazuars.io" || email == "admin@yourdomain.com") 
-        && req.Password == "Password123!")
-    {
-        var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
-        var issuer = config["Jwt:Issuer"] ?? "lazuar-api";
-        var audience = config["Jwt:Audience"] ?? "lazuar-clients";
-        var expiryHours = config.GetValue<int>("Jwt:ExpiryHours", 24);
-
-        // --> CHANGED: Hardcoded org_id removed. Added is_system_admin
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "018f3a3f-3610-73bf-baef-c07a3c3df9ee"),
-            new Claim(ClaimTypes.Email, email),
-            new Claim(ClaimTypes.Role, "SUPER_ADMIN"),
-            new Claim("is_system_admin", "true")
-        };
-
-        var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
-
-        // --> CHANGED: Environment-aware cookie domain sharing
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = !app.Environment.IsDevelopment(),
-            SameSite = SameSiteMode.Lax,
-            Domain = app.Environment.IsDevelopment() ? null : ".lazuar.com",
-            Expires = DateTime.UtcNow.AddHours(expiryHours)
-        };
-        
-        ctx.Response.Cookies.Append("lazuar_auth", token, cookieOptions);
-
-        return TypedResults.Ok(new LoginResponse
-        {
-            User = new AuthUser { Email = email, Name = "Administrator", Role = "SUPER_ADMIN" }
-        });
-    }
-
-    return TypedResults.BadRequest(new ProblemDetails { Status = 401, Detail = "Invalid email or password." });
-});
-
-apiGroup.MapPost("/platform/auth/logout", (HttpContext ctx) => 
-{
-    ctx.Response.Cookies.Delete("lazuar_auth");
-    return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
-});
-
-apiGroup.MapGet("/platform/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResult> (ClaimsPrincipal principal) =>
-{
-    var email = principal.FindFirst(ClaimTypes.Email)?.Value;
-    if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
-
-    return TypedResults.Ok(new AuthUser { Email = email, Name = "Administrator", Role = "SUPER_ADMIN" });
-}).RequireAuthorization();
-
 // Map Minimal API Endpoints
-// apiGroup.MapOneEndpoints(); 
+apiGroup.MapOneEndpoints();
 apiGroup.MapMessagingEndpoints();
 apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();

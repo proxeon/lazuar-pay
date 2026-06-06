@@ -1,4 +1,5 @@
 using BuildingBlocks.Domain;
+using Modules.One.Domain.Events;
 
 namespace Modules.One.Domain;
 
@@ -21,5 +22,7 @@ public class Organization : Entity, IAggregateRoot
         Slug = slug.Trim().ToLowerInvariant();
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
+        
+        AddDomainEvent(new OrganizationCreatedDomainEvent(Id, Name, Slug));
     }
 }

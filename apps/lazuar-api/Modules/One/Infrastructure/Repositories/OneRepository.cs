@@ -1,0 +1,37 @@
+using Microsoft.EntityFrameworkCore;
+using Modules.One.Application;
+using Modules.One.Domain;
+
+namespace Modules.One.Infrastructure.Repositories;
+
+public class OneRepository : IOneRepository
+{
+    private readonly OneDbContext _context;
+
+    public OneRepository(OneDbContext context)
+    {
+        _context = context;
+    }
+
+    public void AddOrganization(Organization organization)
+    {
+        _context.Organizations.Add(organization);
+    }
+
+    public void AddTenantMembership(TenantMembership membership)
+    {
+        _context.TenantMemberships.Add(membership);
+    }
+
+    public async Task<bool> HasMembershipAsync(Guid globalUserId, Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.TenantMemberships
+            .IgnoreQueryFilters()
+            .AnyAsync(m => m.GlobalUserId == globalUserId && m.OrganizationId == organizationId, ct);
+    }
+
+    public async Task SaveChangesAsync(CancellationToken ct = default)
+    {
+        await _context.SaveChangesAsync(ct);
+    }
+}
