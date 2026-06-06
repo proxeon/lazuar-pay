@@ -33,6 +33,11 @@ interface OneOperations {
 
   // --- Workspaces ---
   @useAuth(BearerAuth)
+  @get
+  @route("/workspaces")
+  getWorkspaces(): WorkspaceDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
   @post
   @route("/workspaces")
   createWorkspace(

@@ -23,6 +23,14 @@ model CreateWorkspaceRequestDto {
   slug: string;
 }
 
+model WorkspaceDto {
+  id: string; // GUID
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_at: utcDateTime;
+}
+
 // --- Entitlement Models ---
 model EntitlementDto {
   workspace_id: string; // GUID

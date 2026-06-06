@@ -4,6 +4,7 @@ using BuildingBlocks.Infrastructure;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -11,8 +12,9 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting; 
 using Modules.One.Application.Commands;
+using Modules.One.Contracts;
 
 namespace Modules.One.Infrastructure;
 
@@ -66,6 +68,25 @@ public static class Endpoints
             if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
 
             return TypedResults.Ok(new AuthUser { Email = email, Name = "User", Role = isSystemAdmin ? "SUPER_ADMIN" : "CLIENT", Is_system_admin = isSystemAdmin });
+        }).RequireAuthorization();
+
+        group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (
+            IExecutionContextAccessor ctx,
+            IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            
+            var workspaces = await queryService.GetWorkspacesAsync();
+            var dtos = workspaces.Select(w => new WorkspaceDto 
+            { 
+                Id = w.Id.ToString(), 
+                Name = w.Name, 
+                Slug = w.Slug, 
+                Is_active = w.IsActive, 
+                Created_at = new DateTimeOffset(w.CreatedAt) 
+            }).ToList();
+            
+            return TypedResults.Ok((ICollection<WorkspaceDto>)dtos);
         }).RequireAuthorization();
 
         group.MapPost("/workspaces", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
@@ -124,7 +145,7 @@ public static class Endpoints
 
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
         
-        var isDev = ctx.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>().IsDevelopment();
+        var isDev = ctx.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
 
         var cookieOptions = new CookieOptions
         {

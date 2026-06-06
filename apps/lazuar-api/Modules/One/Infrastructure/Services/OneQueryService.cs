@@ -20,7 +20,7 @@ public class OneQueryService : IOneQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM one.\"Organizations\" WHERE \"Id\" = @Id LIMIT 1";
+        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\", \"CreatedAt\" FROM one.\"Organizations\" WHERE \"Id\" = @Id LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<WorkspaceSnapshotDto>(sql, new { Id = tenantId });
     }
 
@@ -29,8 +29,17 @@ public class OneQueryService : IOneQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\" FROM one.\"Organizations\" WHERE \"Slug\" = @Slug LIMIT 1";
+        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\", \"CreatedAt\" FROM one.\"Organizations\" WHERE \"Slug\" = @Slug LIMIT 1";
         return await connection.QuerySingleOrDefaultAsync<WorkspaceSnapshotDto>(sql, new { Slug = slug.ToLower().Trim() });
+    }
+
+    public async Task<IEnumerable<WorkspaceSnapshotDto>> GetWorkspacesAsync()
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = "SELECT \"Id\", \"Name\", \"Slug\", \"IsActive\", \"CreatedAt\" FROM one.\"Organizations\" ORDER BY \"CreatedAt\" DESC";
+        return await connection.QueryAsync<WorkspaceSnapshotDto>(sql);
     }
 
     public async Task<Guid?> GetTenantIdBySlugAsync(string slug)

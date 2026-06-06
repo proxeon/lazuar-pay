@@ -2,14 +2,14 @@ using BuildingBlocks.Application;
 
 namespace Modules.One.Contracts;
 
-public record WorkspaceSnapshotDto(Guid Id, string Name, string Slug, bool IsActive);
+public record WorkspaceSnapshotDto(Guid Id, string Name, string Slug, bool IsActive, DateTime CreatedAt);
 
 public interface IOneQueryService
 {
     Task<WorkspaceSnapshotDto?> GetWorkspaceByIdAsync(Guid tenantId);
     Task<WorkspaceSnapshotDto?> GetWorkspaceBySlugAsync(string slug);
+    Task<IEnumerable<WorkspaceSnapshotDto>> GetWorkspacesAsync();
     
-    // New Security Helpers for Middleware
     Task<Guid?> GetTenantIdBySlugAsync(string slug);
     Task<bool> HasTenantAccessAsync(Guid globalUserId, Guid tenantId);
 }

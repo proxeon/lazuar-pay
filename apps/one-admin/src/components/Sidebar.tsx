@@ -2,23 +2,27 @@ import { cn } from "../lib/utils";
 import { 
   LayoutDashboard, 
   Users, 
-  UserPlus, // Imported new icon
+  UserPlus, 
   Settings, 
   LogOut, 
   PanelLeftClose, 
-  PanelLeftOpen 
+  PanelLeftOpen, 
+  Building2 
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
+import type { AuthUser } from "../lib/api-client";
 
 interface SidebarProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   isMobile?: boolean;
+  user?: AuthUser;
+  onLogout?: () => void;
 }
 
-export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
+export default function Sidebar({ isOpen, setIsOpen, isMobile, user, onLogout }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -35,12 +39,17 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Updated menuItems array with Onboarding positioned between Overview and Users
   const menuItems = [
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
+    { icon: Building2, label: "Workspaces", path: "/workspaces" },
     { icon: UserPlus, label: "Onboarding", path: "/onboard" },
     { icon: Users, label: "Users", path: "/users" },
   ];
+
+  // Derive display values safely from the AuthUser object
+  const displayName = user?.name || "Admin User";
+  const displayEmail = user?.email || "admin@lazuars.io";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <motion.aside
@@ -131,7 +140,7 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
           >
             <div className="flex w-[40px] shrink-0 items-center justify-center">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] bg-[#f4f4f5] border border-[#e5e5e5] text-[10px] font-semibold text-[#52525b] group-hover:bg-white transition-colors">
-                AU
+                {initials}
               </div>
             </div>
             <motion.div
@@ -140,8 +149,8 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="flex flex-col gap-[2px]"
             >
-              <span className="whitespace-nowrap text-[13px] font-medium leading-none text-[#09090b]">Admin User</span>
-              <span className="whitespace-nowrap text-[11px] font-medium leading-none text-[#71717a]">admin@metrics.io</span>
+              <span className="whitespace-nowrap text-[13px] font-medium leading-none text-[#09090b]">{displayName}</span>
+              <span className="whitespace-nowrap text-[11px] font-medium leading-none text-[#71717a] truncate max-w-[150px]">{displayEmail}</span>
             </motion.div>
           </button>
           
@@ -158,14 +167,20 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile }: SidebarProps) {
                 )}
               >
                   <div className="px-2 py-1.5 border-b border-[#f4f4f5] mb-1">
-                    <span className="block text-[13px] font-medium text-[#09090b]">Admin User</span>
-                    <span className="block text-[11px] text-[#71717a]">admin@metrics.io</span>
+                    <span className="block text-[13px] font-medium text-[#09090b]">{displayName}</span>
+                    <span className="block text-[11px] text-[#71717a] truncate">{displayEmail}</span>
                   </div>
                   <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none focus:bg-[#f4f4f5]">
                     <Settings size={14} />
                     Settings
                   </button>
-                  <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors focus:outline-none focus:bg-red-50">
+                  <button 
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      if (onLogout) onLogout();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors focus:outline-none focus:bg-red-50"
+                  >
                     <LogOut size={14} />
                     Log out
                   </button>

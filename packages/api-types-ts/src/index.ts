@@ -395,7 +395,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["OneOperations_getWorkspaces"];
         put?: never;
         post: operations["OneOperations_createWorkspace"];
         delete?: never;
@@ -851,6 +851,14 @@ export interface components {
         };
         "One.LoginResponse": {
             user: components["schemas"]["One.AuthUser"];
+        };
+        "One.WorkspaceDto": {
+            id: string;
+            name: string;
+            slug: string;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string;
         };
     };
     responses: never;
@@ -3053,6 +3061,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["One.EntitlementDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_getWorkspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.WorkspaceDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
