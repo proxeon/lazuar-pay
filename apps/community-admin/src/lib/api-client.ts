@@ -6,7 +6,6 @@ export const TENANT_SLUG = import.meta.env.VITE_TENANT_SLUG || "lazuar-hq";
 
 export const client = createClient<paths>({ 
   baseUrl: API_URL,
-  // This ensures HttpOnly cookies are attached to all cross-origin requests automatically
   fetch: (url, init) => fetch(url, { ...init, credentials: "include" })
 });
 
@@ -15,7 +14,9 @@ export const client = createClient<paths>({
 // ==========================================
 export type Plan = components["schemas"]["Community.CommunityPlanDto"];
 export type Subscriber = components["schemas"]["Community.CommunitySubscriptionDto"];
-export type MessageTemplate = components["schemas"]["Messaging.MessageTemplateDto"];
+
+export type MessageTemplate = components["schemas"]["Community.MessageTemplateDto"]; 
+
 export type ReminderSchedule = components["schemas"]["Community.CommunityReminderScheduleDto"];
 export type CommunityStatsResponse = components["schemas"]["Community.CommunitySubscriberStatsDto"];
 export type DeliveryHistoryItem = components["schemas"]["Community.DeliveryHistoryItemDto"];
