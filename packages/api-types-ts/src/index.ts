@@ -404,6 +404,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/one/workspaces/{id}/apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OneOperations_getWorkspaceApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/one/workspaces/{id}/apps/{appId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OneOperations_toggleAppEntitlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/community/checkout": {
         parameters: {
             query?: never;
@@ -672,6 +704,18 @@ export interface components {
         "Community.MagicLinkRequestDto": {
             email: string;
         };
+        "Community.MessageTemplateDto": {
+            id: string;
+            name: string;
+            channel: string;
+            subject: string;
+            body: string;
+            is_default: boolean;
+            required_variables: string[];
+            optional_variables: string[];
+            /** Format: date-time */
+            updated_at: string;
+        };
         "Community.PauseRemindersRequestDto": {
             /** Format: date-time */
             pause_until?: string;
@@ -747,6 +791,14 @@ export interface components {
             custom_message?: string;
             channel?: string;
         };
+        "Community.TestReminderRequestDto": {
+            template_name: string;
+            channel?: string;
+        };
+        "Community.TestReminderResponse": {
+            success: boolean;
+            sent_to: string;
+        };
         "Community.UpdatePlanRequestDto": {
             slug?: string;
             name?: string;
@@ -785,6 +837,10 @@ export interface components {
             /** Format: date-time */
             next_renewal_date?: string;
         };
+        "Community.UpdateTemplateRequestDto": {
+            subject: string;
+            body: string;
+        };
         "Core.IdResponse": {
             id: string;
         };
@@ -806,29 +862,6 @@ export interface components {
                 [key: string]: string[];
             };
         } & components["schemas"]["Core.ProblemDetails"];
-        "Messaging.MessageTemplateDto": {
-            id: string;
-            name: string;
-            subject: string;
-            body: string;
-            is_default: boolean;
-            required_variables: string[];
-            optional_variables: string[];
-            /** Format: date-time */
-            updated_at: string;
-        };
-        "Messaging.TestReminderRequestDto": {
-            template_name: string;
-            channel?: string;
-        };
-        "Messaging.TestReminderResponse": {
-            success: boolean;
-            sent_to: string;
-        };
-        "Messaging.UpdateTemplateRequestDto": {
-            subject: string;
-            body: string;
-        };
         "One.AuthUser": {
             email: string;
             name: string;
@@ -851,6 +884,12 @@ export interface components {
         };
         "One.LoginResponse": {
             user: components["schemas"]["One.AuthUser"];
+        };
+        "One.ToggleAppEntitlementRequestDto": {
+            is_active: boolean;
+        };
+        "One.WorkspaceAppDto": {
+            app_id: string;
         };
         "One.WorkspaceDto": {
             id: string;
@@ -1692,7 +1731,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Messaging.TestReminderRequestDto"];
+                "application/json": components["schemas"]["Community.TestReminderRequestDto"];
             };
         };
         responses: {
@@ -1702,7 +1741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Messaging.TestReminderResponse"];
+                    "application/json": components["schemas"]["Community.TestReminderResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2658,7 +2697,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Messaging.MessageTemplateDto"][];
+                    "application/json": components["schemas"]["Community.MessageTemplateDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -2719,7 +2758,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Messaging.UpdateTemplateRequestDto"];
+                "application/json": components["schemas"]["Community.UpdateTemplateRequestDto"];
             };
         };
         responses: {
@@ -3195,6 +3234,145 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.IdResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_getWorkspaceApps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.WorkspaceAppDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_toggleAppEntitlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                appId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["One.ToggleAppEntitlementRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

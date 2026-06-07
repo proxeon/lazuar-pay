@@ -1,7 +1,5 @@
-// packages/api-spec/modules/community/admin-routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
-import "../messaging/models.tsp";
 import "./models.tsp";
 
 using TypeSpec.Http;
@@ -167,17 +165,16 @@ interface AdminCommunityOperations {
     @body body: SavePaymentConfigRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Templates (Messaging Context via Community) ---
+  // --- Templates (Localized to Community) ---
   @get
   @route("/templates")
-  getTemplates(
-  ): LazuarApi.Messaging.MessageTemplateDto[] | LazuarApi.Core.ProblemDetailsResponse;
+  getTemplates(): MessageTemplateDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
   @put
   @route("/templates/{id}")
   updateTemplate(
     @path id: string,
-    @body body: LazuarApi.Messaging.UpdateTemplateRequestDto,
+    @body body: UpdateTemplateRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @delete
@@ -189,6 +186,6 @@ interface AdminCommunityOperations {
   @post
   @route("/reminders/test")
   testReminder(
-    @body body: LazuarApi.Messaging.TestReminderRequestDto,
-  ): LazuarApi.Messaging.TestReminderResponse | LazuarApi.Core.ProblemDetailsResponse;
+    @body body: TestReminderRequestDto,
+  ): TestReminderResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

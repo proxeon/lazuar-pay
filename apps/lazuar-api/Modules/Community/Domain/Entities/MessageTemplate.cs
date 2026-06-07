@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using BuildingBlocks.Domain;
 
-namespace Modules.Messaging.Domain;
+namespace Modules.Community.Domain.Entities;
 
 public class MessageTemplate : Entity, IMustHaveTenant
 {
@@ -13,7 +13,6 @@ public class MessageTemplate : Entity, IMustHaveTenant
     public string Subject { get; private set; } = "";
     public string Body { get; private set; } = "";
     public bool IsDefault { get; private set; }
-    public string? MetaTemplateName { get; private set; }
     
     private readonly List<string> _requiredVariables = new();
     public IReadOnlyCollection<string> RequiredVariables => _requiredVariables.AsReadOnly();
@@ -30,7 +29,7 @@ public class MessageTemplate : Entity, IMustHaveTenant
 
     public MessageTemplate(
         Guid organizationId, string name, string channel,
-        string subject, string body, bool isDefault, string? metaTemplateName = null,
+        string subject, string body, bool isDefault, 
         IEnumerable<string>? requiredVariables = null, IEnumerable<string>? optionalVariables = null)
     {
         Id = Guid.CreateVersion7();
@@ -40,7 +39,6 @@ public class MessageTemplate : Entity, IMustHaveTenant
         Subject = subject;
         Body = body;
         IsDefault = isDefault;
-        MetaTemplateName = metaTemplateName;
         
         if (requiredVariables != null) _requiredVariables.AddRange(requiredVariables);
         if (optionalVariables != null) _optionalVariables.AddRange(optionalVariables);

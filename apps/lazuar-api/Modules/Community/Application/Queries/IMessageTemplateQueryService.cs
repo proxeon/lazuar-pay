@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lazuar.ApiTypes;
 
-namespace Modules.Messaging.Contracts;
+namespace Modules.Community.Application.Queries;
 
 public interface IMessageTemplateQueryService 
 {

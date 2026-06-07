@@ -1,6 +1,6 @@
 using BuildingBlocks.Application;
 using Modules.Community.Domain.Aggregates;
-using Modules.Messaging.Contracts;
+using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Application.Commands;
 
@@ -44,11 +44,11 @@ public class CreateReminderScheduleCommandHandler : ICommandHandler<CreateRemind
             }
         }
 
-        // 2. Validate TemplateId across module boundary (Messaging)
+        // 2. Validate TemplateId within localized Community templates
         var templates = await _templateService.GetTemplatesAsync(new[] { request.TemplateId });
         if (!templates.Any())
         {
-            throw new InvalidOperationException("Template not found in Messaging module.");
+            throw new InvalidOperationException("Template not found in Community module.");
         }
 
         // 3. Construct and save the Aggregate

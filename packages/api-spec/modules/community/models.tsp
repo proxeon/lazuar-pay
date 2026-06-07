@@ -1,5 +1,3 @@
-// packages/api-spec/modules/community/models.tsp
-
 namespace LazuarApi.Community;
 
 // --- Read Models ---
@@ -264,4 +262,35 @@ model PortalDataResponse {
 
 model CancelPortalRequest {
   subscription_id: string;
+}
+
+// ==========================================
+// MIGRATED MESSAGING TEMPLATES (Phase 3)
+// ==========================================
+
+model MessageTemplateDto {
+  id: string; // GUID
+  name: string;
+  channel: string; // ADDED THIS FIELD
+  subject: string;
+  body: string;
+  is_default: boolean;
+  required_variables: string[];
+  optional_variables: string[];
+  updated_at: utcDateTime;
+}
+
+model UpdateTemplateRequestDto {
+  subject: string;
+  body: string;
+}
+
+model TestReminderRequestDto {
+  template_name: string;
+  channel?: string;
+}
+
+model TestReminderResponse {
+  success: boolean;
+  sent_to: string;
 }
