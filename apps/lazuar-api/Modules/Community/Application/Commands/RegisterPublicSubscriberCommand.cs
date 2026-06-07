@@ -12,6 +12,7 @@ namespace Modules.Community.Application.Commands;
 
 public record RegisterPublicSubscriberCommand(
     Guid OrganizationId,
+    string TenantSlug, // <-- ADDED: Needed for URL routing
     string PlanSlug,
     string Name,
     string Email,
@@ -48,7 +49,6 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             throw new InvalidOperationException("The requested subscription program is unavailable.");
         }
 
-        // Pass GlobalUserId down to the CRM module
         var profileCommand = new CreateClientProfileCommand(
             request.OrganizationId,
             request.Name,
@@ -70,8 +70,10 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         _subscriptionRepository.Add(subscription);
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var successUrl = $"{baseUrl}/{plan.Slug}/success";
-        var cancelUrl = $"{baseUrl}/{plan.Slug}/checkout?cancelled=true";
+        
+        // FIX: Inject the TenantSlug into the redirect URL paths!
+        var successUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/success";
+        var cancelUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/checkout?cancelled=true";
 
         var metadata = new Dictionary<string, string>
         {

@@ -314,29 +314,41 @@ public static class Endpoints
         // ==========================================
         // PUBLIC ENROLLMENT FLOW
         // ==========================================
-        publicGroup.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, NotFound>> (
+        publicGroup.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>, NotFound>> (
             PublicCheckoutRequestDto req,
             IOneQueryService oneQueryService, 
-            IExecutionContextAccessor ctx, // <-- ADDED: Inject Context Accessor
+            IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
             var tenant = await oneQueryService.GetWorkspaceBySlugAsync(req.Tenant_slug); 
             if (tenant == null || !tenant.IsActive)
                 return TypedResults.NotFound();
             
-            // --> ADDED: Resolve Global User ID from the context if the user has an active Lazuar One cookie
             var globalUserId = ctx.UserId != Guid.Empty ? ctx.UserId : (Guid?)null;
             
-            var command = new RegisterPublicSubscriberCommand(
-                tenant.Id,
-                req.Plan_slug,
-                req.Name,
-                req.Email,
-                req.Phone,
-                globalUserId); // <-- ADDED: Pass to the command
-            
-            var checkoutUrl = await mediator.Send(command);
-            return TypedResults.Ok(new CheckoutResponse { Url = checkoutUrl });
+            try
+            {
+                var command = new RegisterPublicSubscriberCommand(
+                    tenant.Id,
+                    req.Tenant_slug,
+                    req.Plan_slug,
+                    req.Name,
+                    req.Email,
+                    req.Phone,
+                    globalUserId); 
+                
+                var checkoutUrl = await mediator.Send(command);
+                return TypedResults.Ok(new CheckoutResponse { Url = checkoutUrl });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails 
+                { 
+                    Status = 400, 
+                    Title = "Checkout Generation Failed",
+                    Detail = ex.Message 
+                });
+            }
         });
 
         // ==========================================

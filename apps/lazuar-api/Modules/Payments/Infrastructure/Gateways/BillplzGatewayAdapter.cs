@@ -31,7 +31,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         _logger = logger;
     }
 
-    public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
+public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
         string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId)
@@ -49,9 +49,16 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         metadata.TryGetValue("type", out var type);
         var ref1 = metadata.TryGetValue("subscription_id", out var subId) ? subId : tenantId.ToString();
 
-        // Pass metadata dynamically via query parameters because Billplz does not return reference fields in the POST callback payload
         var queryParams = $"?type={Uri.EscapeDataString(type ?? "payment")}&subscription_id={Uri.EscapeDataString(ref1)}";
         var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}{queryParams}";
+
+        // FIX: Billplz API strictly rejects 'localhost' in callback_url.
+        // If testing locally without ngrok, replace with a dummy domain so checkout UI doesn't crash.
+        // (Webhooks won't arrive locally, but the user can successfully reach the payment page to verify flow).
+        if (webhookUrl.Contains("localhost"))
+        {
+            webhookUrl = webhookUrl.Replace("localhost", "lazuar-local-dev.com");
+        }
 
         var amountCents = (int)(amount * 100);
 
