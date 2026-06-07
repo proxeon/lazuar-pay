@@ -1,5 +1,6 @@
 using BuildingBlocks.Domain;
 using Modules.One.Domain.Events;
+using Modules.One.Domain.Rules;
 
 namespace Modules.One.Domain;
 
@@ -17,9 +18,12 @@ public class Organization : Entity, IAggregateRoot
 
     public Organization(string name, string slug)
     {
+        var cleanSlug = slug.Trim().ToLowerInvariant();
+        CheckRule(new OrganizationSlugMustBeValidRule(cleanSlug));
+
         Id = Guid.CreateVersion7();
         Name = name.Trim();
-        Slug = slug.Trim().ToLowerInvariant();
+        Slug = cleanSlug;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
         

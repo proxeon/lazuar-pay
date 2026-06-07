@@ -8,7 +8,13 @@ namespace LazuarApi.One;
 
 @route("/one")
 interface OneOperations {
-  // --- Auth ---
+  // --- Auth & Public Registration ---
+  @post
+  @route("/public/register")
+  registerPublicUser(
+    @body body: PublicRegisterRequestDto,
+  ): LoginResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @post
   @route("/auth/login")
   login(

@@ -6,6 +6,12 @@ model LoginRequest {
   password?: string;
 }
 
+model PublicRegisterRequestDto {
+  email: string;
+  password?: string;
+  name?: string;
+}
+
 model LoginResponse {
   user: AuthUser;
 }
@@ -21,11 +27,6 @@ model AuthUser {
 model CreateWorkspaceRequestDto {
   name: string;
   slug: string;
-
-  // Customer Handoff Fields
-  owner_email: string;
-
-  owner_name: string;
   provision_apps: string[];
 }
 

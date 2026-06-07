@@ -388,6 +388,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/one/public/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OneOperations_registerPublicUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/one/workspaces": {
         parameters: {
             query?: never;
@@ -871,8 +887,6 @@ export interface components {
         "One.CreateWorkspaceRequestDto": {
             name: string;
             slug: string;
-            owner_email: string;
-            owner_name: string;
             provision_apps: string[];
         };
         "One.EntitlementDto": {
@@ -887,6 +901,11 @@ export interface components {
         };
         "One.LoginResponse": {
             user: components["schemas"]["One.AuthUser"];
+        };
+        "One.PublicRegisterRequestDto": {
+            email: string;
+            password?: string;
+            name?: string;
         };
         "One.ToggleAppEntitlementRequestDto": {
             is_active: boolean;
@@ -3103,6 +3122,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["One.EntitlementDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_registerPublicUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["One.PublicRegisterRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.LoginResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

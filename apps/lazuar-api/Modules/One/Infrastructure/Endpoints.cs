@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using BuildingBlocks.Infrastructure;
 using Lazuar.ApiTypes;
 using MediatR;
@@ -24,6 +25,39 @@ public static class Endpoints
     {
         var group = endpoints.MapGroup("/one").RequireCors();
 
+        // 1. PUBLIC REGISTRATION ENDPOINT (Product-Led Growth)
+        group.MapPost("/public/register", async Task<Results<Ok<LoginResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            [FromBody] PublicRegisterRequestDto req,
+            IConfiguration config,
+            IJwtService jwtService,
+            IMediator mediator,
+            HttpContext ctx) =>
+        {
+            var email = req.Email?.Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(req.Password))
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = "Email and password are required." });
+
+            try
+            {
+                // Dispatch command to create the global user
+                var userId = await mediator.Send(new RegisterPublicUserCommand(email, req.Password, req.Name));
+
+                // Immediately log the user in by issuing the secure cookie
+                var displayName = string.IsNullOrWhiteSpace(req.Name) ? email.Split('@')[0] : req.Name.Trim();
+                IssueCookie(ctx, userId.ToString(), email, isSystemAdmin: false, config);
+
+                return TypedResults.Ok(new LoginResponse
+                {
+                    User = new AuthUser { Email = email, Name = displayName, Role = "CLIENT", Is_system_admin = false }
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
+
+        // 2. AUTHENTICATION ENDPOINT
         group.MapPost("/auth/login", async Task<Results<Ok<LoginResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             [FromBody] LoginRequest req,
             IConfiguration config,
@@ -36,33 +70,26 @@ public static class Endpoints
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(req.Password))
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = "Email and password are required." });
 
-            // Hardcoded developer backdoor for rapid testing
-            if ((email == "sysadmin@lazuars.io" || email == "founder@lazuar-hq.com") && req.Password == "Password123!")
+            var user = await db.GlobalUsers.FirstOrDefaultAsync(u => u.Email == email);
+            
+            bool isDevBackdoor = (email == "sysadmin@lazuars.io" || email == "founder@lazuar-hq.com") && req.Password == "Password123!";
+
+            if (!isDevBackdoor)
             {
-                var isSysAdmin = email == "sysadmin@lazuars.io";
-                var userId = isSysAdmin ? "018f3a3f-3610-73bf-baef-c07a3c3df9ee" : "018f3a3f-3610-73bf-baef-c07a3c3df9ff";
-                
-                IssueCookie(ctx, userId, email, isSysAdmin, config);
-                
-                return TypedResults.Ok(new LoginResponse { 
-                    User = new AuthUser { 
-                        Email = email, 
-                        Name = isSysAdmin ? "System Administrator" : "Founder", 
-                        Role = isSysAdmin ? "SUPER_ADMIN" : "CLIENT", 
-                        Is_system_admin = isSysAdmin 
-                    } 
-                });
+                if (user == null || !user.IsActive || !passwordService.Verify(req.Password, user.PasswordHash))
+                    return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 401, Detail = "Invalid email or password." });
             }
 
-            var user = await db.GlobalUsers.FirstOrDefaultAsync(u => u.Email == email);
-            if (user == null || !user.IsActive || !passwordService.Verify(req.Password, user.PasswordHash))
-                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 401, Detail = "Invalid email or password." });
+            var isSysAdmin = user?.IsSystemAdmin ?? (email == "sysadmin@lazuars.io");
+            var userId = user?.Id.ToString() ?? (isSysAdmin ? "018f3a3f-3610-73bf-baef-c07a3c3df9ee" : "018f3a3f-3610-73bf-baef-c07a3c3df9ff");
+            var role = isSysAdmin ? "SUPER_ADMIN" : "CLIENT";
+            var displayName = user != null ? user.Email.Split('@')[0] : (isSysAdmin ? "System Administrator" : "Founder");
 
-            IssueCookie(ctx, user.Id.ToString(), user.Email, user.IsSystemAdmin, config);
+            IssueCookie(ctx, userId, email, isSysAdmin, config);
 
             return TypedResults.Ok(new LoginResponse
             {
-                User = new AuthUser { Email = user.Email, Name = "User", Role = user.IsSystemAdmin ? "SUPER_ADMIN" : "CLIENT", Is_system_admin = user.IsSystemAdmin }
+                User = new AuthUser { Email = email, Name = displayName, Role = role, Is_system_admin = isSysAdmin }
             });
         });
 
@@ -78,10 +105,37 @@ public static class Endpoints
             var isSystemAdmin = principal.FindFirst("is_system_admin")?.Value == "true";
             if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
 
-            // Return the dynamically mapped role from the ClaimsPrincipal if it exists (set by TenantSecurityMiddleware)
             var role = principal.FindFirst(ClaimTypes.Role)?.Value ?? (isSystemAdmin ? "SUPER_ADMIN" : "CLIENT");
 
             return TypedResults.Ok(new AuthUser { Email = email, Name = "User", Role = role, Is_system_admin = isSystemAdmin });
+        }).RequireAuthorization();
+
+        // 3. WORKSPACE (TENANT) CREATION - NOW ACCESSIBLE TO ALL LOGGED-IN USERS
+        group.MapPost("/workspaces", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            [FromBody] CreateWorkspaceRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            
+            try
+            {
+                // Dispatch Orchestration Command securely bound to the authenticated JWT UserId!
+                var command = new CreateWorkspaceCommand(
+                    OwnerUserId: ctx.UserId,
+                    Name: req.Name, 
+                    Slug: req.Slug, 
+                    ProvisionApps: req.Provision_apps?.ToList() ?? new List<string>()
+                );
+                
+                var id = await mediator.Send(command);
+                return TypedResults.Ok(new IdResponse { Id = id.ToString() });
+            }
+            catch (BusinessRuleValidationException ex)
+            {
+                // Catches the Slug formatting/blocklist rule
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         }).RequireAuthorization();
 
         group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (
@@ -101,38 +155,7 @@ public static class Endpoints
             }).ToList();
             
             return TypedResults.Ok((ICollection<WorkspaceDto>)dtos);
-        }).RequireAuthorization();
-
-        group.MapPost("/workspaces", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
-            [FromBody] CreateWorkspaceRequestDto req,
-            IExecutionContextAccessor ctx,
-            IMediator mediator) =>
-        {
-            // Superadmin Guard
-            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
-            
-            // Validate Required Customer Data
-            if (string.IsNullOrWhiteSpace(req.Owner_email) || string.IsNullOrWhiteSpace(req.Owner_name))
-            {
-                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails 
-                { 
-                    Status = 400, 
-                    Detail = "Owner email and name are required to provision a workspace." 
-                });
-            }
-
-            // Dispatch Orchestration Command
-            var command = new CreateWorkspaceCommand(
-                req.Name, 
-                req.Slug, 
-                req.Owner_email, 
-                req.Owner_name, 
-                req.Provision_apps?.ToList() ?? new List<string>()
-            );
-            
-            var id = await mediator.Send(command);
-            return TypedResults.Ok(new IdResponse { Id = id.ToString() });
-        }).RequireAuthorization();
+        }).RequireAuthorization("OrgAdmin"); // Kept strictly to Super Admins (Global Directory)
 
         group.MapGet("/workspaces/{id:guid}/apps", async Task<Results<Ok<ICollection<WorkspaceAppDto>>, UnauthorizedHttpResult>> (
             Guid id,
@@ -145,7 +168,7 @@ public static class Endpoints
             var result = apps.Select(a => new WorkspaceAppDto { App_id = a }).ToList();
             
             return TypedResults.Ok((ICollection<WorkspaceAppDto>)result);
-        }).RequireAuthorization();
+        }).RequireAuthorization("OrgAdmin");
 
         group.MapPost("/workspaces/{id:guid}/apps/{appId}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (
             Guid id,
@@ -158,7 +181,7 @@ public static class Endpoints
             
             await mediator.Send(new ToggleAppEntitlementCommand(id, appId, req.Is_active));
             return TypedResults.Ok(new StatusResponse { Status = req.Is_active ? "enabled" : "disabled" });
-        }).RequireAuthorization();
+        }).RequireAuthorization("OrgAdmin");
 
         group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (
             IExecutionContextAccessor ctx,
@@ -199,13 +222,11 @@ public static class Endpoints
         {
             new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim(ClaimTypes.Email, email),
-            // Default token role fallback (overridden by middleware per-tenant later)
             new Claim(ClaimTypes.Role, isSystemAdmin ? "SUPER_ADMIN" : "CLIENT"),
             new Claim("is_system_admin", isSystemAdmin ? "true" : "false")
         };
 
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
-        
         var isDev = ctx.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
 
         var cookieOptions = new CookieOptions

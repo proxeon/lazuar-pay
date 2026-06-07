@@ -1188,12 +1188,6 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("slug")]
         public string Slug { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("owner_email")]
-        public string Owner_email { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("owner_name")]
-        public string Owner_name { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("provision_apps")]
         public System.Collections.Generic.List<string> Provision_apps { get; set; } = new System.Collections.Generic.List<string>();
 
@@ -1262,6 +1256,30 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("user")]
         public AuthUser User { get; set; } = new AuthUser();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PublicRegisterRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+        public string Email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("password")]
+        public string? Password { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
