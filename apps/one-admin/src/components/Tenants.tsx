@@ -3,7 +3,6 @@ import { Menu, Plus, Loader2, Settings, Building2, SearchX } from "lucide-react"
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "../lib/api-client";
-import { cn } from "../lib/utils";
 
 import CreateTenantModal from "./CreateTenantModal";
 import TenantDetailsSlideout from "./TenantDetailsSlideout";
@@ -28,13 +27,15 @@ export default function Tenants({ isMobile, toggleSidebar }: TenantsProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (payload: { name: string; slug: string }) => {
+    mutationFn: async (payload: { name: string; slug: string; owner_email: string; owner_name: string; provision_apps: string[] }) => {
       const { data, error } = await client.POST("/one/workspaces", { body: payload });
       if (error) throw new Error(error.detail || "Provisioning failed");
       return data;
     },
-    onSuccess: () => {
-      toast.success("Workspace provisioned and seeded successfully!");
+    onSuccess: (_, variables) => {
+      toast.success("Workspace provisioned successfully!", {
+        description: `Credentials dispatched to ${variables.owner_email}`
+      });
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       setShowCreateModal(false);
     },
@@ -59,7 +60,7 @@ export default function Tenants({ isMobile, toggleSidebar }: TenantsProps) {
           )}
           <div>
             <h1 className="text-[20px] font-semibold tracking-tight text-[#09090b]">Workspaces</h1>
-            <p className="text-[13px] text-[#71717a] mt-0.5">Manage ecosystem tenants and provisioning.</p>
+            <p className="text-[13px] text-[#71717a] mt-0.5">Manage ecosystem tenants and customer provisioning.</p>
           </div>
         </div>
 
@@ -68,7 +69,7 @@ export default function Tenants({ isMobile, toggleSidebar }: TenantsProps) {
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-1.5 bg-[#09090b] text-white text-[13px] font-semibold px-4 h-9 rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-y-[2px] hover:translate-x-[2px] hover:bg-[#27272a] transition-all active:scale-95"
           >
-            <Plus size={16} /> New Workspace
+            <Plus size={16} /> Provision Customer
           </button>
         </div>
       </header>
@@ -125,7 +126,8 @@ export default function Tenants({ isMobile, toggleSidebar }: TenantsProps) {
       {showCreateModal && (
         <CreateTenantModal 
           onClose={() => setShowCreateModal(false)}
-          onSuccess={(name, slug) => createMutation.mutate({ name, slug })}
+          onSuccess={(payload) => createMutation.mutate(payload)}
+          isSubmitting={createMutation.isPending}
         />
       )}
 
