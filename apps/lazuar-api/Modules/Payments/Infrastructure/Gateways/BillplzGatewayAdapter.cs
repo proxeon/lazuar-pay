@@ -31,7 +31,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         _logger = logger;
     }
 
-public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
+    public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
         string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId)
