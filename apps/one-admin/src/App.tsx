@@ -10,6 +10,7 @@ import type { OnboardingRequest } from "./components/Onboard";
 import OnboardDetailsPage from "./components/OnboardDetailsPage";
 import LoginPage from "./components/LoginPage";
 import Tenants from "./components/Tenants";
+import ApiDocs from "./components/ApiDocs";
 import { Toaster } from "sonner";
 import { client, type AuthUser } from "./lib/api-client";
 
@@ -56,6 +57,17 @@ export default function App() {
       try {
         const { data, error } = await client.GET("/one/auth/me");
         if (data && !error && data.is_system_admin) {
+          
+          // Auto-redirect back to requesting app if already authenticated
+          if (window.location.pathname === "/login") {
+            const searchParams = new URLSearchParams(window.location.search);
+            const returnUrl = searchParams.get("returnUrl");
+            if (returnUrl) {
+              window.location.href = returnUrl;
+              return;
+            }
+          }
+
           setUser(data);
         }
       } catch (err) {
@@ -91,6 +103,11 @@ export default function App() {
           
           <Route path="/onboard" element={<Onboard pendingRequests={pendingRequests} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/onboard/:id" element={<OnboardDetailsPage pendingRequests={pendingRequests} setPendingRequests={setPendingRequests} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
+          
+          <Route path="/api-docs" element={<ApiDocs isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
+          
+          {/* Catch stray /login routes if they drop into the router */}
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         
         {isMobile && isSidebarOpen && <div className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />}

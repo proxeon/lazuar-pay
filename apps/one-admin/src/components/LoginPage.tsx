@@ -27,6 +27,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         if (!data.user.is_system_admin) {
            throw new Error("Access denied. System Administrator privileges required.");
         }
+
+        // Process Return URL for SSO redirection (e.g. back to community-admin)
+        const searchParams = new URLSearchParams(window.location.search);
+        const returnUrl = searchParams.get("returnUrl");
+        
+        if (returnUrl) {
+          window.location.href = returnUrl;
+          return; // Stop execution so the component doesn't unmount while redirecting
+        }
+
         onLogin({
           email: data.user.email,
           name: data.user.name,
