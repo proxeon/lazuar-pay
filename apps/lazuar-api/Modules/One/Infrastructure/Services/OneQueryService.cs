@@ -51,12 +51,12 @@ public class OneQueryService : IOneQueryService
         return await connection.QuerySingleOrDefaultAsync<Guid?>(sql, new { Slug = slug.ToLower().Trim() });
     }
 
-    public async Task<bool> HasTenantAccessAsync(Guid globalUserId, Guid tenantId)
+    public async Task<string?> GetTenantRoleAsync(Guid globalUserId, Guid tenantId)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = "SELECT EXISTS(SELECT 1 FROM one.\"TenantMemberships\" WHERE \"GlobalUserId\" = @Uid AND \"OrganizationId\" = @OrgId)";
-        return await connection.ExecuteScalarAsync<bool>(sql, new { Uid = globalUserId, OrgId = tenantId });
+        const string sql = "SELECT \"Role\" FROM one.\"TenantMemberships\" WHERE \"GlobalUserId\" = @Uid AND \"OrganizationId\" = @OrgId LIMIT 1";
+        return await connection.ExecuteScalarAsync<string?>(sql, new { Uid = globalUserId, OrgId = tenantId });
     }
 }

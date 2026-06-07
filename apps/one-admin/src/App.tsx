@@ -21,7 +21,6 @@ export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Global Mock States (For existing features)
   const [users, setUsers] = useState<MockUser[]>([]);
   const [pendingRequests, setPendingRequests] = useState<OnboardingRequest[]>([]);
 
@@ -51,11 +50,11 @@ export default function App() {
     if (!isMobile) localStorage.setItem(SIDEBAR_STATE_KEY, isSidebarOpen ? "expanded" : "collapsed");
   }, [isSidebarOpen, isMobile]);
 
-  // Session Verification
   useEffect(() => {
     async function verifySession() {
       try {
         const { data, error } = await client.GET("/one/auth/me");
+        // STRICT GUARD: Must be system admin
         if (data && !error && data.is_system_admin) {
           
           // Auto-redirect back to requesting app if already authenticated
@@ -97,22 +96,16 @@ export default function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/workspaces" element={<Tenants isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
-          
           <Route path="/users" element={<Users users={users} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/users/:id" element={<UserDetailsPage users={users} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
-          
           <Route path="/onboard" element={<Onboard pendingRequests={pendingRequests} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/onboard/:id" element={<OnboardDetailsPage pendingRequests={pendingRequests} setPendingRequests={setPendingRequests} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
-          
           <Route path="/api-docs" element={<ApiDocs isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           
-          {/* Catch stray /login routes if they drop into the router */}
           <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-        
         {isMobile && isSidebarOpen && <div className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />}
       </main>
-      
       <Toaster position="bottom-right" richColors theme="light" closeButton />
     </div>
   );

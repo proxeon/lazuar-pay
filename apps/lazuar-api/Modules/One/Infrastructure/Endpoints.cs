@@ -37,10 +37,21 @@ public static class Endpoints
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = "Email and password are required." });
 
             // Hardcoded developer backdoor for rapid testing
-            if ((email == "admin@lazuars.io" || email == "sysadmin@lazuars.io") && req.Password == "Password123!")
+            if ((email == "sysadmin@lazuars.io" || email == "founder@lazuar-hq.com") && req.Password == "Password123!")
             {
-                IssueCookie(ctx, "018f3a3f-3610-73bf-baef-c07a3c3df9ee", email, true, config);
-                return TypedResults.Ok(new LoginResponse { User = new AuthUser { Email = email, Name = "Administrator", Role = "SUPER_ADMIN", Is_system_admin = true } });
+                var isSysAdmin = email == "sysadmin@lazuars.io";
+                var userId = isSysAdmin ? "018f3a3f-3610-73bf-baef-c07a3c3df9ee" : "018f3a3f-3610-73bf-baef-c07a3c3df9ff";
+                
+                IssueCookie(ctx, userId, email, isSysAdmin, config);
+                
+                return TypedResults.Ok(new LoginResponse { 
+                    User = new AuthUser { 
+                        Email = email, 
+                        Name = isSysAdmin ? "System Administrator" : "Founder", 
+                        Role = isSysAdmin ? "SUPER_ADMIN" : "CLIENT", 
+                        Is_system_admin = isSysAdmin 
+                    } 
+                });
             }
 
             var user = await db.GlobalUsers.FirstOrDefaultAsync(u => u.Email == email);
@@ -67,7 +78,10 @@ public static class Endpoints
             var isSystemAdmin = principal.FindFirst("is_system_admin")?.Value == "true";
             if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
 
-            return TypedResults.Ok(new AuthUser { Email = email, Name = "User", Role = isSystemAdmin ? "SUPER_ADMIN" : "CLIENT", Is_system_admin = isSystemAdmin });
+            // Return the dynamically mapped role from the ClaimsPrincipal if it exists (set by TenantSecurityMiddleware)
+            var role = principal.FindFirst(ClaimTypes.Role)?.Value ?? (isSystemAdmin ? "SUPER_ADMIN" : "CLIENT");
+
+            return TypedResults.Ok(new AuthUser { Email = email, Name = "User", Role = role, Is_system_admin = isSystemAdmin });
         }).RequireAuthorization();
 
         group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (
@@ -139,6 +153,7 @@ public static class Endpoints
         {
             new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim(ClaimTypes.Email, email),
+            // Default token role fallback (overridden by middleware per-tenant later)
             new Claim(ClaimTypes.Role, isSystemAdmin ? "SUPER_ADMIN" : "CLIENT"),
             new Claim("is_system_admin", isSystemAdmin ? "true" : "false")
         };

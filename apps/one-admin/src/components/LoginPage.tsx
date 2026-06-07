@@ -24,17 +24,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       if (apiError) throw new Error(apiError.detail || "Invalid credentials.");
 
       if (data && data.user) {
+        // STRICT GUARD
         if (!data.user.is_system_admin) {
            throw new Error("Access denied. System Administrator privileges required.");
         }
 
-        // Process Return URL for SSO redirection (e.g. back to community-admin)
         const searchParams = new URLSearchParams(window.location.search);
         const returnUrl = searchParams.get("returnUrl");
         
         if (returnUrl) {
           window.location.href = returnUrl;
-          return; // Stop execution so the component doesn't unmount while redirecting
+          return; 
         }
 
         onLogin({
@@ -68,7 +68,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <label className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Email</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="admin@lazuars.io" />
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="sysadmin@lazuars.io" />
           </div>
           <div className="space-y-2">
             <label className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Password</label>

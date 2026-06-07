@@ -18,40 +18,33 @@ public class TenantSecurityMiddleware
     {
         Guid? resolvedTenantId = null;
 
-        // 1. Resolve Tenant Context from Request Header (X-Tenant-Id)
         if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader) && Guid.TryParse(tenantIdHeader, out var parsedId))
         {
             resolvedTenantId = parsedId;
         }
-        // 2. Resolve Tenant Context from Request Header (X-Tenant-Slug)
         else if (context.Request.Headers.TryGetValue("X-Tenant-Slug", out var tenantSlugHeader))
         {
             resolvedTenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlugHeader.ToString());
         }
-        // 3. Resolve Tenant Context from Route values (e.g. /public/community/{tenantSlug}/plans)
         else if (context.Request.RouteValues.TryGetValue("tenantSlug", out var routeSlug))
         {
             resolvedTenantId = await oneQueryService.GetTenantIdBySlugAsync(routeSlug!.ToString()!);
         }
 
-        // 4. Validate Authorization
         if (resolvedTenantId.HasValue)
         {
-            // Store the resolved ID so the rest of the application (DB Contexts) knows which tenant we are querying
             context.Items["TenantId"] = resolvedTenantId.Value;
 
-            // If the user is authenticated, we MUST verify they belong to this Tenant
             if (context.User.Identity?.IsAuthenticated == true)
             {
                 var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var isSystemAdmin = context.User.FindFirst("is_system_admin")?.Value == "true";
 
-                // System Admins bypass the local membership check (God-Mode)
-                if (Guid.TryParse(userIdClaim, out var userId) && !isSystemAdmin)
+                if (Guid.TryParse(userIdClaim, out var userId))
                 {
-                    var hasAccess = await oneQueryService.HasTenantAccessAsync(userId, resolvedTenantId.Value);
+                    // Removed !isSystemAdmin God-Mode bypass. Everyone must be evaluated.
+                    var role = await oneQueryService.GetTenantRoleAsync(userId, resolvedTenantId.Value);
                     
-                    if (!hasAccess)
+                    if (string.IsNullOrEmpty(role))
                     {
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         context.Response.ContentType = "application/json";
@@ -64,6 +57,13 @@ public class TenantSecurityMiddleware
                         
                         await context.Response.WriteAsync(error);
                         return; // Halt request pipeline
+                    }
+                    else
+                    {
+                        // Dynamically elevate the principal's claims with their localized tenant role 
+                        // so that [Authorize(Policy = "OrgAdmin")] works correctly for this specific request.
+                        var identity = context.User.Identity as ClaimsIdentity;
+                        identity?.AddClaim(new Claim(ClaimTypes.Role, role));
                     }
                 }
             }
