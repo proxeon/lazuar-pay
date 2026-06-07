@@ -38,3 +38,12 @@ model EntitlementDto {
   workspace_slug: string;
   role: string;
 }
+
+// --- App Entitlement Models ---
+model ToggleAppEntitlementRequestDto {
+  is_active: boolean;
+}
+
+model WorkspaceAppDto {
+  app_id: string;
+}

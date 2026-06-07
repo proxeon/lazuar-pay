@@ -11,6 +11,7 @@ public class OneDbContext : PlatformDbContext
     public DbSet<Organization> Organizations { get; set; } = null!;
     public DbSet<GlobalUser> GlobalUsers { get; set; } = null!;
     public DbSet<TenantMembership> TenantMemberships { get; set; } = null!;
+    public DbSet<TenantAppEntitlement> TenantAppEntitlements { get; set; } = null!;
     
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -27,7 +28,6 @@ public class OneDbContext : PlatformDbContext
     {
         base.OnModelCreating(modelBuilder);
         
-        // Define the schema
         modelBuilder.HasDefaultSchema("one");
 
         modelBuilder.Entity<Organization>(builder => 
@@ -51,7 +51,14 @@ public class OneDbContext : PlatformDbContext
             builder.HasIndex(x => new { x.GlobalUserId, x.OrganizationId }).IsUnique();
         });
 
-        // Box tables
+        modelBuilder.Entity<TenantAppEntitlement>(builder => 
+        { 
+            builder.ToTable("TenantAppEntitlements"); 
+            builder.HasKey(x => x.Id); 
+            // Ensures a tenant can only have one entitlement record per app (which toggles true/false)
+            builder.HasIndex(x => new { x.OrganizationId, x.AppId }).IsUnique();
+        });
+
         modelBuilder.Entity<OutboxMessage>(builder =>
         {
             builder.ToTable("OutboxMessages");

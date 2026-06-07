@@ -43,4 +43,21 @@ interface OneOperations {
   createWorkspace(
     @body body: CreateWorkspaceRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  // --- Workspace Apps/Entitlements ---
+  @useAuth(BearerAuth)
+  @get
+  @route("/workspaces/{id}/apps")
+  getWorkspaceApps(
+    @path id: string,
+  ): WorkspaceAppDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @post
+  @route("/workspaces/{id}/apps/{appId}")
+  toggleAppEntitlement(
+    @path id: string,
+    @path appId: string,
+    @body body: ToggleAppEntitlementRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

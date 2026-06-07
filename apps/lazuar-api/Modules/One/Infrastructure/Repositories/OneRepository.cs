@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Modules.One.Application;
 using Modules.One.Domain;
@@ -21,6 +24,18 @@ public class OneRepository : IOneRepository
     public void AddTenantMembership(TenantMembership membership)
     {
         _context.TenantMemberships.Add(membership);
+    }
+
+    public void AddEntitlement(TenantAppEntitlement entitlement)
+    {
+        _context.TenantAppEntitlements.Add(entitlement);
+    }
+
+    public async Task<TenantAppEntitlement?> GetEntitlementAsync(Guid organizationId, string appId, CancellationToken ct = default)
+    {
+        return await _context.TenantAppEntitlements
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.OrganizationId == organizationId && e.AppId == appId, ct);
     }
 
     public async Task<bool> HasMembershipAsync(Guid globalUserId, Guid organizationId, CancellationToken ct = default)

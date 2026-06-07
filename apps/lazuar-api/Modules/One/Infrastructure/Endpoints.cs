@@ -114,6 +114,32 @@ public static class Endpoints
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         }).RequireAuthorization();
 
+        group.MapGet("/workspaces/{id:guid}/apps", async Task<Results<Ok<ICollection<WorkspaceAppDto>>, UnauthorizedHttpResult>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            
+            var apps = await queryService.GetWorkspaceAppsAsync(id);
+            var result = apps.Select(a => new WorkspaceAppDto { App_id = a }).ToList();
+            
+            return TypedResults.Ok((ICollection<WorkspaceAppDto>)result);
+        }).RequireAuthorization();
+
+        group.MapPost("/workspaces/{id:guid}/apps/{appId}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (
+            Guid id,
+            string appId,
+            [FromBody] ToggleAppEntitlementRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            
+            await mediator.Send(new ToggleAppEntitlementCommand(id, appId, req.Is_active));
+            return TypedResults.Ok(new StatusResponse { Status = req.Is_active ? "enabled" : "disabled" });
+        }).RequireAuthorization();
+
         group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (
             IExecutionContextAccessor ctx,
             OneDbContext db) =>
