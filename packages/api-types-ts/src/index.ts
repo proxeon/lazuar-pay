@@ -871,6 +871,9 @@ export interface components {
         "One.CreateWorkspaceRequestDto": {
             name: string;
             slug: string;
+            owner_email: string;
+            owner_name: string;
+            provision_apps: string[];
         };
         "One.EntitlementDto": {
             workspace_id: string;

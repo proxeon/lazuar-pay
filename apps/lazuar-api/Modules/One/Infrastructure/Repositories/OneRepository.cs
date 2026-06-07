@@ -45,6 +45,17 @@ public class OneRepository : IOneRepository
             .AnyAsync(m => m.GlobalUserId == globalUserId && m.OrganizationId == organizationId, ct);
     }
 
+    public async Task<GlobalUser?> GetUserByEmailAsync(string email, CancellationToken ct = default)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        return await _context.GlobalUsers.FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+    }
+
+    public void AddGlobalUser(GlobalUser user)
+    {
+        _context.GlobalUsers.Add(user);
+    }
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await _context.SaveChangesAsync(ct);

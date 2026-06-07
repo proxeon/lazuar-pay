@@ -1188,6 +1188,15 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("slug")]
         public string Slug { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("owner_email")]
+        public string Owner_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("owner_name")]
+        public string Owner_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("provision_apps")]
+        public System.Collections.Generic.List<string> Provision_apps { get; set; } = new System.Collections.Generic.List<string>();
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]

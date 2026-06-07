@@ -21,6 +21,12 @@ model AuthUser {
 model CreateWorkspaceRequestDto {
   name: string;
   slug: string;
+
+  // Customer Handoff Fields
+  owner_email: string;
+
+  owner_name: string;
+  provision_apps: string[];
 }
 
 model WorkspaceDto {

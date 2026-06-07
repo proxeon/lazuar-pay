@@ -108,9 +108,29 @@ public static class Endpoints
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
+            // Superadmin Guard
             if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
             
-            var id = await mediator.Send(new CreateWorkspaceCommand(ctx.UserId, req.Name, req.Slug));
+            // Validate Required Customer Data
+            if (string.IsNullOrWhiteSpace(req.Owner_email) || string.IsNullOrWhiteSpace(req.Owner_name))
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails 
+                { 
+                    Status = 400, 
+                    Detail = "Owner email and name are required to provision a workspace." 
+                });
+            }
+
+            // Dispatch Orchestration Command
+            var command = new CreateWorkspaceCommand(
+                req.Name, 
+                req.Slug, 
+                req.Owner_email, 
+                req.Owner_name, 
+                req.Provision_apps?.ToList() ?? new List<string>()
+            );
+            
+            var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         }).RequireAuthorization();
 

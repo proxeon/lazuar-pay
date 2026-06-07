@@ -12,5 +12,9 @@ public interface IOneRepository
     void AddEntitlement(TenantAppEntitlement entitlement);
     Task<TenantAppEntitlement?> GetEntitlementAsync(Guid organizationId, string appId, CancellationToken ct = default);
     Task<bool> HasMembershipAsync(Guid globalUserId, Guid organizationId, CancellationToken ct = default);
+    
+    Task<GlobalUser?> GetUserByEmailAsync(string email, CancellationToken ct = default);
+    void AddGlobalUser(GlobalUser user);
+    
     Task SaveChangesAsync(CancellationToken ct = default);
 }
