@@ -20,8 +20,8 @@ echo "Seeding development tenant 'lazuar-hq' into container '${DB_CONTAINER}'...
 
 # Run the seeding block
 docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" <<EOF
--- 1. Seed the main Tenant schema
-INSERT INTO tenant."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt")
+-- 1. Seed the main One Organization schema (CHANGED FROM tenant TO one)
+INSERT INTO one."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt")
 VALUES ('7d97963c-063c-4598-86cc-9ddd9d47d9b1', 'Lazuar HQ', 'lazuar-hq', true, NOW())
 ON CONFLICT ("Id") DO NOTHING;
 
