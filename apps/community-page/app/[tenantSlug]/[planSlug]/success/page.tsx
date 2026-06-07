@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { serverClient } from "@/lib/api-client";
+import { serverClient } from "@/lib/server-client";
 import { notFound } from "next/navigation";
 
 export default async function SuccessPage({ params }: { params: Promise<{ tenantSlug: string; planSlug: string }> }) {

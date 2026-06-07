@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Users } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { serverClient } from "@/lib/api-client";
+import { serverClient } from "@/lib/server-client";
 
 export default async function CatalogPage({ params }: { params: Promise<{ tenantSlug: string }> }) {
   const resolvedParams = await params;
