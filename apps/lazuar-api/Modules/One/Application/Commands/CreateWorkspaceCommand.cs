@@ -4,9 +4,11 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.One.Contracts;
 using Modules.One.Domain;
+using Modules.One.Domain.Events;
 
 namespace Modules.One.Application.Commands;
 
@@ -25,15 +27,18 @@ public class CreateWorkspaceCommandHandler : ICommandHandler<CreateWorkspaceComm
     private readonly IOneRepository _repository;
     private readonly IPasswordService _passwordService;
     private readonly IEventBus _eventBus;
+    private readonly IMediator _mediator;
 
     public CreateWorkspaceCommandHandler(
         IOneRepository repository, 
         IPasswordService passwordService,
-        [FromKeyedServices("OneEventBus")] IEventBus eventBus)
+        [FromKeyedServices("OneEventBus")] IEventBus eventBus,
+        IMediator mediator)
     {
         _repository = repository;
         _passwordService = passwordService;
         _eventBus = eventBus;
+        _mediator = mediator;
     }
 
     public async Task<Guid> Handle(CreateWorkspaceCommand request, CancellationToken ct)
@@ -68,14 +73,21 @@ public class CreateWorkspaceCommandHandler : ICommandHandler<CreateWorkspaceComm
             var entitlement = new TenantAppEntitlement(organization.Id, cleanAppId);
             _repository.AddEntitlement(entitlement);
             
-            // Publish event so modules (like Community) know to run JIT template seeding!
+            // Publish event so modules (like Community) know to run JIT template seeding
             await _eventBus.PublishAsync(new AppEntitlementGrantedIntegrationEvent(organization.Id, cleanAppId));
         }
 
-        // Save everything atomically
+        // Step F: Raise the Domain Event to trigger the Customer Handoff Email
+        // (This fires synchronously inside MediatR, appending the message to the Outbox)
+        await _mediator.Publish(new WorkspaceProvisionedDomainEvent(
+            organization.Id, 
+            organization.Name, 
+            request.OwnerName, 
+            request.OwnerEmail, 
+            generatedPassword), ct);
+
+        // Save everything atomically (Workspace, User, Memberships, Entitlements, AND Outbox Messages)
         await _repository.SaveChangesAsync(ct);
-        
-        // (Phase 3 Note: The Customer Handoff Event will be published here in the next step!)
 
         return organization.Id;
     }
