@@ -10,7 +10,7 @@ export const GET = ApiReference({
     content: openapiSpec,
   },
   theme: "default",
-  hideDownloadButton: true,
+  // hideDownloadButton: true,
   metaData: {
     title: "Lazuar Community API",
   },
