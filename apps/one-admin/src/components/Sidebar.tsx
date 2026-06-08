@@ -7,8 +7,7 @@ import {
   LogOut, 
   PanelLeftClose, 
   PanelLeftOpen, 
-  Building2,
-  Code2 // <-- Imported new icon
+  Building2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef } from "react";
@@ -45,10 +44,8 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile, user, onLogout }:
     { icon: Building2, label: "Workspaces", path: "/workspaces" },
     { icon: UserPlus, label: "Onboarding", path: "/onboard" },
     { icon: Users, label: "Users", path: "/users" },
-    { icon: Code2, label: "API Reference", path: "/api-docs" }, // <-- Added menu item
   ];
 
-  // Derive display values safely from the AuthUser object
   const displayName = user?.name || "Admin User";
   const displayEmail = user?.email || "admin@lazuars.io";
   const initials = displayName.slice(0, 2).toUpperCase();

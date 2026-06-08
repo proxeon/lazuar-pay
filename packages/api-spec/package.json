@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx tsp compile .",
-    "watch": "npx tsp compile . --watch"
+    "build": "npx tsp compile main.tsp --output-dir dist && npx tsp compile docs-one.tsp --output-dir dist/one && npx tsp compile docs-community.tsp --output-dir dist/community",
+    "watch": "npx tsp compile main.tsp --watch"
   },
   "dependencies": {
     "@typespec/compiler": "~0.62",

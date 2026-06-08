@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { ApiReference } from "@scalar/nextjs-api-reference";
 
-const specPath = path.join(process.cwd(), "../../packages/api-spec/dist/openapi.yaml");
+const specPath = path.join(process.cwd(), "../../packages/api-spec/dist/one/openapi.yaml");
 const openapiSpec = fs.readFileSync(specPath, "utf8");
 
 export const GET = ApiReference({
@@ -10,8 +10,8 @@ export const GET = ApiReference({
     content: openapiSpec,
   },
   theme: "default",
-  // hideDownloadButton: true,
+  hideDownloadButton: true,
   metaData: {
-    title: "Lazuar API Documentation",
+    title: "Lazuar Platform API",
   },
 });
