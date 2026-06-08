@@ -1,4 +1,3 @@
-// packages/api-spec/common/models.tsp
 import "@typespec/http";
 
 using TypeSpec.Http;
@@ -25,6 +24,13 @@ model IdResponse {
 
 model StatusResponse {
   status: string;
+}
+
+model PaginatedResponse<T> {
+  data: T[];
+  total_count: int32;
+  current_page: int32;
+  total_pages: int32;
 }
 
 @error
