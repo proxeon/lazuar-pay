@@ -1,4 +1,3 @@
-# mprocs-dev.yaml (Monorepo Root)
 procs:
   one-admin:
     shell: cd apps/one-admin && pnpm dev
@@ -12,9 +11,12 @@ procs:
   community-page:
     shell: cd apps/community-page && pnpm dev
     autostart: true
+  developers-page:
+    shell: cd apps/developers-page && pnpm dev
+    autostart: true
   ngrok-api-tunnel:
     shell: task tunnel:api
-    autostart: false # Set to true if you want the API tunnel to open automatically
+    autostart: false
   ngrok-fe-tunnel:
     shell: task tunnel:fe
-    autostart: false # Set to true if you want the Frontend tunnel to open automatically
+    autostart: false
