@@ -73,13 +73,6 @@ interface AdminCommunityOperations {
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
-  @route("/subscribers/{id}/payments")
-  recordPaymentViaPayments(
-    @path id: string,
-    @body body: RecordPaymentRequestDto,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
-
-  @post
   @route("/subscribers/{id}/record-payment")
   recordPayment(
     @path id: string,

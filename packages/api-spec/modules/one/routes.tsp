@@ -8,7 +8,6 @@ namespace LazuarApi.One;
 
 @route("/one")
 interface OneOperations {
-  // --- Auth & Public Registration ---
   @post
   @route("/public/register")
   registerPublicUser(
@@ -44,12 +43,17 @@ interface OneOperations {
     @body body: VerifyEmailRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/auth/resend-verification")
+  resendVerification(
+    @body body: ResendVerificationRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @useAuth(BearerAuth)
   @get
   @route("/auth/me")
   getMe(): AuthUser | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Profile & Security ---
   @useAuth(BearerAuth)
   @put
   @route("/me/profile")
@@ -64,13 +68,11 @@ interface OneOperations {
     @body body: ChangePasswordRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Entitlements ---
   @useAuth(BearerAuth)
   @get
   @route("/me/entitlements")
   getMyEntitlements(): EntitlementDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Workspaces ---
   @useAuth(BearerAuth)
   @get
   @route("/workspaces")
@@ -83,7 +85,21 @@ interface OneOperations {
     @body body: CreateWorkspaceRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Workspace Members & Invitations ---
+  @useAuth(BearerAuth)
+  @put
+  @route("/workspaces/{id}")
+  updateWorkspace(
+    @path id: string,
+    @body body: UpdateWorkspaceRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @delete
+  @route("/workspaces/{id}")
+  deleteWorkspace(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @useAuth(BearerAuth)
   @get
   @route("/workspaces/{id}/members")
@@ -100,6 +116,21 @@ interface OneOperations {
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
+  @get
+  @route("/workspaces/{id}/invites")
+  getWorkspaceInvitations(
+    @path id: string,
+  ): WorkspaceInvitationDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @delete
+  @route("/workspaces/{id}/invites/{inviteId}")
+  revokeWorkspaceInvitation(
+    @path id: string,
+    @path inviteId: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
   @delete
   @route("/workspaces/{id}/members/{userId}")
   removeWorkspaceMember(
@@ -114,7 +145,6 @@ interface OneOperations {
     @body body: AcceptWorkspaceInvitationDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Workspace Apps/Entitlements ---
   @useAuth(BearerAuth)
   @get
   @route("/workspaces/{id}/apps")

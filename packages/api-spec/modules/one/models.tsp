@@ -1,6 +1,5 @@
 namespace LazuarApi.One;
 
-// --- Auth Models ---
 model LoginRequest {
   email: string;
   password?: string;
@@ -38,7 +37,10 @@ model VerifyEmailRequestDto {
   token: string;
 }
 
-// --- Profile Models ---
+model ResendVerificationRequestDto {
+  email: string;
+}
+
 model UpdateProfileRequestDto {
   name: string;
 }
@@ -48,11 +50,15 @@ model ChangePasswordRequestDto {
   new_password: string;
 }
 
-// --- Workspace Models ---
 model CreateWorkspaceRequestDto {
   name: string;
   slug: string;
   provision_apps: string[];
+}
+
+model UpdateWorkspaceRequestDto {
+  name: string;
+  slug: string;
 }
 
 model WorkspaceDto {
@@ -89,7 +95,6 @@ model AcceptWorkspaceInvitationDto {
   token: string;
 }
 
-// --- Entitlement Models ---
 model EntitlementDto {
   workspace_id: string; // GUID
   workspace_name: string;
@@ -97,7 +102,6 @@ model EntitlementDto {
   role: string;
 }
 
-// --- App Entitlement Models ---
 model ToggleAppEntitlementRequestDto {
   is_active: boolean;
 }
