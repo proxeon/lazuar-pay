@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting; 
 using Modules.One.Application.Commands;
 using Modules.One.Contracts;
+using Modules.One.Domain;
 
 namespace Modules.One.Infrastructure;
 
@@ -25,11 +26,10 @@ public static class Endpoints
     {
         var group = endpoints.MapGroup("/one").RequireCors();
 
-        // 1. PUBLIC REGISTRATION ENDPOINT (Product-Led Growth)
         group.MapPost("/public/register", async Task<Results<Ok<LoginResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             [FromBody] PublicRegisterRequestDto req,
             IConfiguration config,
-            IJwtService jwtService,
+            OneDbContext db,
             IMediator mediator,
             HttpContext ctx) =>
         {
@@ -39,16 +39,14 @@ public static class Endpoints
 
             try
             {
-                // Dispatch command to create the global user
                 var userId = await mediator.Send(new RegisterPublicUserCommand(email, req.Password, req.Name));
-
-                // Immediately log the user in by issuing the secure cookie
-                var displayName = string.IsNullOrWhiteSpace(req.Name) ? email.Split('@')[0] : req.Name.Trim();
-                IssueCookie(ctx, userId.ToString(), email, isSystemAdmin: false, config);
+                var user = await db.GlobalUsers.FindAsync(userId);
+                
+                IssueCookie(ctx, user!, config);
 
                 return TypedResults.Ok(new LoginResponse
                 {
-                    User = new AuthUser { Email = email, Name = displayName, Role = "CLIENT", Is_system_admin = false }
+                    User = new AuthUser { Email = user!.Email, Name = user.Name, Role = "CLIENT", Is_system_admin = false, Is_email_verified = user.IsEmailVerified }
                 });
             }
             catch (InvalidOperationException ex)
@@ -57,11 +55,10 @@ public static class Endpoints
             }
         });
 
-        // 2. AUTHENTICATION ENDPOINT
         group.MapPost("/auth/login", async Task<Results<Ok<LoginResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             [FromBody] LoginRequest req,
             IConfiguration config,
-            IJwtService jwtService,
+            IWebHostEnvironment env,
             IPasswordService passwordService,
             OneDbContext db,
             HttpContext ctx) =>
@@ -72,7 +69,7 @@ public static class Endpoints
 
             var user = await db.GlobalUsers.FirstOrDefaultAsync(u => u.Email == email);
             
-            bool isDevBackdoor = (email == "sysadmin@lazuars.io" || email == "founder@lazuar-hq.com") && req.Password == "Password123!";
+            bool isDevBackdoor = env.IsDevelopment() && (email == "sysadmin@lazuars.io" || email == "founder@lazuar-hq.com") && req.Password == "Password123!";
 
             if (!isDevBackdoor)
             {
@@ -80,16 +77,13 @@ public static class Endpoints
                     return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 401, Detail = "Invalid email or password." });
             }
 
-            var isSysAdmin = user?.IsSystemAdmin ?? (email == "sysadmin@lazuars.io");
-            var userId = user?.Id.ToString() ?? (isSysAdmin ? "018f3a3f-3610-73bf-baef-c07a3c3df9ee" : "018f3a3f-3610-73bf-baef-c07a3c3df9ff");
-            var role = isSysAdmin ? "SUPER_ADMIN" : "CLIENT";
-            var displayName = user != null ? user.Email.Split('@')[0] : (isSysAdmin ? "System Administrator" : "Founder");
+            var role = user?.IsSystemAdmin ?? (email == "sysadmin@lazuars.io") ? "SUPER_ADMIN" : "CLIENT";
 
-            IssueCookie(ctx, userId, email, isSysAdmin, config);
+            IssueCookie(ctx, user!, config);
 
             return TypedResults.Ok(new LoginResponse
             {
-                User = new AuthUser { Email = email, Name = displayName, Role = role, Is_system_admin = isSysAdmin }
+                User = new AuthUser { Email = user!.Email, Name = user.Name, Role = role, Is_system_admin = user.IsSystemAdmin, Is_email_verified = user.IsEmailVerified }
             });
         });
 
@@ -99,118 +93,188 @@ public static class Endpoints
             return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
         });
 
-        group.MapGet("/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResult> (ClaimsPrincipal principal) =>
+        group.MapPost("/auth/forgot-password", async Task<Ok<StatusResponse>> (ForgotPasswordRequestDto req, IMediator mediator) =>
         {
-            var email = principal.FindFirst(ClaimTypes.Email)?.Value;
-            var isSystemAdmin = principal.FindFirst("is_system_admin")?.Value == "true";
-            if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
+            await mediator.Send(new ForgotPasswordCommand(req.Email));
+            return TypedResults.Ok(new StatusResponse { Status = "requested" });
+        });
 
-            var role = principal.FindFirst(ClaimTypes.Role)?.Value ?? (isSystemAdmin ? "SUPER_ADMIN" : "CLIENT");
+        group.MapPost("/auth/reset-password", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (ResetPasswordRequestDto req, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new ResetPasswordCommand(req.Email, req.Token, req.New_password));
+                return TypedResults.Ok(new StatusResponse { Status = "reset" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
 
-            return TypedResults.Ok(new AuthUser { Email = email, Name = "User", Role = role, Is_system_admin = isSystemAdmin });
+        group.MapPost("/auth/verify-email", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (VerifyEmailRequestDto req, IExecutionContextAccessor ctx, IMediator mediator, OneDbContext db) =>
+        {
+            try
+            {
+                var user = await db.GlobalUsers.FindAsync(ctx.UserId);
+                if (user == null) return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400 });
+
+                await mediator.Send(new VerifyEmailCommand(user.Email, req.Token));
+                return TypedResults.Ok(new StatusResponse { Status = "verified" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         }).RequireAuthorization();
 
-        // 3. WORKSPACE (TENANT) CREATION - NOW ACCESSIBLE TO ALL LOGGED-IN USERS
+        group.MapGet("/auth/me", async Task<Results<Ok<AuthUser>, UnauthorizedHttpResult>> (ClaimsPrincipal principal, OneDbContext db, HttpContext ctx) =>
+        {
+            var userIdString = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdString, out var userId)) return TypedResults.Unauthorized();
+
+            var user = await db.GlobalUsers.FindAsync(userId);
+            if (user == null || !user.IsActive)
+            {
+                ctx.Response.Cookies.Delete("lazuar_auth");
+                return TypedResults.Unauthorized();
+            }
+
+            var stampClaim = principal.FindFirst("security_stamp")?.Value;
+            if (stampClaim != user.SecurityStamp.ToString())
+            {
+                ctx.Response.Cookies.Delete("lazuar_auth");
+                return TypedResults.Unauthorized();
+            }
+
+            var role = principal.FindFirst(ClaimTypes.Role)?.Value ?? (user.IsSystemAdmin ? "SUPER_ADMIN" : "CLIENT");
+
+            return TypedResults.Ok(new AuthUser 
+            { 
+                Email = user.Email, 
+                Name = user.Name, 
+                Role = role, 
+                Is_system_admin = user.IsSystemAdmin,
+                Is_email_verified = user.IsEmailVerified
+            });
+        }).RequireAuthorization();
+
+        group.MapPut("/me/profile", async Task<Ok<StatusResponse>> (UpdateProfileRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            await mediator.Send(new UpdateProfileCommand(ctx.UserId, req.Name));
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
+        }).RequireAuthorization();
+
+        group.MapPut("/me/security/password", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (ChangePasswordRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new ChangePasswordCommand(ctx.UserId, req.Current_password, req.New_password));
+                return TypedResults.Ok(new StatusResponse { Status = "updated" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization();
+
         group.MapPost("/workspaces", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
-            [FromBody] CreateWorkspaceRequestDto req,
-            IExecutionContextAccessor ctx,
-            IMediator mediator) =>
+            CreateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             
             try
             {
-                // Dispatch Orchestration Command securely bound to the authenticated JWT UserId!
-                var command = new CreateWorkspaceCommand(
-                    OwnerUserId: ctx.UserId,
-                    Name: req.Name, 
-                    Slug: req.Slug, 
-                    ProvisionApps: req.Provision_apps?.ToList() ?? new List<string>()
-                );
-                
-                var id = await mediator.Send(command);
+                var id = await mediator.Send(new CreateWorkspaceCommand(ctx.UserId, req.Name, req.Slug, req.Provision_apps?.ToList() ?? new List<string>()));
                 return TypedResults.Ok(new IdResponse { Id = id.ToString() });
             }
             catch (BusinessRuleValidationException ex)
             {
-                // Catches the Slug formatting/blocklist rule
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
             }
         }).RequireAuthorization();
 
-        group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (
-            IExecutionContextAccessor ctx,
-            IOneQueryService queryService) =>
+        group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
-            
             var workspaces = await queryService.GetWorkspacesAsync();
-            var dtos = workspaces.Select(w => new WorkspaceDto 
-            { 
-                Id = w.Id.ToString(), 
-                Name = w.Name, 
-                Slug = w.Slug, 
-                Is_active = w.IsActive, 
-                Created_at = new DateTimeOffset(w.CreatedAt) 
-            }).ToList();
-            
+            var dtos = workspaces.Select(w => new WorkspaceDto { Id = w.Id.ToString(), Name = w.Name, Slug = w.Slug, Is_active = w.IsActive, Created_at = new DateTimeOffset(w.CreatedAt) }).ToList();
             return TypedResults.Ok((ICollection<WorkspaceDto>)dtos);
-        }).RequireAuthorization("OrgAdmin"); // Kept strictly to Super Admins (Global Directory)
-
-        group.MapGet("/workspaces/{id:guid}/apps", async Task<Results<Ok<ICollection<WorkspaceAppDto>>, UnauthorizedHttpResult>> (
-            Guid id,
-            IExecutionContextAccessor ctx,
-            IOneQueryService queryService) =>
-        {
-            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
-            
-            var apps = await queryService.GetWorkspaceAppsAsync(id);
-            var result = apps.Select(a => new WorkspaceAppDto { App_id = a }).ToList();
-            
-            return TypedResults.Ok((ICollection<WorkspaceAppDto>)result);
         }).RequireAuthorization("OrgAdmin");
 
-        group.MapPost("/workspaces/{id:guid}/apps/{appId}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (
-            Guid id,
-            string appId,
-            [FromBody] ToggleAppEntitlementRequestDto req,
-            IExecutionContextAccessor ctx,
-            IMediator mediator) =>
+        group.MapGet("/workspaces/{id:guid}/members", async Task<Results<Ok<ICollection<WorkspaceMemberDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var members = await queryService.GetWorkspaceMembersAsync(id);
+            var dtos = members.Select(m => new WorkspaceMemberDto { Id = m.Id.ToString(), Global_user_id = m.GlobalUserId.ToString(), Name = m.Name, Email = m.Email, Role = m.Role, Joined_at = new DateTimeOffset(m.JoinedAt) }).ToList();
+            return TypedResults.Ok((ICollection<WorkspaceMemberDto>)dtos);
+        }).RequireAuthorization();
+
+        group.MapPost("/workspaces/{id:guid}/invites", async Task<Results<Ok<IdResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, CreateWorkspaceInvitationDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                var inviteId = await mediator.Send(new InviteUserToWorkspaceCommand(id, ctx.UserId, req.Email, req.Role));
+                return TypedResults.Ok(new IdResponse { Id = inviteId.ToString() });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization();
+
+        group.MapDelete("/workspaces/{id:guid}/members/{userId:guid}", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, Guid userId, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new RemoveWorkspaceMemberCommand(id, ctx.UserId, userId));
+                return TypedResults.Ok(new StatusResponse { Status = "removed" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization();
+
+        group.MapPost("/workspaces/invites/accept", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (AcceptWorkspaceInvitationDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new AcceptWorkspaceInvitationCommand(ctx.UserId, req.Token));
+                return TypedResults.Ok(new StatusResponse { Status = "accepted" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization();
+
+        group.MapGet("/workspaces/{id:guid}/apps", async Task<Results<Ok<ICollection<WorkspaceAppDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
-            
+            var apps = await queryService.GetWorkspaceAppsAsync(id);
+            return TypedResults.Ok((ICollection<WorkspaceAppDto>)apps.Select(a => new WorkspaceAppDto { App_id = a }).ToList());
+        }).RequireAuthorization("OrgAdmin");
+
+        group.MapPost("/workspaces/{id:guid}/apps/{appId}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, string appId, ToggleAppEntitlementRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
             await mediator.Send(new ToggleAppEntitlementCommand(id, appId, req.Is_active));
             return TypedResults.Ok(new StatusResponse { Status = req.Is_active ? "enabled" : "disabled" });
         }).RequireAuthorization("OrgAdmin");
 
-        group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (
-            IExecutionContextAccessor ctx,
-            OneDbContext db) =>
+        group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, OneDbContext db) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
-
-            var entitlements = await db.TenantMemberships
-                .IgnoreQueryFilters()
-                .Where(m => m.GlobalUserId == ctx.UserId)
-                .Join(db.Organizations.IgnoreQueryFilters(), 
-                      m => m.OrganizationId, 
-                      o => o.Id, 
-                      (m, o) => new EntitlementDto 
-                      { 
-                          Workspace_id = o.Id.ToString(), 
-                          Workspace_name = o.Name, 
-                          Workspace_slug = o.Slug, 
-                          Role = m.Role 
-                      })
-                .ToListAsync();
-
+            var entitlements = await db.TenantMemberships.IgnoreQueryFilters().Where(m => m.GlobalUserId == ctx.UserId)
+                .Join(db.Organizations.IgnoreQueryFilters(), m => m.OrganizationId, o => o.Id, (m, o) => new EntitlementDto { Workspace_id = o.Id.ToString(), Workspace_name = o.Name, Workspace_slug = o.Slug, Role = m.Role }).ToListAsync();
             return TypedResults.Ok((ICollection<EntitlementDto>)entitlements);
         }).RequireAuthorization();
 
         return endpoints;
     }
 
-    private static void IssueCookie(HttpContext ctx, string userId, string email, bool isSystemAdmin, IConfiguration config)
+    private static void IssueCookie(HttpContext ctx, GlobalUser user, IConfiguration config)
     {
         var jwtService = ctx.RequestServices.GetRequiredService<IJwtService>();
         var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
@@ -220,10 +284,12 @@ public static class Endpoints
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, userId),
-            new Claim(ClaimTypes.Email, email),
-            new Claim(ClaimTypes.Role, isSystemAdmin ? "SUPER_ADMIN" : "CLIENT"),
-            new Claim("is_system_admin", isSystemAdmin ? "true" : "false")
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.IsSystemAdmin ? "SUPER_ADMIN" : "CLIENT"),
+            new Claim("is_system_admin", user.IsSystemAdmin ? "true" : "false"),
+            new Claim("is_email_verified", user.IsEmailVerified ? "true" : "false"),
+            new Claim("security_stamp", user.SecurityStamp.ToString())
         };
 
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);

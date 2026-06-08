@@ -9,10 +9,12 @@ public interface IOneRepository
 {
     void AddOrganization(Organization organization);
     void AddTenantMembership(TenantMembership membership);
+    void RemoveTenantMembership(TenantMembership membership);
     void AddEntitlement(TenantAppEntitlement entitlement);
     
     Task<TenantAppEntitlement?> GetEntitlementAsync(Guid organizationId, string appId, CancellationToken ct = default);
     Task<bool> HasMembershipAsync(Guid globalUserId, Guid organizationId, CancellationToken ct = default);
+    Task<TenantMembership?> GetMembershipAsync(Guid globalUserId, Guid organizationId, CancellationToken ct = default);
     
     Task<GlobalUser?> GetUserByIdAsync(Guid id, CancellationToken ct = default);
     Task<GlobalUser?> GetUserByEmailAsync(string email, CancellationToken ct = default);

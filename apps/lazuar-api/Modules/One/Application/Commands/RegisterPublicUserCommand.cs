@@ -35,7 +35,11 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
 
         // 2. Hash Password and Create User
         var passwordHash = _passwordService.Hash(request.Password);
-        var user = new GlobalUser(email, passwordHash, isSystemAdmin: false);
+        
+        // Fallback to email local part if name is not provided
+        var name = string.IsNullOrWhiteSpace(request.Name) ? email.Split('@')[0] : request.Name.Trim();
+
+        var user = new GlobalUser(email, name, passwordHash, isSystemAdmin: false);
         
         _repository.AddGlobalUser(user);
         await _repository.SaveChangesAsync(ct);

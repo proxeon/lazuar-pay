@@ -3,10 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
-using Modules.One.Application; // <-- ADDED
+using Modules.One.Application;
 using Modules.One.Contracts;
 using Modules.One.Infrastructure.Services;
-using Modules.One.Infrastructure.Repositories; // <-- ADDED
+using Modules.One.Infrastructure.Repositories;
 using Modules.One.Infrastructure.Workers;
 using Modules.One.Application.IntegrationEvents;
 using Modules.Community.Contracts;
@@ -31,8 +31,10 @@ public static class DependencyInjection
             new NpgsqlConnectionFactory(connectionString));
 
         services.AddScoped<IOneQueryService, OneQueryService>();
-        
         services.AddScoped<IOneRepository, OneRepository>();
+        
+        services.AddSingleton<ITokenGeneratorService, TokenGeneratorService>();
+        services.AddSingleton<IOneLinkService, OneLinkService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<OneDbContext>>("OneEventBus");
 
@@ -47,7 +49,6 @@ public static class DependencyInjection
     public static IApplicationBuilder UseOneSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        
         eventBus.Subscribe<CommunitySubscriptionActivatedIntegrationEvent, CommunitySubscriptionActivatedIntegrationEventHandler>();
 
         return app;

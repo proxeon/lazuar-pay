@@ -3,9 +3,9 @@ version: '3'
 
 tasks:
   infra:up:
-    desc: Start local Docker dependencies (PostgreSQL, MinIO, Mailpit) in the background
+    desc: Start local Docker dependencies (PostgreSQL, MinIO) in the background
     cmds:
-      - docker-compose up db minio minio-provisioner mailpit -d
+      - docker-compose up db minio minio-provisioner -d
 
   infra:down:
     desc: Stop and remove local Docker containers

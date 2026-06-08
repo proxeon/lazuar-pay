@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\Contracts\Modules.CRM.Contracts.csproj" />
     <ProjectReference Include="..\Domain\Modules.CRM.Domain.csproj" />
+    <ProjectReference Include="..\..\One\Contracts\Modules.One.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

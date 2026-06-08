@@ -77,4 +77,26 @@ public class OneQueryService : IOneQueryService
         const string sql = "SELECT \"AppId\" FROM one.\"TenantAppEntitlements\" WHERE \"OrganizationId\" = @OrgId AND \"IsActive\" = true";
         return await connection.QueryAsync<string>(sql, new { OrgId = tenantId });
     }
+
+    public async Task<IEnumerable<WorkspaceMemberSnapshotDto>> GetWorkspaceMembersAsync(Guid tenantId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT m.""Id"", m.""GlobalUserId"", u.""Name"", u.""Email"", m.""Role"", m.""CreatedAt"" as JoinedAt 
+            FROM one.""TenantMemberships"" m
+            JOIN one.""GlobalUsers"" u ON m.""GlobalUserId"" = u.""Id""
+            WHERE m.""OrganizationId"" = @OrgId ORDER BY m.""CreatedAt"" ASC";
+        return await connection.QueryAsync<WorkspaceMemberSnapshotDto>(sql, new { OrgId = tenantId });
+    }
+
+    public async Task<IEnumerable<WorkspaceInvitationSnapshotDto>> GetWorkspaceInvitationsAsync(Guid tenantId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = "SELECT \"Id\", \"Email\", \"Role\", \"Status\", \"ExpiresAt\" FROM one.\"WorkspaceInvitations\" WHERE \"OrganizationId\" = @OrgId ORDER BY \"CreatedAt\" DESC";
+        return await connection.QueryAsync<WorkspaceInvitationSnapshotDto>(sql, new { OrgId = tenantId });
+    }
 }
