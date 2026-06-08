@@ -8,6 +8,8 @@ namespace Modules.One.Application;
 public interface IOneRepository
 {
     void AddOrganization(Organization organization);
+    Task<Organization?> GetOrganizationByIdAsync(Guid id, CancellationToken ct = default);
+    
     void AddTenantMembership(TenantMembership membership);
     void RemoveTenantMembership(TenantMembership membership);
     void AddEntitlement(TenantAppEntitlement entitlement);
@@ -22,6 +24,7 @@ public interface IOneRepository
     
     void AddWorkspaceInvitation(WorkspaceInvitation invitation);
     Task<WorkspaceInvitation?> GetInvitationByHashAsync(string hash, CancellationToken ct = default);
+    Task<WorkspaceInvitation?> GetInvitationByIdAsync(Guid id, CancellationToken ct = default);
     
     Task SaveChangesAsync(CancellationToken ct = default);
 }

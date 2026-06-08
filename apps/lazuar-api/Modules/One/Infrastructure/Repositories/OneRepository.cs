@@ -18,6 +18,11 @@ public class OneRepository : IOneRepository
 
     public void AddOrganization(Organization organization) => _context.Organizations.Add(organization);
     
+    public async Task<Organization?> GetOrganizationByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.Organizations.FirstOrDefaultAsync(o => o.Id == id, ct);
+    }
+    
     public void AddTenantMembership(TenantMembership membership) => _context.TenantMemberships.Add(membership);
     
     public void RemoveTenantMembership(TenantMembership membership) => _context.TenantMemberships.Remove(membership);
@@ -65,6 +70,13 @@ public class OneRepository : IOneRepository
         return await _context.WorkspaceInvitations
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(i => i.TokenHash == hash, ct);
+    }
+
+    public async Task<WorkspaceInvitation?> GetInvitationByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.WorkspaceInvitations
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.Id == id, ct);
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)

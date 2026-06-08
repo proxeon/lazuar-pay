@@ -128,6 +128,12 @@ public static class Endpoints
             }
         }).RequireAuthorization();
 
+        group.MapPost("/auth/resend-verification", async Task<Ok<StatusResponse>> (ResendVerificationRequestDto req, IMediator mediator) =>
+        {
+            await mediator.Send(new ResendVerificationEmailCommand(req.Email));
+            return TypedResults.Ok(new StatusResponse { Status = "requested" });
+        });
+
         group.MapGet("/auth/me", async Task<Results<Ok<AuthUser>, UnauthorizedHttpResult>> (ClaimsPrincipal principal, OneDbContext db, HttpContext ctx) =>
         {
             var userIdString = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -194,6 +200,40 @@ public static class Endpoints
             }
         }).RequireAuthorization();
 
+        group.MapPut("/workspaces/{id:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            Guid id, UpdateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            try
+            {
+                await mediator.Send(new UpdateWorkspaceCommand(id, ctx.UserId, req.Name, req.Slug));
+                return TypedResults.Ok(new StatusResponse { Status = "updated" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+            catch (BusinessRuleValidationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization();
+
+        group.MapDelete("/workspaces/{id:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            try
+            {
+                await mediator.Send(new ArchiveWorkspaceCommand(id, ctx.UserId));
+                return TypedResults.Ok(new StatusResponse { Status = "archived" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization();
+
         group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
@@ -216,6 +256,27 @@ public static class Endpoints
             {
                 var inviteId = await mediator.Send(new InviteUserToWorkspaceCommand(id, ctx.UserId, req.Email, req.Role));
                 return TypedResults.Ok(new IdResponse { Id = inviteId.ToString() });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization();
+
+        group.MapGet("/workspaces/{id:guid}/invites", async Task<Results<Ok<ICollection<WorkspaceInvitationDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var invites = await queryService.GetWorkspaceInvitationsAsync(id);
+            var dtos = invites.Select(i => new WorkspaceInvitationDto { Id = i.Id.ToString(), Email = i.Email, Role = i.Role, Status = i.Status, Expires_at = new DateTimeOffset(i.ExpiresAt) }).ToList();
+            return TypedResults.Ok((ICollection<WorkspaceInvitationDto>)dtos);
+        }).RequireAuthorization();
+
+        group.MapDelete("/workspaces/{id:guid}/invites/{inviteId:guid}", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, Guid inviteId, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new RevokeWorkspaceInvitationCommand(id, ctx.UserId, inviteId));
+                return TypedResults.Ok(new StatusResponse { Status = "revoked" });
             }
             catch (InvalidOperationException ex)
             {
