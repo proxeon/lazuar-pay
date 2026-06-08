@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.One.Contracts;
 using Modules.One.Domain;
@@ -33,6 +34,13 @@ public class CreateWorkspaceCommandHandler : ICommandHandler<CreateWorkspaceComm
 
     public async Task<Guid> Handle(CreateWorkspaceCommand request, CancellationToken ct)
     {
+        // Add invariant check for email verification
+        var user = await _repository.GetUserByIdAsync(request.OwnerUserId, ct);
+        if (user == null || !user.IsEmailVerified)
+        {
+            throw new BusinessRuleValidationException(new GenericBusinessRule("Workspace creation requires a verified email address."));
+        }
+
         // Step A: Create the Organization (Workspace)
         var organization = new Organization(request.Name, request.Slug);
         _repository.AddOrganization(organization);
