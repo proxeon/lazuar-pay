@@ -30,7 +30,7 @@ public static class DependencyInjection
 
         services.AddTransient<TenantProvisionedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
-        
+        services.AddTransient<WorkspaceUpdatedIntegrationEventHandler>();
         services.AddTransient<DispatchMessageIntegrationEventHandler>();
 
         services.AddHostedService<MessagingOutboxPublisherJob>();
@@ -45,8 +45,7 @@ public static class DependencyInjection
         
         eventBus.Subscribe<TenantProvisionedIntegrationEvent, TenantProvisionedIntegrationEventHandler>();
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();
-        
-        // NEW: Subscribe to the generic message dispatch event
+        eventBus.Subscribe<WorkspaceUpdatedIntegrationEvent, WorkspaceUpdatedIntegrationEventHandler>();
         eventBus.Subscribe<DispatchMessageIntegrationEvent, DispatchMessageIntegrationEventHandler>();
 
         return app;
