@@ -179,6 +179,7 @@ app.UseAuthorization();
 app.UseOneSubscriptions();
 app.UseMessagingSubscriptions();
 app.UseCommunitySubscriptions();
+app.UseCrmSubscriptions();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
