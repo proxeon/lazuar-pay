@@ -27,9 +27,6 @@ public static class Endpoints
         var admin = endpoints.MapGroup("/admin/community").RequireAuthorization("OrgAdmin");
         var publicGroup = endpoints.MapGroup("/public/community");
 
-        // ==========================================
-        // QUERIES (READ MODELS)
-        // ==========================================
         admin.MapGet("/plans", async Task<Ok<ICollection<CommunityPlanDto>>> (
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
@@ -47,12 +44,16 @@ public static class Endpoints
             return plan != null ? TypedResults.Ok(plan) : TypedResults.NotFound();
         });
 
-        admin.MapGet("/subscribers", async Task<Ok<ICollection<CommunitySubscriptionDto>>> (
+        admin.MapGet("/subscribers", async Task<Ok<PaginatedResponse<CommunitySubscriptionDto>>> (
+            [FromQuery] int page,
+            [FromQuery] int limit,
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
-            var subscribers = await queryService.GetSubscribersAsync(ctx.TenantId);
-            return TypedResults.Ok((ICollection<CommunitySubscriptionDto>)subscribers.ToList());
+            var p = page < 1 ? 1 : page;
+            var l = limit < 1 || limit > 100 ? 50 : limit;
+            var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l);
+            return TypedResults.Ok(response);
         });
 
         admin.MapGet("/subscribers/export", async (
@@ -74,13 +75,17 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<DeliveryHistoryItemDto>)history.ToList());
         });
 
-        admin.MapGet("/subscribers/{id:guid}/payments", async Task<Ok<ICollection<PaymentRecordDto>>> (
+        admin.MapGet("/subscribers/{id:guid}/payments", async Task<Ok<PaginatedResponse<PaymentRecordDto>>> (
             Guid id,
+            [FromQuery] int page,
+            [FromQuery] int limit,
             IExecutionContextAccessor ctx,
             ICommunityQueryService queryService) =>
         {
-            var history = await queryService.GetPaymentHistoryAsync(ctx.TenantId, id);
-            return TypedResults.Ok((ICollection<PaymentRecordDto>)history.ToList());
+            var p = page < 1 ? 1 : page;
+            var l = limit < 1 || limit > 100 ? 50 : limit;
+            var response = await queryService.GetPaymentHistoryAsync(ctx.TenantId, id, p, l);
+            return TypedResults.Ok(response);
         });
 
         admin.MapGet("/stats", async Task<Ok<CommunitySubscriberStatsDto>> (
@@ -132,10 +137,6 @@ public static class Endpoints
             return plan != null ? TypedResults.Ok(plan) : TypedResults.NotFound();
         });
 
-        // ==========================================
-        // COMMANDS (WRITE MODELS)
-        // ==========================================
-        // --- Plans ---
         admin.MapPost("/plans", async Task<Ok<IdResponse>> (CreatePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CreatePlanCommand(
@@ -166,7 +167,6 @@ public static class Endpoints
             return TypedResults.Ok(new StatusResponse { Status = "archived" });
         });
 
-        // --- Subscribers ---
         admin.MapPost("/subscribers", async Task<Ok<IdResponse>> (CreateSubscriberRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CreateSubscriberCommand(
@@ -200,6 +200,58 @@ public static class Endpoints
             var command = new CancelSubscriptionCommand(ctx.TenantId, id);
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "cancelled" });
+        });
+
+        admin.MapPost("/subscribers/{id:guid}/ban", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new BanSubscriberCommand(ctx.TenantId, id));
+                return TypedResults.Ok(new StatusResponse { Status = "banned" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
+
+        admin.MapPost("/subscribers/{id:guid}/refund", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, RefundRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new RequestRefundCommand(ctx.TenantId, id, Guid.Parse(req.Payment_record_id), req.Reason));
+                return TypedResults.Ok(new StatusResponse { Status = "refund_requested" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
+
+        admin.MapPost("/subscribers/{id:guid}/change-plan", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, ChangePlanRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new ChangePlanCommand(ctx.TenantId, id, Guid.Parse(req.New_plan_id)));
+                return TypedResults.Ok(new StatusResponse { Status = "plan_change_scheduled" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
+
+        admin.MapPost("/subscribers/{id:guid}/resend-onboarding", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new ResendOnboardingCommand(ctx.TenantId, id));
+                return TypedResults.Ok(new StatusResponse { Status = "onboarding_resent" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         });
 
         admin.MapPut("/subscribers/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, UpdateSubscriberProfileRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
@@ -237,7 +289,6 @@ public static class Endpoints
             return TypedResults.Ok(new StatusResponse { Status = "scheduled" });
         });
 
-        // --- Reminder Schedules ---
         admin.MapPost("/reminder-schedules", async Task<Ok<IdResponse>> (CreateReminderScheduleRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             Guid? planId = !string.IsNullOrEmpty(req.Plan_id) ? Guid.Parse(req.Plan_id) : null;
@@ -272,9 +323,6 @@ public static class Endpoints
             return TypedResults.Ok(new StatusResponse { Status = "saved" });
         });
 
-        // ==========================================
-        // MESSAGING & TEMPLATES
-        // ==========================================
         admin.MapGet("/templates", async Task<Ok<ICollection<MessageTemplateDto>>> (
             IExecutionContextAccessor ctx,
             IMessageTemplateQueryService templateService) =>
@@ -311,9 +359,6 @@ public static class Endpoints
             return TypedResults.Ok(new TestReminderResponse { Success = true, Sent_to = "admin@lazuars.io" });
         });
 
-        // ==========================================
-        // PUBLIC ENROLLMENT FLOW
-        // ==========================================
         publicGroup.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>, NotFound>> (
             PublicCheckoutRequestDto req,
             IOneQueryService oneQueryService, 
@@ -351,9 +396,6 @@ public static class Endpoints
             }
         });
 
-        // ==========================================
-        // SUBSCRIBER PORTAL (SELF-SERVICE)
-        // ==========================================
         publicGroup.MapPost("/{tenantSlug}/portal/magic-link", async Task<Results<Ok<StatusResponse>, NotFound>> (
             string tenantSlug,
             [FromBody] MagicLinkRequestDto req,
@@ -404,12 +446,38 @@ public static class Endpoints
             var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug); 
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
             
-            // SECURITY: Ensure the requested cancellation matches the token's authenticated ID
             if (Guid.Parse(req.Subscription_id) != subId.Value) return TypedResults.Unauthorized();
 
             var command = new CancelSubscriptionCommand(tenant.Id, subId.Value);
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "cancelled" });
+        });
+
+        publicGroup.MapGet("/{tenantSlug}/portal/billing-link", async Task<Results<Ok<BillingLinkResponseDto>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>, NotFound, UnauthorizedHttpResult>> (
+            string tenantSlug,
+            [FromQuery] string token,
+            HttpRequest httpReq,
+            IOneQueryService oneQueryService, 
+            IMagicLinkTokenService tokenService,
+            IMediator mediator) =>
+        {
+            var subId = tokenService.ValidateToken(token);
+            if (!subId.HasValue) return TypedResults.Unauthorized();
+            
+            var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug); 
+            if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
+
+            try
+            {
+                var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}/{tenantSlug}/portal?token={token}";
+                var query = new GetPortalBillingLinkQuery(tenant.Id, subId.Value, baseUrl);
+                var url = await mediator.Send(query);
+                return TypedResults.Ok(new BillingLinkResponseDto { Url = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         });
 
         return endpoints;
