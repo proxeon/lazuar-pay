@@ -160,7 +160,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             return Task.FromResult(new GatewayWebhookParsedResult(
                 Verified: true,
                 EventType: isPaid ? "PAYMENT_COMPLETED" : "PAYMENT_FAILED",
-                EventId: billId, // Use billId as EventId for idempotency
+                EventId: billId, 
                 AmountPaid: paidAmountMyr,
                 Currency: "MYR",
                 GatewayTransactionId: billId,
@@ -173,6 +173,17 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             _logger.LogError(ex, "Failed to parse Billplz webhook");
             return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), ex.Message));
         }
+    }
+
+    public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
+    {
+        _logger.LogWarning("Billplz does not support automated API refunds. Transaction {TransactionId} must be refunded manually via the Billplz Dashboard.", transactionId);
+        return Task.FromResult(false);
+    }
+
+    public Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)
+    {
+        throw new InvalidOperationException("Billplz does not provide a managed customer billing portal.");
     }
 
     private static string ComputeHmac(Dictionary<string, string> formData, string secretKey, bool excludeExtra)
