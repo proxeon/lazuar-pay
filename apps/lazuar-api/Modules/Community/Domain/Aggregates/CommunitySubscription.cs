@@ -13,6 +13,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public Guid OrganizationId { get; set; }
     public Guid ClientProfileId { get; private set; }
     public Guid PlanId { get; private set; }
+    public Guid? PendingPlanId { get; private set; }
 
     public string Status { get; private set; }
     public DateTime? CurrentPeriodEnd { get; private set; }
@@ -68,6 +69,12 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void SchedulePlanChange(Guid newPlanId)
+    {
+        PendingPlanId = newPlanId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void Activate(
         DateTime periodStart, DateTime periodEnd, decimal amount, 
         string currency, string paymentMethod, string? externalReference, string recordedBy, string? receiptUrl = null)
@@ -75,6 +82,12 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
 
         bool isFirstPayment = Status == "PENDING";
+
+        if (PendingPlanId.HasValue)
+        {
+            PlanId = PendingPlanId.Value;
+            PendingPlanId = null;
+        }
 
         Status = "ACTIVE";
         CurrentPeriodEnd = periodEnd;
@@ -90,6 +103,11 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         _paymentRecords.Add(payment);
 
         AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, isFirstPayment));
+    }
+
+    public void ReplayActivationEvent()
+    {
+        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, true));
     }
 
     public void MarkAsPastDue()
@@ -118,6 +136,34 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void Ban()
+    {
+        CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "BANNED", IsReminderOnly));
+
+        Status = "BANNED";
+        CurrentPeriodEnd = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SubscriptionBannedDomainEvent(Id, OrganizationId, ClientProfileId));
+    }
+
+    public void RequestRefund(Guid paymentRecordId)
+    {
+        AddDomainEvent(new RefundRequestedDomainEvent(Id, paymentRecordId));
+    }
+
+    public void RecordRefund(decimal refundAmount, string currency, string originalReference)
+    {
+        var negativeAmount = refundAmount > 0 ? -refundAmount : refundAmount;
+
+        var refundRecord = new PaymentRecord(
+            Id, negativeAmount, currency, "SYSTEM_REFUND", originalReference,
+            "SYSTEM", DateTime.UtcNow, DateTime.UtcNow, "Refund processed");
+
+        _paymentRecords.Add(refundRecord);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void ExtendGracePeriod(int days)
     {
         var baseDate = NextRenewalDate ?? CurrentPeriodEnd ?? DateTime.UtcNow;
@@ -133,7 +179,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         NextRenewalDate = newDate;
         UpdatedAt = DateTime.UtcNow;
 
-        // Trigger decoupled audit log
         AddDomainEvent(new SubscriptionGracePeriodExtendedDomainEvent(Id, OrganizationId, ClientProfileId, days, newDate));
     }
 
@@ -142,7 +187,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         RemindersPausedUntil = pauseUntil;
         UpdatedAt = DateTime.UtcNow;
 
-        // Trigger decoupled audit log
         AddDomainEvent(new SubscriptionRemindersPausedDomainEvent(Id, OrganizationId, ClientProfileId, pauseUntil));
     }
 
@@ -155,7 +199,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         
         UpdatedAt = DateTime.UtcNow;
 
-        // Trigger decoupled audit log
         AddDomainEvent(new SubscriptionProfileUpdatedDomainEvent(Id, OrganizationId, ClientProfileId, isReminderOnly, preferredChannel, nextRenewalDate));
     }
 

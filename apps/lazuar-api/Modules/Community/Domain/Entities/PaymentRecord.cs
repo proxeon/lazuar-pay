@@ -2,10 +2,6 @@ using BuildingBlocks.Domain;
 
 namespace Modules.Community.Domain.Entities;
 
-/// <summary>
-/// Child entity of CommunitySubscription.
-/// Sanitized to only contain Domain facts, removing infrastructure details (like GatewaySessionId).
-/// </summary>
 public class PaymentRecord : Entity
 {
     public Guid Id { get; private set; }
@@ -22,8 +18,8 @@ public class PaymentRecord : Entity
     public string Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor.
-    private PaymentRecord() { } // For EF Core
+#pragma warning disable CS8618 
+    private PaymentRecord() { } 
 #pragma warning restore CS8618
 
     internal PaymentRecord(
@@ -40,7 +36,7 @@ public class PaymentRecord : Entity
         RecordedBy = recordedBy;
         PeriodStart = periodStart;
         PeriodEnd = periodEnd;
-        Status = "CONFIRMED";
+        Status = amount < 0 ? "REFUNDED" : "CONFIRMED";
         Notes = notes;
         ReceiptUrl = receiptUrl;
         CreatedAt = DateTime.UtcNow;
