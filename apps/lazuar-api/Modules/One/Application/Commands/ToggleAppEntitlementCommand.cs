@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Application/Commands/ToggleAppEntitlementCommand.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
 
+[AgentTool("Turn specific Lazuar modules on or off for the tenant.", "medium", "SUPER_ADMIN", "ADMIN")]
 public record ToggleAppEntitlementCommand(Guid OrganizationId, string AppId, bool IsActive) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -56,7 +58,6 @@ public class ToggleAppEntitlementCommandHandler : ICommandHandler<ToggleAppEntit
             }
         }
 
-        // Commit transaction and save outbox event atomically
         await _repository.SaveChangesAsync(ct);
 
         if (grantedNow)

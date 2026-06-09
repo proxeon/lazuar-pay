@@ -1,9 +1,11 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/CreatePlanCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Domain.Aggregates;
 using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Generate a new product or subscription tier.", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreatePlanCommand(
     Guid OrganizationId,
     string Slug,

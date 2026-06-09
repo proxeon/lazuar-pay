@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/ArchivePlanCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;

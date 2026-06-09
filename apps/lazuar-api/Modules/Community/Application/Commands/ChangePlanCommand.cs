@@ -1,7 +1,9 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/ChangePlanCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Change or upgrade a user's subscription plan.", "medium", "SUPER_ADMIN", "ADMIN")]
 public record ChangePlanCommand(Guid OrganizationId, Guid SubscriptionId, Guid NewPlanId) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

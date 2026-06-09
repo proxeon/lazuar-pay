@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/CreateSubscriberCommand.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Manually enroll a customer into a subscription plan.", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreateSubscriberCommand(
     Guid OrganizationId,
     string Name,
@@ -44,24 +46,21 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
 
     public async Task<Guid> Handle(CreateSubscriberCommand request, CancellationToken ct)
     {
-        // 1. Resolve Plan
         var plan = await _planRepository.GetByIdAsync(request.PlanId, ct);
         if (plan == null || plan.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("The requested plan is invalid or does not belong to this organization.");
         }
 
-        // 2. Resolve or Create CRM Profile via Cross-Module MediatR Command
         var profileCommand = new CreateClientProfileCommand(
             request.OrganizationId,
             request.Name,
             request.Email,
             request.Phone,
-            null); // --> ADDED: Manual Admin entries don't bind an SSO account initially
+            null);
 
         var profileId = await _mediator.Send(profileCommand, ct);
 
-        // 3. Instantiate Subscription
         var subscription = new CommunitySubscription(
             request.OrganizationId,
             profileId,
@@ -73,7 +72,6 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
 
         _subscriptionRepository.Add(subscription);
 
-        // 4. Activate and Record Initial Manual Payment (if provided)
         var periodStart = DateTime.UtcNow;
         var periodEnd = periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
 
@@ -90,7 +88,6 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
         }
         else
         {
-            // If reminder-only, we activate the subscription directly with a 0.00 ledger record for auditing
             subscription.Activate(
                 periodStart,
                 periodEnd,

@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Application/Commands/RemoveWorkspaceMemberCommand.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -5,6 +6,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.One.Application.Commands;
 
+[AgentTool("Revoke staff or admin access from the workspace.", "high", "SUPER_ADMIN", "ADMIN")]
 public record RemoveWorkspaceMemberCommand(Guid OrganizationId, Guid RequesterUserId, Guid TargetUserId) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

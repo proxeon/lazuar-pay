@@ -1,8 +1,10 @@
+// apps/lazuar-api/Modules/One/Application/Commands/InviteUserToWorkspaceCommand.cs
 using BuildingBlocks.Application;
 using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
 
+[AgentTool("Invite new staff or admins to the current tenant workspace.", "medium", "SUPER_ADMIN", "ADMIN")]
 public record InviteUserToWorkspaceCommand(Guid OrganizationId, Guid InviterUserId, string Email, string Role) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

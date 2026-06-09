@@ -1,7 +1,9 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/RecordSubscriptionPaymentCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Manually register an offline or cash payment and force the subscription to active status.", "medium", "SUPER_ADMIN", "ADMIN")]
 public record RecordSubscriptionPaymentCommand(
     Guid OrganizationId,
     Guid SubscriptionId,
@@ -38,7 +40,6 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
         if (plan == null)
             throw new InvalidOperationException("Plan not found.");
 
-        // Calculate billing periods
         var now = DateTime.UtcNow;
         var intervalDays = plan.Interval == "yr" ? 365 : 30;
         
@@ -49,7 +50,6 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
         var periodStart = now;
         var periodEnd = baseDate.AddDays(intervalDays);
 
-        // Execute domain logic
         subscription.Activate(
             periodStart, 
             periodEnd, 
