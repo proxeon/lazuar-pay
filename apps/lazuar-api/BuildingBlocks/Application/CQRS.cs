@@ -22,3 +22,10 @@ public interface ICommandHandler<in TCommand, TResult> : IRequestHandler<TComman
 
 public interface IQueryHandler<in TQuery, TResult> : IRequestHandler<TQuery, TResult> 
     where TQuery : IQuery<TResult> { }
+
+// Added interface here so Application layers can hash passwords without referencing Infrastructure
+public interface IPasswordService 
+{ 
+    string Hash(string password); 
+    bool Verify(string password, string hash); 
+}

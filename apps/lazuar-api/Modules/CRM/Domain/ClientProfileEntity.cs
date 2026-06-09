@@ -6,6 +6,10 @@ public class ClientProfileEntity : Entity, IMustHaveTenant
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public Guid OrganizationId { get; set; }
+    
+    // Link to the Lazuar One Global Identity
+    public Guid? GlobalUserId { get; set; }
+    
     public string FullName { get; set; } = "";
     public string Email { get; set; } = "";
     public string Phone { get; set; } = "";

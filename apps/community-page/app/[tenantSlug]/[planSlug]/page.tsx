@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Check, ArrowLeft, ShieldCheck, Users, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FaqAccordion } from "@/components/faq-accordion";
-import { serverClient } from "@/lib/api-client";
+import { serverClient } from "@/lib/server-client";
 
 const GENERAL_FAQ = [
   { id: "faq-cancel", question: "Can I cancel my subscription at any time?", answer: "Yes. You can cancel anytime — no lock-in contracts. Your access remains active until the end of your current billing period." },

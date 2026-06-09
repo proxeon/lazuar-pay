@@ -25,7 +25,7 @@ public class CrmQueryService : ICrmQueryService
 
         if (profile == null) return null;
 
-        return new ClientProfileDto(profile.Id, profile.FullName, profile.Email, profile.Phone);
+        return new ClientProfileDto(profile.Id, profile.FullName, profile.Email, profile.Phone, profile.GlobalUserId);
     }
 
     public async Task<IEnumerable<ClientProfileDto>> GetClientProfilesAsync(IEnumerable<Guid> profileIds)
@@ -39,7 +39,7 @@ public class CrmQueryService : ICrmQueryService
             .Where(p => ids.Contains(p.Id))
             .ToListAsync();
 
-        return profiles.Select(p => new ClientProfileDto(p.Id, p.FullName, p.Email, p.Phone));
+        return profiles.Select(p => new ClientProfileDto(p.Id, p.FullName, p.Email, p.Phone, p.GlobalUserId));
     }
 
     public async Task<ClientProfileDto?> GetClientProfileByEmailAsync(Guid organizationId, string email)
@@ -53,6 +53,6 @@ public class CrmQueryService : ICrmQueryService
 
         if (profile == null) return null;
 
-        return new ClientProfileDto(profile.Id, profile.FullName, profile.Email, profile.Phone);
+        return new ClientProfileDto(profile.Id, profile.FullName, profile.Email, profile.Phone, profile.GlobalUserId);
     }
 }

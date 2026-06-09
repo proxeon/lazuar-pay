@@ -7,8 +7,7 @@ using BuildingBlocks.Infrastructure;
 using Modules.Messaging.Application;
 using Modules.Messaging.Infrastructure.EventHandlers;
 using Modules.Messaging.Contracts;
-using Modules.Tenant.Contracts;
-using Modules.Community.Contracts;
+using Modules.One.Contracts;
 
 namespace Modules.Messaging.Infrastructure;
 
@@ -16,8 +15,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddMessagingModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("MessagingConnection")
-            ?? throw new InvalidOperationException("MessagingConnection string not found.");
+        var connectionString = configuration.GetConnectionString("MessagingConnection") ?? throw new InvalidOperationException("MessagingConnection string not found.");
 
         services.AddDbContext<MessagingDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -25,22 +23,15 @@ public static class DependencyInjection
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "messaging");
             }));
 
-        // Isolate Dapper read connection pool for Messaging read models
-        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("MessagingSqlConnectionFactory", (sp, key) => 
-            new NpgsqlConnectionFactory(connectionString));
-
+        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("MessagingSqlConnectionFactory", (sp, key) => new NpgsqlConnectionFactory(connectionString));
         services.AddScoped<ITenantReplicaRepository, TenantReplicaRepository>();
-        
-        // Register cross-module read service for Community module to access templates
-        services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();
 
-        // Overrides global IEventBus with keyed scoped outbox-backed writer for Messaging DbContext
         services.AddKeyedScoped<IEventBus, OutboxEventBus<MessagingDbContext>>("MessagingEventBus");
 
-        // Register Inbox Handlers
-        services.AddTransient<TenantCreatedIntegrationEventHandler>();
+        services.AddTransient<TenantProvisionedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
-        services.AddTransient<CommunityIntegrationEventHandlers>();
+        services.AddTransient<WorkspaceUpdatedIntegrationEventHandler>();
+        services.AddTransient<DispatchMessageIntegrationEventHandler>();
 
         services.AddHostedService<MessagingOutboxPublisherJob>();
         services.AddHostedService<MessagingInboxConsumerJob>();
@@ -52,18 +43,10 @@ public static class DependencyInjection
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         
-        eventBus.Subscribe<TenantCreatedIntegrationEvent, TenantCreatedIntegrationEventHandler>();
+        eventBus.Subscribe<TenantProvisionedIntegrationEvent, TenantProvisionedIntegrationEventHandler>();
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();
-
-        // Community Event Subscriptions
-        eventBus.Subscribe<CommunitySubscriptionActivatedIntegrationEvent, CommunityIntegrationEventHandlers>();
-        eventBus.Subscribe<CommunitySubscriptionCancelledIntegrationEvent, CommunityIntegrationEventHandlers>();
-        eventBus.Subscribe<CommunityCheckoutInitiatedIntegrationEvent, CommunityIntegrationEventHandlers>();
-        eventBus.Subscribe<CommunityRenewalReminderDueIntegrationEvent, CommunityIntegrationEventHandlers>();
-        eventBus.Subscribe<CommunityMagicLinkRequestedIntegrationEvent, CommunityIntegrationEventHandlers>();
-        
-        // Subscribe to manual one-off reminders
-        eventBus.Subscribe<CommunityOneOffReminderRequestedIntegrationEvent, CommunityIntegrationEventHandlers>();
+        eventBus.Subscribe<WorkspaceUpdatedIntegrationEvent, WorkspaceUpdatedIntegrationEventHandler>();
+        eventBus.Subscribe<DispatchMessageIntegrationEvent, DispatchMessageIntegrationEventHandler>();
 
         return app;
     }

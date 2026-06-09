@@ -1,7 +1,5 @@
-// packages/api-spec/modules/community/admin-routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
-import "../messaging/models.tsp";
 import "./models.tsp";
 
 using TypeSpec.Http;
@@ -11,7 +9,6 @@ namespace LazuarApi.Community;
 @useAuth(BearerAuth)
 @route("/admin/community")
 interface AdminCommunityOperations {
-  // --- Plans ---
   @get
   @route("/plans")
   getPlans(): CommunityPlanDto[] | LazuarApi.Core.ProblemDetailsResponse;
@@ -41,11 +38,12 @@ interface AdminCommunityOperations {
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Subscribers ---
   @get
   @route("/subscribers")
   getSubscribers(
-  ): CommunitySubscriptionDto[] | LazuarApi.Core.ProblemDetailsResponse;
+    @query page?: int32 = 1,
+    @query limit?: int32 = 50,
+  ): LazuarApi.Core.PaginatedResponse<CommunitySubscriptionDto> | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/subscribers/export")
@@ -58,7 +56,9 @@ interface AdminCommunityOperations {
   @route("/subscribers/{id}/payments")
   getPaymentHistory(
     @path id: string,
-  ): PaymentRecordDto[] | LazuarApi.Core.ProblemDetailsResponse;
+    @query page?: int32 = 1,
+    @query limit?: int32 = 50,
+  ): LazuarApi.Core.PaginatedResponse<PaymentRecordDto> | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/subscribers/{id}/reminders")
@@ -71,13 +71,6 @@ interface AdminCommunityOperations {
   createSubscriber(
     @body body: CreateSubscriberRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
-
-  @post
-  @route("/subscribers/{id}/payments")
-  recordPaymentViaPayments(
-    @path id: string,
-    @body body: RecordPaymentRequestDto,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/subscribers/{id}/record-payment")
@@ -126,7 +119,32 @@ interface AdminCommunityOperations {
     @body body: ScheduleOneOffRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Reminder Schedules ---
+  @post
+  @route("/subscribers/{id}/refund")
+  refundPayment(
+    @path id: string,
+    @body body: RefundRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/change-plan")
+  changePlan(
+    @path id: string,
+    @body body: ChangePlanRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/ban")
+  banSubscriber(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/resend-onboarding")
+  resendOnboarding(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @get
   @route("/reminder-schedules")
   getReminderSchedules(
@@ -151,7 +169,6 @@ interface AdminCommunityOperations {
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Settings & Stats ---
   @get
   @route("/stats")
   getStats(
@@ -167,17 +184,15 @@ interface AdminCommunityOperations {
     @body body: SavePaymentConfigRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  // --- Templates (Messaging Context via Community) ---
   @get
   @route("/templates")
-  getTemplates(
-  ): LazuarApi.Messaging.MessageTemplateDto[] | LazuarApi.Core.ProblemDetailsResponse;
+  getTemplates(): MessageTemplateDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
   @put
   @route("/templates/{id}")
   updateTemplate(
     @path id: string,
-    @body body: LazuarApi.Messaging.UpdateTemplateRequestDto,
+    @body body: UpdateTemplateRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @delete
@@ -189,6 +204,6 @@ interface AdminCommunityOperations {
   @post
   @route("/reminders/test")
   testReminder(
-    @body body: LazuarApi.Messaging.TestReminderRequestDto,
-  ): LazuarApi.Messaging.TestReminderResponse | LazuarApi.Core.ProblemDetailsResponse;
+    @body body: TestReminderRequestDto,
+  ): TestReminderResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

@@ -1,4 +1,3 @@
-// packages/api-spec/modules/community/public-routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -49,4 +48,11 @@ interface PublicCommunityOperations {
     @query token: string,
     @body body: CancelPortalRequest,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/{tenantSlug}/portal/billing-link")
+  getBillingLink(
+    @path tenantSlug: string,
+    @query token: string,
+  ): BillingLinkResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 }

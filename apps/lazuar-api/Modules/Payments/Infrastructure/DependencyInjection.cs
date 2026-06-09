@@ -1,12 +1,15 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Builder;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Infrastructure.Gateways;
 using Modules.Payments.Infrastructure.Repositories;
 using Modules.Payments.Infrastructure.Workers;
+using Modules.Payments.Infrastructure.EventHandlers;
+using Modules.Payments.Contracts.Events;
 
 namespace Modules.Payments.Infrastructure;
 
@@ -22,22 +25,29 @@ public static class DependencyInjection
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "payments");
             }));
 
-        // Repositories
         services.AddScoped<ITenantPaymentConfigRepository, TenantPaymentConfigRepository>();
         services.AddScoped<IPaymentWebhookLogRepository, PaymentWebhookLogRepository>();
 
-        // Gateways
         services.AddScoped<IPaymentGatewayAdapter, StripeGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
-        // Overrides global IEventBus with keyed scoped outbox-backed writer for Payments DbContext
         services.AddKeyedScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>("PaymentsEventBus");
 
-        // Background Workers
         services.AddHostedService<PaymentsInboxConsumerJob>();
         services.AddHostedService<PaymentsOutboxPublisherJob>();
 
+        services.AddTransient<GatewayRefundRequestedIntegrationEventHandler>();
+
         return services;
+    }
+
+    public static IApplicationBuilder UsePaymentsSubscriptions(this IApplicationBuilder app)
+    {
+        var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
+        
+        eventBus.Subscribe<GatewayRefundRequestedIntegrationEvent, GatewayRefundRequestedIntegrationEventHandler>();
+
+        return app;
     }
 }

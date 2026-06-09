@@ -20,10 +20,28 @@ echo "Seeding development tenant 'lazuar-hq' into container '${DB_CONTAINER}'...
 
 # Run the seeding block
 docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" <<EOF
--- 1. Seed the main Tenant schema
-INSERT INTO tenant."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt")
+
+-- 0. Seed Global Users and Memberships
+INSERT INTO one."GlobalUsers" ("Id", "Email", "PasswordHash", "IsSystemAdmin", "IsActive", "CreatedAt")
+VALUES 
+('018f3a3f-3610-73bf-baef-c07a3c3df9ee', 'sysadmin@lazuars.io', '\$2a\$11\$0nBIfG06U2sZ8D072kE1lOQ4w3k.VzT0f8.j2N.jN4j5.PZ.nL3vC', true, true, NOW()),
+('018f3a3f-3610-73bf-baef-c07a3c3df9ff', 'founder@lazuar-hq.com', '\$2a\$11\$0nBIfG06U2sZ8D072kE1lOQ4w3k.VzT0f8.j2N.jN4j5.PZ.nL3vC', false, true, NOW())
+ON CONFLICT ("Email") DO NOTHING;
+
+-- 1. Seed the main One Organization schema
+INSERT INTO one."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt")
 VALUES ('7d97963c-063c-4598-86cc-9ddd9d47d9b1', 'Lazuar HQ', 'lazuar-hq', true, NOW())
 ON CONFLICT ("Id") DO NOTHING;
+
+-- Link the founder to the organization as an ADMIN
+INSERT INTO one."TenantMemberships" ("Id", "GlobalUserId", "OrganizationId", "Role", "CreatedAt")
+VALUES ('018f3a3f-3610-73bf-baef-c07a3c3df9aa', '018f3a3f-3610-73bf-baef-c07a3c3df9ff', '7d97963c-063c-4598-86cc-9ddd9d47d9b1', 'ADMIN', NOW())
+ON CONFLICT ("GlobalUserId", "OrganizationId") DO NOTHING;
+
+-- Grant COMMUNITY entitlement so dev environment works smoothly
+INSERT INTO one."TenantAppEntitlements" ("Id", "OrganizationId", "AppId", "IsActive", "CreatedAt", "UpdatedAt")
+VALUES ('018f3a3f-3610-73bf-baef-c07a3c3df9cc', '7d97963c-063c-4598-86cc-9ddd9d47d9b1', 'COMMUNITY', true, NOW(), NOW())
+ON CONFLICT ("OrganizationId", "AppId") DO NOTHING;
 
 -- 2. Seed the Messaging schema replica
 INSERT INTO messaging."TenantReplicas" ("Id", "Name", "Slug", "IsActive")

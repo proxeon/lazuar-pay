@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\Modules.One.Domain.csproj" />
+    <ProjectReference Include="..\Contracts\Modules.One.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\Community\Contracts\Modules.Community.Contracts.csproj" />
+    <ProjectReference Include="..\..\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
+  </ItemGroup>
+</Project>

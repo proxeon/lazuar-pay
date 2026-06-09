@@ -49,15 +49,6 @@ services:
     networks:
       - lazuar-network
 
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: lazuar-mail
-    ports:
-      - "1025:1025"     # SMTP Server Port
-      - "8025:8025"     # Web Dashboard UI Port
-    networks:
-      - lazuar-network
-
   api:
     build:
       context: .

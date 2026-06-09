@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "../lib/api-client";
 import type { MessageTemplate, ReminderSchedule } from "../lib/api-client";
@@ -228,8 +228,12 @@ function TemplatesList({ sortedTemplates }: { sortedTemplates: MessageTemplate[]
         return (
           <div key={template.id} className="bg-card border border-border/60 rounded-none shadow-sm overflow-hidden transition-colors">
             <button onClick={() => setExpandedId(isExpanded ? null : template.id)} className="w-full flex items-center justify-between p-4 bg-secondary/30 hover:bg-secondary/60 transition-colors focus:outline-none">
-              <div className="flex flex-col items-start gap-1">
-                <span className="text-sm font-bold text-foreground">{template.name}</span>
+              <div className="flex flex-col items-start gap-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-foreground">{template.name}</span>
+                  {/* NEW: Explicitly show the Channel configuration from the DTO */}
+                  <Badge variant="outline" className="text-[9px] uppercase tracking-widest px-1.5 py-0 border-border/60 bg-background">{template.channel}</Badge>
+                </div>
                 <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Subject: {template.subject || "(No Subject)"}</span>
               </div>
               <div className="text-muted-foreground p-1 border border-transparent hover:border-border/60 hover:bg-background transition-all">{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
@@ -261,7 +265,6 @@ function TemplateEditor({ template, onSave, isSaving, onCancel, onReset, isReset
   const [subject, setSubject] = useState(template.subject);
   const [body, setBody] = useState(template.body);
 
-  // Dynamically pull variables from the API DTO instead of hardcoding
   const requiredVars = template.required_variables || [];
   const optionalVars = template.optional_variables || [];
 

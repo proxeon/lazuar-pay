@@ -12,12 +12,13 @@ using System.Security.Claims;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
-using Modules.Tenant.Infrastructure;
+using Modules.One.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Lazuar.Api;
+using Lazuar.Api.Middleware;
 using Lazuar.ApiTypes;
 
 // Resolve the ambiguous reference between Lazuar.ApiTypes and Microsoft.AspNetCore.Mvc
@@ -85,7 +86,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
     
-    // --> ADDED: Instruct the middleware to read the token from the cookie
+    // Read the token from the HttpOnly cookie
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -144,12 +145,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Application.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
 
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Tenant.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly);
@@ -157,7 +158,7 @@ builder.Services.AddMediatR(cfg =>
 });
 
 // Register Module Services
-builder.Services.AddTenantModule(builder.Configuration);
+builder.Services.AddOneModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
 builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddCrmModule(builder.Configuration);
@@ -168,79 +169,23 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
+
+// Execute custom tenant security checks before Authorizing endpoints
+app.UseMiddleware<TenantSecurityMiddleware>();
+
 app.UseAuthorization();
+
+// Register integration event subscriptions
+app.UseOneSubscriptions();
 app.UseMessagingSubscriptions();
 app.UseCommunitySubscriptions();
+app.UseCrmSubscriptions();
+app.UsePaymentsSubscriptions();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
-// --- Auth Handlers for Local Dev/Admin Panel ---
-apiGroup.MapPost("/platform/auth/login", Results<Ok<LoginResponse>, BadRequest<ProblemDetails>> (
-    [FromBody] LoginRequest req,
-    IConfiguration config,
-    IJwtService jwtService,
-    HttpContext ctx) =>
-{
-    var email = req.Email?.Trim().ToLowerInvariant();
-    
-    if (string.IsNullOrEmpty(email))
-    {
-        return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = "Email is required." });
-    }
-
-    if ((email == "admin@lazuars.io" || email == "sysadmin@lazuars.io" || email == "admin@yourdomain.com") 
-        && req.Password == "Password123!")
-    {
-        var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
-        var issuer = config["Jwt:Issuer"] ?? "lazuar-api";
-        var audience = config["Jwt:Audience"] ?? "lazuar-clients";
-        var expiryHours = config.GetValue<int>("Jwt:ExpiryHours", 24);
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "018f3a3f-3610-73bf-baef-c07a3c3df9ee"),
-            new Claim(ClaimTypes.Email, email),
-            new Claim("org_id", "7d97963c-063c-4598-86cc-9ddd9d47d9b1"),
-            new Claim(ClaimTypes.Role, "SUPER_ADMIN")
-        };
-
-        var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
-
-        // --> ADDED: Issue the HttpOnly Cookie
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = !app.Environment.IsDevelopment(), // Secure true in Prod, false in Local Dev
-            SameSite = SameSiteMode.Lax,
-            Expires = DateTime.UtcNow.AddHours(expiryHours)
-        };
-        ctx.Response.Cookies.Append("lazuar_auth", token, cookieOptions);
-
-        return TypedResults.Ok(new LoginResponse
-        {
-            User = new AuthUser { Email = email, Name = "Administrator", Role = "SUPER_ADMIN" }
-        });
-    }
-
-    return TypedResults.BadRequest(new ProblemDetails { Status = 401, Detail = "Invalid email or password." });
-});
-
-apiGroup.MapPost("/platform/auth/logout", (HttpContext ctx) => 
-{
-    ctx.Response.Cookies.Delete("lazuar_auth");
-    return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
-});
-
-apiGroup.MapGet("/platform/auth/me", Results<Ok<AuthUser>, UnauthorizedHttpResult> (ClaimsPrincipal principal) =>
-{
-    var email = principal.FindFirst(ClaimTypes.Email)?.Value;
-    if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
-
-    return TypedResults.Ok(new AuthUser { Email = email, Name = "Administrator", Role = "SUPER_ADMIN" });
-}).RequireAuthorization();
-
 // Map Minimal API Endpoints
-apiGroup.MapTenantEndpoints();
+apiGroup.MapOneEndpoints();
 apiGroup.MapMessagingEndpoints();
 apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();

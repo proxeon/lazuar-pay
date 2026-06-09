@@ -3,9 +3,9 @@ version: '3'
 
 tasks:
   infra:up:
-    desc: Start local Docker dependencies (PostgreSQL, MinIO, Mailpit) in the background
+    desc: Start local Docker dependencies (PostgreSQL, MinIO) in the background
     cmds:
-      - docker-compose up db minio minio-provisioner mailpit -d
+      - docker-compose up db minio minio-provisioner -d
 
   infra:down:
     desc: Stop and remove local Docker containers
@@ -57,7 +57,7 @@ tasks:
     desc: Apply all pending migrations for all modular contexts sequentially
     dir: apps/lazuar-api/src/Lazuar.Api
     cmds:
-      - dotnet ef database update --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context OneDbContext --project ../../Modules/One/Infrastructure/Modules.One.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj
@@ -67,7 +67,7 @@ tasks:
     desc: Generate the initial EF Core migrations for all core modules
     dir: apps/lazuar-api/src/Lazuar.Api
     cmds:
-      - dotnet ef migrations add InitialTenantSchema --context TenantDbContext --project ../../Modules/Tenant/Infrastructure/Modules.Tenant.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialOneSchema --context OneDbContext --project ../../Modules/One/Infrastructure/Modules.One.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialMessagingSchema --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialCommunitySchema --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialPaymentsSchema --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations

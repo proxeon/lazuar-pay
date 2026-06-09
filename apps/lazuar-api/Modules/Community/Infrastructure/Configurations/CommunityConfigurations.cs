@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -125,5 +128,40 @@ public class ReminderDispatchLogConfiguration : IEntityTypeConfiguration<Reminde
         builder.HasKey(x => x.Id);
         
         builder.HasIndex(x => new { x.SubscriptionId, x.ScheduleId, x.TargetRenewalDate }).IsUnique();
+    }
+}
+
+public class MessageTemplateConfiguration : IEntityTypeConfiguration<MessageTemplate>
+{
+    public void Configure(EntityTypeBuilder<MessageTemplate> builder)
+    {
+        builder.ToTable("MessageTemplates");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => x.OrganizationId);
+
+        var jsonOptions = new JsonSerializerOptions 
+        { 
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+        };
+
+        var stringListConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
+        );
+        
+        var stringListComparer = new ValueComparer<IReadOnlyCollection<string>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
+        builder.Property(x => x.RequiredVariables)
+               .HasConversion(stringListConverter, stringListComparer)
+               .HasColumnType("jsonb");
+               
+        builder.Property(x => x.OptionalVariables)
+               .HasConversion(stringListConverter, stringListComparer)
+               .HasColumnType("jsonb");
     }
 }

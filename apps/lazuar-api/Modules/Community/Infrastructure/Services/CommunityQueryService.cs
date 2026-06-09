@@ -1,15 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using Dapper;
+using System.Data;
+using System.Text.Json;
+using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Application.Queries;
 using Modules.CRM.Contracts;
-using Modules.Messaging.Contracts;
 using Lazuar.ApiTypes;
 
 namespace Modules.Community.Infrastructure.Services;
@@ -20,7 +15,6 @@ public class CommunityQueryService : ICommunityQueryService
     private readonly ICrmQueryService _crmQueryService;
     private readonly IMessageTemplateQueryService _messageTemplateQueryService;
 
-    // Type-safe Positional Data Transfer Objects for Dapper
     private record RawPlanDto(
         Guid Id, string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
         decimal Price, string Interval, string Features, string Methodology, string Faq,
@@ -147,12 +141,18 @@ public class CommunityQueryService : ICommunityQueryService
         return rawPlans.Select(p => MapToPlanDto(p, enrollmentCounts.GetValueOrDefault(p.Id, 0)));
     }
 
-    public async Task<IEnumerable<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId)
+    public async Task<PaginatedResponse<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
+        int offset = (page - 1) * limit;
+
         const string sql = @"
+            SELECT COUNT(*)::int 
+            FROM community.""Subscriptions"" 
+            WHERE ""OrganizationId"" = @OrgId AND ""Status"" != 'PENDING';
+
             SELECT 
                 s.""Id"", s.""OrganizationId"", s.""ClientProfileId"", s.""PlanId"",
                 p.""Name"" as ""PlanName"", p.""Price"" as ""PlanPrice"",
@@ -162,20 +162,23 @@ public class CommunityQueryService : ICommunityQueryService
             FROM community.""Subscriptions"" s
             JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
             WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'
-            ORDER BY s.""CreatedAt"" DESC";
+            ORDER BY s.""CreatedAt"" DESC
+            LIMIT @Limit OFFSET @Offset;";
 
-        var rawSubs = await connection.QueryAsync<RawSubDto>(sql, new { OrgId = organizationId });
-        var subList = rawSubs.ToList();
+        using var multi = await connection.QueryMultipleAsync(sql, new { OrgId = organizationId, Limit = limit, Offset = offset });
 
-        if (subList.Count == 0) return Enumerable.Empty<CommunitySubscriptionDto>();
+        var totalCount = await multi.ReadFirstAsync<int>();
+        var rawSubs = (await multi.ReadAsync<RawSubDto>()).ToList();
 
-        var profileIds = subList.Select(x => x.ClientProfileId).Distinct();
+        if (totalCount == 0) return new PaginatedResponse<CommunitySubscriptionDto>(Enumerable.Empty<CommunitySubscriptionDto>(), 0, page, limit);
+
+        var profileIds = rawSubs.Select(x => x.ClientProfileId).Distinct();
         var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
         var profileDict = profiles.ToDictionary(p => p.Id);
 
         var now = DateTime.UtcNow;
 
-        return subList.Select(s =>
+        var dtos = rawSubs.Select(s =>
         {
             profileDict.TryGetValue(s.ClientProfileId, out var profile);
             
@@ -206,6 +209,8 @@ public class CommunityQueryService : ICommunityQueryService
                 Created_at = new DateTimeOffset(s.CreatedAt)
             };
         });
+
+        return new PaginatedResponse<CommunitySubscriptionDto>(dtos, totalCount, page, limit);
     }
 
     public async Task<CommunitySubscriptionDto?> GetPortalSubscriptionAsync(Guid organizationId, Guid subscriptionId)
@@ -379,7 +384,7 @@ public class CommunityQueryService : ICommunityQueryService
             Net_new_last_30_days = netNewSubscribers,
             Churn_rate_percentage = churnRate,
             Average_revenue_per_user = arpu,
-            Reminder_effectiveness_percentage = 85.0, // Mock metric
+            Reminder_effectiveness_percentage = 85.0,
             Total_revenue_collected = (double)totalRevenue,
             Cash_flow_trend = cashFlowTrend,
             Payment_methods = paymentMethods
@@ -421,12 +426,19 @@ public class CommunityQueryService : ICommunityQueryService
         });
     }
 
-    public async Task<IEnumerable<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId)
+    public async Task<PaginatedResponse<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId, int page, int limit)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
+        int offset = (page - 1) * limit;
+
         const string sql = @"
+            SELECT COUNT(*)::int 
+            FROM community.""PaymentRecords"" pr
+            JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
+            WHERE s.""OrganizationId"" = @OrgId AND pr.""SubscriptionId"" = @SubId;
+
             SELECT 
                 pr.""Id"", pr.""Amount"", pr.""Currency"", pr.""PaymentMethod"",
                 pr.""ExternalReference"" as ReferenceNumber, pr.""ReceiptUrl"",
@@ -435,11 +447,17 @@ public class CommunityQueryService : ICommunityQueryService
             FROM community.""PaymentRecords"" pr
             JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
             WHERE s.""OrganizationId"" = @OrgId AND pr.""SubscriptionId"" = @SubId
-            ORDER BY pr.""CreatedAt"" DESC";
+            ORDER BY pr.""CreatedAt"" DESC
+            LIMIT @Limit OFFSET @Offset;";
 
-        var rawLogs = await connection.QueryAsync<RawPaymentRecordDto>(sql, new { OrgId = organizationId, SubId = subscriptionId });
+        using var multi = await connection.QueryMultipleAsync(sql, new { OrgId = organizationId, SubId = subscriptionId, Limit = limit, Offset = offset });
 
-        return rawLogs.Select(r => new PaymentRecordDto
+        var totalCount = await multi.ReadFirstAsync<int>();
+        var rawLogs = (await multi.ReadAsync<RawPaymentRecordDto>()).ToList();
+
+        if (totalCount == 0) return new PaginatedResponse<PaymentRecordDto>(Enumerable.Empty<PaymentRecordDto>(), 0, page, limit);
+
+        var dtos = rawLogs.Select(r => new PaymentRecordDto
         {
             Id = r.Id.ToString(),
             Amount = (double)r.Amount,
@@ -454,6 +472,8 @@ public class CommunityQueryService : ICommunityQueryService
             Notes = r.Notes,
             Created_at = new DateTimeOffset(r.CreatedAt)
         });
+
+        return new PaginatedResponse<PaymentRecordDto>(dtos, totalCount, page, limit);
     }
 
     private static CommunityPlanDto MapToPlanDto(RawPlanDto raw, int enrolledCount)

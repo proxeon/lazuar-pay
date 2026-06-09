@@ -27,7 +27,6 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             var client = new StripeClient(apiKey);
             var service = new SessionService(client);
             
-            // Add TenantId to metadata automatically
             metadata["tenant_id"] = tenantId.ToString();
 
             var options = new SessionCreateOptions
@@ -41,7 +40,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         PriceData = new SessionLineItemPriceDataOptions
                         {
                             Currency = currency.ToLowerInvariant(),
-                            UnitAmountDecimal = amount * 100, // Convert to cents
+                            UnitAmountDecimal = amount * 100, 
                             ProductData = new SessionLineItemPriceDataProductDataOptions
                             {
                                 Name = string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName
@@ -92,7 +91,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         EventId: stripeEvent.Id,
                         AmountPaid: amount,
                         Currency: session.Currency ?? "myr",
-                        GatewayTransactionId: session.Id,
+                        GatewayTransactionId: session.PaymentIntentId ?? session.Id, 
                         Metadata: meta,
                         Error: null
                     ));
@@ -106,5 +105,51 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             _logger.LogError(ex, "Stripe webhook verification failed");
             return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), ex.Message));
         }
+    }
+
+    public async Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
+    {
+        try
+        {
+            var client = new StripeClient(apiKey);
+            var service = new RefundService(client);
+            
+            var options = new RefundCreateOptions
+            {
+                PaymentIntent = transactionId,
+                Amount = (long)(amount * 100)
+            };
+
+            var refund = await service.CreateAsync(options);
+            return refund.Status == "succeeded" || refund.Status == "pending";
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Stripe refund failed for Transaction {TransactionId}", transactionId);
+            return false;
+        }
+    }
+
+    public async Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)
+    {
+        var client = new StripeClient(apiKey);
+        var customerService = new CustomerService(client);
+        
+        var customers = await customerService.ListAsync(new CustomerListOptions { Email = customerEmail, Limit = 1 });
+        var customerId = customers.FirstOrDefault()?.Id;
+
+        if (string.IsNullOrEmpty(customerId))
+        {
+            throw new InvalidOperationException("No Stripe customer found for this email address.");
+        }
+
+        var portalService = new Stripe.BillingPortal.SessionService(client);
+        var session = await portalService.CreateAsync(new Stripe.BillingPortal.SessionCreateOptions
+        {
+            Customer = customerId,
+            ReturnUrl = returnUrl
+        });
+
+        return session.Url;
     }
 }

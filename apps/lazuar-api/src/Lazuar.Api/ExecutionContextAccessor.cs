@@ -17,8 +17,12 @@ public class ExecutionContextAccessor : IExecutionContextAccessor
     {
         get
         {
-            var claim = _httpContextAccessor.HttpContext?.User?.FindFirst("org_id")?.Value;
-            return Guid.TryParse(claim, out var id) ? id : Guid.Empty;
+            // Read dynamically from the context items (populated by TenantSecurityMiddleware)
+            if (_httpContextAccessor.HttpContext?.Items.TryGetValue("TenantId", out var tenantIdObj) == true && tenantIdObj is Guid tenantId)
+            {
+                return tenantId;
+            }
+            return Guid.Empty;
         }
     }
 
@@ -32,4 +36,6 @@ public class ExecutionContextAccessor : IExecutionContextAccessor
     }
 
     public string UserRole => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+    public bool IsSystemAdmin => _httpContextAccessor.HttpContext?.User?.FindFirst("is_system_admin")?.Value == "true";
 }

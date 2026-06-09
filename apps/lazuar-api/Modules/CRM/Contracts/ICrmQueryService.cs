@@ -1,6 +1,6 @@
 namespace Modules.CRM.Contracts;
 
-public record ClientProfileDto(Guid Id, string FullName, string Email, string Phone);
+public record ClientProfileDto(Guid Id, string FullName, string Email, string Phone, Guid? GlobalUserId);
 
 public interface ICrmQueryService
 {

@@ -6,6 +6,7 @@ public record CommunitySubscriptionActivatedIntegrationEvent(
     Guid OrganizationId,
     Guid SubscriptionId,
     Guid ClientProfileId,
+    Guid? GlobalUserId,
     bool IsFirstPayment,
     string PlanName,
     string GroupLink,

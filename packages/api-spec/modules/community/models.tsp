@@ -1,8 +1,5 @@
-// packages/api-spec/modules/community/models.tsp
-
 namespace LazuarApi.Community;
 
-// --- Read Models ---
 model FaqItemDto {
   id: string;
   question: string;
@@ -126,7 +123,6 @@ model PaymentConfigDto {
   is_active: boolean;
 }
 
-// --- Write Models (Requests) ---
 model CreatePlanRequestDto {
   slug: string;
   name: string;
@@ -235,7 +231,7 @@ model UpdateReminderScheduleRequestDto {
 model SavePaymentConfigRequestDto {
   gateway_type: string;
   api_key?: string;
-  collection_id?: string; // Mapped to MerchantId
+  collection_id?: string;
   webhook_secret?: string;
   secret_key?: string;
   is_active: boolean;
@@ -253,7 +249,6 @@ model MagicLinkRequestDto {
   email: string;
 }
 
-// --- Specific Route Responses ---
 model CheckoutResponse {
   url: string;
 }
@@ -264,4 +259,44 @@ model PortalDataResponse {
 
 model CancelPortalRequest {
   subscription_id: string;
+}
+
+model MessageTemplateDto {
+  id: string; // GUID
+  name: string;
+  channel: string;
+  subject: string;
+  body: string;
+  is_default: boolean;
+  required_variables: string[];
+  optional_variables: string[];
+  updated_at: utcDateTime;
+}
+
+model UpdateTemplateRequestDto {
+  subject: string;
+  body: string;
+}
+
+model TestReminderRequestDto {
+  template_name: string;
+  channel?: string;
+}
+
+model TestReminderResponse {
+  success: boolean;
+  sent_to: string;
+}
+
+model ChangePlanRequestDto {
+  new_plan_id: string; // GUID
+}
+
+model RefundRequestDto {
+  payment_record_id: string; // GUID
+  reason?: string;
+}
+
+model BillingLinkResponseDto {
+  url: string;
 }

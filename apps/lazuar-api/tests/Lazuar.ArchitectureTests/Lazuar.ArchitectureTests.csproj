@@ -13,11 +13,11 @@
     <ProjectReference Include="..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\..\SharedKernel\SharedKernel.csproj" />
     
-    <!-- Tenant Module references -->
-    <ProjectReference Include="..\..\Modules\Tenant\Contracts\Modules.Tenant.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\Tenant\Domain\Modules.Tenant.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Tenant\Application\Modules.Tenant.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\Tenant\Infrastructure\Modules.Tenant.Infrastructure.csproj" />
+    <!-- One Module references -->
+    <ProjectReference Include="..\..\Modules\One\Contracts\Modules.One.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\One\Domain\Modules.One.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\One\Application\Modules.One.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
     
     <!-- Messaging Module references -->
     <ProjectReference Include="..\..\Modules\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
@@ -41,9 +41,6 @@
     <ProjectReference Include="..\..\Modules\Payments\Domain\Modules.Payments.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Payments\Application\Modules.Payments.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Payments\Infrastructure\Modules.Payments.Infrastructure.csproj" />
-
-    <!-- UserAccess Module references -->
-    <ProjectReference Include="..\..\Modules\UserAccess\Domain\Modules.UserAccess.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

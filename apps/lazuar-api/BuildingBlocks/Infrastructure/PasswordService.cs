@@ -3,12 +3,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace BuildingBlocks.Infrastructure;
 
-public interface IPasswordService 
-{ 
-    string Hash(string password); 
-    bool Verify(string password, string hash); 
-}
-
 public class PasswordService : IPasswordService
 {
     private readonly int _workFactor;

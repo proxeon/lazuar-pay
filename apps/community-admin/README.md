@@ -19,3 +19,11 @@
 * **Email:** `admin@yourdomain.com` (or `founder@yourdomain.com`)
 * **Password:** `CHANGE_ME_IN_PRODUCTION`
 
+
+---
+
+
+## Tenant Owner Login
+
+* **Email:** `founder@lazuar-hq.com`
+* **Password:** `Password123!`

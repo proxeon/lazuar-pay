@@ -1,5 +1,5 @@
 using BuildingBlocks.Application;
-using Modules.Messaging.Contracts;
+using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Application.Commands;
 
@@ -48,13 +48,13 @@ public class UpdateReminderScheduleCommandHandler : ICommandHandler<UpdateRemind
             }
         }
 
-        // 2. Validate TemplateId across module boundary if changing
+        // 2. Validate TemplateId within localized Community templates if changing
         if (request.TemplateId.HasValue)
         {
             var templates = await _templateService.GetTemplatesAsync(new[] { request.TemplateId.Value });
             if (!templates.Any())
             {
-                throw new InvalidOperationException("Template not found in Messaging module.");
+                throw new InvalidOperationException("Template not found in Community module.");
             }
         }
 

@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace Modules.Payments.Application.Ports;
 
 public record GatewayCheckoutResult(bool Success, string? CheckoutUrl, string? SessionId, string? Error);
@@ -32,6 +36,16 @@ public interface IPaymentGatewayAdapter
         string webhookSecret,
         string rawBody, 
         Dictionary<string, string> headers);
+
+    Task<bool> IssueRefundAsync(
+        string apiKey, 
+        string transactionId, 
+        decimal amount);
+
+    Task<string> GenerateCustomerPortalAsync(
+        string apiKey, 
+        string customerEmail, 
+        string returnUrl);
 }
 
 public interface IPaymentGatewayFactory

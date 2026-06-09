@@ -106,6 +106,9 @@ namespace Modules.CRM.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<Guid?>("GlobalUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
@@ -115,6 +118,8 @@ namespace Modules.CRM.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GlobalUserId");
 
                     b.HasIndex("OrganizationId", "Email", "Phone")
                         .IsUnique();

@@ -56,7 +56,8 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
             request.OrganizationId,
             request.Name,
             request.Email,
-            request.Phone);
+            request.Phone,
+            null); // --> ADDED: Manual Admin entries don't bind an SSO account initially
 
         var profileId = await _mediator.Send(profileCommand, ct);
 

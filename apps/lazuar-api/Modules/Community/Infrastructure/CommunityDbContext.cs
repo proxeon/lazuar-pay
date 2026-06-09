@@ -14,6 +14,9 @@ public class CommunityDbContext : PlatformDbContext
     public DbSet<PaymentRecord> PaymentRecords { get; set; } = null!;
     public DbSet<CommunityReminderSchedule> ReminderSchedules { get; set; } = null!;
     
+    // Migrated MessageTemplate entity mapped to Community Context
+    public DbSet<MessageTemplate> MessageTemplates { get; set; } = null!;
+    
     // Platform Box pattern tables
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
