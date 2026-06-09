@@ -15,7 +15,8 @@ import {
   Globe,
   ArrowUp,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  Pencil
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -265,7 +266,7 @@ export default function OpsChatWorkspace({
                 className="w-full resize-none text-[15px] text-[#09090b] placeholder-[#71717a] focus:outline-none bg-transparent leading-relaxed overflow-y-auto"
                 style={{ minHeight: "44px" }}
               />
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f4f4f5]">
+              <div className="flex items-center justify-between mt-3">
                 <button className="p-1.5 text-[#71717a] hover:text-[#09090b] transition-colors">
                   <Plus size={18} />
                 </button>
@@ -309,7 +310,7 @@ export default function OpsChatWorkspace({
         /* Active Conversation Flow Layout */
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
           
-          {/* Header Info Panel (Absolute positioned at top of active view) */}
+          {/* Header Info Panel */}
           <div className="absolute top-0 left-0 right-0 h-11 bg-white px-6 flex items-center justify-between z-20 select-none">
             <div className="flex items-center gap-1.5 cursor-pointer group">
               <span className="text-[13px] font-semibold text-[#09090b]">Active Query Control</span>
@@ -333,8 +334,36 @@ export default function OpsChatWorkspace({
                   )}
                 >
                   {msg.role === "user" ? (
-                    <div className="bg-[#f4f4f5] px-4 py-2.5 text-[14px] leading-relaxed text-[#09090b] max-w-[80%] rounded-2xl border border-[#e5e5e5] break-words">
-                      {msg.content}
+                    /* Outer group triggers menu visibility below on mouse hover */
+                    <div className="group flex flex-col items-end w-full relative">
+                      
+                      {/* User Capsule Bubble */}
+                      <div className="bg-[#f4f4f5] px-4 py-2.5 text-[14px] leading-relaxed text-[#09090b] max-w-[80%] rounded-2xl border border-[#e5e5e5] break-words shrink-0">
+                        {msg.content}
+                      </div>
+
+                      {/* Left-aligned, right-docked Action bar positioned neatly BELOW the user bubble */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mt-2 select-none text-[#71717a] text-[11px] font-sans">
+                        <span>12:33 AM</span>
+                        <button 
+                          onClick={() => handleSend(msg.content)}
+                          className="p-1 hover:text-[#09090b] transition-colors" 
+                          title="Retry"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                        <button className="p-1 hover:text-[#09090b] transition-colors" title="Edit">
+                          <Pencil size={12} />
+                        </button>
+                        <button 
+                          onClick={() => handleCopyToClipboard(msg.content, msg.id)}
+                          className="p-1 hover:text-[#09090b] transition-colors" 
+                          title="Copy"
+                        >
+                          {copiedId === msg.id ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                        </button>
+                      </div>
+
                     </div>
                   ) : (
                     <div className="w-full flex flex-col items-start min-w-0">
@@ -397,7 +426,6 @@ export default function OpsChatWorkspace({
           {/* Floating Base Panel Overlay */}
           <div className="absolute bottom-0 left-0 right-0 bg-white pt-4 pb-4 px-4 z-10 pointer-events-none">
             
-            {/* Top Gradient Mask exactly matching custom stops */}
             <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none" />
             
             <div className="max-w-[760px] mx-auto pointer-events-auto">
@@ -418,7 +446,7 @@ export default function OpsChatWorkspace({
                   className="w-full resize-none text-[14px] text-[#09090b] placeholder-[#71717a] focus:outline-none bg-transparent leading-relaxed overflow-y-auto"
                   style={{ minHeight: "24px" }}
                 />
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#f4f4f5]">
+                <div className="flex items-center justify-between mt-2">
                   <button className="p-1 text-[#71717a] hover:text-[#09090b] transition-colors" title="Attach file">
                     <Plus size={16} />
                   </button>

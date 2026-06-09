@@ -93,22 +93,17 @@ export default function Sidebar({
         isMobile ? "shadow-2xl" : ""
       )}
     >
-      {/* Header Panel */}
+      {/* Header Panel - Icon removed, title centered with optimized font styles */}
       <div className="flex h-14 w-full shrink-0 items-center overflow-hidden relative">
         {expanded ? (
           <>
-            <div className="w-12 h-full shrink-0 flex items-center justify-center">
-              <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-[#09090b]">
-                <div className="h-1 w-1 bg-white" />
-              </div>
-            </div>
-            <span className="flex-1 whitespace-nowrap text-sm font-semibold tracking-tight text-[#09090b] truncate select-none">
+            <span className="absolute inset-x-0 text-center text-[16px] font-bold tracking-tight text-[#09090b] select-none pointer-events-none font-sans">
               Lazuar Ops
             </span>
             {!isMobile && (
               <button
                 onClick={setIsOpen}
-                className="text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none pr-4 shrink-0"
+                className="text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none ml-auto pr-4 shrink-0 z-10"
                 title="Collapse sidebar"
               >
                 <PanelLeftClose size={16} />
@@ -128,6 +123,7 @@ export default function Sidebar({
 
       {/* Primary Action Button List */}
       <div className="py-2 space-y-1">
+        {/* New Chat Button */}
         <button
           onClick={onNewChat}
           className={cn(
@@ -144,6 +140,7 @@ export default function Sidebar({
           {expanded && <span className="text-[13px] font-medium truncate">New chat</span>}
         </button>
 
+        {/* Global Chats Directory Switcher */}
         <button
           onClick={() => onSelect("directory")}
           className={cn(
@@ -226,7 +223,6 @@ export default function Sidebar({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.1 }}
-                      // Shadow deleted to make the vertical options dropdown entirely flat
                       className="absolute right-0 top-7 z-40 bg-white border border-[#e5e5e5] p-1 min-w-[110px]"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -290,8 +286,12 @@ export default function Sidebar({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 5 }}
                 transition={{ duration: 0.15 }}
-                // Shadow deleted to make the user settings popup card entirely flat
-                className="absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1 min-w-[200px] bottom-[calc(100%+8px)] left-0"
+                className={cn(
+                  "absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1",
+                  expanded 
+                    ? "bottom-[calc(100%+8px)] left-2 w-[calc(100%-16px)] min-w-[200px]" 
+                    : "bottom-1 left-[calc(100%+8px)] min-w-[200px]"
+                )}
               >
                 <div className="px-2 py-1.5 border-b border-[#f4f4f5] mb-1">
                   <span className="block text-[13px] font-medium text-[#09090b]">Admin User</span>
