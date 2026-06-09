@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Application.Llm;
 using Lazuar.ApiTypes;
 using MediatR;
-using Microsoft.Extensions.Configuration;
 using Modules.Ops.Application.Services;
 using OpenAI.Chat;
 
@@ -15,51 +16,53 @@ namespace Modules.Ops.Infrastructure.Services;
 
 public class LlmOrchestratorService : ILlmOrchestratorService
 {
-    private readonly ChatClient _chatClient;
+    private readonly IChatClientFactory _clientFactory;
     private readonly IToolRegistry _toolRegistry;
     private readonly IMediator _mediator;
     private readonly IExecutionContextAccessor _executionContext;
 
     public LlmOrchestratorService(
-        IConfiguration configuration,
+        IChatClientFactory clientFactory,
         IToolRegistry toolRegistry,
         IMediator mediator,
         IExecutionContextAccessor executionContext)
     {
+        _clientFactory = clientFactory;
         _toolRegistry = toolRegistry;
         _mediator = mediator;
         _executionContext = executionContext;
-
-        var apiKey = configuration["OpenAI:ApiKey"] ?? throw new InvalidOperationException("OpenAI API Key is missing.");
-        _chatClient = new ChatClient("gpt-4o-mini", apiKey);
     }
 
     public async Task<ChatResponseDto> ProcessChatAsync(string userMessage, CancellationToken ct = default)
     {
-        var tools = _toolRegistry.GetAvailableTools(_executionContext.UserRole).ToList();
+        var chatClient = _clientFactory.CreateClient();
         
-        var chatTools = tools.Select(t => ChatTool.CreateFunctionTool(
-            functionName: t.Name,
-            functionDescription: t.Description,
-            functionParameters: BinaryData.FromString(t.JsonSchema)
-        )).ToList();
+        var availableTools = _toolRegistry.GetAvailableTools(_executionContext.UserRole).ToList();
 
         var messages = new List<ChatMessage>
         {
-            new SystemChatMessage($"You are Lazuar Ops, a highly capable internal agent. The current OrganizationId is {_executionContext.TenantId}. " +
-                                  $"If asked to perform a write action, strictly call the relevant tool. Do not chain multiple write tools in a single turn."),
+            new SystemChatMessage(
+                $"You are Lazuar Ops, a highly capable internal operations agent. " +
+                $"The current OrganizationId is {_executionContext.TenantId}. " +
+                $"If the user asks you to perform a write action (create, update, delete, archive), strictly call the relevant tool. " +
+                $"Do not chain multiple write tools in a single turn; stage one write action at a time. " +
+                $"For read operations, you may call multiple tools to gather the necessary context before answering."
+            ),
             new UserChatMessage(userMessage)
         };
 
         var options = new ChatCompletionOptions();
-        foreach (var tool in chatTools) options.Tools.Add(tool);
+        foreach (var toolDef in availableTools)
+        {
+            options.Tools.Add(toolDef.ChatTool);
+        }
 
         int maxIterations = 3;
         int iterations = 0;
 
         while (iterations < maxIterations)
         {
-            var completion = await _chatClient.CompleteChatAsync(messages, options, ct);
+            var completion = await chatClient.CompleteChatAsync(messages, options, ct);
 
             if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
             {
@@ -68,9 +71,13 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 foreach (var toolCall in completion.Value.ToolCalls)
                 {
                     var definition = _toolRegistry.GetToolDefinition(toolCall.FunctionName);
-                    if (definition == null) continue;
+                    
+                    if (definition == null)
+                    {
+                        messages.Add(new ToolChatMessage(toolCall.Id, "Error: Tool not found or not authorized."));
+                        continue;
+                    }
 
-                    // Intercept Write Commands: Supervised Autonomy Pattern
                     if (definition.IsWriteCommand)
                     {
                         var proposedAction = new ProposedActionDto
@@ -90,24 +97,24 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                         };
                     }
 
-                    // Autonomous Reads
-                    var args = JsonSerializer.Deserialize(toolCall.FunctionArguments.ToString(), definition.RequestType, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    
                     try
                     {
-                        var jsonNode = JsonSerializer.SerializeToNode(args) as System.Text.Json.Nodes.JsonObject;
-                        if (jsonNode != null)
-                        {
-                            jsonNode["OrganizationId"] = _executionContext.TenantId;
-                            args = jsonNode.Deserialize(definition.RequestType);
-                        }
+                        var jsonNode = JsonSerializer.SerializeToNode(
+                            JsonSerializer.Deserialize<object>(toolCall.FunctionArguments.ToString())
+                        ) as JsonObject ?? new JsonObject();
+
+                        jsonNode["OrganizationId"] = _executionContext.TenantId;
+
+                        var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                        var args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
 
                         var result = await _mediator.Send(args!, ct);
+                        
                         messages.Add(new ToolChatMessage(toolCall.Id, JsonSerializer.Serialize(result)));
                     }
                     catch (Exception ex)
                     {
-                        messages.Add(new ToolChatMessage(toolCall.Id, $"Error executing tool: {ex.Message}"));
+                        messages.Add(new ToolChatMessage(toolCall.Id, $"Error executing read query: {ex.Message}"));
                     }
                 }
                 
@@ -119,12 +126,13 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             }
         }
 
-        return new ChatResponseDto { Message = "I needed to gather too much information and hit my execution limit. Could you be more specific?" };
+        return new ChatResponseDto { Message = "I hit my maximum execution limit while gathering data. Please be more specific." };
     }
 
     private static string FormatIntentTitle(string commandName)
     {
         var name = commandName.Replace("Command", "");
-        return string.Concat(name.Select(x => Char.IsUpper(x) ? " " + x : x.ToString())).TrimStart();
+        var formatted = string.Concat(name.Select(x => char.IsUpper(x) ? " " + x : x.ToString())).TrimStart();
+        return formatted;
     }
 }

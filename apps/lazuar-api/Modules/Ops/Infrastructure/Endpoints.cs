@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -33,33 +34,27 @@ public static class Endpoints
             IExecutionContextAccessor ctx,
             HttpContext httpContext) => 
         {
-            // 1. Idempotency Check (5 Minute TTL to prevent double-clicks)
             if (cache.TryGetValue(request.Idempotency_key, out _))
             {
                 return Results.Ok(new StatusResponse { Status = "already_processed" });
             }
             cache.Set(request.Idempotency_key, true, TimeSpan.FromMinutes(5));
 
-            // 2. Resolve Command Type
             var toolDefinition = toolRegistry.GetToolDefinition(request.Tool_name);
             if (toolDefinition == null || !toolDefinition.IsWriteCommand)
             {
                 return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Invalid or missing write command tool definition." });
             }
 
-            // 3. Inject Context & Audit Boundaries Programmatically
-            var jsonNode = JsonSerializer.SerializeToNode(request.Command_payload) as System.Text.Json.Nodes.JsonObject;
-            if (jsonNode == null) return Results.BadRequest();
+            var jsonNode = JsonSerializer.SerializeToNode(request.Command_payload) as JsonObject;
+            if (jsonNode == null) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Invalid payload." });
 
             jsonNode["OrganizationId"] = ctx.TenantId;
-            jsonNode["RecordedBy"] = ctx.AuditSignature;
 
-            // Mark Request Context as Agent Action for deeper audit interceptors downstream
             httpContext.Items["IsAgentAction"] = true;
 
             try
             {
-                // 4. Deserialize into strongly-typed MediatR record & Dispatch
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var command = jsonNode.Deserialize(toolDefinition.RequestType, options);
                 
@@ -69,7 +64,6 @@ public static class Endpoints
             }
             catch (Exception ex)
             {
-                // Un-set idempotency key if transaction failed so human can try modifying and submitting again
                 cache.Remove(request.Idempotency_key);
                 return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
             }
