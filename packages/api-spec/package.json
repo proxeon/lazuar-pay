@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx tsp compile main.tsp --output-dir dist && npx tsp compile docs-one.tsp --output-dir dist/one && npx tsp compile docs-community.tsp --output-dir dist/community",
+    "build": "npx tsp compile main.tsp --output-dir dist && npx tsp compile docs-one.tsp --output-dir dist/one && npx tsp compile docs-community.tsp --output-dir dist/community && npx tsp compile docs-ops.tsp --output-dir dist/ops",
     "watch": "npx tsp compile main.tsp --watch"
   },
   "dependencies": {

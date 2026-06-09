@@ -3,23 +3,14 @@ import "@typespec/openapi";
 import "@typespec/openapi3";
 
 import "./common/models.tsp";
-
-import "./modules/one/models.tsp";
-import "./modules/one/routes.tsp";
-
-import "./modules/messaging/models.tsp";
-
-import "./modules/community/models.tsp";
-import "./modules/community/admin-routes.tsp";
-import "./modules/community/public-routes.tsp";
-
 import "./modules/ops/models.tsp";
 import "./modules/ops/routes.tsp";
 
 using TypeSpec.Http;
 
 @service({
-  title: "Lazuar Platform API",
+  title: "Lazuar Ops API",
+  description: "AI Agent orchestration, tool execution, and stream handling.",
 })
 @server("http://localhost:8080/api/v1", "Local development server")
 namespace LazuarApi;
