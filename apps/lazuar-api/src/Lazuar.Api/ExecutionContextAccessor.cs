@@ -17,7 +17,6 @@ public class ExecutionContextAccessor : IExecutionContextAccessor
     {
         get
         {
-            // Read dynamically from the context items (populated by TenantSecurityMiddleware)
             if (_httpContextAccessor.HttpContext?.Items.TryGetValue("TenantId", out var tenantIdObj) == true && tenantIdObj is Guid tenantId)
             {
                 return tenantId;
@@ -38,4 +37,13 @@ public class ExecutionContextAccessor : IExecutionContextAccessor
     public string UserRole => _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
     public bool IsSystemAdmin => _httpContextAccessor.HttpContext?.User?.FindFirst("is_system_admin")?.Value == "true";
+
+    public string AuditSignature 
+    {
+        get
+        {
+            var isAgent = _httpContextAccessor.HttpContext?.Items["IsAgentAction"] as bool? ?? false;
+            return isAgent ? $"OPS_AGENT_ON_BEHALF_OF_{UserId}" : UserId.ToString();
+        }
+    }
 }

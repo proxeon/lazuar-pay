@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace Modules.Ops.Application.Services;
 
-public record AgentToolDefinition(string Name, string Description, string JsonSchema, Type RequestType);
+public record AgentToolDefinition(string Name, string Description, string Severity, string JsonSchema, Type RequestType, bool IsWriteCommand);
 
 public interface IToolRegistry
 {
     IEnumerable<AgentToolDefinition> GetAvailableTools(string userRole);
-    Type? GetToolRequestType(string toolName);
+    AgentToolDefinition? GetToolDefinition(string toolName);
 }

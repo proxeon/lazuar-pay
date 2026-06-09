@@ -13,11 +13,11 @@ interface OpsOperations {
   @route("/chat")
   chat(
     @body body: ChatRequestDto,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+  ): ChatResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/execute-action")
   executeAction(
-    @body body: ActionApprovalRequestDto,
+    @body body: ProposedActionDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

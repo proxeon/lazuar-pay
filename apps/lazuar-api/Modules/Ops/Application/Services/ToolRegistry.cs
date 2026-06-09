@@ -29,11 +29,15 @@ public class ToolRegistry : IToolRegistry
             var attribute = type.GetCustomAttribute<AgentToolAttribute>()!;
             var schema = GenerateJsonSchema(type);
             
+            bool isWriteCommand = type.GetInterfaces().Any(i => i == typeof(ICommand) || (i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommand<>)));
+
             _tools.TryAdd(type.Name, new AgentToolDefinition(
                 type.Name,
                 attribute.Description,
+                attribute.Severity,
                 schema.ToJsonString(),
-                type
+                type,
+                isWriteCommand
             ));
         }
     }
@@ -47,10 +51,10 @@ public class ToolRegistry : IToolRegistry
         });
     }
 
-    public Type? GetToolRequestType(string toolName)
+    public AgentToolDefinition? GetToolDefinition(string toolName)
     {
         _tools.TryGetValue(toolName, out var definition);
-        return definition?.RequestType;
+        return definition;
     }
 
     private JsonObject GenerateJsonSchema(Type type)
@@ -64,15 +68,14 @@ public class ToolRegistry : IToolRegistry
             var propName = prop.Name;
             var propType = prop.PropertyType;
 
+            // Security: Prevent LLM from hallucinating protected context boundaries
+            if (propName == "OrganizationId" || propName == "Id" || propName == "RecordedBy") continue;
+
             var typeSchema = new JsonObject();
 
             if (propType == typeof(string) || propType == typeof(Guid) || propType == typeof(Guid?))
             {
                 typeSchema["type"] = "string";
-                if (propType == typeof(Guid) || propType == typeof(Guid?))
-                {
-                    typeSchema["description"] = "A valid GUID string.";
-                }
             }
             else if (propType == typeof(int) || propType == typeof(int?))
             {
@@ -88,7 +91,7 @@ public class ToolRegistry : IToolRegistry
             }
             else
             {
-                typeSchema["type"] = "string"; // Fallback
+                typeSchema["type"] = "string";
             }
 
             properties[propName] = typeSchema;

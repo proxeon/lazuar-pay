@@ -53,6 +53,7 @@ builder.Services.AddHttpClient("Resend", (sp, client) =>
 });
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IExecutionContextAccessor, ExecutionContextAccessor>();
 builder.Services.AddSingleton<DatabaseJobTrigger>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
