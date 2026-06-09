@@ -8,7 +8,8 @@ import {
   Settings, 
   LogOut, 
   PanelLeftClose, 
-  PanelLeftOpen 
+  PanelLeftOpen,
+  SlidersHorizontal
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -27,6 +28,7 @@ interface SidebarProps {
   onNewChat: () => void;
   onDelete: (id: string, e: React.MouseEvent) => void;
   onRename: (id: string, title: string) => void;
+  onLogout: () => void;
 }
 
 export default function Sidebar({
@@ -38,7 +40,8 @@ export default function Sidebar({
   onSelect,
   onNewChat,
   onDelete,
-  onRename
+  onRename,
+  onLogout
 }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -83,97 +86,125 @@ export default function Sidebar({
         isMobile ? "shadow-2xl" : ""
       )}
     >
-      {/* Header Branding Panel */}
-      <div className="flex h-[56px] w-full shrink-0 items-center overflow-hidden border-b border-[#e5e5e5] px-5 justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-none bg-[#09090b]">
-            <div className="h-1.5 w-1.5 bg-white opacity-90" />
+      {/* Header Panel with Branding and Collapse Toggle */}
+      <div className={cn(
+        "flex h-14 w-full shrink-0 items-center overflow-hidden border-b border-[#e5e5e5] px-4",
+        expanded ? "justify-between" : "justify-center"
+      )}>
+        {expanded && (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-[#09090b]">
+              <div className="h-1 w-1 bg-white" />
+            </div>
+            <span className="whitespace-nowrap text-sm font-semibold tracking-tight text-[#09090b] truncate">
+              Lazuar Ops
+            </span>
           </div>
-          <motion.span
-            initial={false}
-            animate={{ opacity: expanded ? 1 : 0 }}
-            className="whitespace-nowrap text-[14px] font-semibold tracking-tight text-[#09090b] truncate"
-          >
-            Lazuar Ops
-          </motion.span>
-        </div>
+        )}
         
         {!isMobile && (
           <button
             onClick={setIsOpen}
             className="text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none"
-            title={expanded ? "Collapse Sidebar" : "Expand Sidebar"}
+            title={expanded ? "Collapse sidebar" : "Expand sidebar"}
           >
-            {expanded ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+            {expanded ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
           </button>
         )}
       </div>
 
-      {/* Primary New Chat Trigger */}
-      <div className="p-3 border-b border-[#e5e5e5]">
+      {/* Primary Action Button List */}
+      <div className="p-2 space-y-1 border-b border-[#e5e5e5]">
+        {/* New Chat Button */}
         <button
           onClick={onNewChat}
-          className="flex h-10 w-full items-center justify-center gap-2 border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#fafafa] transition-colors focus:outline-none"
+          className={cn(
+            "flex h-9 w-full items-center gap-3 transition-colors text-left focus:outline-none",
+            expanded 
+              ? "px-3 border border-[#e5e5e5] bg-white text-[#09090b] hover:bg-[#fafafa]" 
+              : "justify-center text-[#71717a] hover:text-[#09090b]"
+          )}
+          title={!expanded ? "New chat" : undefined}
         >
-          <Plus size={14} />
-          {expanded && <span>New Chat</span>}
+          <Plus size={16} className="shrink-0" />
+          {expanded && <span className="text-[13px] font-medium">New chat</span>}
+        </button>
+
+        {/* Global Chats Directory Switcher */}
+        <button
+          onClick={() => onSelect("directory")}
+          className={cn(
+            "flex h-9 w-full items-center gap-3 transition-colors text-left focus:outline-none",
+            activeConversationId === "directory"
+              ? "bg-[#f4f4f5] text-[#09090b] font-semibold"
+              : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]",
+            expanded ? "px-3" : "justify-center"
+          )}
+          title={!expanded ? "Chats" : undefined}
+        >
+          <MessageSquare size={16} className="shrink-0" />
+          {expanded && <span className="text-[13px]">Chats</span>}
         </button>
       </div>
 
-      {/* Dynamic Conversation Thread List */}
+      {/* Recents Subsection Header */}
+      {expanded && (
+        <div className="flex items-center justify-between px-4 pt-4 pb-1 text-[#71717a] shrink-0">
+          <span className="text-[11px] font-bold uppercase tracking-wider">Recents</span>
+          <SlidersHorizontal size={11} className="cursor-pointer hover:text-[#09090b] transition-colors" />
+        </div>
+      )}
+
+      {/* Recent Conversation Items (Max 20) */}
       <div className="flex-1 overflow-y-auto p-2 space-y-[2px]">
-        {conversations.map((conv) => (
+        {expanded && conversations.map((conv) => (
           <div
             key={conv.id}
             onClick={() => renamingId !== conv.id && onSelect(conv.id)}
             className={cn(
-              "group flex h-9 w-full items-center justify-between px-2 cursor-pointer transition-colors relative",
+              "group flex h-9 w-full items-center justify-between px-3 cursor-pointer transition-colors relative",
               conv.id === activeConversationId
                 ? "bg-[#f4f4f5] text-[#09090b] font-medium"
                 : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
             )}
           >
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <MessageSquare size={14} className="shrink-0" />
-              {expanded && (
-                <div className="flex-1 min-w-0 pr-2">
-                  {renamingId === conv.id ? (
-                    <input
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={() => handleCommitRename(conv.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCommitRename(conv.id);
-                        if (e.key === "Escape") setRenamingId(null);
-                      }}
-                      className="w-full bg-white border border-[#e5e5e5] px-1.5 py-0.5 text-xs text-[#09090b] outline-none"
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <span className="text-[13px] truncate block">{conv.title}</span>
-                  )}
-                </div>
-              )}
+            <div className="flex items-center min-w-0 flex-1">
+              <div className="flex-1 min-w-0 pr-2">
+                {renamingId === conv.id ? (
+                  <input
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => handleCommitRename(conv.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCommitRename(conv.id);
+                      if (e.key === "Escape") setRenamingId(null);
+                    }}
+                    className="w-full bg-white border border-[#e5e5e5] px-1.5 py-0.5 text-xs text-[#09090b] outline-none"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="text-[13px] truncate block">{conv.title}</span>
+                )}
+              </div>
             </div>
 
-            {/* Rename and Delete Actions */}
-            {expanded && renamingId !== conv.id && (
-              <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1.5 shrink-0 bg-transparent">
+            {renamingId !== conv.id && (
+              <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 shrink-0 bg-transparent">
                 <button
                   onClick={(e) => handleStartRename(conv.id, conv.title, e)}
                   className="p-1 text-[#71717a] hover:text-[#09090b] transition-colors"
                   title="Rename"
                 >
-                  <Pencil size={12} />
+                  <Pencil size={11} />
                 </button>
                 <button
                   onClick={(e) => onDelete(conv.id, e)}
                   className="p-1 text-[#71717a] hover:text-rose-600 transition-colors"
                   title="Delete"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 size={11} />
                 </button>
               </div>
             )}
@@ -181,13 +212,13 @@ export default function Sidebar({
         ))}
       </div>
 
-      {/* User Session Panel */}
+      {/* Bottom Profile Section */}
       <div className="shrink-0 border-t border-[#e5e5e5] p-3 relative">
         <div className="relative" ref={userMenuRef}>
           <button 
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="group flex h-10 w-full items-center rounded-none transition-colors hover:bg-[#fafafa] overflow-hidden text-left focus:outline-none"
-            title={!expanded ? "User Profile" : undefined}
+            title={!expanded ? "User profile" : undefined}
           >
             <div className="flex w-[40px] shrink-0 items-center justify-center">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-none bg-[#f4f4f5] border border-[#e5e5e5] text-[10px] font-semibold text-[#52525b]">
@@ -212,7 +243,7 @@ export default function Sidebar({
                 exit={{ opacity: 0, y: 5 }}
                 transition={{ duration: 0.15 }}
                 className={cn(
-                  "absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]",
+                  "absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1 shadow-brutal",
                   expanded ? "bottom-[calc(100%+8px)] left-0 w-full min-w-[200px]" : "bottom-0 left-[calc(100%+8px)] min-w-[200px]"
                 )}
               >
@@ -224,7 +255,10 @@ export default function Sidebar({
                   <Settings size={14} />
                   Settings
                 </button>
-                <button className="flex w-full items-center gap-2 px-2 py-1.5 text-[13px] text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none">
+                <button 
+                  onClick={onLogout}
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-[13px] text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none"
+                >
                   <LogOut size={14} />
                   Log out
                 </button>
