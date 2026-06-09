@@ -9,5 +9,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
     <PackageReference Include="Microsoft.AspNetCore.Routing" />
+    <PackageReference Include="OpenAI" />
   </ItemGroup>
 </Project>

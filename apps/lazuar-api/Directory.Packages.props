@@ -21,7 +21,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0-preview.1.25120.3" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
     
-    <!-- Storage & Cloud Services (R2 S3-Compatible) -->
+    <!-- Storage & Cloud Services -->
     <PackageVersion Include="AWSSDK.S3" Version="3.7.408" />
     
     <!-- Logging & Diagnostics -->
@@ -32,7 +32,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     
-    <!-- Testing Libraries (NUnit, FluentAssertions, NSubstitute, NetArchTest) -->
+    <!-- Testing Libraries -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="NUnit" Version="4.3.2" />
     <PackageVersion Include="NUnit3TestAdapter" Version="4.6.1" />
@@ -43,5 +43,8 @@
     <!-- Payment Gateways -->
     <PackageVersion Include="Stripe.net" Version="48.0.1" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+
+    <!-- AI & Ops -->
+    <PackageVersion Include="OpenAI" Version="2.1.0" />
   </ItemGroup>
 </Project>
