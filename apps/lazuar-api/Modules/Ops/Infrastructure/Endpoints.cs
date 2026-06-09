@@ -26,12 +26,31 @@ public static class Endpoints
             return Results.Ok(response);
         });
 
+        group.MapPost("/chat/stream", async Task ([FromBody] ChatRequestDto request, ILlmOrchestratorService orchestrator, HttpContext ctx) => 
+        {
+            ctx.Response.Headers.Append("Content-Type", "text/event-stream");
+            ctx.Response.Headers.Append("Cache-Control", "no-cache");
+            ctx.Response.Headers.Append("Connection", "keep-alive");
+
+            var stream = orchestrator.ProcessChatStreamAsync(request.Message, ctx.RequestAborted);
+            
+            await foreach (var chunk in stream)
+            {
+                var json = JsonSerializer.Serialize(chunk, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+                await ctx.Response.WriteAsync($"data: {json}\n\n");
+                await ctx.Response.Body.FlushAsync();
+            }
+
+            await ctx.Response.WriteAsync("data: [DONE]\n\n");
+            await ctx.Response.Body.FlushAsync();
+        });
+
         group.MapPost("/execute-action", async Task<IResult> (
             [FromBody] ProposedActionDto request, 
             IMemoryCache cache, 
             IToolRegistry toolRegistry, 
             IMediator mediator, 
-            IExecutionContextAccessor ctx,
+            IExecutionContextAccessor executionCtx,
             HttpContext httpContext) => 
         {
             if (cache.TryGetValue(request.Idempotency_key, out _))
@@ -49,8 +68,7 @@ public static class Endpoints
             var jsonNode = JsonSerializer.SerializeToNode(request.Command_payload) as JsonObject;
             if (jsonNode == null) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Invalid payload." });
 
-            jsonNode["OrganizationId"] = ctx.TenantId;
-
+            jsonNode["OrganizationId"] = executionCtx.TenantId;
             httpContext.Items["IsAgentAction"] = true;
 
             try

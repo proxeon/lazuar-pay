@@ -17,3 +17,10 @@ model ProposedActionDto {
   human_readable_summary: string;
   command_payload: unknown;
 }
+
+model ChatStreamChunkDto {
+  type: string;
+  content?: string;
+  tool_name?: string;
+  proposed_action?: ProposedActionDto;
+}
