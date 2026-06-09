@@ -69,6 +69,7 @@ public static class Endpoints
             if (jsonNode == null) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Invalid payload." });
 
             jsonNode["OrganizationId"] = executionCtx.TenantId;
+
             httpContext.Items["IsAgentAction"] = true;
 
             try

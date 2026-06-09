@@ -97,14 +97,12 @@ export default function OpsChat() {
   };
 
   const handleActionResolved = async (success: boolean, message?: string) => {
-    // Inject system feedback into the chat to inform the AI of the result
     const systemFeedback = success 
       ? `[System: The action was executed successfully.]`
       : `[System: The action failed or was cancelled. Reason: ${message}]`;
 
     setMessages(prev => [...prev, { id: Date.now().toString(), role: "system", content: systemFeedback }]);
 
-    // Only auto-trigger the LLM to follow up if it failed (so it can apologize/re-propose)
     if (!success) {
       const assistantMsgId = (Date.now() + 1).toString();
       setMessages(prev => [...prev, { id: assistantMsgId, role: "assistant", content: "", isStreaming: true }]);
@@ -118,7 +116,6 @@ export default function OpsChat() {
           credentials: "include"
         });
         
-        // Similar reading logic as above for the error feedback loop
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         if (reader) {

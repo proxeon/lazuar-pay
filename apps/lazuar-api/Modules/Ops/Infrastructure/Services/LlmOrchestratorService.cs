@@ -8,8 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
+using Lazuar.Api.Configuration;
 using Lazuar.ApiTypes;
 using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Modules.Ops.Application.Services;
 using OpenAI.Chat;
 
@@ -21,17 +24,23 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private readonly IToolRegistry _toolRegistry;
     private readonly IMediator _mediator;
     private readonly IExecutionContextAccessor _executionContext;
+    private readonly CostOptions _costOptions;
+    private readonly ILogger<LlmOrchestratorService> _logger;
 
     public LlmOrchestratorService(
         IChatClientFactory clientFactory,
         IToolRegistry toolRegistry,
         IMediator mediator,
-        IExecutionContextAccessor executionContext)
+        IExecutionContextAccessor executionContext,
+        IOptions<CostOptions> costOptions,
+        ILogger<LlmOrchestratorService> logger)
     {
         _clientFactory = clientFactory;
         _toolRegistry = toolRegistry;
         _mediator = mediator;
         _executionContext = executionContext;
+        _costOptions = costOptions.Value;
+        _logger = logger;
     }
 
     public async Task<ChatResponseDto> ProcessChatAsync(string userMessage, CancellationToken ct = default)
@@ -46,6 +55,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         while (iterations < maxIterations)
         {
             var completion = await chatClient.CompleteChatAsync(messages, options, ct);
+            TrackAndLogCost(completion.Value.Usage);
 
             if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
             {
@@ -99,9 +109,12 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             var toolCallAccumulators = new Dictionary<int, ToolCallAccumulator>();
             var hasToolCalls = false;
             var textAppended = false;
+            ChatTokenUsage? finalUsage = null;
 
             await foreach (var update in streamingResult.WithCancellation(ct))
             {
+                if (update.Usage != null) finalUsage = update.Usage;
+
                 if (update.ContentUpdate.Count > 0 && !string.IsNullOrEmpty(update.ContentUpdate[0].Text))
                 {
                     textAppended = true;
@@ -120,6 +133,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     if (toolUpdate.FunctionArgumentsUpdate != null) acc.Arguments += toolUpdate.FunctionArgumentsUpdate;
                 }
             }
+
+            TrackAndLogCost(finalUsage);
 
             if (hasToolCalls)
             {
@@ -161,6 +176,18 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         }
 
         yield return new ChatStreamChunkDto { Type = "text", Content = "\n\nExecution limit reached. Please refine your request." };
+    }
+
+    private void TrackAndLogCost(ChatTokenUsage? usage)
+    {
+        if (usage == null) return;
+        
+        var input = usage.InputTokenCount;
+        var output = usage.OutputTokenCount;
+        var cost = _costOptions.CalculateCost(_costOptions.DefaultModel, input, output, 0, null);
+
+        _logger.LogInformation("FinOps [Tenant: {TenantId}] - Input: {Input}, Output: {Output}, Estimated Cost: {Currency} {Cost}", 
+            _executionContext.TenantId, input, output, _costOptions.Currency, cost);
     }
 
     private List<ChatMessage> BuildInitialMessages(string userMessage)
