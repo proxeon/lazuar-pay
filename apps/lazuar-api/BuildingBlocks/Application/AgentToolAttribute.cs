@@ -2,6 +2,10 @@ using System;
 
 namespace BuildingBlocks.Application;
 
+/// <summary>
+/// Tags a MediatR IQuery or ICommand to be exposed as an autonomous or supervised tool for the AI Agent.
+/// The ToolRegistry scans for this attribute to generate LLM-compatible JSON Schemas on startup.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
 public sealed class AgentToolAttribute : Attribute
 {

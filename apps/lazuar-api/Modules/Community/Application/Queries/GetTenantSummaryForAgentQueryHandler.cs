@@ -2,7 +2,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Modules.Community.Contracts.Queries;
 
 namespace Modules.Community.Application.Queries;
 
@@ -22,15 +21,15 @@ public class GetTenantSummaryForAgentQueryHandler : IQueryHandler<GetTenantSumma
 
         var sb = new StringBuilder();
         sb.AppendLine("Community Ecosystem Summary:");
-        sb.AppendLine($"- MRR: RM {stats.Mrr:F2}");
+        sb.AppendLine($"- Monthly Recurring Revenue (MRR): RM {stats.Mrr:F2}");
         sb.AppendLine($"- Active Subscribers: {stats.Active_subscribers}");
         sb.AppendLine($"- Past Due Subscribers: {stats.Past_due_subscribers}");
-        sb.AppendLine($"- Churn Rate: {stats.Churn_rate_percentage}%");
+        sb.AppendLine($"- Cancellation Rate: {stats.Churn_rate_percentage}%");
         sb.AppendLine("- Active Plans:");
 
         foreach (var plan in plans)
         {
-            sb.AppendLine($"  * '{plan.Name}' (ID: {plan.Id}) | RM {plan.Price:F2}/{plan.Interval} | Enrolled: {plan.Enrolled_count}");
+            sb.AppendLine($"  * Name: '{plan.Name}' (ID: {plan.Id}) | Price: RM {plan.Price:F2}/{plan.Interval} | Enrolled: {plan.Enrolled_count}");
         }
 
         return sb.ToString();
