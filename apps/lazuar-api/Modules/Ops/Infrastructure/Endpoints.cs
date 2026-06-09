@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Ops/Infrastructure/Endpoints.cs
 using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +12,7 @@ using MediatR;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using Modules.Ops.Application.Services;
+using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
 namespace Modules.Ops.Infrastructure;
 

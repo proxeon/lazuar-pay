@@ -1,5 +1,6 @@
 using System;
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using Microsoft.Extensions.Configuration;
 using OpenAI;
 using OpenAI.Chat;

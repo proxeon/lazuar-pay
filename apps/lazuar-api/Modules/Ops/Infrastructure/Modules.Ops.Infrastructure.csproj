@@ -2,13 +2,18 @@
   <PropertyGroup>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\Application\Modules.Ops.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
+
+  <!-- Grants this class library access to ASP.NET Core types (HttpContext, IEndpointRouteBuilder, Results) natively -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
-    <PackageReference Include="Microsoft.AspNetCore.Routing" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="OpenAI" />
   </ItemGroup>
 </Project>

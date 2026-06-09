@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Ops/Infrastructure/Services/LlmOrchestratorService.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
-using Lazuar.Api.Configuration;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -24,7 +24,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private readonly IToolRegistry _toolRegistry;
     private readonly IMediator _mediator;
     private readonly IExecutionContextAccessor _executionContext;
-    private readonly CostOptions _costOptions;
     private readonly ILogger<LlmOrchestratorService> _logger;
 
     public LlmOrchestratorService(
@@ -32,14 +31,12 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         IToolRegistry toolRegistry,
         IMediator mediator,
         IExecutionContextAccessor executionContext,
-        IOptions<CostOptions> costOptions,
         ILogger<LlmOrchestratorService> logger)
     {
         _clientFactory = clientFactory;
         _toolRegistry = toolRegistry;
         _mediator = mediator;
         _executionContext = executionContext;
-        _costOptions = costOptions.Value;
         _logger = logger;
     }
 
@@ -184,10 +181,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         
         var input = usage.InputTokenCount;
         var output = usage.OutputTokenCount;
-        var cost = _costOptions.CalculateCost(_costOptions.DefaultModel, input, output, 0, null);
 
-        _logger.LogInformation("FinOps [Tenant: {TenantId}] - Input: {Input}, Output: {Output}, Estimated Cost: {Currency} {Cost}", 
-            _executionContext.TenantId, input, output, _costOptions.Currency, cost);
+        _logger.LogInformation("FinOps [Tenant: {TenantId}] - Input: {Input}, Output: {Output}", 
+            _executionContext.TenantId, input, output);
     }
 
     private List<ChatMessage> BuildInitialMessages(string userMessage)
@@ -222,7 +218,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             Intent_title = FormatIntentTitle(definition.Name),
             Severity = definition.Severity,
             Human_readable_summary = $"Proposing to execute {FormatIntentTitle(definition.Name)}.",
-            Command_payload = JsonSerializer.Deserialize<object>(arguments)
+            // Used null-coalescing to fix CS8601 Possible null reference assignment
+            Command_payload = JsonSerializer.Deserialize<object>(arguments) ?? new object()
         };
     }
 

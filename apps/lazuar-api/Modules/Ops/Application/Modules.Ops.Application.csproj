@@ -6,5 +6,6 @@
     <ProjectReference Include="..\Domain\Modules.Ops.Domain.csproj" />
     <ProjectReference Include="..\Contracts\Modules.Ops.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\..\packages\api-types-dotnet\Lazuar.ApiContracts.csproj" />
   </ItemGroup>
 </Project>
