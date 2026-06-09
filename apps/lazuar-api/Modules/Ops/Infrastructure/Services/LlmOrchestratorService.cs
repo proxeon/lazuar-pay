@@ -107,7 +107,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
             try
             {
-                // Safely initialize the stream to catch synchronous SDK validation errors
                 var streamingResult = chatClient!.CompleteChatStreamingAsync(messages!, options!, ct);
                 enumerator = streamingResult.GetAsyncEnumerator(ct);
             }
@@ -160,9 +159,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                         
                         if (toolUpdate.FunctionArgumentsUpdate != null)
                         {
-                            // DO NOT implicitly concatenate BinaryData to string here (e.g. string += BinaryData)! 
-                            // It causes UTF-8 multi-byte character corruption if a character is split across network chunks.
-                            // Instead, we accumulate the raw bytes into a memory stream.
                             var bytes = toolUpdate.FunctionArgumentsUpdate.ToArray();
                             acc.ArgumentsStream.Write(bytes, 0, bytes.Length);
                         }
@@ -187,14 +183,11 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 var toolCalls = toolCallAccumulators.Values
                     .Select(a => 
                     {
-                        // Decode the complete byte buffer into a UTF-8 string ONLY after the stream finishes
-                        // This guarantees we don't try to parse a split multi-byte character.
                         var jsonArgs = Encoding.UTF8.GetString(a.ArgumentsStream.ToArray());
                         return ChatToolCall.CreateFunctionToolCall(a.Id, a.Name, BinaryData.FromString(jsonArgs));
                     })
                     .ToList();
 
-                // Clean up memory streams
                 foreach (var acc in toolCallAccumulators.Values)
                 {
                     acc.Dispose();
@@ -243,6 +236,10 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             _executionContext.TenantId, usage.InputTokenCount, usage.OutputTokenCount);
     }
 
+    /// <summary>
+    /// Explicitly instructs the LLM to execute search queries before attempting any write mutations.
+    /// This resolves the Foreign Key hallucination issue when dealing with string names instead of required GUIDs.
+    /// </summary>
     private List<ChatMessage> BuildInitialMessages(string userMessage)
     {
         return new List<ChatMessage>
@@ -250,6 +247,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             new SystemChatMessage(
                 $"You are Lazuar Ops, a highly capable internal operations agent. " +
                 $"The current OrganizationId is {_executionContext.TenantId}. " +
+                $"**CRITICAL RULE**: You must ALWAYS use search tools (like SearchSubscribersAgentQuery or ListActivePlansAgentQuery) to find exact GUID identifiers before executing any write commands. Never guess or hallucinate a Guid. " +
                 $"If the user asks you to perform a write action, strictly call the relevant tool. " +
                 $"Do not chain multiple write tools in a single turn. " +
                 $"For read operations, you may call multiple tools to gather the necessary context."
@@ -276,15 +274,12 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         object payload;
         try 
         {
-            // SAFETY NET: Even with perfect byte decoding, the LLM might hallucinate malformed JSON.
-            // We must catch JsonException to prevent a synchronous 500 error from crashing the HTTP pipeline.
             payload = JsonSerializer.Deserialize<object>(arguments) ?? new object();
         }
         catch (JsonException ex)
         {
             _logger.LogWarning(ex, "LLM generated malformed JSON for tool {ToolName}. Raw arguments: {Arguments}", definition.Name, arguments);
             
-            // Provide a fallback object so the UI doesn't crash, allowing the user to see what went wrong.
             payload = new { 
                 _error = "The AI generated invalid parameters.", 
                 _raw_output = arguments 
@@ -329,7 +324,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         return string.Concat(name.Select(x => char.IsUpper(x) ? " " + x : x.ToString())).TrimStart();
     }
 
-    // Uses MemoryStream instead of string to prevent UTF-8 corruption during streaming.
     private class ToolCallAccumulator : IDisposable
     {
         public string Id { get; set; } = "";

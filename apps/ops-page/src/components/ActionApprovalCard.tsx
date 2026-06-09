@@ -1,3 +1,4 @@
+// apps/ops-page/src/components/ActionApprovalCard.tsx
 import { useState } from "react";
 import { Check, X, Loader2, AlertTriangle, Info, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,12 +22,12 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
         body: action
       });
 
+      // Passes the exact BusinessRuleValidationException message (error.detail) back to the LLM context loop
       if (error) {
         toast.error("Execution Failed", { description: error.detail || "An error occurred." });
         onResolved(false, error.detail);
       } else {
         toast.success("Action Executed Successfully");
-        // Invalidate all queries to ensure adjacent UI (Ledger, Dashboard) updates instantly
         queryClient.invalidateQueries();
         onResolved(true);
       }
@@ -51,9 +52,14 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
     <div className={cn("rounded-md border p-4 shadow-sm w-full max-w-sm my-3 animate-in fade-in zoom-in-95 duration-200", config.bg, config.border)}>
       <div className="flex items-start gap-3 mb-4">
         <Icon className={cn("h-5 w-5 shrink-0 mt-0.5", config.text)} />
-        <div>
+        <div className="min-w-0 w-full">
           <h4 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b] leading-none mb-1.5">{action.intent_title}</h4>
-          <p className="text-[13px] text-[#52525b] leading-snug">{action.human_readable_summary}</p>
+          <p className="text-[13px] text-[#52525b] leading-snug break-words">{action.human_readable_summary}</p>
+          
+          {/* Dynamically renders untyped MediatR payload arguments proposed by the LLM before execution */}
+          <pre className="mt-3 p-2 bg-black/5 text-[10px] font-mono text-[#52525b] overflow-x-auto rounded-sm">
+            {JSON.stringify(action.command_payload, null, 2)}
+          </pre>
         </div>
       </div>
 
