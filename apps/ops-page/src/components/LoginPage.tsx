@@ -68,8 +68,8 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] font-sans">
       <div className="w-full max-w-[380px] mx-4 animate-in fade-in zoom-in-95 duration-300">
         
-        {/* Neobrutalist design box wrapper */}
-        <div className="bg-white border border-[#e5e5e5] p-8 rounded-none shadow-brutal">
+        {/* Shadow classes removed to ensure a completely flat, border-only container */}
+        <div className="bg-white border border-[#e5e5e5] p-8 rounded-none">
           
           {error && (
             <div className="mb-6 p-4 bg-rose-50 border border-rose-200">
@@ -78,7 +78,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           )}
 
           {mode === "signin" ? (
-            /* Sign In Layout Mode */
             <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <div className="text-center mb-8">
                 <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Sign in to Lazuar</h1>
@@ -94,7 +93,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
-                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
                     placeholder="admin@lazuar.io"
                   />
                 </div>
@@ -110,7 +109,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
-                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
                     placeholder="••••••••"
                   />
                 </div>
@@ -134,7 +133,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               </div>
             </div>
           ) : (
-            /* Sign Up / Registration Layout Mode */
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="text-center mb-8">
                 <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Create Account</h1>
@@ -150,7 +148,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
-                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
                     placeholder="name@example.com"
                   />
                 </div>
@@ -163,7 +161,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="new-password"
-                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
+                    className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]"
                     placeholder="••••••••"
                   />
                 </div>

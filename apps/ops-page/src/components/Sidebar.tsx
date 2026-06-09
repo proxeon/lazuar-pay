@@ -128,7 +128,6 @@ export default function Sidebar({
 
       {/* Primary Action Button List */}
       <div className="py-2 space-y-1">
-        {/* New Chat Button - Locked Left Icon Column */}
         <button
           onClick={onNewChat}
           className={cn(
@@ -145,7 +144,6 @@ export default function Sidebar({
           {expanded && <span className="text-[13px] font-medium truncate">New chat</span>}
         </button>
 
-        {/* Global Chats Directory Switcher - Locked Left Icon Column */}
         <button
           onClick={() => onSelect("directory")}
           className={cn(
@@ -206,7 +204,6 @@ export default function Sidebar({
               </div>
             </div>
 
-            {/* Floating Dropdown Trigger container */}
             {renamingId !== conv.id && (
               <div className="item-menu-container relative shrink-0 z-30">
                 <button
@@ -229,7 +226,8 @@ export default function Sidebar({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.1 }}
-                      className="absolute right-0 top-7 z-40 bg-white border border-[#e5e5e5] p-1 shadow-brutal min-w-[110px]"
+                      // Shadow deleted to make the vertical options dropdown entirely flat
+                      className="absolute right-0 top-7 z-40 bg-white border border-[#e5e5e5] p-1 min-w-[110px]"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
@@ -292,22 +290,20 @@ export default function Sidebar({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 5 }}
                 transition={{ duration: 0.15 }}
-                className={cn(
-                  "absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1 shadow-brutal",
-                  expanded ? "bottom-[calc(100%+8px)] left-0 w-full min-w-[200px]" : "bottom-0 left-[calc(100%+8px)] min-w-[200px]"
-                )}
+                // Shadow deleted to make the user settings popup card entirely flat
+                className="absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1 min-w-[200px] bottom-[calc(100%+8px)] left-0"
               >
                 <div className="px-2 py-1.5 border-b border-[#f4f4f5] mb-1">
                   <span className="block text-[13px] font-medium text-[#09090b]">Admin User</span>
                   <span className="block text-[11px] text-[#71717a]">admin@lazuar.io</span>
                 </div>
-                <button className="flex w-full items-center gap-2 px-2 py-1.5 text-[13px] text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none">
+                <button className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none">
                   <Settings size={14} />
                   Settings
                 </button>
                 <button 
                   onClick={onLogout}
-                  className="flex w-full items-center gap-2 px-2 py-1.5 text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none"
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none"
                 >
                   <LogOut size={14} />
                   Log out

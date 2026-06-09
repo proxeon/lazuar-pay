@@ -235,7 +235,7 @@ export default function OpsChatWorkspace({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white overflow-hidden relative">
-      
+
       {isEmpty ? (
         /* Dynamic Empty Center Search View */
         <div className="flex-1 flex flex-col items-center justify-center px-6 bg-white overflow-y-auto">
@@ -248,7 +248,7 @@ export default function OpsChatWorkspace({
               </h1>
             </div>
 
-            <div className="w-full bg-white border border-[#e5e5e5] rounded-2xl p-4 shadow-sm hover:border-[#cbcbcb] transition-colors focus-within:border-[#09090b] focus-within:ring-0 mb-6">
+            <div className="w-full bg-white border border-[#e5e5e5] rounded-2xl p-4 transition-colors focus-within:border-[#09090b] focus-within:ring-0 mb-6">
               <textarea
                 ref={emptyTextareaRef}
                 value={input}
@@ -309,7 +309,7 @@ export default function OpsChatWorkspace({
         /* Active Conversation Flow Layout */
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
           
-          {/* Header Info Panel (Absolute positioned at top) */}
+          {/* Header Info Panel (Absolute positioned at top of active view) */}
           <div className="absolute top-0 left-0 right-0 h-11 bg-white px-6 flex items-center justify-between z-20 select-none">
             <div className="flex items-center gap-1.5 cursor-pointer group">
               <span className="text-[13px] font-semibold text-[#09090b]">Active Query Control</span>
@@ -318,11 +318,10 @@ export default function OpsChatWorkspace({
             <button className="h-7 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] px-3 hover:bg-[#fafafa] transition-colors">
               Share
             </button>
-            {/* Top Gradient Mask positioned exactly below the solid top container to fade scrolling text */}
             <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-white to-transparent pointer-events-none" />
           </div>
 
-          {/* Scroll List container - pt-16 gives clearance for absolute header and top gradient */}
+          {/* Scroll List container */}
           <div className="flex-1 overflow-y-auto px-6 pt-16 pb-48">
             <div className="max-w-[680px] mx-auto space-y-8">
               {visibleMessages.map((msg) => (
@@ -395,14 +394,14 @@ export default function OpsChatWorkspace({
             </div>
           </div>
 
-          {/* Floating Base Panel Overlay with solid white background to block out scrolling text and an top gradient fade */}
+          {/* Floating Base Panel Overlay */}
           <div className="absolute bottom-0 left-0 right-0 bg-white pt-4 pb-4 px-4 z-10 pointer-events-none">
             
-            {/* Top Gradient Mask positioned exactly above the solid bottom container */}
+            {/* Top Gradient Mask exactly matching custom stops */}
             <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none" />
             
             <div className="max-w-[760px] mx-auto pointer-events-auto">
-              <div className="w-full bg-white border border-[#e5e5e5] rounded-2xl p-3.5 shadow-sm hover:border-[#cbcbcb] transition-colors focus-within:border-[#09090b] focus-within:ring-0">
+              <div className="w-full bg-white border border-[#e5e5e5] rounded-2xl p-3.5 transition-colors focus-within:border-[#09090b] focus-within:ring-0">
                 <textarea
                   ref={activeTextareaRef}
                   value={input}

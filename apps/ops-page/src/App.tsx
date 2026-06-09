@@ -104,7 +104,6 @@ export default function App() {
     });
     setMessagesMap((prev) => ({
       ...prev,
-      // We initialize the message thread as empty so the centered greeting view mounts instantly
       [newId]: []
     }));
     setActiveConversationId(newId);
@@ -195,7 +194,6 @@ export default function App() {
               
               <main className="flex-1 flex flex-col overflow-hidden w-full relative bg-white">
                 {activeConversationId === "directory" ? (
-                  /* Conversations Grid Directory Dashboard view */
                   <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fafafa] p-6 md:p-12">
                     <div className="max-w-4xl mx-auto w-full">
                       <div className="mb-8">
@@ -213,7 +211,8 @@ export default function App() {
                             <div 
                               key={conv.id} 
                               onClick={() => setActiveConversationId(conv.id)}
-                              className="bg-white border border-[#e5e5e5] p-5 shadow-sm hover:shadow-brutal transition-all cursor-pointer flex flex-col justify-between h-36 relative group"
+                              // Shadows deleted on Directory Dashboard cards to make them completely flat
+                              className="bg-white border border-[#e5e5e5] p-5 hover:bg-[#fafafa] transition-all cursor-pointer flex flex-col justify-between h-36 relative group"
                             >
                               <div className="flex items-start gap-3 min-w-0">
                                 <div className="h-8 w-8 shrink-0 bg-[#09090b] text-white flex items-center justify-center">
