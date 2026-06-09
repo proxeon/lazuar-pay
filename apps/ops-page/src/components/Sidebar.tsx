@@ -77,7 +77,7 @@ export default function Sidebar({
     <motion.aside
       initial={false}
       animate={{ 
-        width: isMobile ? 240 : (isOpen ? 240 : 64),
+        width: isMobile ? 240 : (isOpen ? 240 : 48),
         x: isMobile ? (isOpen ? 0 : -240) : 0,
       }}
       transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
@@ -86,83 +86,92 @@ export default function Sidebar({
         isMobile ? "shadow-2xl" : ""
       )}
     >
-      {/* Header Panel with Branding and Collapse Toggle */}
-      <div className={cn(
-        "flex h-14 w-full shrink-0 items-center overflow-hidden border-b border-[#e5e5e5] px-4",
-        expanded ? "justify-between" : "justify-center"
-      )}>
-        {expanded && (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-[#09090b]">
-              <div className="h-1 w-1 bg-white" />
+      {/* Header Panel - Collapse toggle replaces the branding icon when collapsed */}
+      <div className="flex h-14 w-full shrink-0 items-center overflow-hidden border-b border-[#e5e5e5] relative">
+        {expanded ? (
+          <>
+            <div className="w-12 h-full shrink-0 flex items-center justify-center">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-[#09090b]">
+                <div className="h-1 w-1 bg-white" />
+              </div>
             </div>
-            <span className="whitespace-nowrap text-sm font-semibold tracking-tight text-[#09090b] truncate">
+            <span className="flex-1 whitespace-nowrap text-sm font-semibold tracking-tight text-[#09090b] truncate select-none">
               Lazuar Ops
             </span>
-          </div>
-        )}
-        
-        {!isMobile && (
+            {!isMobile && (
+              <button
+                onClick={setIsOpen}
+                className="text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none pr-4 shrink-0"
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose size={16} />
+              </button>
+            )}
+          </>
+        ) : (
           <button
             onClick={setIsOpen}
-            className="text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none"
-            title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            className="w-full h-full flex items-center justify-center text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none"
+            title="Expand sidebar"
           >
-            {expanded ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            <PanelLeftOpen size={16} className="shrink-0" />
           </button>
         )}
       </div>
 
       {/* Primary Action Button List */}
-      <div className="p-2 space-y-1 border-b border-[#e5e5e5]">
-        {/* New Chat Button */}
+      <div className="py-2 border-b border-[#e5e5e5] space-y-1">
+        {/* New Chat Button - Locked Left Icon Column */}
         <button
           onClick={onNewChat}
           className={cn(
-            "flex h-9 w-full items-center gap-3 transition-colors text-left focus:outline-none",
-            expanded 
-              ? "px-3 border border-[#e5e5e5] bg-white text-[#09090b] hover:bg-[#fafafa]" 
-              : "justify-center text-[#71717a] hover:text-[#09090b]"
+            "group flex h-9 w-full items-center text-left focus:outline-none transition-colors",
+            activeConversationId === "new-trigger"
+              ? "bg-[#f4f4f5] text-[#09090b]"
+              : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
           )}
           title={!expanded ? "New chat" : undefined}
         >
-          <Plus size={16} className="shrink-0" />
-          {expanded && <span className="text-[13px] font-medium">New chat</span>}
+          <div className="w-12 h-full shrink-0 flex items-center justify-center">
+            <Plus size={16} className="shrink-0" />
+          </div>
+          {expanded && <span className="text-[13px] font-medium truncate">New chat</span>}
         </button>
 
-        {/* Global Chats Directory Switcher */}
+        {/* Global Chats Directory Switcher - Locked Left Icon Column */}
         <button
           onClick={() => onSelect("directory")}
           className={cn(
-            "flex h-9 w-full items-center gap-3 transition-colors text-left focus:outline-none",
+            "group flex h-9 w-full items-center text-left focus:outline-none transition-colors",
             activeConversationId === "directory"
               ? "bg-[#f4f4f5] text-[#09090b] font-semibold"
-              : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]",
-            expanded ? "px-3" : "justify-center"
+              : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
           )}
           title={!expanded ? "Chats" : undefined}
         >
-          <MessageSquare size={16} className="shrink-0" />
-          {expanded && <span className="text-[13px]">Chats</span>}
+          <div className="w-12 h-full shrink-0 flex items-center justify-center">
+            <MessageSquare size={16} className="shrink-0" />
+          </div>
+          {expanded && <span className="text-[13px] truncate">Chats</span>}
         </button>
       </div>
 
       {/* Recents Subsection Header */}
       {expanded && (
-        <div className="flex items-center justify-between px-4 pt-4 pb-1 text-[#71717a] shrink-0">
+        <div className="flex items-center justify-between px-4 pt-4 pb-1 text-[#71717a] shrink-0 select-none">
           <span className="text-[11px] font-bold uppercase tracking-wider">Recents</span>
           <SlidersHorizontal size={11} className="cursor-pointer hover:text-[#09090b] transition-colors" />
         </div>
       )}
 
       {/* Recent Conversation Items (Max 20) */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-[2px]">
+      <div className="flex-1 overflow-y-auto py-2 space-y-[2px]">
         {expanded && conversations.map((conv) => (
           <div
             key={conv.id}
             onClick={() => renamingId !== conv.id && onSelect(conv.id)}
             className={cn(
-              "group flex h-9 w-full items-center justify-between px-3 cursor-pointer transition-colors relative",
+              "group flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors relative",
               conv.id === activeConversationId
                 ? "bg-[#f4f4f5] text-[#09090b] font-medium"
                 : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
@@ -212,23 +221,25 @@ export default function Sidebar({
         ))}
       </div>
 
-      {/* Bottom Profile Section */}
-      <div className="shrink-0 border-t border-[#e5e5e5] p-3 relative">
+      {/* Bottom Profile Section - Border-t wrapper padding is removed to center AU perfectly inside the collapsed 48px width */}
+      <div className="shrink-0 border-t border-[#e5e5e5] relative">
         <div className="relative" ref={userMenuRef}>
           <button 
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="group flex h-10 w-full items-center rounded-none transition-colors hover:bg-[#fafafa] overflow-hidden text-left focus:outline-none"
+            className="group flex h-11 w-full items-center rounded-none transition-colors hover:bg-[#fafafa] overflow-hidden text-left focus:outline-none"
             title={!expanded ? "User profile" : undefined}
           >
-            <div className="flex w-[40px] shrink-0 items-center justify-center">
+            {/* Avatar Initials block - serves as the static left-column icon */}
+            <div className="w-12 h-full shrink-0 flex items-center justify-center">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-none bg-[#f4f4f5] border border-[#e5e5e5] text-[10px] font-semibold text-[#52525b]">
                 AU
               </div>
             </div>
+            
             <motion.div
               initial={false}
               animate={{ opacity: expanded ? 1 : 0 }}
-              className="flex flex-col gap-[2px] min-w-0 overflow-hidden"
+              className="flex flex-col gap-[2px] min-w-0 overflow-hidden pr-3"
             >
               <span className="whitespace-nowrap text-[13px] font-medium leading-none text-[#09090b] truncate">Admin User</span>
               <span className="whitespace-nowrap text-[11px] font-medium leading-none text-[#71717a] truncate">admin@lazuar.io</span>

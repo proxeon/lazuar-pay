@@ -104,9 +104,8 @@ export default function App() {
     });
     setMessagesMap((prev) => ({
       ...prev,
-      [newId]: [
-        { id: `init-${newId}`, role: "assistant", content: "How can I help you manage your ecosystem today?" }
-      ]
+      // We initialize the message thread as empty so the centered greeting view mounts instantly
+      [newId]: []
     }));
     setActiveConversationId(newId);
   };
