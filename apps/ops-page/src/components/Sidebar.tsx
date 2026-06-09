@@ -9,7 +9,8 @@ import {
   LogOut, 
   PanelLeftClose, 
   PanelLeftOpen,
-  SlidersHorizontal
+  SlidersHorizontal,
+  MoreVertical
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -44,10 +45,11 @@ export default function Sidebar({
   onLogout
 }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  
   const userMenuRef = useRef<HTMLDivElement>(null);
-
   const expanded = isMobile ? true : isOpen;
 
   useEffect(() => {
@@ -55,10 +57,15 @@ export default function Sidebar({
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
+      
+      const target = event.target as HTMLElement;
+      if (activeMenuId && !target.closest(".item-menu-container")) {
+        setActiveMenuId(null);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [activeMenuId]);
 
   const handleStartRename = (id: string, title: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -86,8 +93,8 @@ export default function Sidebar({
         isMobile ? "shadow-2xl" : ""
       )}
     >
-      {/* Header Panel - Collapse toggle replaces the branding icon when collapsed */}
-      <div className="flex h-14 w-full shrink-0 items-center overflow-hidden border-b border-[#e5e5e5] relative">
+      {/* Header Panel */}
+      <div className="flex h-14 w-full shrink-0 items-center overflow-hidden relative">
         {expanded ? (
           <>
             <div className="w-12 h-full shrink-0 flex items-center justify-center">
@@ -120,7 +127,7 @@ export default function Sidebar({
       </div>
 
       {/* Primary Action Button List */}
-      <div className="py-2 border-b border-[#e5e5e5] space-y-1">
+      <div className="py-2 space-y-1">
         {/* New Chat Button - Locked Left Icon Column */}
         <button
           onClick={onNewChat}
@@ -199,37 +206,69 @@ export default function Sidebar({
               </div>
             </div>
 
+            {/* Floating Dropdown Trigger container */}
             {renamingId !== conv.id && (
-              <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 shrink-0 bg-transparent">
+              <div className="item-menu-container relative shrink-0 z-30">
                 <button
-                  onClick={(e) => handleStartRename(conv.id, conv.title, e)}
-                  className="p-1 text-[#71717a] hover:text-[#09090b] transition-colors"
-                  title="Rename"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuId(activeMenuId === conv.id ? null : conv.id);
+                  }}
+                  className={cn(
+                    "p-1 rounded-none hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors focus:outline-none",
+                    activeMenuId === conv.id ? "opacity-100 text-[#09090b]" : "opacity-0 group-hover:opacity-100 text-[#71717a]"
+                  )}
                 >
-                  <Pencil size={11} />
+                  <MoreVertical size={13} />
                 </button>
-                <button
-                  onClick={(e) => onDelete(conv.id, e)}
-                  className="p-1 text-[#71717a] hover:text-rose-600 transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 size={11} />
-                </button>
+
+                <AnimatePresence>
+                  {activeMenuId === conv.id && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.1 }}
+                      className="absolute right-0 top-7 z-40 bg-white border border-[#e5e5e5] p-1 shadow-brutal min-w-[110px]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={(e) => {
+                          handleStartRename(conv.id, conv.title, e);
+                          setActiveMenuId(null);
+                        }}
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors text-left"
+                      >
+                        <Pencil size={11} />
+                        <span>Rename</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          onDelete(conv.id, e);
+                          setActiveMenuId(null);
+                        }}
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors text-left"
+                      >
+                        <Trash2 size={11} />
+                        <span>Delete</span>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Bottom Profile Section - Border-t wrapper padding is removed to center AU perfectly inside the collapsed 48px width */}
-      <div className="shrink-0 border-t border-[#e5e5e5] relative">
+      {/* Bottom Profile Section */}
+      <div className="shrink-0 relative">
         <div className="relative" ref={userMenuRef}>
           <button 
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="group flex h-11 w-full items-center rounded-none transition-colors hover:bg-[#fafafa] overflow-hidden text-left focus:outline-none"
             title={!expanded ? "User profile" : undefined}
           >
-            {/* Avatar Initials block - serves as the static left-column icon */}
             <div className="w-12 h-full shrink-0 flex items-center justify-center">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-none bg-[#f4f4f5] border border-[#e5e5e5] text-[10px] font-semibold text-[#52525b]">
                 AU
@@ -268,7 +307,7 @@ export default function Sidebar({
                 </button>
                 <button 
                   onClick={onLogout}
-                  className="flex w-full items-center gap-2 px-2 py-1.5 text-[13px] text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none"
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none"
                 >
                   <LogOut size={14} />
                   Log out
