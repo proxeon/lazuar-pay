@@ -12,6 +12,7 @@ using System.Security.Claims;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
+using BuildingBlocks.Infrastructure.Llm;
 using Modules.One.Infrastructure;
 using Modules.Messaging.Infrastructure;
 using Modules.Community.Infrastructure;
@@ -60,6 +61,8 @@ builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
+
+builder.Services.AddThinLlmFactory();
 
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
