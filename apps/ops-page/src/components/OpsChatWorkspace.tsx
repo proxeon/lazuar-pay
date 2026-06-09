@@ -56,15 +56,10 @@ export default function OpsChatWorkspace({
 
   useEffect(() => {
     const hours = new Date().getHours();
-    if (hours >= 22 || hours < 5) {
-      setGreeting("Hello, night owl");
-    } else if (hours >= 5 && hours < 12) {
-      setGreeting("Good morning");
-    } else if (hours >= 12 && hours < 17) {
-      setGreeting("Good afternoon");
-    } else {
-      setGreeting("Good evening");
-    }
+    if (hours >= 22 || hours < 5) setGreeting("Hello, night owl");
+    else if (hours >= 5 && hours < 12) setGreeting("Good morning");
+    else if (hours >= 12 && hours < 17) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
   }, []);
 
   const scrollToBottom = () => {
@@ -175,24 +170,18 @@ export default function OpsChatWorkspace({
     setInput("");
 
     const userMsgId = Date.now().toString();
-    setMessages((prev) => [
-      ...prev,
-      { id: userMsgId, role: "user", content: userText }
-    ]);
+    setMessages((prev) => [...prev, { id: userMsgId, role: "user", content: userText }]);
 
     const assistantMsgId = (Date.now() + 1).toString();
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantMsgId, role: "assistant", content: "", isStreaming: true }
-    ]);
+    setMessages((prev) => [...prev, { id: assistantMsgId, role: "assistant", content: "", isStreaming: true }]);
     setIsProcessing(true);
 
     await executeStreamCall(userText, assistantMsgId);
   };
 
-  const handleActionResolved = async (success: boolean, message?: string) => {
+  const handleActionResolved = async (success: boolean, message?: string, actionRef?: ProposedActionDto) => {
     const systemFeedback = success
-      ? `[System: The action was executed successfully.]`
+      ? `[System: The action was executed successfully. Waiting for next instruction.]`
       : `[System: The action failed or was cancelled. Reason: ${message}]`;
 
     setMessages((prev) => [
@@ -200,14 +189,17 @@ export default function OpsChatWorkspace({
       { id: Date.now().toString(), role: "system", content: systemFeedback }
     ]);
 
-    const assistantMsgId = (Date.now() + 1).toString();
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantMsgId, role: "assistant", content: "", isStreaming: true }
-    ]);
-    setIsProcessing(true);
-
-    await executeStreamCall(systemFeedback, assistantMsgId);
+    // MAGIC LOOP: If it failed due to an API error, automatically ping the AI to fix its mistake
+    if (!success && actionRef && message !== "Action cancelled by user.") {
+      const fixPrompt = `System Error Notification: I tried to execute the tool '${actionRef.tool_name}' with the payload ${JSON.stringify(actionRef.command_payload)}. The system rejected it with this error: "${message}". Please analyze the error, apologize, and propose a corrected action.`;
+      
+      const assistantMsgId = (Date.now() + 1).toString();
+      setMessages((prev) => [...prev, { id: assistantMsgId, role: "assistant", content: "", isStreaming: true }]);
+      setIsProcessing(true);
+      
+      // Send the hidden context prompt to the backend
+      await executeStreamCall(fixPrompt, assistantMsgId);
+    }
   };
 
   const handleCopyToClipboard = (text: string, msgId: string) => {
@@ -216,7 +208,7 @@ export default function OpsChatWorkspace({
     setTimeout(() => setCopiedId(null), 1500);
   };
 
-  const visibleMessages = messages.filter((m) => m.role !== "system");
+  const visibleMessages = messages.filter((m) => m.role !== "system" || m.content.includes("successfully") || m.content.includes("failed"));
   const isEmpty = visibleMessages.length === 0;
 
   const quickActions = [
@@ -236,9 +228,7 @@ export default function OpsChatWorkspace({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white overflow-hidden relative">
-
       {isEmpty ? (
-        /* Dynamic Empty Center Search View */
         <div className="flex-1 flex flex-col items-center justify-center px-6 bg-white overflow-y-auto">
           <div className="w-full max-w-[720px] text-center flex flex-col items-center">
             
@@ -307,10 +297,8 @@ export default function OpsChatWorkspace({
           </div>
         </div>
       ) : (
-        /* Active Conversation Flow Layout */
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
           
-          {/* Header Info Panel */}
           <div className="absolute top-0 left-0 right-0 h-11 bg-white px-6 flex items-center justify-between z-20 select-none">
             <div className="flex items-center gap-1.5 cursor-pointer group">
               <span className="text-[13px] font-semibold text-[#09090b]">Active Query Control</span>
@@ -322,7 +310,6 @@ export default function OpsChatWorkspace({
             <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-white to-transparent pointer-events-none" />
           </div>
 
-          {/* Scroll List container */}
           <div className="flex-1 overflow-y-auto px-6 pt-16 pb-48">
             <div className="max-w-[680px] mx-auto space-y-8">
               {visibleMessages.map((msg) => (
@@ -333,18 +320,18 @@ export default function OpsChatWorkspace({
                     msg.role === "user" ? "items-end" : "items-start"
                   )}
                 >
-                  {msg.role === "user" ? (
-                    /* Outer group triggers menu visibility below on mouse hover */
+                  {msg.role === "system" ? (
+                    <div className="w-full flex justify-center py-2">
+                      <span className={cn("text-[11px] font-mono px-3 py-1.5 rounded-sm border", msg.content.includes("successfully") ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200")}>
+                        {msg.content}
+                      </span>
+                    </div>
+                  ) : msg.role === "user" ? (
                     <div className="group flex flex-col items-end w-full relative">
-                      
-                      {/* User Capsule Bubble */}
                       <div className="bg-[#f4f4f5] px-4 py-2.5 text-[14px] leading-relaxed text-[#09090b] max-w-[80%] rounded-2xl border border-[#e5e5e5] break-words shrink-0">
                         {msg.content}
                       </div>
-
-                      {/* Left-aligned, right-docked Action bar positioned neatly BELOW the user bubble */}
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mt-2 select-none text-[#71717a] text-[11px] font-sans">
-                        <span>12:33 AM</span>
                         <button 
                           onClick={() => handleSend(msg.content)}
                           className="p-1 hover:text-[#09090b] transition-colors" 
@@ -363,7 +350,6 @@ export default function OpsChatWorkspace({
                           {copiedId === msg.id ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
                         </button>
                       </div>
-
                     </div>
                   ) : (
                     <div className="w-full flex flex-col items-start min-w-0">
@@ -423,7 +409,6 @@ export default function OpsChatWorkspace({
             </div>
           </div>
 
-          {/* Floating Base Panel Overlay */}
           <div className="absolute bottom-0 left-0 right-0 bg-white pt-4 pb-4 px-4 z-10 pointer-events-none">
             
             <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none" />

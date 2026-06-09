@@ -236,17 +236,15 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             _executionContext.TenantId, usage.InputTokenCount, usage.OutputTokenCount);
     }
 
-    /// <summary>
-    /// Explicitly instructs the LLM to execute search queries before attempting any write mutations.
-    /// This resolves the Foreign Key hallucination issue when dealing with string names instead of required GUIDs.
-    /// </summary>
     private List<ChatMessage> BuildInitialMessages(string userMessage)
     {
+        var tenantId = _executionContext.TenantId == Guid.Empty ? Guid.Parse("7d97963c-063c-4598-86cc-9ddd9d47d9b1") : _executionContext.TenantId;
+
         return new List<ChatMessage>
         {
             new SystemChatMessage(
                 $"You are Lazuar Ops, a highly capable internal operations agent. " +
-                $"The current OrganizationId is {_executionContext.TenantId}. " +
+                $"The current OrganizationId is {tenantId}. " +
                 $"**CRITICAL RULE**: You must ALWAYS use search tools (like SearchSubscribersAgentQuery or ListActivePlansAgentQuery) to find exact GUID identifiers before executing any write commands. Never guess or hallucinate a Guid. " +
                 $"If the user asks you to perform a write action, strictly call the relevant tool. " +
                 $"Do not chain multiple write tools in a single turn. " +

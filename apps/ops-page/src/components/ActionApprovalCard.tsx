@@ -1,4 +1,3 @@
-// apps/ops-page/src/components/ActionApprovalCard.tsx
 import { useState } from "react";
 import { Check, X, Loader2, AlertTriangle, Info, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,7 +7,8 @@ import { client, type ProposedActionDto } from "../lib/api-client";
 
 interface ActionApprovalCardProps {
   action: ProposedActionDto;
-  onResolved: (success: boolean, message?: string) => void;
+  // Updated callback to include the action reference so the AI knows what to fix
+  onResolved: (success: boolean, message?: string, actionRef?: ProposedActionDto) => void;
 }
 
 export default function ActionApprovalCard({ action, onResolved }: ActionApprovalCardProps) {
@@ -22,18 +22,18 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
         body: action
       });
 
-      // Passes the exact BusinessRuleValidationException message (error.detail) back to the LLM context loop
       if (error) {
         toast.error("Execution Failed", { description: error.detail || "An error occurred." });
-        onResolved(false, error.detail);
+        // Pass the action back on failure
+        onResolved(false, error.detail, action);
       } else {
         toast.success("Action Executed Successfully");
         queryClient.invalidateQueries();
-        onResolved(true);
+        onResolved(true, undefined, action);
       }
     } catch (err) {
       toast.error("Network Error", { description: "Failed to reach the server." });
-      onResolved(false, "Network error");
+      onResolved(false, "Network error", action);
     } finally {
       setIsExecuting(false);
     }
@@ -56,7 +56,6 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
           <h4 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b] leading-none mb-1.5">{action.intent_title}</h4>
           <p className="text-[13px] text-[#52525b] leading-snug break-words">{action.human_readable_summary}</p>
           
-          {/* Dynamically renders untyped MediatR payload arguments proposed by the LLM before execution */}
           <pre className="mt-3 p-2 bg-black/5 text-[10px] font-mono text-[#52525b] overflow-x-auto rounded-sm">
             {JSON.stringify(action.command_payload, null, 2)}
           </pre>
@@ -65,7 +64,7 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
 
       <div className="flex items-center gap-2 pt-3 border-t border-black/5">
         <button
-          onClick={() => onResolved(false, "Action cancelled by user.")}
+          onClick={() => onResolved(false, "Action cancelled by user.", action)}
           disabled={isExecuting}
           className="flex-1 h-9 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50"
         >

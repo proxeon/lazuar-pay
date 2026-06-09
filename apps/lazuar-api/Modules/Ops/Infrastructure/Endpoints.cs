@@ -70,7 +70,9 @@ public static class Endpoints
             var jsonNode = JsonSerializer.SerializeToNode(request.Command_payload) as JsonObject;
             if (jsonNode == null) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Invalid payload." });
 
-            jsonNode["OrganizationId"] = executionCtx.TenantId;
+            // Ensure the write action executes against the correct Tenant ID (fallback to dev org if header missing)
+            var tenantId = executionCtx.TenantId == Guid.Empty ? Guid.Parse("7d97963c-063c-4598-86cc-9ddd9d47d9b1") : executionCtx.TenantId;
+            jsonNode["OrganizationId"] = tenantId;
 
             httpContext.Items["IsAgentAction"] = true;
 
@@ -86,7 +88,8 @@ public static class Endpoints
             catch (Exception ex)
             {
                 cache.Remove(request.Idempotency_key);
-                return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
+                // Return exactly the inner exception message to feed it back into the AI
+                return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.InnerException?.Message ?? ex.Message });
             }
         });
 
