@@ -1,3 +1,4 @@
+// apps/lazuar-api/BuildingBlocks/Infrastructure/Llm/ChatClientFactory.cs
 using System;
 using System.ClientModel;
 using System.ClientModel.Primitives;
@@ -39,7 +40,8 @@ public sealed class ChatClientFactory : IChatClientFactory
 
         var options = new OpenAIClientOptions
         {
-            Endpoint = new Uri("https://openrouter.ai/api/v1")
+            // FIX: Added trailing slash to prevent .NET from dropping the "v1" segment
+            Endpoint = new Uri("https://openrouter.ai/api/v1/")
         };
         options.AddPolicy(new OpenRouterHeaderPolicy(siteUrl, siteName), PipelinePosition.PerCall);
         options.AddPolicy(new ProviderQuirksPolicy("OPENROUTER", thinkingEnabled, reasoningEffort), PipelinePosition.BeforeTransport);
@@ -51,7 +53,8 @@ public sealed class ChatClientFactory : IChatClientFactory
     {
         var options = new OpenAIClientOptions
         {
-            Endpoint = new Uri("https://api.deepseek.com")
+            // FIX: Added trailing slash 
+            Endpoint = new Uri("https://api.deepseek.com/v1/")
         };
         options.AddPolicy(new ProviderQuirksPolicy("DEEPSEEK", thinkingEnabled, reasoningEffort), PipelinePosition.BeforeTransport);
 
@@ -62,7 +65,8 @@ public sealed class ChatClientFactory : IChatClientFactory
     {
         var options = new OpenAIClientOptions
         {
-            Endpoint = new Uri("https://api.xiaomimimo.com/v1")
+            // FIX: Added trailing slash
+            Endpoint = new Uri("https://api.xiaomimimo.com/v1/")
         };
         options.AddPolicy(new ProviderQuirksPolicy("MIMO", thinkingEnabled, reasoningEffort), PipelinePosition.BeforeTransport);
 

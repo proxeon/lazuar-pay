@@ -100,7 +100,7 @@ export default function Dashboard({ isMobile, toggleSidebar }: DashboardProps) {
               <h2 className="text-[14px] font-semibold text-[#09090b]">Revenue Growth</h2>
             </div>
             <div className="flex-1 w-full min-h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={250}>
                 <AreaChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -129,7 +129,7 @@ export default function Dashboard({ isMobile, toggleSidebar }: DashboardProps) {
               <h2 className="text-[14px] font-semibold text-[#09090b]">User Acquisition</h2>
             </div>
             <div className="flex-1 w-full min-h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={250}>
                 <BarChart data={data} margin={{ top: 10, right: 0, left: -25, bottom: 0 }} barSize={28}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#71717a', fontWeight: 500 }} dy={10} />

@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Ops/Application/Services/ToolRegistry.cs
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,14 +19,17 @@ public class ToolRegistry : IToolRegistry
         DiscoverTools();
     }
 
-    /// <summary>
-    /// Uses reflection to scan all loaded assemblies for MediatR records tagged with [AgentTool].
-    /// Automatically maps C# properties to JSON Schema definitions and caches the official OpenAI ChatTool object.
-    /// </summary>
     private void DiscoverTools()
     {
+        // Safely scan assemblies, catching ReflectionTypeLoadExceptions thrown by dynamic/system DLLs
         var queryTypes = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(a => a.GetTypes())
+            .SelectMany(a => 
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException e) { return e.Types; }
+                catch { return Type.EmptyTypes; }
+            })
+            .OfType<Type>() // Safely filters out nulls AND casts to non-nullable Type
             .Where(t => t.GetCustomAttribute<AgentToolAttribute>() != null && !t.IsAbstract && !t.IsInterface);
 
         foreach (var type in queryTypes)
@@ -33,7 +37,6 @@ public class ToolRegistry : IToolRegistry
             var attribute = type.GetCustomAttribute<AgentToolAttribute>()!;
             var schema = GenerateJsonSchema(type);
             
-            // Detect if this is a Write operation (Command) or Read operation (Query)
             bool isWriteCommand = type.GetInterfaces().Any(i => i == typeof(ICommand) || (i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommand<>)));
 
             var chatTool = ChatTool.CreateFunctionTool(
@@ -78,38 +81,19 @@ public class ToolRegistry : IToolRegistry
         {
             var propName = prop.Name;
             
-            // Security: Prevent LLM from hallucinating protected context boundaries
-            // These properties are populated programmatically by the execution middleware
             if (propName == "OrganizationId" || propName == "Id" || propName == "RecordedBy") continue;
 
             var propType = prop.PropertyType;
             var underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
             var typeSchema = new JsonObject();
 
-            if (underlyingType == typeof(string) || underlyingType == typeof(Guid))
-            {
-                typeSchema["type"] = "string";
-            }
-            else if (underlyingType == typeof(int) || underlyingType == typeof(long))
-            {
-                typeSchema["type"] = "integer";
-            }
-            else if (underlyingType == typeof(decimal) || underlyingType == typeof(double) || underlyingType == typeof(float))
-            {
-                typeSchema["type"] = "number";
-            }
-            else if (underlyingType == typeof(bool))
-            {
-                typeSchema["type"] = "boolean";
-            }
-            else
-            {
-                typeSchema["type"] = "string";
-            }
+            if (underlyingType == typeof(int) || underlyingType == typeof(long)) typeSchema["type"] = "integer";
+            else if (underlyingType == typeof(decimal) || underlyingType == typeof(double) || underlyingType == typeof(float)) typeSchema["type"] = "number";
+            else if (underlyingType == typeof(bool)) typeSchema["type"] = "boolean";
+            else typeSchema["type"] = "string";
 
             properties[propName] = typeSchema;
 
-            // Mark property as required if it is a non-nullable value type or a required string
             if (Nullable.GetUnderlyingType(propType) == null && propType.IsValueType || propType == typeof(string))
             {
                 required.Add(propName);

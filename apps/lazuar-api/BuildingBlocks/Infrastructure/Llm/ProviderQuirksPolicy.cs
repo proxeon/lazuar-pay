@@ -1,3 +1,4 @@
+// apps/lazuar-api/BuildingBlocks/Infrastructure/Llm/ProviderQuirksPolicy.cs
 using System;
 using System.ClientModel;
 using System.ClientModel.Primitives;
@@ -37,6 +38,11 @@ public sealed class ProviderQuirksPolicy : PipelinePolicy
     {
         if (message.Request.Content == null) return;
 
+        // FAST EXIT: Do not manipulate the stream if we don't strictly need to.
+        // This prevents breaking the OpenAI SDK's Content-Length headers!
+        if (_provider == "OPENROUTER" && !_thinkingEnabled) return;
+        if (_provider == "OPENAI") return;
+
         using var stream = new MemoryStream();
         message.Request.Content.WriteTo(stream, default);
         stream.Position = 0;
@@ -44,21 +50,15 @@ public sealed class ProviderQuirksPolicy : PipelinePolicy
         var jsonNode = JsonNode.Parse(stream) as JsonObject;
         if (jsonNode == null) return;
 
-        if (_provider == "OPENROUTER")
+        if (_provider == "OPENROUTER" && _thinkingEnabled)
         {
-            if (_thinkingEnabled)
-            {
-                jsonNode["include_reasoning"] = true;
-                jsonNode["reasoning_effort"] = _reasoningEffort;
-            }
+            jsonNode["include_reasoning"] = true;
+            jsonNode["reasoning_effort"] = _reasoningEffort;
         }
-        else if (_provider == "DEEPSEEK")
+        else if (_provider == "DEEPSEEK" && _thinkingEnabled)
         {
-            if (_thinkingEnabled)
-            {
-                jsonNode["thinking"] = new JsonObject { ["type"] = "enabled" };
-                jsonNode["reasoning_effort"] = _reasoningEffort;
-            }
+            jsonNode["thinking"] = new JsonObject { ["type"] = "enabled" };
+            jsonNode["reasoning_effort"] = _reasoningEffort;
         }
         else if (_provider == "MIMO")
         {

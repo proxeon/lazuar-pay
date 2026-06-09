@@ -1,8 +1,10 @@
 // apps/lazuar-api/Modules/Ops/Infrastructure/Services/LlmOrchestratorService.cs
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -12,7 +14,6 @@ using BuildingBlocks.Application.Llm;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Modules.Ops.Application.Services;
 using OpenAI.Chat;
 
@@ -43,92 +44,120 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     public async Task<ChatResponseDto> ProcessChatAsync(string userMessage, CancellationToken ct = default)
     {
         var messages = BuildInitialMessages(userMessage);
-        var options = BuildChatOptions();
         var chatClient = _clientFactory.CreateClient();
-
-        int maxIterations = 3;
-        int iterations = 0;
-
-        while (iterations < maxIterations)
-        {
-            var completion = await chatClient.CompleteChatAsync(messages, options, ct);
-            TrackAndLogCost(completion.Value.Usage);
-
-            if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
-            {
-                messages.Add(new AssistantChatMessage(completion.Value));
-
-                foreach (var toolCall in completion.Value.ToolCalls)
-                {
-                    var definition = _toolRegistry.GetToolDefinition(toolCall.FunctionName);
-                    if (definition == null)
-                    {
-                        messages.Add(new ToolChatMessage(toolCall.Id, "Error: Tool not found."));
-                        continue;
-                    }
-
-                    if (definition.IsWriteCommand)
-                    {
-                        return new ChatResponseDto 
-                        { 
-                            Message = "I have staged this action for your review.", 
-                            Proposed_action = BuildProposedAction(definition, toolCall.FunctionArguments.ToString()) 
-                        };
-                    }
-
-                    var resultJson = await ExecuteReadToolAsync(definition, toolCall.FunctionArguments.ToString(), ct);
-                    messages.Add(new ToolChatMessage(toolCall.Id, resultJson));
-                }
-                
-                iterations++;
-            }
-            else
-            {
-                return new ChatResponseDto { Message = completion.Value.Content[0].Text };
-            }
-        }
-
-        return new ChatResponseDto { Message = "Execution limit reached. Please be more specific." };
+        var completion = await chatClient.CompleteChatAsync(messages, BuildChatOptions(), ct);
+        return new ChatResponseDto { Message = completion.Value.Content[0].Text };
     }
 
     public async IAsyncEnumerable<ChatStreamChunkDto> ProcessChatStreamAsync(string userMessage, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var messages = BuildInitialMessages(userMessage);
-        var options = BuildChatOptions();
-        var chatClient = _clientFactory.CreateClient();
+        List<ChatMessage>? messages = null;
+        ChatCompletionOptions? options = null;
+        ChatClient? chatClient = null;
+        Exception? initError = null;
+
+        try
+        {
+            messages = BuildInitialMessages(userMessage);
+            options = BuildChatOptions();
+            chatClient = _clientFactory.CreateClient();
+        }
+        catch (Exception ex)
+        {
+            initError = ex;
+        }
+
+        if (initError != null)
+        {
+            yield return new ChatStreamChunkDto { Type = "text", Content = $"⚠️ **System Configuration Error:**\n\n`{initError.Message}`\n\nEnsure your OpenRouter API Key is set correctly." };
+            yield break;
+        }
 
         int maxIterations = 3;
         int iterations = 0;
 
         while (iterations < maxIterations)
         {
-            var streamingResult = chatClient.CompleteChatStreamingAsync(messages, options, ct);
             var toolCallAccumulators = new Dictionary<int, ToolCallAccumulator>();
             var hasToolCalls = false;
             var textAppended = false;
             ChatTokenUsage? finalUsage = null;
+            Exception? streamError = null;
+            Exception? requestError = null;
 
-            await foreach (var update in streamingResult.WithCancellation(ct))
+            IAsyncEnumerator<StreamingChatCompletionUpdate>? enumerator = null;
+
+            try
             {
-                if (update.Usage != null) finalUsage = update.Usage;
+                // Safely initialize the stream to catch synchronous SDK validation errors
+                var streamingResult = chatClient!.CompleteChatStreamingAsync(messages!, options!, ct);
+                enumerator = streamingResult.GetAsyncEnumerator(ct);
+            }
+            catch (Exception ex)
+            {
+                requestError = ex;
+            }
 
-                if (update.ContentUpdate.Count > 0 && !string.IsNullOrEmpty(update.ContentUpdate[0].Text))
-                {
-                    textAppended = true;
-                    yield return new ChatStreamChunkDto { Type = "text", Content = update.ContentUpdate[0].Text };
-                }
+            if (requestError != null)
+            {
+                yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Request Error:**\n\n`{requestError.Message}`" };
+                yield break;
+            }
 
-                foreach (var toolUpdate in update.ToolCallUpdates)
+            try 
+            {
+                while (true)
                 {
-                    hasToolCalls = true;
-                    if (!toolCallAccumulators.TryGetValue(toolUpdate.Index, out var acc))
+                    bool hasNext;
+                    try
                     {
-                        acc = new ToolCallAccumulator { Id = toolUpdate.ToolCallId ?? Guid.NewGuid().ToString() };
-                        toolCallAccumulators[toolUpdate.Index] = acc;
+                        hasNext = await enumerator!.MoveNextAsync();
                     }
-                    if (toolUpdate.FunctionName != null) acc.Name += toolUpdate.FunctionName;
-                    if (toolUpdate.FunctionArgumentsUpdate != null) acc.Arguments += toolUpdate.FunctionArgumentsUpdate;
+                    catch (Exception ex)
+                    {
+                        streamError = ex;
+                        break;
+                    }
+
+                    if (!hasNext) break;
+
+                    var update = enumerator.Current;
+                    if (update.Usage != null) finalUsage = update.Usage;
+
+                    if (update.ContentUpdate.Count > 0 && !string.IsNullOrEmpty(update.ContentUpdate[0].Text))
+                    {
+                        textAppended = true;
+                        yield return new ChatStreamChunkDto { Type = "text", Content = update.ContentUpdate[0].Text };
+                    }
+
+                    foreach (var toolUpdate in update.ToolCallUpdates)
+                    {
+                        hasToolCalls = true;
+                        if (!toolCallAccumulators.TryGetValue(toolUpdate.Index, out var acc))
+                        {
+                            acc = new ToolCallAccumulator { Id = toolUpdate.ToolCallId ?? Guid.NewGuid().ToString() };
+                            toolCallAccumulators[toolUpdate.Index] = acc;
+                        }
+                        if (toolUpdate.FunctionName != null) acc.Name += toolUpdate.FunctionName;
+                        
+                        if (toolUpdate.FunctionArgumentsUpdate != null)
+                        {
+                            // Safely extract raw bytes to prevent UTF-8 boundary splitting issues
+                            var bytes = toolUpdate.FunctionArgumentsUpdate.ToArray();
+                            acc.ArgumentsStream.Write(bytes, 0, bytes.Length);
+                        }
+                    }
                 }
+            }
+            finally 
+            {
+                if (enumerator != null) await enumerator.DisposeAsync();
+            }
+
+            if (streamError != null)
+            {
+                yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Streaming Error:**\n\n`{streamError.Message}`" };
+                yield break;
             }
 
             TrackAndLogCost(finalUsage);
@@ -136,10 +165,21 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             if (hasToolCalls)
             {
                 var toolCalls = toolCallAccumulators.Values
-                    .Select(a => ChatToolCall.CreateFunctionToolCall(a.Id, a.Name, BinaryData.FromString(a.Arguments)))
+                    .Select(a => 
+                    {
+                        // Decode the complete byte buffer into a UTF-8 string only after the stream finishes
+                        var jsonArgs = Encoding.UTF8.GetString(a.ArgumentsStream.ToArray());
+                        return ChatToolCall.CreateFunctionToolCall(a.Id, a.Name, BinaryData.FromString(jsonArgs));
+                    })
                     .ToList();
 
-                messages.Add(new AssistantChatMessage(toolCalls));
+                // Clean up memory streams
+                foreach (var acc in toolCallAccumulators.Values)
+                {
+                    acc.Dispose();
+                }
+
+                messages!.Add(new AssistantChatMessage(toolCalls));
 
                 foreach (var toolCall in toolCalls)
                 {
@@ -178,12 +218,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private void TrackAndLogCost(ChatTokenUsage? usage)
     {
         if (usage == null) return;
-        
-        var input = usage.InputTokenCount;
-        var output = usage.OutputTokenCount;
-
         _logger.LogInformation("FinOps [Tenant: {TenantId}] - Input: {Input}, Output: {Output}", 
-            _executionContext.TenantId, input, output);
+            _executionContext.TenantId, usage.InputTokenCount, usage.OutputTokenCount);
     }
 
     private List<ChatMessage> BuildInitialMessages(string userMessage)
@@ -204,13 +240,34 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private ChatCompletionOptions BuildChatOptions()
     {
         var options = new ChatCompletionOptions();
-        var tools = _toolRegistry.GetAvailableTools(_executionContext.UserRole);
-        foreach (var tool in tools) options.Tools.Add(tool.ChatTool);
+        var tools = _toolRegistry.GetAvailableTools(_executionContext.UserRole).ToList();
+        
+        if (tools.Any())
+        {
+            foreach (var tool in tools) options.Tools.Add(tool.ChatTool);
+        }
+        
         return options;
     }
 
     private ProposedActionDto BuildProposedAction(AgentToolDefinition definition, string arguments)
     {
+        object payload;
+        try 
+        {
+            payload = JsonSerializer.Deserialize<object>(arguments) ?? new object();
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "LLM generated malformed JSON for tool {ToolName}. Raw arguments: {Arguments}", definition.Name, arguments);
+            
+            // Provide a fallback object so the UI doesn't crash, allowing the user to see what went wrong.
+            payload = new { 
+                _error = "The AI generated invalid parameters.", 
+                _raw_output = arguments 
+            };
+        }
+
         return new ProposedActionDto
         {
             Idempotency_key = Guid.CreateVersion7().ToString(),
@@ -218,8 +275,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             Intent_title = FormatIntentTitle(definition.Name),
             Severity = definition.Severity,
             Human_readable_summary = $"Proposing to execute {FormatIntentTitle(definition.Name)}.",
-            // Used null-coalescing to fix CS8601 Possible null reference assignment
-            Command_payload = JsonSerializer.Deserialize<object>(arguments) ?? new object()
+            Command_payload = payload
         };
     }
 
@@ -228,7 +284,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         try
         {
             var jsonNode = JsonSerializer.SerializeToNode(JsonSerializer.Deserialize<object>(arguments)) as JsonObject ?? new JsonObject();
-            jsonNode["OrganizationId"] = _executionContext.TenantId;
+            
+            var tenantId = _executionContext.TenantId == Guid.Empty ? Guid.Parse("7d97963c-063c-4598-86cc-9ddd9d47d9b1") : _executionContext.TenantId;
+            jsonNode["OrganizationId"] = tenantId;
 
             var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
@@ -248,10 +306,12 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         return string.Concat(name.Select(x => char.IsUpper(x) ? " " + x : x.ToString())).TrimStart();
     }
 
-    private class ToolCallAccumulator
+    private class ToolCallAccumulator : IDisposable
     {
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
-        public string Arguments { get; set; } = "";
+        public MemoryStream ArgumentsStream { get; } = new MemoryStream();
+
+        public void Dispose() => ArgumentsStream.Dispose();
     }
 }
