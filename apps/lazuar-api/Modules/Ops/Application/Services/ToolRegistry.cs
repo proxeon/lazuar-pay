@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using BuildingBlocks.Application;
 using OpenAI.Chat;
 
@@ -21,7 +22,6 @@ public class ToolRegistry : IToolRegistry
 
     private void DiscoverTools()
     {
-        // Safely scan assemblies, catching ReflectionTypeLoadExceptions thrown by dynamic/system DLLs
         var queryTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(a => 
             {
@@ -29,7 +29,7 @@ public class ToolRegistry : IToolRegistry
                 catch (ReflectionTypeLoadException e) { return e.Types; }
                 catch { return Type.EmptyTypes; }
             })
-            .OfType<Type>() // Safely filters out nulls AND casts to non-nullable Type
+            .OfType<Type>()
             .Where(t => t.GetCustomAttribute<AgentToolAttribute>() != null && !t.IsAbstract && !t.IsInterface);
 
         foreach (var type in queryTypes)
@@ -73,28 +73,68 @@ public class ToolRegistry : IToolRegistry
 
     private JsonObject GenerateJsonSchema(Type type)
     {
-        var schema = new JsonObject { ["type"] = "object" };
+        return (JsonObject)GetSchemaForType(type);
+    }
+
+    /// <summary>
+    /// Recursively generates OpenAPI-compatible JSON schemas for primitives, arrays, and complex objects.
+    /// </summary>
+    private JsonNode GetSchemaForType(Type type)
+    {
+        var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+        var schema = new JsonObject();
+
+        if (underlyingType == typeof(int) || underlyingType == typeof(long))
+        {
+            schema["type"] = "integer";
+            return schema;
+        }
+        
+        if (underlyingType == typeof(decimal) || underlyingType == typeof(double) || underlyingType == typeof(float))
+        {
+            schema["type"] = "number";
+            return schema;
+        }
+        
+        if (underlyingType == typeof(bool))
+        {
+            schema["type"] = "boolean";
+            return schema;
+        }
+        
+        if (underlyingType == typeof(string) || underlyingType == typeof(Guid) || underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+        {
+            schema["type"] = "string";
+            return schema;
+        }
+
+        if (typeof(System.Collections.IEnumerable).IsAssignableFrom(underlyingType) && underlyingType != typeof(string))
+        {
+            schema["type"] = "array";
+            var elementType = GetElementType(underlyingType);
+            
+            schema["items"] = elementType != null 
+                ? GetSchemaForType(elementType) 
+                : new JsonObject { ["type"] = "string" };
+                
+            return schema;
+        }
+
+        schema["type"] = "object";
         var properties = new JsonObject();
         var required = new JsonArray();
 
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        foreach (var prop in underlyingType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            var propName = prop.Name;
-            
+            var jsonAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>();
+            var propName = jsonAttr?.Name ?? prop.Name;
+
             if (propName == "OrganizationId" || propName == "Id" || propName == "RecordedBy") continue;
 
-            var propType = prop.PropertyType;
-            var underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
-            var typeSchema = new JsonObject();
+            properties[propName] = GetSchemaForType(prop.PropertyType);
 
-            if (underlyingType == typeof(int) || underlyingType == typeof(long)) typeSchema["type"] = "integer";
-            else if (underlyingType == typeof(decimal) || underlyingType == typeof(double) || underlyingType == typeof(float)) typeSchema["type"] = "number";
-            else if (underlyingType == typeof(bool)) typeSchema["type"] = "boolean";
-            else typeSchema["type"] = "string";
-
-            properties[propName] = typeSchema;
-
-            if (Nullable.GetUnderlyingType(propType) == null && propType.IsValueType || propType == typeof(string))
+            var isNullableValueType = Nullable.GetUnderlyingType(prop.PropertyType) != null;
+            if (!isNullableValueType && (prop.PropertyType.IsValueType || prop.PropertyType == typeof(string)))
             {
                 required.Add(propName);
             }
@@ -105,5 +145,23 @@ public class ToolRegistry : IToolRegistry
         schema["additionalProperties"] = false;
 
         return schema;
+    }
+
+    /// <summary>
+    /// Extracts the generic type T from IEnumerable<T> or T[].
+    /// </summary>
+    private Type? GetElementType(Type type)
+    {
+        if (type.IsArray) return type.GetElementType();
+        
+        var enumerableType = type.GetInterfaces()
+            .FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+        
+        if (enumerableType != null) return enumerableType.GetGenericArguments()[0];
+        
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            return type.GetGenericArguments()[0];
+            
+        return null;
     }
 }
