@@ -53,7 +53,7 @@ export default function App() {
     async function verifySession() {
       try {
         const { data, error } = await client.GET("/one/auth/me");
-        if (data && !error && data.is_system_admin) {
+        if (data && !error && data.role === "SUPER_ADMIN") {
           if (window.location.pathname === "/login") {
             const searchParams = new URLSearchParams(window.location.search);
             const returnUrl = searchParams.get("returnUrl");

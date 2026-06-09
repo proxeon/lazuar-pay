@@ -1167,7 +1167,6 @@ export interface components {
             email: string;
             name: string;
             role: string;
-            is_system_admin: boolean;
             is_email_verified: boolean;
         };
         "One.ChangePasswordRequestDto": {

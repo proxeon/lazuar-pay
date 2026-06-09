@@ -1239,9 +1239,6 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("role")]
         public string Role { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("is_system_admin")]
-        public bool Is_system_admin { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("is_email_verified")]
         public bool Is_email_verified { get; set; } = default!;
 

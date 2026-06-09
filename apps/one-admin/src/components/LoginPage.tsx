@@ -2,7 +2,7 @@ import { useState } from "react";
 import { client } from "../lib/api-client";
 
 interface LoginPageProps {
-  onLogin: (user: { email: string; name: string; role: string; is_system_admin: boolean }) => void;
+  onLogin: (user: { email: string; name: string; role: string }) => void;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
@@ -24,8 +24,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       if (apiError) throw new Error(apiError.detail || "Invalid credentials.");
 
       if (data && data.user) {
-        // STRICT GUARD
-        if (!data.user.is_system_admin) {
+        if (data.user.role !== "SUPER_ADMIN") {
            throw new Error("Access denied. System Administrator privileges required.");
         }
 
@@ -40,8 +39,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         onLogin({
           email: data.user.email,
           name: data.user.name,
-          role: data.user.role,
-          is_system_admin: data.user.is_system_admin
+          role: data.user.role
         });
       }
     } catch (err: any) {

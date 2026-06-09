@@ -46,7 +46,7 @@ public static class Endpoints
 
                 return TypedResults.Ok(new LoginResponse
                 {
-                    User = new AuthUser { Email = user!.Email, Name = user.Name, Role = "CLIENT", Is_system_admin = false, Is_email_verified = user.IsEmailVerified }
+                    User = new AuthUser { Email = user!.Email, Name = user.Name, Role = "CLIENT", Is_email_verified = user.IsEmailVerified }
                 });
             }
             catch (InvalidOperationException ex)
@@ -83,7 +83,7 @@ public static class Endpoints
 
             return TypedResults.Ok(new LoginResponse
             {
-                User = new AuthUser { Email = user!.Email, Name = user.Name, Role = role, Is_system_admin = user.IsSystemAdmin, Is_email_verified = user.IsEmailVerified }
+                User = new AuthUser { Email = user!.Email, Name = user.Name, Role = role, Is_email_verified = user.IsEmailVerified }
             });
         });
 
@@ -160,7 +160,6 @@ public static class Endpoints
                 Email = user.Email, 
                 Name = user.Name, 
                 Role = role, 
-                Is_system_admin = user.IsSystemAdmin,
                 Is_email_verified = user.IsEmailVerified
             });
         }).RequireAuthorization();
