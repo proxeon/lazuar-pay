@@ -1,4 +1,22 @@
 // apps/lazuar-api/Modules/Ops/Infrastructure/Services/LlmOrchestratorService.cs
+
+// ==============================================================================================
+// DONT DELETE COMMENT HERE. IF you need to modify, just modify specific code and dont delete the comment.
+// 
+// HISTORICAL BUG CONTEXT:
+// We previously experienced hard 500 Internal Server Errors because of how the new OpenAI SDK (v2+) 
+// streams tool arguments as `BinaryData`. Implicitly appending `BinaryData` to a `string` 
+// (e.g., `acc.Arguments += update`) calls `.ToString()` on partial UTF-8 byte chunks. 
+// If a multi-byte character or JSON structural boundary gets split across two network chunks, 
+// it results in a corrupted string. When passed to JsonSerializer, it threw an unhandled 
+// JsonException BEFORE the response headers could be flushed, crashing the Minimal API.
+// 
+// FIX IMPLEMENTED & REQUIRED TO MAINTAIN:
+// 1. Accumulate raw bytes using `MemoryStream` in `ToolCallAccumulator` rather than `string`.
+// 2. Decode to a UTF-8 string ONLY when the stream completes.
+// 3. Wrap `JsonSerializer.Deserialize` in a try/catch to catch LLM JSON hallucinations gracefully.
+// ==============================================================================================
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -142,7 +160,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                         
                         if (toolUpdate.FunctionArgumentsUpdate != null)
                         {
-                            // Safely extract raw bytes to prevent UTF-8 boundary splitting issues
+                            // DO NOT implicitly concatenate BinaryData to string here (e.g. string += BinaryData)! 
+                            // It causes UTF-8 multi-byte character corruption if a character is split across network chunks.
+                            // Instead, we accumulate the raw bytes into a memory stream.
                             var bytes = toolUpdate.FunctionArgumentsUpdate.ToArray();
                             acc.ArgumentsStream.Write(bytes, 0, bytes.Length);
                         }
@@ -167,7 +187,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 var toolCalls = toolCallAccumulators.Values
                     .Select(a => 
                     {
-                        // Decode the complete byte buffer into a UTF-8 string only after the stream finishes
+                        // Decode the complete byte buffer into a UTF-8 string ONLY after the stream finishes
+                        // This guarantees we don't try to parse a split multi-byte character.
                         var jsonArgs = Encoding.UTF8.GetString(a.ArgumentsStream.ToArray());
                         return ChatToolCall.CreateFunctionToolCall(a.Id, a.Name, BinaryData.FromString(jsonArgs));
                     })
@@ -255,6 +276,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         object payload;
         try 
         {
+            // SAFETY NET: Even with perfect byte decoding, the LLM might hallucinate malformed JSON.
+            // We must catch JsonException to prevent a synchronous 500 error from crashing the HTTP pipeline.
             payload = JsonSerializer.Deserialize<object>(arguments) ?? new object();
         }
         catch (JsonException ex)
@@ -306,6 +329,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         return string.Concat(name.Select(x => char.IsUpper(x) ? " " + x : x.ToString())).TrimStart();
     }
 
+    // Uses MemoryStream instead of string to prevent UTF-8 corruption during streaming.
     private class ToolCallAccumulator : IDisposable
     {
         public string Id { get; set; } = "";
