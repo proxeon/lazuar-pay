@@ -38,6 +38,7 @@ public static class DependencyInjection
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<OneDbContext>>("OneEventBus");
 
+        services.AddHostedService<SystemGenesisBootstrapperJob>();
         services.AddHostedService<OneInboxConsumerJob>();
         services.AddHostedService<OneOutboxPublisherJob>();
 
