@@ -20,11 +20,13 @@ using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Modules.Ops.Infrastructure;
 using Lazuar.Api;
+using Lazuar.Api.Configuration;
 using Lazuar.Api.Middleware;
 using Lazuar.ApiTypes;
 
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +42,13 @@ builder.Host.UseSerilog();
 
 builder.Services.AddOptions<ResendOptions>()
     .BindConfiguration(ResendOptions.SectionName);
+
+builder.Services.AddOptions<PlatformAdminSettings>()
+    .Configure<IConfiguration>((settings, configuration) =>
+    {
+        settings.Emails = configuration["PLATFORM_ADMIN_EMAILS"] ?? string.Empty;
+        settings.Password = configuration["PLATFORM_ADMIN_PASSWORD"] ?? string.Empty;
+    });
 
 builder.Services.AddHttpClient("Resend", (sp, client) =>
 {
