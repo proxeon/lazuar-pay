@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { client } from "../lib/api-client";
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -17,24 +18,35 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    setTimeout(() => {
-      onLoginSuccess();
-      const returnUrl = searchParams.get("returnUrl");
-      if (returnUrl) {
-        window.location.href = returnUrl;
-      } else {
-        navigate("/chat");
+    try {
+      const { data, error: apiError } = await client.POST("/one/auth/login", {
+        body: { email, password }
+      });
+
+      if (apiError) throw new Error(apiError.detail || "Invalid credentials.");
+
+      if (data && data.user) {
+        onLoginSuccess();
+        const returnUrl = searchParams.get("returnUrl");
+        if (returnUrl) {
+          window.location.href = returnUrl;
+        } else {
+          navigate("/chat");
+        }
       }
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials.");
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
-  const handleSignUpSubmit = (e: React.FormEvent) => {
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
@@ -45,16 +57,27 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       return;
     }
 
-    setTimeout(() => {
-      onLoginSuccess();
-      const returnUrl = searchParams.get("returnUrl");
-      if (returnUrl) {
-        window.location.href = returnUrl;
-      } else {
-        navigate("/chat");
+    try {
+      const { data, error: apiError } = await client.POST("/one/public/register", {
+        body: { email, password, name: email.split("@")[0] }
+      });
+
+      if (apiError) throw new Error(apiError.detail || "Registration failed.");
+
+      if (data && data.user) {
+        onLoginSuccess();
+        const returnUrl = searchParams.get("returnUrl");
+        if (returnUrl) {
+          window.location.href = returnUrl;
+        } else {
+          navigate("/chat");
+        }
       }
+    } catch (err: any) {
+      setError(err.message || "Registration failed.");
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   const toggleMode = () => {
@@ -67,8 +90,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   return (
     <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] font-sans">
       <div className="w-full max-w-[380px] mx-4 animate-in fade-in zoom-in-95 duration-300">
-        
-        {/* Shadow classes removed to ensure a completely flat, border-only container */}
         <div className="bg-white border border-[#e5e5e5] p-8 rounded-none">
           
           {error && (
@@ -198,7 +219,6 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>

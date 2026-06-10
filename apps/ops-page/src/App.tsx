@@ -1,23 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import OpsChatWorkspace from "./components/OpsChatWorkspace";
 import LoginPage from "./components/LoginPage";
 import { MessageSquare, Trash2, ArrowRight } from "lucide-react";
-import type { ProposedActionDto } from "./lib/api-client";
+import { client } from "./lib/api-client";
+import type { Message } from "./types/chat";
 
 interface Conversation {
   id: string;
   title: string;
-}
-
-interface Message {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  isStreaming?: boolean;
-  toolStatus?: string;
-  proposedAction?: ProposedActionDto;
 }
 
 export default function App() {
@@ -28,6 +20,30 @@ export default function App() {
       return false;
     }
   });
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await client.POST("/one/auth/logout");
+    } catch (err) {
+      console.error("Logout API failed", err);
+    }
+    
+    setIsAuthenticated(false);
+    try {
+      localStorage.removeItem("lazuar-ops-auth");
+    } catch (err) {
+      console.error("Failed to flush session", err);
+    }
+  }, []);
+
+  // Ensure active backend session exists (prevents stale LocalStorage bypasses)
+  useEffect(() => {
+    if (isAuthenticated) {
+      client.GET("/one/auth/me").then(({ data, error }) => {
+        if (error || !data) handleLogout();
+      }).catch(() => handleLogout());
+    }
+  }, [isAuthenticated, handleLogout]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     try {
@@ -140,15 +156,6 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    try {
-      localStorage.removeItem("lazuar-ops-auth");
-    } catch (err) {
-      console.error("Failed to flush session", err);
-    }
-  };
-
   const activeMessages = activeConversationId && activeConversationId !== "directory" 
     ? messagesMap[activeConversationId] || [] 
     : [];
@@ -211,7 +218,6 @@ export default function App() {
                             <div 
                               key={conv.id} 
                               onClick={() => setActiveConversationId(conv.id)}
-                              // Shadows deleted on Directory Dashboard cards to make them completely flat
                               className="bg-white border border-[#e5e5e5] p-5 hover:bg-[#fafafa] transition-all cursor-pointer flex flex-col justify-between h-36 relative group"
                             >
                               <div className="flex items-start gap-3 min-w-0">

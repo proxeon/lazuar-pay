@@ -1,7 +1,7 @@
 import createClient from "openapi-fetch";
 import type { paths, components } from "@repo/api-types-ts";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
 
 export const client = createClient<paths>({ 
   baseUrl: API_URL,
