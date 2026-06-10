@@ -17,11 +17,6 @@ public class InvalidSubscriptionStateTransitionRule : IBusinessRule
 
     public bool IsBroken()
     {
-        if (_currentState == "BANNED" && _targetState != "BANNED")
-        {
-            return true;
-        }
-
         if (_targetState == "BANNED")
         {
             return false;
@@ -48,12 +43,15 @@ public class InvalidSubscriptionStateTransitionRule : IBusinessRule
             ("EXPIRED", "ACTIVE") => false,
             ("EXPIRED", "CANCELLED") => false,
             
+            ("CANCELLED", "ACTIVE") => false,
+            
+            ("BANNED", "ACTIVE") => false,
+            
             _ => true 
         };
     }
 
     public string Message => 
-        _currentState == "BANNED" ? "Cannot transition from BANNED state. This is a terminal state." :
         _isReminderOnly && (_targetState == "EXPIRED" || _targetState == "SUSPENDED")
         ? $"Cannot transition reminder-only subscription to {_targetState}. It must remain PAST_DUE indefinitely."
         : $"Invalid subscription state transition from {_currentState} to {_targetState}.";

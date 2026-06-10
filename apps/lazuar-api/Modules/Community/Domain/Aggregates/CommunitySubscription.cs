@@ -105,6 +105,27 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, isFirstPayment));
     }
 
+    public void Reactivate(string recordedBy)
+    {
+        CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
+
+        Status = "ACTIVE";
+        var now = DateTime.UtcNow;
+        var periodEnd = now.AddDays(30);
+        
+        CurrentPeriodEnd = periodEnd;
+        NextRenewalDate = periodEnd;
+        UpdatedAt = now;
+
+        var payment = new PaymentRecord(
+            Id, 0m, "MYR", "SYSTEM_REACTIVATION", null, 
+            recordedBy, now, periodEnd, "Manual account reactivation");
+
+        _paymentRecords.Add(payment);
+
+        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, false));
+    }
+
     public void ReplayActivationEvent()
     {
         AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, true));
