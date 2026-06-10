@@ -164,7 +164,7 @@ public static class Endpoints
             var tenantId = executionCtx.TenantId;
             if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
             
-            jsonNode["OrganizationId"] = tenantId;
+            jsonNode["OrganizationId"] = tenantId.ToString();
             jsonNode["RecordedBy"] = executionCtx.AuditSignature;
 
             httpContext.Items["IsAgentAction"] = true;

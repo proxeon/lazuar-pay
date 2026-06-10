@@ -62,24 +62,39 @@ function normalizeLatexDelimiters(content: string): string {
   return parsed
 }
 
-// Sub-component to render the dynamic form
 function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text: string) => void }) {
-  const fields = useMemo(() => {
+  const parsedFields = useMemo(() => {
     return rawContent.split('\n')
       .map(line => line.trim())
       .filter(Boolean)
-      .map(line => line.replace(/:$/, '').trim());
+      .map(line => {
+        // Robust colon split: left is label, right is pre-filled data
+        const colonIndex = line.indexOf(':');
+        if (colonIndex !== -1) {
+          const name = line.slice(0, colonIndex).trim();
+          const initialValue = line.slice(colonIndex + 1).trim();
+          return { name, initialValue };
+        }
+        return { name: line.replace(/:$/, '').trim(), initialValue: "" };
+      });
   }, [rawContent]);
 
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    parsedFields.forEach(f => {
+      initial[f.name] = f.initialValue;
+    });
+    return initial;
+  });
+  
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!onSend || submitted) return;
 
-    const formattedMessage = fields
-      .map(f => `${f}: ${formData[f] || "N/A"}`)
+    const formattedMessage = parsedFields
+      .map(f => `${f.name}: ${formData[f.name] || "N/A"}`)
       .join('\n');
     
     setSubmitted(true);
@@ -87,24 +102,40 @@ function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text:
   };
 
   return (
-    <div className="not-prose my-5 w-full max-w-sm rounded-lg border border-[#e5e5e5] shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white overflow-hidden font-sans">
+    <div className="not-prose my-5 w-full max-w-xl rounded-lg border border-[#e5e5e5] shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white overflow-hidden font-sans">
       <div className="bg-[#fafafa] border-b border-[#e5e5e5] px-4 py-2.5">
         <span className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Action Required</span>
       </div>
-      <form onSubmit={handleSubmit} className="p-4 space-y-3">
-        {fields.map(field => (
-          <div key={field} className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">{field}</label>
-            <input 
-              type="text" 
-              required
-              disabled={submitted}
-              value={formData[field] || ""}
-              onChange={(e) => setFormData(prev => ({ ...prev, [field]: e.target.value }))}
-              className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5]" 
-            />
-          </div>
-        ))}
+      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {parsedFields.map(field => {
+          const isLongText = field.name.toLowerCase().includes('description') || 
+                             field.name.toLowerCase().includes('summary') || 
+                             (formData[field.name]?.length || 0) > 60;
+          return (
+            <div key={field.name} className="space-y-1">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">{field.name}</label>
+              {isLongText ? (
+                <textarea 
+                  required
+                  disabled={submitted}
+                  value={formData[field.name] || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
+                  rows={4}
+                  className="flex w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-2 text-[13px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5] resize-y" 
+                />
+              ) : (
+                <input 
+                  type="text" 
+                  required
+                  disabled={submitted}
+                  value={formData[field.name] || ""}
+                  onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
+                  className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5]" 
+                />
+              )}
+            </div>
+          );
+        })}
         <div className="pt-2">
           <button 
             type="submit"
@@ -130,7 +161,6 @@ function createComponents(onSend?: (text: string) => void): Components {
       const raw = String(children)
       const codeString = raw.replace(/\n$/, '')
 
-      // INTERCEPT GENERATIVE UI FORM
       if (match && match[1] === 'form') {
         return <GenUIForm rawContent={codeString} onSend={onSend} />
       }

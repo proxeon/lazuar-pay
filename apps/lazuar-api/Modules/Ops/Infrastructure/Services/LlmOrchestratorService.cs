@@ -80,9 +80,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         }
 
         var messages = BuildInitialMessages(tenantId, history, userMessage);
-        
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
-        
         var completion = await chatClient.CompleteChatAsync(messages, BuildChatOptions(), ct);
         
         return new ChatResponseDto { Message = completion.Value.Content[0].Text };
@@ -124,7 +122,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         List<ChatMessage> messages = BuildInitialMessages(tenantId, history, userMessage);
         var options = BuildChatOptions();
-        
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
 
         int maxIterations = 3;
@@ -160,6 +157,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     yield break;
                 }
 
+                string currentIterationText = "";
+
                 try 
                 {
                     while (true)
@@ -183,6 +182,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                         if (update.ContentUpdate.Count > 0 && !string.IsNullOrEmpty(update.ContentUpdate[0].Text))
                         {
                             var text = update.ContentUpdate[0].Text;
+                            currentIterationText += text;
                             accumulatedAssistantText += text;
                             yield return new ChatStreamChunkDto { Type = "text", Content = text };
                         }
@@ -231,7 +231,14 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
                     foreach (var acc in toolCallAccumulators.Values) acc.Dispose();
 
-                    messages.Add(new AssistantChatMessage(toolCalls));
+                    var assistantParts = new List<ChatMessageContentPart>();
+                    if (!string.IsNullOrEmpty(currentIterationText))
+                    {
+                        assistantParts.Add(ChatMessageContentPart.CreateTextPart(currentIterationText));
+                    }
+                    
+                    var assistantMsg = new AssistantChatMessage(toolCalls);
+                    messages.Add(assistantMsg);
 
                     foreach (var toolCall in toolCalls)
                     {
@@ -262,8 +269,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     if (iterations >= 2)
                     {
                         messages.Add(new SystemChatMessage("SYSTEM ALARM: You have executed the necessary tools and received the data. Output a final text summary immediately. DO NOT execute any more tools."));
-                        options.Tools.Clear();
-                        options.ToolChoice = null;
+                        options.ToolChoice = ChatToolChoice.CreateNoneChoice(); // Gracefully stops the AI from looping
                     }
                 }
                 else
@@ -340,7 +346,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 $"**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid! " +
                 $"**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages (like '[I proposed...]') in your text response. " +
                 $"**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs. " +
-                $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon."
+                $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it."
             )
         };
 
@@ -429,7 +435,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 jsonNode = new JsonObject();
             }
             
-            jsonNode["OrganizationId"] = tenantId;
+            // FIX: Must convert Guid to String before assigning to JsonNode to avoid crash loop
+            jsonNode["OrganizationId"] = tenantId.ToString();
 
             var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
