@@ -81,7 +81,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         var messages = BuildInitialMessages(tenantId, history, userMessage);
         
-        // Force reasoning mode to maximum
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
         
         var completion = await chatClient.CompleteChatAsync(messages, BuildChatOptions(), ct);
@@ -94,16 +93,19 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         var tenantId = GetValidatedTenantId();
         List<OpsMessage> history = new();
         Guid convId;
+        bool isNew = false;
 
         using (var setupScope = _scopeFactory.CreateScope())
         {
             var repo = setupScope.ServiceProvider.GetRequiredService<IOpsRepository>();
+            var titleGen = setupScope.ServiceProvider.GetRequiredService<ILlmTitleGenerator>();
             
             if (string.IsNullOrEmpty(conversationId) || !Guid.TryParse(conversationId, out convId))
             {
+                isNew = true;
                 convId = Guid.CreateVersion7();
-                var title = userMessage.Length > 40 ? userMessage.Substring(0, 40) + "..." : userMessage;
-                repo.AddConversation(new OpsConversation(convId, tenantId, title));
+                var fallbackTitle = titleGen.GenerateFallback(userMessage);
+                repo.AddConversation(new OpsConversation(convId, tenantId, fallbackTitle));
             }
             else
             {
@@ -123,7 +125,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         List<ChatMessage> messages = BuildInitialMessages(tenantId, history, userMessage);
         var options = BuildChatOptions();
         
-        // Force reasoning mode to maximum
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
 
         int maxIterations = 3;
@@ -290,6 +291,19 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     finalProposedActionJson);
 
                 repo.AddMessage(assistantMsg);
+
+                if (isNew)
+                {
+                    var titleGen = finishScope.ServiceProvider.GetRequiredService<ILlmTitleGenerator>();
+                    var newTitle = await titleGen.GenerateAsync(userMessage);
+
+                    var conv = await repo.GetConversationByIdAsync(tenantId, convId, default);
+                    if (conv != null)
+                    {
+                        conv.UpdateTitle(newTitle);
+                    }
+                }
+
                 await repo.SaveChangesAsync(default);
             }
             catch (Exception ex)

@@ -8,6 +8,7 @@ public static class LlmDependencyInjection
     public static IServiceCollection AddThinLlmFactory(this IServiceCollection services)
     {
         services.AddSingleton<IChatClientFactory, ChatClientFactory>();
+        services.AddScoped<ILlmTitleGenerator, LlmTitleGenerator>();
         return services;
     }
 }
