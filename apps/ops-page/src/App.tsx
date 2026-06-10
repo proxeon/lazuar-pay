@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "./components/Sidebar";
 import OpsChatWorkspace from "./components/OpsChatWorkspace";
 import LoginPage from "./components/LoginPage";
-import { MessageSquare, ArrowRight } from "lucide-react";
+import { MessageSquare, ArrowRight, MoreVertical } from "lucide-react";
+import { toast } from "sonner";
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 import type { Message } from "./types/chat";
 
 export default function App() {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() => localStorage.getItem("ops_active_workspace_id"));
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -17,6 +19,7 @@ export default function App() {
   
   const [activeConversationId, setActiveConversationId] = useState<string | null>("directory");
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -27,6 +30,12 @@ export default function App() {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const closeMenu = () => setOpenMenuId(null);
+    document.addEventListener("click", closeMenu);
+    return () => document.removeEventListener("click", closeMenu);
   }, []);
 
   useEffect(() => {
@@ -124,6 +133,44 @@ export default function App() {
     window.location.href = `http://localhost:3001/login`;
   };
 
+  const handleRenameConversation = async (id: string, currentTitle: string) => {
+    const newTitle = window.prompt("Enter new title:", currentTitle);
+    if (!newTitle || newTitle.trim() === "" || newTitle === currentTitle) return;
+    
+    try {
+      const { error } = await client.PUT("/ops/chat/conversations/{id}/title", {
+        params: { path: { id } },
+        body: { title: newTitle.trim() }
+      });
+      if (error) throw new Error(error.detail);
+      
+      toast.success("Conversation renamed");
+      queryClient.invalidateQueries({ queryKey: ["conversations", activeWorkspaceId] });
+    } catch (err: any) {
+      toast.error("Failed to rename conversation", { description: err.message });
+    }
+  };
+
+  const handleDeleteConversation = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this conversation?")) return;
+    
+    try {
+      const { error } = await client.DELETE("/ops/chat/conversations/{id}", {
+        params: { path: { id } }
+      });
+      if (error) throw new Error(error.detail);
+      
+      toast.success("Conversation deleted");
+      queryClient.invalidateQueries({ queryKey: ["conversations", activeWorkspaceId] });
+      
+      if (activeConversationId === id) {
+        setActiveConversationId("directory");
+      }
+    } catch (err: any) {
+      toast.error("Failed to delete conversation", { description: err.message });
+    }
+  };
+
   if (isAuthLoading || isEntitlementsLoading) {
     return <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Loading Environment...</div>;
   }
@@ -151,6 +198,8 @@ export default function App() {
               activeConversationId={activeConversationId}
               onSelect={setActiveConversationId}
               onNewChat={() => setActiveConversationId("new")}
+              onRename={handleRenameConversation}
+              onDelete={handleDeleteConversation}
               onLogout={handleLogout}
             />
             
@@ -175,15 +224,41 @@ export default function App() {
                             onClick={() => setActiveConversationId(conv.id)}
                             className="bg-white border border-[#e5e5e5] p-5 hover:bg-[#fafafa] transition-all cursor-pointer flex flex-col justify-between h-32 relative group"
                           >
-                            <div className="flex items-start gap-3 min-w-0">
-                              <div className="h-8 w-8 shrink-0 bg-[#09090b] text-white flex items-center justify-center">
-                                <MessageSquare size={14} />
+                            <div className="flex items-start justify-between min-w-0">
+                              <div className="flex items-start gap-3 min-w-0">
+                                <div className="h-8 w-8 shrink-0 bg-[#09090b] text-white flex items-center justify-center">
+                                  <MessageSquare size={14} />
+                                </div>
+                                <div className="min-w-0">
+                                  <h3 className="text-[14px] font-bold text-[#09090b] truncate pr-8">{conv.title}</h3>
+                                  <p className="text-[11px] text-[#71717a] mt-1">
+                                    {new Date(conv.updated_at).toLocaleString()}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <h3 className="text-[14px] font-bold text-[#09090b] truncate pr-8">{conv.title}</h3>
-                                <p className="text-[11px] text-[#71717a] mt-1">
-                                  {new Date(conv.updated_at).toLocaleString()}
-                                </p>
+                              <div className="relative shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                                <button 
+                                  onClick={() => setOpenMenuId(openMenuId === conv.id ? null : conv.id)}
+                                  className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm focus:outline-none"
+                                >
+                                  <MoreVertical size={16} />
+                                </button>
+                                {openMenuId === conv.id && (
+                                  <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-[#e5e5e5] shadow-lg rounded-sm py-1 z-50">
+                                    <button 
+                                      onClick={() => { setOpenMenuId(null); handleRenameConversation(conv.id, conv.title); }}
+                                      className="w-full text-left px-3 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors"
+                                    >
+                                      Rename
+                                    </button>
+                                    <button 
+                                      onClick={() => { setOpenMenuId(null); handleDeleteConversation(conv.id); }}
+                                      className="w-full text-left px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 transition-colors"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#f4f4f5]">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "../lib/utils";
-import { Plus, MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Building2 } from "lucide-react";
+import { Plus, MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Building2, MoreVertical } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { OpsConversationDto, AuthUser, EntitlementDto } from "../lib/api-client";
 
@@ -16,14 +16,17 @@ interface SidebarProps {
   activeConversationId: string | null;
   onSelect: (id: string | null) => void;
   onNewChat: () => void;
+  onRename: (id: string, currentTitle: string) => void;
+  onDelete: (id: string) => void;
   onLogout: () => void;
 }
 
 export default function Sidebar({
   isOpen, setIsOpen, isMobile, user, entitlements, activeWorkspaceId, onWorkspaceSelect,
-  conversations, activeConversationId, onSelect, onNewChat, onLogout
+  conversations, activeConversationId, onSelect, onNewChat, onRename, onDelete, onLogout
 }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const expanded = isMobile ? true : isOpen;
 
@@ -35,6 +38,12 @@ export default function Sidebar({
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const closeMenu = () => setOpenMenuId(null);
+    document.addEventListener("click", closeMenu);
+    return () => document.removeEventListener("click", closeMenu);
   }, []);
 
   const activeWorkspace = entitlements.find(e => e.workspace_id === activeWorkspaceId);
@@ -102,9 +111,34 @@ export default function Sidebar({
           <div
             key={conv.id}
             onClick={() => onSelect(conv.id)}
-            className={cn("group flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors", conv.id === activeConversationId ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
+            className={cn("group relative flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors", conv.id === activeConversationId ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
           >
             <span className="text-[13px] truncate block pr-2">{conv.title}</span>
+            
+            <div className={cn("relative shrink-0", openMenuId === conv.id ? "block" : "hidden group-hover:block")} onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={() => setOpenMenuId(openMenuId === conv.id ? null : conv.id)}
+                className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm focus:outline-none"
+              >
+                <MoreVertical size={14} />
+              </button>
+              {openMenuId === conv.id && (
+                <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-[#e5e5e5] shadow-lg rounded-sm py-1 z-50">
+                  <button 
+                    onClick={() => { setOpenMenuId(null); onRename(conv.id, conv.title); }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors"
+                  >
+                    Rename
+                  </button>
+                  <button 
+                    onClick={() => { setOpenMenuId(null); onDelete(conv.id); }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ))}
         {expanded && conversations.length === 20 && (
