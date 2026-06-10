@@ -6,7 +6,6 @@ import Users from "./components/Users";
 import type { MockUser } from "./components/Users";
 import UserDetailsPage from "./components/UserDetailsPage";
 import Onboard from "./components/Onboard";
-import type { OnboardingRequest } from "./components/Onboard";
 import OnboardDetailsPage from "./components/OnboardDetailsPage";
 import LoginPage from "./components/LoginPage";
 import Tenants from "./components/Tenants";
@@ -21,7 +20,6 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [users, setUsers] = useState<MockUser[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<OnboardingRequest[]>([]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== "undefined") {
@@ -53,7 +51,14 @@ export default function App() {
     async function verifySession() {
       try {
         const { data, error } = await client.GET("/one/auth/me");
-        if (data && !error && data.role === "SUPER_ADMIN") {
+        
+        if (data && !error) {
+          // Prevent Clients from accessing the Admin Hub
+          if (data.role !== "SUPER_ADMIN") {
+            window.location.href = "http://localhost:3001/launchpad";
+            return;
+          }
+
           if (window.location.pathname === "/login") {
             const searchParams = new URLSearchParams(window.location.search);
             const returnUrl = searchParams.get("returnUrl");
@@ -93,8 +98,8 @@ export default function App() {
           <Route path="/workspaces" element={<Tenants isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/users" element={<Users users={users} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/users/:id" element={<UserDetailsPage users={users} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
-          <Route path="/onboard" element={<Onboard pendingRequests={pendingRequests} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
-          <Route path="/onboard/:id" element={<OnboardDetailsPage pendingRequests={pendingRequests} setPendingRequests={setPendingRequests} setUsers={setUsers} isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
+          <Route path="/onboard" element={<Onboard isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
+          <Route path="/onboard/:id" element={<OnboardDetailsPage isMobile={isMobile} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />} />
           <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         

@@ -1,22 +1,24 @@
-import { useNavigate } from "react-router-dom"; // Added for routing navigation
-import { Menu, UserCheck, Settings, SearchX } from "lucide-react";
-
-export interface OnboardingRequest {
-  id: string;
-  name: string;
-  email: string;
-  requestedApps: string[];
-  createdAt: string;
-}
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Menu, UserCheck, Settings, SearchX, Loader2 } from "lucide-react";
+import { client } from "../lib/api-client";
 
 interface OnboardProps {
-  pendingRequests: OnboardingRequest[];
   isMobile?: boolean;
   toggleSidebar?: () => void;
 }
 
-export default function Onboard({ pendingRequests, isMobile, toggleSidebar }: OnboardProps) {
+export default function Onboard({ isMobile, toggleSidebar }: OnboardProps) {
   const navigate = useNavigate();
+
+  const { data: pendingRequests, isLoading } = useQuery({
+    queryKey: ["access-requests"],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/one/access-requests");
+      if (error) throw new Error(error.detail || "Failed to fetch access requests.");
+      return data ?? [];
+    }
+  });
 
   const formatDate = (isoString: string) => {
     return new Date(isoString).toLocaleDateString("en-US", {
@@ -26,14 +28,9 @@ export default function Onboard({ pendingRequests, isMobile, toggleSidebar }: On
     });
   };
 
-  const getFormatAppName = (appId: string) => {
-    return appId.charAt(0).toUpperCase() + appId.slice(1).toLowerCase();
-  };
-
   return (
     <div className="flex-1 w-full p-4 md:p-8 mx-auto max-w-[1240px] flex flex-col gap-6 animate-in fade-in duration-300">
       
-      {/* Page Header */}
       <header className="flex flex-col md:flex-row md:items-center justify-between pb-2 gap-4">
         <div className="flex items-center gap-3">
           {isMobile && (
@@ -51,14 +48,18 @@ export default function Onboard({ pendingRequests, isMobile, toggleSidebar }: On
         </div>
       </header>
 
-      {/* Directory Queue Card */}
       <div className="bg-white border border-[#e5e5e5] rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
         <div className="px-5 py-4 border-b border-[#f4f4f5] bg-[#fafafa]/50 flex items-center gap-2">
           <UserCheck size={16} className="text-[#a1a1aa]" />
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Pending Approvals</h2>
         </div>
 
-        {pendingRequests.length === 0 ? (
+        {isLoading ? (
+          <div className="py-20 text-center flex flex-col items-center justify-center">
+            <Loader2 className="h-8 w-8 text-[#a1a1aa] animate-spin mb-4" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Loading Requests...</span>
+          </div>
+        ) : !pendingRequests || pendingRequests.length === 0 ? (
           <div className="py-20 text-center flex flex-col items-center justify-center">
             <div className="flex h-12 w-12 items-center justify-center bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-none mb-4">
               <UserCheck size={20} />
@@ -87,19 +88,18 @@ export default function Onboard({ pendingRequests, isMobile, toggleSidebar }: On
 
                     <td className="p-5">
                       <div className="flex flex-wrap gap-1 max-w-[280px]">
-                        {request.requestedApps.map(app => (
+                        {request.requested_apps.map(app => (
                           <span key={app} className="px-1.5 py-0.5 bg-zinc-50 border border-zinc-200 text-[#52525b] text-[9px] font-bold uppercase tracking-wider font-mono">
-                            {getFormatAppName(app)}
+                            {app}
                           </span>
                         ))}
                       </div>
                     </td>
 
                     <td className="p-5 whitespace-nowrap text-[#52525b] font-mono text-[12px]">
-                      {formatDate(request.createdAt)}
+                      {formatDate(request.created_at)}
                     </td>
 
-                    {/* Standardized single route Manage trigger */}
                     <td className="p-5 whitespace-nowrap text-right">
                       <button 
                         onClick={() => navigate(`/onboard/${request.id}`)}
