@@ -36,6 +36,8 @@ public static class DependencyInjection
         services.AddScoped<ICommunityPlanRepository, CommunityPlanRepository>();
         services.AddScoped<ICommunitySubscriptionRepository, CommunitySubscriptionRepository>();
         services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
+        services.AddScoped<ICommunityCouponRepository, CommunityCouponRepository>();
+        
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
         services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();

@@ -12,12 +12,13 @@ namespace Modules.Community.Application.Commands;
 
 public record RegisterPublicSubscriberCommand(
     Guid OrganizationId,
-    string TenantSlug, // <-- ADDED: Needed for URL routing
+    string TenantSlug,
     string PlanSlug,
     string Name,
     string Email,
     string Phone,
-    Guid? GlobalUserId) : ICommand<string>
+    Guid? GlobalUserId,
+    string? CouponCode = null) : ICommand<string>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -26,17 +27,20 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
 {
     private readonly ICommunityPlanRepository _planRepository;
     private readonly ICommunitySubscriptionRepository _subscriptionRepository;
+    private readonly ICommunityCouponRepository _couponRepository;
     private readonly ICommunityLinkService _linkService;
     private readonly IMediator _mediator;
 
     public RegisterPublicSubscriberCommandHandler(
         ICommunityPlanRepository planRepository,
         ICommunitySubscriptionRepository subscriptionRepository,
+        ICommunityCouponRepository couponRepository,
         ICommunityLinkService linkService,
         IMediator mediator)
     {
         _planRepository = planRepository;
         _subscriptionRepository = subscriptionRepository;
+        _couponRepository = couponRepository;
         _linkService = linkService;
         _mediator = mediator;
     }
@@ -55,7 +59,6 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             request.Email,
             request.Phone,
             request.GlobalUserId);
-
         var profileId = await _mediator.Send(profileCommand, ct);
 
         var subscription = new CommunitySubscription(
@@ -69,9 +72,21 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         subscription.InitiateCheckout();
         _subscriptionRepository.Add(subscription);
 
+        decimal finalPrice = plan.Price;
+
+        if (!string.IsNullOrWhiteSpace(request.CouponCode))
+        {
+            var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
+            if (coupon == null) throw new InvalidOperationException("Invalid coupon code.");
+            
+            coupon.Redeem();
+            _couponRepository.Update(coupon);
+            
+            finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
+            if (finalPrice < 0) finalPrice = 0;
+        }
+
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        
-        // FIX: Inject the TenantSlug into the redirect URL paths!
         var successUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/success";
         var cancelUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/checkout?cancelled=true";
 
@@ -83,7 +98,7 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
 
         var checkoutQuery = new GenerateCheckoutSessionQuery(
             request.OrganizationId,
-            plan.Price,
+            finalPrice,
             "MYR",
             $"{plan.Name} (Monthly Subscription)",
             request.Email,
@@ -92,8 +107,8 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             metadata);
 
         var checkoutUrl = await _mediator.Send(checkoutQuery, ct);
-
         subscription.SetPaymentGatewaySessionId(checkoutUrl);
+        
         await _subscriptionRepository.SaveChangesAsync(ct);
 
         return checkoutUrl;

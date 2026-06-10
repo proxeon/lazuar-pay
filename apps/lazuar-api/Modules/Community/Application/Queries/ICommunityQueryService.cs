@@ -6,6 +6,15 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries;
 
+public record CouponDto(
+    string Id,
+    string Code,
+    string DiscountType,
+    double Amount,
+    int MaxUses,
+    int UsedCount,
+    DateTimeOffset? ExpiresAt);
+
 public record GlobalTransactionDto(
     Guid Id, 
     decimal Amount, 
@@ -28,4 +37,5 @@ public interface ICommunityQueryService
     Task<IEnumerable<DeliveryHistoryItemDto>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId);
     Task<PaginatedResponse<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId, int page, int limit);
     Task<IEnumerable<GlobalTransactionDto>> GetGlobalTransactionsAsync(Guid organizationId, DateTime? fromDate, DateTime? toDate, string? status);
+    Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
 }

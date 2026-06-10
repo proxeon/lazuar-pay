@@ -2,6 +2,7 @@ using Dapper;
 using System.Data;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
+using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Infrastructure.Services;
 

@@ -30,3 +30,11 @@ public interface ICommunityReminderScheduleRepository
     void Remove(CommunityReminderSchedule schedule);
     Task SaveChangesAsync(CancellationToken ct = default);
 }
+
+public interface ICommunityCouponRepository
+{
+    Task<CommunityCoupon?> GetByCodeAsync(Guid organizationId, string code, CancellationToken ct = default);
+    void Add(CommunityCoupon coupon);
+    void Update(CommunityCoupon coupon);
+    Task SaveChangesAsync(CancellationToken ct = default);
+}

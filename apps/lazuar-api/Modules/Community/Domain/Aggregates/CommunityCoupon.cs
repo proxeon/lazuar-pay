@@ -1,0 +1,64 @@
+using System;
+using BuildingBlocks.Domain;
+
+namespace Modules.Community.Domain.Aggregates;
+
+public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
+{
+    public Guid Id { get; private set; }
+    public Guid OrganizationId { get; set; }
+    public string Code { get; private set; }
+    public string DiscountType { get; private set; } // "PERCENTAGE" or "FIXED"
+    public decimal Amount { get; private set; }
+    public int MaxUses { get; private set; }
+    public int UsedCount { get; private set; }
+    public DateTime? ExpiresAt { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+
+#pragma warning disable CS8618
+    private CommunityCoupon() { }
+#pragma warning restore CS8618
+
+    public CommunityCoupon(Guid organizationId, string code, string discountType, decimal amount, int maxUses, DateTime? expiresAt)
+    {
+        if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Code is required.");
+        if (discountType != "PERCENTAGE" && discountType != "FIXED") throw new ArgumentException("Invalid discount type.");
+        if (amount <= 0) throw new ArgumentException("Amount must be greater than zero.");
+
+        Id = Guid.CreateVersion7();
+        OrganizationId = organizationId;
+        Code = code.ToUpperInvariant().Trim();
+        DiscountType = discountType;
+        Amount = amount;
+        MaxUses = maxUses;
+        UsedCount = 0;
+        ExpiresAt = expiresAt;
+        CreatedAt = DateTime.UtcNow;
+    }
+
+    public decimal CalculateDiscount(decimal originalPrice)
+    {
+        if (DiscountType == "PERCENTAGE")
+        {
+            var discount = originalPrice * (Amount / 100m);
+            return Math.Min(discount, originalPrice);
+        }
+        
+        return Math.Min(Amount, originalPrice);
+    }
+
+    public void Redeem()
+    {
+        if (ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow)
+        {
+            CheckRule(new GenericBusinessRule("This coupon has expired."));
+        }
+
+        if (MaxUses > 0 && UsedCount >= MaxUses)
+        {
+            CheckRule(new GenericBusinessRule("This coupon has reached its maximum usage limit."));
+        }
+
+        UsedCount++;
+    }
+}
