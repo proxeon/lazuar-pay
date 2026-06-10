@@ -13,6 +13,7 @@ using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using Modules.Ops.Application;
 using Modules.Ops.Application.Services;
+using Modules.Ops.Application.Commands;
 using Modules.Ops.Domain;
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
@@ -105,6 +106,38 @@ public static class Endpoints
             return Results.Ok(new StatusResponse { Status = "saved" });
         });
 
+        group.MapPut("/chat/conversations/{id:guid}/title", async Task<IResult> (Guid id, [FromBody] RenameConversationRequestDto request, IMediator mediator, IExecutionContextAccessor ctx) => 
+        {
+            var tenantId = ctx.TenantId;
+            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+
+            try
+            {
+                await mediator.Send(new RenameConversationCommand(tenantId, id, request.Title));
+                return Results.Ok(new StatusResponse { Status = "updated" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
+
+        group.MapDelete("/chat/conversations/{id:guid}", async Task<IResult> (Guid id, IMediator mediator, IExecutionContextAccessor ctx) => 
+        {
+            var tenantId = ctx.TenantId;
+            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+
+            try
+            {
+                await mediator.Send(new DeleteConversationCommand(tenantId, id));
+                return Results.Ok(new StatusResponse { Status = "deleted" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
+
         group.MapPost("/execute-action", async Task<IResult> (
             [FromBody] ProposedActionDto request, 
             IMemoryCache cache, 
@@ -131,11 +164,7 @@ public static class Endpoints
             var tenantId = executionCtx.TenantId;
             if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
             
-            // Force-inject the secure context variables into the payload
             jsonNode["OrganizationId"] = tenantId;
-            
-            // FIX: Inject the RecordedBy field automatically for audit logging
-            // using the same AuditSignature mechanism the rest of the platform uses
             jsonNode["RecordedBy"] = executionCtx.AuditSignature;
 
             httpContext.Items["IsAgentAction"] = true;
