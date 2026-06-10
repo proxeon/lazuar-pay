@@ -33,6 +33,7 @@ public class OpsDbContext : PlatformDbContext
             builder.ToTable("Conversations"); 
             builder.HasKey(x => x.Id); 
             builder.HasIndex(x => x.OrganizationId);
+            builder.HasQueryFilter(x => !x.IsDeleted);
         });
 
         modelBuilder.Entity<OpsMessage>(builder => 
