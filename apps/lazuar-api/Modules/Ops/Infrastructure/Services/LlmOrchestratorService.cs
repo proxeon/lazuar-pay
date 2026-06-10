@@ -322,8 +322,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 $"You are Lazuar Ops, a highly capable internal operations agent. " +
                 $"The current Target OrganizationId is {tenantId}. " +
                 $"**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. " +
-                $"**CRITICAL RULE 2**: DO NOT output raw JSON tool calls as plain text in your response. " +
-                $"**CRITICAL RULE 3**: NEVER guess, hallucinate, or manually construct URLs (like checkout links). You MUST ALWAYS use the appropriate tool (like GetPlanLinkAgentQuery) to retrieve the exact environment-aware URLs."
+                $"**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages (like '[I proposed...]') in your text response. " +
+                $"**CRITICAL RULE 3**: NEVER guess, hallucinate, or manually construct URLs (like checkout links). You MUST ALWAYS use the appropriate tool to retrieve the exact environment-aware URLs."
             )
         };
 
@@ -333,26 +333,25 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             if (string.IsNullOrWhiteSpace(msg.Content) && string.IsNullOrWhiteSpace(msg.ProposedActionJson)) 
                 continue;
 
-            var content = msg.Content;
-            
-            // Remind the AI if it previously proposed an action so it has context on what it did
-            if (msg.Role == "assistant" && !string.IsNullOrEmpty(msg.ProposedActionJson))
-            {
-                content += $"\n[I proposed a system action: {msg.ProposedActionJson}]";
-            }
-
             if (msg.Role == "user")
             {
-                messages.Add(new UserChatMessage(content));
+                messages.Add(new UserChatMessage(msg.Content));
             }
             else if (msg.Role == "assistant")
             {
-                messages.Add(new AssistantChatMessage(content));
+                messages.Add(new AssistantChatMessage(msg.Content));
+                
+                // CRITICAL FIX: Do not append JSON to the Assistant's content. 
+                // Add it as a separate System Note so the AI doesn't mimic the pattern in its own voice.
+                if (!string.IsNullOrEmpty(msg.ProposedActionJson))
+                {
+                    messages.Add(new SystemChatMessage($"[System Log: You invoked a tool with payload: {msg.ProposedActionJson}]"));
+                }
             }
             else if (msg.Role == "system")
             {
-                // Map system feedback ("Action executed successfully") as User observations so the AI reads them
-                messages.Add(new UserChatMessage(content));
+                // Push system execution results to the LLM so it knows if actions succeeded or failed
+                messages.Add(new SystemChatMessage(msg.Content));
             }
         }
 

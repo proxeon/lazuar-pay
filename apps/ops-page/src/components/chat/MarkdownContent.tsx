@@ -106,29 +106,55 @@ function createComponents(): Components {
         </a>
       )
     },
+    // ---- FIXED TABLE COMPONENTS ----
     table({ children, ...rest }) {
       return (
-        <div className="my-4 overflow-x-auto rounded-md border border-[#e5e5e5]">
-          <table className="w-full min-w-[400px] border-collapse text-sm text-left" {...rest}>
-            {children}
-          </table>
+        // The "not-prose" class completely disables Tailwind Typography defaults for this block
+        <div className="not-prose my-6 w-full overflow-hidden rounded-lg border border-[#e5e5e5] shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm" {...rest}>
+              {children}
+            </table>
+          </div>
         </div>
+      )
+    },
+    thead({ children, ...rest }) {
+      return (
+        <thead className="bg-[#fafafa] border-b border-[#e5e5e5]" {...rest}>
+          {children}
+        </thead>
+      )
+    },
+    tbody({ children, ...rest }) {
+      return (
+        <tbody className="divide-y divide-[#f4f4f5] bg-white" {...rest}>
+          {children}
+        </tbody>
+      )
+    },
+    tr({ children, ...rest }) {
+      return (
+        <tr className="transition-colors hover:bg-[#fafafa]/50" {...rest}>
+          {children}
+        </tr>
       )
     },
     th({ children, ...rest }) {
       return (
-        <th className="border-b border-[#e5e5e5] bg-[#fafafa] px-3 py-2.5 font-semibold text-[#09090b]" {...rest}>
+        <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-[#71717a] whitespace-nowrap" {...rest}>
           {children}
         </th>
       )
     },
     td({ children, ...rest }) {
       return (
-        <td className="border-b border-[#f4f4f5] px-3 py-2.5 text-[#52525b] last:border-b-0" {...rest}>
+        <td className="px-4 py-3.5 text-[13px] text-[#09090b] font-medium align-middle" {...rest}>
           {children}
         </td>
       )
     },
+    // ---------------------------------
     blockquote({ children, ...rest }) {
       return (
         <blockquote className="my-4 border-l-2 border-[#a1a1aa] pl-4 italic text-[#71717a]" {...rest}>

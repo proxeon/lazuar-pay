@@ -13,6 +13,7 @@ using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using Modules.Ops.Application;
 using Modules.Ops.Application.Services;
+using Modules.Ops.Domain;
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
 namespace Modules.Ops.Infrastructure;
@@ -39,7 +40,8 @@ public static class Endpoints
                 Updated_at = new DateTimeOffset(c.UpdatedAt)
             }).ToList();
             
-            return Results.Ok(new PaginatedResponse<OpsConversationDto>(dtos, 0, (safeOffset / safeLimit) + 1, safeLimit));
+            int currentPage = (safeOffset / safeLimit) + 1;
+            return Results.Ok(new PaginatedResponse<OpsConversationDto>(dtos, 0, currentPage, safeLimit));
         });
 
         group.MapGet("/chat/conversations/{id:guid}/messages", async Task<IResult> (Guid id, IOpsRepository repo, IExecutionContextAccessor ctx) => 
@@ -87,6 +89,20 @@ public static class Endpoints
 
             await ctx.Response.WriteAsync("data: [DONE]\n\n");
             await ctx.Response.Body.FlushAsync();
+        });
+
+        group.MapPost("/chat/conversations/{id:guid}/system-message", async Task<IResult> (Guid id, [FromBody] ChatRequestDto request, IOpsRepository repo, IExecutionContextAccessor ctx) => 
+        {
+            var tenantId = ctx.TenantId;
+            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            
+            var conv = await repo.GetConversationByIdAsync(tenantId, id);
+            if (conv == null) return Results.NotFound();
+
+            repo.AddMessage(new OpsMessage(Guid.CreateVersion7(), tenantId, id, "system", request.Message));
+            await repo.SaveChangesAsync();
+            
+            return Results.Ok(new StatusResponse { Status = "saved" });
         });
 
         group.MapPost("/execute-action", async Task<IResult> (

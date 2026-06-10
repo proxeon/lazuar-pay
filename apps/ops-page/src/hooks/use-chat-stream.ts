@@ -51,7 +51,6 @@ export function useChatStream(
               try {
                 const chunk: ChatStreamChunkDto = JSON.parse(dataStr);
 
-                // Intercept the conversation ID from the backend to lock the session
                 if (chunk.type === "conversation_id" && chunk.content) {
                   generatedConvId = chunk.content;
                   continue;
@@ -79,8 +78,6 @@ export function useChatStream(
     } finally {
       setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, isStreaming: false, toolStatus: undefined } : msg));
       setIsProcessing(false);
-      
-      // Notify parent of the exact generated GUID if it was a new chat
       onStreamComplete(isNew && generatedConvId ? generatedConvId : undefined);
     }
   };
@@ -106,6 +103,23 @@ export function useChatStream(
     const systemFeedback = success
       ? `[System: The action was executed successfully. Waiting for next instruction.]`
       : `[System: The action failed or was cancelled. Reason: ${message}]`;
+
+    // Persist system message securely
+    if (activeConversationId && activeConversationId !== "new") {
+      try {
+        await fetch(`${API_URL}/ops/chat/conversations/${activeConversationId}/system-message`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || ""
+          },
+          body: JSON.stringify({ message: systemFeedback }),
+          credentials: "include"
+        });
+      } catch (e) {
+        console.error("Failed to persist system message", e);
+      }
+    }
 
     setMessages((prev) => [...prev, { id: Date.now().toString(), role: "system", content: systemFeedback }]);
 
