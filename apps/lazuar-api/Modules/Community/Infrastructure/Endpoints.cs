@@ -369,7 +369,10 @@ public static class Endpoints
             if (tenant == null || !tenant.IsActive)
                 return TypedResults.NotFound();
             
-            var globalUserId = ctx.UserId != Guid.Empty ? ctx.UserId : (Guid?)null;
+            // Explicitly ignore the HttpOnly cookie context if the user requested a guest checkout
+            var globalUserId = (ctx.UserId != Guid.Empty && req.Is_guest_checkout != true) 
+                ? ctx.UserId 
+                : (Guid?)null;
             
             try
             {

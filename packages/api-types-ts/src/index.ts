@@ -1216,6 +1216,7 @@ export interface components {
             name: string;
             email: string;
             phone: string;
+            is_guest_checkout?: boolean;
         };
         "Community.RecordPaymentRequestDto": {
             /** Format: double */

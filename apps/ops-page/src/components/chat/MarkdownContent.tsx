@@ -68,7 +68,6 @@ function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text:
       .map(line => line.trim())
       .filter(Boolean)
       .map(line => {
-        // Robust colon split: left is label, right is pre-filled data
         const colonIndex = line.indexOf(':');
         if (colonIndex !== -1) {
           const name = line.slice(0, colonIndex).trim();
@@ -94,7 +93,10 @@ function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text:
     if (!onSend || submitted) return;
 
     const formattedMessage = parsedFields
-      .map(f => `${f.name}: ${formData[f.name] || "N/A"}`)
+      .map(f => {
+        const val = formData[f.name]?.trim();
+        return `${f.name}: ${val ? val : "(empty)"}`;
+      })
       .join('\n');
     
     setSubmitted(true);
@@ -116,7 +118,6 @@ function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text:
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">{field.name}</label>
               {isLongText ? (
                 <textarea 
-                  required
                   disabled={submitted}
                   value={formData[field.name] || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
@@ -126,7 +127,6 @@ function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text:
               ) : (
                 <input 
                   type="text" 
-                  required
                   disabled={submitted}
                   value={formData[field.name] || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}

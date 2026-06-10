@@ -801,6 +801,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("phone")]
         public string Phone { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("is_guest_checkout")]
+        public bool? Is_guest_checkout { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]

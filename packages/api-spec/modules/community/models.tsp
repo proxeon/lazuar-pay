@@ -1,7 +1,7 @@
 namespace LazuarApi.Community;
 
 model FaqItemDto {
-  id: string;
+  id: string; // GUID
   question: string;
   answer: string;
 }
@@ -243,6 +243,7 @@ model PublicCheckoutRequestDto {
   name: string;
   email: string;
   phone: string;
+  is_guest_checkout?: boolean; // Instructs backend to ignore HttpOnly auth cookie to prevent cross-identity binding
 }
 
 model MagicLinkRequestDto {
@@ -258,7 +259,7 @@ model PortalDataResponse {
 }
 
 model CancelPortalRequest {
-  subscription_id: string;
+  subscription_id: string; // GUID
 }
 
 model MessageTemplateDto {

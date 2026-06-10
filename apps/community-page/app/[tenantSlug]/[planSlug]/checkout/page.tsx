@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, LockKeyhole, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { browserClient, type CommunityPlan } from "@/lib/api-client";
+import { browserClient, type CommunityPlan, type EntitlementDto } from "@/lib/api-client";
 
 export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug: string; planSlug: string }> }) {
   const resolvedParams = use(params);
@@ -19,7 +19,9 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFull, setIsFull] = useState(false);
 
-  // Controlled form inputs for auto-filling
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [isAdminOfTenant, setIsAdminOfTenant] = useState(false);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -27,7 +29,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
   useEffect(() => {
     async function loadCheckoutData() {
       try {
-        // 1. Fetch Plan Details
         const { data: planData, error: planError } = await browserClient.GET("/public/community/{tenantSlug}/plans/{slug}", {
           params: { path: { tenantSlug, slug: planSlug } }
         });
@@ -40,12 +41,19 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
         setPkg(planData);
         if (planData.is_full) setIsFull(true);
 
-        // 2. Silently Check Global Authentication
         const { data: authData } = await browserClient.GET("/one/auth/me");
         if (authData) {
           setGlobalUser(authData);
           setName(authData.name);
           setEmail(authData.email);
+
+          const { data: entitlements } = await browserClient.GET("/one/me/entitlements");
+          if (entitlements) {
+            const isAdmin = entitlements.some(
+              (e: EntitlementDto) => e.workspace_slug === tenantSlug && (e.role === "ADMIN" || e.role === "SUPER_ADMIN")
+            );
+            setIsAdminOfTenant(isAdmin);
+          }
         }
       } catch (err) {
         console.error("Failed to load checkout data", err);
@@ -57,6 +65,20 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
     loadCheckoutData();
   }, [tenantSlug, planSlug, router]);
 
+  const enableGuestMode = () => {
+    setIsGuestMode(true);
+    setName("");
+    setEmail("");
+  };
+
+  const disableGuestMode = () => {
+    setIsGuestMode(false);
+    if (globalUser) {
+      setName(globalUser.name);
+      setEmail(globalUser.email);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -67,7 +89,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
         plan_slug: planSlug,
         name: name,
         email: email,
-        phone: phone
+        phone: phone,
+        is_guest_checkout: isGuestMode
       }
     });
 
@@ -84,7 +107,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-muted-foreground" /></div>;
   }
 
-  // Render Full/Sold Out Block...
   if (isFull) {
      return (
        <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black items-center justify-center">
@@ -121,8 +143,35 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
             <form onSubmit={handleSubmit} className="space-y-6">
               
               {globalUser && (
-                <div className="p-3 bg-emerald-50/50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 mb-4">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-500">✓ Logged in as {globalUser.name}</p>
+                <div className="mb-4">
+                  {isGuestMode ? (
+                    <div className="flex items-center justify-between p-3 bg-zinc-100 border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
+                        Checking out as Guest
+                      </p>
+                      <button type="button" onClick={disableGuestMode} className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:underline dark:text-zinc-300">
+                        Use my Lazuar account
+                      </button>
+                    </div>
+                  ) : isAdminOfTenant ? (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-900">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-blue-700 dark:text-blue-400">
+                        Viewing as Workspace Admin
+                      </p>
+                      <button type="button" onClick={enableGuestMode} className="text-[11px] font-bold uppercase tracking-widest text-blue-700 dark:text-blue-400 hover:underline">
+                        Checkout as Guest
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-emerald-50/50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-500">
+                        ✓ Logged in as {globalUser.name}
+                      </p>
+                      <button type="button" onClick={enableGuestMode} className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-500 hover:underline">
+                        Checkout as Guest
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -131,7 +180,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
                 <input 
                   id="name" type="text" required 
                   value={name} onChange={e => setName(e.target.value)}
-                  disabled={!!globalUser}
+                  disabled={!!globalUser && !isGuestMode}
                   className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed" 
                 />
               </div>
@@ -140,7 +189,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
                 <input 
                   id="email" type="email" required 
                   value={email} onChange={e => setEmail(e.target.value)}
-                  disabled={!!globalUser}
+                  disabled={!!globalUser && !isGuestMode}
                   className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed" 
                 />
               </div>
@@ -162,7 +211,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
             </form>
           </div>
 
-          {/* Render Order Summary ... */}
           <div className="w-full lg:w-[380px] shrink-0">
             <div className="border border-border/60 bg-card p-6 shadow-sm rounded-none">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Order Summary</h3>
