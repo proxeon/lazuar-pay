@@ -41,7 +41,6 @@ public class TenantSecurityMiddleware
 
                 if (Guid.TryParse(userIdClaim, out var userId))
                 {
-                    // Removed !isSystemAdmin God-Mode bypass. Everyone must be evaluated.
                     var role = await oneQueryService.GetTenantRoleAsync(userId, resolvedTenantId.Value);
                     
                     if (string.IsNullOrEmpty(role))
@@ -53,15 +52,14 @@ public class TenantSecurityMiddleware
                             status = 403, 
                             title = "Forbidden", 
                             detail = "You do not have access to this workspace. Please ensure your Lazuar One identity is authorized for this tenant." 
-                        });
+                        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
                         
                         await context.Response.WriteAsync(error);
                         return; // Halt request pipeline
                     }
                     else
                     {
-                        // Dynamically elevate the principal's claims with their localized tenant role 
-                        // so that [Authorize(Policy = "OrgAdmin")] works correctly for this specific request.
+                        // Dynamically elevate the principal's claims with their localized tenant role
                         var identity = context.User.Identity as ClaimsIdentity;
                         identity?.AddClaim(new Claim(ClaimTypes.Role, role));
                     }

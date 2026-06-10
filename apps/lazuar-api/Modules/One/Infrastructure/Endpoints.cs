@@ -58,7 +58,6 @@ public static class Endpoints
         group.MapPost("/auth/login", async Task<Results<Ok<LoginResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             [FromBody] LoginRequest req,
             IConfiguration config,
-            IWebHostEnvironment env,
             IPasswordService passwordService,
             OneDbContext db,
             HttpContext ctx) =>
@@ -69,21 +68,18 @@ public static class Endpoints
 
             var user = await db.GlobalUsers.FirstOrDefaultAsync(u => u.Email == email);
             
-            bool isDevBackdoor = env.IsDevelopment() && (email == "sysadmin@lazuars.io" || email == "founder@lazuar-hq.com") && req.Password == "Password123!";
-
-            if (!isDevBackdoor)
+            if (user == null || !user.IsActive || !passwordService.Verify(req.Password, user.PasswordHash))
             {
-                if (user == null || !user.IsActive || !passwordService.Verify(req.Password, user.PasswordHash))
-                    return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 401, Detail = "Invalid email or password." });
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 401, Detail = "Invalid email or password." });
             }
 
-            var role = user?.IsSystemAdmin ?? (email == "sysadmin@lazuars.io") ? "SUPER_ADMIN" : "CLIENT";
+            var role = user.IsSystemAdmin ? "SUPER_ADMIN" : "CLIENT";
 
-            IssueCookie(ctx, user!, config);
+            IssueCookie(ctx, user, config);
 
             return TypedResults.Ok(new LoginResponse
             {
-                User = new AuthUser { Email = user!.Email, Name = user.Name, Role = role, Is_email_verified = user.IsEmailVerified }
+                User = new AuthUser { Email = user.Email, Name = user.Name, Role = role, Is_email_verified = user.IsEmailVerified }
             });
         });
 
@@ -182,6 +178,48 @@ public static class Endpoints
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
             }
         }).RequireAuthorization();
+
+        group.MapPost("/me/access-requests", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult>> (CreateAppAccessRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var id = await mediator.Send(new RequestAppAccessCommand(ctx.UserId, req.Requested_apps?.ToList() ?? new List<string>()));
+            return TypedResults.Ok(new IdResponse { Id = id.ToString() });
+        }).RequireAuthorization();
+
+        group.MapGet("/access-requests", async Task<Results<Ok<ICollection<AppAccessRequestDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        {
+            if (!ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            var requests = await queryService.GetAppAccessRequestsAsync();
+            return TypedResults.Ok((ICollection<AppAccessRequestDto>)requests.ToList());
+        }).RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
+
+        group.MapPost("/access-requests/{id:guid}/approve", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            if (!ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            try
+            {
+                await mediator.Send(new ApproveAppAccessCommand(id));
+                return TypedResults.Ok(new StatusResponse { Status = "approved" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
+
+        group.MapPost("/access-requests/{id:guid}/reject", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            if (!ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            try
+            {
+                await mediator.Send(new RejectAppAccessCommand(id));
+                return TypedResults.Ok(new StatusResponse { Status = "rejected" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        }).RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
 
         group.MapPost("/workspaces", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             CreateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>

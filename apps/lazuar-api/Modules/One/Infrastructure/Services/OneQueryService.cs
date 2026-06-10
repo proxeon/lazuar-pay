@@ -1,8 +1,10 @@
 using Dapper;
 using System.Data;
+using System.Text.Json;
 using Modules.One.Contracts;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
+using Lazuar.ApiTypes;
 
 namespace Modules.One.Infrastructure.Services;
 
@@ -98,5 +100,30 @@ public class OneQueryService : IOneQueryService
 
         const string sql = "SELECT \"Id\", \"Email\", \"Role\", \"Status\", \"ExpiresAt\" FROM one.\"WorkspaceInvitations\" WHERE \"OrganizationId\" = @OrgId ORDER BY \"CreatedAt\" DESC";
         return await connection.QueryAsync<WorkspaceInvitationSnapshotDto>(sql, new { OrgId = tenantId });
+    }
+
+    public async Task<IEnumerable<AppAccessRequestDto>> GetAppAccessRequestsAsync()
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT r.""Id"", r.""GlobalUserId"", u.""Name"", u.""Email"", r.""RequestedApps""::text, r.""Status"", r.""CreatedAt""
+            FROM one.""AppAccessRequests"" r
+            JOIN one.""GlobalUsers"" u ON r.""GlobalUserId"" = u.""Id""
+            ORDER BY r.""CreatedAt"" DESC";
+
+        var rows = await connection.QueryAsync<dynamic>(sql);
+
+        return rows.Select(r => new AppAccessRequestDto
+        {
+            Id = r.Id.ToString(),
+            Global_user_id = r.GlobalUserId.ToString(),
+            Name = r.Name,
+            Email = r.Email,
+            Requested_apps = JsonSerializer.Deserialize<List<string>>(r.RequestedApps) ?? new List<string>(),
+            Status = r.Status,
+            Created_at = new DateTimeOffset(r.CreatedAt)
+        });
     }
 }

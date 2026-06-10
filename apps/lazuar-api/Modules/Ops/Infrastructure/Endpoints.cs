@@ -1,5 +1,5 @@
-// apps/lazuar-api/Modules/Ops/Infrastructure/Endpoints.cs
 using System;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -11,6 +11,7 @@ using Microsoft.Extensions.Caching.Memory;
 using MediatR;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
+using Modules.Ops.Application;
 using Modules.Ops.Application.Services;
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
@@ -20,11 +21,59 @@ public static class Endpoints
 {
     public static IEndpointRouteBuilder MapOpsEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/ops").RequireAuthorization();
+        // Enforce Separation of Duties: Only users elevated to CLIENT or ADMIN in a tenant can execute Ops commands.
+        // A raw SUPER_ADMIN token hitting this without a workspace context will be explicitly rejected.
+        var group = endpoints.MapGroup("/ops").RequireAuthorization(policy => policy.RequireRole("CLIENT", "ADMIN"));
+
+        group.MapGet("/chat/conversations", async Task<IResult> ([FromQuery] int limit, [FromQuery] int offset, IOpsRepository repo, IExecutionContextAccessor ctx) => 
+        {
+            var tenantId = ctx.TenantId;
+            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            
+            int safeLimit = limit > 0 ? limit : 20;
+            int safeOffset = offset >= 0 ? offset : 0;
+            
+            var conversations = await repo.GetConversationsAsync(tenantId, safeLimit, safeOffset);
+            
+            var dtos = conversations.Select(c => new OpsConversationDto {
+                Id = c.Id.ToString(),
+                Title = c.Title,
+                Updated_at = new DateTimeOffset(c.UpdatedAt)
+            }).ToList();
+            
+            return Results.Ok(new PaginatedResponse<OpsConversationDto> {
+                Data = dtos,
+                Current_page = (safeOffset / safeLimit) + 1,
+                Total_count = 0,
+                Total_pages = 0
+            });
+        });
+
+        group.MapGet("/chat/conversations/{id:guid}/messages", async Task<IResult> (Guid id, IOpsRepository repo, IExecutionContextAccessor ctx) => 
+        {
+            var tenantId = ctx.TenantId;
+            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            
+            var messages = await repo.GetMessagesAsync(tenantId, id);
+            
+            var dtos = messages.Select(m => new OpsMessageDto {
+                Id = m.Id.ToString(),
+                Conversation_id = m.ConversationId.ToString(),
+                Role = m.Role,
+                Content = m.Content,
+                Tool_status = m.ToolStatus,
+                Proposed_action = m.ProposedActionJson != null 
+                    ? JsonSerializer.Deserialize<ProposedActionDto>(m.ProposedActionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) 
+                    : null,
+                Created_at = new DateTimeOffset(m.CreatedAt)
+            }).ToList();
+            
+            return Results.Ok(dtos);
+        });
 
         group.MapPost("/chat", async Task<IResult> ([FromBody] ChatRequestDto request, ILlmOrchestratorService orchestrator) => 
         {
-            var response = await orchestrator.ProcessChatAsync(request.Message);
+            var response = await orchestrator.ProcessChatAsync(request.Message, request.Conversation_id);
             return Results.Ok(response);
         });
 
@@ -34,7 +83,7 @@ public static class Endpoints
             ctx.Response.Headers.Append("Cache-Control", "no-cache");
             ctx.Response.Headers.Append("Connection", "keep-alive");
 
-            var stream = orchestrator.ProcessChatStreamAsync(request.Message, ctx.RequestAborted);
+            var stream = orchestrator.ProcessChatStreamAsync(request.Message, request.Conversation_id, ctx.RequestAborted);
             
             await foreach (var chunk in stream)
             {
@@ -70,8 +119,9 @@ public static class Endpoints
             var jsonNode = JsonSerializer.SerializeToNode(request.Command_payload) as JsonObject;
             if (jsonNode == null) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Invalid payload." });
 
-            // Ensure the write action executes against the correct Tenant ID (fallback to dev org if header missing)
-            var tenantId = executionCtx.TenantId == Guid.Empty ? Guid.Parse("7d97963c-063c-4598-86cc-9ddd9d47d9b1") : executionCtx.TenantId;
+            var tenantId = executionCtx.TenantId;
+            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            
             jsonNode["OrganizationId"] = tenantId;
 
             httpContext.Items["IsAgentAction"] = true;
@@ -88,7 +138,6 @@ public static class Endpoints
             catch (Exception ex)
             {
                 cache.Remove(request.Idempotency_key);
-                // Return exactly the inner exception message to feed it back into the AI
                 return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.InnerException?.Message ?? ex.Message });
             }
         });
