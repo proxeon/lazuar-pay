@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<ICommunitySubscriptionRepository, CommunitySubscriptionRepository>();
         services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
         services.AddScoped<ICommunityCouponRepository, CommunityCouponRepository>();
+        services.AddScoped<IBroadcastCampaignRepository, CommunityBroadcastRepository>();
         
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
@@ -48,6 +49,7 @@ public static class DependencyInjection
         services.AddHostedService<CommunityInboxConsumerJob>();
         services.AddHostedService<CommunityOutboxPublisherJob>();
         services.AddHostedService<CommunityLifecycleJob>();
+        services.AddHostedService<BroadcastPublisherJob>();
         
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();

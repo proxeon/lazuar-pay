@@ -38,3 +38,9 @@ public interface ICommunityCouponRepository
     void Update(CommunityCoupon coupon);
     Task SaveChangesAsync(CancellationToken ct = default);
 }
+
+public interface IBroadcastCampaignRepository
+{
+    void Add(BroadcastCampaign campaign);
+    Task SaveChangesAsync(CancellationToken ct = default);
+}

@@ -78,3 +78,13 @@ public class CommunityCouponRepository : ICommunityCouponRepository
     public void Update(CommunityCoupon coupon) => _context.Coupons.Update(coupon);
     public async Task SaveChangesAsync(CancellationToken ct = default) => await _context.SaveChangesAsync(ct);
 }
+
+public class CommunityBroadcastRepository : IBroadcastCampaignRepository
+{
+    private readonly CommunityDbContext _context;
+    public CommunityBroadcastRepository(CommunityDbContext context) => _context = context;
+
+    public void Add(BroadcastCampaign campaign) => _context.BroadcastCampaigns.Add(campaign);
+    
+    public async Task SaveChangesAsync(CancellationToken ct = default) => await _context.SaveChangesAsync(ct);
+}

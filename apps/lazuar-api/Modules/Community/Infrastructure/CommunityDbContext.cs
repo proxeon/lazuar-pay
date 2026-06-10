@@ -14,6 +14,7 @@ public class CommunityDbContext : PlatformDbContext
     public DbSet<PaymentRecord> PaymentRecords { get; set; } = null!;
     public DbSet<CommunityReminderSchedule> ReminderSchedules { get; set; } = null!;
     public DbSet<CommunityCoupon> Coupons { get; set; } = null!;
+    public DbSet<BroadcastCampaign> BroadcastCampaigns { get; set; } = null!;
     public DbSet<MessageTemplate> MessageTemplates { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
