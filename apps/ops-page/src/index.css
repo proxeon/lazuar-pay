@@ -1,51 +1,20 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
-  /* Semantic background tokens for chat message bubbles */
-  --color-bubble-user: #f4f4f5;
-  --color-bubble-assistant: transparent;
-  
-  /* Fallback color matching the user bubble background for collapsed text gradients */
-  --collapse-fade: #f4f4f5;
-
-  /* Custom Neobrutalist box shadows for layout blocks, buttons, and cards */
-  --shadow-brutal: 8px 8px 0px 0px rgba(0, 0, 0, 0.05);
-  --shadow-brutal-dark: 8px 8px 0px 0px rgba(0, 0, 0, 0.15);
-
-  /* Unified platform colors mapping directly to monochrome wireframe themes */
-  --color-border-standard: #e5e5e5;
-  --color-text-primary: #09090b;
-  --color-text-muted: #71717a;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
 }
 
-/* Custom global rules for unified layout and container behaviors */
 @layer base {
+  * {
+    /* Replaces @apply border-border */
+    border-color: #e5e5e5;
+  }
+  
   body {
-    background-color: #f5f5f5;
-    color: #1a1a1a;
+    /* Replaces @apply bg-background text-foreground */
+    background-color: #ffffff;
+    color: #09090b;
   }
-
-  /* Force sharp, geometric inputs and buttons to match Neobrutalist principles globally */
-  input, button, textarea, select {
-    border-radius: 0px !important;
-  }
-}
-
-/* Compact scrollbar styles to preserve reading layout for dense system outputs and logs */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #e5e5e5;
-  border-radius: 0px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
 }

@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check, Activity, Pencil } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "../../lib/utils";
 import ActionApprovalCard from "../ActionApprovalCard";
 import type { Message } from "../../types/chat";
 import type { ProposedActionDto } from "../../lib/api-client";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface ChatMessageBubbleProps {
   msg: Message;
@@ -65,15 +64,13 @@ export default function ChatMessageBubble({
   return (
     <div className="w-full flex flex-col items-start min-w-0">
       {msg.content && (
-        <div className="text-[15px] leading-relaxed text-[#09090b] prose prose-sm max-w-none break-words whitespace-pre-wrap font-sans antialiased w-full">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {msg.content}
-          </ReactMarkdown>
+        <div className="w-full">
+          <MarkdownContent content={msg.content} />
         </div>
       )}
 
       {msg.toolStatus && (
-        <div className="flex items-center gap-2 px-3 py-1.5 mt-2 bg-[#fafafa] border border-[#e5e5e5] text-[11px] font-mono text-[#71717a]">
+        <div className="flex items-center gap-2 px-3 py-1.5 mt-2 bg-[#fafafa] border border-[#e5e5e5] text-[11px] font-mono text-[#71717a] rounded-sm shadow-sm">
           <Activity size={12} className="animate-pulse text-[#09090b]" />
           {msg.toolStatus}
         </div>
@@ -90,17 +87,17 @@ export default function ChatMessageBubble({
 
       {!msg.isStreaming && (
         <div className="flex items-center gap-1.5 mt-4 text-[#71717a]">
-          <button onClick={() => handleCopyToClipboard(msg.content)} className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all" title="Copy reply">
+          <button onClick={() => handleCopyToClipboard(msg.content)} className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all rounded-sm" title="Copy reply">
             {copiedId === msg.id ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
           </button>
-          <button className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all" title="Good response">
+          <button className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all rounded-sm" title="Good response">
             <ThumbsUp size={14} />
           </button>
-          <button className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all" title="Bad response">
+          <button className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all rounded-sm" title="Bad response">
             <ThumbsDown size={14} />
           </button>
           {previousUserMsgContent && (
-            <button onClick={() => onSend(previousUserMsgContent)} className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all" title="Regenerate reply">
+            <button onClick={() => onSend(previousUserMsgContent)} className="p-1.5 hover:bg-[#f4f4f5] hover:text-[#09090b] transition-all rounded-sm" title="Regenerate reply">
               <RotateCcw size={14} />
             </button>
           )}
