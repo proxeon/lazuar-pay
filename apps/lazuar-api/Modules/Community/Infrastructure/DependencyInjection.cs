@@ -13,6 +13,7 @@ using Modules.Community.Infrastructure.Services;
 using Modules.Community.Infrastructure.Workers;
 using Modules.Payments.Contracts.Events;
 using Modules.One.Contracts;
+using Modules.CRM.Contracts;
 
 namespace Modules.Community.Infrastructure;
 
@@ -20,7 +21,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddCommunityModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default") 
+        var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Default connection string not found.");
 
         services.AddDbContext<CommunityDbContext>(options =>
@@ -29,26 +30,26 @@ public static class DependencyInjection
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "community");
             }));
 
-        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("CommunitySqlConnectionFactory", (sp, key) => 
+        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("CommunitySqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
         services.AddScoped<ICommunityPlanRepository, CommunityPlanRepository>();
         services.AddScoped<ICommunitySubscriptionRepository, CommunitySubscriptionRepository>();
         services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
-        
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
-        services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>(); 
+        services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
-
+        
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunityDbContext>>("CommunityEventBus");
-
+        
         services.AddHostedService<CommunityInboxConsumerJob>();
         services.AddHostedService<CommunityOutboxPublisherJob>();
         services.AddHostedService<CommunityLifecycleJob>();
-
+        
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
-        services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>(); 
+        services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
+        services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
 
         return services;
     }
@@ -56,10 +57,9 @@ public static class DependencyInjection
     public static IApplicationBuilder UseCommunitySubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
-        eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>(); 
-        
+        eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>();
+        eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
         return app;
     }
 }

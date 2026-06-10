@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,11 +58,22 @@ public class CommunitySubscriptionRepository : ICommunitySubscriptionRepository
     public async Task<CommunitySubscription?> GetActiveByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default)
     {
         return await _context.Subscriptions
-            .Where(s => s.OrganizationId == organizationId 
-                     && s.ClientProfileId == clientProfileId 
+            .Where(s => s.OrganizationId == organizationId
+                     && s.ClientProfileId == clientProfileId
                      && (s.Status == "ACTIVE" || s.Status == "PAST_DUE"))
             .OrderByDescending(s => s.CreatedAt)
             .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<IEnumerable<Guid>> GetSubscriptionIdsByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default)
+    {
+        return await _context.Subscriptions
+            .IgnoreQueryFilters()
+            .Where(s => s.OrganizationId == organizationId
+                     && s.ClientProfileId == clientProfileId
+                     && s.Status != "CANCELLED" && s.Status != "BANNED" && s.Status != "EXPIRED")
+            .Select(s => s.Id)
+            .ToListAsync(ct);
     }
 
     public void Add(CommunitySubscription subscription)

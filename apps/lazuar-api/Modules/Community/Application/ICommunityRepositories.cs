@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Modules.Community.Domain.Aggregates;
@@ -17,6 +18,7 @@ public interface ICommunitySubscriptionRepository
 {
     Task<CommunitySubscription?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<CommunitySubscription?> GetActiveByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default);
+    Task<IEnumerable<Guid>> GetSubscriptionIdsByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default);
     void Add(CommunitySubscription subscription);
     Task SaveChangesAsync(CancellationToken ct = default);
 }
