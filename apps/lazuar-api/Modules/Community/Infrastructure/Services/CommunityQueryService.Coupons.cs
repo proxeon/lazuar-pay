@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Lazuar.ApiTypes;
 using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Infrastructure.Services;
@@ -27,14 +28,15 @@ public partial class CommunityQueryService
 
         var rawCoupons = await connection.QueryAsync<RawCouponDto>(sql, new { OrgId = organizationId });
 
-        return rawCoupons.Select(c => new CouponDto(
-            c.Id.ToString(),
-            c.Code,
-            c.DiscountType,
-            (double)c.Amount,
-            c.MaxUses,
-            c.UsedCount,
-            c.ExpiresAt.HasValue ? new DateTimeOffset(c.ExpiresAt.Value) : null
-        )).ToList();
+        return rawCoupons.Select(c => new CouponDto
+        {
+            Id = c.Id.ToString(),
+            Code = c.Code,
+            Discount_type = c.DiscountType,
+            Amount = (double)c.Amount,
+            Max_uses = c.MaxUses,
+            Used_count = c.UsedCount,
+            Expires_at = c.ExpiresAt.HasValue ? new DateTimeOffset(c.ExpiresAt.Value) : null
+        }).ToList();
     }
 }

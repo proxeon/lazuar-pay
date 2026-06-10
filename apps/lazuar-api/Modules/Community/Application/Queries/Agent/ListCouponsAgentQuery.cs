@@ -34,10 +34,10 @@ public class ListCouponsAgentQueryHandler : IQueryHandler<ListCouponsAgentQuery,
         return coupons.Select(c => new AgentCouponResult(
             c.Id,
             c.Code,
-            c.DiscountType,
+            c.Discount_type,
             (decimal)c.Amount,
-            c.MaxUses,
-            c.UsedCount,
-            c.ExpiresAt?.UtcDateTime)).ToList();
+            c.Max_uses,
+            c.Used_count,
+            c.Expires_at?.UtcDateTime)).ToList();
     }
 }

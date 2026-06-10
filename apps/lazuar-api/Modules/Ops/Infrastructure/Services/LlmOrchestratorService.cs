@@ -1,16 +1,15 @@
 // apps/lazuar-api/Modules/Ops/Infrastructure/Services/LlmOrchestratorService.cs
-
 // ==============================================================================================
 // DONT DELETE COMMENT HERE. IF you need to modify, just modify specific code and dont delete the comment.
-// 
+//
 // HISTORICAL BUG CONTEXT:
-// We previously experienced hard 500 Internal Server Errors because of how the new OpenAI SDK (v2+) 
-// streams tool arguments as `BinaryData`. Implicitly appending `BinaryData` to a `string` 
-// (e.g., `acc.Arguments += update`) calls `.ToString()` on partial UTF-8 byte chunks. 
-// If a multi-byte character or JSON structural boundary gets split across two network chunks, 
-// it results in a corrupted string. When passed to JsonSerializer, it threw an unhandled 
+// We previously experienced hard 500 Internal Server Errors because of how the new OpenAI SDK (v2+)
+// streams tool arguments as `BinaryData`. Implicitly appending `BinaryData` to a `string`
+// (e.g., `acc.Arguments += update`) calls `.ToString()` on partial UTF-8 byte chunks.
+// If a multi-byte character or JSON structural boundary gets split across two network chunks,
+// it results in a corrupted string. When passed to JsonSerializer, it threw an unhandled
 // JsonException BEFORE the response headers could be flushed, crashing the Minimal API.
-// 
+//
 // FIX IMPLEMENTED & REQUIRED TO MAINTAIN:
 // 1. Accumulate raw bytes using `MemoryStream` in `ToolCallAccumulator` rather than `string`.
 // 2. Decode to a UTF-8 string ONLY when the stream completes.
@@ -82,7 +81,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         var messages = BuildInitialMessages(tenantId, history, userMessage);
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
         var completion = await chatClient.CompleteChatAsync(messages, BuildChatOptions(), ct);
-        
+
         return new ChatResponseDto { Message = completion.Value.Content[0].Text };
     }
 
@@ -97,7 +96,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         {
             var repo = setupScope.ServiceProvider.GetRequiredService<IOpsRepository>();
             var titleGen = setupScope.ServiceProvider.GetRequiredService<ILlmTitleGenerator>();
-            
+
             if (string.IsNullOrEmpty(conversationId) || !Guid.TryParse(conversationId, out convId))
             {
                 isNew = true;
@@ -110,7 +109,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 var conv = await repo.GetConversationByIdAsync(tenantId, convId, ct);
                 if (conv == null) throw new InvalidOperationException("Conversation not found.");
                 conv.MarkUpdated();
-
                 history = (await repo.GetMessagesAsync(tenantId, convId, ct)).ToList();
             }
 
@@ -126,7 +124,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         int maxIterations = 3;
         int iterations = 0;
-        
         string accumulatedAssistantText = "";
         string? finalToolStatus = null;
         string? finalProposedActionJson = null;
@@ -153,13 +150,13 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
                 if (streamError != null)
                 {
-                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Request Error:**\n\n`{streamError.Message}`" };
+                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n⚠️ **LLM Request Error:**\n`{streamError.Message}`" };
                     yield break;
                 }
 
                 string currentIterationText = "";
 
-                try 
+                try
                 {
                     while (true)
                     {
@@ -195,8 +192,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                                 acc = new ToolCallAccumulator { Id = toolUpdate.ToolCallId ?? Guid.NewGuid().ToString() };
                                 toolCallAccumulators[toolUpdate.Index] = acc;
                             }
+
                             if (toolUpdate.FunctionName != null) acc.Name += toolUpdate.FunctionName;
-                            
                             if (toolUpdate.FunctionArgumentsUpdate != null)
                             {
                                 var bytes = toolUpdate.FunctionArgumentsUpdate.ToArray();
@@ -205,14 +202,14 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                         }
                     }
                 }
-                finally 
+                finally
                 {
                     if (enumerator != null) await enumerator.DisposeAsync();
                 }
 
                 if (streamError != null)
                 {
-                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Streaming Error:**\n\n`{streamError.Message}`" };
+                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n⚠️ **LLM Streaming Error:**\n`{streamError.Message}`" };
                     yield break;
                 }
 
@@ -221,7 +218,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 if (hasToolCalls)
                 {
                     var toolCalls = toolCallAccumulators.Values
-                        .Select(a => 
+                        .Select(a =>
                         {
                             var jsonArgs = Encoding.UTF8.GetString(a.ArgumentsStream.ToArray());
                             var cleanArgs = string.IsNullOrWhiteSpace(jsonArgs) ? "{}" : jsonArgs;
@@ -236,7 +233,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     {
                         assistantParts.Add(ChatMessageContentPart.CreateTextPart(currentIterationText));
                     }
-                    
+
                     var assistantMsg = new AssistantChatMessage(toolCalls);
                     messages.Add(assistantMsg);
 
@@ -254,7 +251,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                             var proposedAction = BuildProposedAction(definition, toolCall.FunctionArguments.ToString());
                             finalProposedActionJson = JsonSerializer.Serialize(proposedAction);
                             yield return new ChatStreamChunkDto { Type = "proposed_action", Proposed_action = proposedAction };
-                            yield break; 
+                            yield break;
                         }
 
                         finalToolStatus = $"Executed {definition.Name}";
@@ -269,7 +266,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     if (iterations >= 2)
                     {
                         messages.Add(new SystemChatMessage("SYSTEM ALARM: You have executed the necessary tools and received the data. Output a final text summary immediately. DO NOT execute any more tools."));
-                        options.ToolChoice = ChatToolChoice.CreateNoneChoice(); // Gracefully stops the AI from looping
+                        options.ToolChoice = ChatToolChoice.CreateNoneChoice(); 
                     }
                 }
                 else
@@ -278,7 +275,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 }
             }
 
-            yield return new ChatStreamChunkDto { Type = "text", Content = "\n\nExecution limit reached. Please refine your request." };
+            yield return new ChatStreamChunkDto { Type = "text", Content = "\nExecution limit reached. Please refine your request." };
         }
         finally
         {
@@ -286,14 +283,14 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             {
                 using var finishScope = _scopeFactory.CreateScope();
                 var repo = finishScope.ServiceProvider.GetRequiredService<IOpsRepository>();
-                
+
                 var assistantMsg = new OpsMessage(
-                    Guid.CreateVersion7(), 
-                    tenantId, 
-                    convId, 
-                    "assistant", 
-                    string.IsNullOrWhiteSpace(accumulatedAssistantText) ? "[Tool Execution]" : accumulatedAssistantText, 
-                    finalToolStatus, 
+                    Guid.CreateVersion7(),
+                    tenantId,
+                    convId,
+                    "assistant",
+                    string.IsNullOrWhiteSpace(accumulatedAssistantText) ? "[Tool Execution]" : accumulatedAssistantText,
+                    finalToolStatus,
                     finalProposedActionJson);
 
                 repo.AddMessage(assistantMsg);
@@ -302,7 +299,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 {
                     var titleGen = finishScope.ServiceProvider.GetRequiredService<ILlmTitleGenerator>();
                     var newTitle = await titleGen.GenerateAsync(userMessage);
-
                     var conv = await repo.GetConversationByIdAsync(tenantId, convId, default);
                     if (conv != null)
                     {
@@ -332,7 +328,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private void TrackAndLogCost(ChatTokenUsage? usage, Guid tenantId)
     {
         if (usage == null) return;
-        _logger.LogInformation("FinOps [Tenant: {TenantId}] - Input: {Input}, Output: {Output}", 
+        _logger.LogInformation("FinOps [Tenant: {TenantId}] - Input: {Input}, Output: {Output}",
             tenantId, usage.InputTokenCount, usage.OutputTokenCount);
     }
 
@@ -346,13 +342,14 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 $"**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid! " +
                 $"**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages (like '[I proposed...]') in your text response. " +
                 $"**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs. " +
-                $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it."
+                $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it. " +
+                $"**CRITICAL RULE 5**: When executing bulk actions (Broadcasts) or financial lookups (Global Ledger), rely on the dedicated batch tools. Never attempt to loop through individual subscriber tools to send bulk messages, as this will violate system timeout boundaries."
             )
         };
 
         foreach (var msg in history)
         {
-            if (string.IsNullOrWhiteSpace(msg.Content) && string.IsNullOrWhiteSpace(msg.ProposedActionJson)) 
+            if (string.IsNullOrWhiteSpace(msg.Content) && string.IsNullOrWhiteSpace(msg.ProposedActionJson))
                 continue;
 
             var content = msg.Content;
@@ -364,7 +361,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             else if (msg.Role == "assistant")
             {
                 messages.Add(new AssistantChatMessage(content));
-                
                 if (!string.IsNullOrEmpty(msg.ProposedActionJson))
                 {
                     messages.Add(new SystemChatMessage($"[System Log: You invoked a tool with payload: {msg.ProposedActionJson}]"));
@@ -377,7 +373,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         }
 
         messages.Add(new UserChatMessage(currentMessage));
-        
         return messages;
     }
 
@@ -392,7 +387,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private ProposedActionDto BuildProposedAction(AgentToolDefinition definition, string arguments)
     {
         object payload;
-        try 
+        try
         {
             var cleanArgs = string.IsNullOrWhiteSpace(arguments) ? "{}" : arguments;
             payload = JsonSerializer.Deserialize<object>(cleanArgs) ?? new object();
@@ -420,12 +415,12 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     {
         try
         {
-            var cleanArgs = string.IsNullOrWhiteSpace(arguments) || arguments.Trim() == "{}" 
-                ? "{}" 
+            var cleanArgs = string.IsNullOrWhiteSpace(arguments) || arguments.Trim() == "{}"
+                ? "{}"
                 : arguments;
 
             JsonNode jsonNode;
-            try 
+            try
             {
                 var jsonObject = JsonSerializer.Deserialize<JsonElement>(cleanArgs);
                 jsonNode = JsonNode.Parse(jsonObject.GetRawText()) as JsonObject ?? new JsonObject();
@@ -434,8 +429,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             {
                 jsonNode = new JsonObject();
             }
-            
-            // FIX: Must convert Guid to String before assigning to JsonNode to avoid crash loop
+
             jsonNode["OrganizationId"] = tenantId.ToString();
 
             var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };

@@ -6,15 +6,6 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries;
 
-public record CouponDto(
-    string Id,
-    string Code,
-    string DiscountType,
-    double Amount,
-    int MaxUses,
-    int UsedCount,
-    DateTimeOffset? ExpiresAt);
-
 public record GlobalTransactionDto(
     Guid Id, 
     decimal Amount, 

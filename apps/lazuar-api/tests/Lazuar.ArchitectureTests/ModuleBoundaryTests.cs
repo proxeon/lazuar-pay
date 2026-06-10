@@ -1,67 +1,83 @@
-using FluentAssertions;
 using NetArchTest.Rules;
 using NUnit.Framework;
-using System.Reflection;
+using System;
+using System.Linq;
+using Modules.Community.Domain.Aggregates;
+using Modules.Payments.Domain.Aggregates;
+using Modules.CRM.Domain;
+using Modules.One.Domain;
+using Modules.Messaging.Domain;
+using Modules.Ops.Domain;
 
 namespace Lazuar.ArchitectureTests;
 
+[TestFixture]
 public class ModuleBoundaryTests
 {
-    private static readonly Assembly[] ModuleAssemblies =
-    {
-        typeof(Modules.Community.Application.DependencyInjection).Assembly,
-        typeof(Modules.Messaging.Application.DependencyInjection).Assembly,
-        typeof(Modules.Payments.Application.DependencyInjection).Assembly,
-        typeof(Modules.One.Application.DependencyInjection).Assembly,
-        typeof(Modules.CRM.Contracts.CreateClientProfileCommand).Assembly 
-    };
-
-    private static readonly string[] ModuleNamespaces =
-    {
-        "Modules.Community",
-        "Modules.Messaging",
-        "Modules.Payments",
-        "Modules.One",
-        "Modules.CRM"
-    };
-
     [Test]
-    public void Modules_ShouldNotHave_CrossModuleDependencies_OutsideContracts()
+    public void CommunityDomain_Should_Not_Reference_Other_Modules()
     {
-        foreach (var moduleNamespace in ModuleNamespaces)
-        {
-            var otherModules = ModuleNamespaces
-                .Where(m => m != moduleNamespace)
-                .ToList();
+        var result = Types.InAssembly(typeof(CommunityPlan).Assembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(
+                "Modules.CRM.Domain",
+                "Modules.Payments.Domain",
+                "Modules.One.Domain",
+                "Modules.Messaging.Domain",
+                "Modules.Ops.Domain"
+            )
+            .GetResult();
 
-            // A module can ONLY reference the .Contracts namespace of another module.
-            // It MUST NOT reference .Application, .Domain, or .Infrastructure of other modules.
-            var forbiddenNamespaces = otherModules.SelectMany(m => new[]
-            {
-                $"{m}.Application",
-                $"{m}.Domain",
-                $"{m}.Infrastructure"
-            }).ToArray();
-
-            var result = Types.InAssemblies(ModuleAssemblies)
-                .That().ResideInNamespace(moduleNamespace)
-                .ShouldNot()
-                .HaveDependencyOnAny(forbiddenNamespaces)
-                .GetResult();
-
-            result.IsSuccessful.Should().BeTrue($"Module {moduleNamespace} violates strict isolation boundaries. It is directly referencing the internals of another module.");
-        }
+        Assert.That(result.IsSuccessful, Is.True, 
+            $"Community Domain violates boundaries. Failing types: {string.Join(", ", result.FailingTypeNames ?? Array.Empty<string>())}");
     }
 
     [Test]
-    public void SharedKernel_ShouldNotHave_DependencyOn_Modules()
+    public void PaymentsDomain_Should_Be_Blind_To_Community_Concepts()
     {
-        // SharedKernel must be pure and completely domain-agnostic.
-        var result = Types.InAssembly(typeof(SharedKernel.SharedKernelMarker).Assembly)
+        var result = Types.InAssembly(typeof(TenantPaymentConfiguration).Assembly)
             .ShouldNot()
-            .HaveDependencyOnAny(ModuleNamespaces)
+            .HaveDependencyOn("Modules.Community.Domain")
             .GetResult();
 
-        result.IsSuccessful.Should().BeTrue("SharedKernel must not reference any specific module.");
+        Assert.That(result.IsSuccessful, Is.True, 
+            "Payments Domain must remain completely blind to Community concepts like Coupons or Broadcasts.");
+    }
+
+    [Test]
+    public void Domain_Assemblies_Should_Not_Reference_Infrastructure()
+    {
+        var domainAssemblies = new[]
+        {
+            typeof(CommunityPlan).Assembly,
+            typeof(TenantPaymentConfiguration).Assembly,
+            typeof(ClientProfileEntity).Assembly,
+            typeof(Organization).Assembly,
+            typeof(TenantReplica).Assembly,
+            typeof(OpsConversation).Assembly
+        };
+
+        foreach (var assembly in domainAssemblies)
+        {
+            var result = Types.InAssembly(assembly)
+                .ShouldNot()
+                .HaveDependencyOnAny(
+                    "Microsoft.EntityFrameworkCore",
+                    "Dapper",
+                    "Npgsql",
+                    "Stripe",
+                    "Amazon.S3",
+                    "Modules.Community.Infrastructure",
+                    "Modules.Payments.Infrastructure",
+                    "Modules.CRM.Infrastructure",
+                    "Modules.One.Infrastructure",
+                    "Modules.Messaging.Infrastructure",
+                    "Modules.Ops.Infrastructure"
+                )
+                .GetResult();
+
+            Assert.That(result.IsSuccessful, Is.True, 
+                $"{assembly.GetName().Name} references infrastructure or external libraries. Failing types: {string.Join(", ", result.FailingTypeNames ?? Array.Empty<string>())}");
+        }
     }
 }

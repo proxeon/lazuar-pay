@@ -243,7 +243,7 @@ model PublicCheckoutRequestDto {
   name: string;
   email: string;
   phone: string;
-  is_guest_checkout?: boolean; // Instructs backend to ignore HttpOnly auth cookie to prevent cross-identity binding
+  is_guest_checkout?: boolean;
 }
 
 model MagicLinkRequestDto {
@@ -300,4 +300,22 @@ model RefundRequestDto {
 
 model BillingLinkResponseDto {
   url: string;
+}
+
+model CouponDto {
+  id: string; // GUID
+  code: string;
+  discount_type: string;
+  amount: float64;
+  max_uses: int32;
+  used_count: int32;
+  expires_at?: utcDateTime;
+}
+
+model CreateCouponRequestDto {
+  code: string;
+  discount_type: string;
+  amount: float64;
+  max_uses: int32;
+  expires_at?: utcDateTime;
 }
