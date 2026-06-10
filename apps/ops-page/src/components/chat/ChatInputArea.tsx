@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Plus, Mic, Volume2, ArrowUp, Loader2 } from "lucide-react";
+import { Plus, Mic, Volume2, ArrowUp, Loader2, BookOpen } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 interface ChatInputAreaProps {
@@ -8,14 +8,16 @@ interface ChatInputAreaProps {
   activeConversationId: string | null;
   placeholder?: string;
   variant?: "empty" | "active";
+  onOpenLibrary?: () => void;
 }
 
-export default function ChatInputArea({ 
-  onSend, 
-  isProcessing, 
-  activeConversationId, 
-  placeholder = "Write a message...", 
-  variant = "active" 
+export default function ChatInputArea({
+  onSend,
+  isProcessing,
+  activeConversationId,
+  placeholder = "Write a message...",
+  variant = "active",
+  onOpenLibrary
 }: ChatInputAreaProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -30,11 +32,7 @@ export default function ChatInputArea({
     el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
   }, []);
 
-  useEffect(() => {
-    adjustHeight();
-  }, [input, adjustHeight]);
-
-  // Clear input when switching conversations
+  useEffect(() => { adjustHeight(); }, [input, adjustHeight]);
   useEffect(() => {
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -52,33 +50,30 @@ export default function ChatInputArea({
         ref={textareaRef}
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit();
-          }
-        }}
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
         disabled={isProcessing}
         placeholder={placeholder}
         rows={1}
         className="w-full resize-none text-[14px] text-[#09090b] placeholder-[#71717a] focus:outline-none bg-transparent leading-relaxed overflow-y-auto"
         style={{ minHeight: variant === "empty" ? "44px" : "24px" }}
       />
-      
       <div className={cn("flex items-center justify-between", variant === "empty" ? "mt-3" : "mt-2")}>
-        <button className="p-1.5 text-[#71717a] hover:text-[#09090b] transition-colors" title="Attach file">
-          <Plus size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          {onOpenLibrary && (
+            <button onClick={onOpenLibrary} className="p-1.5 text-[#71717a] hover:text-[#09090b] transition-colors" title="Operations Playbook">
+              <BookOpen size={16} />
+            </button>
+          )}
+          <button className="p-1.5 text-[#71717a] hover:text-[#09090b] transition-colors" title="Attach file">
+            <Plus size={16} />
+          </button>
+        </div>
         <div className="flex items-center gap-2.5">
           <span className="text-[10px] font-bold text-[#71717a] border border-[#e5e5e5] px-1.5 py-0.5 select-none bg-white uppercase tracking-wider">
             {variant === "empty" ? "Lazuar Ops Core" : "Ops Core Max"}
           </span>
-          <button className="p-1 text-[#71717a] hover:text-[#09090b] transition-colors">
-            <Mic size={15} />
-          </button>
-          <button className="p-1 text-[#71717a] hover:text-[#09090b] transition-colors">
-            <Volume2 size={15} />
-          </button>
+          <button className="p-1 text-[#71717a] hover:text-[#09090b] transition-colors"><Mic size={15} /></button>
+          <button className="p-1 text-[#71717a] hover:text-[#09090b] transition-colors"><Volume2 size={15} /></button>
           <button
             onClick={handleSubmit}
             disabled={!input.trim() || isProcessing}
@@ -87,11 +82,7 @@ export default function ChatInputArea({
               variant === "empty" ? "h-7 w-7" : "h-6 w-6"
             )}
           >
-            {isProcessing && variant !== "empty" ? (
-              <Loader2 size={11} className="animate-spin" />
-            ) : (
-              <ArrowUp size={variant === "empty" ? 14 : 12} />
-            )}
+            {isProcessing && variant !== "empty" ? <Loader2 size={11} className="animate-spin" /> : <ArrowUp size={variant === "empty" ? 14 : 12} />}
           </button>
         </div>
       </div>
