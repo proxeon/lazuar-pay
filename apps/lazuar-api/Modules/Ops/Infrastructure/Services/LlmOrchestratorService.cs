@@ -321,28 +321,28 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             new SystemChatMessage(
                 $"You are Lazuar Ops, a highly capable internal operations agent. " +
                 $"The current Target OrganizationId is {tenantId}. " +
-                $"**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. " +
+                $"**CRITICAL RULE 1**: You must ALWAYS use search tools (like ListActivePlansAgentQuery) to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid! " +
                 $"**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages (like '[I proposed...]') in your text response. " +
-                $"**CRITICAL RULE 3**: NEVER guess, hallucinate, or manually construct URLs (like checkout links). You MUST ALWAYS use the appropriate tool to retrieve the exact environment-aware URLs."
+                $"**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs. " +
+                $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon."
             )
         };
 
-        // Inject the historical database messages into the LLM context so it remembers the conversation
         foreach (var msg in history)
         {
             if (string.IsNullOrWhiteSpace(msg.Content) && string.IsNullOrWhiteSpace(msg.ProposedActionJson)) 
                 continue;
 
+            var content = msg.Content;
+
             if (msg.Role == "user")
             {
-                messages.Add(new UserChatMessage(msg.Content));
+                messages.Add(new UserChatMessage(content));
             }
             else if (msg.Role == "assistant")
             {
-                messages.Add(new AssistantChatMessage(msg.Content));
+                messages.Add(new AssistantChatMessage(content));
                 
-                // CRITICAL FIX: Do not append JSON to the Assistant's content. 
-                // Add it as a separate System Note so the AI doesn't mimic the pattern in its own voice.
                 if (!string.IsNullOrEmpty(msg.ProposedActionJson))
                 {
                     messages.Add(new SystemChatMessage($"[System Log: You invoked a tool with payload: {msg.ProposedActionJson}]"));
@@ -350,12 +350,10 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             }
             else if (msg.Role == "system")
             {
-                // Push system execution results to the LLM so it knows if actions succeeded or failed
-                messages.Add(new SystemChatMessage(msg.Content));
+                messages.Add(new SystemChatMessage(content));
             }
         }
 
-        // Add the current user prompt
         messages.Add(new UserChatMessage(currentMessage));
         
         return messages;

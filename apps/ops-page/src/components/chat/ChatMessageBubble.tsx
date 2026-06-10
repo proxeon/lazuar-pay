@@ -43,7 +43,7 @@ export default function ChatMessageBubble({
     return (
       <div className="group flex flex-col items-end w-full relative">
         <div className="bg-[#f4f4f5] px-4 py-2.5 max-w-[80%] rounded-2xl border border-[#e5e5e5] break-words shrink-0 [&_.prose>*:first-child]:mt-0 [&_.prose>*:last-child]:mb-0">
-          <MarkdownContent content={msg.content} />
+          <MarkdownContent content={msg.content} onSend={onSend} />
         </div>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mt-2 select-none text-[#71717a] text-[11px] font-sans">
           <button onClick={() => onSend(msg.content)} className="p-1 hover:text-[#09090b] transition-colors" title="Retry">
@@ -65,7 +65,7 @@ export default function ChatMessageBubble({
     <div className="w-full flex flex-col items-start min-w-0">
       {msg.content && (
         <div className="w-full">
-          <MarkdownContent content={msg.content} />
+          <MarkdownContent content={msg.content} onSend={onSend} />
         </div>
       )}
 

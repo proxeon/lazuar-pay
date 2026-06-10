@@ -11,7 +11,7 @@ using Modules.Community.Application.Queries;
 using Modules.CRM.Contracts;
 using Modules.Messaging.Contracts;
 
-// Alias to prevent ambiguity with the old deleted interface
+// Alias to prevent ambiguity
 using ILocalMessageTemplateQueryService = Modules.Community.Application.Queries.IMessageTemplateQueryService;
 
 namespace Modules.Community.Application.EventHandlers;
@@ -25,20 +25,23 @@ public class NotificationDispatchDomainEventHandlers :
 {
     private readonly ICrmQueryService _crmQueryService;
     private readonly ILocalMessageTemplateQueryService _templateService;
-    private readonly ICommunityQueryService _communityQueryService;
+    private readonly ICommunitySubscriptionRepository _subscriptionRepository;
+    private readonly ICommunityPlanRepository _planRepository;
     private readonly IEventBus _eventBus;
     private readonly ICommunityLinkService _linkService;
 
     public NotificationDispatchDomainEventHandlers(
         ICrmQueryService crmQueryService, 
         ILocalMessageTemplateQueryService templateService,
-        ICommunityQueryService communityQueryService,
+        ICommunitySubscriptionRepository subscriptionRepository,
+        ICommunityPlanRepository planRepository,
         [FromKeyedServices("CommunityEventBus")] IEventBus eventBus,
         ICommunityLinkService linkService)
     {
         _crmQueryService = crmQueryService;
         _templateService = templateService;
-        _communityQueryService = communityQueryService;
+        _subscriptionRepository = subscriptionRepository;
+        _planRepository = planRepository;
         _eventBus = eventBus;
         _linkService = linkService;
     }
@@ -59,8 +62,12 @@ public class NotificationDispatchDomainEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var sub = await _communityQueryService.GetPortalSubscriptionAsync(notification.OrganizationId, notification.SubscriptionId);
-        var plan = await _communityQueryService.GetAdminPlanByIdAsync(notification.OrganizationId, Guid.Parse(sub!.Plan_id));
+        // FIX: Use EF Repositories instead of Dapper so we can read uncommitted data
+        var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
+        if (sub == null) return;
+
+        var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
+        if (plan == null) return;
 
         var templateName = notification.IsFirstPayment ? "Community Welcome" : "Community Payment Success";
         var template = await _templateService.GetTemplateByNameAsync(notification.OrganizationId, templateName);
@@ -69,9 +76,9 @@ public class NotificationDispatchDomainEventHandlers :
         {
             ["customer_name"] = profile.FullName,
             ["business_name"] = "Our Community",
-            ["plan_name"] = plan!.Name,
-            ["group_link"] = plan.Telegram_invite_link ?? "",
-            ["meeting_link"] = plan.Weekly_meeting_link ?? "",
+            ["plan_name"] = plan.Name,
+            ["group_link"] = plan.TelegramInviteLink ?? "",
+            ["meeting_link"] = plan.WeeklyMeetingLink ?? "",
             ["total_price"] = plan.Price.ToString("F2")
         };
 
@@ -86,15 +93,20 @@ public class NotificationDispatchDomainEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var sub = await _communityQueryService.GetPortalSubscriptionAsync(notification.OrganizationId, notification.SubscriptionId);
+        var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
+        if (sub == null) return;
+        
+        var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
+        if (plan == null) return;
+
         var template = await _templateService.GetTemplateByNameAsync(notification.OrganizationId, "Community Subscription Cancelled");
 
         var variables = new Dictionary<string, string>
         {
             ["customer_name"] = profile.FullName,
             ["business_name"] = "Our Community",
-            ["plan_name"] = sub!.Plan_name,
-            ["current_period_end"] = sub.Current_period_end?.ToString("dd MMM yyyy") ?? "the end of your billing cycle"
+            ["plan_name"] = plan.Name,
+            ["current_period_end"] = sub.CurrentPeriodEnd?.ToString("dd MMM yyyy") ?? "the end of your billing cycle"
         };
 
         var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Cancelled";
@@ -108,20 +120,24 @@ public class NotificationDispatchDomainEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var sub = await _communityQueryService.GetPortalSubscriptionAsync(notification.OrganizationId, notification.SubscriptionId);
-        var plan = await _communityQueryService.GetAdminPlanByIdAsync(notification.OrganizationId, Guid.Parse(sub!.Plan_id));
+        var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
+        if (sub == null) return;
+        
+        var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
+        if (plan == null) return;
+
         var template = (await _templateService.GetTemplatesAsync(new[] { notification.TemplateId })).FirstOrDefault();
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var renewalLink = sub.Is_reminder_only 
-            ? $"Please remit payment directly. Notes: {sub.Admin_notes ?? "Contact us for payment details"}"
-            : $"{baseUrl}/{plan!.Slug}/checkout";
+        var renewalLink = sub.IsReminderOnly 
+            ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
+            : $"{baseUrl}/{plan.Slug}/checkout";
 
         var variables = new Dictionary<string, string>
         {
             ["customer_name"] = profile.FullName,
             ["business_name"] = "Our Community",
-            ["plan_name"] = plan!.Name,
+            ["plan_name"] = plan.Name,
             ["renewal_link"] = renewalLink
         };
 
@@ -146,13 +162,16 @@ public class NotificationDispatchDomainEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var sub = await _communityQueryService.GetPortalSubscriptionAsync(notification.OrganizationId, notification.SubscriptionId);
-        var plan = await _communityQueryService.GetAdminPlanByIdAsync(notification.OrganizationId, Guid.Parse(sub!.Plan_id));
+        var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
+        if (sub == null) return;
+        
+        var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
+        if (plan == null) return;
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var renewalLink = sub.Is_reminder_only 
-            ? $"Please remit payment directly. Notes: {sub.Admin_notes ?? "Contact us for payment details"}"
-            : $"{baseUrl}/{plan!.Slug}/checkout";
+        var renewalLink = sub.IsReminderOnly 
+            ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
+            : $"{baseUrl}/{plan.Slug}/checkout";
 
         string subject = "Important Update Regarding Your Subscription";
         string body = "";
@@ -168,7 +187,7 @@ public class NotificationDispatchDomainEventHandlers :
             {
                 ["customer_name"] = profile.FullName,
                 ["business_name"] = "Our Community",
-                ["plan_name"] = plan!.Name,
+                ["plan_name"] = plan.Name,
                 ["total_price"] = plan.Price.ToString("F2"),
                 ["renewal_link"] = renewalLink
             };

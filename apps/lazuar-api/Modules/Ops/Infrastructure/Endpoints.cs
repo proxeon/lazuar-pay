@@ -131,7 +131,12 @@ public static class Endpoints
             var tenantId = executionCtx.TenantId;
             if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
             
+            // Force-inject the secure context variables into the payload
             jsonNode["OrganizationId"] = tenantId;
+            
+            // FIX: Inject the RecordedBy field automatically for audit logging
+            // using the same AuditSignature mechanism the rest of the platform uses
+            jsonNode["RecordedBy"] = executionCtx.AuditSignature;
 
             httpContext.Items["IsAgentAction"] = true;
 
