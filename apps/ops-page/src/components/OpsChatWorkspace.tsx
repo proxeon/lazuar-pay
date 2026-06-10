@@ -11,13 +11,14 @@ import ChatInputArea from "./chat/ChatInputArea";
 interface OpsChatWorkspaceProps {
   activeConversationId: string | null;
   setActiveConversationId: (id: string) => void;
+  activeConversationTitle: string;
   messages: Message[];
   setMessages: (updater: (prev: Message[]) => Message[]) => void;
   onStreamComplete: () => void;
 }
 
 export default function OpsChatWorkspace({
-  activeConversationId, setActiveConversationId, messages, setMessages, onStreamComplete
+  activeConversationId, setActiveConversationId, activeConversationTitle, messages, setMessages, onStreamComplete
 }: OpsChatWorkspaceProps) {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -27,7 +28,6 @@ export default function OpsChatWorkspace({
     setMessages, 
     (newId) => {
       onStreamComplete(); 
-      // Safely transition the active state to the actual database GUID
       if (activeConversationId === "new" && newId) {
         setActiveConversationId(newId);
       }
@@ -48,10 +48,10 @@ export default function OpsChatWorkspace({
       ) : (
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
           
-          <div className="absolute top-0 left-0 right-0 h-11 bg-white px-6 flex items-center justify-between z-20 select-none">
+          <div className="absolute top-0 left-0 right-0 h-11 bg-white px-6 flex items-center justify-between z-20 select-none border-b border-[#f4f4f5]">
             <div className="flex items-center gap-1.5 cursor-pointer group">
-              <span className="text-[13px] font-semibold text-[#09090b]">Active Query Control</span>
-              <ChevronDown size={12} className="text-[#71717a] group-hover:text-[#09090b] transition-colors" />
+              <span className="text-[13px] font-semibold text-[#09090b] truncate max-w-[300px]">{activeConversationTitle}</span>
+              <ChevronDown size={12} className="text-[#71717a] group-hover:text-[#09090b] transition-colors shrink-0" />
             </div>
             <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-white to-transparent pointer-events-none" />
           </div>

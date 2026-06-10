@@ -60,13 +60,20 @@ export default function ChatMessageBubble({
     );
   }
 
-  // Assistant Role
   return (
     <div className="w-full flex flex-col items-start min-w-0">
-      {msg.content && (
-        <div className="w-full">
-          <MarkdownContent content={msg.content} onSend={onSend} />
+      {msg.isStreaming && !msg.content && !msg.toolStatus && !msg.proposedAction ? (
+        <div className="flex items-center gap-1.5 h-6 px-1 my-2">
+          <span className="w-1.5 h-1.5 bg-[#a1a1aa] rounded-full animate-bounce [animation-delay:-0.3s]" />
+          <span className="w-1.5 h-1.5 bg-[#a1a1aa] rounded-full animate-bounce [animation-delay:-0.15s]" />
+          <span className="w-1.5 h-1.5 bg-[#a1a1aa] rounded-full animate-bounce" />
         </div>
+      ) : (
+        msg.content && (
+          <div className="w-full">
+            <MarkdownContent content={msg.content} onSend={onSend} />
+          </div>
+        )
       )}
 
       {msg.toolStatus && (

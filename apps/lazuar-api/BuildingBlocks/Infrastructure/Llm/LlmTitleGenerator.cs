@@ -32,7 +32,8 @@ public sealed class LlmTitleGenerator : ILlmTitleGenerator
 
         try
         {
-            var chatClient = _clientFactory.CreateClient("MIMO", "xiaomi/mimo-v2.5-pro", false);
+            // Note: Inherits default provider and model from appsettings.json
+            var chatClient = _clientFactory.CreateClient(null, null, false);
             
             var messages = new ChatMessage[]
             {
@@ -40,9 +41,16 @@ public sealed class LlmTitleGenerator : ILlmTitleGenerator
                 new UserChatMessage(preview)
             };
 
-            var options = new ChatCompletionOptions { MaxOutputTokenCount = 30 };
+            // FIX: Removed MaxOutputTokenCount. 
+            // Many OpenRouter models reject or return empty when max_completion_tokens is too low.
+            var result = await chatClient.CompleteChatAsync(messages);
 
-            var result = await chatClient.CompleteChatAsync(messages, options);
+            if (result.Value.Content == null || result.Value.Content.Count == 0)
+            {
+                _logger.LogWarning("Title generation returned empty content, using fallback");
+                return GenerateFallback(contentContext);
+            }
+
             var text = result.Value.Content[0].Text;
 
             var cleaned = text

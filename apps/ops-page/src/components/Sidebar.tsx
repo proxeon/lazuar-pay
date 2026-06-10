@@ -46,8 +46,6 @@ export default function Sidebar({
     return () => document.removeEventListener("click", closeMenu);
   }, []);
 
-  const activeWorkspace = entitlements.find(e => e.workspace_id === activeWorkspaceId);
-
   return (
     <motion.aside
       initial={false}
@@ -102,7 +100,7 @@ export default function Sidebar({
 
       {expanded && (
         <div className="flex items-center justify-between px-4 pt-4 pb-1 text-[#71717a] shrink-0 select-none border-t border-[#f4f4f5]">
-          <span className="text-[11px] font-bold uppercase tracking-wider">Recent ({activeWorkspace?.workspace_name})</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider">Recent</span>
         </div>
       )}
 

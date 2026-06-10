@@ -179,6 +179,10 @@ export default function App() {
     return <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] text-[11px] font-bold uppercase tracking-widest text-rose-600">Access Denied: No active workspace entitlements found.</div>;
   }
 
+  const activeConversationTitle = activeConversationId === "new" 
+    ? "New Chat" 
+    : conversationData?.find(c => c.id === activeConversationId)?.title || "Active Query Control";
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -275,6 +279,7 @@ export default function App() {
                 <OpsChatWorkspace
                   activeConversationId={activeConversationId}
                   setActiveConversationId={setActiveConversationId}
+                  activeConversationTitle={activeConversationTitle}
                   messages={activeMessages}
                   setMessages={setActiveMessages}
                   onStreamComplete={() => refetchConversations()}
