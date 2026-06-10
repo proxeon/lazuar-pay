@@ -4,16 +4,26 @@ import type { Message } from "../types/chat";
 
 export function useChatStream(
   activeConversationId: string | null,
-  setMessages: (updater: (prev: Message[]) => Message[]) => void
+  setMessages: (updater: (prev: Message[]) => Message[]) => void,
+  onStreamComplete: (newConversationId?: string) => void
 ) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const executeStreamCall = async (payloadMessage: string, targetAssistantMsgId: string) => {
     try {
+      const tenantId = localStorage.getItem("ops_active_workspace_id") || "";
+      const isNew = activeConversationId === "new";
+
       const response = await fetch(`${API_URL}/ops/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: payloadMessage }),
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Tenant-Id": tenantId 
+        },
+        body: JSON.stringify({ 
+          message: payloadMessage,
+          conversation_id: isNew ? undefined : activeConversationId 
+        }),
         credentials: "include"
       });
 
@@ -43,14 +53,9 @@ export function useChatStream(
                 setMessages((prev) =>
                   prev.map((msg) => {
                     if (msg.id !== targetAssistantMsgId) return msg;
-
-                    if (chunk.type === "text" && chunk.content) {
-                      return { ...msg, content: msg.content + chunk.content, toolStatus: undefined };
-                    } else if (chunk.type === "tool_status" && chunk.tool_name) {
-                      return { ...msg, toolStatus: `Running ${chunk.tool_name}...` };
-                    } else if (chunk.type === "proposed_action" && chunk.proposed_action) {
-                      return { ...msg, proposedAction: chunk.proposed_action, toolStatus: undefined };
-                    }
+                    if (chunk.type === "text" && chunk.content) return { ...msg, content: msg.content + chunk.content, toolStatus: undefined };
+                    if (chunk.type === "tool_status" && chunk.tool_name) return { ...msg, toolStatus: `Running ${chunk.tool_name}...` };
+                    if (chunk.type === "proposed_action" && chunk.proposed_action) return { ...msg, proposedAction: chunk.proposed_action, toolStatus: undefined };
                     return msg;
                   })
                 );
@@ -61,28 +66,21 @@ export function useChatStream(
           }
         }
       }
+      
+      // If it was a new conversation, the backend just saved it. Trigger a refetch so the sidebar updates.
+      onStreamComplete(isNew ? "refresh_trigger" : undefined);
+      
     } catch (error) {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === targetAssistantMsgId
-            ? { ...msg, content: "Network error occurred." }
-            : msg
-        )
-      );
+      setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, content: "Network error occurred." } : msg));
+      onStreamComplete();
     } finally {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === targetAssistantMsgId
-            ? { ...msg, isStreaming: false, toolStatus: undefined }
-            : msg
-        )
-      );
+      setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, isStreaming: false, toolStatus: undefined } : msg));
       setIsProcessing(false);
     }
   };
 
   const handleSend = async (textToSend: string) => {
-    if (!textToSend.trim() || isProcessing || !activeConversationId) return;
+    if (!textToSend.trim() || isProcessing) return;
 
     const userText = textToSend.trim();
     const userMsgId = Date.now().toString();
@@ -103,18 +101,13 @@ export function useChatStream(
       ? `[System: The action was executed successfully. Waiting for next instruction.]`
       : `[System: The action failed or was cancelled. Reason: ${message}]`;
 
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), role: "system", content: systemFeedback }
-    ]);
+    setMessages((prev) => [...prev, { id: Date.now().toString(), role: "system", content: systemFeedback }]);
 
     if (!success && actionRef && message !== "Action cancelled by user.") {
-      const fixPrompt = `System Error Notification: I tried to execute the tool '${actionRef.tool_name}' with the payload ${JSON.stringify(actionRef.command_payload)}. The system rejected it with this error: "${message}". Please analyze the error, apologize, and propose a corrected action.`;
-      
+      const fixPrompt = `System Error Notification: I tried to execute the tool '${actionRef.tool_name}'. The system rejected it with this error: "${message}". Please analyze the error, apologize, and propose a corrected action.`;
       const assistantMsgId = (Date.now() + 1).toString();
       setMessages((prev) => [...prev, { id: assistantMsgId, role: "assistant", content: "", isStreaming: true }]);
       setIsProcessing(true);
-      
       await executeStreamCall(fixPrompt, assistantMsgId);
     }
   };

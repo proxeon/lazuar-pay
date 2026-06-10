@@ -80,7 +80,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     {
         var tenantId = GetValidatedTenantId();
 
-        // 1. Establish Persistence Boundaries before streaming
         Guid convId;
         using (var setupScope = _scopeFactory.CreateScope())
         {
@@ -122,6 +121,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 var hasToolCalls = false;
                 ChatTokenUsage? finalUsage = null;
                 IAsyncEnumerator<StreamingChatCompletionUpdate>? enumerator = null;
+                Exception? streamError = null;
 
                 try
                 {
@@ -130,14 +130,32 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 }
                 catch (Exception ex)
                 {
-                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Request Error:**\n\n`{ex.Message}`" };
+                    streamError = ex;
+                }
+
+                if (streamError != null)
+                {
+                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Request Error:**\n\n`{streamError.Message}`" };
                     yield break;
                 }
 
                 try 
                 {
-                    while (await enumerator.MoveNextAsync())
+                    while (true)
                     {
+                        bool hasNext;
+                        try
+                        {
+                            hasNext = await enumerator!.MoveNextAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            streamError = ex;
+                            break;
+                        }
+
+                        if (!hasNext) break;
+
                         var update = enumerator.Current;
                         if (update.Usage != null) finalUsage = update.Usage;
 
@@ -169,6 +187,12 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 finally 
                 {
                     if (enumerator != null) await enumerator.DisposeAsync();
+                }
+
+                if (streamError != null)
+                {
+                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Streaming Error:**\n\n`{streamError.Message}`" };
+                    yield break;
                 }
 
                 TrackAndLogCost(finalUsage, tenantId);
@@ -231,7 +255,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         }
         finally
         {
-            // 2. Guaranteed Persistence Block (Executes even if the client closes the browser)
             try
             {
                 using var finishScope = _scopeFactory.CreateScope();
@@ -247,7 +270,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     finalProposedActionJson);
 
                 repo.AddMessage(assistantMsg);
-                await repo.SaveChangesAsync(default); // Ignore CT to guarantee save completion
+                await repo.SaveChangesAsync(default);
             }
             catch (Exception ex)
             {

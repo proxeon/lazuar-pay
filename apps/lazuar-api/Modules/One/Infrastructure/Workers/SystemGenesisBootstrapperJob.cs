@@ -4,8 +4,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BuildingBlocks.Application;
-using Lazuar.Api.Configuration;
 using Modules.One.Domain;
+using Modules.One.Infrastructure.Configuration;
 
 namespace Modules.One.Infrastructure.Workers;
 

@@ -1,4 +1,4 @@
-namespace Lazuar.Api.Configuration;
+namespace Modules.One.Infrastructure.Configuration;
 
 /// <summary>
 /// Maps the root platform administrator credentials from environment variables.

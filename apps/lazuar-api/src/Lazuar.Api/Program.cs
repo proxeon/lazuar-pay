@@ -14,13 +14,13 @@ using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
 using BuildingBlocks.Infrastructure.Llm;
 using Modules.One.Infrastructure;
+using Modules.One.Infrastructure.Configuration;
 using Modules.Messaging.Infrastructure;
 using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Modules.Ops.Infrastructure;
 using Lazuar.Api;
-using Lazuar.Api.Configuration;
 using Lazuar.Api.Middleware;
 using Lazuar.ApiTypes;
 

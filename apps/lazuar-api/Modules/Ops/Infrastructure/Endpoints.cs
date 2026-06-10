@@ -21,8 +21,6 @@ public static class Endpoints
 {
     public static IEndpointRouteBuilder MapOpsEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        // Enforce Separation of Duties: Only users elevated to CLIENT or ADMIN in a tenant can execute Ops commands.
-        // A raw SUPER_ADMIN token hitting this without a workspace context will be explicitly rejected.
         var group = endpoints.MapGroup("/ops").RequireAuthorization(policy => policy.RequireRole("CLIENT", "ADMIN"));
 
         group.MapGet("/chat/conversations", async Task<IResult> ([FromQuery] int limit, [FromQuery] int offset, IOpsRepository repo, IExecutionContextAccessor ctx) => 
@@ -41,12 +39,7 @@ public static class Endpoints
                 Updated_at = new DateTimeOffset(c.UpdatedAt)
             }).ToList();
             
-            return Results.Ok(new PaginatedResponse<OpsConversationDto> {
-                Data = dtos,
-                Current_page = (safeOffset / safeLimit) + 1,
-                Total_count = 0,
-                Total_pages = 0
-            });
+            return Results.Ok(new PaginatedResponse<OpsConversationDto>(dtos, 0, (safeOffset / safeLimit) + 1, safeLimit));
         });
 
         group.MapGet("/chat/conversations/{id:guid}/messages", async Task<IResult> (Guid id, IOpsRepository repo, IExecutionContextAccessor ctx) => 
