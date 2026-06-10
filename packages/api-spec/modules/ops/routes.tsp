@@ -33,4 +33,17 @@ interface OpsOperations {
   executeAction(
     @body body: ProposedActionDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/chat/conversations/{id}/title")
+  renameConversation(
+    @path id: string,
+    @body body: RenameConversationRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @delete
+  @route("/chat/conversations/{id}")
+  deleteConversation(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

@@ -41,3 +41,7 @@ model OpsMessageDto {
   proposed_action?: ProposedActionDto;
   created_at: utcDateTime;
 }
+
+model RenameConversationRequestDto {
+  title: string;
+}
