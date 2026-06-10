@@ -9,6 +9,19 @@ namespace LazuarApi.Ops;
 @useAuth(BearerAuth)
 @route("/ops")
 interface OpsOperations {
+  @get
+  @route("/chat/conversations")
+  getConversations(
+    @query limit?: int32 = 20,
+    @query offset?: int32 = 0,
+  ): LazuarApi.Core.PaginatedResponse<OpsConversationDto> | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/chat/conversations/{id}/messages")
+  getConversationMessages(
+    @path id: string,
+  ): OpsMessageDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
   @post
   @route("/chat")
   chat(
