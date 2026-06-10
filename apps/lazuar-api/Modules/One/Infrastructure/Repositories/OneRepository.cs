@@ -79,6 +79,13 @@ public class OneRepository : IOneRepository
             .FirstOrDefaultAsync(i => i.Id == id, ct);
     }
 
+    public void AddAppAccessRequest(AppAccessRequest request) => _context.AppAccessRequests.Add(request);
+
+    public async Task<AppAccessRequest?> GetAppAccessRequestByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.AppAccessRequests.FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await _context.SaveChangesAsync(ct);

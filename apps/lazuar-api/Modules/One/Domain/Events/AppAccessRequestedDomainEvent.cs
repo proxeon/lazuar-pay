@@ -1,0 +1,9 @@
+using BuildingBlocks.Domain;
+
+namespace Modules.One.Domain.Events;
+
+public record AppAccessRequestedDomainEvent(Guid RequestId, Guid GlobalUserId, List<string> RequestedApps) : IDomainEvent
+{
+    public Guid Id { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+}
