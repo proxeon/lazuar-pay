@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+using System.IO;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
@@ -28,7 +29,32 @@ using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
+// 1. Manually parse and inject the monorepo root .env file so .NET can read it
+var envPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../../../.env"));
+if (File.Exists(envPath))
+{
+    foreach (var line in File.ReadAllLines(envPath))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#")) continue;
+        
+        var separatorIndex = trimmed.IndexOf('=');
+        if (separatorIndex > 0)
+        {
+            var key = trimmed.Substring(0, separatorIndex).Trim();
+            var value = trimmed.Substring(separatorIndex + 1).Trim();
+            
+            // Strip wrapping quotes if present
+            if (value.StartsWith("\"") && value.EndsWith("\"") && value.Length >= 2) value = value.Substring(1, value.Length - 2);
+            if (value.StartsWith("'") && value.EndsWith("'") && value.Length >= 2) value = value.Substring(1, value.Length - 2);
+            
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables(); // Ensure custom env vars are loaded into IConfiguration
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()

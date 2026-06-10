@@ -205,6 +205,10 @@ public static class Endpoints
             {
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
             }
+            catch (BusinessRuleValidationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         }).RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
 
         group.MapPost("/access-requests/{id:guid}/reject", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
@@ -216,6 +220,10 @@ public static class Endpoints
                 return TypedResults.Ok(new StatusResponse { Status = "rejected" });
             }
             catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+            catch (BusinessRuleValidationException ex)
             {
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
             }

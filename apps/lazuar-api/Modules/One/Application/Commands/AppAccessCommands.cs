@@ -62,11 +62,16 @@ public class ApproveAppAccessCommandHandler : ICommandHandler<ApproveAppAccessCo
         var user = await _repository.GetUserByIdAsync(accessReq.GlobalUserId, ct);
         if (user == null) throw new InvalidOperationException("User not found.");
 
+        // Explicitly verify the email since the Superadmin manually approved the account
+        if (!user.IsEmailVerified)
+        {
+            user.VerifyEmail();
+        }
+
         var baseSlug = Regex.Replace(user.Name.ToLowerInvariant(), @"[^a-z0-9]", "-").Trim('-');
         if (string.IsNullOrEmpty(baseSlug)) baseSlug = "workspace";
         var uniqueSlug = $"{baseSlug}-{Guid.NewGuid().ToString()[..4]}";
 
-        // Defer to the existing CreateWorkspaceCommand to handle entitlements and events securely
         var workspaceCommand = new CreateWorkspaceCommand(
             user.Id,
             $"{user.Name}'s Workspace",

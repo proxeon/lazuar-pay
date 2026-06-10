@@ -82,6 +82,10 @@ public class SystemGenesisBootstrapperJob : IHostedService
 
             await db.SaveChangesAsync(cancellationToken);
         }
+        else
+        {
+            _logger.LogWarning("⚠️ PLATFORM_ADMIN_EMAILS or PLATFORM_ADMIN_PASSWORD is missing from environment. Superadmin accounts will not be seeded or updated.");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

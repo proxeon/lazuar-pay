@@ -26,8 +26,11 @@ export default function OpsChatWorkspace({
     activeConversationId, 
     setMessages, 
     (newId) => {
-      onStreamComplete();
-      if (activeConversationId === "new" && newId) setActiveConversationId(newId);
+      onStreamComplete(); 
+      // Safely transition the active state to the actual database GUID
+      if (activeConversationId === "new" && newId) {
+        setActiveConversationId(newId);
+      }
     }
   );
 

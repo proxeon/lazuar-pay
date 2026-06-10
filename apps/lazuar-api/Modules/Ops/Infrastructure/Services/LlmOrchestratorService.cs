@@ -68,7 +68,18 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     public async Task<ChatResponseDto> ProcessChatAsync(string userMessage, string? conversationId = null, CancellationToken ct = default)
     {
         var tenantId = GetValidatedTenantId();
-        var messages = BuildInitialMessages(tenantId, userMessage);
+        List<OpsMessage> history = new();
+
+        using (var setupScope = _scopeFactory.CreateScope())
+        {
+            var repo = setupScope.ServiceProvider.GetRequiredService<IOpsRepository>();
+            if (!string.IsNullOrEmpty(conversationId) && Guid.TryParse(conversationId, out var convId))
+            {
+                history = (await repo.GetMessagesAsync(tenantId, convId, ct)).ToList();
+            }
+        }
+
+        var messages = BuildInitialMessages(tenantId, history, userMessage);
         
         var chatClient = _clientFactory.CreateClient();
         var completion = await chatClient.CompleteChatAsync(messages, BuildChatOptions(), ct);
@@ -79,8 +90,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     public async IAsyncEnumerable<ChatStreamChunkDto> ProcessChatStreamAsync(string userMessage, string? conversationId = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var tenantId = GetValidatedTenantId();
-
+        List<OpsMessage> history = new();
         Guid convId;
+
         using (var setupScope = _scopeFactory.CreateScope())
         {
             var repo = setupScope.ServiceProvider.GetRequiredService<IOpsRepository>();
@@ -96,13 +108,19 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 var conv = await repo.GetConversationByIdAsync(tenantId, convId, ct);
                 if (conv == null) throw new InvalidOperationException("Conversation not found.");
                 conv.MarkUpdated();
+
+                // Load conversation memory from the database so the AI remembers context
+                history = (await repo.GetMessagesAsync(tenantId, convId, ct)).ToList();
             }
 
             repo.AddMessage(new OpsMessage(Guid.CreateVersion7(), tenantId, convId, "user", userMessage));
             await repo.SaveChangesAsync(ct);
         }
 
-        List<ChatMessage> messages = BuildInitialMessages(tenantId, userMessage);
+        yield return new ChatStreamChunkDto { Type = "conversation_id", Content = convId.ToString() };
+
+        // Inject the fetched memory history into the LLM context
+        List<ChatMessage> messages = BuildInitialMessages(tenantId, history, userMessage);
         var options = BuildChatOptions();
         var chatClient = _clientFactory.CreateClient();
 
@@ -296,18 +314,52 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             tenantId, usage.InputTokenCount, usage.OutputTokenCount);
     }
 
-    private List<ChatMessage> BuildInitialMessages(Guid tenantId, string userMessage)
+    private List<ChatMessage> BuildInitialMessages(Guid tenantId, IEnumerable<OpsMessage> history, string currentMessage)
     {
-        return new List<ChatMessage>
+        var messages = new List<ChatMessage>
         {
             new SystemChatMessage(
                 $"You are Lazuar Ops, a highly capable internal operations agent. " +
                 $"The current Target OrganizationId is {tenantId}. " +
                 $"**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. " +
-                $"**CRITICAL RULE 2**: DO NOT output raw JSON tool calls as plain text in your response."
-            ),
-            new UserChatMessage(userMessage)
+                $"**CRITICAL RULE 2**: DO NOT output raw JSON tool calls as plain text in your response. " +
+                $"**CRITICAL RULE 3**: NEVER guess, hallucinate, or manually construct URLs (like checkout links). You MUST ALWAYS use the appropriate tool (like GetPlanLinkAgentQuery) to retrieve the exact environment-aware URLs."
+            )
         };
+
+        // Inject the historical database messages into the LLM context so it remembers the conversation
+        foreach (var msg in history)
+        {
+            if (string.IsNullOrWhiteSpace(msg.Content) && string.IsNullOrWhiteSpace(msg.ProposedActionJson)) 
+                continue;
+
+            var content = msg.Content;
+            
+            // Remind the AI if it previously proposed an action so it has context on what it did
+            if (msg.Role == "assistant" && !string.IsNullOrEmpty(msg.ProposedActionJson))
+            {
+                content += $"\n[I proposed a system action: {msg.ProposedActionJson}]";
+            }
+
+            if (msg.Role == "user")
+            {
+                messages.Add(new UserChatMessage(content));
+            }
+            else if (msg.Role == "assistant")
+            {
+                messages.Add(new AssistantChatMessage(content));
+            }
+            else if (msg.Role == "system")
+            {
+                // Map system feedback ("Action executed successfully") as User observations so the AI reads them
+                messages.Add(new UserChatMessage(content));
+            }
+        }
+
+        // Add the current user prompt
+        messages.Add(new UserChatMessage(currentMessage));
+        
+        return messages;
     }
 
     private ChatCompletionOptions BuildChatOptions()
@@ -349,16 +401,38 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     {
         try
         {
-            var cleanArgs = string.IsNullOrWhiteSpace(arguments) ? "{}" : arguments;
-            var jsonObject = JsonSerializer.Deserialize<JsonElement>(cleanArgs);
-            var jsonNode = JsonNode.Parse(jsonObject.GetRawText()) as JsonObject ?? new JsonObject();
+            // 1. Force safety on empty or null arguments from the LLM
+            var cleanArgs = string.IsNullOrWhiteSpace(arguments) || arguments.Trim() == "{}" 
+                ? "{}" 
+                : arguments;
+
+            // 2. Parse the string into a JsonNode safely
+            JsonNode jsonNode;
+            try 
+            {
+                var jsonObject = JsonSerializer.Deserialize<JsonElement>(cleanArgs);
+                jsonNode = JsonNode.Parse(jsonObject.GetRawText()) as JsonObject ?? new JsonObject();
+            }
+            catch (JsonException)
+            {
+                // Fallback: If the LLM hallucinated totally invalid JSON, create an empty object
+                jsonNode = new JsonObject();
+            }
             
+            // 3. Force inject the TenantId context to ensure security
             jsonNode["OrganizationId"] = tenantId;
 
+            // 4. Map the JSON to the actual C# MediatR Contract
             var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
 
-            var result = await _mediator.Send(args!, ct);
+            if (args == null)
+            {
+                return "Error: Failed to deserialize arguments into command.";
+            }
+
+            // 5. Execute
+            var result = await _mediator.Send(args, ct);
             return JsonSerializer.Serialize(result);
         }
         catch (Exception ex)

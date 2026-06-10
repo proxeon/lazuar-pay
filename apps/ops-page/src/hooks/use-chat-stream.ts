@@ -10,10 +10,11 @@ export function useChatStream(
   const [isProcessing, setIsProcessing] = useState(false);
 
   const executeStreamCall = async (payloadMessage: string, targetAssistantMsgId: string) => {
-    try {
-      const tenantId = localStorage.getItem("ops_active_workspace_id") || "";
-      const isNew = activeConversationId === "new";
+    let generatedConvId: string | undefined = undefined;
+    const isNew = activeConversationId === "new";
+    const tenantId = localStorage.getItem("ops_active_workspace_id") || "";
 
+    try {
       const response = await fetch(`${API_URL}/ops/chat/stream`, {
         method: "POST",
         headers: { 
@@ -50,6 +51,12 @@ export function useChatStream(
               try {
                 const chunk: ChatStreamChunkDto = JSON.parse(dataStr);
 
+                // Intercept the conversation ID from the backend to lock the session
+                if (chunk.type === "conversation_id" && chunk.content) {
+                  generatedConvId = chunk.content;
+                  continue;
+                }
+
                 setMessages((prev) =>
                   prev.map((msg) => {
                     if (msg.id !== targetAssistantMsgId) return msg;
@@ -67,15 +74,14 @@ export function useChatStream(
         }
       }
       
-      // If it was a new conversation, the backend just saved it. Trigger a refetch so the sidebar updates.
-      onStreamComplete(isNew ? "refresh_trigger" : undefined);
-      
     } catch (error) {
       setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, content: "Network error occurred." } : msg));
-      onStreamComplete();
     } finally {
       setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, isStreaming: false, toolStatus: undefined } : msg));
       setIsProcessing(false);
+      
+      // Notify parent of the exact generated GUID if it was a new chat
+      onStreamComplete(isNew && generatedConvId ? generatedConvId : undefined);
     }
   };
 

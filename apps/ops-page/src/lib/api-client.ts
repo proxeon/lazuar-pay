@@ -5,12 +5,22 @@ export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/ap
 
 export const client = createClient<paths>({ 
   baseUrl: API_URL,
-  fetch: (url, init) => {
+  // Pass credentials: "include" so HttpOnly cookies are attached to all requests.
+  // By spreading init, we preserve any Request objects passed by openapi-fetch.
+  fetch: (input, init) => fetch(input, { ...init, credentials: "include" })
+});
+
+// Official openapi-fetch middleware to safely inject headers
+client.use({
+  onRequest({ request }) {
     const tenantId = localStorage.getItem("ops_active_workspace_id");
-    const headers = new Headers(init?.headers);
-    if (tenantId) headers.set("X-Tenant-Id", tenantId);
     
-    return fetch(url, { ...init, headers, credentials: "include" });
+    // Safely mutate the Request headers without breaking Content-Type
+    if (tenantId) {
+      request.headers.set("X-Tenant-Id", tenantId);
+    }
+    
+    return request;
   }
 });
 
