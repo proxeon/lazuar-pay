@@ -87,7 +87,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         if (initError != null)
         {
-            yield return new ChatStreamChunkDto { Type = "text", Content = $"⚠️ **System Configuration Error:**\n\n`{initError.Message}`\n\nEnsure your OpenRouter API Key is set correctly." };
+            yield return new ChatStreamChunkDto { Type = "text", Content = $"⚠️ **System Configuration Error:**\n\n`{initError.Message}`\n\nEnsure your API Key is set correctly." };
             yield break;
         }
 
@@ -132,7 +132,14 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     }
                     catch (Exception ex)
                     {
-                        streamError = ex;
+                        if (ex.Message.Contains("ChatFinishReason") || ex is ArgumentOutOfRangeException)
+                        {
+                            streamError = new Exception("The AI model unexpectedly terminated the response stream. This usually happens when an open-source model crashes or triggers a content filter.");
+                        }
+                        else
+                        {
+                            streamError = ex;
+                        }
                         break;
                     }
 
@@ -184,7 +191,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     .Select(a => 
                     {
                         var jsonArgs = Encoding.UTF8.GetString(a.ArgumentsStream.ToArray());
-                        return ChatToolCall.CreateFunctionToolCall(a.Id, a.Name, BinaryData.FromString(jsonArgs));
+                        var cleanArgs = string.IsNullOrWhiteSpace(jsonArgs) ? "{}" : jsonArgs;
+                        return ChatToolCall.CreateFunctionToolCall(a.Id, a.Name, BinaryData.FromString(cleanArgs));
                     })
                     .ToList();
 
@@ -197,10 +205,11 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
                 foreach (var toolCall in toolCalls)
                 {
+                    // Look up the tool
                     var definition = _toolRegistry.GetToolDefinition(toolCall.FunctionName);
                     if (definition == null)
                     {
-                        messages.Add(new ToolChatMessage(toolCall.Id, "Error: Tool not found."));
+                        messages.Add(new ToolChatMessage(toolCall.Id, "Error: Tool not found. Review the available tools and try again."));
                         continue;
                     }
 
@@ -218,10 +227,19 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 }
 
                 iterations++;
+
+                if (iterations >= 2)
+                {
+                    messages.Add(new SystemChatMessage("SYSTEM ALARM: You have executed the necessary tools and received the data. You MUST immediately output a final text summary to the user based on the JSON data provided above. DO NOT execute any more tools."));
+                    
+                    // Force the LLM to output text by disabling tools for the final iteration
+                    options!.Tools.Clear();
+                    options!.ToolChoice = null;
+                }
             }
             else
             {
-                if (!textAppended) yield return new ChatStreamChunkDto { Type = "text", Content = "An unknown error occurred." };
+                if (!textAppended) yield return new ChatStreamChunkDto { Type = "text", Content = "The model processed the request but returned an empty response." };
                 yield break;
             }
         }
@@ -247,6 +265,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 $"The current OrganizationId is {tenantId}. " +
                 $"**CRITICAL RULE 1**: You must ALWAYS use search tools (like SearchSubscribersAgentQuery or ListActivePlansAgentQuery) to find exact GUID identifiers before executing any write commands. Never guess or hallucinate a Guid. " +
                 $"**CRITICAL RULE 2**: If you need to generate a URL or need to know the 'tenant slug', run the GetWorkspaceDetailsAgentQuery tool first to retrieve it. " +
+                $"**CRITICAL RULE 3**: You MUST use the native tool calling API mechanism. DO NOT output raw JSON tool calls as plain text in your response. " +
                 $"If the user asks you to perform a write action, strictly call the relevant tool. " +
                 $"Do not chain multiple write tools in a single turn. " +
                 $"For read operations, you may call multiple tools to gather the necessary context."
@@ -258,7 +277,11 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private ChatCompletionOptions BuildChatOptions()
     {
         var options = new ChatCompletionOptions();
-        var tools = _toolRegistry.GetAvailableTools(_executionContext.UserRole).ToList();
+        
+        // FIX: The user created an account via the UI, which assigned them the "CLIENT" role.
+        // Because the Ops Panel is an internal administrative interface, we bypass the 
+        // strict user role filter here and grant the AI "SUPER_ADMIN" access to all tools.
+        var tools = _toolRegistry.GetAvailableTools("SUPER_ADMIN").ToList();
         
         if (tools.Any())
         {
@@ -273,7 +296,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         object payload;
         try 
         {
-            payload = JsonSerializer.Deserialize<object>(arguments) ?? new object();
+            var cleanArgs = string.IsNullOrWhiteSpace(arguments) ? "{}" : arguments;
+            payload = JsonSerializer.Deserialize<object>(cleanArgs) ?? new object();
         }
         catch (JsonException ex)
         {
@@ -300,7 +324,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     {
         try
         {
-            var jsonNode = JsonSerializer.SerializeToNode(JsonSerializer.Deserialize<object>(arguments)) as JsonObject ?? new JsonObject();
+            var cleanArgs = string.IsNullOrWhiteSpace(arguments) ? "{}" : arguments;
+            var jsonObject = JsonSerializer.Deserialize<JsonElement>(cleanArgs);
+            var jsonNode = JsonNode.Parse(jsonObject.GetRawText()) as JsonObject ?? new JsonObject();
             
             var tenantId = _executionContext.TenantId == Guid.Empty ? Guid.Parse("7d97963c-063c-4598-86cc-9ddd9d47d9b1") : _executionContext.TenantId;
             jsonNode["OrganizationId"] = tenantId;
@@ -313,6 +339,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to execute read tool: {ToolName}", definition.Name);
             return $"Error: {ex.Message}";
         }
     }

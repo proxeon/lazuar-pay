@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Ops/Application/Services/ToolRegistry.cs
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -76,9 +75,6 @@ public class ToolRegistry : IToolRegistry
         return (JsonObject)GetSchemaForType(type);
     }
 
-    /// <summary>
-    /// Recursively generates OpenAPI-compatible JSON schemas for primitives, arrays, and complex objects.
-    /// </summary>
     private JsonNode GetSchemaForType(Type type)
     {
         var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
@@ -129,6 +125,7 @@ public class ToolRegistry : IToolRegistry
             var jsonAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>();
             var propName = jsonAttr?.Name ?? prop.Name;
 
+            // We hide these fields from the AI so it doesn't try to hallucinate them
             if (propName == "OrganizationId" || propName == "Id" || propName == "RecordedBy") continue;
 
             properties[propName] = GetSchemaForType(prop.PropertyType);
@@ -140,16 +137,20 @@ public class ToolRegistry : IToolRegistry
             }
         }
 
+        // FIX: Google Gemini strictly rejects tools with 0 properties. 
+        // Since we hide `OrganizationId`, many of our tools become empty. 
+        // We inject a dummy variable here to keep the schema valid for Gemini.
+        if (properties.Count == 0)
+        {
+            properties["_meta"] = new JsonObject { ["type"] = "string", ["description"] = "Optional metadata context. Leave empty." };
+        }
+
         schema["properties"] = properties;
         if (required.Count > 0) schema["required"] = required;
-        schema["additionalProperties"] = false;
 
         return schema;
     }
 
-    /// <summary>
-    /// Extracts the generic type T from IEnumerable<T> or T[].
-    /// </summary>
     private Type? GetElementType(Type type)
     {
         if (type.IsArray) return type.GetElementType();
