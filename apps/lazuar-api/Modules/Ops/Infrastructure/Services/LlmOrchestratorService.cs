@@ -81,7 +81,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         var messages = BuildInitialMessages(tenantId, history, userMessage);
         
-        var chatClient = _clientFactory.CreateClient();
+        // Force reasoning mode to maximum
+        var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
+        
         var completion = await chatClient.CompleteChatAsync(messages, BuildChatOptions(), ct);
         
         return new ChatResponseDto { Message = completion.Value.Content[0].Text };
@@ -109,7 +111,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 if (conv == null) throw new InvalidOperationException("Conversation not found.");
                 conv.MarkUpdated();
 
-                // Load conversation memory from the database so the AI remembers context
                 history = (await repo.GetMessagesAsync(tenantId, convId, ct)).ToList();
             }
 
@@ -119,10 +120,11 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         yield return new ChatStreamChunkDto { Type = "conversation_id", Content = convId.ToString() };
 
-        // Inject the fetched memory history into the LLM context
         List<ChatMessage> messages = BuildInitialMessages(tenantId, history, userMessage);
         var options = BuildChatOptions();
-        var chatClient = _clientFactory.CreateClient();
+        
+        // Force reasoning mode to maximum
+        var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
 
         int maxIterations = 3;
         int iterations = 0;
@@ -321,7 +323,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             new SystemChatMessage(
                 $"You are Lazuar Ops, a highly capable internal operations agent. " +
                 $"The current Target OrganizationId is {tenantId}. " +
-                $"**CRITICAL RULE 1**: You must ALWAYS use search tools (like ListActivePlansAgentQuery) to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid! " +
+                $"**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid! " +
                 $"**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages (like '[I proposed...]') in your text response. " +
                 $"**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs. " +
                 $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon."
@@ -398,12 +400,10 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     {
         try
         {
-            // 1. Force safety on empty or null arguments from the LLM
             var cleanArgs = string.IsNullOrWhiteSpace(arguments) || arguments.Trim() == "{}" 
                 ? "{}" 
                 : arguments;
 
-            // 2. Parse the string into a JsonNode safely
             JsonNode jsonNode;
             try 
             {
@@ -412,14 +412,11 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             }
             catch (JsonException)
             {
-                // Fallback: If the LLM hallucinated totally invalid JSON, create an empty object
                 jsonNode = new JsonObject();
             }
             
-            // 3. Force inject the TenantId context to ensure security
             jsonNode["OrganizationId"] = tenantId;
 
-            // 4. Map the JSON to the actual C# MediatR Contract
             var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
 
@@ -428,7 +425,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 return "Error: Failed to deserialize arguments into command.";
             }
 
-            // 5. Execute
             var result = await _mediator.Send(args, ct);
             return JsonSerializer.Serialize(result);
         }
