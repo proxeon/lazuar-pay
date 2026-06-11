@@ -399,12 +399,13 @@ public static class Endpoints
         admin.MapPost("/coupons", async Task<Ok<IdResponse>> (CreateCouponRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             var command = new CreateCouponCommand(
-            ctx.TenantId,
-            req.Code,
-            req.Discount_type,
-            (decimal)req.Amount,
-            req.Max_uses,
-            req.Expires_at?.UtcDateTime);
+                ctx.TenantId,
+                req.Code,
+                req.Discount_type,
+                (decimal)req.Amount,
+                req.Max_uses,
+                req.Expires_at?.UtcDateTime,
+                req.Minimum_original_price.HasValue ? (decimal)req.Minimum_original_price.Value : 0);
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         });
@@ -437,7 +438,6 @@ public static class Endpoints
 
                 var checkoutUrl = await mediator.Send(command);
 
-                // Determine if it's a zero-amount bypass by checking if the URL ends with "/success"
                 var isBypass = checkoutUrl.EndsWith("/success");
 
                 return TypedResults.Ok(new CheckoutResponse 

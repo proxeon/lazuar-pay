@@ -1,5 +1,6 @@
 using System;
 using BuildingBlocks.Domain;
+using Modules.Community.Domain.Events;
 
 namespace Modules.Community.Domain.Aggregates;
 
@@ -71,6 +72,7 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
     public void Reserve()
     {
         ReservedCount++;
+        AddDomainEvent(new CouponReservedDomainEvent(Id, OrganizationId, Code));
     }
 
     public void ConfirmReservation()
@@ -82,6 +84,7 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
 
         ReservedCount--;
         UsedCount++;
+        AddDomainEvent(new CouponConfirmedDomainEvent(Id, OrganizationId, Code));
     }
 
     public void ReleaseReservation()
@@ -89,6 +92,7 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
         if (ReservedCount > 0)
         {
             ReservedCount--;
+            AddDomainEvent(new CouponReleasedDomainEvent(Id, OrganizationId, Code));
         }
     }
 }

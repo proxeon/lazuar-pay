@@ -1134,6 +1134,10 @@ export interface components {
             max_uses: number;
             /** Format: int32 */
             used_count: number;
+            /** Format: int32 */
+            reserved_count: number;
+            /** Format: double */
+            minimum_original_price: number;
             /** Format: date-time */
             expires_at?: string;
         };
@@ -1144,6 +1148,8 @@ export interface components {
             amount: number;
             /** Format: int32 */
             max_uses: number;
+            /** Format: double */
+            minimum_original_price?: number;
             /** Format: date-time */
             expires_at?: string;
         };

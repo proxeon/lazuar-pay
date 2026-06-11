@@ -13,7 +13,7 @@ public partial class CommunityQueryService
 {
     private record RawCouponDto(
         Guid Id, string Code, string DiscountType, decimal Amount,
-        int MaxUses, int UsedCount, DateTime? ExpiresAt);
+        int MaxUses, int UsedCount, int ReservedCount, decimal MinimumOriginalPrice, DateTime? ExpiresAt);
 
     public async Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId)
     {
@@ -21,7 +21,7 @@ public partial class CommunityQueryService
         if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
-            SELECT ""Id"", ""Code"", ""DiscountType"", ""Amount"", ""MaxUses"", ""UsedCount"", ""ExpiresAt""
+            SELECT ""Id"", ""Code"", ""DiscountType"", ""Amount"", ""MaxUses"", ""UsedCount"", ""ReservedCount"", ""MinimumOriginalPrice"", ""ExpiresAt""
             FROM community.""Coupons""
             WHERE ""OrganizationId"" = @OrgId
             ORDER BY ""CreatedAt"" DESC";
@@ -36,6 +36,8 @@ public partial class CommunityQueryService
             Amount = (double)c.Amount,
             Max_uses = c.MaxUses,
             Used_count = c.UsedCount,
+            Reserved_count = c.ReservedCount,
+            Minimum_original_price = (double)c.MinimumOriginalPrice,
             Expires_at = c.ExpiresAt.HasValue ? new DateTimeOffset(c.ExpiresAt.Value) : null
         }).ToList();
     }

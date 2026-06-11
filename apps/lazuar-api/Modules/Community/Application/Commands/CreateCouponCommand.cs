@@ -13,7 +13,8 @@ public record CreateCouponCommand(
     string DiscountType,
     decimal Amount,
     int MaxUses,
-    DateTime? ExpiresAt) : ICommand<Guid>
+    DateTime? ExpiresAt,
+    decimal MinimumOriginalPrice = 0) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -35,7 +36,8 @@ public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, G
             request.DiscountType,
             request.Amount,
             request.MaxUses,
-            request.ExpiresAt);
+            request.ExpiresAt,
+            request.MinimumOriginalPrice);
 
         _couponRepository.Add(coupon);
         await _couponRepository.SaveChangesAsync(ct);

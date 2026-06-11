@@ -381,6 +381,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("used_count")]
         public int Used_count { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("reserved_count")]
+        public int Reserved_count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("minimum_original_price")]
+        public double Minimum_original_price { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
         public System.DateTimeOffset? Expires_at { get; set; } = default!;
 
@@ -410,6 +416,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("max_uses")]
         public int Max_uses { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("minimum_original_price")]
+        public double? Minimum_original_price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
         public System.DateTimeOffset? Expires_at { get; set; } = default!;

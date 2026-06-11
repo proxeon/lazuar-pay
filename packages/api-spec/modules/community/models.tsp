@@ -318,6 +318,8 @@ model CouponDto {
   amount: float64;
   max_uses: int32;
   used_count: int32;
+  reserved_count: int32;
+  minimum_original_price: float64;
   expires_at?: utcDateTime;
 }
 
@@ -326,5 +328,6 @@ model CreateCouponRequestDto {
   discount_type: string;
   amount: float64;
   max_uses: int32;
+  minimum_original_price?: float64;
   expires_at?: utcDateTime;
 }
