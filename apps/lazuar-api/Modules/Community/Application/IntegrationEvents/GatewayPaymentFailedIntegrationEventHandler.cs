@@ -7,7 +7,7 @@ using Modules.Payments.Contracts.Events;
 
 namespace Modules.Community.Application.IntegrationEvents;
 
-public class GatewayPaymentFailedIntegrationEventHandler 
+public class GatewayPaymentFailedIntegrationEventHandler
     : IIntegrationEventHandler<GatewayPaymentFailedIntegrationEvent>
 {
     private readonly IMediator _mediator;
@@ -26,7 +26,7 @@ public class GatewayPaymentFailedIntegrationEventHandler
         }
 
         // 2. Extract subscription id
-        if (!@event.Metadata.TryGetValue("subscription_id", out var subIdStr) || 
+        if (!@event.Metadata.TryGetValue("subscription_id", out var subIdStr) ||
             !Guid.TryParse(subIdStr, out var subscriptionId))
         {
             return;

@@ -22,7 +22,7 @@ public class ToolRegistry : IToolRegistry
     private void DiscoverTools()
     {
         var queryTypes = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(a => 
+            .SelectMany(a =>
             {
                 try { return a.GetTypes(); }
                 catch (ReflectionTypeLoadException e) { return e.Types; }
@@ -35,7 +35,7 @@ public class ToolRegistry : IToolRegistry
         {
             var attribute = type.GetCustomAttribute<AgentToolAttribute>()!;
             var schema = GenerateJsonSchema(type);
-            
+
             bool isWriteCommand = type.GetInterfaces().Any(i => i == typeof(ICommand) || (i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommand<>)));
 
             var chatTool = ChatTool.CreateFunctionTool(
@@ -57,7 +57,7 @@ public class ToolRegistry : IToolRegistry
 
     public IEnumerable<AgentToolDefinition> GetAvailableTools(string userRole)
     {
-        return _tools.Values.Where(t => 
+        return _tools.Values.Where(t =>
         {
             var attr = t.RequestType.GetCustomAttribute<AgentToolAttribute>();
             return attr != null && (attr.AllowedRoles.Length == 0 || attr.AllowedRoles.Contains(userRole, StringComparer.OrdinalIgnoreCase));
@@ -85,19 +85,19 @@ public class ToolRegistry : IToolRegistry
             schema["type"] = "integer";
             return schema;
         }
-        
+
         if (underlyingType == typeof(decimal) || underlyingType == typeof(double) || underlyingType == typeof(float))
         {
             schema["type"] = "number";
             return schema;
         }
-        
+
         if (underlyingType == typeof(bool))
         {
             schema["type"] = "boolean";
             return schema;
         }
-        
+
         if (underlyingType == typeof(string) || underlyingType == typeof(Guid) || underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
         {
             schema["type"] = "string";
@@ -108,11 +108,11 @@ public class ToolRegistry : IToolRegistry
         {
             schema["type"] = "array";
             var elementType = GetElementType(underlyingType);
-            
-            schema["items"] = elementType != null 
-                ? GetSchemaForType(elementType) 
+
+            schema["items"] = elementType != null
+                ? GetSchemaForType(elementType)
                 : new JsonObject { ["type"] = "string" };
-                
+
             return schema;
         }
 
@@ -154,15 +154,15 @@ public class ToolRegistry : IToolRegistry
     private Type? GetElementType(Type type)
     {
         if (type.IsArray) return type.GetElementType();
-        
+
         var enumerableType = type.GetInterfaces()
             .FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEnumerable<>));
-        
+
         if (enumerableType != null) return enumerableType.GetGenericArguments()[0];
-        
+
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
             return type.GetGenericArguments()[0];
-            
+
         return null;
     }
 }

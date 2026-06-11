@@ -46,7 +46,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         // If it's not a completed payment event (e.g., checkout.session.expired), we just ack it and stop here.
         if (parsedResult.EventType != "PAYMENT_COMPLETED")
         {
-            return; 
+            return;
         }
 
         // 3. Idempotency Check
@@ -59,7 +59,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         // 4. Lock it (Save Log)
         var log = new PaymentWebhookLog(parsedResult.EventId, config.GatewayType);
         _logRepository.Add(log);
-        
+
         // 5. Publish Integration Event to the Outbox
         var integrationEvent = new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: request.TenantId,
@@ -70,7 +70,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         );
 
         await _eventBus.PublishAsync(integrationEvent);
-        
+
         // 6. Flush the context to commit the log and outbox message transactionally!
         // If the DB fails here, neither the log nor the outbox event is saved.
         await _logRepository.SaveChangesAsync(cancellationToken);

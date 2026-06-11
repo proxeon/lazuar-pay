@@ -3,9 +3,9 @@ using Amazon.S3.Model;
 
 namespace BuildingBlocks.Infrastructure;
 
-public interface IR2StorageService 
-{ 
-    Task<string?> UploadAsync(Stream data, string bucket, string key, string contentType, CancellationToken ct = default); 
+public interface IR2StorageService
+{
+    Task<string?> UploadAsync(Stream data, string bucket, string key, string contentType, CancellationToken ct = default);
 }
 
 public class R2StorageService : IR2StorageService
@@ -23,7 +23,7 @@ public class R2StorageService : IR2StorageService
             InputStream = data,
             ContentType = contentType
         };
-        
+
         var response = await _client.PutObjectAsync(request, ct);
         return response.HttpStatusCode == System.Net.HttpStatusCode.OK ? key : null;
     }

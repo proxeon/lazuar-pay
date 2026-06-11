@@ -85,12 +85,12 @@ public partial class CommunityQueryService
             ORDER BY pr.""CreatedAt"" DESC
             LIMIT 500";
 
-        return await connection.QueryAsync<GlobalTransactionDto>(sql, new 
-        { 
-            OrgId = organizationId, 
-            FromDate = fromDate, 
-            ToDate = toDate, 
-            Status = status 
+        return await connection.QueryAsync<GlobalTransactionDto>(sql, new
+        {
+            OrgId = organizationId,
+            FromDate = fromDate,
+            ToDate = toDate,
+            Status = status
         });
     }
 }

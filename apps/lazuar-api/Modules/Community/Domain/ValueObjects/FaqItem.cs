@@ -12,7 +12,7 @@ public class FaqItem : ValueObject
     {
         if (string.IsNullOrWhiteSpace(question)) throw new ArgumentException("Question cannot be empty.", nameof(question));
         if (string.IsNullOrWhiteSpace(answer)) throw new ArgumentException("Answer cannot be empty.", nameof(answer));
-        
+
         Id = string.IsNullOrWhiteSpace(id) ? Guid.CreateVersion7().ToString() : id;
         Question = question;
         Answer = answer;

@@ -12,7 +12,7 @@ public class WorkspaceInvitation : Entity, IAggregateRoot, IMustHaveTenant
     public string TokenHash { get; private set; }
     public DateTime ExpiresAt { get; private set; }
     public string Status { get; private set; }
-    
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 

@@ -28,9 +28,9 @@ public class UpdateMessageTemplateCommandHandler : ICommandHandler<UpdateMessage
             .FirstOrDefaultAsync(t => t.Id == request.TemplateId && t.OrganizationId == request.OrganizationId, cancellationToken);
 
         if (template == null) throw new InvalidOperationException("Template not found.");
-        
+
         template.UpdateContent(request.Subject, request.Body);
-        
+
         await _context.SaveChangesAsync(cancellationToken);
     }
 }
@@ -86,7 +86,7 @@ public class SendTestReminderCommandHandler : ICommandHandler<SendTestReminderCo
     private readonly IEventBus _eventBus;
 
     public SendTestReminderCommandHandler(
-        IMessageTemplateQueryService templateService, 
+        IMessageTemplateQueryService templateService,
         [FromKeyedServices("CommunityEventBus")] IEventBus eventBus)
     {
         _templateService = templateService;

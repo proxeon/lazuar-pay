@@ -12,9 +12,9 @@ public abstract class PlatformDbContext : DbContext
     protected readonly DatabaseJobTrigger JobTrigger;
 
     protected PlatformDbContext(
-        DbContextOptions options, 
-        IExecutionContextAccessor executionContext, 
-        IMediator mediator, 
+        DbContextOptions options,
+        IExecutionContextAccessor executionContext,
+        IMediator mediator,
         DatabaseJobTrigger jobTrigger) : base(options)
     {
         ExecutionContext = executionContext;
@@ -25,7 +25,7 @@ public abstract class PlatformDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(IMustHaveTenant).IsAssignableFrom(entityType.ClrType))
@@ -40,7 +40,7 @@ public abstract class PlatformDbContext : DbContext
 
     private void ConfigureGlobalFilter<TEntity>(ModelBuilder modelBuilder) where TEntity : class, IMustHaveTenant
     {
-        modelBuilder.Entity<TEntity>().HasQueryFilter(e => 
+        modelBuilder.Entity<TEntity>().HasQueryFilter(e =>
             ExecutionContext.TenantId == Guid.Empty || e.OrganizationId == ExecutionContext.TenantId);
     }
 
@@ -84,7 +84,7 @@ public abstract class PlatformDbContext : DbContext
 
         // 3. Persist all changes to the database
         var result = await base.SaveChangesAsync(cancellationToken);
-        
+
         // 4. Trigger background outbox/inbox workers instantly on success
         if (result > 0)
         {

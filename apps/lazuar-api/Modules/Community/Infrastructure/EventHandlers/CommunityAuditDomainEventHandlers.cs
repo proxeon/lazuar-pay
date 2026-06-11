@@ -36,8 +36,8 @@ public class CommunityAuditDomainEventHandlers :
 
     public Task Handle(SubscriptionRemindersPausedDomainEvent notification, CancellationToken ct)
     {
-        var status = notification.PauseUntil.HasValue 
-            ? $"PAUSED until {notification.PauseUntil.Value:yyyy-MM-dd HH:mm} UTC" 
+        var status = notification.PauseUntil.HasValue
+            ? $"PAUSED until {notification.PauseUntil.Value:yyyy-MM-dd HH:mm} UTC"
             : "RESUMED (Unpaused)";
 
         _logger.LogInformation(

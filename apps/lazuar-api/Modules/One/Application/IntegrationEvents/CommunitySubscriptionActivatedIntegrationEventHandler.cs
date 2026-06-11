@@ -15,7 +15,7 @@ public class CommunitySubscriptionActivatedIntegrationEventHandler : IIntegratio
 
     public async Task HandleAsync(CommunitySubscriptionActivatedIntegrationEvent @event)
     {
-        if (!@event.GlobalUserId.HasValue) 
+        if (!@event.GlobalUserId.HasValue)
             return; // Was a manual admin entry with no global identity attached
 
         var exists = await _repository.HasMembershipAsync(@event.GlobalUserId.Value, @event.OrganizationId);

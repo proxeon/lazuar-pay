@@ -30,7 +30,7 @@ public class RequestAppAccessCommandHandler : ICommandHandler<RequestAppAccessCo
 
         var accessRequest = new AppAccessRequest(user.Id, request.RequestedApps);
         _repository.AddAppAccessRequest(accessRequest);
-        
+
         await _repository.SaveChangesAsync(ct);
         return accessRequest.Id;
     }

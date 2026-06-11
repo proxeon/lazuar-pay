@@ -31,7 +31,7 @@ public class ListReminderSchedulesAgentQueryHandler : IQueryHandler<ListReminder
     public async Task<IEnumerable<AgentReminderScheduleResult>> Handle(ListReminderSchedulesAgentQuery request, CancellationToken cancellationToken)
     {
         var schedules = await _queryService.GetReminderSchedulesAsync(request.OrganizationId);
-        
+
         return schedules.Select(s => new AgentReminderScheduleResult(
             s.Id,
             s.Plan_name,

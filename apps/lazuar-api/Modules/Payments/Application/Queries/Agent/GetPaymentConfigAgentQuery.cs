@@ -24,16 +24,16 @@ public class GetPaymentConfigAgentQueryHandler : IQueryHandler<GetPaymentConfigA
     public async Task<AgentPaymentConfigResult> Handle(GetPaymentConfigAgentQuery request, CancellationToken cancellationToken)
     {
         var config = await _repository.GetActiveByTenantIdAsync(request.OrganizationId, cancellationToken);
-        
+
         if (config == null)
         {
             return new AgentPaymentConfigResult("NONE", false, false, false);
         }
 
         return new AgentPaymentConfigResult(
-            config.GatewayType, 
-            config.IsActive, 
-            !string.IsNullOrWhiteSpace(config.ApiKey), 
+            config.GatewayType,
+            config.IsActive,
+            !string.IsNullOrWhiteSpace(config.ApiKey),
             !string.IsNullOrWhiteSpace(config.WebhookSecret));
     }
 }

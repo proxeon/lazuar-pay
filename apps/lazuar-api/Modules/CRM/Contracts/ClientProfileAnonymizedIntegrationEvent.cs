@@ -4,7 +4,7 @@ using BuildingBlocks.Application;
 namespace Modules.CRM.Contracts;
 
 public record ClientProfileAnonymizedIntegrationEvent(
-    Guid OrganizationId, 
+    Guid OrganizationId,
     Guid ClientProfileId) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

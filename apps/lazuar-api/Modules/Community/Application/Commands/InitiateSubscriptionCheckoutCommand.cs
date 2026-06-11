@@ -61,12 +61,12 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         {
             var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
             if (coupon == null) throw new InvalidOperationException("Invalid coupon code.");
-            
+
             coupon.Validate(plan.Price);
             coupon.Reserve();
             subscription.SetPendingCoupon(coupon.Id);
             appliedCoupon = coupon;
-            
+
             _couponRepository.Update(coupon);
             finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
             if (finalPrice < 0) finalPrice = 0;
@@ -79,7 +79,7 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             var periodStart = DateTime.UtcNow;
             var intervalDays = plan.Interval == "yr" ? 365 : 30;
             var periodEnd = periodStart.AddDays(intervalDays);
-            
+
             subscription.Activate(
                 periodStart,
                 periodEnd,
@@ -88,10 +88,10 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
                 "COUPON_100_OFF",
                 null,
                 "SYSTEM");
-            
+
             appliedCoupon.ConfirmReservation();
             subscription.ClearPendingCoupon();
-            
+
             await _repository.SaveChangesAsync(ct);
             return request.SuccessUrl;
         }

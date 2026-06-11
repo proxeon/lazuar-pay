@@ -103,7 +103,7 @@ public class CommunityLifecycleJob : BackgroundService
                         coupon.ReleaseReservation();
                     }
                 }
-                
+
                 sub.Cancel();
             }
             requiresSave = true;

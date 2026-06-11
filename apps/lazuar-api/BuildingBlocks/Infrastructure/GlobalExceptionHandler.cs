@@ -14,7 +14,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             Title = "An unexpected error occurred",
             Detail = exception.Message
         };
-        
+
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
         return true;

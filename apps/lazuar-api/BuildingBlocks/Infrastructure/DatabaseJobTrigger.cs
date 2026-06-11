@@ -8,6 +8,6 @@ public class DatabaseJobTrigger
         new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest });
 
     public void Trigger() => _channel.Writer.TryWrite(true);
-    
+
     public async ValueTask WaitAsync(CancellationToken ct) => await _channel.Reader.WaitToReadAsync(ct);
 }

@@ -31,7 +31,7 @@ public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery,
             Api_key = MaskSecret(config.ApiKey),
             Merchant_id = config.MerchantId,
             Webhook_secret = MaskSecret(config.WebhookSecret),
-            Secret_key = MaskSecret(config.ApiKey), 
+            Secret_key = MaskSecret(config.ApiKey),
             Is_active = config.IsActive
         };
     }

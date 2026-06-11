@@ -25,12 +25,12 @@ public class ListMessageTemplatesAgentQueryHandler : IQueryHandler<ListMessageTe
     public async Task<IEnumerable<AgentTemplateResult>> Handle(ListMessageTemplatesAgentQuery request, CancellationToken cancellationToken)
     {
         var templates = await _templateService.GetAllTemplatesAsync(request.OrganizationId);
-        
+
         return templates.Select(t => new AgentTemplateResult(
-            t.Id, 
-            t.Name, 
-            t.Channel, 
-            t.Subject, 
+            t.Id,
+            t.Name,
+            t.Channel,
+            t.Subject,
             t.Body)).ToList();
     }
 }

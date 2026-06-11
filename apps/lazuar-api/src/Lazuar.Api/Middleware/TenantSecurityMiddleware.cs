@@ -42,18 +42,19 @@ public class TenantSecurityMiddleware
                 if (Guid.TryParse(userIdClaim, out var userId))
                 {
                     var role = await oneQueryService.GetTenantRoleAsync(userId, resolvedTenantId.Value);
-                    
+
                     if (string.IsNullOrEmpty(role))
                     {
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         context.Response.ContentType = "application/json";
-                        
-                        var error = JsonSerializer.Serialize(new { 
-                            status = 403, 
-                            title = "Forbidden", 
-                            detail = "You do not have access to this workspace. Please ensure your Lazuar One identity is authorized for this tenant." 
+
+                        var error = JsonSerializer.Serialize(new
+                        {
+                            status = 403,
+                            title = "Forbidden",
+                            detail = "You do not have access to this workspace. Please ensure your Lazuar One identity is authorized for this tenant."
                         }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
-                        
+
                         await context.Response.WriteAsync(error);
                         return; // Halt request pipeline
                     }

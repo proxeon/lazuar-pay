@@ -108,6 +108,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("url")]
         public string Url { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("is_zero_amount_bypass")]
+        public bool? Is_zero_amount_bypass { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -870,6 +873,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_guest_checkout")]
         public bool? Is_guest_checkout { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("coupon_code")]
+        public string? Coupon_code { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -1190,6 +1196,33 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("body")]
         public string Body { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ValidateCouponResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_valid")]
+        public bool Is_valid { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("discount_amount")]
+        public double Discount_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("final_price")]
+        public double Final_price { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("error_message")]
+        public string? Error_message { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

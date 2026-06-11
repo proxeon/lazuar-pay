@@ -37,17 +37,17 @@ if (File.Exists(envPath))
     {
         var trimmed = line.Trim();
         if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#")) continue;
-        
+
         var separatorIndex = trimmed.IndexOf('=');
         if (separatorIndex > 0)
         {
             var key = trimmed.Substring(0, separatorIndex).Trim();
             var value = trimmed.Substring(separatorIndex + 1).Trim();
-            
+
             // Strip wrapping quotes if present
             if (value.StartsWith("\"") && value.EndsWith("\"") && value.Length >= 2) value = value.Substring(1, value.Length - 2);
             if (value.StartsWith("'") && value.EndsWith("'") && value.Length >= 2) value = value.Substring(1, value.Length - 2);
-            
+
             Environment.SetEnvironmentVariable(key, value);
         }
     }
@@ -80,7 +80,7 @@ builder.Services.AddHttpClient("Resend", (sp, client) =>
 {
     client.BaseAddress = new Uri("https://api.resend.com/");
     client.Timeout = TimeSpan.FromSeconds(30);
-    
+
     var options = sp.GetRequiredService<IOptions<ResendOptions>>().Value;
     if (!string.IsNullOrEmpty(options.ApiKey))
     {
@@ -120,7 +120,7 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "lazuar-clients",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
-    
+
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -154,7 +154,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(origins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
-                  .AllowCredentials(); 
+                  .AllowCredentials();
         }
         else
         {
@@ -179,7 +179,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.One.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly); 
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Ops.Application.DependencyInjection).Assembly);
 

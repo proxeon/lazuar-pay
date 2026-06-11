@@ -26,16 +26,16 @@ public class SearchSubscribersAgentQueryHandler : IQueryHandler<SearchSubscriber
     {
         var response = await _queryService.GetSubscribersAsync(request.OrganizationId, 1, 500);
         var term = request.SearchTerm?.ToLowerInvariant() ?? "";
-        
+
         return response.Data
-            .Where(s => (s.Customer_name?.ToLowerInvariant().Contains(term) == true) || 
+            .Where(s => (s.Customer_name?.ToLowerInvariant().Contains(term) == true) ||
                         (s.Customer_email?.ToLowerInvariant().Contains(term) == true))
             .Select(s => new AgentSubscriberResult(
-                s.Id, 
-                s.Client_profile_id, 
-                s.Customer_name ?? "Unknown", 
-                s.Customer_email ?? "Unknown", 
-                s.Status, 
+                s.Id,
+                s.Client_profile_id,
+                s.Customer_name ?? "Unknown",
+                s.Customer_email ?? "Unknown",
+                s.Status,
                 s.Plan_name))
             .ToList();
     }

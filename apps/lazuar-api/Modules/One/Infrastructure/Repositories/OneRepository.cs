@@ -17,16 +17,16 @@ public class OneRepository : IOneRepository
     }
 
     public void AddOrganization(Organization organization) => _context.Organizations.Add(organization);
-    
+
     public async Task<Organization?> GetOrganizationByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Organizations.FirstOrDefaultAsync(o => o.Id == id, ct);
     }
-    
+
     public void AddTenantMembership(TenantMembership membership) => _context.TenantMemberships.Add(membership);
-    
+
     public void RemoveTenantMembership(TenantMembership membership) => _context.TenantMemberships.Remove(membership);
-    
+
     public void AddEntitlement(TenantAppEntitlement entitlement) => _context.TenantAppEntitlements.Add(entitlement);
 
     public async Task<TenantAppEntitlement?> GetEntitlementAsync(Guid organizationId, string appId, CancellationToken ct = default)

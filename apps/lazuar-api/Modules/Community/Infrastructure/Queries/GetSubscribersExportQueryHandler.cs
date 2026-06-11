@@ -68,7 +68,7 @@ public class GetSubscribersExportQueryHandler : IQueryHandler<GetSubscribersExpo
 
         var preamble = Encoding.UTF8.GetPreamble();
         var content = Encoding.UTF8.GetBytes(sb.ToString());
-        
+
         var result = new byte[preamble.Length + content.Length];
         Buffer.BlockCopy(preamble, 0, result, 0, preamble.Length);
         Buffer.BlockCopy(content, 0, result, preamble.Length, content.Length);

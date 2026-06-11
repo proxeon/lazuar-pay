@@ -34,7 +34,7 @@ public sealed class LlmTitleGenerator : ILlmTitleGenerator
         {
             // Note: Inherits default provider and model from appsettings.json
             var chatClient = _clientFactory.CreateClient(null, null, false);
-            
+
             var messages = new ChatMessage[]
             {
                 new SystemChatMessage(TitlePrompt),
@@ -82,7 +82,7 @@ public sealed class LlmTitleGenerator : ILlmTitleGenerator
     {
         var t = content.Replace("*", "").Replace("#", "").Replace("`", "").Trim();
         if (t.Length <= 80) return t;
-        
+
         var cut = char.IsHighSurrogate(t[79]) ? t[..79] : t[..80];
         var sp = cut.LastIndexOf(' ');
         return (sp > 20 ? cut[..sp] : cut) + "…";

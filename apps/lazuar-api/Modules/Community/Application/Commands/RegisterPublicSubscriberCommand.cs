@@ -80,13 +80,13 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         {
             var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
             if (coupon == null) throw new InvalidOperationException("Invalid coupon code.");
-            
+
             coupon.Validate(plan.Price);
             coupon.Reserve();
-            
+
             subscription.SetPendingCoupon(coupon.Id);
             appliedCoupon = coupon;
-            
+
             _couponRepository.Update(coupon);
             finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
             if (finalPrice < 0) finalPrice = 0;
@@ -100,7 +100,7 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         {
             var periodStart = DateTime.UtcNow;
             var periodEnd = periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
-            
+
             subscription.Activate(
                 periodStart,
                 periodEnd,
@@ -109,10 +109,10 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
                 "COUPON_100_OFF",
                 null,
                 "SYSTEM");
-            
+
             appliedCoupon.ConfirmReservation();
             subscription.ClearPendingCoupon();
-            
+
             await _subscriptionRepository.SaveChangesAsync(ct);
             return successUrl;
         }
@@ -134,7 +134,7 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             metadata);
 
         var checkoutUrl = await _mediator.Send(checkoutQuery, ct);
-        
+
         subscription.SetPaymentGatewaySessionId(checkoutUrl);
         await _subscriptionRepository.SaveChangesAsync(ct);
 

@@ -266,7 +266,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     if (iterations >= 2)
                     {
                         messages.Add(new SystemChatMessage("SYSTEM ALARM: You have executed the necessary tools and received the data. Output a final text summary immediately. DO NOT execute any more tools."));
-                        options.ToolChoice = ChatToolChoice.CreateNoneChoice(); 
+                        options.ToolChoice = ChatToolChoice.CreateNoneChoice();
                     }
                 }
                 else

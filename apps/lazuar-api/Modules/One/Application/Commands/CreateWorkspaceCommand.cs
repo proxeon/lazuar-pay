@@ -12,8 +12,8 @@ namespace Modules.One.Application.Commands;
 
 public record CreateWorkspaceCommand(
     Guid OwnerUserId,
-    string Name, 
-    string Slug, 
+    string Name,
+    string Slug,
     List<string> ProvisionApps) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -25,7 +25,7 @@ public class CreateWorkspaceCommandHandler : ICommandHandler<CreateWorkspaceComm
     private readonly IEventBus _eventBus;
 
     public CreateWorkspaceCommandHandler(
-        IOneRepository repository, 
+        IOneRepository repository,
         [FromKeyedServices("OneEventBus")] IEventBus eventBus)
     {
         _repository = repository;
@@ -55,7 +55,7 @@ public class CreateWorkspaceCommandHandler : ICommandHandler<CreateWorkspaceComm
             var cleanAppId = appId.Trim().ToUpperInvariant();
             var entitlement = new TenantAppEntitlement(organization.Id, cleanAppId);
             _repository.AddEntitlement(entitlement);
-            
+
             // Publish event so modules (like Community) know to run JIT template seeding
             await _eventBus.PublishAsync(new AppEntitlementGrantedIntegrationEvent(organization.Id, cleanAppId));
         }

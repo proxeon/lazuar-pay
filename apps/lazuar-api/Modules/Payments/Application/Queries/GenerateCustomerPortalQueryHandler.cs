@@ -10,7 +10,7 @@ public class GenerateCustomerPortalQueryHandler : IQueryHandler<GenerateCustomer
     private readonly IPaymentGatewayFactory _gatewayFactory;
 
     public GenerateCustomerPortalQueryHandler(
-        ITenantPaymentConfigRepository configRepository, 
+        ITenantPaymentConfigRepository configRepository,
         IPaymentGatewayFactory gatewayFactory)
     {
         _configRepository = configRepository;
@@ -20,14 +20,14 @@ public class GenerateCustomerPortalQueryHandler : IQueryHandler<GenerateCustomer
     public async Task<string> Handle(GenerateCustomerPortalQuery request, CancellationToken cancellationToken)
     {
         var config = await _configRepository.GetActiveByTenantIdAsync(request.TenantId, cancellationToken);
-        
+
         if (config == null || !config.IsActive || string.IsNullOrEmpty(config.ApiKey))
         {
             throw new InvalidOperationException("Payment gateway is not configured or active for this tenant.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
-        
+
         return await adapter.GenerateCustomerPortalAsync(
             config.ApiKey,
             request.CustomerEmail,

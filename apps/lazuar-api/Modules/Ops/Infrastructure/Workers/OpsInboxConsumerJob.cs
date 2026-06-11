@@ -6,7 +6,7 @@ namespace Modules.Ops.Infrastructure.Workers;
 
 public class OpsInboxConsumerJob : InboxConsumerJob<OpsDbContext>
 {
-    public OpsInboxConsumerJob(IServiceScopeFactory scopeFactory, ILogger<OpsInboxConsumerJob> logger, DatabaseJobTrigger jobTrigger) 
+    public OpsInboxConsumerJob(IServiceScopeFactory scopeFactory, ILogger<OpsInboxConsumerJob> logger, DatabaseJobTrigger jobTrigger)
         : base(scopeFactory, logger, jobTrigger)
     {
     }

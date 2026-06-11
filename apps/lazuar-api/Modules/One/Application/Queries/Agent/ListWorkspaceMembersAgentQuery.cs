@@ -26,11 +26,11 @@ public class ListWorkspaceMembersAgentQueryHandler : IQueryHandler<ListWorkspace
     public async Task<IEnumerable<AgentWorkspaceMemberResult>> Handle(ListWorkspaceMembersAgentQuery request, CancellationToken cancellationToken)
     {
         var members = await _queryService.GetWorkspaceMembersAsync(request.OrganizationId);
-        
+
         return members.Select(m => new AgentWorkspaceMemberResult(
-            m.GlobalUserId.ToString(), 
-            m.Name, 
-            m.Email, 
+            m.GlobalUserId.ToString(),
+            m.Name,
+            m.Email,
             m.Role)).ToList();
     }
 }

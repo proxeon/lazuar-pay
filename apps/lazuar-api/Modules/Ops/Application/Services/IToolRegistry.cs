@@ -5,11 +5,11 @@ using OpenAI.Chat;
 namespace Modules.Ops.Application.Services;
 
 public record AgentToolDefinition(
-    string Name, 
-    string Description, 
-    string Severity, 
-    Type RequestType, 
-    bool IsWriteCommand, 
+    string Name,
+    string Description,
+    string Severity,
+    Type RequestType,
+    bool IsWriteCommand,
     ChatTool ChatTool);
 
 public interface IToolRegistry

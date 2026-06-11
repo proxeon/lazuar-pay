@@ -8,7 +8,7 @@ namespace Modules.Community.Application.IntegrationEvents;
 // -------------------------------------------------------------------------
 // INBOX HANDLER
 // -------------------------------------------------------------------------
-public class GatewayPaymentCompletedIntegrationEventHandler 
+public class GatewayPaymentCompletedIntegrationEventHandler
     : IIntegrationEventHandler<GatewayPaymentCompletedIntegrationEvent>
 {
     private readonly IMediator _mediator;
@@ -27,7 +27,7 @@ public class GatewayPaymentCompletedIntegrationEventHandler
         }
 
         // 2. Extract the Subscription ID
-        if (!@event.Metadata.TryGetValue("subscription_id", out var subIdStr) || 
+        if (!@event.Metadata.TryGetValue("subscription_id", out var subIdStr) ||
             !Guid.TryParse(subIdStr, out var subscriptionId))
         {
             throw new InvalidOperationException("Gateway payment completed for community, but missing valid subscription_id in metadata.");

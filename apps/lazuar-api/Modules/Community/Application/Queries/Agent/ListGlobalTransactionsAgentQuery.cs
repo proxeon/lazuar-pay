@@ -11,9 +11,9 @@ namespace Modules.Community.Application.Queries.Agent;
 
 [AgentTool("Query the global financial ledger. Filter by date range, status (e.g., CONFIRMED, REFUNDED), or payment method to calculate revenue or find failed transactions.", "low", "SUPER_ADMIN")]
 public record ListGlobalTransactionsAgentQuery(
-    Guid OrganizationId, 
-    DateTime? FromDate, 
-    DateTime? ToDate, 
+    Guid OrganizationId,
+    DateTime? FromDate,
+    DateTime? ToDate,
     string? Status) : IQuery<IEnumerable<AgentTransactionResult>>;
 
 public record AgentTransactionResult(
@@ -42,9 +42,9 @@ public class ListGlobalTransactionsAgentQueryHandler : IQueryHandler<ListGlobalT
     public async Task<IEnumerable<AgentTransactionResult>> Handle(ListGlobalTransactionsAgentQuery request, CancellationToken cancellationToken)
     {
         var transactions = await _queryService.GetGlobalTransactionsAsync(
-            request.OrganizationId, 
-            request.FromDate, 
-            request.ToDate, 
+            request.OrganizationId,
+            request.FromDate,
+            request.ToDate,
             request.Status);
 
         var transactionList = transactions.ToList();

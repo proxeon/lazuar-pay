@@ -23,7 +23,7 @@ public class ReactivateSubscriptionCommandHandler : ICommandHandler<ReactivateSu
     public async Task Handle(ReactivateSubscriptionCommand request, CancellationToken ct)
     {
         var subscription = await _repository.GetByIdAsync(request.SubscriptionId, ct);
-        
+
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Subscription not found.");

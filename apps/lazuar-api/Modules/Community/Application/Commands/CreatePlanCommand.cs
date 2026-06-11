@@ -35,7 +35,7 @@ public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
     private readonly ICommunitySubscriptionRepository _uow;
 
     public CreatePlanCommandHandler(
-        ICommunityPlanRepository planRepository, 
+        ICommunityPlanRepository planRepository,
         ICommunitySubscriptionRepository uow)
     {
         _planRepository = planRepository;

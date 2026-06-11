@@ -996,6 +996,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/community/{tenantSlug}/validate-coupon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PublicCommunityOperations_validateCoupon"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1016,6 +1032,7 @@ export interface components {
         };
         "Community.CheckoutResponse": {
             url: string;
+            is_zero_amount_bypass?: boolean;
         };
         "Community.CommunityPlanDto": {
             id: string;
@@ -1256,6 +1273,7 @@ export interface components {
             email: string;
             phone: string;
             is_guest_checkout?: boolean;
+            coupon_code?: string;
         };
         "Community.RecordPaymentRequestDto": {
             /** Format: double */
@@ -1338,6 +1356,14 @@ export interface components {
         "Community.UpdateTemplateRequestDto": {
             subject: string;
             body: string;
+        };
+        "Community.ValidateCouponResponseDto": {
+            is_valid: boolean;
+            /** Format: double */
+            discount_amount: number;
+            /** Format: double */
+            final_price: number;
+            error_message?: string;
         };
         "Core.IdResponse": {
             id: string;
@@ -6545,6 +6571,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicCommunityOperations_validateCoupon: {
+        parameters: {
+            query: {
+                code: string;
+                plan_slug: string;
+            };
+            header?: never;
+            path: {
+                tenantSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Community.ValidateCouponResponseDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

@@ -33,7 +33,7 @@ public sealed class ResendEmailService : IEmailService
         try
         {
             var client = _httpClientFactory.CreateClient("Resend");
-            
+
             var payload = new
             {
                 from = _options.SenderEmail,
@@ -48,7 +48,7 @@ public sealed class ResendEmailService : IEmailService
             {
                 var error = await response.Content.ReadAsStringAsync();
                 _logger.LogError("[Resend] Failed to send email to {To}. Status: {Status}. Error: {Error}", to, response.StatusCode, error);
-                
+
                 // Throwing ensures the Outbox/Inbox worker will mark the message as FAILED
                 // and automatically retry it later!
                 throw new InvalidOperationException($"Failed to send email via Resend: {error}");

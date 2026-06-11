@@ -29,14 +29,14 @@ public class Organization : Entity, IAggregateRoot
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
-        
+
         AddDomainEvent(new OrganizationCreatedDomainEvent(Id, Name, Slug));
     }
 
     public void UpdateDetails(string name, string slug)
     {
         var cleanSlug = slug.Trim().ToLowerInvariant();
-        
+
         if (Slug != cleanSlug)
         {
             CheckRule(new OrganizationSlugMustBeValidRule(cleanSlug));

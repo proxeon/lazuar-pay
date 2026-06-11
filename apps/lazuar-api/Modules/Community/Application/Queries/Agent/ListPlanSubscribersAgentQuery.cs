@@ -24,18 +24,18 @@ public class ListPlanSubscribersAgentQueryHandler : IQueryHandler<ListPlanSubscr
     public async Task<IEnumerable<AgentPlanSubscriberResult>> Handle(ListPlanSubscribersAgentQuery request, CancellationToken cancellationToken)
     {
         var planIdStr = request.PlanId.ToString();
-        
+
         // Fetch the active subscriber roster. 
         // We use a high limit (500) to ensure we capture the roster in a single pass for the AI context window.
         var response = await _queryService.GetSubscribersAsync(request.OrganizationId, 1, 500);
-        
+
         return response.Data
             .Where(s => s.Plan_id == planIdStr)
             .Select(s => new AgentPlanSubscriberResult(
-                s.Id, 
-                s.Client_profile_id, 
-                s.Customer_name ?? "Unknown", 
-                s.Customer_email ?? "Unknown", 
+                s.Id,
+                s.Client_profile_id,
+                s.Customer_name ?? "Unknown",
+                s.Customer_email ?? "Unknown",
                 s.Status))
             .ToList();
     }

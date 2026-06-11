@@ -10,7 +10,7 @@ public class GlobalUser : Entity, IAggregateRoot
     public string Name { get; private set; }
     public string PasswordHash { get; private set; }
     public Guid SecurityStamp { get; private set; }
-    
+
     public bool IsSystemAdmin { get; private set; }
     public bool IsActive { get; private set; }
     public bool IsEmailVerified { get; private set; }

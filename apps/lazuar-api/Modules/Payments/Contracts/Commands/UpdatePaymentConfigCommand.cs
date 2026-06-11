@@ -10,7 +10,7 @@ public record UpdatePaymentConfigCommand(
     Guid OrganizationId,
     string GatewayType,
     string? ApiKey,
-    [property: JsonPropertyName("collection_id")] string? MerchantId, 
+    [property: JsonPropertyName("collection_id")] string? MerchantId,
     string? WebhookSecret,
     string? SecretKey,
     bool IsActive) : ICommand

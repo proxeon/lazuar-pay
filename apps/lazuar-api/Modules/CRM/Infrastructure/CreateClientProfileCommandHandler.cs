@@ -25,7 +25,7 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
         // 1. Check for existing profile by email or phone across database boundary (Idempotency)
         var existingProfile = await _dbContext.ClientProfiles
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId 
+            .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId
                 && (p.Email == emailNormalized || p.Phone == phoneNormalized), cancellationToken);
 
         if (existingProfile != null)
@@ -61,7 +61,7 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
     private static string NormalizePhone(string phone)
     {
         if (string.IsNullOrWhiteSpace(phone)) return "";
-        
+
         var normalized = phone
             .Replace("+", "")
             .Replace(" ", "")

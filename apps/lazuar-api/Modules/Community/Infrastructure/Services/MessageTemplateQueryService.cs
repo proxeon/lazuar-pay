@@ -62,17 +62,17 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
         var reqVars = string.IsNullOrWhiteSpace(raw.RequiredVariables) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(raw.RequiredVariables, options) ?? new List<string>();
         var optVars = string.IsNullOrWhiteSpace(raw.OptionalVariables) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(raw.OptionalVariables, options) ?? new List<string>();
 
-        return new MessageTemplateDto 
-        { 
-            Id = raw.Id.ToString(), 
-            Name = raw.Name, 
+        return new MessageTemplateDto
+        {
+            Id = raw.Id.ToString(),
+            Name = raw.Name,
             Channel = raw.Channel,
-            Subject = raw.Subject, 
-            Body = raw.Body, 
-            Is_default = raw.IsDefault, 
-            Required_variables = reqVars, 
-            Optional_variables = optVars, 
-            Updated_at = new DateTimeOffset(raw.UpdatedAt) 
+            Subject = raw.Subject,
+            Body = raw.Body,
+            Is_default = raw.IsDefault,
+            Required_variables = reqVars,
+            Optional_variables = optVars,
+            Updated_at = new DateTimeOffset(raw.UpdatedAt)
         };
     }
 }

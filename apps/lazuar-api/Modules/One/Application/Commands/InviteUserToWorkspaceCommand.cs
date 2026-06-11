@@ -37,11 +37,11 @@ public class InviteUserToWorkspaceCommandHandler : ICommandHandler<InviteUserToW
         var expiry = DateTime.UtcNow.AddDays(7);
 
         var invitation = new WorkspaceInvitation(
-            request.OrganizationId, 
-            request.Email, 
-            request.Role, 
-            token.TokenHash, 
-            token.PlainToken, 
+            request.OrganizationId,
+            request.Email,
+            request.Role,
+            token.TokenHash,
+            token.PlainToken,
             expiry);
 
         _repository.AddWorkspaceInvitation(invitation);

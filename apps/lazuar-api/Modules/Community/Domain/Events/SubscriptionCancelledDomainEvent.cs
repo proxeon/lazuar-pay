@@ -3,8 +3,8 @@ using BuildingBlocks.Domain;
 namespace Modules.Community.Domain.Events;
 
 public record SubscriptionCancelledDomainEvent(
-    Guid SubscriptionId, 
-    Guid OrganizationId, 
+    Guid SubscriptionId,
+    Guid OrganizationId,
     Guid ClientProfileId) : IDomainEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

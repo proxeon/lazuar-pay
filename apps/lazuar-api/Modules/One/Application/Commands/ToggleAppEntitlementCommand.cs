@@ -21,7 +21,7 @@ public class ToggleAppEntitlementCommandHandler : ICommandHandler<ToggleAppEntit
     private readonly IEventBus _eventBus;
 
     public ToggleAppEntitlementCommandHandler(
-        IOneRepository repository, 
+        IOneRepository repository,
         [FromKeyedServices("OneEventBus")] IEventBus eventBus)
     {
         _repository = repository;
@@ -44,7 +44,7 @@ public class ToggleAppEntitlementCommandHandler : ICommandHandler<ToggleAppEntit
             {
                 grantedNow = true;
             }
-            
+
             _repository.AddEntitlement(entitlement);
         }
         else

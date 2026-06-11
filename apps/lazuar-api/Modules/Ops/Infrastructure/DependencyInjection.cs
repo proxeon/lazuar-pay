@@ -25,7 +25,7 @@ public static class DependencyInjection
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ops");
             }));
 
-        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("OpsSqlConnectionFactory", (sp, key) => 
+        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("OpsSqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
         services.AddSingleton<IToolRegistry, ToolRegistry>();

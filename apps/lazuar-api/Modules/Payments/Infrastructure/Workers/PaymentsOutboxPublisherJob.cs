@@ -6,7 +6,7 @@ namespace Modules.Payments.Infrastructure.Workers;
 
 public class PaymentsOutboxPublisherJob : OutboxPublisherJob<PaymentsDbContext>
 {
-    public PaymentsOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<PaymentsOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger) 
+    public PaymentsOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<PaymentsOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger)
         : base(scopeFactory, logger, jobTrigger)
     {
     }

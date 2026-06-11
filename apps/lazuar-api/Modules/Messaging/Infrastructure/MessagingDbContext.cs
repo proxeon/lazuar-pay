@@ -13,9 +13,9 @@ public class MessagingDbContext : PlatformDbContext
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
     public MessagingDbContext(
-        DbContextOptions<MessagingDbContext> options, 
-        IExecutionContextAccessor executionContext, 
-        IMediator mediator, 
+        DbContextOptions<MessagingDbContext> options,
+        IExecutionContextAccessor executionContext,
+        IMediator mediator,
         DatabaseJobTrigger jobTrigger) : base(options, executionContext, mediator, jobTrigger)
     {
     }
@@ -25,10 +25,10 @@ public class MessagingDbContext : PlatformDbContext
         base.OnModelCreating(modelBuilder);
         modelBuilder.HasDefaultSchema("messaging");
 
-        modelBuilder.Entity<TenantReplica>(builder => 
-        { 
-            builder.ToTable("TenantReplicas"); 
-            builder.HasKey(x => x.Id); 
+        modelBuilder.Entity<TenantReplica>(builder =>
+        {
+            builder.ToTable("TenantReplicas");
+            builder.HasKey(x => x.Id);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

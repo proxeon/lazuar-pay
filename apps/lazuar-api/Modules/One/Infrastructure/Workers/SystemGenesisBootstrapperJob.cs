@@ -20,8 +20,8 @@ public class SystemGenesisBootstrapperJob : IHostedService
     private readonly ILogger<SystemGenesisBootstrapperJob> _logger;
 
     public SystemGenesisBootstrapperJob(
-        IServiceScopeFactory scopeFactory, 
-        IOptions<PlatformAdminSettings> settings, 
+        IServiceScopeFactory scopeFactory,
+        IOptions<PlatformAdminSettings> settings,
         ILogger<SystemGenesisBootstrapperJob> logger)
     {
         _scopeFactory = scopeFactory;
@@ -70,7 +70,7 @@ public class SystemGenesisBootstrapperJob : IHostedService
                         user.ChangePassword(targetHash);
                         _logger.LogInformation("Rotated credentials for Superadmin: {Email}", normalizedEmail);
                     }
-                    
+
                     if (!user.IsSystemAdmin)
                     {
                         // Ensure legacy users are elevated if defined in the env array

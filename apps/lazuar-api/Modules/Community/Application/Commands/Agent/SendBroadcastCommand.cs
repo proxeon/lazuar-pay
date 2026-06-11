@@ -8,9 +8,9 @@ namespace Modules.Community.Application.Commands.Agent;
 
 [AgentTool("Schedule a bulk announcement to be sent to all active subscribers or a specific plan. Returns a Campaign ID.", "high", "SUPER_ADMIN")]
 public record SendBroadcastCommand(
-    Guid OrganizationId, 
-    string Subject, 
-    string Body, 
+    Guid OrganizationId,
+    string Subject,
+    string Body,
     Guid? TargetPlanId) : ICommand<string>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -29,7 +29,7 @@ public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand,
     {
         if (string.IsNullOrWhiteSpace(request.Subject))
             throw new InvalidOperationException("Subject cannot be empty.");
-            
+
         if (string.IsNullOrWhiteSpace(request.Body))
             throw new InvalidOperationException("Body cannot be empty.");
 

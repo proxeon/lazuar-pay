@@ -22,8 +22,8 @@ public class BroadcastPublisherJob : BackgroundService
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(10);
 
     public BroadcastPublisherJob(
-        IServiceScopeFactory scopeFactory, 
-        ILogger<BroadcastPublisherJob> logger, 
+        IServiceScopeFactory scopeFactory,
+        ILogger<BroadcastPublisherJob> logger,
         DatabaseJobTrigger jobTrigger)
     {
         _scopeFactory = scopeFactory;
@@ -69,7 +69,7 @@ public class BroadcastPublisherJob : BackgroundService
                             AND (@PlanId IS NULL OR s.""PlanId"" = @PlanId)";
 
                         var recipients = (await connection.QueryAsync<(string Email, string Phone)>(
-                            sql, 
+                            sql,
                             new { OrgId = campaign.OrganizationId, PlanId = campaign.TargetPlanId })).ToList();
 
                         int total = 0;

@@ -244,6 +244,7 @@ model PublicCheckoutRequestDto {
   email: string;
   phone: string;
   is_guest_checkout?: boolean;
+  coupon_code?: string;
 }
 
 model MagicLinkRequestDto {
@@ -252,6 +253,14 @@ model MagicLinkRequestDto {
 
 model CheckoutResponse {
   url: string;
+  is_zero_amount_bypass?: boolean;
+}
+
+model ValidateCouponResponseDto {
+  is_valid: boolean;
+  discount_amount: float64;
+  final_price: float64;
+  error_message?: string;
 }
 
 model PortalDataResponse {

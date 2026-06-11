@@ -24,7 +24,7 @@ public class GetWorkspaceDetailsAgentQueryHandler : IQueryHandler<GetWorkspaceDe
     public async Task<AgentWorkspaceDetailsResult> Handle(GetWorkspaceDetailsAgentQuery request, CancellationToken cancellationToken)
     {
         var workspace = await _queryService.GetWorkspaceByIdAsync(request.OrganizationId);
-        
+
         if (workspace == null)
         {
             throw new InvalidOperationException("Workspace not found.");

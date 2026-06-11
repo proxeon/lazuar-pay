@@ -67,7 +67,7 @@ public sealed class ProviderQuirksPolicy : PipelinePolicy
                 jsonNode["thinking"] = new JsonObject { ["type"] = "enabled" };
                 jsonNode["temperature"] = 1.0;
             }
-            
+
             if (jsonNode.TryGetPropertyValue("max_tokens", out var maxTokensNode) && maxTokensNode != null)
             {
                 jsonNode["max_completion_tokens"] = maxTokensNode.GetValue<int>();

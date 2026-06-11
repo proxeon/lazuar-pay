@@ -38,7 +38,7 @@ public class ExecutionContextAccessor : IExecutionContextAccessor
 
     public bool IsSystemAdmin => _httpContextAccessor.HttpContext?.User?.FindFirst("is_system_admin")?.Value == "true";
 
-    public string AuditSignature 
+    public string AuditSignature
     {
         get
         {

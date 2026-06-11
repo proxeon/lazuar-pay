@@ -18,7 +18,7 @@ public class NotificationDispatchDomainEventHandlers :
 {
     private readonly IEventBus _eventBus;
     private readonly IOneLinkService _linkService;
-    private readonly Guid _systemTenantId = Guid.Empty; 
+    private readonly Guid _systemTenantId = Guid.Empty;
 
     public NotificationDispatchDomainEventHandlers(
         [FromKeyedServices("OneEventBus")] IEventBus eventBus,

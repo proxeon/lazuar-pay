@@ -45,7 +45,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UsePaymentsSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        
+
         eventBus.Subscribe<GatewayRefundRequestedIntegrationEvent, GatewayRefundRequestedIntegrationEventHandler>();
 
         return app;

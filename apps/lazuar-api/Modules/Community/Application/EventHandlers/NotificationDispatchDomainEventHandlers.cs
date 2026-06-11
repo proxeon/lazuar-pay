@@ -16,7 +16,7 @@ using ILocalMessageTemplateQueryService = Modules.Community.Application.Queries.
 
 namespace Modules.Community.Application.EventHandlers;
 
-public class NotificationDispatchDomainEventHandlers : 
+public class NotificationDispatchDomainEventHandlers :
     INotificationHandler<SubscriptionActivatedDomainEvent>,
     INotificationHandler<SubscriptionCancelledDomainEvent>,
     INotificationHandler<SubscriptionRenewalDueDomainEvent>,
@@ -31,7 +31,7 @@ public class NotificationDispatchDomainEventHandlers :
     private readonly ICommunityLinkService _linkService;
 
     public NotificationDispatchDomainEventHandlers(
-        ICrmQueryService crmQueryService, 
+        ICrmQueryService crmQueryService,
         ILocalMessageTemplateQueryService templateService,
         ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository,
@@ -95,7 +95,7 @@ public class NotificationDispatchDomainEventHandlers :
 
         var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
         if (sub == null) return;
-        
+
         var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
         if (plan == null) return;
 
@@ -111,7 +111,7 @@ public class NotificationDispatchDomainEventHandlers :
 
         var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Cancelled";
         var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.FullName}, your subscription has been cancelled.";
-        
+
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, template?.Channel ?? "EMAIL"));
     }
 
@@ -122,14 +122,14 @@ public class NotificationDispatchDomainEventHandlers :
 
         var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
         if (sub == null) return;
-        
+
         var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
         if (plan == null) return;
 
         var template = (await _templateService.GetTemplatesAsync(new[] { notification.TemplateId })).FirstOrDefault();
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var renewalLink = sub.IsReminderOnly 
+        var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
             : $"{baseUrl}/{plan.Slug}/checkout";
 
@@ -164,12 +164,12 @@ public class NotificationDispatchDomainEventHandlers :
 
         var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
         if (sub == null) return;
-        
+
         var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
         if (plan == null) return;
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var renewalLink = sub.IsReminderOnly 
+        var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
             : $"{baseUrl}/{plan.Slug}/checkout";
 

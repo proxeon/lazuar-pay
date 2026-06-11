@@ -15,7 +15,7 @@ public class ChangePlanCommandHandler : ICommandHandler<ChangePlanCommand>
     private readonly ICommunityPlanRepository _planRepository;
 
     public ChangePlanCommandHandler(
-        ICommunitySubscriptionRepository subscriptionRepository, 
+        ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository)
     {
         _subscriptionRepository = subscriptionRepository;
@@ -25,7 +25,7 @@ public class ChangePlanCommandHandler : ICommandHandler<ChangePlanCommand>
     public async Task Handle(ChangePlanCommand request, CancellationToken ct)
     {
         var subscription = await _subscriptionRepository.GetByIdAsync(request.SubscriptionId, ct);
-        
+
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Subscription not found.");
 

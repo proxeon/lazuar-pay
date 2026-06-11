@@ -19,7 +19,7 @@ public sealed class OpenRouterHeaderPolicy : PipelinePolicy
     {
         if (!string.IsNullOrEmpty(_siteUrl))
             message.Request.Headers.Set("HTTP-Referer", _siteUrl);
-        
+
         if (!string.IsNullOrEmpty(_siteName))
             message.Request.Headers.Set("X-OpenRouter-Title", _siteName);
 
@@ -30,7 +30,7 @@ public sealed class OpenRouterHeaderPolicy : PipelinePolicy
     {
         if (!string.IsNullOrEmpty(_siteUrl))
             message.Request.Headers.Set("HTTP-Referer", _siteUrl);
-        
+
         if (!string.IsNullOrEmpty(_siteName))
             message.Request.Headers.Set("X-OpenRouter-Title", _siteName);
 

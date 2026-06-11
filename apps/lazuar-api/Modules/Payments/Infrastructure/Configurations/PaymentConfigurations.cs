@@ -10,10 +10,10 @@ public class TenantPaymentConfigurationConfig : IEntityTypeConfiguration<TenantP
     public void Configure(EntityTypeBuilder<TenantPaymentConfiguration> builder)
     {
         builder.HasKey(x => x.Id);
-        
+
         // Ensure one active configuration per gateway type per tenant
         builder.HasIndex(x => new { x.OrganizationId, x.GatewayType }).IsUnique();
-        
+
         builder.Property(x => x.GatewayType).HasMaxLength(50);
     }
 }
@@ -23,7 +23,7 @@ public class PaymentWebhookLogConfig : IEntityTypeConfiguration<PaymentWebhookLo
     public void Configure(EntityTypeBuilder<PaymentWebhookLog> builder)
     {
         builder.HasKey(x => x.Id);
-        
+
         // Guarantee idempotency at the database level!
         builder.HasIndex(x => new { x.Provider, x.EventId }).IsUnique();
     }

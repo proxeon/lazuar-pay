@@ -80,7 +80,7 @@ public class UpdatePlanCommandHandler : ICommandHandler<UpdatePlanCommand>
         if (request.TelegramInviteLink != null || request.WeeklyMeetingLink != null)
         {
             plan.SetFulfillmentLinks(
-                request.TelegramInviteLink ?? plan.TelegramInviteLink, 
+                request.TelegramInviteLink ?? plan.TelegramInviteLink,
                 request.WeeklyMeetingLink ?? plan.WeeklyMeetingLink);
         }
 

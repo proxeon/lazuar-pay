@@ -11,11 +11,11 @@ namespace Modules.Community.Application.Queries.Agent;
 public record GetSubscriberDeliveryHistoryAgentQuery(Guid OrganizationId, Guid SubscriptionId) : IQuery<IEnumerable<AgentDeliveryResult>>;
 
 public record AgentDeliveryResult(
-    string DeliveryId, 
-    string Channel, 
-    string? TemplateName, 
-    string Status, 
-    string Date, 
+    string DeliveryId,
+    string Channel,
+    string? TemplateName,
+    string Status,
+    string Date,
     string? ErrorMessage);
 
 public class GetSubscriberDeliveryHistoryAgentQueryHandler : IQueryHandler<GetSubscriberDeliveryHistoryAgentQuery, IEnumerable<AgentDeliveryResult>>

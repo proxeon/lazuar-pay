@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting; 
+using Microsoft.Extensions.Hosting;
 using Modules.One.Application.Commands;
 using Modules.One.Contracts;
 using Modules.One.Domain;
@@ -41,7 +41,7 @@ public static class Endpoints
             {
                 var userId = await mediator.Send(new RegisterPublicUserCommand(email, req.Password, req.Name));
                 var user = await db.GlobalUsers.FindAsync(userId);
-                
+
                 IssueCookie(ctx, user!, config);
 
                 return TypedResults.Ok(new LoginResponse
@@ -67,7 +67,7 @@ public static class Endpoints
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = "Email and password are required." });
 
             var user = await db.GlobalUsers.FirstOrDefaultAsync(u => u.Email == email);
-            
+
             if (user == null || !user.IsActive || !passwordService.Verify(req.Password, user.PasswordHash))
             {
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 401, Detail = "Invalid email or password." });
@@ -83,7 +83,7 @@ public static class Endpoints
             });
         });
 
-        group.MapPost("/auth/logout", (HttpContext ctx) => 
+        group.MapPost("/auth/logout", (HttpContext ctx) =>
         {
             ctx.Response.Cookies.Delete("lazuar_auth");
             return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
@@ -151,11 +151,11 @@ public static class Endpoints
 
             var role = principal.FindFirst(ClaimTypes.Role)?.Value ?? (user.IsSystemAdmin ? "SUPER_ADMIN" : "CLIENT");
 
-            return TypedResults.Ok(new AuthUser 
-            { 
-                Email = user.Email, 
-                Name = user.Name, 
-                Role = role, 
+            return TypedResults.Ok(new AuthUser
+            {
+                Email = user.Email,
+                Name = user.Name,
+                Role = role,
                 Is_email_verified = user.IsEmailVerified
             });
         }).RequireAuthorization();
@@ -233,7 +233,7 @@ public static class Endpoints
             CreateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
-            
+
             try
             {
                 var id = await mediator.Send(new CreateWorkspaceCommand(ctx.UserId, req.Name, req.Slug, req.Provision_apps?.ToList() ?? new List<string>()));
@@ -409,7 +409,7 @@ public static class Endpoints
             Domain = isDev ? null : ".lazuar.com",
             Expires = DateTime.UtcNow.AddHours(expiryHours)
         };
-        
+
         ctx.Response.Cookies.Append("lazuar_auth", token, cookieOptions);
     }
 }

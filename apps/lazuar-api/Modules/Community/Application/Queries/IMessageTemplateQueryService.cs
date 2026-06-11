@@ -5,7 +5,7 @@ using Lazuar.ApiTypes;
 
 namespace Modules.Community.Application.Queries;
 
-public interface IMessageTemplateQueryService 
+public interface IMessageTemplateQueryService
 {
     Task<IEnumerable<MessageTemplateDto>> GetTemplatesAsync(IEnumerable<Guid> templateIds);
     Task<MessageTemplateDto?> GetTemplateByNameAsync(Guid organizationId, string name);

@@ -11,11 +11,11 @@ namespace Modules.Community.Application.Queries.Agent;
 public record ListSubscriberPaymentsAgentQuery(Guid OrganizationId, Guid SubscriptionId) : IQuery<IEnumerable<AgentPaymentResult>>;
 
 public record AgentPaymentResult(
-    string PaymentRecordId, 
-    double Amount, 
-    string Currency, 
-    string Status, 
-    string Date, 
+    string PaymentRecordId,
+    double Amount,
+    string Currency,
+    string Status,
+    string Date,
     string? ReferenceNumber);
 
 public class ListSubscriberPaymentsAgentQueryHandler : IQueryHandler<ListSubscriberPaymentsAgentQuery, IEnumerable<AgentPaymentResult>>
@@ -30,7 +30,7 @@ public class ListSubscriberPaymentsAgentQueryHandler : IQueryHandler<ListSubscri
     public async Task<IEnumerable<AgentPaymentResult>> Handle(ListSubscriberPaymentsAgentQuery request, CancellationToken cancellationToken)
     {
         var response = await _queryService.GetPaymentHistoryAsync(request.OrganizationId, request.SubscriptionId, 1, 50);
-        
+
         return response.Data.Select(p => new AgentPaymentResult(
             p.Id,
             p.Amount,

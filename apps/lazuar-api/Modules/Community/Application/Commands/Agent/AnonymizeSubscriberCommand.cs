@@ -29,7 +29,7 @@ public class AnonymizeSubscriberCommandHandler : ICommandHandler<AnonymizeSubscr
     public async Task Handle(AnonymizeSubscriberCommand request, CancellationToken cancellationToken)
     {
         var profile = await _crmQueryService.GetClientProfileAsync(request.ClientProfileId);
-        
+
         if (profile == null)
         {
             throw new InvalidOperationException("Client profile not found.");

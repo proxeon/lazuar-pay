@@ -66,17 +66,17 @@ public class CommunitySubscriptionConfiguration : IEntityTypeConfiguration<Commu
         builder.HasIndex(x => x.OrganizationId);
         builder.HasIndex(x => x.ClientProfileId);
         builder.Property(x => x.ClientProfileId).IsRequired();
-        
+
         builder.HasOne<CommunityPlan>()
             .WithMany()
             .HasForeignKey(x => x.PlanId)
             .OnDelete(DeleteBehavior.Restrict);
-            
+
         builder.HasMany(x => x.PaymentRecords)
             .WithOne()
             .HasForeignKey(x => x.SubscriptionId)
             .OnDelete(DeleteBehavior.Cascade);
-            
+
         builder.HasMany(x => x.ReminderLogs)
             .WithOne()
             .HasForeignKey(x => x.SubscriptionId)

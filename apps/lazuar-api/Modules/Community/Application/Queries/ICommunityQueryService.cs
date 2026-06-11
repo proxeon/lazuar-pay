@@ -7,12 +7,12 @@ using BuildingBlocks.Application;
 namespace Modules.Community.Application.Queries;
 
 public record GlobalTransactionDto(
-    Guid Id, 
-    decimal Amount, 
-    string Currency, 
-    string PaymentMethod, 
-    string Status, 
-    DateTime CreatedAt, 
+    Guid Id,
+    decimal Amount,
+    string Currency,
+    string PaymentMethod,
+    string Status,
+    DateTime CreatedAt,
     Guid ClientProfileId
 );
 

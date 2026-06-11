@@ -54,7 +54,7 @@ public class AgentSendCheckoutLinkCommandHandler : ICommandHandler<AgentSendChec
             plan.Slug,
             request.CustomerName,
             request.Email,
-            "", 
+            "",
             null
         );
 

@@ -32,7 +32,7 @@ public partial class CommunityQueryService : ICommunityQueryService
         var faqList = string.IsNullOrEmpty(raw.Faq) ? new List<Lazuar.ApiTypes.FaqItemDto>() : JsonSerializer.Deserialize<List<Lazuar.ApiTypes.FaqItemDto>>(raw.Faq, options) ?? new List<Lazuar.ApiTypes.FaqItemDto>();
         var spotsRemaining = raw.MaxCapacity.HasValue ? Math.Max(0, raw.MaxCapacity.Value - enrolledCount) : (int?)null;
         var isFull = raw.MaxCapacity.HasValue && enrolledCount >= raw.MaxCapacity.Value;
-        
+
         return new CommunityPlanDto
         {
             Id = raw.Id.ToString(),

@@ -7,7 +7,7 @@ using Modules.CRM.Contracts; // <-- ADDED
 
 namespace Modules.Community.Application.EventHandlers;
 
-public class DomainEventHandlers : 
+public class DomainEventHandlers :
     INotificationHandler<SubscriptionActivatedDomainEvent>,
     INotificationHandler<SubscriptionCancelledDomainEvent>,
     INotificationHandler<CheckoutInitiatedDomainEvent>,
@@ -26,7 +26,7 @@ public class DomainEventHandlers :
         ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository,
         ICommunityLinkService linkService,
-        ICrmQueryService crmQueryService) 
+        ICrmQueryService crmQueryService)
     {
         _eventBus = eventBus;
         _subscriptionRepository = subscriptionRepository;
@@ -60,7 +60,7 @@ public class DomainEventHandlers :
             )
         );
     }
-    
+
     // ... rest of the handlers remain exactly the same ...
     public async Task Handle(SubscriptionCancelledDomainEvent notification, CancellationToken ct)
     {
@@ -88,7 +88,7 @@ public class DomainEventHandlers :
         if (sub == null || plan == null) return;
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var renewalLink = sub.IsReminderOnly 
+        var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
             : $"{baseUrl}/{plan.Slug}/checkout";
 
@@ -135,7 +135,7 @@ public class DomainEventHandlers :
         if (sub == null || plan == null) return;
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var renewalLink = sub.IsReminderOnly 
+        var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
             : $"{baseUrl}/{plan.Slug}/checkout";
 

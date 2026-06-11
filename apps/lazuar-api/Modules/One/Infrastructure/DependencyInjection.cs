@@ -27,12 +27,12 @@ public static class DependencyInjection
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "one");
             }));
 
-        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("OneSqlConnectionFactory", (sp, key) => 
+        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("OneSqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
         services.AddScoped<IOneQueryService, OneQueryService>();
         services.AddScoped<IOneRepository, OneRepository>();
-        
+
         services.AddSingleton<ITokenGeneratorService, TokenGeneratorService>();
         services.AddSingleton<IOneLinkService, OneLinkService>();
 

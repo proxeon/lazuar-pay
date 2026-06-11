@@ -17,16 +17,16 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     public string GatewayType => "STRIPE";
 
     public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
-        string apiKey, Guid tenantId, decimal amount, string currency, 
+        string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
-        string successUrl, string cancelUrl, Dictionary<string, string> metadata, 
+        string successUrl, string cancelUrl, Dictionary<string, string> metadata,
         string? merchantId)
     {
         try
         {
             var client = new StripeClient(apiKey);
             var service = new SessionService(client);
-            
+
             metadata["tenant_id"] = tenantId.ToString();
 
             var options = new SessionCreateOptions
@@ -40,7 +40,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         PriceData = new SessionLineItemPriceDataOptions
                         {
                             Currency = currency.ToLowerInvariant(),
-                            UnitAmountDecimal = amount * 100, 
+                            UnitAmountDecimal = amount * 100,
                             ProductData = new SessionLineItemPriceDataProductDataOptions
                             {
                                 Name = string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName
@@ -84,14 +84,14 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 {
                     var amount = (session.AmountTotal ?? 0) / 100m;
                     var meta = session.Metadata != null ? new Dictionary<string, string>(session.Metadata) : new Dictionary<string, string>();
-                    
+
                     return Task.FromResult(new GatewayWebhookParsedResult(
                         Verified: true,
                         EventType: "PAYMENT_COMPLETED",
                         EventId: stripeEvent.Id,
                         AmountPaid: amount,
                         Currency: session.Currency ?? "myr",
-                        GatewayTransactionId: session.PaymentIntentId ?? session.Id, 
+                        GatewayTransactionId: session.PaymentIntentId ?? session.Id,
                         Metadata: meta,
                         Error: null
                     ));
@@ -113,7 +113,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         {
             var client = new StripeClient(apiKey);
             var service = new RefundService(client);
-            
+
             var options = new RefundCreateOptions
             {
                 PaymentIntent = transactionId,
@@ -134,7 +134,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     {
         var client = new StripeClient(apiKey);
         var customerService = new CustomerService(client);
-        
+
         var customers = await customerService.ListAsync(new CustomerListOptions { Email = customerEmail, Limit = 1 });
         var customerId = customers.FirstOrDefault()?.Id;
 

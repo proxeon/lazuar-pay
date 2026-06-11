@@ -11,9 +11,9 @@ public interface IOpsRepository
     Task<OpsConversation?> GetConversationByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<IEnumerable<OpsConversation>> GetConversationsAsync(Guid organizationId, int limit, int offset, CancellationToken ct = default);
     Task<IEnumerable<OpsMessage>> GetMessagesAsync(Guid organizationId, Guid conversationId, CancellationToken ct = default);
-    
+
     void AddConversation(OpsConversation conversation);
     void AddMessage(OpsMessage message);
-    
+
     Task SaveChangesAsync(CancellationToken ct = default);
 }

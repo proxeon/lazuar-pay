@@ -38,19 +38,19 @@ public static class DependencyInjection
         services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
         services.AddScoped<ICommunityCouponRepository, CommunityCouponRepository>();
         services.AddScoped<IBroadcastCampaignRepository, CommunityBroadcastRepository>();
-        
+
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
         services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
-        
+
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunityDbContext>>("CommunityEventBus");
-        
+
         services.AddHostedService<CommunityInboxConsumerJob>();
         services.AddHostedService<CommunityOutboxPublisherJob>();
         services.AddHostedService<CommunityLifecycleJob>();
         services.AddHostedService<BroadcastPublisherJob>();
-        
+
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
         services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();

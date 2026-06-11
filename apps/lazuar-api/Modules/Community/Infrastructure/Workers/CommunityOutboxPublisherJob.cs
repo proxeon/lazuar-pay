@@ -6,7 +6,7 @@ namespace Modules.Community.Infrastructure.Workers;
 
 public class CommunityOutboxPublisherJob : OutboxPublisherJob<CommunityDbContext>
 {
-    public CommunityOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<CommunityOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger) 
+    public CommunityOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<CommunityOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger)
         : base(scopeFactory, logger, jobTrigger)
     {
     }

@@ -25,7 +25,7 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
     public async Task<Guid> Handle(RegisterPublicUserCommand request, CancellationToken ct)
     {
         var email = request.Email.Trim().ToLowerInvariant();
-        
+
         // 1. Check if user already exists
         var existingUser = await _repository.GetUserByEmailAsync(email, ct);
         if (existingUser != null)
@@ -35,12 +35,12 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
 
         // 2. Hash Password and Create User
         var passwordHash = _passwordService.Hash(request.Password);
-        
+
         // Fallback to email local part if name is not provided
         var name = string.IsNullOrWhiteSpace(request.Name) ? email.Split('@')[0] : request.Name.Trim();
 
         var user = new GlobalUser(email, name, passwordHash, isSystemAdmin: false);
-        
+
         _repository.AddGlobalUser(user);
         await _repository.SaveChangesAsync(ct);
 

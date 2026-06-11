@@ -6,7 +6,7 @@ using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.IntegrationEvents;
 
-public class ClientProfileAnonymizedIntegrationEventHandler 
+public class ClientProfileAnonymizedIntegrationEventHandler
     : IIntegrationEventHandler<ClientProfileAnonymizedIntegrationEvent>
 {
     private readonly IMediator _mediator;
@@ -23,7 +23,7 @@ public class ClientProfileAnonymizedIntegrationEventHandler
     public async Task HandleAsync(ClientProfileAnonymizedIntegrationEvent @event)
     {
         var subscriptionIds = await _subscriptionRepository.GetSubscriptionIdsByProfileIdAsync(
-            @event.OrganizationId, 
+            @event.OrganizationId,
             @event.ClientProfileId);
 
         foreach (var subscriptionId in subscriptionIds)

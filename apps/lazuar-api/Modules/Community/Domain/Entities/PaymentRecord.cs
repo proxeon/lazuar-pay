@@ -19,12 +19,12 @@ public class PaymentRecord : Entity
     public DateTime CreatedAt { get; private set; }
 
 #pragma warning disable CS8618 
-    private PaymentRecord() { } 
+    private PaymentRecord() { }
 #pragma warning restore CS8618
 
     internal PaymentRecord(
-        Guid subscriptionId, decimal amount, string currency, 
-        string paymentMethod, string? externalReference, string recordedBy, 
+        Guid subscriptionId, decimal amount, string currency,
+        string paymentMethod, string? externalReference, string recordedBy,
         DateTime periodStart, DateTime periodEnd, string? notes = null, string? receiptUrl = null)
     {
         Id = Guid.CreateVersion7();

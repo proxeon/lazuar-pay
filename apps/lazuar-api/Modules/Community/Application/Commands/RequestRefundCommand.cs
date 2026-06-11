@@ -21,7 +21,7 @@ public class RequestRefundCommandHandler : ICommandHandler<RequestRefundCommand>
     public async Task Handle(RequestRefundCommand request, CancellationToken ct)
     {
         var subscription = await _repository.GetByIdAsync(request.SubscriptionId, ct);
-        
+
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Subscription not found.");
 

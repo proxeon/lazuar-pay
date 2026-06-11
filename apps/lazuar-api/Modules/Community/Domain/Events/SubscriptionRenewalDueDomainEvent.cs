@@ -3,9 +3,9 @@ using BuildingBlocks.Domain;
 namespace Modules.Community.Domain.Events;
 
 public record SubscriptionRenewalDueDomainEvent(
-    Guid SubscriptionId, 
-    Guid OrganizationId, 
-    Guid ClientProfileId, 
+    Guid SubscriptionId,
+    Guid OrganizationId,
+    Guid ClientProfileId,
     DateTime RenewalDate,
     Guid TemplateId,
     string Channel) : IDomainEvent
