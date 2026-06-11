@@ -38,7 +38,6 @@ public class CommunityLifecycleJob : BackgroundService
                 _logger.LogError(ex, "An error occurred while executing the community lifecycle actions.");
             }
 
-            // Poll every 1 hour to handle specific TimeOfDay schedules accurately
             await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
         }
     }
@@ -48,15 +47,15 @@ public class CommunityLifecycleJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CommunityDbContext>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
         var now = DateTime.UtcNow;
         bool requiresSave = false;
 
-        // 1. Transition ACTIVE overdue subscriptions to PAST_DUE
         var overdue = await db.Subscriptions
             .IgnoreQueryFilters()
-            .Where(s => s.Status == "ACTIVE" 
-                     && s.NextRenewalDate != null 
-                     && s.NextRenewalDate < now)
+            .Where(s => s.Status == "ACTIVE"
+                && s.NextRenewalDate != null
+                && s.NextRenewalDate < now)
             .ToListAsync(ct);
 
         if (overdue.Any())
@@ -69,7 +68,6 @@ public class CommunityLifecycleJob : BackgroundService
             _logger.LogInformation("Transitioned {Count} overdue subscription(s) to PAST_DUE state.", overdue.Count);
         }
 
-        // 2. Expire old PAST_DUE subscriptions based on Plan's GracePeriodDays
         var pastDue = await db.Subscriptions
             .IgnoreQueryFilters()
             .Where(s => s.Status == "PAST_DUE" && s.NextRenewalDate != null)
@@ -86,25 +84,32 @@ public class CommunityLifecycleJob : BackgroundService
             }
         }
 
-        // 3. NEW: Clean up stale PENDING subscriptions older than 3 days
         var stalePendingCutoff = now.AddDays(-3);
         var stalePending = await db.Subscriptions
             .IgnoreQueryFilters()
-            .Where(s => s.Status == "PENDING" 
-                     && s.CreatedAt < stalePendingCutoff)
+            .Where(s => s.Status == "PENDING"
+                && s.CreatedAt < stalePendingCutoff)
             .ToListAsync(ct);
 
         if (stalePending.Any())
         {
             foreach (var sub in stalePending)
             {
-                sub.Cancel(); // Transitions PENDING -> CANCELLED, raising SubscriptionCancelledDomainEvent to outbox
+                if (sub.PendingCouponId.HasValue)
+                {
+                    var coupon = await db.Coupons.FirstOrDefaultAsync(c => c.Id == sub.PendingCouponId.Value, ct);
+                    if (coupon != null)
+                    {
+                        coupon.ReleaseReservation();
+                    }
+                }
+                
+                sub.Cancel();
             }
             requiresSave = true;
             _logger.LogInformation("Cancelled {Count} stale PENDING subscription checkout session(s).", stalePending.Count);
         }
 
-        // 4. Dynamic Reminder Schedules Processing
         var activeSchedules = await db.ReminderSchedules
             .IgnoreQueryFilters()
             .Where(r => r.IsEnabled)
@@ -112,8 +117,7 @@ public class CommunityLifecycleJob : BackgroundService
 
         foreach (var schedule in activeSchedules)
         {
-            // Only process schedules that match the current hour
-            if (!schedule.TimeOfDay.StartsWith(now.ToString("HH"))) 
+            if (!schedule.TimeOfDay.StartsWith(now.ToString("HH")))
             {
                 continue;
             }
@@ -124,10 +128,10 @@ public class CommunityLifecycleJob : BackgroundService
                 .IgnoreQueryFilters()
                 .Include(s => s.ReminderLogs)
                 .Where(s => s.OrganizationId == schedule.OrganizationId
-                         && (s.Status == "ACTIVE" || s.Status == "PAST_DUE")
-                         && s.NextRenewalDate != null
-                         && s.NextRenewalDate.Value.Date == targetRenewalDate
-                         && (s.RemindersPausedUntil == null || s.RemindersPausedUntil < now));
+                    && (s.Status == "ACTIVE" || s.Status == "PAST_DUE")
+                    && s.NextRenewalDate != null
+                    && s.NextRenewalDate.Value.Date == targetRenewalDate
+                    && (s.RemindersPausedUntil == null || s.RemindersPausedUntil < now));
 
             if (schedule.PlanId.HasValue)
             {
@@ -138,23 +142,20 @@ public class CommunityLifecycleJob : BackgroundService
 
             foreach (var sub in subscriptionsToRemind)
             {
-                // Ensure a schedule only fires exactly once per target renewal date per subscription (idempotency check)
                 if (sub.ReminderLogs.Any(l => l.ScheduleId == schedule.Id && l.TargetRenewalDate.Date == targetRenewalDate.Date))
                 {
                     continue;
                 }
 
-                // Mutate state to record the dispatch log locally
                 sub.RecordReminderDispatched(schedule.Id, targetRenewalDate);
                 requiresSave = true;
 
-                // Fire domain event to local outbox
                 await mediator.Publish(new SubscriptionRenewalDueDomainEvent(
-                    sub.Id, 
-                    sub.OrganizationId, 
-                    sub.ClientProfileId, 
-                    sub.NextRenewalDate!.Value, 
-                    schedule.TemplateId, 
+                    sub.Id,
+                    sub.OrganizationId,
+                    sub.ClientProfileId,
+                    sub.NextRenewalDate!.Value,
+                    schedule.TemplateId,
                     schedule.Channel), ct);
             }
         }

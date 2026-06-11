@@ -1,5 +1,8 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/RecordSubscriptionPaymentCommand.cs
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
 
@@ -21,13 +24,16 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
 {
     private readonly ICommunitySubscriptionRepository _subscriptionRepository;
     private readonly ICommunityPlanRepository _planRepository;
+    private readonly ICommunityCouponRepository _couponRepository;
 
     public RecordSubscriptionPaymentCommandHandler(
-        ICommunitySubscriptionRepository subscriptionRepository, 
-        ICommunityPlanRepository planRepository)
+        ICommunitySubscriptionRepository subscriptionRepository,
+        ICommunityPlanRepository planRepository,
+        ICommunityCouponRepository couponRepository)
     {
         _subscriptionRepository = subscriptionRepository;
         _planRepository = planRepository;
+        _couponRepository = couponRepository;
     }
 
     public async Task Handle(RecordSubscriptionPaymentCommand request, CancellationToken ct)
@@ -42,23 +48,33 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
 
         var now = DateTime.UtcNow;
         var intervalDays = plan.Interval == "yr" ? 365 : 30;
-        
-        var baseDate = (subscription.CurrentPeriodEnd.HasValue && subscription.CurrentPeriodEnd.Value > now) 
-            ? subscription.CurrentPeriodEnd.Value 
+        var baseDate = (subscription.CurrentPeriodEnd.HasValue && subscription.CurrentPeriodEnd.Value > now)
+            ? subscription.CurrentPeriodEnd.Value
             : now;
-            
+
         var periodStart = now;
         var periodEnd = baseDate.AddDays(intervalDays);
 
         subscription.Activate(
-            periodStart, 
-            periodEnd, 
-            request.Amount, 
-            request.Currency, 
-            request.PaymentMethod, 
-            request.ExternalReference, 
-            request.RecordedBy, 
+            periodStart,
+            periodEnd,
+            request.Amount,
+            request.Currency,
+            request.PaymentMethod,
+            request.ExternalReference,
+            request.RecordedBy,
             request.ReceiptUrl);
+
+        if (subscription.PendingCouponId.HasValue)
+        {
+            var coupon = await _couponRepository.GetByIdAsync(subscription.PendingCouponId.Value, ct);
+            if (coupon != null)
+            {
+                coupon.ConfirmReservation();
+                _couponRepository.Update(coupon);
+            }
+            subscription.ClearPendingCoupon();
+        }
 
         await _subscriptionRepository.SaveChangesAsync(ct);
     }

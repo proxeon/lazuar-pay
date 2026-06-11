@@ -46,7 +46,6 @@ public class CommunitySubscriptionRepository : ICommunitySubscriptionRepository
             .Select(s => s.Id).ToListAsync(ct);
 
     public void Add(CommunitySubscription subscription) => _context.Subscriptions.Add(subscription);
-
     public async Task SaveChangesAsync(CancellationToken ct = default) => await _context.SaveChangesAsync(ct);
 }
 
@@ -68,6 +67,11 @@ public class CommunityCouponRepository : ICommunityCouponRepository
     private readonly CommunityDbContext _context;
     public CommunityCouponRepository(CommunityDbContext context) => _context = context;
 
+    public async Task<CommunityCoupon?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.Coupons.FirstOrDefaultAsync(c => c.Id == id, ct);
+    }
+
     public async Task<CommunityCoupon?> GetByCodeAsync(Guid organizationId, string code, CancellationToken ct = default)
     {
         var normalizedCode = code.ToUpperInvariant().Trim();
@@ -85,6 +89,5 @@ public class CommunityBroadcastRepository : IBroadcastCampaignRepository
     public CommunityBroadcastRepository(CommunityDbContext context) => _context = context;
 
     public void Add(BroadcastCampaign campaign) => _context.BroadcastCampaigns.Add(campaign);
-    
     public async Task SaveChangesAsync(CancellationToken ct = default) => await _context.SaveChangesAsync(ct);
 }

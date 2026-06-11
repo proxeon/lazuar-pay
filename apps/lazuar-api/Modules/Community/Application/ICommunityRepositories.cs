@@ -33,6 +33,7 @@ public interface ICommunityReminderScheduleRepository
 
 public interface ICommunityCouponRepository
 {
+    Task<CommunityCoupon?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<CommunityCoupon?> GetByCodeAsync(Guid organizationId, string code, CancellationToken ct = default);
     void Add(CommunityCoupon coupon);
     void Update(CommunityCoupon coupon);

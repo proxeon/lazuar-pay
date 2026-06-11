@@ -6,6 +6,7 @@ using BuildingBlocks.Application;
 using MediatR;
 using Modules.Payments.Contracts.Queries;
 using Modules.CRM.Contracts;
+using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
 
@@ -54,6 +55,8 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         subscription.InitiateCheckout();
 
         decimal finalPrice = plan.Price;
+        CommunityCoupon? appliedCoupon = null;
+
         if (!string.IsNullOrWhiteSpace(request.CouponCode))
         {
             var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
@@ -62,6 +65,7 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             coupon.Validate(plan.Price);
             coupon.Reserve();
             subscription.SetPendingCoupon(coupon.Id);
+            appliedCoupon = coupon;
             
             _couponRepository.Update(coupon);
             finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
@@ -69,6 +73,28 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         }
 
         await _repository.SaveChangesAsync(ct);
+
+        if (finalPrice <= 0 && appliedCoupon != null)
+        {
+            var periodStart = DateTime.UtcNow;
+            var intervalDays = plan.Interval == "yr" ? 365 : 30;
+            var periodEnd = periodStart.AddDays(intervalDays);
+            
+            subscription.Activate(
+                periodStart,
+                periodEnd,
+                0m,
+                "MYR",
+                "COUPON_100_OFF",
+                null,
+                "SYSTEM");
+            
+            appliedCoupon.ConfirmReservation();
+            subscription.ClearPendingCoupon();
+            
+            await _repository.SaveChangesAsync(ct);
+            return request.SuccessUrl;
+        }
 
         var customerProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
         var customerEmail = customerProfile?.Email ?? "";

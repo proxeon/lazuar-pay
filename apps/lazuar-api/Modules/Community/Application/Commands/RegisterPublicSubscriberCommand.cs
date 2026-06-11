@@ -74,6 +74,8 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         _subscriptionRepository.Add(subscription);
 
         decimal finalPrice = plan.Price;
+        CommunityCoupon? appliedCoupon = null;
+
         if (!string.IsNullOrWhiteSpace(request.CouponCode))
         {
             var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
@@ -81,7 +83,9 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             
             coupon.Validate(plan.Price);
             coupon.Reserve();
+            
             subscription.SetPendingCoupon(coupon.Id);
+            appliedCoupon = coupon;
             
             _couponRepository.Update(coupon);
             finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
@@ -91,6 +95,27 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         var baseUrl = _linkService.GetCommunityBaseUrl();
         var successUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/success";
         var cancelUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/checkout?cancelled=true";
+
+        if (finalPrice <= 0 && appliedCoupon != null)
+        {
+            var periodStart = DateTime.UtcNow;
+            var periodEnd = periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
+            
+            subscription.Activate(
+                periodStart,
+                periodEnd,
+                0m,
+                "MYR",
+                "COUPON_100_OFF",
+                null,
+                "SYSTEM");
+            
+            appliedCoupon.ConfirmReservation();
+            subscription.ClearPendingCoupon();
+            
+            await _subscriptionRepository.SaveChangesAsync(ct);
+            return successUrl;
+        }
 
         var metadata = new Dictionary<string, string>
         {
