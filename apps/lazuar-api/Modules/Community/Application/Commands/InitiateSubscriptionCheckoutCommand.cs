@@ -52,17 +52,18 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             throw new InvalidOperationException("Plan not found.");
 
         subscription.InitiateCheckout();
-        
-        decimal finalPrice = plan.Price;
 
+        decimal finalPrice = plan.Price;
         if (!string.IsNullOrWhiteSpace(request.CouponCode))
         {
             var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
             if (coupon == null) throw new InvalidOperationException("Invalid coupon code.");
             
-            coupon.Redeem();
-            _couponRepository.Update(coupon);
+            coupon.Validate(plan.Price);
+            coupon.Reserve();
+            subscription.SetPendingCoupon(coupon.Id);
             
+            _couponRepository.Update(coupon);
             finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
             if (finalPrice < 0) finalPrice = 0;
         }

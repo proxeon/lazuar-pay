@@ -13,5 +13,6 @@ public class CommunityCouponConfiguration : IEntityTypeConfiguration<CommunityCo
         builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
         builder.Property(x => x.DiscountType).HasMaxLength(20).IsRequired();
         builder.Property(x => x.Amount).HasPrecision(10, 2);
+        builder.Property(x => x.MinimumOriginalPrice).HasPrecision(10, 2);
     }
 }

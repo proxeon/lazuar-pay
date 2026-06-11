@@ -59,6 +59,7 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             request.Email,
             request.Phone,
             request.GlobalUserId);
+
         var profileId = await _mediator.Send(profileCommand, ct);
 
         var subscription = new CommunitySubscription(
@@ -73,15 +74,16 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         _subscriptionRepository.Add(subscription);
 
         decimal finalPrice = plan.Price;
-
         if (!string.IsNullOrWhiteSpace(request.CouponCode))
         {
             var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
             if (coupon == null) throw new InvalidOperationException("Invalid coupon code.");
             
-            coupon.Redeem();
-            _couponRepository.Update(coupon);
+            coupon.Validate(plan.Price);
+            coupon.Reserve();
+            subscription.SetPendingCoupon(coupon.Id);
             
+            _couponRepository.Update(coupon);
             finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
             if (finalPrice < 0) finalPrice = 0;
         }
@@ -107,8 +109,8 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             metadata);
 
         var checkoutUrl = await _mediator.Send(checkoutQuery, ct);
-        subscription.SetPaymentGatewaySessionId(checkoutUrl);
         
+        subscription.SetPaymentGatewaySessionId(checkoutUrl);
         await _subscriptionRepository.SaveChangesAsync(ct);
 
         return checkoutUrl;

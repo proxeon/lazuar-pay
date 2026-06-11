@@ -8,10 +8,12 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
     public Guid Id { get; private set; }
     public Guid OrganizationId { get; set; }
     public string Code { get; private set; }
-    public string DiscountType { get; private set; } // "PERCENTAGE" or "FIXED"
+    public string DiscountType { get; private set; }
     public decimal Amount { get; private set; }
     public int MaxUses { get; private set; }
     public int UsedCount { get; private set; }
+    public int ReservedCount { get; private set; }
+    public decimal MinimumOriginalPrice { get; private set; }
     public DateTime? ExpiresAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
@@ -19,7 +21,7 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
     private CommunityCoupon() { }
 #pragma warning restore CS8618
 
-    public CommunityCoupon(Guid organizationId, string code, string discountType, decimal amount, int maxUses, DateTime? expiresAt)
+    public CommunityCoupon(Guid organizationId, string code, string discountType, decimal amount, int maxUses, DateTime? expiresAt, decimal minimumOriginalPrice = 0)
     {
         if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Code is required.");
         if (discountType != "PERCENTAGE" && discountType != "FIXED") throw new ArgumentException("Invalid discount type.");
@@ -32,6 +34,8 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
         Amount = amount;
         MaxUses = maxUses;
         UsedCount = 0;
+        ReservedCount = 0;
+        MinimumOriginalPrice = minimumOriginalPrice;
         ExpiresAt = expiresAt;
         CreatedAt = DateTime.UtcNow;
     }
@@ -43,22 +47,48 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
             var discount = originalPrice * (Amount / 100m);
             return Math.Min(discount, originalPrice);
         }
-        
         return Math.Min(Amount, originalPrice);
     }
 
-    public void Redeem()
+    public void Validate(decimal originalPrice)
     {
         if (ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow)
         {
             CheckRule(new GenericBusinessRule("This coupon has expired."));
         }
 
-        if (MaxUses > 0 && UsedCount >= MaxUses)
+        if (MaxUses > 0 && (UsedCount + ReservedCount) >= MaxUses)
         {
             CheckRule(new GenericBusinessRule("This coupon has reached its maximum usage limit."));
         }
 
+        if (MinimumOriginalPrice > 0 && originalPrice < MinimumOriginalPrice)
+        {
+            CheckRule(new GenericBusinessRule($"This coupon requires a minimum original price of {MinimumOriginalPrice:F2}."));
+        }
+    }
+
+    public void Reserve()
+    {
+        ReservedCount++;
+    }
+
+    public void ConfirmReservation()
+    {
+        if (ReservedCount <= 0)
+        {
+            CheckRule(new GenericBusinessRule("No active reservation to confirm."));
+        }
+
+        ReservedCount--;
         UsedCount++;
+    }
+
+    public void ReleaseReservation()
+    {
+        if (ReservedCount > 0)
+        {
+            ReservedCount--;
+        }
     }
 }
