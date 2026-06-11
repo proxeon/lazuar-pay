@@ -14,6 +14,8 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
     public string ReferenceType { get; private set; }
     public string ReferenceId { get; private set; }
     public string? Description { get; private set; }
+    public string? TaxInvoiceId { get; private set; }
+    public string? LhdnValidationStatus { get; private set; }
 
     private readonly List<LedgerLine> _lines = new();
     public IReadOnlyCollection<LedgerLine> Lines => _lines.AsReadOnly();
@@ -34,6 +36,12 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
     {
         var line = new LedgerLine(Id, accountType, amount, currency, baseCurrencyAmount, baseCurrency);
         _lines.Add(line);
+    }
+
+    public void UpdateLhdnStatus(string taxInvoiceId, string status)
+    {
+        TaxInvoiceId = taxInvoiceId;
+        LhdnValidationStatus = status;
     }
 
     public void ValidateBalanced()

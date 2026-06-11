@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Application;
 using Modules.Billing.Contracts;
+using Modules.Billing.Contracts.Events;
 using Modules.Billing.Infrastructure.EventHandlers;
 using Modules.Billing.Infrastructure.Repositories;
 using Modules.Billing.Infrastructure.Services;
@@ -39,9 +40,13 @@ public static class DependencyInjection
         services.AddTransient<GatewayPaymentCompletedHandler>();
         services.AddTransient<ZeroAmountCheckoutHandler>();
         services.AddTransient<GatewayRefundCompletedHandler>();
+        services.AddTransient<InvoiceIssuedHandler>();
+        services.AddTransient<ManualPaymentRecordedHandler>();
+        services.AddTransient<CommissionAccruedHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
+        services.AddHostedService<RevenueRecognitionJob>();
 
         return services;
     }
@@ -53,6 +58,9 @@ public static class DependencyInjection
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedHandler>();
         eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedHandler>();
+        eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedHandler>();
+        eventBus.Subscribe<ManualPaymentRecordedIntegrationEvent, ManualPaymentRecordedHandler>();
+        eventBus.Subscribe<CommissionAccruedIntegrationEvent, CommissionAccruedHandler>();
 
         return app;
     }
