@@ -1,4 +1,4 @@
-import { UserPlus, Megaphone, GraduationCap, CreditCard, Building2, type LucideIcon } from "lucide-react";
+import { UserPlus, Megaphone, GraduationCap, CreditCard, Building2, DollarSign, type LucideIcon } from "lucide-react";
 
 export interface PromptItem {
   label: string;
@@ -67,6 +67,17 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
       { label: "Change Plan", query: "Upgrade a specific member to a different plan." },
       { label: "Cancel / Ban", query: "Cancel a specific member's subscription at the end of the month." },
       { label: "GDPR Deletion", query: "Permanently anonymize and delete all data for a member who requested account deletion." },
+    ]
+  },
+  {
+    id: "financials",
+    icon: DollarSign,
+    title: "Financial Health",
+    description: "Revenue, fees, and tax liabilities",
+    prompts: [
+      { label: "Net Profit & Fees", query: "What is our exact Net Cash in Bank after deducting Stripe and Billplz gateway fees?" },
+      { label: "Tax Liabilities", query: "How much SST/Tax liability do we currently owe the government from our recent sales?" },
+      { label: "Gross vs Net Revenue", query: "Give me a breakdown of our Gross Revenue versus our actual Recognized Revenue." },
     ]
   },
   {

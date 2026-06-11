@@ -15,7 +15,6 @@
 // 2. Decode to a UTF-8 string ONLY when the stream completes.
 // 3. Wrap `JsonSerializer.Deserialize` in a try/catch to catch LLM JSON hallucinations gracefully.
 // ==============================================================================================
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -150,7 +149,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
                 if (streamError != null)
                 {
-                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n⚠️ **LLM Request Error:**\n`{streamError.Message}`" };
+                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Request Error:**\n`{streamError.Message}`" };
                     yield break;
                 }
 
@@ -209,7 +208,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
                 if (streamError != null)
                 {
-                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n⚠️ **LLM Streaming Error:**\n`{streamError.Message}`" };
+                    yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **LLM Streaming Error:**\n`{streamError.Message}`" };
                     yield break;
                 }
 
@@ -262,7 +261,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     }
 
                     iterations++;
-
                     if (iterations >= 2)
                     {
                         messages.Add(new SystemChatMessage("SYSTEM ALARM: You have executed the necessary tools and received the data. Output a final text summary immediately. DO NOT execute any more tools."));
@@ -275,7 +273,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 }
             }
 
-            yield return new ChatStreamChunkDto { Type = "text", Content = "\nExecution limit reached. Please refine your request." };
+            yield return new ChatStreamChunkDto { Type = "text", Content = "\n\nExecution limit reached. Please refine your request." };
         }
         finally
         {
@@ -283,7 +281,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             {
                 using var finishScope = _scopeFactory.CreateScope();
                 var repo = finishScope.ServiceProvider.GetRequiredService<IOpsRepository>();
-
                 var assistantMsg = new OpsMessage(
                     Guid.CreateVersion7(),
                     tenantId,
@@ -343,7 +340,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                 $"**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages (like '[I proposed...]') in your text response. " +
                 $"**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs. " +
                 $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it. " +
-                $"**CRITICAL RULE 5**: When executing bulk actions (Broadcasts) or financial lookups (Global Ledger), rely on the dedicated batch tools. Never attempt to loop through individual subscriber tools to send bulk messages, as this will violate system timeout boundaries."
+                $"**CRITICAL RULE 5**: When executing bulk actions (Broadcasts) or financial lookups (Global Ledger), rely on the dedicated batch tools. Never attempt to loop through individual subscriber tools to send bulk messages, as this will violate system timeout boundaries. " +
+                $"**CRITICAL RULE 6 (FINANCIAL TRUTH)**: When discussing revenue, strictly differentiate between 'Gross Revenue' (total catalog value of sales) and 'Net Cash in Bank' (actual cash deposited after deducting Gateway Fees like Stripe/Billplz). Always remind the user of 'Tax Liabilities' (SST/VAT) that are owed to the government and should not be counted as profit. Use the GetFinancialHealthAgentQuery tool for accurate ledger-based metrics."
             )
         };
 
