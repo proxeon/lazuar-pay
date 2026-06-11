@@ -25,7 +25,6 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
     public async Task HandleAsync(GatewayRefundRequestedIntegrationEvent @event)
     {
         var config = await _configRepository.GetActiveByTenantIdAsync(@event.OrganizationId);
-
         if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
             await _eventBus.PublishAsync(new GatewayRefundFailedIntegrationEvent(
@@ -34,15 +33,19 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
-
-        // As a safeguard, since we lack the exact refund amount in the event, we query the gateway to refund the full original transaction amount.
-        // For Stripe, leaving the amount blank refunds the entire charge. We pass 0 here, and the adapter handles it.
+        
         var success = await adapter.IssueRefundAsync(config.ApiKey, @event.GatewayTransactionId, 0);
-
         if (success)
         {
             await _eventBus.PublishAsync(new GatewayRefundCompletedIntegrationEvent(
-                @event.OrganizationId, @event.SubscriptionId, @event.PaymentRecordId, 0, "MYR"));
+                OrganizationId: @event.OrganizationId,
+                SubscriptionId: @event.SubscriptionId,
+                PaymentRecordId: @event.PaymentRecordId,
+                RefundedAmount: 0,
+                Currency: "MYR",
+                RefundedFee: 0m,
+                NetRefundedAmount: 0m
+            ));
         }
         else
         {

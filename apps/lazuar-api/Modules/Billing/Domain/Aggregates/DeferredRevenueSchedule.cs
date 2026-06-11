@@ -15,7 +15,9 @@ public class DeferredRevenueSchedule : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime EndDate { get; private set; }
     public string Status { get; private set; }
 
+#pragma warning disable CS8618
     private DeferredRevenueSchedule() { }
+#pragma warning restore CS8618
 
     public DeferredRevenueSchedule(Guid organizationId, Guid ledgerEntryId, decimal totalDeferredAmount, string currency, DateTime startDate, DateTime endDate)
     {

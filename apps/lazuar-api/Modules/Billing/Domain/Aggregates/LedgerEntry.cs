@@ -20,7 +20,9 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
     private readonly List<LedgerLine> _lines = new();
     public IReadOnlyCollection<LedgerLine> Lines => _lines.AsReadOnly();
 
+#pragma warning disable CS8618
     private LedgerEntry() { }
+#pragma warning restore CS8618
 
     public LedgerEntry(Guid organizationId, string referenceType, string referenceId, string? description = null)
     {

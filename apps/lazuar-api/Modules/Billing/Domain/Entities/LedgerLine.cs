@@ -13,7 +13,9 @@ public class LedgerLine : Entity
     public decimal BaseCurrencyAmount { get; private set; }
     public string BaseCurrency { get; private set; }
 
+#pragma warning disable CS8618
     private LedgerLine() { }
+#pragma warning restore CS8618
 
     internal LedgerLine(Guid ledgerEntryId, string accountType, decimal amount, string currency, decimal baseCurrencyAmount, string baseCurrency)
     {

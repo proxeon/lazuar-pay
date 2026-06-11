@@ -81,13 +81,13 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             {
                 if (stripeEvent.Data.Object is Session session)
                 {
-                    var amount = (session.AmountTotal ?? 0) / 100m;
+                    var amount = (session.AmountTotal ?? 0L) / 100m;
                     var meta = session.Metadata != null ? new Dictionary<string, string>(session.Metadata) : new Dictionary<string, string>();
                     
                     decimal gatewayFee = 0;
                     decimal fxRate = 1;
                     string baseCurrency = session.Currency ?? "myr";
-                    decimal taxAmount = (session.TotalDetails?.AmountTax ?? 0) / 100m;
+                    decimal taxAmount = (session.TotalDetails?.AmountTax ?? 0L) / 100m;
 
                     if (!string.IsNullOrEmpty(session.PaymentIntentId))
                     {
@@ -104,7 +104,11 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                             if (charge?.BalanceTransaction != null)
                             {
                                 var bt = charge.BalanceTransaction;
-                                gatewayFee = Math.Abs((bt.Fee ?? 0) / 100m);
+                                
+                                // FIX: bt.Fee is a non-nullable long in the Stripe.net SDK. 
+                                // Applying ?? 0L causes CS0019. Math.Abs handles the negative fee integer correctly.
+                                gatewayFee = Math.Abs(bt.Fee / 100m);
+                                
                                 if (bt.ExchangeRate.HasValue)
                                 {
                                     fxRate = bt.ExchangeRate.Value;

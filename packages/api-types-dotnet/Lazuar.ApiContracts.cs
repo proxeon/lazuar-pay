@@ -27,6 +27,144 @@ namespace Lazuar.ApiTypes
     
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class FinancialSummaryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("gross_revenue")]
+        public double Gross_revenue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_gateway_fees")]
+        public double Total_gateway_fees { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_tax_liabilities")]
+        public double Total_tax_liabilities { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("net_revenue")]
+        public double Net_revenue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deferred_revenue")]
+        public double Deferred_revenue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recognized_revenue")]
+        public double Recognized_revenue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LedgerEntryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("timestamp")]
+        public System.DateTimeOffset Timestamp { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reference_type")]
+        public string Reference_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reference_id")]
+        public string Reference_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lines")]
+        public System.Collections.Generic.List<LedgerLineDto> Lines { get; set; } = new System.Collections.Generic.List<LedgerLineDto>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LedgerLineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("ledger_entry_id")]
+        public string Ledger_entry_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("account_type")]
+        public string Account_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("base_currency_amount")]
+        public double Base_currency_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("base_currency")]
+        public string Base_currency { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class NetProfitDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        public string Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gross_revenue")]
+        public double Gross_revenue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_fees")]
+        public double Gateway_fees { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("refunds_issued")]
+        public double Refunds_issued { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("net_profit")]
+        public double Net_profit { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class BillingLinkResponseDto
     {
 
@@ -756,6 +894,15 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("estimated_fee_percentage")]
+        public double Estimated_fee_percentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fixed_fee")]
+        public double Fixed_fee { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tax_rate")]
+        public double Tax_rate { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -965,6 +1112,15 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("estimated_fee_percentage")]
+        public double? Estimated_fee_percentage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fixed_fee")]
+        public double? Fixed_fee { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tax_rate")]
+        public double? Tax_rate { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2005,7 +2161,7 @@ namespace Lazuar.ApiTypes
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("data")]
-        public System.Collections.Generic.List<CommunitySubscriptionDto> Data { get; set; } = new System.Collections.Generic.List<CommunitySubscriptionDto>();
+        public System.Collections.Generic.List<LedgerEntryDto> Data { get; set; } = new System.Collections.Generic.List<LedgerEntryDto>();
 
         [System.Text.Json.Serialization.JsonPropertyName("total_count")]
         public int Total_count { get; set; } = default!;
@@ -2032,7 +2188,7 @@ namespace Lazuar.ApiTypes
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("data")]
-        public System.Collections.Generic.List<PaymentRecordDto> Data { get; set; } = new System.Collections.Generic.List<PaymentRecordDto>();
+        public System.Collections.Generic.List<CommunitySubscriptionDto> Data { get; set; } = new System.Collections.Generic.List<CommunitySubscriptionDto>();
 
         [System.Text.Json.Serialization.JsonPropertyName("total_count")]
         public int Total_count { get; set; } = default!;
@@ -2056,6 +2212,33 @@ namespace Lazuar.ApiTypes
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Response3
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.List<PaymentRecordDto> Data { get; set; } = new System.Collections.Generic.List<PaymentRecordDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_count")]
+        public int Total_count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_page")]
+        public int Current_page { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_pages")]
+        public int Total_pages { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Response4
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("data")]
