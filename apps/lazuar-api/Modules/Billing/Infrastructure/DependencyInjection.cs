@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Application;
+using Modules.Billing.Contracts;
 using Modules.Billing.Infrastructure.EventHandlers;
 using Modules.Billing.Infrastructure.Repositories;
+using Modules.Billing.Infrastructure.Services;
 using Modules.Billing.Infrastructure.Workers;
 using Modules.Community.Contracts;
 using Modules.Payments.Contracts.Events;
@@ -32,6 +34,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<IEventBus, OutboxEventBus<BillingDbContext>>("BillingEventBus");
         
         services.AddScoped<ILedgerRepository, LedgerRepository>();
+        services.AddScoped<IBillingQueryService, BillingQueryService>();
 
         services.AddTransient<GatewayPaymentCompletedHandler>();
         services.AddTransient<ZeroAmountCheckoutHandler>();

@@ -2,6 +2,11 @@ using BuildingBlocks.Domain;
 
 namespace Modules.Community.Domain.Entities;
 
+/// <summary>
+/// Acts purely as an AccessGrantLog. Proves the user paid for this specific cycle 
+/// to grant Telegram/Zoom access. Financial summation and MRR calculations are 
+/// strictly handled by the centralized Billing module.
+/// </summary>
 public class PaymentRecord : Entity
 {
     public Guid Id { get; private set; }
@@ -18,7 +23,7 @@ public class PaymentRecord : Entity
     public string Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
-#pragma warning disable CS8618 
+#pragma warning disable CS8618
     private PaymentRecord() { }
 #pragma warning restore CS8618
 
