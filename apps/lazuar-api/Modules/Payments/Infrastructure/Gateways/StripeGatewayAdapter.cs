@@ -26,7 +26,6 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         {
             var client = new StripeClient(apiKey);
             var service = new SessionService(client);
-
             metadata["tenant_id"] = tenantId.ToString();
 
             var options = new SessionCreateOptions
@@ -55,7 +54,6 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             };
 
             var session = await service.CreateAsync(options);
-
             return new GatewayCheckoutResult(true, session.Url, session.Id, null);
         }
         catch (StripeException ex)
@@ -65,15 +63,16 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public Task<GatewayWebhookParsedResult> ParseWebhookAsync(
-        string webhookSecret, string rawBody, Dictionary<string, string> headers)
+    public async Task<GatewayWebhookParsedResult> ParseWebhookAsync(
+        string apiKey, string webhookSecret, string rawBody, Dictionary<string, string> headers,
+        decimal estimatedFeePercentage = 0, decimal fixedFee = 0, decimal taxRate = 0)
     {
         try
         {
             var signatureHeader = headers.Keys.FirstOrDefault(k => k.Equals("Stripe-Signature", StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrEmpty(signatureHeader) || !headers.TryGetValue(signatureHeader, out var signature))
             {
-                return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), "Missing Stripe-Signature header."));
+                return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing Stripe-Signature header.");
             }
 
             var stripeEvent = EventUtility.ConstructEvent(rawBody, signature, webhookSecret);
@@ -84,8 +83,44 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 {
                     var amount = (session.AmountTotal ?? 0) / 100m;
                     var meta = session.Metadata != null ? new Dictionary<string, string>(session.Metadata) : new Dictionary<string, string>();
+                    
+                    decimal gatewayFee = 0;
+                    decimal fxRate = 1;
+                    string baseCurrency = session.Currency ?? "myr";
+                    decimal taxAmount = (session.TotalDetails?.AmountTax ?? 0) / 100m;
 
-                    return Task.FromResult(new GatewayWebhookParsedResult(
+                    if (!string.IsNullOrEmpty(session.PaymentIntentId))
+                    {
+                        try
+                        {
+                            var client = new StripeClient(apiKey);
+                            var piService = new PaymentIntentService(client);
+                            var pi = await piService.GetAsync(session.PaymentIntentId, new PaymentIntentGetOptions
+                            {
+                                Expand = new List<string> { "latest_charge.balance_transaction" }
+                            });
+                            
+                            var charge = pi.LatestCharge as Charge;
+                            if (charge?.BalanceTransaction != null)
+                            {
+                                var bt = charge.BalanceTransaction;
+                                gatewayFee = Math.Abs((bt.Fee ?? 0) / 100m);
+                                if (bt.ExchangeRate.HasValue)
+                                {
+                                    fxRate = bt.ExchangeRate.Value;
+                                }
+                                baseCurrency = bt.Currency ?? baseCurrency;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to fetch Stripe balance transaction for fee extraction.");
+                        }
+                    }
+
+                    decimal netAmount = amount - gatewayFee;
+
+                    return new GatewayWebhookParsedResult(
                         Verified: true,
                         EventType: "PAYMENT_COMPLETED",
                         EventId: stripeEvent.Id,
@@ -93,17 +128,22 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         Currency: session.Currency ?? "myr",
                         GatewayTransactionId: session.PaymentIntentId ?? session.Id,
                         Metadata: meta,
+                        GatewayFee: gatewayFee,
+                        TaxAmount: taxAmount,
+                        NetAmount: netAmount,
+                        FxRate: fxRate,
+                        BaseCurrency: baseCurrency,
                         Error: null
-                    ));
+                    );
                 }
             }
-
-            return Task.FromResult(new GatewayWebhookParsedResult(true, stripeEvent.Type, stripeEvent.Id, 0, "", null, new(), null));
+            
+            return new GatewayWebhookParsedResult(true, stripeEvent.Type, stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "", null);
         }
         catch (StripeException ex)
         {
             _logger.LogError(ex, "Stripe webhook verification failed");
-            return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), ex.Message));
+            return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message);
         }
     }
 
@@ -113,13 +153,11 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         {
             var client = new StripeClient(apiKey);
             var service = new RefundService(client);
-
             var options = new RefundCreateOptions
             {
                 PaymentIntent = transactionId,
                 Amount = (long)(amount * 100)
             };
-
             var refund = await service.CreateAsync(options);
             return refund.Status == "succeeded" || refund.Status == "pending";
         }
@@ -134,10 +172,9 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     {
         var client = new StripeClient(apiKey);
         var customerService = new CustomerService(client);
-
         var customers = await customerService.ListAsync(new CustomerListOptions { Email = customerEmail, Limit = 1 });
         var customerId = customers.FirstOrDefault()?.Id;
-
+        
         if (string.IsNullOrEmpty(customerId))
         {
             throw new InvalidOperationException("No Stripe customer found for this email address.");
@@ -149,7 +186,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             Customer = customerId,
             ReturnUrl = returnUrl
         });
-
+        
         return session.Url;
     }
 }

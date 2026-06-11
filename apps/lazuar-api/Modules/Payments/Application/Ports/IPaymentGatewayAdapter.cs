@@ -14,12 +14,17 @@ public record GatewayWebhookParsedResult(
     string Currency,
     string? GatewayTransactionId,
     Dictionary<string, string> Metadata,
+    decimal GatewayFee,
+    decimal TaxAmount,
+    decimal NetAmount,
+    decimal FxRate,
+    string BaseCurrency,
     string? Error);
 
 public interface IPaymentGatewayAdapter
 {
     string GatewayType { get; }
-
+    
     Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey,
         Guid tenantId,
@@ -31,17 +36,21 @@ public interface IPaymentGatewayAdapter
         string cancelUrl,
         Dictionary<string, string> metadata,
         string? merchantId);
-
+        
     Task<GatewayWebhookParsedResult> ParseWebhookAsync(
+        string apiKey,
         string webhookSecret,
         string rawBody,
-        Dictionary<string, string> headers);
-
+        Dictionary<string, string> headers,
+        decimal estimatedFeePercentage = 0,
+        decimal fixedFee = 0,
+        decimal taxRate = 0);
+        
     Task<bool> IssueRefundAsync(
         string apiKey,
         string transactionId,
         decimal amount);
-
+        
     Task<string> GenerateCustomerPortalAsync(
         string apiKey,
         string customerEmail,

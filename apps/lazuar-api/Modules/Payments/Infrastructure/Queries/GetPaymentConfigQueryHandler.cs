@@ -32,7 +32,10 @@ public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery,
             Merchant_id = config.MerchantId,
             Webhook_secret = MaskSecret(config.WebhookSecret),
             Secret_key = MaskSecret(config.ApiKey),
-            Is_active = config.IsActive
+            Is_active = config.IsActive,
+            Estimated_fee_percentage = (double)config.EstimatedFeePercentage,
+            Fixed_fee = (double)config.FixedFee,
+            Tax_rate = (double)config.TaxRate
         };
     }
 

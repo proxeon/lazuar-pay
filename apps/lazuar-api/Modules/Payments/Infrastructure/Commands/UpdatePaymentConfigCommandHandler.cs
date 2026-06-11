@@ -31,8 +31,10 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
                 request.ApiKey,
                 request.WebhookSecret,
                 request.MerchantId,
-                request.IsActive);
-
+                request.IsActive,
+                request.EstimatedFeePercentage,
+                request.FixedFee,
+                request.TaxRate);
             _context.TenantPaymentConfigurations.Add(config);
         }
         else
@@ -40,15 +42,18 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
             var finalApiKey = string.IsNullOrEmpty(request.ApiKey) || request.ApiKey.Contains("••••") ? config.ApiKey : request.ApiKey.Trim();
             var finalWebhookSecret = string.IsNullOrEmpty(request.WebhookSecret) || request.WebhookSecret.Contains("••••") ? config.WebhookSecret : request.WebhookSecret.Trim();
             var finalSecretKey = string.IsNullOrEmpty(request.SecretKey) || request.SecretKey.Contains("••••") ? config.ApiKey : request.SecretKey.Trim();
-
+            
             config.UpdateCredentials(
                 request.GatewayType,
                 request.GatewayType == "STRIPE" ? finalSecretKey : finalApiKey,
                 finalWebhookSecret,
                 request.MerchantId,
-                request.IsActive);
+                request.IsActive,
+                request.EstimatedFeePercentage,
+                request.FixedFee,
+                request.TaxRate);
         }
-
+        
         await _context.SaveChangesAsync(ct);
     }
 }

@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Payments/Contracts/Commands/UpdatePaymentConfigCommand.cs
 using System;
 using System.Text.Json.Serialization;
 using BuildingBlocks.Application;
@@ -13,7 +12,10 @@ public record UpdatePaymentConfigCommand(
     [property: JsonPropertyName("collection_id")] string? MerchantId,
     string? WebhookSecret,
     string? SecretKey,
-    bool IsActive) : ICommand
+    bool IsActive,
+    decimal EstimatedFeePercentage = 0,
+    decimal FixedFee = 0,
+    decimal TaxRate = 0) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
