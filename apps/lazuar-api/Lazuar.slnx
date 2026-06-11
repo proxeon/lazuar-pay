@@ -1,53 +1,52 @@
 <Solution>
+  <Project Path="src\Lazuar.Api\Lazuar.Api.csproj" />
   <Folder Name="/BuildingBlocks/">
-    <Project Path="BuildingBlocks/Application/BuildingBlocks.Application.csproj" />
-    <Project Path="BuildingBlocks/Domain/BuildingBlocks.Domain.csproj" />
-    <Project Path="BuildingBlocks/Infrastructure/BuildingBlocks.Infrastructure.csproj" />
-  </Folder>
-  <Folder Name="/Modules/">
-    <Folder Name="/Modules/Community/">
-      <Project Path="Modules/Community/Application/Modules.Community.Application.csproj" />
-      <Project Path="Modules/Community/Contracts/Modules.Community.Contracts.csproj" />
-      <Project Path="Modules/Community/Domain/Modules.Community.Domain.csproj" />
-      <Project Path="Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj" />
-    </Folder>
-    <Folder Name="/Modules/CRM/">
-      <Project Path="Modules/CRM/Contracts/Modules.CRM.Contracts.csproj" />
-      <Project Path="Modules/CRM/Domain/Modules.CRM.Domain.csproj" />
-      <Project Path="Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj" />
-    </Folder>
-    <Folder Name="/Modules/Messaging/">
-      <Project Path="Modules/Messaging/Application/Modules.Messaging.Application.csproj" />
-      <Project Path="Modules/Messaging/Contracts/Modules.Messaging.Contracts.csproj" />
-      <Project Path="Modules/Messaging/Domain/Modules.Messaging.Domain.csproj" />
-      <Project Path="Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj" />
-    </Folder>
-    <Folder Name="/Modules/One/">
-      <Project Path="Modules/One/Application/Modules.One.Application.csproj" />
-      <Project Path="Modules/One/Contracts/Modules.One.Contracts.csproj" />
-      <Project Path="Modules/One/Domain/Modules.One.Domain.csproj" />
-      <Project Path="Modules/One/Infrastructure/Modules.One.Infrastructure.csproj" />
-    </Folder>
-    <Folder Name="/Modules/Ops/">
-      <Project Path="Modules/Ops/Application/Modules.Ops.Application.csproj" />
-      <Project Path="Modules/Ops/Contracts/Modules.Ops.Contracts.csproj" />
-      <Project Path="Modules/Ops/Domain/Modules.Ops.Domain.csproj" />
-      <Project Path="Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj" />
-    </Folder>
-    <Folder Name="/Modules/Payments/">
-      <Project Path="Modules/Payments/Application/Modules.Payments.Application.csproj" />
-      <Project Path="Modules/Payments/Contracts/Modules.Payments.Contracts.csproj" />
-      <Project Path="Modules/Payments/Domain/Modules.Payments.Domain.csproj" />
-      <Project Path="Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj" />
-    </Folder>
-  </Folder>
-  <Folder Name="/Packages/">
-    <Project Path="../../packages/api-types-dotnet/Lazuar.ApiContracts.csproj" />
+    <Project Path="BuildingBlocks\Domain\BuildingBlocks.Domain.csproj" />
+    <Project Path="BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
+    <Project Path="BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/SharedKernel/">
-    <Project Path="SharedKernel/SharedKernel.csproj" />
+    <Project Path="SharedKernel\SharedKernel.csproj" />
   </Folder>
-  <Folder Name="/src/">
-    <Project Path="src/Lazuar.Api/Lazuar.Api.csproj" />
+  <Folder Name="/Modules/One/">
+    <Project Path="Modules\One\Contracts\Modules.One.Contracts.csproj" />
+    <Project Path="Modules\One\Domain\Modules.One.Domain.csproj" />
+    <Project Path="Modules\One\Application\Modules.One.Application.csproj" />
+    <Project Path="Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/Messaging/">
+    <Project Path="Modules\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
+    <Project Path="Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
+    <Project Path="Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
+    <Project Path="Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/Community/">
+    <Project Path="Modules\Community\Contracts\Modules.Community.Contracts.csproj" />
+    <Project Path="Modules\Community\Domain\Modules.Community.Domain.csproj" />
+    <Project Path="Modules\Community\Application\Modules.Community.Application.csproj" />
+    <Project Path="Modules\Community\Infrastructure\Modules.Community.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/CRM/">
+    <Project Path="Modules\CRM\Contracts\Modules.CRM.Contracts.csproj" />
+    <Project Path="Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
+    <Project Path="Modules\CRM\Infrastructure\Modules.CRM.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/Payments/">
+    <Project Path="Modules\Payments\Contracts\Modules.Payments.Contracts.csproj" />
+    <Project Path="Modules\Payments\Domain\Modules.Payments.Domain.csproj" />
+    <Project Path="Modules\Payments\Application\Modules.Payments.Application.csproj" />
+    <Project Path="Modules\Payments\Infrastructure\Modules.Payments.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/Ops/">
+    <Project Path="Modules\Ops\Contracts\Modules.Ops.Contracts.csproj" />
+    <Project Path="Modules\Ops\Domain\Modules.Ops.Domain.csproj" />
+    <Project Path="Modules\Ops\Application\Modules.Ops.Application.csproj" />
+    <Project Path="Modules\Ops\Infrastructure\Modules.Ops.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/Billing/">
+    <Project Path="Modules\Billing\Contracts\Modules.Billing.Contracts.csproj" />
+    <Project Path="Modules\Billing\Domain\Modules.Billing.Domain.csproj" />
+    <Project Path="Modules\Billing\Application\Modules.Billing.Application.csproj" />
+    <Project Path="Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
   </Folder>
 </Solution>

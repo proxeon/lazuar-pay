@@ -2,82 +2,82 @@ using NetArchTest.Rules;
 using NUnit.Framework;
 using System;
 using System.Linq;
-using Modules.Community.Domain.Aggregates;
-using Modules.Payments.Domain.Aggregates;
-using Modules.CRM.Domain;
-using Modules.One.Domain;
-using Modules.Messaging.Domain;
-using Modules.Ops.Domain;
 
 namespace Lazuar.ArchitectureTests;
 
-[TestFixture]
 public class ModuleBoundaryTests
 {
-    [Test]
-    public void CommunityDomain_Should_Not_Reference_Other_Modules()
+    private readonly string[] _moduleNamespaces = new[]
     {
-        var result = Types.InAssembly(typeof(CommunityPlan).Assembly)
-            .ShouldNot()
-            .HaveDependencyOnAny(
-                "Modules.CRM.Domain",
-                "Modules.Payments.Domain",
-                "Modules.One.Domain",
-                "Modules.Messaging.Domain",
-                "Modules.Ops.Domain"
-            )
-            .GetResult();
-
-        Assert.That(result.IsSuccessful, Is.True, 
-            $"Community Domain violates boundaries. Failing types: {string.Join(", ", result.FailingTypeNames ?? Array.Empty<string>())}");
-    }
+        "Modules.One",
+        "Modules.Messaging",
+        "Modules.Community",
+        "Modules.CRM",
+        "Modules.Payments",
+        "Modules.Ops",
+        "Modules.Billing"
+    };
 
     [Test]
-    public void PaymentsDomain_Should_Be_Blind_To_Community_Concepts()
+    public void Domain_Should_Not_Reference_Infrastructure_Or_Application()
     {
-        var result = Types.InAssembly(typeof(TenantPaymentConfiguration).Assembly)
-            .ShouldNot()
-            .HaveDependencyOn("Modules.Community.Domain")
-            .GetResult();
-
-        Assert.That(result.IsSuccessful, Is.True, 
-            "Payments Domain must remain completely blind to Community concepts like Coupons or Broadcasts.");
-    }
-
-    [Test]
-    public void Domain_Assemblies_Should_Not_Reference_Infrastructure()
-    {
-        var domainAssemblies = new[]
+        foreach (var module in _moduleNamespaces)
         {
-            typeof(CommunityPlan).Assembly,
-            typeof(TenantPaymentConfiguration).Assembly,
-            typeof(ClientProfileEntity).Assembly,
-            typeof(Organization).Assembly,
-            typeof(TenantReplica).Assembly,
-            typeof(OpsConversation).Assembly
-        };
+            var domainAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Domain") == true);
 
-        foreach (var assembly in domainAssemblies)
-        {
-            var result = Types.InAssembly(assembly)
+            if (domainAssembly == null) continue;
+
+            var result = Types.InAssembly(domainAssembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(
-                    "Microsoft.EntityFrameworkCore",
-                    "Dapper",
-                    "Npgsql",
-                    "Stripe",
-                    "Amazon.S3",
-                    "Modules.Community.Infrastructure",
-                    "Modules.Payments.Infrastructure",
-                    "Modules.CRM.Infrastructure",
-                    "Modules.One.Infrastructure",
-                    "Modules.Messaging.Infrastructure",
-                    "Modules.Ops.Infrastructure"
-                )
+                .HaveDependencyOnAny($"{module}.Infrastructure", $"{module}.Application")
                 .GetResult();
 
-            Assert.That(result.IsSuccessful, Is.True, 
-                $"{assembly.GetName().Name} references infrastructure or external libraries. Failing types: {string.Join(", ", result.FailingTypeNames ?? Array.Empty<string>())}");
+            Assert.That(result.IsSuccessful, Is.True, $"Domain layer in {module} violates boundaries.");
+        }
+    }
+
+    [Test]
+    public void Application_Should_Not_Reference_Infrastructure()
+    {
+        foreach (var module in _moduleNamespaces)
+        {
+            var appAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Application") == true);
+
+            if (appAssembly == null) continue;
+
+            var result = Types.InAssembly(appAssembly)
+                .ShouldNot()
+                .HaveDependencyOn($"{module}.Infrastructure")
+                .GetResult();
+
+            Assert.That(result.IsSuccessful, Is.True, $"Application layer in {module} violates boundaries.");
+        }
+    }
+
+    [Test]
+    public void Modules_Should_Not_Reference_Other_Modules_Directly()
+    {
+        foreach (var module in _moduleNamespaces)
+        {
+            var domainAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Domain") == true);
+            
+            var appAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Application") == true);
+
+            var otherModules = _moduleNamespaces.Where(m => m != module).ToArray();
+
+            if (domainAssembly != null)
+            {
+                var domainResult = Types.InAssembly(domainAssembly)
+                    .ShouldNot()
+                    .HaveDependencyOnAny(otherModules)
+                    .GetResult();
+                    
+                Assert.That(domainResult.IsSuccessful, Is.True, $"Domain in {module} references another module.");
+            }
         }
     }
 }

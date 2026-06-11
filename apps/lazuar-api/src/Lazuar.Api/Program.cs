@@ -21,15 +21,14 @@ using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Modules.Ops.Infrastructure;
+using Modules.Billing.Infrastructure;
 using Lazuar.Api;
 using Lazuar.Api.Middleware;
 using Lazuar.ApiTypes;
-
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
-// 1. Manually parse and inject the monorepo root .env file so .NET can read it
 var envPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../../../.env"));
 if (File.Exists(envPath))
 {
@@ -37,24 +36,20 @@ if (File.Exists(envPath))
     {
         var trimmed = line.Trim();
         if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#")) continue;
-
         var separatorIndex = trimmed.IndexOf('=');
         if (separatorIndex > 0)
         {
             var key = trimmed.Substring(0, separatorIndex).Trim();
             var value = trimmed.Substring(separatorIndex + 1).Trim();
-
-            // Strip wrapping quotes if present
             if (value.StartsWith("\"") && value.EndsWith("\"") && value.Length >= 2) value = value.Substring(1, value.Length - 2);
             if (value.StartsWith("'") && value.EndsWith("'") && value.Length >= 2) value = value.Substring(1, value.Length - 2);
-
             Environment.SetEnvironmentVariable(key, value);
         }
     }
 }
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Configuration.AddEnvironmentVariables(); // Ensure custom env vars are loaded into IConfiguration
+builder.Configuration.AddEnvironmentVariables();
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -66,21 +61,17 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-builder.Services.AddOptions<ResendOptions>()
-    .BindConfiguration(ResendOptions.SectionName);
-
-builder.Services.AddOptions<PlatformAdminSettings>()
-    .Configure<IConfiguration>((settings, configuration) =>
-    {
-        settings.Emails = configuration["PLATFORM_ADMIN_EMAILS"] ?? string.Empty;
-        settings.Password = configuration["PLATFORM_ADMIN_PASSWORD"] ?? string.Empty;
-    });
+builder.Services.AddOptions<ResendOptions>().BindConfiguration(ResendOptions.SectionName);
+builder.Services.AddOptions<PlatformAdminSettings>().Configure<IConfiguration>((settings, configuration) =>
+{
+    settings.Emails = configuration["PLATFORM_ADMIN_EMAILS"] ?? string.Empty;
+    settings.Password = configuration["PLATFORM_ADMIN_PASSWORD"] ?? string.Empty;
+});
 
 builder.Services.AddHttpClient("Resend", (sp, client) =>
 {
     client.BaseAddress = new Uri("https://api.resend.com/");
     client.Timeout = TimeSpan.FromSeconds(30);
-
     var options = sp.GetRequiredService<IOptions<ResendOptions>>().Value;
     if (!string.IsNullOrEmpty(options.ApiKey))
     {
@@ -96,9 +87,7 @@ builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
-
 builder.Services.AddThinLlmFactory();
-
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
@@ -120,7 +109,6 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "lazuar-clients",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
     };
-
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
@@ -152,15 +140,15 @@ builder.Services.AddCors(options =>
         {
             var origins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             policy.WithOrigins(origins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
         }
         else
         {
             policy.AllowAnyOrigin()
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         }
     });
 });
@@ -182,13 +170,15 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Ops.Application.DependencyInjection).Assembly);
-
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Application.DependencyInjection).Assembly);
+    
     cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.CRM.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Ops.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Infrastructure.DependencyInjection).Assembly);
 });
 
 builder.Services.AddOneModule(builder.Configuration);
@@ -197,6 +187,7 @@ builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddCrmModule(builder.Configuration);
 builder.Services.AddPaymentsModule(builder.Configuration);
 builder.Services.AddOpsModule(builder.Configuration);
+builder.Services.AddBillingModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -212,6 +203,7 @@ app.UseCommunitySubscriptions();
 app.UseCrmSubscriptions();
 app.UsePaymentsSubscriptions();
 app.UseOpsSubscriptions();
+app.UseBillingSubscriptions();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
@@ -220,6 +212,7 @@ apiGroup.MapMessagingEndpoints();
 apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();
 apiGroup.MapOpsEndpoints();
+apiGroup.MapBillingEndpoints();
 
 app.Run();
 
