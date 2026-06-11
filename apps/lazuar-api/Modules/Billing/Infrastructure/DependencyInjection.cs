@@ -4,7 +4,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.Billing.Application;
+using Modules.Billing.Infrastructure.EventHandlers;
+using Modules.Billing.Infrastructure.Repositories;
 using Modules.Billing.Infrastructure.Workers;
+using Modules.Community.Contracts;
+using Modules.Payments.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure;
 
@@ -26,6 +31,12 @@ public static class DependencyInjection
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<BillingDbContext>>("BillingEventBus");
         
+        services.AddScoped<ILedgerRepository, LedgerRepository>();
+
+        services.AddTransient<GatewayPaymentCompletedHandler>();
+        services.AddTransient<ZeroAmountCheckoutHandler>();
+        services.AddTransient<GatewayRefundCompletedHandler>();
+
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
 
@@ -34,6 +45,12 @@ public static class DependencyInjection
 
     public static IApplicationBuilder UseBillingSubscriptions(this IApplicationBuilder app)
     {
+        var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
+        
+        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedHandler>();
+        eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
+        eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedHandler>();
+
         return app;
     }
 }
