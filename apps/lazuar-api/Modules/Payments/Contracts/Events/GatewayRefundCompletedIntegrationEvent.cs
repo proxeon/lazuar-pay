@@ -8,7 +8,9 @@ public record GatewayRefundCompletedIntegrationEvent(
     Guid SubscriptionId,
     Guid PaymentRecordId,
     decimal RefundedAmount,
-    string Currency) : IIntegrationEvent
+    string Currency,
+    decimal RefundedFee,
+    decimal NetRefundedAmount) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;

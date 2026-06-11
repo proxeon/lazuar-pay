@@ -1,18 +1,29 @@
+using System;
+using System.Collections.Generic;
 using BuildingBlocks.Application;
 
 namespace Modules.Payments.Contracts.Events;
 
-/// <summary>
-/// Published by the Payments module when a valid webhook is received confirming a successful payment.
-/// Other modules (Community, Shop, Vault) listen to this to fulfill orders/subscriptions.
-/// </summary>
 public record GatewayPaymentCompletedIntegrationEvent(
     Guid OrganizationId,
     string GatewayTransactionId,
     decimal AmountPaid,
     string Currency,
+    decimal GatewayFee,
+    decimal TaxAmount,
+    decimal NetAmount,
+    decimal FxRate,
+    string BaseCurrency,
+    List<LineItemDto> LineItems,
     Dictionary<string, string> Metadata) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
 }
+
+public record LineItemDto(
+    string Sku,
+    string Description,
+    decimal Amount,
+    string RevenueType
+);

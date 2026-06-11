@@ -16,6 +16,9 @@ import "./modules/community/public-routes.tsp";
 import "./modules/ops/models.tsp";
 import "./modules/ops/routes.tsp";
 
+import "./modules/billing/models.tsp";
+import "./modules/billing/routes.tsp";
+
 using TypeSpec.Http;
 
 @service({
