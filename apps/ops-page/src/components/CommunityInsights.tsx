@@ -8,7 +8,6 @@ export default function CommunityInsights() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["community-stats"],
     queryFn: async () => {
-      // Cast route to 'any' since it's from the Community spec but accessible via the same API base
       const { data, error } = await client.GET("/admin/community/stats" as any);
       if (error) throw new Error(error.detail);
       return data;
@@ -84,7 +83,8 @@ export default function CommunityInsights() {
           {/* 2. Cash Flow Chart */}
           <div className="lg:col-span-1 bg-white border border-[#e5e5e5] p-5 shadow-sm flex flex-col h-[320px]">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] mb-6">Revenue Trend</h3>
-            <div className="flex-1 w-full min-h-0">
+            {/* Added min-h-[200px] to prevent Recharts rendering dimension errors */}
+            <div className="flex-1 w-full min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats?.cash_flow_trend || []} margin={{ top: 0, right: 0, left: 0, bottom: 0 }} barSize={32}>
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#71717a' }} dy={10} />
