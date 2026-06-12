@@ -4,7 +4,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Payments.Application.Commands;
 
-[AgentTool("Configure or toggle the active payment gateway (Stripe or Billplz).", "high", "SUPER_ADMIN", "ADMIN")]
+// Removed [AgentTool] attribute to revoke AI write access for security reasons.
 public record UpdatePaymentConfigCommand(
     Guid OrganizationId,
     string GatewayType,

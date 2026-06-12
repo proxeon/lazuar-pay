@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "../lib/utils";
-import { Plus, MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Building2, MoreVertical } from "lucide-react";
+import { Plus, MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Building2, MoreVertical, CreditCard, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { OpsConversationDto, AuthUser, EntitlementDto } from "../lib/api-client";
 
@@ -19,11 +19,12 @@ interface SidebarProps {
   onRename: (id: string, currentTitle: string) => void;
   onDelete: (id: string) => void;
   onLogout: () => void;
+  onOpenPaymentSettings: () => void;
 }
 
 export default function Sidebar({
   isOpen, setIsOpen, isMobile, user, entitlements, activeWorkspaceId, onWorkspaceSelect,
-  conversations, activeConversationId, onSelect, onNewChat, onRename, onDelete, onLogout
+  conversations, activeConversationId, onSelect, onNewChat, onRename, onDelete, onLogout, onOpenPaymentSettings
 }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -92,6 +93,13 @@ export default function Sidebar({
           {expanded && <span className="text-[13px] font-medium truncate">New chat</span>}
         </button>
 
+        {/* --- ADDED INSIGHTS TAB --- */}
+        <button onClick={() => onSelect("insights")} className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", activeConversationId === "insights" ? "bg-[#f4f4f5] text-[#09090b] font-semibold" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}>
+          <div className="w-12 h-full shrink-0 flex items-center justify-center"><Activity size={16} /></div>
+          {expanded && <span className="text-[13px] truncate">Community Insights</span>}
+        </button>
+        {/* ------------------------- */}
+
         <button onClick={() => onSelect("directory")} className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", activeConversationId === "directory" ? "bg-[#f4f4f5] text-[#09090b] font-semibold" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}>
           <div className="w-12 h-full shrink-0 flex items-center justify-center"><MessageSquare size={16} /></div>
           {expanded && <span className="text-[13px] truncate">Conversations Directory</span>}
@@ -159,9 +167,18 @@ export default function Sidebar({
           <AnimatePresence>
             {isUserMenuOpen && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className={cn("absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1", expanded ? "bottom-[calc(100%+8px)] left-2 w-[calc(100%-16px)] min-w-[200px]" : "bottom-1 left-[calc(100%+8px)] min-w-[200px]")}>
+                
+                <button 
+                  onClick={() => { setIsUserMenuOpen(false); onOpenPaymentSettings(); }} 
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors focus:outline-none"
+                >
+                  <CreditCard size={14} className="text-[#71717a]" /> Payment Configuration
+                </button>
+
                 <button onClick={() => { window.location.href = "http://localhost:3001/profile"; }} className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none">
                   <Settings size={14} /> View Identity Hub
                 </button>
+                <div className="h-px w-full bg-[#f4f4f5] my-1" />
                 <button onClick={onLogout} className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none">
                   <LogOut size={14} /> Log out
                 </button>
