@@ -93,15 +93,20 @@ tasks:
   # ==========================================
   # Ngrok Tunnel Tasks
   # ==========================================
-  tunnel:api:
-    desc: Start ngrok tunnel for the .NET API on port 8080 (rewrites host-headers)
+  tunnel:stop:
+    desc: Force kill any orphaned ngrok processes running in the background
     cmds:
-      - ngrok http 8080 --host-header="localhost:8080"
+      - pkill -9 ngrok || echo "No ngrok processes were running."
+
+  tunnel:api:
+    desc: Start ngrok tunnel for the .NET API on port 8080
+    cmds:
+      - ngrok http 8080
 
   tunnel:fe:
-    desc: Start ngrok tunnel for Next.js community-page on port 3020 (rewrites host-headers)
+    desc: Start ngrok tunnel for Next.js community-page on port 3020
     cmds:
-      - ngrok http 3020 --host-header="localhost:3020"
+      - ngrok http 3020
 
   tunnel:status:
     desc: Query the local ngrok agent API to print active public tunnel URLs

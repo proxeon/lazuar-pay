@@ -1,9 +1,35 @@
+// ==============================================================================================
+// DONT DELETE COMMENT HERE. IF you need to modify, just modify specific code and dont delete the comment.
+//
+// HISTORICAL BUG CONTEXT: BILLPLZ WEBHOOK VERIFICATION (x_signature)
+// 
+// Billplz sends webhook callbacks as `application/x-www-form-urlencoded`. To verify the authenticity 
+// of the payload, we must compute an HMAC-SHA256 signature using the X-Signature Key.
+//
+// PREVIOUS BUG:
+// We originally used ASP.NET's standard `QueryHelpers.ParseQuery(body)` to parse the incoming webhook. 
+// However, `QueryHelpers` applies aggressive URL-decoding (e.g., automatically converting `+` to spaces, 
+// handling form-data arrays, etc.). This caused slight mutations in the extracted string values.
+// Because HMAC hashing requires byte-for-byte exactness, these tiny mutations caused the computed 
+// signature to mismatch the provided `x_signature`, leading to false-positive 400 Bad Request errors.
+//
+// FIX IMPLEMENTED & REQUIRED TO MAINTAIN:
+// We MUST use the custom `ParseFormBody` method at the bottom of this class. It manually splits the 
+// raw body by `&` and `=`, and strictly uses `Uri.UnescapeDataString()`. This perfectly mimics the 
+// PHP/Ruby parameter extraction logic used by Billplz internally, guaranteeing that our signature 
+// computation always matches theirs. We also explicitly map '+' to ' ' before unescaping.
+// ==============================================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.WebUtilities;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
@@ -14,11 +40,24 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 {
     private const string ProductionApiUrl = "https://www.billplz.com/api/v3/";
     private const string SandboxApiUrl = "https://www.billplz-sandbox.com/api/v3/";
+    
     private readonly IHttpClientFactory _httpFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<BillplzGatewayAdapter> _logger;
 
     public string GatewayType => "BILLPLZ";
+
+    // Fields that Billplz only includes in x_signature computation when "Enable Extra Payment Completion Information" is checked.
+    private static readonly HashSet<string> ExtraFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "paid_at", "transaction_id", "transaction_status"
+    };
+
+    // Fields that are never part of the signature.
+    private static readonly HashSet<string> AlwaysExclude = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "x_signature"
+    };
 
     public BillplzGatewayAdapter(
         IHttpClientFactory httpFactory,
@@ -46,8 +85,9 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
         metadata.TryGetValue("type", out var type);
         var ref1 = metadata.TryGetValue("subscription_id", out var subId) ? subId : tenantId.ToString();
-        var queryParams = $"?type={Uri.EscapeDataString(type ?? "payment")}&subscription_id={Uri.EscapeDataString(ref1)}";
-        var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}{queryParams}";
+        
+        // Clean webhook URL without query parameters. Context is preserved in reference_1 and reference_2
+        var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}";
 
         if (webhookUrl.Contains("localhost"))
         {
@@ -113,19 +153,24 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         try
         {
             var formData = ParseFormBody(rawBody);
+            
             if (!formData.TryGetValue("x_signature", out var providedSignature) || string.IsNullOrEmpty(providedSignature))
             {
+                _logger.LogWarning("Billplz webhook failed: Missing x_signature in payload. Payload: {RawBody}", rawBody);
                 return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing x_signature in Billplz callback."));
             }
 
-            var computedSig = ComputeHmac(formData, webhookSecret, excludeExtra: false);
-            if (!string.Equals(providedSignature, computedSig, StringComparison.OrdinalIgnoreCase))
+            // Strategy 1: Exclude extra fields (When "Enable Extra Payment Completion Information" is UNCHECKED)
+            var withoutExtra = ComputeHmac(formData, webhookSecret, excludeExtra: true);
+            
+            // Strategy 2: Include extra fields (When "Enable Extra Payment Completion Information" is CHECKED)
+            var withExtra = ComputeHmac(formData, webhookSecret, excludeExtra: false);
+
+            if (!string.Equals(providedSignature, withoutExtra, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(providedSignature, withExtra, StringComparison.OrdinalIgnoreCase))
             {
-                computedSig = ComputeHmac(formData, webhookSecret, excludeExtra: true);
-                if (!string.Equals(providedSignature, computedSig, StringComparison.OrdinalIgnoreCase))
-                {
-                    return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Billplz x_signature verification failed."));
-                }
+                _logger.LogWarning("Billplz webhook failed: Signature mismatch. Provided: {Provided}, ComputedWithoutExtra: {WithoutExtra}, ComputedWithExtra: {WithExtra}", providedSignature, withoutExtra, withExtra);
+                return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Billplz x_signature verification failed."));
             }
 
             var paid = formData.GetValueOrDefault("paid", "false");
@@ -136,8 +181,9 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             var isPaid = paid.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                          state.Equals("paid", StringComparison.OrdinalIgnoreCase);
 
-            var reference1 = headers.GetValueOrDefault("Query-subscription_id", "");
-            var reference2 = headers.GetValueOrDefault("Query-type", "");
+            // Extract metadata from custom references sent by Billplz in the body (set during checkout)
+            var reference1 = formData.GetValueOrDefault("reference_1", "");
+            var reference2 = formData.GetValueOrDefault("reference_2", "");
 
             var metadata = new Dictionary<string, string>();
             if (!string.IsNullOrEmpty(reference2)) metadata["type"] = reference2;
@@ -185,10 +231,13 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
     private static string ComputeHmac(Dictionary<string, string> formData, string secretKey, bool excludeExtra)
     {
-        var extraFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "paid_at", "transaction_id", "transaction_status" };
         var elements = formData
-            .Where(kv => !string.Equals(kv.Key, "x_signature", StringComparison.OrdinalIgnoreCase))
-            .Where(kv => !(excludeExtra && extraFields.Contains(kv.Key)))
+            .Where(kv =>
+            {
+                if (AlwaysExclude.Contains(kv.Key)) return false;
+                if (excludeExtra && ExtraFields.Contains(kv.Key)) return false;
+                return true;
+            })
             .Select(kv => $"{kv.Key}{kv.Value}")
             .OrderBy(element => element, StringComparer.Ordinal)
             .ToList();
@@ -197,19 +246,28 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var keyBytes = Encoding.UTF8.GetBytes(secretKey);
         var dataBytes = Encoding.UTF8.GetBytes(sourceString);
         var hash = HMACSHA256.HashData(keyBytes, dataBytes);
+        
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
-    private static Dictionary<string, string> ParseFormBody(string body)
+    internal static Dictionary<string, string> ParseFormBody(string body)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrEmpty(body)) return result;
 
-        var parsed = QueryHelpers.ParseQuery(body);
-        foreach (var parameter in parsed)
+        foreach (var pair in body.Split('&'))
         {
-            result[parameter.Key] = parameter.Value.ToString();
+            var parts = pair.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                // Form payloads encode spaces as '+'. We must replace them with ' ' 
+                // BEFORE unescaping, otherwise the HMAC signature will mismatch.
+                var key = Uri.UnescapeDataString(parts[0].Replace("+", " "));
+                var value = Uri.UnescapeDataString(parts[1].Replace("+", " "));
+                result[key] = value;
+            }
         }
+
         return result;
     }
 

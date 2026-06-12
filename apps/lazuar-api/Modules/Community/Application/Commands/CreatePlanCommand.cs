@@ -64,10 +64,10 @@ public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
             request.DisplayOrder,
             request.Methodology);
 
-        if (request.Features.Any())
+        if (request.Features != null && request.Features.Any())
             plan.UpdateFeatures(request.Features);
 
-        if (request.Faq.Any())
+        if (request.Faq != null && request.Faq.Any())
         {
             var faqs = request.Faq.Select(f => new FaqItem(f.Id, f.Question, f.Answer)).ToList();
             plan.UpdateFaq(faqs);
