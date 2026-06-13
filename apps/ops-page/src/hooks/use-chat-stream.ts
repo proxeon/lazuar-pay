@@ -3,7 +3,7 @@ import { API_URL, type ChatStreamChunkDto, type ProposedActionDto } from "../lib
 import type { Message } from "../types/chat";
 
 export function useChatStream(
-  activeConversationId: string | null,
+  activeConversationId: string | null | undefined,
   setMessages: (updater: (prev: Message[]) => Message[]) => void,
   onStreamComplete: (newConversationId?: string) => void
 ) {
@@ -11,7 +11,7 @@ export function useChatStream(
 
   const executeStreamCall = async (payloadMessage: string, targetAssistantMsgId: string) => {
     let generatedConvId: string | undefined = undefined;
-    const isNew = activeConversationId === "new";
+    const isNew = !activeConversationId || activeConversationId === "new";
     const tenantId = localStorage.getItem("ops_active_workspace_id") || "";
 
     try {
@@ -104,7 +104,6 @@ export function useChatStream(
       ? `[System: The action was executed successfully. Waiting for next instruction.]`
       : `[System: The action failed or was cancelled. Reason: ${message}]`;
 
-    // Persist system message securely
     if (activeConversationId && activeConversationId !== "new") {
       try {
         await fetch(`${API_URL}/ops/chat/conversations/${activeConversationId}/system-message`, {

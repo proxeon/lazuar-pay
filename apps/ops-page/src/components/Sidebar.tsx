@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "../lib/utils";
 import { Plus, MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Building2, MoreVertical, CreditCard, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import type { OpsConversationDto, AuthUser, EntitlementDto } from "../lib/api-client";
+import { client, type AuthUser, type EntitlementDto } from "../lib/api-client";
+import { toast } from "sonner";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,24 +15,19 @@ interface SidebarProps {
   entitlements: EntitlementDto[];
   activeWorkspaceId: string | null;
   onWorkspaceSelect: (id: string) => void;
-  conversations: OpsConversationDto[];
-  activeConversationId: string | null;
-  onSelect: (id: string | null) => void;
-  onNewChat: () => void;
-  onRename: (id: string, currentTitle: string) => void;
-  onDelete: (id: string) => void;
   onLogout: () => void;
-  onOpenPaymentSettings: () => void;
 }
 
 export default function Sidebar({
-  isOpen, setIsOpen, isMobile, user, entitlements, activeWorkspaceId, onWorkspaceSelect,
-  conversations, activeConversationId, onSelect, onNewChat, onRename, onDelete, onLogout, onOpenPaymentSettings
+  isOpen, setIsOpen, isMobile, user, entitlements, activeWorkspaceId, onWorkspaceSelect, onLogout
 }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const expanded = isMobile ? true : isOpen;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -46,6 +44,54 @@ export default function Sidebar({
     document.addEventListener("click", closeMenu);
     return () => document.removeEventListener("click", closeMenu);
   }, []);
+
+  const { data: conversations } = useQuery({
+    queryKey: ["conversations", activeWorkspaceId],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/ops/chat/conversations", { params: { query: { limit: 20, offset: 0 } } });
+      if (error) throw new Error(error.detail);
+      return data.data;
+    },
+    enabled: !!activeWorkspaceId
+  });
+
+  const handleRenameConversation = async (id: string, currentTitle: string) => {
+    const newTitle = window.prompt("Enter new title:", currentTitle);
+    if (!newTitle || newTitle.trim() === "" || newTitle === currentTitle) return;
+    
+    try {
+      const { error } = await client.PUT("/ops/chat/conversations/{id}/title", {
+        params: { path: { id } },
+        body: { title: newTitle.trim() }
+      });
+      if (error) throw new Error(error.detail);
+      
+      toast.success("Conversation renamed");
+      queryClient.invalidateQueries({ queryKey: ["conversations", activeWorkspaceId] });
+    } catch (err: any) {
+      toast.error("Failed to rename conversation", { description: err.message });
+    }
+  };
+
+  const handleDeleteConversation = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this conversation?")) return;
+    
+    try {
+      const { error } = await client.DELETE("/ops/chat/conversations/{id}", {
+        params: { path: { id } }
+      });
+      if (error) throw new Error(error.detail);
+      
+      toast.success("Conversation deleted");
+      queryClient.invalidateQueries({ queryKey: ["conversations", activeWorkspaceId] });
+      
+      if (location.pathname === `/chat/${id}`) {
+        navigate("/chat");
+      }
+    } catch (err: any) {
+      toast.error("Failed to delete conversation", { description: err.message });
+    }
+  };
 
   return (
     <motion.aside
@@ -87,24 +133,34 @@ export default function Sidebar({
         </div>
       )}
 
-      <div className="py-2 space-y-1">
-        <button onClick={onNewChat} className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", activeConversationId === "new" ? "bg-[#f4f4f5] text-[#09090b]" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}>
+      <nav className="py-2 space-y-1">
+        <Link 
+          to="/chat" 
+          onClick={() => isMobile && setIsOpen()} 
+          className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", location.pathname === "/chat" ? "bg-[#f4f4f5] text-[#09090b]" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
+        >
           <div className="w-12 h-full shrink-0 flex items-center justify-center"><Plus size={16} /></div>
           {expanded && <span className="text-[13px] font-medium truncate">New chat</span>}
-        </button>
+        </Link>
 
-        {/* --- ADDED INSIGHTS TAB --- */}
-        <button onClick={() => onSelect("insights")} className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", activeConversationId === "insights" ? "bg-[#f4f4f5] text-[#09090b] font-semibold" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}>
+        <Link 
+          to="/insights" 
+          onClick={() => isMobile && setIsOpen()} 
+          className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", location.pathname === "/insights" ? "bg-[#f4f4f5] text-[#09090b] font-semibold" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
+        >
           <div className="w-12 h-full shrink-0 flex items-center justify-center"><Activity size={16} /></div>
           {expanded && <span className="text-[13px] truncate">Community Insights</span>}
-        </button>
-        {/* ------------------------- */}
+        </Link>
 
-        <button onClick={() => onSelect("directory")} className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", activeConversationId === "directory" ? "bg-[#f4f4f5] text-[#09090b] font-semibold" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}>
+        <Link 
+          to="/history" 
+          onClick={() => isMobile && setIsOpen()} 
+          className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", location.pathname === "/history" ? "bg-[#f4f4f5] text-[#09090b] font-semibold" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
+        >
           <div className="w-12 h-full shrink-0 flex items-center justify-center"><MessageSquare size={16} /></div>
           {expanded && <span className="text-[13px] truncate">Conversations Directory</span>}
-        </button>
-      </div>
+        </Link>
+      </nav>
 
       {expanded && (
         <div className="flex items-center justify-between px-4 pt-4 pb-1 text-[#71717a] shrink-0 select-none border-t border-[#f4f4f5]">
@@ -113,17 +169,20 @@ export default function Sidebar({
       )}
 
       <div className="flex-1 overflow-y-auto py-2 space-y-[2px]">
-        {expanded && conversations.map((conv) => (
+        {expanded && conversations?.map((conv) => (
           <div
             key={conv.id}
-            onClick={() => onSelect(conv.id)}
-            className={cn("group relative flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors", conv.id === activeConversationId ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
+            onClick={() => {
+              if (isMobile) setIsOpen();
+              navigate(`/chat/${conv.id}`);
+            }}
+            className={cn("group relative flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors", location.pathname === `/chat/${conv.id}` ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
           >
-            <span className="text-[13px] truncate block pr-2">{conv.title}</span>
+            <span className="text-[13px] truncate flex-1 pr-2">{conv.title}</span>
             
             <div className={cn("relative shrink-0", openMenuId === conv.id ? "block" : "hidden group-hover:block")} onClick={(e) => e.stopPropagation()}>
               <button 
-                onClick={() => setOpenMenuId(openMenuId === conv.id ? null : conv.id)}
+                onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === conv.id ? null : conv.id); }}
                 className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm focus:outline-none"
               >
                 <MoreVertical size={14} />
@@ -131,13 +190,13 @@ export default function Sidebar({
               {openMenuId === conv.id && (
                 <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-[#e5e5e5] shadow-lg rounded-sm py-1 z-50">
                   <button 
-                    onClick={() => { setOpenMenuId(null); onRename(conv.id, conv.title); }}
+                    onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); handleRenameConversation(conv.id, conv.title); }}
                     className="w-full text-left px-3 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors"
                   >
                     Rename
                   </button>
                   <button 
-                    onClick={() => { setOpenMenuId(null); onDelete(conv.id); }}
+                    onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); handleDeleteConversation(conv.id); }}
                     className="w-full text-left px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 transition-colors"
                   >
                     Delete
@@ -147,8 +206,8 @@ export default function Sidebar({
             </div>
           </div>
         ))}
-        {expanded && conversations.length === 20 && (
-          <button onClick={() => onSelect("directory")} className="w-full py-2 text-[11px] font-bold uppercase tracking-widest text-[#a1a1aa] hover:text-[#09090b] transition-colors">See All</button>
+        {expanded && conversations?.length === 20 && (
+          <Link to="/history" onClick={() => isMobile && setIsOpen()} className="w-full block py-2 px-4 text-[11px] font-bold uppercase tracking-widest text-[#a1a1aa] hover:text-[#09090b] transition-colors text-center">See All</Link>
         )}
       </div>
 
@@ -168,16 +227,23 @@ export default function Sidebar({
             {isUserMenuOpen && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className={cn("absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1", expanded ? "bottom-[calc(100%+8px)] left-2 w-[calc(100%-16px)] min-w-[200px]" : "bottom-1 left-[calc(100%+8px)] min-w-[200px]")}>
                 
-                <button 
-                  onClick={() => { setIsUserMenuOpen(false); onOpenPaymentSettings(); }} 
+                <Link 
+                  to="/settings/payment"
+                  onClick={() => setIsUserMenuOpen(false)} 
                   className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors focus:outline-none"
                 >
                   <CreditCard size={14} className="text-[#71717a]" /> Payment Configuration
-                </button>
+                </Link>
 
-                <button onClick={() => { window.location.href = "http://localhost:3001/profile"; }} className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none">
+                <a 
+                  href="http://localhost:3001/profile" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  onClick={() => setIsUserMenuOpen(false)} 
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none"
+                >
                   <Settings size={14} /> View Identity Hub
-                </button>
+                </a>
                 <div className="h-px w-full bg-[#f4f4f5] my-1" />
                 <button onClick={onLogout} className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-red-600 hover:bg-rose-50 hover:text-red-700 transition-colors focus:outline-none">
                   <LogOut size={14} /> Log out

@@ -1,5 +1,7 @@
 import { useRef, useEffect, useState } from "react";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { cn } from "../lib/utils";
 import type { Message } from "../types/chat";
 import { useChatStream } from "../hooks/use-chat-stream";
@@ -7,29 +9,49 @@ import ChatEmptyState from "./chat/ChatEmptyState";
 import ChatMessageBubble from "./chat/ChatMessageBubble";
 import ChatInputArea from "./chat/ChatInputArea";
 import PromptLibrary from "./chat/PromptLibrary";
+import { client, type OpsConversationDto } from "../lib/api-client";
 
-interface OpsChatWorkspaceProps {
-  activeConversationId: string | null;
-  setActiveConversationId: (id: string) => void;
-  activeConversationTitle: string;
-  messages: Message[];
-  setMessages: (updater: (prev: Message[]) => Message[]) => void;
-  onStreamComplete: () => void;
-}
+export default function OpsChatWorkspace() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
 
-export default function OpsChatWorkspace({
-  activeConversationId, setActiveConversationId, activeConversationTitle, messages, setMessages, onStreamComplete
-}: OpsChatWorkspaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  
+
+  useEffect(() => {
+    async function loadMessages() {
+      if (!id) {
+        setMessages([]);
+        return;
+      }
+
+      const { data, error } = await client.GET("/ops/chat/conversations/{id}/messages", {
+        params: { path: { id } }
+      });
+
+      if (!error && data) {
+        setMessages(data.map(m => ({
+          id: m.id,
+          role: m.role as "user" | "assistant" | "system",
+          content: m.content,
+          toolStatus: m.tool_status,
+          proposedAction: m.proposed_action
+        })));
+      }
+    }
+    loadMessages();
+  }, [id]);
+
   const { handleSend, handleActionResolved, isProcessing } = useChatStream(
-    activeConversationId,
+    id || "new",
     setMessages,
     (newId) => {
-      onStreamComplete();
-      if (activeConversationId === "new" && newId) {
-        setActiveConversationId(newId);
+      queryClient.invalidateQueries({ queryKey: ["conversations", activeWorkspaceId] });
+      if (!id && newId) {
+        navigate(`/chat/${newId}`, { replace: true });
       }
     }
   );
@@ -37,6 +59,15 @@ export default function OpsChatWorkspace({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const { data: conversationData } = useQuery<OpsConversationDto[]>({
+    queryKey: ["conversations", activeWorkspaceId],
+    enabled: false
+  });
+
+  const activeConversationTitle = !id 
+    ? "New Chat" 
+    : conversationData?.find(c => c.id === id)?.title || "Active Query Control";
 
   const visibleMessages = messages.filter((m) => m.role !== "system" || m.content.includes("successfully") || m.content.includes("failed"));
   const isEmpty = visibleMessages.length === 0;
@@ -47,7 +78,7 @@ export default function OpsChatWorkspace({
         <ChatEmptyState 
           onSend={handleSend} 
           isProcessing={isProcessing} 
-          activeConversationId={activeConversationId} 
+          activeConversationId={id || null} 
           onOpenLibrary={() => setIsLibraryOpen(true)}
         />
       ) : (
@@ -82,7 +113,7 @@ export default function OpsChatWorkspace({
               <ChatInputArea 
                 onSend={handleSend} 
                 isProcessing={isProcessing} 
-                activeConversationId={activeConversationId} 
+                activeConversationId={id || null} 
                 onOpenLibrary={() => setIsLibraryOpen(true)}
               />
               <p className="text-[11px] text-[#71717a] text-center mt-2.5">
