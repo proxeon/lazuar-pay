@@ -6,6 +6,23 @@
 
 ## Context
 
+### The Context: The "Silent Drop"
+When you completed the test payment, the transaction succeeded on Billplz, and your server successfully received the webhook (as verified by the `200 OK` in your ngrok logs). However, the subscription remained inactive and no emails were sent. 
+
+This happened because the `Payments` module published the internal success event without any metadata. When the `Community` module received this event, it checked for a `subscription_id` and `type` to verify ownership. Finding none, the module assumed the payment belonged to a different part of the system (like Vault or Funnel) and silently ignored it, halting the activation and email dispatch process.
+
+### Why is it working now?
+In a server-to-server (S2S) payment flow, there are two distinct steps:
+1. **You ask the gateway for a checkout link.** (You send the amount, product name, and metadata).
+2. **The gateway tells you the customer paid.** (It sends an HTTP POST to your webhook endpoint).
+
+**The Problem:** Stripe is "smart"; it takes the `metadata` dictionary you give it in Step 1 and includes it in the JSON body it sends back in Step 2. Billplz is "dumb"; it completely strips out `reference_1`, `reference_2`, and any custom data from its S2S webhook body. It only sends back its own Bill ID and the amount paid. Because your backend is strictly decoupled, it had no way to know *which* subscriber that Billplz ID belonged to.
+
+**The Solution:** We exploited the one thing Billplz *cannot* strip out: **The URL itself**. 
+By appending `?type=community_subscription&subscription_id=...` to the `callback_url` during Step 1, we forced Billplz to send its POST request to that exact URL in Step 2. We then updated your ASP.NET Minimal API endpoint to scrape the Query String from the URL, inject it into the headers, and pass it into the pipeline. Now, your system gets its context back statelessly.
+
+---
+
 The `Payments` module is designed to be completely **stateless** regarding checkout sessions. It acts strictly as an infrastructure gateway orchestrator. It does not store "Pending Orders" or "Pending Checkouts" in the database. 
 
 Instead, the domain context (e.g., `type=community_subscription`, `subscription_id=XYZ`) must be passed to the payment gateway during checkout generation, and the payment gateway must return that exact context in its Webhook/Callback upon a successful payment.
