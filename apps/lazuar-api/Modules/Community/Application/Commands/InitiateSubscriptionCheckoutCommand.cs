@@ -113,7 +113,8 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             customerEmail,
             request.SuccessUrl,
             request.CancelUrl,
-            metadata);
+            metadata,
+            SetupFutureUsage: true);
 
         var checkoutUrl = await _mediator.Send(query, ct);
         return checkoutUrl;

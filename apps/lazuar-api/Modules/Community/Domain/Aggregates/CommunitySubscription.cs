@@ -25,6 +25,8 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public string? PaymentGatewaySessionId { get; private set; }
     public string? GatewaySubscriptionId { get; private set; }
     public Guid? PendingCouponId { get; private set; }
+    public string? VaultedCustomerId { get; private set; }
+    public string? VaultedTokenId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -52,6 +54,20 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         PreferredChannel = preferredChannel;
         AdminNotes = adminNotes;
         CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void StoreVaultedToken(string customerId, string tokenId)
+    {
+        VaultedCustomerId = customerId;
+        VaultedTokenId = tokenId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearVaultedToken()
+    {
+        VaultedCustomerId = null;
+        VaultedTokenId = null;
         UpdatedAt = DateTime.UtcNow;
     }
 

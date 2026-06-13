@@ -131,7 +131,8 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             request.Email,
             successUrl,
             cancelUrl,
-            metadata);
+            metadata,
+            SetupFutureUsage: true);
 
         var checkoutUrl = await _mediator.Send(checkoutQuery, ct);
 

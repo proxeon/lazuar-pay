@@ -11,28 +11,39 @@ public class GatewayPaymentFailedIntegrationEventHandler
     : IIntegrationEventHandler<GatewayPaymentFailedIntegrationEvent>
 {
     private readonly IMediator _mediator;
+    private readonly ICommunitySubscriptionRepository _subscriptionRepository;
 
-    public GatewayPaymentFailedIntegrationEventHandler(IMediator mediator)
+    public GatewayPaymentFailedIntegrationEventHandler(
+        IMediator mediator,
+        ICommunitySubscriptionRepository subscriptionRepository)
     {
         _mediator = mediator;
+        _subscriptionRepository = subscriptionRepository;
     }
 
     public async Task HandleAsync(GatewayPaymentFailedIntegrationEvent @event)
     {
-        // 1. Safeguard context boundary
         if (!@event.Metadata.TryGetValue("type", out var type) || type != "community_subscription")
         {
             return;
         }
 
-        // 2. Extract subscription id
         if (!@event.Metadata.TryGetValue("subscription_id", out var subIdStr) ||
             !Guid.TryParse(subIdStr, out var subscriptionId))
         {
             return;
         }
 
-        // 3. Dispatch failure command to community domain
+        var subscription = await _subscriptionRepository.GetByIdAsync(subscriptionId);
+        if (subscription != null && subscription.OrganizationId == @event.OrganizationId)
+        {
+            if (!string.IsNullOrEmpty(subscription.VaultedTokenId))
+            {
+                subscription.ClearVaultedToken();
+                await _subscriptionRepository.SaveChangesAsync();
+            }
+        }
+
         var command = new TransitionSubscriptionToPastDueCommand(
             @event.OrganizationId,
             subscriptionId

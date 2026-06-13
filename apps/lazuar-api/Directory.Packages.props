@@ -42,6 +42,7 @@
 
     <!-- Payment Gateways -->
     <PackageVersion Include="Stripe.net" Version="48.0.1" />
+    <PackageVersion Include="Razorpay" Version="3.3.2" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
 
     <!-- AI & Ops -->
