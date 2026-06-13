@@ -9,7 +9,7 @@ public class OpsMessage : Entity, IMustHaveTenant
     public Guid ConversationId { get; private set; }
     public string Role { get; private set; }
     public string Content { get; private set; }
-    public string? ToolStatus { get; private set; }
+    public string? ExecutedToolsJson { get; private set; }
     public string? ProposedActionJson { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
@@ -17,14 +17,14 @@ public class OpsMessage : Entity, IMustHaveTenant
     private OpsMessage() { }
 #pragma warning restore CS8618
 
-    public OpsMessage(Guid id, Guid organizationId, Guid conversationId, string role, string content, string? toolStatus = null, string? proposedActionJson = null)
+    public OpsMessage(Guid id, Guid organizationId, Guid conversationId, string role, string content, string? executedToolsJson = null, string? proposedActionJson = null)
     {
         Id = id;
         OrganizationId = organizationId;
         ConversationId = conversationId;
         Role = role.ToLowerInvariant();
         Content = content;
-        ToolStatus = toolStatus;
+        ExecutedToolsJson = executedToolsJson;
         ProposedActionJson = proposedActionJson;
         CreatedAt = DateTime.UtcNow;
     }

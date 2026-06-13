@@ -23,6 +23,7 @@ model ChatStreamChunkDto {
   type: string;
   content?: string;
   tool_name?: string;
+  executed_tools?: string[];
   proposed_action?: ProposedActionDto;
 }
 
@@ -37,7 +38,7 @@ model OpsMessageDto {
   conversation_id: string; // GUID
   role: string;
   content: string;
-  tool_status?: string;
+  executed_tools?: string[];
   proposed_action?: ProposedActionDto;
   created_at: utcDateTime;
 }

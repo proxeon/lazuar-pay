@@ -2031,6 +2031,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("tool_name")]
         public string? Tool_name { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("executed_tools")]
+        public System.Collections.Generic.List<string>? Executed_tools { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("proposed_action")]
         public ProposedActionDto? Proposed_action { get; set; } = default!;
 
@@ -2085,8 +2088,8 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("content")]
         public string Content { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("tool_status")]
-        public string? Tool_status { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("executed_tools")]
+        public System.Collections.Generic.List<string>? Executed_tools { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("proposed_action")]
         public ProposedActionDto? Proposed_action { get; set; } = default!;

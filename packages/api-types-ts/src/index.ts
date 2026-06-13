@@ -1616,6 +1616,7 @@ export interface components {
             type: string;
             content?: string;
             tool_name?: string;
+            executed_tools?: string[];
             proposed_action?: components["schemas"]["Ops.ProposedActionDto"];
         };
         "Ops.OpsConversationDto": {
@@ -1629,7 +1630,7 @@ export interface components {
             conversation_id: string;
             role: string;
             content: string;
-            tool_status?: string;
+            executed_tools?: string[];
             proposed_action?: components["schemas"]["Ops.ProposedActionDto"];
             /** Format: date-time */
             created_at: string;
