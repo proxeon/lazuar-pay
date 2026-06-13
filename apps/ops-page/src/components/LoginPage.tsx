@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Wipe any stale workspace IDs from previous sessions to prevent 403 Forbidden errors
   useEffect(() => {
     localStorage.removeItem("ops_active_workspace_id");
   }, []);
@@ -92,7 +91,7 @@ export default function LoginPage() {
     <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] font-sans">
       <div className="w-full max-w-[380px] mx-4 animate-in fade-in zoom-in-95 duration-300">
         
-        <div className="bg-white border border-[#e5e5e5] p-8 rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)]">
+        <div className="bg-white border border-[#e5e5e5] p-8 rounded-none">
           
           {error && (
             <div className="mb-6 p-4 bg-rose-50 border border-rose-200">
@@ -110,14 +109,14 @@ export default function LoginPage() {
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email</label>
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="name@example.com" />
+                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="name@example.com" />
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Password</label>
                   </div>
-                  <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="••••••••" />
+                  <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="••••••••" />
                 </div>
 
                 <button type="submit" disabled={isLoading} className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2">

@@ -40,9 +40,8 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
   const isHighSeverity = action.severity === "high";
 
   return (
-    <div className="w-full max-w-[540px] mt-2 mb-4 bg-white border border-[#e5e5e5] rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="w-full max-w-[540px] mt-2 mb-4 bg-white border border-[#e5e5e5] rounded-lg overflow-hidden flex flex-col font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
       
-      {/* Header */}
       <div className="px-4 py-3 border-b border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           {isHighSeverity ? (
@@ -57,13 +56,11 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
         <span className="text-[10px] font-mono text-[#a1a1aa] uppercase tracking-wider">System Proposal</span>
       </div>
 
-      {/* Body */}
       <div className="p-4 space-y-4">
         <p className="text-[13px] text-[#52525b] leading-relaxed">
           {action.human_readable_summary}
         </p>
         
-        {/* JSON Payload Block */}
         <div className="rounded-md border border-[#e5e5e5] overflow-hidden">
           <div className="bg-[#fafafa] border-b border-[#e5e5e5] px-3 py-1.5 flex items-center">
             <span className="text-[10px] font-bold text-[#71717a] uppercase tracking-widest">Payload Data</span>
@@ -76,7 +73,6 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
         </div>
       </div>
 
-      {/* Footer Actions */}
       <div className="px-4 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
         <button
           onClick={() => onResolved(false, "Action cancelled by user.", action)}
@@ -89,7 +85,7 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
           onClick={handleApprove}
           disabled={isExecuting}
           className={cn(
-            "h-8 px-6 rounded-sm text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shadow-[0_2px_4px_rgba(0,0,0,0.05)]",
+            "h-8 px-6 rounded-sm text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors disabled:opacity-50",
             isHighSeverity ? "bg-rose-600 hover:bg-rose-700" : "bg-[#09090b] hover:bg-[#27272a]"
           )}
         >

@@ -92,7 +92,7 @@ export default function PaymentSettingsPage() {
 
   return (
     <div className="flex-1 w-full p-6 md:p-12 overflow-y-auto bg-[#fafafa]">
-      <div className="max-w-2xl mx-auto bg-white border border-[#e5e5e5] rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] flex flex-col">
+      <div className="max-w-2xl mx-auto bg-white border border-[#e5e5e5] rounded-none flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] shrink-0 bg-[#fafafa]/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white border border-[#e5e5e5] text-[#09090b]">

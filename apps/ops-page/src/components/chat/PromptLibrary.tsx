@@ -31,7 +31,7 @@ export default function PromptLibrary({ isOpen, onClose, onSelect }: PromptLibra
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
       <div 
-        className="relative w-full max-w-2xl max-h-[80vh] bg-white border border-[#e5e5e5] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.05)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl max-h-[80vh] bg-white border border-[#e5e5e5] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
@@ -83,7 +83,7 @@ export default function PromptLibrary({ isOpen, onClose, onSelect }: PromptLibra
                       <button
                         key={i}
                         onClick={() => onSelect(p.query)}
-                        className="text-left p-3 bg-white border border-[#e5e5e5] hover:border-[#09090b] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] transition-all group"
+                        className="text-left p-3 bg-white border border-[#e5e5e5] hover:border-[#09090b] transition-all group"
                       >
                         <span className="text-[12px] font-bold text-[#09090b] block mb-1 group-hover:text-blue-600">{p.label}</span>
                         <span className="text-[11px] text-[#71717a] leading-relaxed line-clamp-2">{p.query}</span>

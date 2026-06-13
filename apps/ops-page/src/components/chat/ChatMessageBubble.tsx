@@ -77,7 +77,7 @@ export default function ChatMessageBubble({
       )}
 
       {msg.toolStatus && (
-        <div className="flex items-center gap-2 px-3 py-1.5 mt-2 bg-[#fafafa] border border-[#e5e5e5] text-[11px] font-mono text-[#71717a] rounded-sm shadow-sm">
+        <div className="flex items-center gap-2 px-3 py-1.5 mt-2 bg-[#fafafa] border border-[#e5e5e5] text-[11px] font-mono text-[#71717a] rounded-sm">
           <Activity size={12} className="animate-pulse text-[#09090b]" />
           {msg.toolStatus}
         </div>

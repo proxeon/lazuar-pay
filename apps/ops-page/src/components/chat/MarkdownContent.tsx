@@ -104,7 +104,7 @@ function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text:
   };
 
   return (
-    <div className="not-prose my-5 w-full max-w-xl rounded-lg border border-[#e5e5e5] shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white overflow-hidden font-sans">
+    <div className="not-prose my-5 w-full max-w-xl rounded-lg border border-[#e5e5e5] bg-white overflow-hidden font-sans">
       <div className="bg-[#fafafa] border-b border-[#e5e5e5] px-4 py-2.5">
         <span className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Action Required</span>
       </div>
@@ -140,7 +140,7 @@ function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text:
           <button 
             type="submit"
             disabled={submitted}
-            className="w-full h-9 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-sm flex items-center justify-center gap-2 hover:bg-[#27272a] disabled:opacity-50 transition-colors shadow-sm"
+            className="w-full h-9 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-sm flex items-center justify-center gap-2 hover:bg-[#27272a] disabled:opacity-50 transition-colors"
           >
             <Send size={13} />
             {submitted ? "Submitted" : "Submit Data"}
@@ -170,7 +170,7 @@ function createComponents(onSend?: (text: string) => void): Components {
         const showLabel = !!match
 
         return (
-          <div className="not-prose group my-4 overflow-hidden rounded-md text-[13px] shadow-sm antialiased border border-[#e5e5e5]">
+          <div className="not-prose group my-4 overflow-hidden rounded-md text-[13px] antialiased border border-[#e5e5e5]">
             <div className="flex items-center justify-between bg-[#f4f4f5] px-3 py-1.5 border-b border-[#e5e5e5]">
               <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#71717a]">
                 {showLabel ? language : ''}
@@ -203,7 +203,7 @@ function createComponents(onSend?: (text: string) => void): Components {
     },
     table({ children, ...rest }) {
       return (
-        <div className="not-prose my-6 w-full overflow-hidden rounded-lg border border-[#e5e5e5] shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white">
+        <div className="not-prose my-6 w-full overflow-hidden rounded-lg border border-[#e5e5e5] bg-white">
           <div className="w-full overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm" {...rest}>
               {children}
