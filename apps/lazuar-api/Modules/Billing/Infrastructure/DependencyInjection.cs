@@ -1,10 +1,12 @@
 using BuildingBlocks.Application;
+using BuildingBlocks.Application.Llm;
 using BuildingBlocks.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Application;
+using Modules.Billing.Application.Llm;
 using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Events;
 using Modules.Billing.Infrastructure.EventHandlers;
@@ -47,6 +49,8 @@ public static class DependencyInjection
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
         services.AddHostedService<RevenueRecognitionJob>();
+
+        services.AddSingleton<IAgentPromptProvider, BillingPromptProvider>();
 
         return services;
     }

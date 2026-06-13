@@ -1,4 +1,5 @@
 using BuildingBlocks.Application;
+using BuildingBlocks.Application.Llm;
 using BuildingBlocks.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Application;
 using Modules.Community.Application.IntegrationEvents;
+using Modules.Community.Application.Llm;
 using Modules.Community.Application.Queries;
 using Modules.Community.Infrastructure.EventHandlers;
 using Modules.Community.Infrastructure.Repositories;
@@ -54,6 +56,8 @@ public static class DependencyInjection
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
         services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
+
+        services.AddSingleton<IAgentPromptProvider, CommunityPromptProvider>();
 
         return services;
     }
