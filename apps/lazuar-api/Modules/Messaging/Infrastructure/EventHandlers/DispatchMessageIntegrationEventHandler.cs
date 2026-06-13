@@ -19,12 +19,12 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
     {
         if (@event.Channel is "EMAIL" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToEmail))
         {
-            await _emailService.SendEmailAsync(@event.ToEmail, @event.Subject, @event.HtmlBody);
+            var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlBody);
+            await _emailService.SendEmailAsync(@event.ToEmail, @event.Subject, htmlPayload);
         }
 
         if (@event.Channel is "WHATSAPP" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToPhone))
         {
-            // Simplistic HTML stripping for SMS/WhatsApp
             var plainText = @event.HtmlBody.Replace("<br>", "\n").Replace("<br/>", "\n");
             await _messagingService.SendMessageAsync(@event.ToPhone, $"*{@event.Subject}*\n\n{plainText}");
         }

@@ -32,6 +32,7 @@ using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.One.Contracts;
 using Modules.Ops.Application;
 using Modules.Ops.Application.Services;
 using Modules.Ops.Domain;
@@ -46,6 +47,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private readonly IMediator _mediator;
     private readonly IExecutionContextAccessor _executionContext;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IOneQueryService _oneQueryService;
+    private readonly IEnumerable<IAgentPromptProvider> _promptProviders;
     private readonly ILogger<LlmOrchestratorService> _logger;
 
     public LlmOrchestratorService(
@@ -54,6 +57,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         IMediator mediator,
         IExecutionContextAccessor executionContext,
         IServiceScopeFactory scopeFactory,
+        IOneQueryService oneQueryService,
+        IEnumerable<IAgentPromptProvider> promptProviders,
         ILogger<LlmOrchestratorService> logger)
     {
         _clientFactory = clientFactory;
@@ -61,6 +66,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         _mediator = mediator;
         _executionContext = executionContext;
         _scopeFactory = scopeFactory;
+        _oneQueryService = oneQueryService;
+        _promptProviders = promptProviders;
         _logger = logger;
     }
 
@@ -78,9 +85,12 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             }
         }
 
-        var messages = BuildInitialMessages(tenantId, history, userMessage);
+        var activeApps = await _oneQueryService.GetWorkspaceAppsAsync(tenantId);
+        var messages = BuildInitialMessages(tenantId, history, userMessage, activeApps);
+        var options = BuildChatOptions(activeApps);
+        
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
-        var completion = await chatClient.CompleteChatAsync(messages, BuildChatOptions(), ct);
+        var completion = await chatClient.CompleteChatAsync(messages, options, ct);
 
         return new ChatResponseDto { Message = completion.Value.Content[0].Text };
     }
@@ -118,8 +128,10 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         yield return new ChatStreamChunkDto { Type = "conversation_id", Content = convId.ToString() };
 
-        List<ChatMessage> messages = BuildInitialMessages(tenantId, history, userMessage);
-        var options = BuildChatOptions();
+        var activeApps = await _oneQueryService.GetWorkspaceAppsAsync(tenantId);
+        List<ChatMessage> messages = BuildInitialMessages(tenantId, history, userMessage, activeApps);
+        var options = BuildChatOptions(activeApps);
+        
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
 
         int maxIterations = 3;
@@ -333,20 +345,30 @@ public class LlmOrchestratorService : ILlmOrchestratorService
             tenantId, usage.InputTokenCount, usage.OutputTokenCount);
     }
 
-    private List<ChatMessage> BuildInitialMessages(Guid tenantId, IEnumerable<OpsMessage> history, string currentMessage)
+    private List<ChatMessage> BuildInitialMessages(Guid tenantId, IEnumerable<OpsMessage> history, string currentMessage, IEnumerable<string> activeApps)
     {
+        var sb = new StringBuilder();
+        sb.AppendLine($"You are Lazuar Ops, a highly capable internal operations agent.");
+        sb.AppendLine($"The current Target OrganizationId is {tenantId}.");
+        sb.AppendLine("**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid!");
+        sb.AppendLine("**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages in your text response.");
+        sb.AppendLine("**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs.");
+        sb.AppendLine("**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it.");
+
+        var activeAppsSet = new HashSet<string>(activeApps, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var provider in _promptProviders)
+        {
+            if (activeAppsSet.Contains(provider.GetAppId()))
+            {
+                sb.AppendLine();
+                sb.AppendLine(provider.GetSystemPromptRules());
+            }
+        }
+
         var messages = new List<ChatMessage>
         {
-            new SystemChatMessage(
-                $"You are Lazuar Ops, a highly capable internal operations agent. " +
-                $"The current Target OrganizationId is {tenantId}. " +
-                $"**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid! " +
-                $"**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages (like '[I proposed...]') in your text response. " +
-                $"**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs. " +
-                $"**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it. " +
-                $"**CRITICAL RULE 5**: When executing bulk actions (Broadcasts) or financial lookups (Global Ledger), rely on the dedicated batch tools. Never attempt to loop through individual subscriber tools to send bulk messages, as this will violate system timeout boundaries. " +
-                $"**CRITICAL RULE 6 (FINANCIAL TRUTH)**: When discussing revenue, strictly differentiate between 'Gross Revenue' (total catalog value of sales) and 'Net Cash in Bank' (actual cash deposited after deducting Gateway Fees like Stripe/Billplz). Always remind the user of 'Tax Liabilities' (SST/VAT) that are owed to the government and should not be counted as profit. Use the GetFinancialHealthAgentQuery tool for accurate ledger-based metrics."
-            )
+            new SystemChatMessage(sb.ToString())
         };
 
         foreach (var msg in history)
@@ -378,10 +400,10 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         return messages;
     }
 
-    private ChatCompletionOptions BuildChatOptions()
+    private ChatCompletionOptions BuildChatOptions(IEnumerable<string> activeApps)
     {
         var options = new ChatCompletionOptions();
-        var tools = _toolRegistry.GetAvailableTools("SUPER_ADMIN").ToList();
+        var tools = _toolRegistry.GetAvailableTools("SUPER_ADMIN", activeApps).ToList();
         if (tools.Any()) foreach (var tool in tools) options.Tools.Add(tool.ChatTool);
         return options;
     }
