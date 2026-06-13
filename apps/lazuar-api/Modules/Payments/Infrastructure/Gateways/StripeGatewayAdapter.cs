@@ -20,7 +20,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
         string successUrl, string cancelUrl, Dictionary<string, string> metadata,
-        string? merchantId)
+        string? merchantId, bool setupFutureUsage = false)
     {
         try
         {
@@ -53,6 +53,11 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 CancelUrl = cancelUrl,
             };
 
+            if (setupFutureUsage)
+            {
+                options.PaymentIntentData = new SessionPaymentIntentDataOptions { SetupFutureUsage = "off_session" };
+            }
+
             var session = await service.CreateAsync(options);
             return new GatewayCheckoutResult(true, session.Url, session.Id, null);
         }
@@ -77,7 +82,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
             var stripeEvent = EventUtility.ConstructEvent(rawBody, signature, webhookSecret);
 
-            if (stripeEvent.Type == "checkout.session.completed")
+            if (stripeEvent.Type == "checkout.session.completed" || stripeEvent.Type == "payment_intent.succeeded")
             {
                 if (stripeEvent.Data.Object is Session session)
                 {
@@ -88,6 +93,8 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     decimal fxRate = 1;
                     string baseCurrency = session.Currency ?? "myr";
                     decimal taxAmount = (session.TotalDetails?.AmountTax ?? 0L) / 100m;
+                    string? customerId = session.CustomerId;
+                    string? paymentMethodId = null;
 
                     if (!string.IsNullOrEmpty(session.PaymentIntentId))
                     {
@@ -97,16 +104,15 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                             var piService = new PaymentIntentService(client);
                             var pi = await piService.GetAsync(session.PaymentIntentId, new PaymentIntentGetOptions
                             {
-                                Expand = new List<string> { "latest_charge.balance_transaction" }
+                                Expand = new List<string> { "latest_charge.balance_transaction", "payment_method" }
                             });
                             
+                            paymentMethodId = pi.PaymentMethodId;
+
                             var charge = pi.LatestCharge as Charge;
                             if (charge?.BalanceTransaction != null)
                             {
                                 var bt = charge.BalanceTransaction;
-                                
-                                // FIX: bt.Fee is a non-nullable long in the Stripe.net SDK. 
-                                // Applying ?? 0L causes CS0019. Math.Abs handles the negative fee integer correctly.
                                 gatewayFee = Math.Abs(bt.Fee / 100m);
                                 
                                 if (bt.ExchangeRate.HasValue)
@@ -137,7 +143,32 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         NetAmount: netAmount,
                         FxRate: fxRate,
                         BaseCurrency: baseCurrency,
-                        Error: null
+                        Error: null,
+                        GatewayCustomerId: customerId,
+                        GatewayTokenId: paymentMethodId
+                    );
+                }
+                else if (stripeEvent.Data.Object is PaymentIntent pi)
+                {
+                    // Catch off-session direct charges
+                    var amount = pi.AmountReceived / 100m;
+                    var meta = pi.Metadata != null ? new Dictionary<string, string>(pi.Metadata) : new Dictionary<string, string>();
+                    return new GatewayWebhookParsedResult(
+                        Verified: true,
+                        EventType: "PAYMENT_COMPLETED",
+                        EventId: stripeEvent.Id,
+                        AmountPaid: amount,
+                        Currency: pi.Currency ?? "myr",
+                        GatewayTransactionId: pi.Id,
+                        Metadata: meta,
+                        GatewayFee: 0, // Fallback, would need balance_transaction extraction here too
+                        TaxAmount: 0,
+                        NetAmount: amount,
+                        FxRate: 1,
+                        BaseCurrency: pi.Currency ?? "myr",
+                        Error: null,
+                        GatewayCustomerId: pi.CustomerId,
+                        GatewayTokenId: pi.PaymentMethodId
                     );
                 }
             }
@@ -148,6 +179,33 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         {
             _logger.LogError(ex, "Stripe webhook verification failed");
             return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message);
+        }
+    }
+
+    public async Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt)
+    {
+        try
+        {
+            var client = new StripeClient(apiKey);
+            var service = new PaymentIntentService(client);
+            var options = new PaymentIntentCreateOptions
+            {
+                Amount = (long)(amount * 100),
+                Currency = currency.ToLowerInvariant(),
+                Customer = customerId,
+                PaymentMethod = tokenId,
+                OffSession = true,
+                Confirm = true,
+                Description = description,
+                Metadata = new Dictionary<string, string> { { "receipt", receipt } }
+            };
+            var intent = await service.CreateAsync(options);
+            return intent.Status == "succeeded" || intent.Status == "processing";
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, "Stripe off-session charge failed for customer {CustomerId}", customerId);
+            return false;
         }
     }
 

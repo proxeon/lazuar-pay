@@ -73,7 +73,9 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             FxRate: parsedResult.FxRate,
             BaseCurrency: parsedResult.BaseCurrency,
             LineItems: new List<LineItemDto>(),
-            Metadata: parsedResult.Metadata
+            Metadata: parsedResult.Metadata,
+            GatewayCustomerId: parsedResult.GatewayCustomerId,
+            GatewayTokenId: parsedResult.GatewayTokenId
         );
 
         await _eventBus.PublishAsync(integrationEvent);

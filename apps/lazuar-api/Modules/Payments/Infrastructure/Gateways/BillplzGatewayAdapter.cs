@@ -49,11 +49,16 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
     public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
-        string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId)
+        string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false)
     {
         if (string.IsNullOrEmpty(merchantId))
         {
             return new GatewayCheckoutResult(false, null, null, "MerchantId (Collection ID) is required for Billplz.");
+        }
+
+        if (setupFutureUsage)
+        {
+            _logger.LogWarning("Billplz does not support off-session tokenization. Proceeding with standard one-time checkout.");
         }
 
         var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
@@ -203,6 +208,11 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             _logger.LogError(ex, "Failed to parse Billplz webhook");
             return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message));
         }
+    }
+
+    public Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt)
+    {
+        throw new NotSupportedException("Billplz does not support vaulted token off-session charges.");
     }
 
     public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)

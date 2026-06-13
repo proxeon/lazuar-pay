@@ -19,7 +19,9 @@ public record GatewayWebhookParsedResult(
     decimal NetAmount,
     decimal FxRate,
     string BaseCurrency,
-    string? Error);
+    string? Error,
+    string? GatewayCustomerId = null,
+    string? GatewayTokenId = null);
 
 public interface IPaymentGatewayAdapter
 {
@@ -35,7 +37,8 @@ public interface IPaymentGatewayAdapter
         string successUrl,
         string cancelUrl,
         Dictionary<string, string> metadata,
-        string? merchantId);
+        string? merchantId,
+        bool setupFutureUsage = false);
         
     Task<GatewayWebhookParsedResult> ParseWebhookAsync(
         string apiKey,
@@ -55,6 +58,15 @@ public interface IPaymentGatewayAdapter
         string apiKey,
         string customerEmail,
         string returnUrl);
+
+    Task<bool> ChargeOffSessionAsync(
+        string apiKey,
+        string customerId,
+        string tokenId,
+        decimal amount,
+        string currency,
+        string description,
+        string receipt);
 }
 
 public interface IPaymentGatewayFactory

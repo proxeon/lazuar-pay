@@ -38,7 +38,8 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
             request.SuccessUrl,
             request.CancelUrl,
             request.Metadata,
-            config.MerchantId);
+            config.MerchantId,
+            request.SetupFutureUsage);
 
         if (!result.Success || string.IsNullOrEmpty(result.CheckoutUrl))
         {
