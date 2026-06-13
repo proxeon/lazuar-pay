@@ -7,6 +7,7 @@ import LoginPage from "./components/LoginPage";
 import PaymentSettingsPage from "./components/PaymentSettingsPage";
 import CommunityInsights from "./components/CommunityInsights";
 import ConversationsDirectory from "./components/ConversationsDirectory";
+import TemplatesPage from "./components/TemplatesPage"; // Import Templates
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
 function OpsLayout() {
@@ -158,6 +159,7 @@ export default function App() {
         <Route path="/history" element={<ConversationsDirectory />} />
         <Route path="/insights" element={<CommunityInsights />} />
         <Route path="/settings/payment" element={<PaymentSettingsPage />} />
+        <Route path="/settings/templates" element={<TemplatesPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/chat" replace />} />
     </Routes>

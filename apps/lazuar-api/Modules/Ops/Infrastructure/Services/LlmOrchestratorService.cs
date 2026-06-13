@@ -32,6 +32,7 @@ using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Modules.One.Contracts;
 using Modules.Ops.Application;
 using Modules.Ops.Application.Services;
@@ -50,6 +51,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
     private readonly IOneQueryService _oneQueryService;
     private readonly IEnumerable<IAgentPromptProvider> _promptProviders;
     private readonly ILogger<LlmOrchestratorService> _logger;
+    private readonly int _maxIterations;
 
     public LlmOrchestratorService(
         IChatClientFactory clientFactory,
@@ -59,6 +61,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         IServiceScopeFactory scopeFactory,
         IOneQueryService oneQueryService,
         IEnumerable<IAgentPromptProvider> promptProviders,
+        IConfiguration configuration,
         ILogger<LlmOrchestratorService> logger)
     {
         _clientFactory = clientFactory;
@@ -69,6 +72,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         _oneQueryService = oneQueryService;
         _promptProviders = promptProviders;
         _logger = logger;
+        _maxIterations = configuration.GetValue<int>("Ai:MaxToolIterations", 7);
     }
 
     public async Task<ChatResponseDto> ProcessChatAsync(string userMessage, string? conversationId = null, CancellationToken ct = default)
@@ -134,7 +138,6 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         
         var chatClient = _clientFactory.CreateClient(thinkingEnabled: true, reasoningEffort: "xhigh");
 
-        int maxIterations = 3;
         int iterations = 0;
         string accumulatedAssistantText = "";
         
@@ -143,7 +146,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
 
         try
         {
-            while (iterations < maxIterations)
+            while (iterations < _maxIterations)
             {
                 var toolCallAccumulators = new Dictionary<int, ToolCallAccumulator>();
                 var hasToolCalls = false;
@@ -275,7 +278,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     }
 
                     iterations++;
-                    if (iterations >= 2)
+                    if (iterations >= _maxIterations - 1)
                     {
                         messages.Add(new SystemChatMessage("SYSTEM ALARM: You have executed the necessary tools and received the data. Output a final text summary immediately. DO NOT execute any more tools."));
                         options.ToolChoice = ChatToolChoice.CreateNoneChoice();
@@ -354,6 +357,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         sb.AppendLine("**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages in your text response.");
         sb.AppendLine("**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs.");
         sb.AppendLine("**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it.");
+        sb.AppendLine("**CRITICAL RULE 5**: When executing bulk actions (Broadcasts) or financial lookups (Global Ledger), rely on the dedicated batch tools. Never attempt to loop through individual subscriber tools to send bulk messages, as this will violate system timeout boundaries.");
+        sb.AppendLine("**CRITICAL RULE 6**: When discussing revenue, strictly differentiate between 'Gross Revenue' (total catalog value of sales) and 'Net Cash in Bank' (actual cash deposited after deducting Gateway Fees like Stripe/Billplz). Always remind the user of 'Tax Liabilities' (SST/VAT) that are owed to the government and should not be counted as profit. Use the GetFinancialHealthAgentQuery tool for accurate ledger-based metrics.");
+        sb.AppendLine("**CRITICAL RULE 7**: If a tool returns an error or empty result, DO NOT execute the exact same tool with the exact same parameters again. Try a different approach or ask the user for clarification.");
 
         var activeAppsSet = new HashSet<string>(activeApps, StringComparer.OrdinalIgnoreCase);
 

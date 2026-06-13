@@ -60,9 +60,7 @@ public static class Endpoints
                 Conversation_id = m.ConversationId.ToString(),
                 Role = m.Role,
                 Content = m.Content,
-                Executed_tools = m.ExecutedToolsJson != null
-                    ? JsonSerializer.Deserialize<List<string>>(m.ExecutedToolsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                    : null,
+                Executed_tools = ParseExecutedToolsSafe(m.ExecutedToolsJson),
                 Proposed_action = m.ProposedActionJson != null
                     ? JsonSerializer.Deserialize<ProposedActionDto>(m.ProposedActionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                     : null,
@@ -191,5 +189,19 @@ public static class Endpoints
         });
 
         return endpoints;
+    }
+
+    private static List<string>? ParseExecutedToolsSafe(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            return new List<string>();
+        }
     }
 }

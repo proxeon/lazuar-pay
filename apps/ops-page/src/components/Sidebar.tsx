@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "../lib/utils";
-import { Plus, MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Building2, MoreVertical, CreditCard, Activity } from "lucide-react";
+import { Plus, MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Building2, MoreVertical, CreditCard, Activity, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { client, type AuthUser, type EntitlementDto } from "../lib/api-client";
 import { toast } from "sonner";
@@ -225,6 +225,14 @@ export default function Sidebar({
             {isUserMenuOpen && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className={cn("absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1", expanded ? "bottom-[calc(100%+8px)] left-2 w-[calc(100%-16px)] min-w-[200px]" : "bottom-1 left-[calc(100%+8px)] min-w-[200px]")}>
                 
+                <Link 
+                  to="/settings/templates"
+                  onClick={() => setIsUserMenuOpen(false)} 
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors focus:outline-none"
+                >
+                  <Mail size={14} className="text-[#71717a]" /> Message Templates
+                </Link>
+
                 <Link 
                   to="/settings/payment"
                   onClick={() => setIsUserMenuOpen(false)} 
