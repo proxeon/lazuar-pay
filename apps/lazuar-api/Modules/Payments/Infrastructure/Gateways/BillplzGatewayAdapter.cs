@@ -26,13 +26,11 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
     public string GatewayType => "BILLPLZ";
 
-    // Fields that Billplz only includes in x_signature computation when "Enable Extra Payment Completion Information" is checked.
     private static readonly HashSet<string> ExtraFields = new(StringComparer.OrdinalIgnoreCase)
     {
         "paid_at", "transaction_id", "transaction_status"
     };
 
-    // Fields that are never part of the signature.
     private static readonly HashSet<string> AlwaysExclude = new(StringComparer.OrdinalIgnoreCase)
     {
         "x_signature"
@@ -64,14 +62,16 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
         metadata.TryGetValue("type", out var type);
         var ref1 = metadata.TryGetValue("subscription_id", out var subId) ? subId : tenantId.ToString();
+        var typeValue = type ?? "payment";
         
-        // Clean webhook URL without any query parameters
         var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}";
 
         if (webhookUrl.Contains("localhost"))
         {
             webhookUrl = webhookUrl.Replace("localhost", "lazuar-local-dev.com");
         }
+
+        webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&subscription_id={Uri.EscapeDataString(ref1)}";
 
         var amountCents = (int)(amount * 100);
         var payload = new Dictionary<string, object>
@@ -86,7 +86,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             ["reference_1_label"] = "Reference",
             ["reference_1"] = ref1,
             ["reference_2_label"] = "Type",
-            ["reference_2"] = type ?? "payment",
+            ["reference_2"] = typeValue,
         };
 
         try
@@ -131,7 +131,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
     {
         try
         {
-            // Use the standard ASP.NET parser from the legacy code
             var formData = ParseFormBody(rawBody);
 
             if (!formData.TryGetValue("x_signature", out var providedSignature) || string.IsNullOrEmpty(providedSignature))
@@ -140,12 +139,10 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
                 return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing x_signature in Billplz callback."));
             }
 
-            // Strategy 1: Include extra fields in signature computation (When "Enable Extra" is checked)
             var computedSigWithExtra = ComputeHmac(formData, webhookSecret, excludeExtra: false);
 
             if (!string.Equals(providedSignature, computedSigWithExtra, StringComparison.OrdinalIgnoreCase))
             {
-                // Strategy 2: Exclude extra fields
                 var computedSigWithoutExtra = ComputeHmac(formData, webhookSecret, excludeExtra: true);
                 if (!string.Equals(providedSignature, computedSigWithoutExtra, StringComparison.OrdinalIgnoreCase))
                 {
@@ -163,11 +160,18 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             var isPaid = paid.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                          state.Equals("paid", StringComparison.OrdinalIgnoreCase);
 
-            // Extract metadata from native references sent by Billplz in the body (set during checkout)
             var reference1 = formData.GetValueOrDefault("reference_1", "");
-            var reference2 = formData.GetValueOrDefault("reference_2", "");
+            if (string.IsNullOrEmpty(reference1) && headers.TryGetValue("Query-subscription_id", out var qsSubId))
+            {
+                reference1 = qsSubId;
+            }
 
-            // Reconstruct the metadata dictionary exactly like the legacy app
+            var reference2 = formData.GetValueOrDefault("reference_2", "");
+            if (string.IsNullOrEmpty(reference2) && headers.TryGetValue("Query-type", out var qsType))
+            {
+                reference2 = qsType;
+            }
+
             var metadata = new Dictionary<string, string>();
             if (!string.IsNullOrEmpty(reference2)) metadata["type"] = reference2;
             if (!string.IsNullOrEmpty(reference1)) metadata["subscription_id"] = reference1;
@@ -238,7 +242,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrEmpty(body)) return result;
 
-        // Uses the standard ASP.NET WebUtilities parser, identical to legacy
         var parsed = QueryHelpers.ParseQuery(body);
         foreach (var parameter in parsed)
         {
