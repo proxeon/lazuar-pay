@@ -4,7 +4,7 @@ using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Modify an existing global automated reminder schedule.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Modify an existing global automated reminder schedule.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record UpdateReminderScheduleCommand(
     Guid OrganizationId,
     Guid ScheduleId,

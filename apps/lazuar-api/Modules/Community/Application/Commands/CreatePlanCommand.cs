@@ -5,7 +5,7 @@ using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Generate a new product or subscription tier.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Generate a new product or subscription tier.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreatePlanCommand(
     Guid OrganizationId,
     string Slug,

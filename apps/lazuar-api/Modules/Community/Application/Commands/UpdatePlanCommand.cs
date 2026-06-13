@@ -4,7 +4,7 @@ using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Modify pricing, descriptions, or capacity limits of an existing plan.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Modify pricing, descriptions, or capacity limits of an existing plan.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record UpdatePlanCommand(
     Guid OrganizationId,
     Guid PlanId,

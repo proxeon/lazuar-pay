@@ -7,7 +7,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("List all automated reminder schedules to find a ScheduleId, TemplateId, or current configuration.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List all automated reminder schedules to find a ScheduleId, TemplateId, or current configuration.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListReminderSchedulesAgentQuery(Guid OrganizationId) : IQuery<IEnumerable<AgentReminderScheduleResult>>;
 
 public record AgentReminderScheduleResult(

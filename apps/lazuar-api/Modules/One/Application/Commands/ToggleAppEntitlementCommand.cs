@@ -9,7 +9,7 @@ using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
 
-[AgentTool("Turn specific Lazuar modules on or off for the tenant.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Turn specific Lazuar modules on or off for the tenant.", "CORE", "medium", "SUPER_ADMIN", "ADMIN")]
 public record ToggleAppEntitlementCommand(Guid OrganizationId, string AppId, bool IsActive) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

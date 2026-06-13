@@ -6,7 +6,7 @@ using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Create a new promotional coupon code for discounts.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Create a new promotional coupon code for discounts.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreateCouponCommand(
     Guid OrganizationId,
     string Code,

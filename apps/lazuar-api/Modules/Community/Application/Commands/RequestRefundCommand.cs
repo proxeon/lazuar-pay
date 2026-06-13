@@ -3,7 +3,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Process a refund for a specific payment record.", "high", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Process a refund for a specific payment record.", "COMMUNITY", "high", "SUPER_ADMIN", "ADMIN")]
 public record RequestRefundCommand(Guid OrganizationId, Guid SubscriptionId, Guid PaymentRecordId, string? Reason) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

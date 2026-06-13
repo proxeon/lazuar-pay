@@ -7,7 +7,7 @@ using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.Commands.Agent;
 
-[AgentTool("Permanently erase a user's PII (Personally Identifiable Information) from the CRM and cancel their subscriptions to comply with GDPR/PDPA deletion requests.", "high", "SUPER_ADMIN")]
+[AgentTool("Permanently erase a user's PII (Personally Identifiable Information) from the CRM and cancel their subscriptions to comply with GDPR/PDPA deletion requests.", "COMMUNITY", "high", "SUPER_ADMIN")]
 public record AnonymizeSubscriberCommand(Guid OrganizationId, Guid ClientProfileId) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

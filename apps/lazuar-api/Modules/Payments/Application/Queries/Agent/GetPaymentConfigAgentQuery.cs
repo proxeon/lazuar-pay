@@ -7,7 +7,7 @@ using Modules.Payments.Application.Ports;
 
 namespace Modules.Payments.Application.Queries.Agent;
 
-[AgentTool("Check the current payment gateway configuration.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Check the current payment gateway configuration.", "CORE", "low", "SUPER_ADMIN", "ADMIN")]
 public record GetPaymentConfigAgentQuery(Guid OrganizationId) : IQuery<AgentPaymentConfigResult>;
 
 public record AgentPaymentConfigResult(string GatewayType, bool IsActive, bool HasApiKey, bool HasWebhookSecret);

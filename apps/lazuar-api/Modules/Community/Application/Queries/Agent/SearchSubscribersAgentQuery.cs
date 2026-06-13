@@ -8,7 +8,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("Search for subscribers by name or email to find their Subscription ID.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Search for subscribers by name or email to find their Subscription ID.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record SearchSubscribersAgentQuery(Guid OrganizationId, string SearchTerm) : IQuery<IEnumerable<AgentSubscriberResult>>;
 
 public record AgentSubscriberResult(string SubscriptionId, string ClientProfileId, string Name, string Email, string Status, string PlanName);

@@ -15,6 +15,7 @@
 // 2. Decode to a UTF-8 string ONLY when the stream completes.
 // 3. Wrap `JsonSerializer.Deserialize` in a try/catch to catch LLM JSON hallucinations gracefully.
 // ==============================================================================================
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -124,7 +125,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         int maxIterations = 3;
         int iterations = 0;
         string accumulatedAssistantText = "";
-        string? finalToolStatus = null;
+        
+        List<string> executedTools = new();
         string? finalProposedActionJson = null;
 
         try
@@ -253,8 +255,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                             yield break;
                         }
 
-                        finalToolStatus = $"Executed {definition.Name}";
-                        yield return new ChatStreamChunkDto { Type = "tool_status", Tool_name = definition.Name };
+                        executedTools.Add(definition.Name);
+                        yield return new ChatStreamChunkDto { Type = "tool_status", Tool_name = definition.Name, Executed_tools = executedTools };
 
                         var resultJson = await ExecuteReadToolAsync(definition, toolCall.FunctionArguments.ToString(), tenantId, ct);
                         messages.Add(new ToolChatMessage(toolCall.Id, resultJson));
@@ -279,6 +281,8 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         {
             try
             {
+                string? finalExecutedToolsJson = executedTools.Count > 0 ? JsonSerializer.Serialize(executedTools) : null;
+                
                 using var finishScope = _scopeFactory.CreateScope();
                 var repo = finishScope.ServiceProvider.GetRequiredService<IOpsRepository>();
                 var assistantMsg = new OpsMessage(
@@ -287,7 +291,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     convId,
                     "assistant",
                     string.IsNullOrWhiteSpace(accumulatedAssistantText) ? "[Tool Execution]" : accumulatedAssistantText,
-                    finalToolStatus,
+                    finalExecutedToolsJson,
                     finalProposedActionJson);
 
                 repo.AddMessage(assistantMsg);

@@ -9,7 +9,7 @@ using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Manually enroll a customer into a subscription plan.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Manually enroll a customer into a subscription plan.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreateSubscriberCommand(
     Guid OrganizationId,
     string Name,

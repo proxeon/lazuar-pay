@@ -6,7 +6,7 @@ using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Manually register an offline or cash payment and force the subscription to active status.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Manually register an offline or cash payment and force the subscription to active status.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record RecordSubscriptionPaymentCommand(
     Guid OrganizationId,
     Guid SubscriptionId,

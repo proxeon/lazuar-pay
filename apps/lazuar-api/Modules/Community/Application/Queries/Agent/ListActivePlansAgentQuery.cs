@@ -7,7 +7,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("List all active subscription plans to find a Plan ID, Slug, or check available capacity.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List all active subscription plans to find a Plan ID, Slug, or check available capacity.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListActivePlansAgentQuery(Guid OrganizationId) : IQuery<IEnumerable<AgentPlanResult>>;
 
 public record AgentPlanResult(

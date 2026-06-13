@@ -9,7 +9,7 @@ using Modules.One.Contracts;
 
 namespace Modules.One.Application.Queries.Agent;
 
-[AgentTool("List all staff and admins in the current workspace to find their User ID.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List all staff and admins in the current workspace to find their User ID.", "CORE", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListWorkspaceMembersAgentQuery(Guid OrganizationId) : IQuery<IEnumerable<AgentWorkspaceMemberResult>>;
 
 public record AgentWorkspaceMemberResult(string UserId, string Name, string Email, string Role);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -59,7 +60,9 @@ public static class Endpoints
                 Conversation_id = m.ConversationId.ToString(),
                 Role = m.Role,
                 Content = m.Content,
-                Tool_status = m.ToolStatus,
+                Executed_tools = m.ExecutedToolsJson != null
+                    ? JsonSerializer.Deserialize<List<string>>(m.ExecutedToolsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                    : null,
                 Proposed_action = m.ProposedActionJson != null
                     ? JsonSerializer.Deserialize<ProposedActionDto>(m.ProposedActionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                     : null,

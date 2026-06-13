@@ -3,7 +3,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Archives a community plan so it can no longer be purchased. Existing subscribers are not affected.", "high", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Archives a community plan so it can no longer be purchased. Existing subscribers are not affected.", "COMMUNITY", "high", "SUPER_ADMIN", "ADMIN")]
 public record ArchivePlanCommand(Guid OrganizationId, Guid PlanId) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

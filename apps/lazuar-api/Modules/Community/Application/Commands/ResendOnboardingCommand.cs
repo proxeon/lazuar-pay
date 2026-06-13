@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Resend the welcome email and onboarding links to a subscriber.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Resend the welcome email and onboarding links to a subscriber.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ResendOnboardingCommand(Guid OrganizationId, Guid SubscriptionId) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

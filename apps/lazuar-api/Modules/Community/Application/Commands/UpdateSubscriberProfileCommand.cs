@@ -3,7 +3,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Update internal admin notes, reminder settings, or change the preferred communication channel.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Update internal admin notes, reminder settings, or change the preferred communication channel.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record UpdateSubscriberProfileCommand(
     Guid OrganizationId,
     Guid SubscriptionId,

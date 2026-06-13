@@ -10,7 +10,7 @@ using Modules.One.Contracts;
 
 namespace Modules.Community.Application.Commands.Agent;
 
-[AgentTool("Generate and send a payment checkout link to a customer.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Generate and send a payment checkout link to a customer.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record AgentSendCheckoutLinkCommand(Guid OrganizationId, string Email, string PlanId, string CustomerName) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

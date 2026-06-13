@@ -3,7 +3,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Cancel a user's subscription at the end of their billing cycle.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Cancel a user's subscription at the end of their billing cycle.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CancelSubscriptionCommand(
     Guid OrganizationId,
     Guid SubscriptionId) : ICommand

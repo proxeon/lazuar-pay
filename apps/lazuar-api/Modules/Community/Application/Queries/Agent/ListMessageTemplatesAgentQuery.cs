@@ -8,7 +8,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("List all message templates to find a Template ID.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List all message templates to find a Template ID.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListMessageTemplatesAgentQuery(Guid OrganizationId) : IQuery<IEnumerable<AgentTemplateResult>>;
 
 public record AgentTemplateResult(string TemplateId, string Name, string Channel, string Subject, string Body);

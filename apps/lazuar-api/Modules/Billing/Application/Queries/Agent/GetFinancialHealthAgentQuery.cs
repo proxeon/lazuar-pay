@@ -6,7 +6,7 @@ using Modules.Billing.Contracts;
 
 namespace Modules.Billing.Application.Queries.Agent;
 
-[AgentTool("Retrieve the exact financial health of the workspace, including Gross Revenue, Net Cash in Bank, Total Gateway Fees paid, and Tax Liabilities owed to the government.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Retrieve the exact financial health of the workspace, including Gross Revenue, Net Cash in Bank, Total Gateway Fees paid, and Tax Liabilities owed to the government.", "BILLING", "low", "SUPER_ADMIN", "ADMIN")]
 public record GetFinancialHealthAgentQuery(Guid OrganizationId) : IQuery<AgentFinancialHealthResult>;
 
 public record AgentFinancialHealthResult(

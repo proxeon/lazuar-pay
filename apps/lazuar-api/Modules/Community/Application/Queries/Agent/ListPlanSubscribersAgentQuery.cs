@@ -7,7 +7,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("List all subscribers enrolled in a specific subscription plan. Use this when you need to see who is in a specific program.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List all subscribers enrolled in a specific subscription plan. Use this when you need to see who is in a specific program.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListPlanSubscribersAgentQuery(Guid OrganizationId, Guid PlanId) : IQuery<IEnumerable<AgentPlanSubscriberResult>>;
 
 public record AgentPlanSubscriberResult(string SubscriptionId, string ClientProfileId, string Name, string Email, string Status);

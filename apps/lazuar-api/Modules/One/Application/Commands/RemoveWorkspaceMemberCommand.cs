@@ -6,7 +6,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.One.Application.Commands;
 
-[AgentTool("Revoke staff or admin access from the workspace.", "high", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Revoke staff or admin access from the workspace.", "CORE", "high", "SUPER_ADMIN", "ADMIN")]
 public record RemoveWorkspaceMemberCommand(Guid OrganizationId, Guid RequesterUserId, Guid TargetUserId) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

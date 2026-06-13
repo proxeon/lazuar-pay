@@ -8,7 +8,7 @@ using Modules.One.Contracts;
 
 namespace Modules.One.Application.Queries.Agent;
 
-[AgentTool("List all provisioned app modules (e.g., COMMUNITY, VAULT) and their current active/inactive status for the workspace.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List all provisioned app modules (e.g., COMMUNITY, VAULT) and their current active/inactive status for the workspace.", "CORE", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListAppEntitlementsAgentQuery(Guid OrganizationId) : IQuery<IEnumerable<AgentEntitlementResult>>;
 
 public record AgentEntitlementResult(string AppId, bool IsActive);

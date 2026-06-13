@@ -6,7 +6,7 @@ using Modules.One.Contracts;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("Generate the public, shareable URL for a specific subscription plan. Use this when the user wants a link to send to their customers.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Generate the public, shareable URL for a specific subscription plan. Use this when the user wants a link to send to their customers.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record GetPlanLinkAgentQuery(Guid OrganizationId, Guid PlanId) : IQuery<string>;
 
 public class GetPlanLinkAgentQueryHandler : IQueryHandler<GetPlanLinkAgentQuery, string>

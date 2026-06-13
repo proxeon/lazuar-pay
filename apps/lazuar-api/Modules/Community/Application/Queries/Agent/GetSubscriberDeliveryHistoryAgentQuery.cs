@@ -7,7 +7,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("Audit the delivery history of emails and WhatsApp messages sent to a subscriber to verify success or bounce errors.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Audit the delivery history of emails and WhatsApp messages sent to a subscriber to verify success or bounce errors.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record GetSubscriberDeliveryHistoryAgentQuery(Guid OrganizationId, Guid SubscriptionId) : IQuery<IEnumerable<AgentDeliveryResult>>;
 
 public record AgentDeliveryResult(

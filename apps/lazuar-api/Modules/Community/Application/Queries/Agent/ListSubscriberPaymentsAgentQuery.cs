@@ -7,7 +7,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("List a subscriber's payment transaction history to find a PaymentRecordId required for processing refunds.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List a subscriber's payment transaction history to find a PaymentRecordId required for processing refunds.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListSubscriberPaymentsAgentQuery(Guid OrganizationId, Guid SubscriptionId) : IQuery<IEnumerable<AgentPaymentResult>>;
 
 public record AgentPaymentResult(

@@ -9,7 +9,7 @@ using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("Query the global financial ledger. Filter by date range, status (e.g., CONFIRMED, REFUNDED), or payment method to calculate revenue or find failed transactions.", "low", "SUPER_ADMIN")]
+[AgentTool("Query the global financial ledger. Filter by date range, status (e.g., CONFIRMED, REFUNDED), or payment method to calculate revenue or find failed transactions.", "COMMUNITY", "low", "SUPER_ADMIN")]
 public record ListGlobalTransactionsAgentQuery(
     Guid OrganizationId,
     DateTime? FromDate,

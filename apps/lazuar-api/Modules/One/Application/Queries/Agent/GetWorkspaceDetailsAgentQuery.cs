@@ -7,7 +7,7 @@ using Modules.One.Contracts;
 
 namespace Modules.One.Application.Queries.Agent;
 
-[AgentTool("Get the core details of the current organization/workspace, including its public tenant slug (which is used in URLs) and active status.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Get the core details of the current organization/workspace, including its public tenant slug (which is used in URLs) and active status.", "CORE", "low", "SUPER_ADMIN", "ADMIN")]
 public record GetWorkspaceDetailsAgentQuery(Guid OrganizationId) : IQuery<AgentWorkspaceDetailsResult>;
 
 public record AgentWorkspaceDetailsResult(string WorkspaceId, string Name, string Slug, bool IsActive);

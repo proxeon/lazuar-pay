@@ -8,7 +8,7 @@ using Modules.One.Contracts;
 
 namespace Modules.Community.Application.Commands.Agent;
 
-[AgentTool("Send a secure portal login magic link to a subscriber.", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Send a secure portal login magic link to a subscriber.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record AgentSendMagicLinkCommand(Guid OrganizationId, string Email) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

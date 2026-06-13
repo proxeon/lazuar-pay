@@ -7,7 +7,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("List all active promotional coupons to find a Coupon Code or check usage limits.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("List all active promotional coupons to find a Coupon Code or check usage limits.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListCouponsAgentQuery(Guid OrganizationId) : IQuery<IEnumerable<AgentCouponResult>>;
 
 public record AgentCouponResult(

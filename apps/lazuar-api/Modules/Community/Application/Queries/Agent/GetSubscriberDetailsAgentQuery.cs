@@ -6,7 +6,7 @@ using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.Queries.Agent;
 
-[AgentTool("Fetch the complete profile, billing status, and plan details of a single subscriber using their exact SubscriptionId.", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Fetch the complete profile, billing status, and plan details of a single subscriber using their exact SubscriptionId.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record GetSubscriberDetailsAgentQuery(Guid OrganizationId, Guid SubscriptionId) : IQuery<AgentSubscriberDetailsResult>;
 
 public record AgentSubscriberDetailsResult(

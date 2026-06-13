@@ -5,7 +5,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Reactivate a cancelled, expired, or banned subscription.", "high", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Reactivate a cancelled, expired, or banned subscription.", "COMMUNITY", "high", "SUPER_ADMIN", "ADMIN")]
 public record ReactivateSubscriptionCommand(Guid OrganizationId, Guid SubscriptionId, string RecordedBy) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
