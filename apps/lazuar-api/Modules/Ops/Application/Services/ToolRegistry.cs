@@ -55,12 +55,19 @@ public class ToolRegistry : IToolRegistry
         }
     }
 
-    public IEnumerable<AgentToolDefinition> GetAvailableTools(string userRole)
+    public IEnumerable<AgentToolDefinition> GetAvailableTools(string userRole, IEnumerable<string> activeAppIds)
     {
+        var activeAppsSet = new HashSet<string>(activeAppIds, StringComparer.OrdinalIgnoreCase);
+
         return _tools.Values.Where(t =>
         {
             var attr = t.RequestType.GetCustomAttribute<AgentToolAttribute>();
-            return attr != null && (attr.AllowedRoles.Length == 0 || attr.AllowedRoles.Contains(userRole, StringComparer.OrdinalIgnoreCase));
+            if (attr == null) return false;
+
+            bool roleMatches = attr.AllowedRoles.Length == 0 || attr.AllowedRoles.Contains(userRole, StringComparer.OrdinalIgnoreCase);
+            bool appMatches = string.Equals(attr.RequiredAppId, "CORE", StringComparison.OrdinalIgnoreCase) || activeAppsSet.Contains(attr.RequiredAppId);
+
+            return roleMatches && appMatches;
         });
     }
 
@@ -125,7 +132,6 @@ public class ToolRegistry : IToolRegistry
             var jsonAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>();
             var propName = jsonAttr?.Name ?? prop.Name;
 
-            // We hide these fields from the AI so it doesn't try to hallucinate them
             if (propName == "OrganizationId" || propName == "Id" || propName == "RecordedBy") continue;
 
             properties[propName] = GetSchemaForType(prop.PropertyType);
@@ -137,9 +143,6 @@ public class ToolRegistry : IToolRegistry
             }
         }
 
-        // FIX: Google Gemini strictly rejects tools with 0 properties. 
-        // Since we hide `OrganizationId`, many of our tools become empty. 
-        // We inject a dummy variable here to keep the schema valid for Gemini.
         if (properties.Count == 0)
         {
             properties["_meta"] = new JsonObject { ["type"] = "string", ["description"] = "Optional metadata context. Leave empty." };

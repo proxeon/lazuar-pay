@@ -14,6 +14,6 @@ public record AgentToolDefinition(
 
 public interface IToolRegistry
 {
-    IEnumerable<AgentToolDefinition> GetAvailableTools(string userRole);
+    IEnumerable<AgentToolDefinition> GetAvailableTools(string userRole, IEnumerable<string> activeAppIds);
     AgentToolDefinition? GetToolDefinition(string toolName);
 }
