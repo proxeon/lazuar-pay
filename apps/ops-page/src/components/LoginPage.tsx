@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { client } from "../lib/api-client";
 
 type AuthMode = "signin" | "signup";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +15,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Wipe any stale workspace IDs from previous sessions to prevent 403 Forbidden errors
+  useEffect(() => {
+    localStorage.removeItem("ops_active_workspace_id");
+  }, []);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
