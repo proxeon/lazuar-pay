@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using MediatR;
 using Modules.Community.Infrastructure;
 using Modules.Community.Domain.Events;
+using Modules.Payments.Contracts.Events;
 
 namespace Modules.Community.Infrastructure.Workers;
 
@@ -16,6 +17,9 @@ public class CommunityLifecycleJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CommunityLifecycleJob> _logger;
+
+    // A system-level identifier to track auto-debit attempts in the idempotency log
+    private static readonly Guid AutoDebitScheduleId = new("FFFFFFFF-FFFF-FFFF-FFFF-000000000001");
 
     public CommunityLifecycleJob(IServiceScopeFactory scopeFactory, ILogger<CommunityLifecycleJob> logger)
     {
@@ -51,21 +55,52 @@ public class CommunityLifecycleJob : BackgroundService
         var now = DateTime.UtcNow;
         bool requiresSave = false;
 
+        // Process active subscriptions that have crossed their renewal date
         var overdue = await db.Subscriptions
             .IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
             .Where(s => s.Status == "ACTIVE"
                 && s.NextRenewalDate != null
                 && s.NextRenewalDate < now)
+            .Join(db.Plans.IgnoreQueryFilters(), s => s.PlanId, p => p.Id, (s, p) => new { Sub = s, Plan = p })
             .ToListAsync(ct);
 
         if (overdue.Any())
         {
-            foreach (var sub in overdue)
+            foreach (var item in overdue)
             {
-                sub.MarkAsPastDue();
+                var sub = item.Sub;
+                var plan = item.Plan;
+
+                // Branch A: Vaulted Tokens (Auto-Debit)
+                if (!string.IsNullOrEmpty(sub.VaultedTokenId) && !string.IsNullOrEmpty(sub.VaultedCustomerId))
+                {
+                    // Ensure we only attempt to auto-debit once per billing cycle
+                    if (!sub.ReminderLogs.Any(l => l.ScheduleId == AutoDebitScheduleId && l.TargetRenewalDate.Date == sub.NextRenewalDate!.Value.Date))
+                    {
+                        sub.RecordReminderDispatched(AutoDebitScheduleId, sub.NextRenewalDate!.Value);
+                        
+                        await mediator.Publish(new ExecuteOffSessionChargeIntegrationEvent(
+                            sub.OrganizationId,
+                            sub.Id,
+                            plan.Price,
+                            "MYR",
+                            sub.VaultedCustomerId,
+                            sub.VaultedTokenId
+                        ), ct);
+
+                        requiresSave = true;
+                        _logger.LogInformation("Dispatched auto-debit request for subscription {Id}.", sub.Id);
+                    }
+                }
+                // Branch B: Manual Renewals
+                else
+                {
+                    sub.MarkAsPastDue();
+                    requiresSave = true;
+                    _logger.LogInformation("Transitioned subscription {Id} to PAST_DUE state.", sub.Id);
+                }
             }
-            requiresSave = true;
-            _logger.LogInformation("Transitioned {Count} overdue subscription(s) to PAST_DUE state.", overdue.Count);
         }
 
         var pastDue = await db.Subscriptions
@@ -150,13 +185,22 @@ public class CommunityLifecycleJob : BackgroundService
                 sub.RecordReminderDispatched(schedule.Id, targetRenewalDate);
                 requiresSave = true;
 
-                await mediator.Publish(new SubscriptionRenewalDueDomainEvent(
-                    sub.Id,
-                    sub.OrganizationId,
-                    sub.ClientProfileId,
-                    sub.NextRenewalDate!.Value,
-                    schedule.TemplateId,
-                    schedule.Channel), ct);
+                // Pre-Debit Notification override for vaulted subscriptions
+                if (!string.IsNullOrEmpty(sub.VaultedTokenId))
+                {
+                    var noticeMessage = $"Notice: Your subscription will be automatically renewed on {sub.NextRenewalDate?.ToString("MMM dd, yyyy")}. Your saved payment method will be charged.";
+                    sub.SendOneOffReminder(null, noticeMessage, schedule.Channel);
+                }
+                else
+                {
+                    await mediator.Publish(new SubscriptionRenewalDueDomainEvent(
+                        sub.Id,
+                        sub.OrganizationId,
+                        sub.ClientProfileId,
+                        sub.NextRenewalDate!.Value,
+                        schedule.TemplateId,
+                        schedule.Channel), ct);
+                }
             }
         }
 
