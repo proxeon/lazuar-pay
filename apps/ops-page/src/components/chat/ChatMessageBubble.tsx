@@ -62,11 +62,22 @@ export default function ChatMessageBubble({
 
   return (
     <div className="w-full flex flex-col items-start min-w-0">
-      {msg.isStreaming && !msg.content && !msg.toolStatus && !msg.proposedAction ? (
+      
+      {msg.executedTools && msg.executedTools.length > 0 && (
+        <div className="flex flex-col gap-1.5 mb-3 w-full">
+          {msg.executedTools.map((tool, idx) => (
+            <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-[#fafafa] border border-[#e5e5e5] text-[11px] font-mono text-[#71717a] rounded-sm w-fit">
+              <Check size={12} className="text-emerald-600" />
+              Executed {tool}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {msg.isStreaming && !msg.content && !msg.proposedAction ? (
         <div className="flex items-center gap-1.5 h-6 px-1 my-2">
-          <span className="w-1.5 h-1.5 bg-[#a1a1aa] rounded-full animate-bounce [animation-delay:-0.3s]" />
-          <span className="w-1.5 h-1.5 bg-[#a1a1aa] rounded-full animate-bounce [animation-delay:-0.15s]" />
-          <span className="w-1.5 h-1.5 bg-[#a1a1aa] rounded-full animate-bounce" />
+          <Activity size={14} className="animate-pulse text-[#09090b]" />
+          <span className="text-[11px] font-mono text-[#71717a] animate-pulse">Thinking...</span>
         </div>
       ) : (
         msg.content && (
@@ -74,13 +85,6 @@ export default function ChatMessageBubble({
             <MarkdownContent content={msg.content} onSend={onSend} />
           </div>
         )
-      )}
-
-      {msg.toolStatus && (
-        <div className="flex items-center gap-2 px-3 py-1.5 mt-2 bg-[#fafafa] border border-[#e5e5e5] text-[11px] font-mono text-[#71717a] rounded-sm">
-          <Activity size={12} className="animate-pulse text-[#09090b]" />
-          {msg.toolStatus}
-        </div>
       )}
 
       {msg.proposedAction && (

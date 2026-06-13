@@ -5,6 +5,6 @@ export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   isStreaming?: boolean;
-  toolStatus?: string;
+  executedTools?: string[];
   proposedAction?: ProposedActionDto;
 }

@@ -59,9 +59,9 @@ export function useChatStream(
                 setMessages((prev) =>
                   prev.map((msg) => {
                     if (msg.id !== targetAssistantMsgId) return msg;
-                    if (chunk.type === "text" && chunk.content) return { ...msg, content: msg.content + chunk.content, toolStatus: undefined };
-                    if (chunk.type === "tool_status" && chunk.tool_name) return { ...msg, toolStatus: `Running ${chunk.tool_name}...` };
-                    if (chunk.type === "proposed_action" && chunk.proposed_action) return { ...msg, proposedAction: chunk.proposed_action, toolStatus: undefined };
+                    if (chunk.type === "text" && chunk.content) return { ...msg, content: msg.content + chunk.content };
+                    if (chunk.type === "tool_status" && chunk.executed_tools) return { ...msg, executedTools: chunk.executed_tools };
+                    if (chunk.type === "proposed_action" && chunk.proposed_action) return { ...msg, proposedAction: chunk.proposed_action };
                     return msg;
                   })
                 );
@@ -76,7 +76,7 @@ export function useChatStream(
     } catch (error) {
       setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, content: "Network error occurred." } : msg));
     } finally {
-      setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, isStreaming: false, toolStatus: undefined } : msg));
+      setMessages((prev) => prev.map((msg) => msg.id === targetAssistantMsgId ? { ...msg, isStreaming: false } : msg));
       setIsProcessing(false);
       onStreamComplete(isNew && generatedConvId ? generatedConvId : undefined);
     }

@@ -37,7 +37,7 @@ export default function OpsChatWorkspace() {
           id: m.id,
           role: m.role as "user" | "assistant" | "system",
           content: m.content,
-          toolStatus: m.tool_status,
+          executedTools: m.executed_tools,
           proposedAction: m.proposed_action
         })));
       }
