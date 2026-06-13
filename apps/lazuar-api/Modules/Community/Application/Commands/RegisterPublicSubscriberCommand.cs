@@ -120,7 +120,9 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         var metadata = new Dictionary<string, string>
         {
             ["type"] = "community_subscription",
-            ["subscription_id"] = subscription.Id.ToString()
+            ["subscription_id"] = subscription.Id.ToString(),
+            ["customer_name"] = request.Name,
+            ["customer_phone"] = request.Phone
         };
 
         var checkoutQuery = new GenerateCheckoutSessionQuery(

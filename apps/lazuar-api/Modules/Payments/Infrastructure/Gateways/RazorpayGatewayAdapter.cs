@@ -22,7 +22,6 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
 
     private RazorpayClient GetClient(string apiKey)
     {
-        // Admin must provide "KeyId:KeySecret" in the API Key field
         var parts = apiKey.Split(':');
         var keyId = parts[0];
         var keySecret = parts.Length > 1 ? parts[1] : "";
@@ -38,10 +37,18 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         {
             var client = GetClient(apiKey);
             var amountPaise = (int)(amount * 100);
+            
+            metadata.TryGetValue("customer_name", out var customerName);
+            metadata.TryGetValue("customer_phone", out var customerPhone);
+
+            var finalName = !string.IsNullOrWhiteSpace(customerName) ? customerName : ExtractName(customerEmail);
+            var finalPhone = !string.IsNullOrWhiteSpace(customerPhone) ? customerPhone : "+60100000000";
+
             var customer = new Dictionary<string, object>
             {
-                { "name", ExtractName(customerEmail) },
-                { "email", customerEmail }
+                { "name", finalName },
+                { "email", customerEmail },
+                { "contact", finalPhone }
             };
             
             var notes = metadata.ToDictionary(k => k.Key, v => (object)v.Value);

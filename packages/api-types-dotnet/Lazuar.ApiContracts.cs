@@ -483,6 +483,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("days_overdue")]
         public int? Days_overdue { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("vaulted_customer_id")]
+        public string? Vaulted_customer_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("vaulted_token_id")]
+        public string? Vaulted_token_id { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
 

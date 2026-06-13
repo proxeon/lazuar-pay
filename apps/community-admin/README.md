@@ -1,6 +1,7 @@
 
 # Community Admin
 
+## Billplz
 
 ## API Credentials
 
@@ -10,6 +11,17 @@
 | xsignature   | `45140688eeafc8b735d8720b3fdf08d51282cb4fbc45ee9ea8893da1db492eeeb064a01143d2dd8b93941231908547251a6ac145aca7dde066a93d24957aacc6` |
 | Collection   | `qigic0ou`                                                                                       |
 
+
+## Razorpay
+
+```txt
+key_id = rzp_test_T12E5uk0urzQHa
+key_secret = RsuKMUHTw67hS1mG4sMD0seg
+```
+
+Webhook secrete = lazuar_test_secret_123
+
+---
 
 ## Admin Login
 

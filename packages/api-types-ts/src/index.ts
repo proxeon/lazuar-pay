@@ -1216,6 +1216,8 @@ export interface components {
             next_billing_date?: string;
             /** Format: int32 */
             days_overdue?: number;
+            vaulted_customer_id?: string;
+            vaulted_token_id?: string;
             /** Format: date-time */
             created_at: string;
         };

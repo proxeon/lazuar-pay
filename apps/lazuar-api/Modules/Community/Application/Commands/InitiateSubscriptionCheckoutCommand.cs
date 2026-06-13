@@ -97,12 +97,13 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         }
 
         var customerProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
-        var customerEmail = customerProfile?.Email ?? "";
 
         var metadata = new Dictionary<string, string>
         {
             ["type"] = "community_subscription",
-            ["subscription_id"] = subscription.Id.ToString()
+            ["subscription_id"] = subscription.Id.ToString(),
+            ["customer_name"] = customerProfile?.FullName ?? "",
+            ["customer_phone"] = customerProfile?.Phone ?? ""
         };
 
         var query = new GenerateCheckoutSessionQuery(
@@ -110,7 +111,7 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             finalPrice,
             "MYR",
             plan.Name,
-            customerEmail,
+            customerProfile?.Email ?? "",
             request.SuccessUrl,
             request.CancelUrl,
             metadata,
