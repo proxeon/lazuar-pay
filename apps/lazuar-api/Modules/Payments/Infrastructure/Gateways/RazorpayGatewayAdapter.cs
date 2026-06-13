@@ -57,7 +57,11 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             {
                 var subReg = new Dictionary<string, object>
                 {
-                    { "method", "card" },
+                    // By omitting "method", Razorpay Curlec will show all local recurring options (including FPX AutoPay)
+                    // { "method", "card" },
+                    // { "method", "emandate" },          // Forces Bank Account Mandate instead of Card
+                    // { "auth_type", "netbanking" },     // Forces digital FPX flow (prevents physical paper forms)
+                    { "method", "card" }, // MUST be "card" for MYR
                     { "max_amount", amountPaise * 10 },
                     { "expire_at", DateTimeOffset.UtcNow.AddYears(10).ToUnixTimeSeconds() }
                 };
