@@ -98,7 +98,7 @@ export default function Sidebar({
       initial={false}
       animate={{ width: isMobile ? 240 : (isOpen ? 240 : 48), x: isMobile ? (isOpen ? 0 : -240) : 0 }}
       transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-      className={cn("z-30 flex h-full shrink-0 flex-col border-r border-[#e5e5e5] bg-white absolute md:relative", isMobile ? "shadow-2xl" : "")}
+      className={cn("z-30 flex h-full shrink-0 flex-col border-r border-[#e5e5e5] bg-white absolute md:relative")}
     >
       <div className="flex h-14 w-full shrink-0 items-center overflow-hidden relative border-b border-[#e5e5e5]">
         {expanded ? (
@@ -170,17 +170,15 @@ export default function Sidebar({
 
       <div className="flex-1 overflow-y-auto py-2 space-y-[2px]">
         {expanded && conversations?.map((conv) => (
-          <div
+          <Link
             key={conv.id}
-            onClick={() => {
-              if (isMobile) setIsOpen();
-              navigate(`/chat/${conv.id}`);
-            }}
-            className={cn("group relative flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors", location.pathname === `/chat/${conv.id}` ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
+            to={`/chat/${conv.id}`}
+            onClick={() => isMobile && setIsOpen()}
+            className={cn("group relative flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors block", location.pathname === `/chat/${conv.id}` ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
           >
-            <span className="text-[13px] truncate flex-1 pr-2">{conv.title}</span>
+            <span className="text-[13px] truncate block pr-2 flex-1">{conv.title}</span>
             
-            <div className={cn("relative shrink-0", openMenuId === conv.id ? "block" : "hidden group-hover:block")} onClick={(e) => e.stopPropagation()}>
+            <div className={cn("relative shrink-0", openMenuId === conv.id ? "block" : "hidden group-hover:block")} onClick={(e) => e.preventDefault()}>
               <button 
                 onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === conv.id ? null : conv.id); }}
                 className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm focus:outline-none"
@@ -188,7 +186,7 @@ export default function Sidebar({
                 <MoreVertical size={14} />
               </button>
               {openMenuId === conv.id && (
-                <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-[#e5e5e5] shadow-lg rounded-sm py-1 z-50">
+                <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-[#e5e5e5] rounded-sm py-1 z-50">
                   <button 
                     onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); handleRenameConversation(conv.id, conv.title); }}
                     className="w-full text-left px-3 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors"
@@ -204,7 +202,7 @@ export default function Sidebar({
                 </div>
               )}
             </div>
-          </div>
+          </Link>
         ))}
         {expanded && conversations?.length === 20 && (
           <Link to="/history" onClick={() => isMobile && setIsOpen()} className="w-full block py-2 px-4 text-[11px] font-bold uppercase tracking-widest text-[#a1a1aa] hover:text-[#09090b] transition-colors text-center">See All</Link>

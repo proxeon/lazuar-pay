@@ -61,7 +61,7 @@ export default function CommunityInsights() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {topMetrics.map((kpi, i) => (
             <div key={i} className={cn(
-              "bg-white border p-4 shadow-sm flex flex-col justify-between",
+              "bg-white border p-4 flex flex-col justify-between",
               kpi.alert ? "border-amber-300 bg-amber-50/30" : "border-[#e5e5e5]"
             )}>
               <div className="flex justify-between items-start mb-3">
@@ -79,7 +79,7 @@ export default function CommunityInsights() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 bg-white border border-[#e5e5e5] p-5 shadow-sm flex flex-col h-[320px]">
+          <div className="lg:col-span-1 bg-white border border-[#e5e5e5] p-5 flex flex-col h-[320px]">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] mb-6">Revenue Trend</h3>
             <div className="flex-1 w-full relative">
               <div className="absolute inset-0">
@@ -97,14 +97,14 @@ export default function CommunityInsights() {
             </div>
           </div>
 
-          <div className="lg:col-span-2 bg-white border border-[#e5e5e5] shadow-sm flex flex-col h-[320px]">
+          <div className="lg:col-span-2 bg-white border border-[#e5e5e5] flex flex-col h-[320px]">
             <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center gap-2 bg-[#fafafa]/50">
               <Package size={14} className="text-[#a1a1aa]" />
               <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Active Plans Performance</h3>
             </div>
             <div className="flex-1 overflow-auto">
               <table className="w-full text-left text-[12px]">
-                <thead className="sticky top-0 bg-white shadow-[0_1px_0_#f4f4f5]">
+                <thead className="sticky top-0 bg-white border-b border-[#f4f4f5]">
                   <tr>
                     <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Plan Name</th>
                     <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Price</th>

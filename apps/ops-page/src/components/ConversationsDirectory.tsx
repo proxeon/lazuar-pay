@@ -100,7 +100,7 @@ export default function ConversationsDirectory() {
                       <MoreVertical size={16} />
                     </button>
                     {openMenuId === conv.id && (
-                      <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-[#e5e5e5] shadow-lg rounded-sm py-1 z-50">
+                      <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-[#e5e5e5] rounded-sm py-1 z-50">
                         <button 
                           onClick={() => { setOpenMenuId(null); handleRenameConversation(conv.id, conv.title); }}
                           className="w-full text-left px-3 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors"
