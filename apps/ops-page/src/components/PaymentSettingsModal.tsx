@@ -12,14 +12,14 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ">("BILLPLZ");
+  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY">("BILLPLZ");
   const [isActive, setIsActive] = useState(true);
   
   // Credentials
   const [apiKey, setApiKey] = useState("");
-  const [webhookSecret, setWebhookSecret] = useState(""); // X-Signature for Billplz
-  const [secretKey, setSecretKey] = useState(""); // Used by Stripe
-  const [collectionId, setCollectionId] = useState(""); // Merchant/Collection ID
+  const [webhookSecret, setWebhookSecret] = useState(""); 
+  const [secretKey, setSecretKey] = useState(""); 
+  const [collectionId, setCollectionId] = useState(""); 
   
   // Fees
   const [estimatedFeePct, setEstimatedFeePct] = useState("0");
@@ -127,6 +127,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                     <select value={gatewayType} onChange={e => setGatewayType(e.target.value as any)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
+                      <option value="RAZORPAY">Razorpay (Global/India)</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">
@@ -142,7 +143,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Secure Credentials</label>
                 
-                {gatewayType === "BILLPLZ" ? (
+                {gatewayType === "BILLPLZ" && (
                   <>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Collection ID</label>
@@ -158,7 +159,9 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                       <p className="text-[10px] text-[#a1a1aa]">Must be exactly 128 characters long for signature verification.</p>
                     </div>
                   </>
-                ) : (
+                )}
+
+                {gatewayType === "STRIPE" && (
                   <>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Secret Key</label>
@@ -167,6 +170,20 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Webhook Signing Secret</label>
                       <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} required placeholder="whsec_..." className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
+                    </div>
+                  </>
+                )}
+
+                {gatewayType === "RAZORPAY" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">API Key (KeyId:KeySecret)</label>
+                      <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} required placeholder="rzp_live_xxx:secret_yyy" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
+                      <p className="text-[10px] text-[#a1a1aa]">Format must be KeyId:KeySecret</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">Webhook Signing Secret</label>
+                      <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} required placeholder="Your custom webhook secret" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
                     </div>
                   </>
                 )}
@@ -192,7 +209,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
 
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50">
+            <div className="flex items-center justify-end gap-3 p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50 mt-auto">
               <button type="button" onClick={onClose} className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] transition-colors">Cancel</button>
               <button type="submit" disabled={isSaving} className="h-10 px-6 bg-[#09090b] text-white text-[11px] font-bold tracking-widest uppercase rounded-none hover:bg-[#27272a] disabled:opacity-50 transition-colors flex items-center gap-2">
                 {isSaving && <Loader2 size={13} className="animate-spin" />} Save Configuration

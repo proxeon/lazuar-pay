@@ -12,7 +12,8 @@ public partial class CommunityQueryService
         string PlanName, decimal PlanPrice, string Status, string Source,
         bool IsReminderOnly, string? PreferredChannel, string? AdminNotes,
         DateTime? RemindersPausedUntil, DateTime? CurrentPeriodEnd,
-        DateTime? NextBillingDate, DateTime CreatedAt);
+        DateTime? NextBillingDate, DateTime CreatedAt,
+        string? VaultedCustomerId, string? VaultedTokenId);
 
     public async Task<PaginatedResponse<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit)
     {
@@ -31,7 +32,8 @@ public partial class CommunityQueryService
                 p.""Name"" as ""PlanName"", p.""Price"" as ""PlanPrice"",
                 s.""Status"", s.""Source"", s.""IsReminderOnly"", s.""PreferredChannel"",
                 s.""AdminNotes"", s.""RemindersPausedUntil"", s.""CurrentPeriodEnd"",
-                s.""NextRenewalDate"" as ""NextBillingDate"", s.""CreatedAt""
+                s.""NextRenewalDate"" as ""NextBillingDate"", s.""CreatedAt"",
+                s.""VaultedCustomerId"", s.""VaultedTokenId""
             FROM community.""Subscriptions"" s
             JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
             WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'
@@ -76,6 +78,8 @@ public partial class CommunityQueryService
                 Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
                 Next_billing_date = s.NextBillingDate.HasValue ? new DateTimeOffset(s.NextBillingDate.Value) : null,
                 Days_overdue = daysOverdue,
+                Vaulted_customer_id = s.VaultedCustomerId,
+                Vaulted_token_id = s.VaultedTokenId,
                 Created_at = new DateTimeOffset(s.CreatedAt)
             };
         });
@@ -94,7 +98,8 @@ public partial class CommunityQueryService
                 p.""Name"" as ""PlanName"", p.""Price"" as ""PlanPrice"",
                 s.""Status"", s.""Source"", s.""IsReminderOnly"", s.""PreferredChannel"",
                 s.""AdminNotes"", s.""RemindersPausedUntil"", s.""CurrentPeriodEnd"",
-                s.""NextRenewalDate"" as ""NextBillingDate"", s.""CreatedAt""
+                s.""NextRenewalDate"" as ""NextBillingDate"", s.""CreatedAt"",
+                s.""VaultedCustomerId"", s.""VaultedTokenId""
             FROM community.""Subscriptions"" s
             JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
             WHERE s.""Id"" = @SubId AND s.""OrganizationId"" = @OrgId
@@ -128,6 +133,8 @@ public partial class CommunityQueryService
             Current_period_end = rawSub.CurrentPeriodEnd.HasValue ? new DateTimeOffset(rawSub.CurrentPeriodEnd.Value) : null,
             Next_billing_date = rawSub.NextBillingDate.HasValue ? new DateTimeOffset(rawSub.NextBillingDate.Value) : null,
             Days_overdue = daysOverdue,
+            Vaulted_customer_id = rawSub.VaultedCustomerId,
+            Vaulted_token_id = rawSub.VaultedTokenId,
             Created_at = new DateTimeOffset(rawSub.CreatedAt)
         };
     }

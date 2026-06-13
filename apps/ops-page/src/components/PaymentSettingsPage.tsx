@@ -10,7 +10,7 @@ export default function PaymentSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ">("BILLPLZ");
+  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY">("BILLPLZ");
   const [isActive, setIsActive] = useState(true);
   
   const [apiKey, setApiKey] = useState("");
@@ -120,6 +120,7 @@ export default function PaymentSettingsPage() {
                     <select value={gatewayType} onChange={e => setGatewayType(e.target.value as any)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
+                      <option value="RAZORPAY">Razorpay (Global/India)</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">
@@ -135,7 +136,7 @@ export default function PaymentSettingsPage() {
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Secure Credentials</label>
                 
-                {gatewayType === "BILLPLZ" ? (
+                {gatewayType === "BILLPLZ" && (
                   <>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Collection ID</label>
@@ -151,7 +152,9 @@ export default function PaymentSettingsPage() {
                       <p className="text-[10px] text-[#a1a1aa]">Must be exactly 128 characters long for signature verification.</p>
                     </div>
                   </>
-                ) : (
+                )}
+
+                {gatewayType === "STRIPE" && (
                   <>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Secret Key</label>
@@ -160,6 +163,20 @@ export default function PaymentSettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Webhook Signing Secret</label>
                       <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} required placeholder="whsec_..." className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
+                    </div>
+                  </>
+                )}
+
+                {gatewayType === "RAZORPAY" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">API Key (KeyId:KeySecret)</label>
+                      <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} required placeholder="rzp_live_xxx:secret_yyy" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
+                      <p className="text-[10px] text-[#a1a1aa]">Format must be KeyId:KeySecret</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">Webhook Signing Secret</label>
+                      <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} required placeholder="Your custom webhook secret" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
                     </div>
                   </>
                 )}

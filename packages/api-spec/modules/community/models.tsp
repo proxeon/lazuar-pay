@@ -47,6 +47,8 @@ model CommunitySubscriptionDto {
   current_period_end?: utcDateTime;
   next_billing_date?: utcDateTime;
   days_overdue?: int32;
+  vaulted_customer_id?: string;
+  vaulted_token_id?: string;
   created_at: utcDateTime;
 }
 

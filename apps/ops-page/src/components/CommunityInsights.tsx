@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, Copy, Check, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { client, type CommunitySubscriptionDto } from "../lib/api-client";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -73,7 +73,6 @@ export default function CommunityInsights() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Client-side filtering for the current paginated chunk
   const displayedSubscribers = (subscribersData?.data as CommunitySubscriptionDto[] || [])
     .filter(sub => statusFilter === "ALL" || sub.status === statusFilter);
 
@@ -160,7 +159,6 @@ export default function CommunityInsights() {
           </div>
         </div>
 
-        {/* --- SUBSCRIBER LEDGER --- */}
         <div className="bg-white border border-[#e5e5e5] flex flex-col">
           <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Subscriber Directory</h3>
@@ -213,7 +211,12 @@ export default function CommunityInsights() {
                         </div>
                       </td>
                       <td className="px-5 py-3 min-w-[200px]">
-                        <p className="font-medium text-[#09090b] text-[13px]">{sub.customer_name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-[#09090b] text-[13px]">{sub.customer_name}</p>
+                          {sub.vaulted_token_id && (
+                            <Zap size={12} className="text-blue-500" title="Auto-Debit Token Saved" />
+                          )}
+                        </div>
                         <p className="text-[11px] text-[#71717a]">{sub.customer_email}</p>
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
