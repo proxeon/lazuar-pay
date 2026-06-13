@@ -10,7 +10,10 @@ public class BroadcastCampaignConfiguration : IEntityTypeConfiguration<Broadcast
     {
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => new { x.OrganizationId, x.Status });
+        
         builder.Property(x => x.Subject).IsRequired().HasMaxLength(500);
+        builder.Property(x => x.Channel).IsRequired().HasMaxLength(20);
+        builder.Property(x => x.TargetStatus).HasMaxLength(50);
         builder.Property(x => x.Status).IsRequired().HasMaxLength(50);
     }
 }

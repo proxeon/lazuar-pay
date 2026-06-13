@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "../lib/utils";
 import { client, type ProposedActionDto } from "../lib/api-client";
+import { MarkdownContent } from "./chat/MarkdownContent";
 
 interface ActionApprovalCardProps {
   action: ProposedActionDto;
@@ -38,6 +39,11 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
   };
 
   const isHighSeverity = action.severity === "high";
+  const isBroadcast = action.tool_name === "SendBroadcastCommand";
+  
+  // Extract body dynamically if it exists in the payload, specifically for Broadcast previews
+  const payloadRecord = action.command_payload as Record<string, any>;
+  const broadcastBody = isBroadcast && payloadRecord?.Body ? String(payloadRecord.Body) : null;
 
   return (
     <div className="w-full max-w-[540px] mt-2 mb-4 bg-white border border-[#e5e5e5] rounded-lg overflow-hidden flex flex-col font-sans animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -63,12 +69,24 @@ export default function ActionApprovalCard({ action, onResolved }: ActionApprova
         
         <div className="rounded-md border border-[#e5e5e5] overflow-hidden">
           <div className="bg-[#fafafa] border-b border-[#e5e5e5] px-3 py-1.5 flex items-center">
-            <span className="text-[10px] font-bold text-[#71717a] uppercase tracking-widest">Payload Data</span>
+            <span className="text-[10px] font-bold text-[#71717a] uppercase tracking-widest">
+              {isBroadcast ? "Broadcast Preview" : "Payload Data"}
+            </span>
           </div>
           <div className="bg-white p-0 m-0 overflow-x-auto max-h-[280px] overflow-y-auto">
-            <pre className="p-3 m-0 text-[11.5px] font-mono text-[#09090b] bg-transparent border-0">
-              {JSON.stringify(action.command_payload, null, 2)}
-            </pre>
+            {isBroadcast && broadcastBody ? (
+              <div className="p-4 bg-white">
+                <div className="mb-4 pb-3 border-b border-[#f4f4f5]">
+                  <p className="text-[11px] font-bold text-[#71717a] uppercase tracking-widest mb-1">Subject</p>
+                  <p className="text-[13px] font-semibold text-[#09090b]">{payloadRecord.Subject}</p>
+                </div>
+                <MarkdownContent content={broadcastBody} />
+              </div>
+            ) : (
+              <pre className="p-3 m-0 text-[11.5px] font-mono text-[#09090b] bg-transparent border-0">
+                {JSON.stringify(action.command_payload, null, 2)}
+              </pre>
+            )}
           </div>
         </div>
       </div>

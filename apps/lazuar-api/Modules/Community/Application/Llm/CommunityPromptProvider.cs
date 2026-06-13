@@ -9,7 +9,7 @@ public class CommunityPromptProvider : IAgentPromptProvider
     public string GetSystemPromptRules()
     {
         return "**COMMUNITY MODULE RULES**:\n" +
-               "- When executing bulk actions (Broadcasts), rely on the dedicated batch tools. Never attempt to loop through individual subscriber tools to send bulk messages, as this will violate system timeout boundaries.\n" +
+               "- NEVER use ListPlanSubscribers to retrieve IDs for the purpose of sending messages. If you need to contact multiple users (e.g., a whole class or everyone who is PAST_DUE), ALWAYS use the SendBroadcastCommand.\n" +
                "- Use search tools to find exact GUID identifiers for Subscribers or Plans before executing any write commands. NEVER guess or hallucinate a Guid!";
     }
 }

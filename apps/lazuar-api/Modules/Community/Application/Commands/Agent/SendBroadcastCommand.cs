@@ -6,12 +6,15 @@ using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands.Agent;
 
-[AgentTool("Schedule a bulk announcement to be sent to all active subscribers or a specific plan. Returns a Campaign ID.", "COMMUNITY", "high", "SUPER_ADMIN")]
+[AgentTool("Schedule a bulk announcement to be sent to multiple subscribers or an entire plan. ALWAYS use this tool instead of SendOneOffReminder when messaging multiple users or an entire plan.", "COMMUNITY", "high", "SUPER_ADMIN")]
 public record SendBroadcastCommand(
     Guid OrganizationId,
     string Subject,
     string Body,
-    Guid? TargetPlanId) : ICommand<string>
+    string Channel,
+    Guid? TargetPlanId = null,
+    string? TargetStatus = null,
+    bool? TargetIsReminderOnly = null) : ICommand<string>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -37,7 +40,10 @@ public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand,
             request.OrganizationId,
             request.Subject,
             request.Body,
-            request.TargetPlanId);
+            request.Channel,
+            request.TargetPlanId,
+            request.TargetStatus,
+            request.TargetIsReminderOnly);
 
         _repository.Add(campaign);
         await _repository.SaveChangesAsync(ct);

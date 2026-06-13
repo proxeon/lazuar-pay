@@ -65,12 +65,20 @@ public class BroadcastPublisherJob : BackgroundService
                             SELECT cp.""Email"", cp.""Phone""
                             FROM community.""Subscriptions"" s
                             JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
-                            WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" = 'ACTIVE'
-                            AND (@PlanId IS NULL OR s.""PlanId"" = @PlanId)";
+                            WHERE s.""OrganizationId"" = @OrgId 
+                            AND (@PlanId IS NULL OR s.""PlanId"" = @PlanId)
+                            AND (@TargetStatus IS NULL OR s.""Status"" = @TargetStatus)
+                            AND (@IsReminderOnly IS NULL OR s.""IsReminderOnly"" = @IsReminderOnly)";
 
                         var recipients = (await connection.QueryAsync<(string Email, string Phone)>(
                             sql,
-                            new { OrgId = campaign.OrganizationId, PlanId = campaign.TargetPlanId })).ToList();
+                            new 
+                            { 
+                                OrgId = campaign.OrganizationId, 
+                                PlanId = campaign.TargetPlanId,
+                                TargetStatus = campaign.TargetStatus,
+                                IsReminderOnly = campaign.TargetIsReminderOnly
+                            })).ToList();
 
                         int total = 0;
                         foreach (var chunk in recipients.Chunk(100))
@@ -86,7 +94,7 @@ public class BroadcastPublisherJob : BackgroundService
                                     recipient.Phone,
                                     campaign.Subject,
                                     campaign.Body,
-                                    "ALL"
+                                    campaign.Channel
                                 );
                                 await eventBus.PublishAsync(evt);
                                 total++;

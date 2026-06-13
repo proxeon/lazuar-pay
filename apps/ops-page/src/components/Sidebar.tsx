@@ -173,28 +173,48 @@ export default function Sidebar({
           <Link
             key={conv.id}
             to={`/chat/${conv.id}`}
-            onClick={() => isMobile && setIsOpen()}
-            className={cn("group relative flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors block", location.pathname === `/chat/${conv.id}` ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
+            onClick={(e) => {
+              // Only close sidebar on mobile if the menu isn't open
+              if (isMobile && !openMenuId) setIsOpen();
+            }}
+            className={cn("group relative flex h-9 w-full items-center justify-between px-4 cursor-pointer transition-colors", location.pathname === `/chat/${conv.id}` ? "bg-[#f4f4f5] text-[#09090b] font-medium" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}
           >
             <span className="text-[13px] truncate block pr-2 flex-1">{conv.title}</span>
             
-            <div className={cn("relative shrink-0", openMenuId === conv.id ? "block" : "hidden group-hover:block")} onClick={(e) => e.preventDefault()}>
+            <div className={cn("relative shrink-0", openMenuId === conv.id ? "block" : "hidden group-hover:block")}>
               <button 
-                onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === conv.id ? null : conv.id); }}
+                type="button"
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  e.stopPropagation(); 
+                  setOpenMenuId(openMenuId === conv.id ? null : conv.id); 
+                }}
                 className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm focus:outline-none"
               >
                 <MoreVertical size={14} />
               </button>
               {openMenuId === conv.id && (
-                <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-[#e5e5e5] rounded-sm py-1 z-50">
+                <div className="absolute right-0 top-full mt-1 w-28 bg-white border border-[#e5e5e5] rounded-sm py-1 z-50 shadow-sm">
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); handleRenameConversation(conv.id, conv.title); }}
+                    type="button"
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      e.stopPropagation(); 
+                      setOpenMenuId(null); 
+                      handleRenameConversation(conv.id, conv.title); 
+                    }}
                     className="w-full text-left px-3 py-1.5 text-xs text-[#09090b] hover:bg-[#f4f4f5] transition-colors"
                   >
                     Rename
                   </button>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); handleDeleteConversation(conv.id); }}
+                    type="button"
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      e.stopPropagation(); 
+                      setOpenMenuId(null); 
+                      handleDeleteConversation(conv.id); 
+                    }}
                     className="w-full text-left px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 transition-colors"
                   >
                     Delete

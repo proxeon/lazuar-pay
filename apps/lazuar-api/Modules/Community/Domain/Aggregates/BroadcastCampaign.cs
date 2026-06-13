@@ -9,7 +9,10 @@ public class BroadcastCampaign : Entity, IAggregateRoot, IMustHaveTenant
     public Guid OrganizationId { get; set; }
     public string Subject { get; private set; }
     public string Body { get; private set; }
+    public string Channel { get; private set; }
     public Guid? TargetPlanId { get; private set; }
+    public string? TargetStatus { get; private set; }
+    public bool? TargetIsReminderOnly { get; private set; }
     public string Status { get; private set; }
     public int TotalRecipients { get; private set; }
     public string? ErrorMessage { get; private set; }
@@ -20,13 +23,23 @@ public class BroadcastCampaign : Entity, IAggregateRoot, IMustHaveTenant
     private BroadcastCampaign() { }
 #pragma warning restore CS8618
 
-    public BroadcastCampaign(Guid organizationId, string subject, string body, Guid? targetPlanId)
+    public BroadcastCampaign(
+        Guid organizationId, 
+        string subject, 
+        string body, 
+        string channel,
+        Guid? targetPlanId = null,
+        string? targetStatus = null,
+        bool? targetIsReminderOnly = null)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
         Subject = subject;
         Body = body;
+        Channel = string.IsNullOrWhiteSpace(channel) ? "ALL" : channel.ToUpperInvariant();
         TargetPlanId = targetPlanId;
+        TargetStatus = targetStatus?.ToUpperInvariant();
+        TargetIsReminderOnly = targetIsReminderOnly;
         Status = "PENDING";
         TotalRecipients = 0;
         CreatedAt = DateTime.UtcNow;
