@@ -28,3 +28,4 @@ export type OpsConversationDto = components["schemas"]["Ops.OpsConversationDto"]
 export type OpsMessageDto = components["schemas"]["Ops.OpsMessageDto"];
 export type AuthUser = components["schemas"]["One.AuthUser"];
 export type EntitlementDto = components["schemas"]["One.EntitlementDto"];
+export type CommunitySubscriptionDto = components["schemas"]["Community.CommunitySubscriptionDto"];
