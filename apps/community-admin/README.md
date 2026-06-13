@@ -17,9 +17,17 @@
 ```txt
 key_id = rzp_test_T12E5uk0urzQHa
 key_secret = RsuKMUHTw67hS1mG4sMD0seg
+Webhook secrete = lazuar_test_secret_123
 ```
 
-Webhook secrete = lazuar_test_secret_123
+### Test Cards
+
+https://curlec.com/docs/payments/payments/test-card-details/?preferred-country=MY
+
+| Card Network | Card Number         | CVV & Expiry Date                    |
+|--------------|---------------------|--------------------------------------|
+| Mastercard   | 5272 0088 0623 5704 | Use a random CVV and any future date |
+| Visa         | 4842 7930 0208 6571 | Use a random CVV and any future date |
 
 ---
 
