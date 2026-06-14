@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Microsoft.EntityFrameworkCore;
-using Modules.Lhdn.Infrastructure; 
+using Modules.Lhdn.Application.Ports;
 
 namespace Modules.Lhdn.Application.Queries.Agent;
 
@@ -22,30 +20,15 @@ public record AgentLhdnSubmissionResult(
 
 public class ListLhdnSubmissionsAgentQueryHandler : IQueryHandler<ListLhdnSubmissionsAgentQuery, IEnumerable<AgentLhdnSubmissionResult>>
 {
-    private readonly LhdnDbContext _dbContext;
+    private readonly ILhdnQueryService _queryService;
 
-    public ListLhdnSubmissionsAgentQueryHandler(LhdnDbContext dbContext)
+    public ListLhdnSubmissionsAgentQueryHandler(ILhdnQueryService queryService)
     {
-        _dbContext = dbContext;
+        _queryService = queryService;
     }
 
     public async Task<IEnumerable<AgentLhdnSubmissionResult>> Handle(ListLhdnSubmissionsAgentQuery request, CancellationToken ct)
     {
-        var safeLimit = request.Limit > 100 ? 100 : request.Limit;
-
-        var documents = await _dbContext.TaxDocuments
-            .Where(d => d.OrganizationId == request.OrganizationId)
-            .OrderByDescending(d => d.CreatedAt)
-            .Take(safeLimit)
-            .ToListAsync(ct);
-
-        return documents.Select(d => new AgentLhdnSubmissionResult(
-            d.Id.ToString(),
-            d.InternalReferenceId,
-            d.ValidationStatus,
-            d.LhdnUuid,
-            d.ErrorMessage,
-            d.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-        )).ToList();
+        return await _queryService.GetRecentSubmissionsAsync(request.OrganizationId, request.Limit, ct);
     }
 }

@@ -27,9 +27,13 @@ public static class DependencyInjection
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "lhdn");
             }));
 
+        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("LhdnSqlConnectionFactory", (sp, key) =>
+            new NpgsqlConnectionFactory(connectionString));
+
         services.AddKeyedScoped<IEventBus, OutboxEventBus<LhdnDbContext>>("LhdnEventBus");
 
         services.AddScoped<ILhdnRepository, LhdnRepository>();
+        services.AddScoped<ILhdnQueryService, LhdnQueryService>();
         services.AddScoped<ICertificateVaultService, CertificateVaultService>();
         services.AddScoped<IXmlSignatureService, XmlSignatureService>();
         services.AddScoped<IUblXmlGenerator, UblXmlGenerator>();

@@ -41,6 +41,6 @@ public class CertificateVaultService : ICertificateVaultService
         
         var rawPassword = reader.ReadToEnd();
 
-        return new X509Certificate2(pfxBytes, rawPassword, X509KeyStorageFlags.EphemeralKeySet);
+        return X509CertificateLoader.LoadPkcs12(pfxBytes, rawPassword, X509KeyStorageFlags.EphemeralKeySet);
     }
 }

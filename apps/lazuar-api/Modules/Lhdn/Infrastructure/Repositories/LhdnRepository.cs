@@ -45,6 +45,11 @@ public class LhdnRepository : ILhdnRepository
         _context.WebhookSubscriptions.Add(subscription);
     }
 
+    public void AddDeveloperApiKey(DeveloperApiKey key)
+    {
+        _context.DeveloperApiKeys.Add(key);
+    }
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await _context.SaveChangesAsync(ct);

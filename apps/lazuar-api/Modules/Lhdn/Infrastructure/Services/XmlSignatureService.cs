@@ -34,8 +34,8 @@ public class XmlSignatureService : IXmlSignatureService
             SigningKey = rsaKey
         };
 
-        signedXml.SignedInfo.SignatureMethod = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
-        signedXml.SignedInfo.CanonicalizationMethod = "http://www.w3.org/2006/12/xml-c14n11";
+        signedXml.SignedInfo!.SignatureMethod = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
+        signedXml.SignedInfo!.CanonicalizationMethod = "http://www.w3.org/2006/12/xml-c14n11";
 
         var docReference = new Reference
         {
@@ -109,7 +109,7 @@ public class XmlSignatureService : IXmlSignatureService
 
         var dataObject = new DataObject
         {
-            Data = qualifyingProperties.SelectNodes(".")
+            Data = qualifyingProperties.SelectNodes(".")!
         };
 
         return dataObject;
@@ -147,7 +147,8 @@ public class XmlSignatureService : IXmlSignatureService
         ublExtension.AppendChild(extensionContent);
         ublExtensions.AppendChild(ublExtension);
 
-        document.DocumentElement?.InsertBefore(ublExtensions, document.DocumentElement.FirstChild);
+        var root = document.DocumentElement ?? throw new InvalidOperationException("XML document has no root element.");
+        root.InsertBefore(ublExtensions, root.FirstChild);
     }
 
     private static string ParseSerialNumber(string hexString)
