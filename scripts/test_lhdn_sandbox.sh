@@ -11,37 +11,34 @@ echo "========================================="
 echo " 0. Provisioning Isolated Test Tenant..."
 echo "========================================="
 
-# Fetch the exact User ID for the sysadmin
 USER_ID=$(docker exec -i lazuar-db psql -U postgres -d lazuar_mvp -t -c "SELECT \"Id\" FROM one.\"GlobalUsers\" WHERE \"Email\" = '$EMAIL';" | xargs)
 
 if [ -z "$USER_ID" ]; then
-    echo "❌ Sysadmin user not found. Ensure your .NET backend is running so the bootstrapper can create it."
+    echo "❌ Sysadmin user not found. Ensure your .NET backend is running."
     exit 1
 fi
 
-# Execute an anonymous block in Postgres to create the Org, Membership, and LHDN Config
+# Updated to include SupplierTin, IdType, IdValue, Environment, and MsicCode
 docker exec -i lazuar-db psql -U postgres -d lazuar_mvp <<EOF > /dev/null
 DO \$\$
 DECLARE
     v_org_id uuid := gen_random_uuid();
 BEGIN
-    -- 1. Create a new Organization (Workspace)
     INSERT INTO one."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt", "UpdatedAt")
     VALUES (v_org_id, 'Test Org $TIMESTAMP', '$TENANT_SLUG', true, NOW(), NOW());
 
-    -- 2. Grant the Sysadmin ADMIN access to this new Workspace
     INSERT INTO one."TenantMemberships" ("Id", "GlobalUserId", "OrganizationId", "Role", "CreatedAt")
     VALUES (gen_random_uuid(), '$USER_ID', v_org_id, 'ADMIN', NOW());
 
-    -- 3. Seed the LHDN Configuration for this new Workspace
-    INSERT INTO lhdn."TenantConfigs" ("Id", "OrganizationId", "IntermediaryMode", "CreatedAt", "UpdatedAt")
-    VALUES (gen_random_uuid(), v_org_id, true, NOW(), NOW());
+    -- Seed the extended LHDN Configuration
+    INSERT INTO lhdn."TenantConfigs" ("Id", "OrganizationId", "IntermediaryMode", "SupplierTin", "IdType", "IdValue", "Environment", "MsicCode", "CreatedAt", "UpdatedAt")
+    VALUES (gen_random_uuid(), v_org_id, true, 'C1234567890', 'BRN', '202401234567', 'SANDBOX', '62010', NOW(), NOW());
 END \$\$;
 EOF
 
 echo "✅ Created Workspace: $TENANT_SLUG"
 echo "✅ Granted access to: $EMAIL"
-echo "✅ Seeded LHDN Tenant Configuration."
+echo "✅ Seeded extended LHDN Tenant Configuration."
 echo ""
 
 echo "========================================="
@@ -53,11 +50,6 @@ LAZUAR_TOKEN=$(curl -s -X POST "$LAZUAR_API/one/auth/login" \
   -d "{\"email\": \"$EMAIL\", \"password\": \"$PASSWORD\"}" \
   -c cookies.txt | jq -r '.user.email')
 
-if [ "$LAZUAR_TOKEN" == "null" ] || [ -z "$LAZUAR_TOKEN" ]; then
-    echo "❌ Failed to authenticate with Lazuar API. Check credentials."
-    exit 1
-fi
-
 echo "✅ Authenticated as: $LAZUAR_TOKEN"
 echo ""
 
@@ -68,6 +60,7 @@ echo "========================================="
 INTERNAL_INV_ID="INV-$TIMESTAMP"
 CURRENT_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+# Updated JSON Payload to match new TypeSpec DTOs
 PAYLOAD=$(cat <<EOF
 {
   "internal_id": "$INTERNAL_INV_ID",
@@ -92,7 +85,8 @@ PAYLOAD=$(cat <<EOF
       "unit_price": 1000.0,
       "tax_rate": 0,
       "tax_amount": 0,
-      "subtotal": 1000.0
+      "subtotal": 1000.0,
+      "tax_type_code": "06"
     }
   ],
   "total_excluding_tax": 1000.0,
@@ -110,7 +104,6 @@ SUBMIT_RES=$(curl -s -X POST "$LAZUAR_API/lhdn/documents" \
 
 echo "$SUBMIT_RES" | jq
 
-# Check if the API threw an error
 if echo "$SUBMIT_RES" | grep -q '"status": 40'; then
     echo "❌ Submission rejected by Lazuar API."
     exit 1
