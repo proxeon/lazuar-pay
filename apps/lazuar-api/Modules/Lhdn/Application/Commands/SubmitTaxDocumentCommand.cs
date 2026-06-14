@@ -29,16 +29,22 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 
     public async Task<Guid> Handle(SubmitTaxDocumentCommand request, CancellationToken ct)
     {
-        var xmlDoc = _xmlGenerator.GenerateInvoiceXml(request.Payload);
+        var config = await _repository.GetTenantConfigAsync(request.OrganizationId, ct);
+        if (config == null)
+        {
+            throw new InvalidOperationException("LHDN Tenant Configuration is missing.");
+        }
+
+        var xmlDoc = _xmlGenerator.GenerateInvoiceXml(request.Payload, config);
         var rawXmlString = xmlDoc.OuterXml;
 
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
-        var documentHash = Convert.ToBase64String(hashBytes);
+        var documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
         var taxDocument = new TaxDocument(
             request.OrganizationId,
             request.Payload.Internal_id,
-            documentHash,
+            documentHashHex,
             rawXmlString 
         );
 

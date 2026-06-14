@@ -107,7 +107,7 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
                 Total_including_tax = (double)@event.RefundedAmount
             };
 
-            var xmlDoc = _xmlGenerator.GenerateInvoiceXml(payload, originalDocument.LhdnUuid);
+            var xmlDoc = _xmlGenerator.GenerateInvoiceXml(payload, config, originalDocument.LhdnUuid);
             var rawXmlString = xmlDoc.OuterXml;
 
             var documentHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
