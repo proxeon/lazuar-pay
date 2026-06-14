@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Lhdn.Domain.Aggregates;
+using Modules.Lhdn.Domain.Entities;
 
 namespace Modules.Lhdn.Infrastructure;
 
@@ -12,6 +13,11 @@ public class LhdnDbContext : PlatformDbContext
     public DbSet<TaxDocument> TaxDocuments { get; set; } = null!;
     public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; } = null!;
     public DbSet<DeveloperApiKey> DeveloperApiKeys { get; set; } = null!;
+    
+    public DbSet<MsicCode> MsicCodes { get; set; } = null!;
+    public DbSet<CountryCode> CountryCodes { get; set; } = null!;
+    public DbSet<TaxType> TaxTypes { get; set; } = null!;
+    
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
@@ -56,6 +62,24 @@ public class LhdnDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
             builder.HasIndex(x => x.KeyHash).IsUnique();
+        });
+
+        modelBuilder.Entity<MsicCode>(builder =>
+        {
+            builder.ToTable("MsicCodes");
+            builder.HasKey(x => x.Code);
+        });
+
+        modelBuilder.Entity<CountryCode>(builder =>
+        {
+            builder.ToTable("CountryCodes");
+            builder.HasKey(x => x.Code);
+        });
+
+        modelBuilder.Entity<TaxType>(builder =>
+        {
+            builder.ToTable("TaxTypes");
+            builder.HasKey(x => x.Code);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

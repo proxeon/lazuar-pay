@@ -34,6 +34,7 @@ public class LhdnQueryService : ILhdnQueryService
                 ""InternalReferenceId"" as InternalReference, 
                 ""ValidationStatus"" as Status, 
                 ""LhdnUuid"", 
+                ""LongId"",
                 ""ErrorMessage"", 
                 ""CreatedAt""
             FROM lhdn.""TaxDocuments""
@@ -48,6 +49,7 @@ public class LhdnQueryService : ILhdnQueryService
             r.InternalReference,
             r.Status,
             r.LhdnUuid,
+            r.LongId,
             r.ErrorMessage,
             ((DateTime)r.CreatedAt).ToString("yyyy-MM-dd HH:mm:ss")
         )).ToList();

@@ -15,6 +15,7 @@ public record AgentLhdnSubmissionResult(
     string InternalReference,
     string Status,
     string? LhdnUuid,
+    string? LongId,
     string? ErrorMessage,
     string CreatedAt);
 

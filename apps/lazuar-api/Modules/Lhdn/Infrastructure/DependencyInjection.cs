@@ -44,6 +44,7 @@ public static class DependencyInjection
 
         services.AddHostedService<LhdnSubmissionJob>();
         services.AddHostedService<LhdnStatusPollingJob>();
+        services.AddHostedService<LhdnReferenceDataSeederJob>();
 
         return services;
     }

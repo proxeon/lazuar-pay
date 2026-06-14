@@ -69,6 +69,7 @@ tasks:
       - dotnet ef database update --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:init:
     desc: Generate the initial EF Core migrations for all core modules
@@ -81,6 +82,7 @@ tasks:
       - dotnet ef migrations add InitialCrmSchema --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialOpsSchema --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialBillingSchema --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialLhdnSchema --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:
     desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"
