@@ -10,9 +10,12 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     public Guid OrganizationId { get; set; }
     public string InternalReferenceId { get; private set; }
     public string DocumentHash { get; private set; }
+    public string RawXmlContent { get; private set; }
     public string? LhdnUuid { get; private set; }
+    public string? SubmissionUid { get; private set; }
     public string? LongId { get; private set; }
     public string ValidationStatus { get; private set; }
+    public string? ErrorMessage { get; private set; }
     public DateTime? ValidatedAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
@@ -21,35 +24,45 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     private TaxDocument() { }
 #pragma warning restore CS8618
 
-    public TaxDocument(Guid organizationId, string internalReferenceId, string documentHash)
+    public TaxDocument(Guid organizationId, string internalReferenceId, string documentHash, string rawXmlContent)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
         InternalReferenceId = internalReferenceId;
         DocumentHash = documentHash;
+        RawXmlContent = rawXmlContent;
         ValidationStatus = "PENDING";
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void MarkAsSubmitted()
+    public void MarkAsSubmitted(string submissionUid, string? lhdnUuid)
     {
+        SubmissionUid = submissionUid;
+        LhdnUuid = lhdnUuid;
         ValidationStatus = "SUBMITTED";
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void MarkAsValid(string lhdnUuid, string longId)
+    public void MarkAsValid(string longId)
     {
-        LhdnUuid = lhdnUuid;
         LongId = longId;
         ValidationStatus = "VALID";
         ValidatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void MarkAsInvalid()
+    public void MarkAsInvalid(string error)
     {
         ValidationStatus = "INVALID";
+        ErrorMessage = error;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsFailed(string error)
+    {
+        ValidationStatus = "FAILED";
+        ErrorMessage = error;
         UpdatedAt = DateTime.UtcNow;
     }
 
