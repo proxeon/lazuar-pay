@@ -31,6 +31,7 @@ using Lazuar.ApiTypes;
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Azure.Identity;
 
 var envPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../../../.env"));
 if (File.Exists(envPath))
@@ -53,6 +54,22 @@ if (File.Exists(envPath))
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
+
+var keyVaultName = Environment.GetEnvironmentVariable("AZURE_KEY_VAULT_NAME");
+if (!string.IsNullOrEmpty(keyVaultName))
+{
+    try
+    {
+        // Prevent local dev crashes if Azure CLI credentials (az login) are missing or expired
+        builder.Configuration.AddAzureKeyVault(
+            new Uri($"https://{keyVaultName}.vault.azure.net/"),
+            new DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[WARNING] Failed to authenticate with Azure Key Vault: {ex.Message}. Falling back to local secrets.");
+    }
+}
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
