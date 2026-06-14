@@ -133,7 +133,8 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
                 var errorJson = JsonDocument.Parse(responseBody);
                 if (errorJson.RootElement.TryGetProperty("error", out var err) && err.TryGetProperty("details", out var details) && details.GetArrayLength() > 0)
                 {
-                    var msg = details[0].TryGetProperty("message", out var m) ? m.GetString() : responseBody;
+                    // FIX: Extract "error" instead of "message"
+                    var msg = details[0].TryGetProperty("error", out var m) ? m.GetString() : responseBody;
                     return new LhdnSubmissionResult(false, null, null, $"LHDN Rejected: {msg}");
                 }
             }
@@ -157,9 +158,9 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
                 string rejectMessage = "Validation Error";
                 if (errObj.TryGetProperty("details", out var errDetails) && errDetails.GetArrayLength() > 0)
                 {
-                    rejectMessage = errDetails[0].TryGetProperty("message", out var mProp) ? mProp.GetString()! : rejectMessage;
+                    rejectMessage = errDetails[0].TryGetProperty("error", out var mProp) ? mProp.GetString()! : rejectMessage;
                 }
-                else if (errObj.TryGetProperty("message", out var msgProp))
+                else if (errObj.TryGetProperty("error", out var msgProp))
                 {
                     rejectMessage = msgProp.GetString()!;
                 }
@@ -236,11 +237,16 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
                     {
                         if (step.TryGetProperty("status", out var stepStatus) && stepStatus.GetString() == "Invalid" && step.TryGetProperty("error", out var errObj))
                         {
+                            // FIX: Extract "error" instead of "message"
                             if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
                             {
-                                errors.Add(innerArr[0].GetProperty("message").GetString()!);
+                                var innerObj = innerArr[0];
+                                if (innerObj.TryGetProperty("error", out var innerErrMsg))
+                                {
+                                    errors.Add(innerErrMsg.GetString()!);
+                                }
                             }
-                            else if (errObj.TryGetProperty("message", out var errMsg))
+                            else if (errObj.TryGetProperty("error", out var errMsg))
                             {
                                 errors.Add(errMsg.GetString()!);
                             }

@@ -25,7 +25,6 @@ public class UblXmlGenerator : IUblXmlGenerator
         root.AppendChild(CreateCbcElement(doc, "IssueDate", request.Issue_date.ToString("yyyy-MM-dd")));
         root.AppendChild(CreateCbcElement(doc, "IssueTime", request.Issue_date.ToString("HH:mm:ssZ")));
         
-        // Safely map Document Type Enum to LHDN String
         var cleanDocTypeCode = request.Document_type switch
         {
             SubmitDocumentRequestDtoDocument_type._01 => "01",
@@ -40,11 +39,24 @@ public class UblXmlGenerator : IUblXmlGenerator
         };
 
         var invoiceTypeCode = CreateCbcElement(doc, "InvoiceTypeCode", cleanDocTypeCode);
-        invoiceTypeCode.SetAttribute("listVersionID", "1.1"); 
+        invoiceTypeCode.SetAttribute("listVersionID", "1.0"); 
         root.AppendChild(invoiceTypeCode);
         
         root.AppendChild(CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
 
+        var isB2c = string.IsNullOrWhiteSpace(request.Buyer_tin) || request.Buyer_tin == GeneralPublicTin;
+
+        // 1. InvoicePeriod (Mandatory for B2C Consolidated Invoices)
+        if (isB2c)
+        {
+            var invoicePeriod = doc.CreateElement("cac", "InvoicePeriod", CacNamespace);
+            invoicePeriod.AppendChild(CreateCbcElement(doc, "StartDate", request.Issue_date.ToString("yyyy-MM-dd")));
+            invoicePeriod.AppendChild(CreateCbcElement(doc, "EndDate", request.Issue_date.ToString("yyyy-MM-dd")));
+            invoicePeriod.AppendChild(CreateCbcElement(doc, "Description", "Consolidated Invoice"));
+            root.AppendChild(invoicePeriod);
+        }
+
+        // 2. BillingReference (Required for Original UUIDs AND B2C Receipts)
         if (!string.IsNullOrEmpty(originalUuid))
         {
             var billingRef = doc.CreateElement("cac", "BillingReference", CacNamespace);
@@ -53,10 +65,18 @@ public class UblXmlGenerator : IUblXmlGenerator
             billingRef.AppendChild(addDocRef);
             root.AppendChild(billingRef);
         }
+        else if (isB2c)
+        {
+            // FIX: For B2C Consolidated Invoices, LHDN strictly expects the receipt numbers inside BillingReference.
+            // If the item classification is '004', LHDN will NOT try to look this up as an e-Invoice UUID.
+            var billingRef = doc.CreateElement("cac", "BillingReference", CacNamespace);
+            var addDocRef = doc.CreateElement("cac", "AdditionalDocumentReference", CacNamespace);
+            addDocRef.AppendChild(CreateCbcElement(doc, "ID", request.Internal_id)); // Internal Receipt Number
+            billingRef.AppendChild(addDocRef);
+            root.AppendChild(billingRef);
+        }
 
         root.AppendChild(BuildSupplierParty(doc, tenantConfig));
-        
-        var isB2c = string.IsNullOrWhiteSpace(request.Buyer_tin) || request.Buyer_tin == GeneralPublicTin;
         root.AppendChild(BuildCustomerParty(doc, request, isB2c));
         
         root.AppendChild(BuildTaxTotal(doc, request.Total_excluding_tax, request.Total_tax, "06"));
@@ -76,7 +96,6 @@ public class UblXmlGenerator : IUblXmlGenerator
         var cacParty = doc.CreateElement("cac", "Party", CacNamespace);
 
         var industryCode = CreateCbcElement(doc, "IndustryClassificationCode", tenantConfig.MsicCode ?? "00000");
-        industryCode.SetAttribute("name", "General Business");
         cacParty.AppendChild(industryCode);
 
         var partyId1 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
@@ -114,8 +133,8 @@ public class UblXmlGenerator : IUblXmlGenerator
         cacParty.AppendChild(legalEntity);
 
         var contact = doc.CreateElement("cac", "Contact", CacNamespace);
-        contact.AppendChild(CreateCbcElement(doc, "Telephone", "+60000000000"));
-        contact.AppendChild(CreateCbcElement(doc, "ElectronicMail", "admin@localhost"));
+        contact.AppendChild(CreateCbcElement(doc, "Telephone", "+60123456789"));
+        contact.AppendChild(CreateCbcElement(doc, "ElectronicMail", "admin@lazuar.com"));
         cacParty.AppendChild(contact);
 
         party.AppendChild(cacParty);
@@ -193,7 +212,7 @@ public class UblXmlGenerator : IUblXmlGenerator
         cacParty.AppendChild(legalEntity);
 
         var contact = doc.CreateElement("cac", "Contact", CacNamespace);
-        contact.AppendChild(CreateCbcElement(doc, "Telephone", isB2c ? "+60000000000" : (request.Buyer_phone ?? "+60000000000")));
+        contact.AppendChild(CreateCbcElement(doc, "Telephone", isB2c ? "+60123456789" : (request.Buyer_phone ?? "+60123456789")));
         contact.AppendChild(CreateCbcElement(doc, "ElectronicMail", isB2c ? "na@example.com" : (request.Buyer_email ?? "na@example.com")));
         cacParty.AppendChild(contact);
 
@@ -222,7 +241,7 @@ public class UblXmlGenerator : IUblXmlGenerator
         var taxCategory = doc.CreateElement("cac", "TaxCategory", CacNamespace);
         taxCategory.AppendChild(CreateCbcElement(doc, "ID", taxTypeCode));
         
-        if (taxTypeCode == "E")
+        if (taxTypeCode == "E" || taxTypeCode == "06")
         {
             taxCategory.AppendChild(CreateCbcElement(doc, "TaxExemptionReason", "Not subject to tax"));
         }
@@ -294,6 +313,9 @@ public class UblXmlGenerator : IUblXmlGenerator
         cacItem.AppendChild(CreateCbcElement(doc, "Description", item.Description));
 
         var commodity = doc.CreateElement("cac", "CommodityClassification", CacNamespace);
+        
+        // FIX: Force '004' (Consolidated e-Invoice) if Buyer TIN is General Public.
+        // This is strictly required by LHDN when using State Code 17 and EI00000000010.
         var classificationCode = CreateCbcElement(doc, "ItemClassificationCode", isB2c ? "004" : item.Classification_code);
         classificationCode.SetAttribute("listID", "CLASS");
         commodity.AppendChild(classificationCode);
