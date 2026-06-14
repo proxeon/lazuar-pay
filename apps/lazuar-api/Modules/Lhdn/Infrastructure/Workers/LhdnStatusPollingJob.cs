@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,15 +18,11 @@ public class LhdnStatusPollingJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<LhdnStatusPollingJob> _logger;
-    private readonly IConfiguration _configuration;
-    private readonly SemaphoreSlim _throttleSemaphore = new(1, 1);
-    private readonly TimeSpan _delayBetweenRequests = TimeSpan.FromMilliseconds(250); 
 
-    public LhdnStatusPollingJob(IServiceScopeFactory scopeFactory, ILogger<LhdnStatusPollingJob> logger, IConfiguration configuration)
+    public LhdnStatusPollingJob(IServiceScopeFactory scopeFactory, ILogger<LhdnStatusPollingJob> logger)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
-        _configuration = configuration;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -63,19 +58,18 @@ public class LhdnStatusPollingJob : BackgroundService
 
         if (!submittedDocs.Any()) return;
 
-        var clientId = _configuration["Lhdn:ClientId"] ?? throw new InvalidOperationException("LHDN ClientId missing.");
-        var clientSecret = _configuration["Lhdn:ClientSecret"] ?? throw new InvalidOperationException("LHDN ClientSecret missing.");
-
         foreach (var doc in submittedDocs)
         {
-            await _throttleSemaphore.WaitAsync(ct);
             try
             {
                 var config = await db.TenantConfigs.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.OrganizationId == doc.OrganizationId, ct);
-                if (config == null) continue;
+                if (config == null || string.IsNullOrWhiteSpace(config.MyInvoisClientId) || string.IsNullOrWhiteSpace(config.MyInvoisClientSecret))
+                {
+                    continue;
+                }
 
-                var token = await gateway.GetTokenAsync(config.OrganizationId, clientId, clientSecret, config.IntermediaryMode, null, ct);
-                var result = await gateway.GetDocumentStatusAsync(token, doc.SubmissionUid!, ct);
+                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+                var result = await gateway.GetDocumentStatusAsync(config.MyInvoisClientId, token, doc.SubmissionUid!, config.IntermediaryMode, config.SupplierTin, ct);
 
                 if (result.Success)
                 {
@@ -91,7 +85,6 @@ public class LhdnStatusPollingJob : BackgroundService
                     }
                     else if (result.Status == "INVALID")
                     {
-                        // Use the extracted error message from the details API
                         var errorMessage = result.ErrorMessage ?? "Validation failed at LHDN.";
                         doc.MarkAsInvalid(errorMessage);
 
@@ -107,8 +100,6 @@ public class LhdnStatusPollingJob : BackgroundService
             finally
             {
                 await db.SaveChangesAsync(ct);
-                _throttleSemaphore.Release();
-                await Task.Delay(_delayBetweenRequests, ct);
             }
         }
     }

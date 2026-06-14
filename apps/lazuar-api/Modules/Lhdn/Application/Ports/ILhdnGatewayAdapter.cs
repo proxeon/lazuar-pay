@@ -14,9 +14,9 @@ public interface ILhdnGatewayAdapter
 {
     Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default);
     
-    Task<LhdnSubmissionResult> SubmitDocumentAsync(string token, string payloadJson, CancellationToken ct = default);
+    Task<LhdnSubmissionResult> SubmitDocumentAsync(string clientId, string token, string payloadJson, bool isIntermediary, string? tenantTin, CancellationToken ct = default);
     
-    Task<LhdnDocumentStatusResult> GetDocumentStatusAsync(string token, string submissionUid, CancellationToken ct = default);
+    Task<LhdnDocumentStatusResult> GetDocumentStatusAsync(string clientId, string token, string submissionUid, bool isIntermediary, string? tenantTin, CancellationToken ct = default);
 
-    Task<LhdnTinValidationResult> ValidateTaxpayerTinAsync(string token, string tin, string idType, string idValue, CancellationToken ct = default);
+    Task<LhdnTinValidationResult> ValidateTaxpayerTinAsync(string clientId, string token, string tin, string idType, string idValue, bool isIntermediary, string? tenantTin, CancellationToken ct = default);
 }

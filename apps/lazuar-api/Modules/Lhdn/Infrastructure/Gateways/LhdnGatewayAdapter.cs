@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +21,11 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
     private readonly IMemoryCache _cache;
     private readonly IConfiguration _configuration;
     private readonly ILogger<LhdnGatewayAdapter> _logger;
+
+    private static readonly ConcurrentDictionary<string, TokenBucketRateLimiter> _loginLimiters = new();
+    private static readonly ConcurrentDictionary<string, TokenBucketRateLimiter> _submitLimiters = new();
+    private static readonly ConcurrentDictionary<string, TokenBucketRateLimiter> _pollLimiters = new();
+    private static readonly ConcurrentDictionary<string, TokenBucketRateLimiter> _tinLimiters = new();
 
     public LhdnGatewayAdapter(
         IHttpClientFactory httpClientFactory,
@@ -37,6 +44,31 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         return _configuration["Lhdn:BaseUrl"]?.TrimEnd('/') ?? "https://preprod-api.myinvois.hasil.gov.my";
     }
 
+    private async Task EnforceRateLimitAsync(ConcurrentDictionary<string, TokenBucketRateLimiter> registry, string clientId, int limit, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(clientId)) return;
+
+        var limiter = registry.GetOrAdd(clientId, _ => new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = limit,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = int.MaxValue,
+            ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+            TokensPerPeriod = limit,
+            AutoReplenishment = true
+        }));
+
+        await limiter.AcquireAsync(1, ct);
+    }
+
+    private void TryAddIntermediaryHeader(HttpRequestMessage request, bool isIntermediary, string? tenantTin)
+    {
+        if (isIntermediary && !string.IsNullOrWhiteSpace(tenantTin))
+        {
+            request.Headers.Add("onbehalfof", tenantTin.Trim());
+        }
+    }
+
     public async Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default)
     {
         var cacheKey = $"lhdn_token_{organizationId}";
@@ -45,6 +77,8 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         {
             return cachedToken;
         }
+
+        await EnforceRateLimitAsync(_loginLimiters, clientId, 12, ct);
 
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Post, $"{GetBaseUrl()}/connect/token");
@@ -58,11 +92,7 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         };
 
         request.Content = new FormUrlEncodedContent(formData);
-
-        if (isIntermediary && !string.IsNullOrEmpty(tenantTin))
-        {
-            request.Headers.Add("onbehalfof", tenantTin);
-        }
+        TryAddIntermediaryHeader(request, isIntermediary, tenantTin);
 
         var response = await client.SendAsync(request, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
@@ -81,18 +111,19 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         return token;
     }
 
-    public async Task<LhdnSubmissionResult> SubmitDocumentAsync(string token, string payloadJson, CancellationToken ct = default)
+    public async Task<LhdnSubmissionResult> SubmitDocumentAsync(string clientId, string token, string payloadJson, bool isIntermediary, string? tenantTin, CancellationToken ct = default)
     {
+        await EnforceRateLimitAsync(_submitLimiters, clientId, 100, ct);
+
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Post, $"{GetBaseUrl()}/api/v1.0/documentsubmissions");
         
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
+        TryAddIntermediaryHeader(request, isIntermediary, tenantTin);
 
         var response = await client.SendAsync(request, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
-
-        _logger.LogInformation("LHDN Raw Submission Response: {Response}", responseBody);
 
         if (!response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.Accepted)
         {
@@ -145,17 +176,18 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         return new LhdnSubmissionResult(true, submissionUid, uuid, null);
     }
 
-    public async Task<LhdnDocumentStatusResult> GetDocumentStatusAsync(string token, string submissionUid, CancellationToken ct = default)
+    public async Task<LhdnDocumentStatusResult> GetDocumentStatusAsync(string clientId, string token, string submissionUid, bool isIntermediary, string? tenantTin, CancellationToken ct = default)
     {
+        await EnforceRateLimitAsync(_pollLimiters, clientId, 300, ct);
+
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/documentsubmissions/{submissionUid}");
         
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        TryAddIntermediaryHeader(request, isIntermediary, tenantTin);
 
         var response = await client.SendAsync(request, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
-
-        _logger.LogInformation("LHDN Polling Response: {Response}", responseBody);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -187,10 +219,10 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         {
             var detailsReq = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/documents/{uuid}/details");
             detailsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            TryAddIntermediaryHeader(detailsReq, isIntermediary, tenantTin);
+
             var detailsRes = await client.SendAsync(detailsReq, ct);
             var detailsBody = await detailsRes.Content.ReadAsStringAsync(ct);
-            
-            _logger.LogInformation("LHDN Validation Details: {Details}", detailsBody);
 
             try
             {
@@ -201,18 +233,15 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
                     var errors = new List<string>();
                     foreach (var step in valSteps.EnumerateArray())
                     {
-                        if (step.TryGetProperty("status", out var stepStatus) && stepStatus.GetString() == "Invalid")
+                        if (step.TryGetProperty("status", out var stepStatus) && stepStatus.GetString() == "Invalid" && step.TryGetProperty("error", out var errObj))
                         {
-                            if (step.TryGetProperty("error", out var errObj))
+                            if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
                             {
-                                if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
-                                {
-                                    errors.Add(innerArr[0].GetProperty("message").GetString()!);
-                                }
-                                else if (errObj.TryGetProperty("message", out var errMsg))
-                                {
-                                    errors.Add(errMsg.GetString()!);
-                                }
+                                errors.Add(innerArr[0].GetProperty("message").GetString()!);
+                            }
+                            else if (errObj.TryGetProperty("message", out var errMsg))
+                            {
+                                errors.Add(errMsg.GetString()!);
                             }
                         }
                     }
@@ -229,12 +258,15 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         return new LhdnDocumentStatusResult(true, status?.ToUpperInvariant(), uuid, longId, errorMessage);
     }
 
-    public async Task<LhdnTinValidationResult> ValidateTaxpayerTinAsync(string token, string tin, string idType, string idValue, CancellationToken ct = default)
+    public async Task<LhdnTinValidationResult> ValidateTaxpayerTinAsync(string clientId, string token, string tin, string idType, string idValue, bool isIntermediary, string? tenantTin, CancellationToken ct = default)
     {
+        await EnforceRateLimitAsync(_tinLimiters, clientId, 60, ct);
+
         var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/taxpayer/validate/{Uri.EscapeDataString(tin)}?idType={Uri.EscapeDataString(idType)}&idValue={Uri.EscapeDataString(idValue)}");
         
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        TryAddIntermediaryHeader(request, isIntermediary, tenantTin);
 
         var response = await client.SendAsync(request, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
