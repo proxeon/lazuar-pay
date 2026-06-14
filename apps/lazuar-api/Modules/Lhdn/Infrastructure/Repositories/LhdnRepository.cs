@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +31,18 @@ public class LhdnRepository : ILhdnRepository
     public void AddTaxDocument(TaxDocument document)
     {
         _context.TaxDocuments.Add(document);
+    }
+
+    public async Task<IEnumerable<WebhookSubscription>> GetActiveWebhooksAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.WebhookSubscriptions
+            .Where(w => w.OrganizationId == organizationId && w.IsActive)
+            .ToListAsync(ct);
+    }
+
+    public void AddWebhookSubscription(WebhookSubscription subscription)
+    {
+        _context.WebhookSubscriptions.Add(subscription);
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)

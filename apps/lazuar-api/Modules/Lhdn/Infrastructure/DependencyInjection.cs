@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IXmlSignatureService, XmlSignatureService>();
         services.AddScoped<IUblXmlGenerator, UblXmlGenerator>();
         services.AddScoped<ILhdnGatewayAdapter, LhdnGatewayAdapter>();
+        services.AddScoped<IWebhookSenderService, WebhookSenderService>();
 
         services.AddTransient<InvoiceIssuedIntegrationEventHandler>();
 

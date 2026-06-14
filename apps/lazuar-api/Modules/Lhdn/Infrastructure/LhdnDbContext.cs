@@ -10,6 +10,7 @@ public class LhdnDbContext : PlatformDbContext
 {
     public DbSet<LhdnTenantConfig> TenantConfigs { get; set; } = null!;
     public DbSet<TaxDocument> TaxDocuments { get; set; } = null!;
+    public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
@@ -38,8 +39,14 @@ public class LhdnDbContext : PlatformDbContext
             builder.ToTable("TaxDocuments");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.ValidationStatus });
-            // Used by background workers to poll efficiently
             builder.HasIndex(x => x.ValidationStatus);
+        });
+
+        modelBuilder.Entity<WebhookSubscription>(builder =>
+        {
+            builder.ToTable("WebhookSubscriptions");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

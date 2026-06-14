@@ -3,10 +3,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Contracts.Events;
 
@@ -53,6 +55,7 @@ public class LhdnStatusPollingJob : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<LhdnDbContext>();
         var gateway = scope.ServiceProvider.GetRequiredService<ILhdnGatewayAdapter>();
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("LhdnEventBus");
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var submittedDocs = await db.TaxDocuments
             .Where(d => d.ValidationStatus == "SUBMITTED" && d.SubmissionUid != null)
@@ -79,19 +82,19 @@ public class LhdnStatusPollingJob : BackgroundService
                     {
                         doc.MarkAsValid(result.LongId!);
                         
-                        var integrationEvent = new LhdnDocumentValidatedIntegrationEvent(
-                            doc.OrganizationId,
-                            doc.InternalReferenceId,
-                            result.Uuid!,
-                            result.LongId!,
-                            "VALID"
-                        );
-                        
-                        await eventBus.PublishAsync(integrationEvent);
+                        await eventBus.PublishAsync(new LhdnDocumentValidatedIntegrationEvent(
+                            doc.OrganizationId, doc.InternalReferenceId, result.Uuid!, result.LongId!, "VALID"));
+
+                        await mediator.Send(new DispatchExternalWebhookCommand(
+                            doc.OrganizationId, doc.InternalReferenceId, "VALID", result.Uuid, result.LongId, null), ct);
                     }
                     else if (result.Status == "INVALID")
                     {
-                        doc.MarkAsInvalid("Validation failed at LHDN.");
+                        var errorMessage = "Validation failed at LHDN.";
+                        doc.MarkAsInvalid(errorMessage);
+
+                        await mediator.Send(new DispatchExternalWebhookCommand(
+                            doc.OrganizationId, doc.InternalReferenceId, "INVALID", result.Uuid, null, errorMessage), ct);
                     }
                 }
             }
