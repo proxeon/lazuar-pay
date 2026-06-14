@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using Modules.Lhdn.Application.Ports;
+using Modules.Lhdn.Application.Services;
 
 namespace Modules.Lhdn.Application.Queries;
 
@@ -14,10 +15,12 @@ public record GetLhdnDocumentStatusQuery(Guid OrganizationId, string InternalId)
 public class GetLhdnDocumentStatusQueryHandler : IQueryHandler<GetLhdnDocumentStatusQuery, LhdnDocumentResponseDto?>
 {
     private readonly ILhdnQueryService _queryService;
+    private readonly ILhdnLinkService _linkService;
 
-    public GetLhdnDocumentStatusQueryHandler(ILhdnQueryService queryService)
+    public GetLhdnDocumentStatusQueryHandler(ILhdnQueryService queryService, ILhdnLinkService linkService)
     {
         _queryService = queryService;
+        _linkService = linkService;
     }
 
     public async Task<LhdnDocumentResponseDto?> Handle(GetLhdnDocumentStatusQuery request, CancellationToken ct)
@@ -27,8 +30,10 @@ public class GetLhdnDocumentStatusQueryHandler : IQueryHandler<GetLhdnDocumentSt
 
         if (doc == null) return null;
 
+        var portalUrl = _linkService.GetPortalUrl();
+
         var qrLink = (!string.IsNullOrEmpty(doc.LhdnUuid) && !string.IsNullOrEmpty(doc.LongId))
-            ? $"https://myinvois.hasil.gov.my/{doc.LhdnUuid}/share/{doc.LongId}"
+            ? $"{portalUrl}/{doc.LhdnUuid}/share/{doc.LongId}"
             : null;
 
         return new LhdnDocumentResponseDto

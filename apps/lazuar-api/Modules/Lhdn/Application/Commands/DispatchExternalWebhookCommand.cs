@@ -23,19 +23,23 @@ public class DispatchExternalWebhookCommandHandler : ICommandHandler<DispatchExt
 {
     private readonly ILhdnRepository _repository;
     private readonly IWebhookSenderService _webhookSender;
+    private readonly ILhdnLinkService _linkService;
 
-    public DispatchExternalWebhookCommandHandler(ILhdnRepository repository, IWebhookSenderService webhookSender)
+    public DispatchExternalWebhookCommandHandler(ILhdnRepository repository, IWebhookSenderService webhookSender, ILhdnLinkService linkService)
     {
         _repository = repository;
         _webhookSender = webhookSender;
+        _linkService = linkService;
     }
 
     public async Task Handle(DispatchExternalWebhookCommand request, CancellationToken ct)
     {
         var webhooks = await _repository.GetActiveWebhooksAsync(request.OrganizationId, ct);
 
+        var portalUrl = _linkService.GetPortalUrl();
+
         var qrLink = (!string.IsNullOrEmpty(request.LhdnUuid) && !string.IsNullOrEmpty(request.LongId))
-            ? $"https://myinvois.hasil.gov.my/{request.LhdnUuid}/share/{request.LongId}"
+            ? $"{portalUrl}/{request.LhdnUuid}/share/{request.LongId}"
             : null;
 
         var payload = new
