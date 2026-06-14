@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using Modules.Billing.Contracts.Events;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
+using Modules.Lhdn.Infrastructure.EventHandlers;
 using Modules.Lhdn.Infrastructure.Gateways;
 using Modules.Lhdn.Infrastructure.Repositories;
 using Modules.Lhdn.Infrastructure.Services;
@@ -32,9 +35,20 @@ public static class DependencyInjection
         services.AddScoped<IUblXmlGenerator, UblXmlGenerator>();
         services.AddScoped<ILhdnGatewayAdapter, LhdnGatewayAdapter>();
 
+        services.AddTransient<InvoiceIssuedIntegrationEventHandler>();
+
         services.AddHostedService<LhdnSubmissionJob>();
         services.AddHostedService<LhdnStatusPollingJob>();
 
         return services;
+    }
+
+    public static IApplicationBuilder UseLhdnSubscriptions(this IApplicationBuilder app)
+    {
+        var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
+        
+        eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedIntegrationEventHandler>();
+
+        return app;
     }
 }

@@ -2,17 +2,20 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Ports;
+using Modules.Lhdn.Contracts.Events;
 
 namespace Modules.Lhdn.Infrastructure.Workers;
 
 /// <summary>
 /// Polls LHDN for the status of SUBMITTED documents.
 /// Throttled to ensure compliance with the 300 RPM limit.
+/// Publishes integration events upon successful validation.
 /// </summary>
 public class LhdnStatusPollingJob : BackgroundService
 {
@@ -49,6 +52,7 @@ public class LhdnStatusPollingJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LhdnDbContext>();
         var gateway = scope.ServiceProvider.GetRequiredService<ILhdnGatewayAdapter>();
+        var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("LhdnEventBus");
 
         var submittedDocs = await db.TaxDocuments
             .Where(d => d.ValidationStatus == "SUBMITTED" && d.SubmissionUid != null)
@@ -74,7 +78,16 @@ public class LhdnStatusPollingJob : BackgroundService
                     if (result.Status == "VALID")
                     {
                         doc.MarkAsValid(result.LongId!);
-                        // TODO: Publish LhdnDocumentValidatedIntegrationEvent to Outbox
+                        
+                        var integrationEvent = new LhdnDocumentValidatedIntegrationEvent(
+                            doc.OrganizationId,
+                            doc.InternalReferenceId,
+                            result.Uuid!,
+                            result.LongId!,
+                            "VALID"
+                        );
+                        
+                        await eventBus.PublishAsync(integrationEvent);
                     }
                     else if (result.Status == "INVALID")
                     {
