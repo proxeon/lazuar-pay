@@ -2,15 +2,52 @@
 
 # Configuration
 LAZUAR_API="http://localhost:8080/api/v1"
-TENANT_SLUG="lazuar-hq" # The default seeded tenant from your genesis script
+TIMESTAMP=$(date +%s)
 EMAIL="sysadmin@lazuars.io"
-PASSWORD="admin" # Assuming this is the password for your dev seed
+PASSWORD="Password123!"
+TENANT_SLUG="test-org-${TIMESTAMP}"
+
+echo "========================================="
+echo " 0. Provisioning Isolated Test Tenant..."
+echo "========================================="
+
+# Fetch the exact User ID for the sysadmin
+USER_ID=$(docker exec -i lazuar-db psql -U postgres -d lazuar_mvp -t -c "SELECT \"Id\" FROM one.\"GlobalUsers\" WHERE \"Email\" = '$EMAIL';" | xargs)
+
+if [ -z "$USER_ID" ]; then
+    echo "❌ Sysadmin user not found. Ensure your .NET backend is running so the bootstrapper can create it."
+    exit 1
+fi
+
+# Execute an anonymous block in Postgres to create the Org, Membership, and LHDN Config
+docker exec -i lazuar-db psql -U postgres -d lazuar_mvp <<EOF > /dev/null
+DO \$\$
+DECLARE
+    v_org_id uuid := gen_random_uuid();
+BEGIN
+    -- 1. Create a new Organization (Workspace)
+    INSERT INTO one."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt", "UpdatedAt")
+    VALUES (v_org_id, 'Test Org $TIMESTAMP', '$TENANT_SLUG', true, NOW(), NOW());
+
+    -- 2. Grant the Sysadmin ADMIN access to this new Workspace
+    INSERT INTO one."TenantMemberships" ("Id", "GlobalUserId", "OrganizationId", "Role", "CreatedAt")
+    VALUES (gen_random_uuid(), '$USER_ID', v_org_id, 'ADMIN', NOW());
+
+    -- 3. Seed the LHDN Configuration for this new Workspace
+    INSERT INTO lhdn."TenantConfigs" ("Id", "OrganizationId", "IntermediaryMode", "CreatedAt", "UpdatedAt")
+    VALUES (gen_random_uuid(), v_org_id, true, NOW(), NOW());
+END \$\$;
+EOF
+
+echo "✅ Created Workspace: $TENANT_SLUG"
+echo "✅ Granted access to: $EMAIL"
+echo "✅ Seeded LHDN Tenant Configuration."
+echo ""
 
 echo "========================================="
 echo " 1. Authenticating with Lazuar API..."
 echo "========================================="
 
-# Login and extract the JWT token using jq
 LAZUAR_TOKEN=$(curl -s -X POST "$LAZUAR_API/one/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\": \"$EMAIL\", \"password\": \"$PASSWORD\"}" \
@@ -28,10 +65,9 @@ echo "========================================="
 echo " 2. Submitting Invoice to Lazuar LHDN Module..."
 echo "========================================="
 
-INTERNAL_INV_ID="INV-$(date +%s)"
+INTERNAL_INV_ID="INV-$TIMESTAMP"
 CURRENT_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# JSON Payload matching your TypeSpec SubmitDocumentRequestDto
 PAYLOAD=$(cat <<EOF
 {
   "internal_id": "$INTERNAL_INV_ID",
@@ -66,7 +102,6 @@ PAYLOAD=$(cat <<EOF
 EOF
 )
 
-# Submit to Lazuar API (Using cookie for auth, X-Tenant-Slug for tenant resolution)
 SUBMIT_RES=$(curl -s -X POST "$LAZUAR_API/lhdn/documents" \
   -b cookies.txt \
   -H "X-Tenant-Slug: $TENANT_SLUG" \
@@ -74,6 +109,13 @@ SUBMIT_RES=$(curl -s -X POST "$LAZUAR_API/lhdn/documents" \
   -d "$PAYLOAD")
 
 echo "$SUBMIT_RES" | jq
+
+# Check if the API threw an error
+if echo "$SUBMIT_RES" | grep -q '"status": 40'; then
+    echo "❌ Submission rejected by Lazuar API."
+    exit 1
+fi
+
 echo "✅ Invoice queued in Lazuar DB as PENDING."
 echo ""
 
@@ -81,7 +123,6 @@ echo "========================================="
 echo " 3. Polling Lazuar API for LHDN Validation..."
 echo "========================================="
 
-# Poll the Lazuar backend every 3 seconds to check if the background workers have finished
 for i in {1..15}; do
     echo "⏳ Check $i: Fetching status for $INTERNAL_INV_ID..."
     
@@ -92,11 +133,13 @@ for i in {1..15}; do
     STATUS=$(echo "$STATUS_RES" | jq -r '.status')
     
     if [ "$STATUS" == "VALID" ]; then
-        echo "✅ SUCCESS! Document validated by LHDN."
+        echo ""
+        echo "🎉 SUCCESS! Document validated by LHDN."
         echo "LHDN UUID: $(echo "$STATUS_RES" | jq -r '.lhdn_uuid')"
         echo "QR Link: $(echo "$STATUS_RES" | jq -r '.qr_link')"
         exit 0
     elif [ "$STATUS" == "INVALID" ] || [ "$STATUS" == "FAILED" ]; then
+        echo ""
         echo "❌ FAILED! LHDN rejected the document or gateway error occurred."
         echo "Error: $(echo "$STATUS_RES" | jq -r '.error_message')"
         exit 1

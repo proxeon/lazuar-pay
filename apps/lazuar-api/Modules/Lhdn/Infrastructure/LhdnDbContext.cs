@@ -4,6 +4,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Lhdn.Domain.Aggregates;
 using Modules.Lhdn.Domain.Entities;
+using System;
 
 namespace Modules.Lhdn.Infrastructure;
 
@@ -39,6 +40,18 @@ public class LhdnDbContext : PlatformDbContext
             builder.ToTable("TenantConfigs");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId).IsUnique();
+
+            // SEED DATA FOR DEVELOPMENT (lazuar-hq tenant)
+            builder.HasData(new
+            {
+                Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                OrganizationId = new Guid("7d97963c-063c-4598-86cc-9ddd9d47d9b1"), // Matches lazuar-hq
+                IntermediaryMode = true,
+                EncryptedPfxBase64 = (string?)null,
+                PfxPasswordCiphertext = (string?)null,
+                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
         });
 
         modelBuilder.Entity<TaxDocument>(builder =>

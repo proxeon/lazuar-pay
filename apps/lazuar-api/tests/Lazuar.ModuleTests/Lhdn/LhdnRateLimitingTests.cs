@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Lhdn.Application.Ports;
@@ -61,8 +62,13 @@ public class LhdnRateLimitingTests
             await db.SaveChangesAsync();
         }
 
+        // Mock the configuration so the job can "read" the Client ID and Secret
+        var configMock = Substitute.For<IConfiguration>();
+        configMock["Lhdn:ClientId"].Returns("mock_client_id");
+        configMock["Lhdn:ClientSecret"].Returns("mock_client_secret");
+
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var job = new LhdnSubmissionJob(scopeFactory, NullLogger<LhdnSubmissionJob>.Instance);
+        var job = new LhdnSubmissionJob(scopeFactory, NullLogger<LhdnSubmissionJob>.Instance, configMock);
 
         var stopwatch = Stopwatch.StartNew();
         

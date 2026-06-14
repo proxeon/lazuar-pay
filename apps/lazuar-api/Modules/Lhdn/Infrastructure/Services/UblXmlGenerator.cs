@@ -5,9 +5,6 @@ using Modules.Lhdn.Application.Services;
 
 namespace Modules.Lhdn.Infrastructure.Services;
 
-/// <summary>
-/// Maps the pure JSON DTO from the external API contract directly to LHDN's UBL 2.1 specification using DOM objects.
-/// </summary>
 public class UblXmlGenerator : IUblXmlGenerator
 {
     private const string InvoiceNamespace = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
@@ -27,12 +24,17 @@ public class UblXmlGenerator : IUblXmlGenerator
         root.AppendChild(CreateCbcElement(doc, "IssueTime", request.Issue_date.ToString("HH:mm:ssZ")));
         
         var invoiceTypeCode = CreateCbcElement(doc, "InvoiceTypeCode", request.Document_type);
-        invoiceTypeCode.SetAttribute("listVersionID", "1.1");
+        invoiceTypeCode.SetAttribute("listVersionID", "1.0"); 
         root.AppendChild(invoiceTypeCode);
         
         root.AppendChild(CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
 
+        root.AppendChild(BuildSupplierParty(doc));
         root.AppendChild(BuildCustomerParty(doc, request));
+        
+        // Add root level TaxTotal
+        root.AppendChild(BuildTaxTotal(doc, request.Total_excluding_tax, request.Total_tax));
+
         root.AppendChild(BuildLegalMonetaryTotal(doc, request));
 
         for (int i = 0; i < request.Items.Count; i++)
@@ -41,6 +43,55 @@ public class UblXmlGenerator : IUblXmlGenerator
         }
 
         return doc;
+    }
+
+    private XmlElement BuildSupplierParty(XmlDocument doc)
+    {
+        var party = doc.CreateElement("cac", "AccountingSupplierParty", CacNamespace);
+        var cacParty = doc.CreateElement("cac", "Party", CacNamespace);
+
+        var industryCode = CreateCbcElement(doc, "IndustryClassificationCode", "62010");
+        cacParty.AppendChild(industryCode);
+
+        var partyId1 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
+        var id1 = CreateCbcElement(doc, "ID", "IG56848407100"); 
+        id1.SetAttribute("schemeID", "TIN");
+        partyId1.AppendChild(id1);
+        cacParty.AppendChild(partyId1);
+
+        var partyId2 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
+        var id2 = CreateCbcElement(doc, "ID", "990806086487"); 
+        id2.SetAttribute("schemeID", "NRIC");
+        partyId2.AppendChild(id2);
+        cacParty.AppendChild(partyId2);
+
+        var postalAddress = doc.CreateElement("cac", "PostalAddress", CacNamespace);
+        postalAddress.AppendChild(CreateCbcElement(doc, "CityName", "CHEMOR"));
+        postalAddress.AppendChild(CreateCbcElement(doc, "PostalZone", "31200"));
+        postalAddress.AppendChild(CreateCbcElement(doc, "CountrySubentityCode", "08"));
+
+        var addressLine = doc.CreateElement("cac", "AddressLine", CacNamespace);
+        addressLine.AppendChild(CreateCbcElement(doc, "Line", "NO 16, HALA KLEBANG RESTU 18, MEDAN KLEBANG RESTU"));
+        postalAddress.AppendChild(addressLine);
+
+        var country = doc.CreateElement("cac", "Country", CacNamespace);
+        var countryCode = CreateCbcElement(doc, "IdentificationCode", "MYS");
+        country.AppendChild(countryCode);
+        postalAddress.AppendChild(country);
+        
+        cacParty.AppendChild(postalAddress);
+
+        var legalEntity = doc.CreateElement("cac", "PartyLegalEntity", CacNamespace);
+        legalEntity.AppendChild(CreateCbcElement(doc, "RegistrationName", "AXXX_XXXXRI")); 
+        cacParty.AppendChild(legalEntity);
+
+        var contact = doc.CreateElement("cac", "Contact", CacNamespace);
+        contact.AppendChild(CreateCbcElement(doc, "Telephone", "01160714390"));
+        contact.AppendChild(CreateCbcElement(doc, "ElectronicMail", "akmal.fir010@gmail.com"));
+        cacParty.AppendChild(contact);
+
+        party.AppendChild(cacParty);
+        return party;
     }
 
     private XmlElement BuildCustomerParty(XmlDocument doc, SubmitDocumentRequestDto request)
@@ -80,8 +131,44 @@ public class UblXmlGenerator : IUblXmlGenerator
         legalEntity.AppendChild(CreateCbcElement(doc, "RegistrationName", request.Buyer_name));
         cacParty.AppendChild(legalEntity);
 
+        var contact = doc.CreateElement("cac", "Contact", CacNamespace);
+        contact.AppendChild(CreateCbcElement(doc, "Telephone", "01160714390"));
+        cacParty.AppendChild(contact);
+
         party.AppendChild(cacParty);
         return party;
+    }
+
+    private XmlElement BuildTaxTotal(XmlDocument doc, double taxableAmount, double taxAmount)
+    {
+        var taxTotal = doc.CreateElement("cac", "TaxTotal", CacNamespace);
+        
+        var cbcTaxAmount = CreateCbcElement(doc, "TaxAmount", taxAmount.ToString("F2"));
+        cbcTaxAmount.SetAttribute("currencyID", "MYR");
+        taxTotal.AppendChild(cbcTaxAmount);
+
+        var taxSubtotal = doc.CreateElement("cac", "TaxSubtotal", CacNamespace);
+        
+        var cbcTaxableAmount = CreateCbcElement(doc, "TaxableAmount", taxableAmount.ToString("F2"));
+        cbcTaxableAmount.SetAttribute("currencyID", "MYR");
+        taxSubtotal.AppendChild(cbcTaxableAmount);
+
+        var subTaxAmount = CreateCbcElement(doc, "TaxAmount", taxAmount.ToString("F2"));
+        subTaxAmount.SetAttribute("currencyID", "MYR");
+        taxSubtotal.AppendChild(subTaxAmount);
+
+        var taxCategory = doc.CreateElement("cac", "TaxCategory", CacNamespace);
+        taxCategory.AppendChild(CreateCbcElement(doc, "ID", "06")); // 06 = Not Applicable
+        taxCategory.AppendChild(CreateCbcElement(doc, "TaxExemptionReason", "Not subject to tax"));
+        
+        var taxScheme = doc.CreateElement("cac", "TaxScheme", CacNamespace);
+        taxScheme.AppendChild(CreateCbcElement(doc, "ID", "OTH"));
+        taxCategory.AppendChild(taxScheme);
+        
+        taxSubtotal.AppendChild(taxCategory);
+        taxTotal.AppendChild(taxSubtotal);
+
+        return taxTotal;
     }
 
     private XmlElement BuildLegalMonetaryTotal(XmlDocument doc, SubmitDocumentRequestDto request)
@@ -120,6 +207,9 @@ public class UblXmlGenerator : IUblXmlGenerator
         extAmount.SetAttribute("currencyID", "MYR");
         line.AppendChild(extAmount);
 
+        // Add line level TaxTotal
+        line.AppendChild(BuildTaxTotal(doc, item.Subtotal, item.Tax_amount));
+
         var cacItem = doc.CreateElement("cac", "Item", CacNamespace);
         cacItem.AppendChild(CreateCbcElement(doc, "Description", item.Description));
 
@@ -129,6 +219,13 @@ public class UblXmlGenerator : IUblXmlGenerator
         commodity.AppendChild(classificationCode);
         cacItem.AppendChild(commodity);
 
+        var classifiedTax = doc.CreateElement("cac", "ClassifiedTaxCategory", CacNamespace);
+        classifiedTax.AppendChild(CreateCbcElement(doc, "ID", "06"));
+        var taxScheme = doc.CreateElement("cac", "TaxScheme", CacNamespace);
+        taxScheme.AppendChild(CreateCbcElement(doc, "ID", "OTH"));
+        classifiedTax.AppendChild(taxScheme);
+        cacItem.AppendChild(classifiedTax);
+
         line.AppendChild(cacItem);
 
         var price = doc.CreateElement("cac", "Price", CacNamespace);
@@ -137,6 +234,12 @@ public class UblXmlGenerator : IUblXmlGenerator
         price.AppendChild(priceAmount);
         
         line.AppendChild(price);
+
+        var itemPriceExtension = doc.CreateElement("cac", "ItemPriceExtension", CacNamespace);
+        var itemExtAmount = CreateCbcElement(doc, "Amount", item.Subtotal.ToString("F2"));
+        itemExtAmount.SetAttribute("currencyID", "MYR");
+        itemPriceExtension.AppendChild(itemExtAmount);
+        line.AppendChild(itemPriceExtension);
 
         return line;
     }

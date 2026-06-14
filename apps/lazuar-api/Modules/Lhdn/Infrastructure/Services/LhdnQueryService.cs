@@ -16,6 +16,17 @@ public class LhdnQueryService : ILhdnQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
 
+    // Defines a strict schema to prevent dynamic null-binding crashes
+    private record RawTaxDocumentDto(
+        Guid DocumentId,
+        string InternalReference,
+        string Status,
+        string? LhdnUuid,
+        string? LongId,
+        string? ErrorMessage,
+        DateTime CreatedAt
+    );
+
     public LhdnQueryService([FromKeyedServices("LhdnSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
@@ -42,7 +53,8 @@ public class LhdnQueryService : ILhdnQueryService
             ORDER BY ""CreatedAt"" DESC
             LIMIT @Limit";
 
-        var results = await connection.QueryAsync<dynamic>(sql, new { OrgId = organizationId, Limit = safeLimit });
+        // Querying explicitly into the record instead of <dynamic>
+        var results = await connection.QueryAsync<RawTaxDocumentDto>(sql, new { OrgId = organizationId, Limit = safeLimit });
 
         return results.Select(r => new AgentLhdnSubmissionResult(
             r.DocumentId.ToString(),
@@ -51,7 +63,7 @@ public class LhdnQueryService : ILhdnQueryService
             r.LhdnUuid,
             r.LongId,
             r.ErrorMessage,
-            ((DateTime)r.CreatedAt).ToString("yyyy-MM-dd HH:mm:ss")
+            r.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
         )).ToList();
     }
 }

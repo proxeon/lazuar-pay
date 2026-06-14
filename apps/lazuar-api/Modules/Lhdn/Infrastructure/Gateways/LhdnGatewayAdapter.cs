@@ -92,8 +92,21 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         var response = await client.SendAsync(request, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
+        _logger.LogInformation("LHDN Raw Submission Response: {Response}", responseBody);
+
         if (!response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.Accepted)
         {
+            try
+            {
+                var errorJson = JsonDocument.Parse(responseBody);
+                if (errorJson.RootElement.TryGetProperty("error", out var err) && err.TryGetProperty("details", out var details) && details.GetArrayLength() > 0)
+                {
+                    var msg = details[0].TryGetProperty("message", out var m) ? m.GetString() : responseBody;
+                    return new LhdnSubmissionResult(false, null, null, $"LHDN Rejected: {msg}");
+                }
+            }
+            catch { }
+
             return new LhdnSubmissionResult(false, null, null, responseBody);
         }
 
@@ -101,8 +114,30 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         var root = json.RootElement;
         
         var submissionUid = root.TryGetProperty("submissionUid", out var uidProp) ? uidProp.GetString() : null;
-        string? uuid = null;
+        if (string.IsNullOrEmpty(submissionUid))
+            submissionUid = root.TryGetProperty("submissionUID", out var uidPropCap) ? uidPropCap.GetString() : null;
 
+        if (root.TryGetProperty("rejectedDocuments", out var rejectedDocs) && rejectedDocs.GetArrayLength() > 0)
+        {
+            var firstReject = rejectedDocs[0];
+            if (firstReject.TryGetProperty("error", out var errObj))
+            {
+                // Attempt to grab the deeply nested "details[0].message" which contains the actual reason
+                string rejectMessage = "Validation Error";
+                if (errObj.TryGetProperty("details", out var errDetails) && errDetails.GetArrayLength() > 0)
+                {
+                    rejectMessage = errDetails[0].TryGetProperty("message", out var mProp) ? mProp.GetString()! : rejectMessage;
+                }
+                else if (errObj.TryGetProperty("message", out var msgProp))
+                {
+                    rejectMessage = msgProp.GetString()!;
+                }
+                
+                return new LhdnSubmissionResult(false, submissionUid, null, $"Rejected by LHDN: {rejectMessage}");
+            }
+        }
+
+        string? uuid = null;
         if (root.TryGetProperty("acceptedDocuments", out var acceptedDocs) && acceptedDocs.GetArrayLength() > 0)
         {
             uuid = acceptedDocs[0].TryGetProperty("uuid", out var uuidProp) ? uuidProp.GetString() : null;
