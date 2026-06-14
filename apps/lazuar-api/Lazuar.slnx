@@ -14,6 +14,13 @@
     <Project Path="Modules\One\Application\Modules.One.Application.csproj" />
     <Project Path="Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/Modules/Lhdn/">
+    <Project Path="../../packages/api-types-dotnet/Lazuar.ApiContracts.csproj" />
+    <Project Path="Modules/Lhdn/Application/Modules.Lhdn.Application.csproj" />
+    <Project Path="Modules/Lhdn/Contracts/Modules.Lhdn.Contracts.csproj" />
+    <Project Path="Modules/Lhdn/Domain/Modules.Lhdn.Domain.csproj" />
+    <Project Path="Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/Modules/Messaging/">
     <Project Path="Modules\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
     <Project Path="Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
@@ -43,6 +50,7 @@
     <Project Path="Modules\Ops\Application\Modules.Ops.Application.csproj" />
     <Project Path="Modules\Ops\Infrastructure\Modules.Ops.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/Modules/" />
   <Folder Name="/Modules/Billing/">
     <Project Path="Modules\Billing\Contracts\Modules.Billing.Contracts.csproj" />
     <Project Path="Modules\Billing\Domain\Modules.Billing.Domain.csproj" />
