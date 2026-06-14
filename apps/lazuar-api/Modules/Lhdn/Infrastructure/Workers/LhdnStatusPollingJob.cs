@@ -50,9 +50,11 @@ public class LhdnStatusPollingJob : BackgroundService
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("LhdnEventBus");
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
+        var now = DateTime.UtcNow;
+
         var submittedDocs = await db.TaxDocuments
-            .Where(d => d.ValidationStatus == "SUBMITTED" && d.SubmissionUid != null)
-            .OrderBy(d => d.UpdatedAt)
+            .Where(d => d.ValidationStatus == "SUBMITTED" && d.SubmissionUid != null && (d.NextPollAt == null || d.NextPollAt <= now))
+            .OrderBy(d => d.NextPollAt)
             .Take(50)
             .ToListAsync(ct);
 
@@ -91,11 +93,20 @@ public class LhdnStatusPollingJob : BackgroundService
                         await mediator.Send(new DispatchExternalWebhookCommand(
                             doc.OrganizationId, doc.InternalReferenceId, "INVALID", result.Uuid, null, errorMessage), ct);
                     }
+                    else
+                    {
+                        doc.ScheduleNextPoll();
+                    }
+                }
+                else
+                {
+                    doc.ScheduleNextPoll();
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to poll status for Document {DocId}", doc.Id);
+                doc.ScheduleNextPoll();
             }
             finally
             {

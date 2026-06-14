@@ -17,6 +17,8 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     public string ValidationStatus { get; private set; }
     public string? ErrorMessage { get; private set; }
     public DateTime? ValidatedAt { get; private set; }
+    public DateTime? NextPollAt { get; private set; }
+    public int PollAttempts { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -32,6 +34,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         DocumentHash = documentHash;
         RawXmlContent = rawXmlContent;
         ValidationStatus = "PENDING";
+        PollAttempts = 0;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -41,6 +44,16 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         SubmissionUid = submissionUid;
         LhdnUuid = lhdnUuid;
         ValidationStatus = "SUBMITTED";
+        PollAttempts = 0;
+        NextPollAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ScheduleNextPoll()
+    {
+        PollAttempts++;
+        var secondsToWait = Math.Pow(3, Math.Min(PollAttempts, 10));
+        NextPollAt = DateTime.UtcNow.AddSeconds(secondsToWait);
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -49,6 +62,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         LongId = longId;
         ValidationStatus = "VALID";
         ValidatedAt = DateTime.UtcNow;
+        NextPollAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -56,6 +70,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     {
         ValidationStatus = "INVALID";
         ErrorMessage = error;
+        NextPollAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -63,6 +78,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     {
         ValidationStatus = "FAILED";
         ErrorMessage = error;
+        NextPollAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -70,6 +86,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     {
         CheckRule(new CancelWindowMustBeValidRule(ValidatedAt));
         ValidationStatus = "CANCELLED";
+        NextPollAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 }
