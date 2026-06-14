@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# =========================================================================
+# LHDN SANDBOX CREDENTIALS (FROM YOUR PORTAL)
+# =========================================================================
+LHDN_CLIENT_ID="f832d052-174d-4a40-8391-f4500b0e9d44"
+LHDN_CLIENT_SECRET="c5701fef-8016-4c62-b88a-28cda9246c5b"
+LHDN_SUPPLIER_TIN="IG56848407100"
+LHDN_SUPPLIER_ID_TYPE="NRIC"
+LHDN_SUPPLIER_ID_VALUE="990806086487"
+# =========================================================================
+
 # Configuration
 LAZUAR_API="http://localhost:8080/api/v1"
 TIMESTAMP=$(date +%s)
@@ -11,6 +21,7 @@ echo "========================================="
 echo " 0. Provisioning Isolated Test Tenant..."
 echo "========================================="
 
+# Fetch the exact User ID for the sysadmin
 USER_ID=$(docker exec -i lazuar-db psql -U postgres -d lazuar_mvp -t -c "SELECT \"Id\" FROM one.\"GlobalUsers\" WHERE \"Email\" = '$EMAIL';" | xargs)
 
 if [ -z "$USER_ID" ]; then
@@ -18,7 +29,7 @@ if [ -z "$USER_ID" ]; then
     exit 1
 fi
 
-# Updated to include SupplierTin, IdType, IdValue, Environment, and MsicCode
+# We explicitly inject MyInvoisClientId, Secret, TIN, and NRIC into the new TenantConfig
 docker exec -i lazuar-db psql -U postgres -d lazuar_mvp <<EOF > /dev/null
 DO \$\$
 DECLARE
@@ -30,15 +41,23 @@ BEGIN
     INSERT INTO one."TenantMemberships" ("Id", "GlobalUserId", "OrganizationId", "Role", "CreatedAt")
     VALUES (gen_random_uuid(), '$USER_ID', v_org_id, 'ADMIN', NOW());
 
-    -- Seed the extended LHDN Configuration
-    INSERT INTO lhdn."TenantConfigs" ("Id", "OrganizationId", "IntermediaryMode", "SupplierTin", "IdType", "IdValue", "Environment", "MsicCode", "CreatedAt", "UpdatedAt")
-    VALUES (gen_random_uuid(), v_org_id, true, 'C1234567890', 'BRN', '202401234567', 'SANDBOX', '62010', NOW(), NOW());
+    -- Seed the extended LHDN Configuration with real Sandbox API Keys and Identity
+    INSERT INTO lhdn."TenantConfigs" (
+        "Id", "OrganizationId", "IntermediaryMode", "SupplierTin", "IdType", 
+        "IdValue", "Environment", "MsicCode", "MyInvoisClientId", "MyInvoisClientSecret", 
+        "CreatedAt", "UpdatedAt"
+    )
+    VALUES (
+        gen_random_uuid(), v_org_id, false, '$LHDN_SUPPLIER_TIN', '$LHDN_SUPPLIER_ID_TYPE', 
+        '$LHDN_SUPPLIER_ID_VALUE', 'SANDBOX', '62010', '$LHDN_CLIENT_ID', '$LHDN_CLIENT_SECRET', 
+        NOW(), NOW()
+    );
 END \$\$;
 EOF
 
 echo "✅ Created Workspace: $TENANT_SLUG"
 echo "✅ Granted access to: $EMAIL"
-echo "✅ Seeded extended LHDN Tenant Configuration."
+echo "✅ Seeded LHDN Tenant Configuration with NRIC Profile & API Keys."
 echo ""
 
 echo "========================================="
@@ -50,6 +69,11 @@ LAZUAR_TOKEN=$(curl -s -X POST "$LAZUAR_API/one/auth/login" \
   -d "{\"email\": \"$EMAIL\", \"password\": \"$PASSWORD\"}" \
   -c cookies.txt | jq -r '.user.email')
 
+if [ "$LAZUAR_TOKEN" == "null" ] || [ -z "$LAZUAR_TOKEN" ]; then
+    echo "❌ Failed to authenticate with Lazuar API. Check credentials."
+    exit 1
+fi
+
 echo "✅ Authenticated as: $LAZUAR_TOKEN"
 echo ""
 
@@ -60,21 +84,20 @@ echo "========================================="
 INTERNAL_INV_ID="INV-$TIMESTAMP"
 CURRENT_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Updated JSON Payload to match new TypeSpec DTOs
 PAYLOAD=$(cat <<EOF
 {
   "internal_id": "$INTERNAL_INV_ID",
   "document_type": "01",
   "issue_date": "$CURRENT_UTC",
-  "buyer_name": "AXXX_XXXXRI",
-  "buyer_tin": "IG56848407100",
-  "buyer_id_type": "NRIC",
-  "buyer_id_value": "990806086487",
+  "buyer_name": "General Public",
+  "buyer_tin": "EI00000000010",
+  "buyer_id_type": "BRN",
+  "buyer_id_value": "NA",
   "buyer_address": {
-    "line1": "NO 16, HALA KLEBANG RESTU 18",
-    "city": "CHEMOR",
-    "postal_code": "31200",
-    "state_code": "08",
+    "line1": "NA",
+    "city": "NA",
+    "postal_code": "00000",
+    "state_code": "17",
     "country_code": "MYS"
   },
   "items": [
@@ -116,7 +139,7 @@ echo "========================================="
 echo " 3. Polling Lazuar API for LHDN Validation..."
 echo "========================================="
 
-for i in {1..15}; do
+for i in {1..20}; do
     echo "⏳ Check $i: Fetching status for $INTERNAL_INV_ID..."
     
     STATUS_RES=$(curl -s -X GET "$LAZUAR_API/lhdn/documents/$INTERNAL_INV_ID" \

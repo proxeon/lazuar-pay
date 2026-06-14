@@ -25,8 +25,22 @@ public class UblXmlGenerator : IUblXmlGenerator
         root.AppendChild(CreateCbcElement(doc, "IssueDate", request.Issue_date.ToString("yyyy-MM-dd")));
         root.AppendChild(CreateCbcElement(doc, "IssueTime", request.Issue_date.ToString("HH:mm:ssZ")));
         
-        var invoiceTypeCode = CreateCbcElement(doc, "InvoiceTypeCode", request.Document_type.ToString() ?? "01");
-        invoiceTypeCode.SetAttribute("listVersionID", "1.0"); 
+        // Safely map Document Type Enum to LHDN String
+        var cleanDocTypeCode = request.Document_type switch
+        {
+            SubmitDocumentRequestDtoDocument_type._01 => "01",
+            SubmitDocumentRequestDtoDocument_type._02 => "02",
+            SubmitDocumentRequestDtoDocument_type._03 => "03",
+            SubmitDocumentRequestDtoDocument_type._04 => "04",
+            SubmitDocumentRequestDtoDocument_type._11 => "11",
+            SubmitDocumentRequestDtoDocument_type._12 => "12",
+            SubmitDocumentRequestDtoDocument_type._13 => "13",
+            SubmitDocumentRequestDtoDocument_type._14 => "14",
+            _ => "01"
+        };
+
+        var invoiceTypeCode = CreateCbcElement(doc, "InvoiceTypeCode", cleanDocTypeCode);
+        invoiceTypeCode.SetAttribute("listVersionID", "1.1"); 
         root.AppendChild(invoiceTypeCode);
         
         root.AppendChild(CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
@@ -62,6 +76,7 @@ public class UblXmlGenerator : IUblXmlGenerator
         var cacParty = doc.CreateElement("cac", "Party", CacNamespace);
 
         var industryCode = CreateCbcElement(doc, "IndustryClassificationCode", tenantConfig.MsicCode ?? "00000");
+        industryCode.SetAttribute("name", "General Business");
         cacParty.AppendChild(industryCode);
 
         var partyId1 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
@@ -87,6 +102,8 @@ public class UblXmlGenerator : IUblXmlGenerator
 
         var country = doc.CreateElement("cac", "Country", CacNamespace);
         var countryCode = CreateCbcElement(doc, "IdentificationCode", "MYS");
+        countryCode.SetAttribute("listID", "ISO3166-1");
+        countryCode.SetAttribute("listAgencyID", "6");
         country.AppendChild(countryCode);
         postalAddress.AppendChild(country);
         
@@ -116,16 +133,47 @@ public class UblXmlGenerator : IUblXmlGenerator
         partyId1.AppendChild(id1);
         cacParty.AppendChild(partyId1);
 
+        var cleanBuyerIdType = request.Buyer_id_type switch
+        {
+            SubmitDocumentRequestDtoBuyer_id_type.BRN => "BRN",
+            SubmitDocumentRequestDtoBuyer_id_type.NRIC => "NRIC",
+            SubmitDocumentRequestDtoBuyer_id_type.PASSPORT => "PASSPORT",
+            SubmitDocumentRequestDtoBuyer_id_type.ARMY => "ARMY",
+            _ => "BRN"
+        };
+
         var partyId2 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
         var id2 = CreateCbcElement(doc, "ID", isB2c ? "NA" : request.Buyer_id_value);
-        id2.SetAttribute("schemeID", isB2c ? "BRN" : request.Buyer_id_type.ToString() ?? "BRN");
+        id2.SetAttribute("schemeID", isB2c ? "BRN" : cleanBuyerIdType);
         partyId2.AppendChild(id2);
         cacParty.AppendChild(partyId2);
+
+        var cleanStateCode = request.Buyer_address.State_code switch
+        {
+            LhdnAddressDtoState_code._01 => "01",
+            LhdnAddressDtoState_code._02 => "02",
+            LhdnAddressDtoState_code._03 => "03",
+            LhdnAddressDtoState_code._04 => "04",
+            LhdnAddressDtoState_code._05 => "05",
+            LhdnAddressDtoState_code._06 => "06",
+            LhdnAddressDtoState_code._07 => "07",
+            LhdnAddressDtoState_code._08 => "08",
+            LhdnAddressDtoState_code._09 => "09",
+            LhdnAddressDtoState_code._10 => "10",
+            LhdnAddressDtoState_code._11 => "11",
+            LhdnAddressDtoState_code._12 => "12",
+            LhdnAddressDtoState_code._13 => "13",
+            LhdnAddressDtoState_code._14 => "14",
+            LhdnAddressDtoState_code._15 => "15",
+            LhdnAddressDtoState_code._16 => "16",
+            LhdnAddressDtoState_code._17 => "17",
+            _ => "17"
+        };
 
         var postalAddress = doc.CreateElement("cac", "PostalAddress", CacNamespace);
         postalAddress.AppendChild(CreateCbcElement(doc, "CityName", isB2c ? "NA" : request.Buyer_address.City));
         postalAddress.AppendChild(CreateCbcElement(doc, "PostalZone", isB2c ? "00000" : request.Buyer_address.Postal_code));
-        postalAddress.AppendChild(CreateCbcElement(doc, "CountrySubentityCode", isB2c ? "17" : request.Buyer_address.State_code.ToString() ?? "17"));
+        postalAddress.AppendChild(CreateCbcElement(doc, "CountrySubentityCode", isB2c ? "17" : cleanStateCode));
 
         var addressLine = doc.CreateElement("cac", "AddressLine", CacNamespace);
         addressLine.AppendChild(CreateCbcElement(doc, "Line", isB2c ? "NA" : request.Buyer_address.Line1));
@@ -133,6 +181,8 @@ public class UblXmlGenerator : IUblXmlGenerator
 
         var country = doc.CreateElement("cac", "Country", CacNamespace);
         var countryCode = CreateCbcElement(doc, "IdentificationCode", isB2c ? "MYS" : request.Buyer_address.Country_code);
+        countryCode.SetAttribute("listID", "ISO3166-1");
+        countryCode.SetAttribute("listAgencyID", "6");
         country.AppendChild(countryCode);
         postalAddress.AppendChild(country);
         
@@ -178,7 +228,10 @@ public class UblXmlGenerator : IUblXmlGenerator
         }
         
         var taxScheme = doc.CreateElement("cac", "TaxScheme", CacNamespace);
-        taxScheme.AppendChild(CreateCbcElement(doc, "ID", "OTH"));
+        var taxSchemeId = CreateCbcElement(doc, "ID", "OTH");
+        taxSchemeId.SetAttribute("schemeID", "UN/ECE 5153");
+        taxSchemeId.SetAttribute("schemeAgencyID", "6");
+        taxScheme.AppendChild(taxSchemeId);
         taxCategory.AppendChild(taxScheme);
         
         taxSubtotal.AppendChild(taxCategory);
@@ -223,7 +276,19 @@ public class UblXmlGenerator : IUblXmlGenerator
         extAmount.SetAttribute("currencyID", "MYR");
         line.AppendChild(extAmount);
 
-        line.AppendChild(BuildTaxTotal(doc, item.Subtotal, item.Tax_amount, item.Tax_type_code.ToString() ?? "06"));
+        var cleanTaxCode = item.Tax_type_code switch
+        {
+            LhdnItemDtoTax_type_code._01 => "01",
+            LhdnItemDtoTax_type_code._02 => "02",
+            LhdnItemDtoTax_type_code._03 => "03",
+            LhdnItemDtoTax_type_code._04 => "04",
+            LhdnItemDtoTax_type_code._05 => "05",
+            LhdnItemDtoTax_type_code._06 => "06",
+            LhdnItemDtoTax_type_code.E => "E",
+            _ => "06"
+        };
+
+        line.AppendChild(BuildTaxTotal(doc, item.Subtotal, item.Tax_amount, cleanTaxCode));
 
         var cacItem = doc.CreateElement("cac", "Item", CacNamespace);
         cacItem.AppendChild(CreateCbcElement(doc, "Description", item.Description));
@@ -235,9 +300,12 @@ public class UblXmlGenerator : IUblXmlGenerator
         cacItem.AppendChild(commodity);
 
         var classifiedTax = doc.CreateElement("cac", "ClassifiedTaxCategory", CacNamespace);
-        classifiedTax.AppendChild(CreateCbcElement(doc, "ID", item.Tax_type_code.ToString() ?? "06"));
+        classifiedTax.AppendChild(CreateCbcElement(doc, "ID", cleanTaxCode));
         var taxScheme = doc.CreateElement("cac", "TaxScheme", CacNamespace);
-        taxScheme.AppendChild(CreateCbcElement(doc, "ID", "OTH"));
+        var taxSchemeId = CreateCbcElement(doc, "ID", "OTH");
+        taxSchemeId.SetAttribute("schemeID", "UN/ECE 5153");
+        taxSchemeId.SetAttribute("schemeAgencyID", "6");
+        taxScheme.AppendChild(taxSchemeId);
         classifiedTax.AppendChild(taxScheme);
         cacItem.AppendChild(classifiedTax);
 
