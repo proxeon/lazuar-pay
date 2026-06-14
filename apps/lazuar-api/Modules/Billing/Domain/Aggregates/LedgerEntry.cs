@@ -16,6 +16,7 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
     public string? Description { get; private set; }
     public string? TaxInvoiceId { get; private set; }
     public string? LhdnValidationStatus { get; private set; }
+    public string CustomerType { get; private set; }
 
     private readonly List<LedgerLine> _lines = new();
     public IReadOnlyCollection<LedgerLine> Lines => _lines.AsReadOnly();
@@ -24,7 +25,7 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
     private LedgerEntry() { }
 #pragma warning restore CS8618
 
-    public LedgerEntry(Guid organizationId, string referenceType, string referenceId, string? description = null)
+    public LedgerEntry(Guid organizationId, string referenceType, string referenceId, string? description = null, string customerType = "B2C")
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -32,15 +33,16 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
         ReferenceType = referenceType;
         ReferenceId = referenceId;
         Description = description;
+        CustomerType = customerType;
     }
 
-    public void AddLine(string accountType, decimal amount, string currency, decimal baseCurrencyAmount, string baseCurrency)
+    public void AddLine(string accountType, decimal amount, string currency, decimal baseCurrencyAmount, string baseCurrency, string taxTypeCode = "06", string msicCode = "004")
     {
-        var line = new LedgerLine(Id, accountType, amount, currency, baseCurrencyAmount, baseCurrency);
+        var line = new LedgerLine(Id, accountType, amount, currency, baseCurrencyAmount, baseCurrency, taxTypeCode, msicCode);
         _lines.Add(line);
     }
 
-    public void UpdateLhdnStatus(string taxInvoiceId, string status)
+    public void UpdateLhdnStatus(string? taxInvoiceId, string status)
     {
         TaxInvoiceId = taxInvoiceId;
         LhdnValidationStatus = status;

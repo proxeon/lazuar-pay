@@ -45,6 +45,7 @@ public static class DependencyInjection
 
         services.AddTransient<InvoiceIssuedIntegrationEventHandler>();
         services.AddTransient<GatewayRefundCompletedIntegrationEventHandler>();
+        services.AddTransient<ConsolidatedInvoiceIssuedIntegrationEventHandler>();
 
         services.AddHostedService<LhdnSubmissionJob>();
         services.AddHostedService<LhdnStatusPollingJob>();
@@ -59,6 +60,7 @@ public static class DependencyInjection
         
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<ConsolidatedInvoiceIssuedIntegrationEvent, ConsolidatedInvoiceIssuedIntegrationEventHandler>();
 
         return app;
     }

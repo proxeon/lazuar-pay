@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
         services.AddHostedService<RevenueRecognitionJob>();
+        services.AddHostedService<B2cConsolidationJob>();
 
         services.AddSingleton<IAgentPromptProvider, BillingPromptProvider>();
 
