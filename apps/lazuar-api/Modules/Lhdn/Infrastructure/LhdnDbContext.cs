@@ -11,6 +11,7 @@ public class LhdnDbContext : PlatformDbContext
     public DbSet<LhdnTenantConfig> TenantConfigs { get; set; } = null!;
     public DbSet<TaxDocument> TaxDocuments { get; set; } = null!;
     public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; } = null!;
+    public DbSet<DeveloperApiKey> DeveloperApiKeys { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
@@ -47,6 +48,14 @@ public class LhdnDbContext : PlatformDbContext
             builder.ToTable("WebhookSubscriptions");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
+        });
+
+        modelBuilder.Entity<DeveloperApiKey>(builder =>
+        {
+            builder.ToTable("DeveloperApiKeys");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId);
+            builder.HasIndex(x => x.KeyHash).IsUnique();
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>
