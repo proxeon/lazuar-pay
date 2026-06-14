@@ -1,7 +1,9 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/RequestRefundCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Process a refund for a specific payment record.", "COMMUNITY", "high", "SUPER_ADMIN", "ADMIN")]
 public record RequestRefundCommand(Guid OrganizationId, Guid SubscriptionId, Guid PaymentRecordId, string? Reason) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -19,7 +21,7 @@ public class RequestRefundCommandHandler : ICommandHandler<RequestRefundCommand>
     public async Task Handle(RequestRefundCommand request, CancellationToken ct)
     {
         var subscription = await _repository.GetByIdAsync(request.SubscriptionId, ct);
-        
+
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Subscription not found.");
 

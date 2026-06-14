@@ -27,52 +27,58 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
 
     public async Task Handle(ProcessGatewayWebhookCommand request, CancellationToken cancellationToken)
     {
-        // 1. Get Tenant Config
         var config = await _configRepository.GetActiveByTenantIdAsync(request.TenantId, cancellationToken);
         if (config == null || string.IsNullOrEmpty(config.WebhookSecret))
         {
             throw new InvalidOperationException("Webhook secret not configured for this tenant.");
         }
 
-        // 2. Validate & Parse via Adapter
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
-        var parsedResult = await adapter.ParseWebhookAsync(config.WebhookSecret, request.RawBody, request.Headers);
+        var parsedResult = await adapter.ParseWebhookAsync(
+            config.ApiKey ?? "",
+            config.WebhookSecret, 
+            request.RawBody, 
+            request.Headers,
+            config.EstimatedFeePercentage,
+            config.FixedFee,
+            config.TaxRate);
 
         if (!parsedResult.Verified)
         {
             throw new InvalidOperationException($"Webhook signature verification failed: {parsedResult.Error}");
         }
 
-        // If it's not a completed payment event (e.g., checkout.session.expired), we just ack it and stop here.
         if (parsedResult.EventType != "PAYMENT_COMPLETED")
+        {
+            return;
+        }
+
+        var alreadyProcessed = await _logRepository.HasBeenProcessedAsync(parsedResult.EventId, config.GatewayType, cancellationToken);
+        if (alreadyProcessed)
         {
             return; 
         }
 
-        // 3. Idempotency Check
-        var alreadyProcessed = await _logRepository.HasBeenProcessedAsync(parsedResult.EventId, config.GatewayType, cancellationToken);
-        if (alreadyProcessed)
-        {
-            return; // Gracefully acknowledge duplicate webhooks sent by Stripe/Billplz
-        }
-
-        // 4. Lock it (Save Log)
         var log = new PaymentWebhookLog(parsedResult.EventId, config.GatewayType);
         _logRepository.Add(log);
-        
-        // 5. Publish Integration Event to the Outbox
+
         var integrationEvent = new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: request.TenantId,
             GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
             AmountPaid: parsedResult.AmountPaid,
             Currency: parsedResult.Currency,
-            Metadata: parsedResult.Metadata
+            GatewayFee: parsedResult.GatewayFee,
+            TaxAmount: parsedResult.TaxAmount,
+            NetAmount: parsedResult.NetAmount,
+            FxRate: parsedResult.FxRate,
+            BaseCurrency: parsedResult.BaseCurrency,
+            LineItems: new List<LineItemDto>(),
+            Metadata: parsedResult.Metadata,
+            GatewayCustomerId: parsedResult.GatewayCustomerId,
+            GatewayTokenId: parsedResult.GatewayTokenId
         );
 
         await _eventBus.PublishAsync(integrationEvent);
-        
-        // 6. Flush the context to commit the log and outbox message transactionally!
-        // If the DB fails here, neither the log nor the outbox event is saved.
         await _logRepository.SaveChangesAsync(cancellationToken);
     }
 }

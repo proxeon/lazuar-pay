@@ -10,7 +10,7 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
     private readonly IPaymentGatewayFactory _gatewayFactory;
 
     public GenerateCheckoutSessionQueryHandler(
-        ITenantPaymentConfigRepository configRepository, 
+        ITenantPaymentConfigRepository configRepository,
         IPaymentGatewayFactory gatewayFactory)
     {
         _configRepository = configRepository;
@@ -20,14 +20,14 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
     public async Task<string> Handle(GenerateCheckoutSessionQuery request, CancellationToken cancellationToken)
     {
         var config = await _configRepository.GetActiveByTenantIdAsync(request.TenantId, cancellationToken);
-        
+
         if (config == null || !config.IsActive || string.IsNullOrEmpty(config.ApiKey))
         {
             throw new InvalidOperationException("Payment gateway is not configured or active for this tenant.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
-        
+
         var result = await adapter.GenerateCheckoutAsync(
             config.ApiKey,
             request.TenantId,
@@ -38,7 +38,8 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
             request.SuccessUrl,
             request.CancelUrl,
             request.Metadata,
-            config.MerchantId);
+            config.MerchantId,
+            request.SetupFutureUsage);
 
         if (!result.Success || string.IsNullOrEmpty(result.CheckoutUrl))
         {

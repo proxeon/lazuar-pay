@@ -9,7 +9,7 @@ public class OrganizationSlugMustBeValidRule : IBusinessRule
     private readonly string _slug;
     private static readonly HashSet<string> ReservedSlugs = new(System.StringComparer.OrdinalIgnoreCase)
     {
-        "api", "app", "admin", "dashboard", "portal", "system", 
+        "api", "app", "admin", "dashboard", "portal", "system",
         "www", "support", "help", "mail", "blog", "docs",
         "stripe", "billplz", "lazuar", "one", "auth", "login"
     };

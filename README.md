@@ -5,18 +5,20 @@
 
                      +---------------------------------------+
                      |             COGNITIVE CORE            |
-                     |  Your Custom AI-Chat (via OpenRouter)  |
+                     |          Your Custom AI-Agent         |
                      +-------------------+-------------------+
                                          |
-                                         | Orfestrates / Optimizes
+                                         | Orchestrates / Optimizes
                                          v
        +---------------------------------+---------------------------------+
        |                                 |                                 |
 +------v------+                   +------v------+                   +------v------+
 | ACQUISITION |                   | FULFILLMENT |                   |  RETENTION  |
-|  - Funnel   |                   |  - Vault    |                   | - Community |
-|  - Event    |                   |  - Academy  |                   | - Broadcast |
-|  - Consult  |                   |             |                   | - Affiliate |
+|  - Bio      | (Linktree)        |  - Vault    | (Gumroad)         | - Community | (Skool)
+|  - Form     | (Typeform)        |  - Editorial| (Substack)        | - Broadcast | (Mailchimp)
+|  - Funnel   | (ClickFunnels)    |  - Academy  | (Kajabi)          | - Affiliate | (Rewardful)
+|  - Event    | (Eventbrite)      |  - Invoice  | <-- NEW           | - Sponsor   | (Passionfroot)
+|  - Consult  | (Calendly)        |  - Pipeline | <-- NEW           | - Support   | <-- NEW
 +-------------+                   +-------------+                   +-------------+
 ```
 

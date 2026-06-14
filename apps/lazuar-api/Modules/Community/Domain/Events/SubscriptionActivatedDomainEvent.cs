@@ -3,9 +3,9 @@ using BuildingBlocks.Domain;
 namespace Modules.Community.Domain.Events;
 
 public record SubscriptionActivatedDomainEvent(
-    Guid SubscriptionId, 
-    Guid OrganizationId, 
-    Guid ClientProfileId, 
+    Guid SubscriptionId,
+    Guid OrganizationId,
+    Guid ClientProfileId,
     bool IsFirstPayment) : IDomainEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

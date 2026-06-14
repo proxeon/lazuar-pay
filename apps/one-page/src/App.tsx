@@ -29,7 +29,6 @@ function PrivateLayout() {
     return true;
   });
 
-  // Mobile detection
   useEffect(() => {
     const checkMobile = () => {
       const isMobileViewport = window.innerWidth < 768;
@@ -42,22 +41,28 @@ function PrivateLayout() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Persist sidebar
   useEffect(() => {
     if (!isMobile) localStorage.setItem(SIDEBAR_STATE_KEY, isSidebarOpen ? "expanded" : "collapsed");
   }, [isSidebarOpen, isMobile]);
 
-  // Session verification
   useEffect(() => {
     async function verifySession() {
       try {
         const { data, error } = await client.GET("/one/auth/me");
+        
         if (error || !data) {
           const returnUrl = encodeURIComponent(location.pathname + location.search);
           navigate(`/login?returnUrl=${returnUrl}`);
-        } else {
-          setUser(data);
+          return;
         }
+
+        // Prevent Superadmins from accessing the client-facing portal
+        if (data.role === "SUPER_ADMIN") {
+          window.location.href = "http://localhost:3000/dashboard";
+          return;
+        }
+
+        setUser(data);
       } catch (err) {
         navigate("/login");
       } finally {
@@ -65,7 +70,7 @@ function PrivateLayout() {
       }
     }
     verifySession();
-  }, [navigate]);
+  }, [navigate, location.pathname, location.search]);
 
   const handleLogout = async () => {
     await client.POST("/one/auth/logout");

@@ -1,7 +1,9 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/PauseRemindersCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Halt automated dunning emails for a specific user until a specific date.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record PauseRemindersCommand(Guid OrganizationId, Guid SubscriptionId, DateTime? PauseUntil) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

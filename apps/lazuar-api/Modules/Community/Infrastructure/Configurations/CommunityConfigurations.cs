@@ -18,17 +18,14 @@ public class CommunityPlanConfiguration : IEntityTypeConfiguration<CommunityPlan
     {
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => new { x.OrganizationId, x.Slug }).IsUnique();
-        
         builder.Property(x => x.Price).HasPrecision(10, 2);
 
-        // Standardize JSON serialization options
-        var jsonOptions = new JsonSerializerOptions 
-        { 
+        var jsonOptions = new JsonSerializerOptions
+        {
             PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
-        // Value converters to transform lists into raw JSON strings for SQL parameters
         var featuresConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
             v => JsonSerializer.Serialize(v, jsonOptions),
             v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
@@ -39,7 +36,6 @@ public class CommunityPlanConfiguration : IEntityTypeConfiguration<CommunityPlan
             v => JsonSerializer.Deserialize<List<FaqItem>>(v, jsonOptions) ?? new List<FaqItem>()
         );
 
-        // Value comparers for change tracking (ensuring correct dirty checks in EF Core)
         var featuresComparer = new ValueComparer<IReadOnlyCollection<string>>(
             (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
             c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -52,14 +48,13 @@ public class CommunityPlanConfiguration : IEntityTypeConfiguration<CommunityPlan
             c => c.ToList()
         );
 
-        // Map column mappings and assign converters
         builder.Property(x => x.Features)
-               .HasConversion(featuresConverter, featuresComparer)
-               .HasColumnType("jsonb");
+            .HasConversion(featuresConverter, featuresComparer)
+            .HasColumnType("jsonb");
 
         builder.Property(x => x.Faq)
-               .HasConversion(faqConverter, faqComparer)
-               .HasColumnType("jsonb");
+            .HasConversion(faqConverter, faqComparer)
+            .HasColumnType("jsonb");
     }
 }
 
@@ -69,24 +64,26 @@ public class CommunitySubscriptionConfiguration : IEntityTypeConfiguration<Commu
     {
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => x.OrganizationId);
-        
         builder.HasIndex(x => x.ClientProfileId);
         builder.Property(x => x.ClientProfileId).IsRequired();
 
         builder.HasOne<CommunityPlan>()
-               .WithMany()
-               .HasForeignKey(x => x.PlanId)
-               .OnDelete(DeleteBehavior.Restrict);
+            .WithMany()
+            .HasForeignKey(x => x.PlanId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(x => x.PaymentRecords)
-               .WithOne()
-               .HasForeignKey(x => x.SubscriptionId)
-               .OnDelete(DeleteBehavior.Cascade);
-               
+            .WithOne()
+            .HasForeignKey(x => x.SubscriptionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasMany(x => x.ReminderLogs)
-               .WithOne()
-               .HasForeignKey(x => x.SubscriptionId)
-               .OnDelete(DeleteBehavior.Cascade);
+            .WithOne()
+            .HasForeignKey(x => x.SubscriptionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(x => x.PendingCouponId)
+            .HasFilter("\"PendingCouponId\" IS NOT NULL");
     }
 }
 
@@ -96,10 +93,9 @@ public class PaymentRecordConfiguration : IEntityTypeConfiguration<PaymentRecord
     {
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Amount).HasPrecision(10, 2);
-        
         builder.HasIndex(x => x.ExternalReference)
-               .HasFilter("\"ExternalReference\" IS NOT NULL")
-               .IsUnique();
+            .HasFilter("\"ExternalReference\" IS NOT NULL")
+            .IsUnique();
     }
 }
 
@@ -108,16 +104,13 @@ public class CommunityReminderScheduleConfiguration : IEntityTypeConfiguration<C
     public void Configure(EntityTypeBuilder<CommunityReminderSchedule> builder)
     {
         builder.HasKey(x => x.Id);
-        
         builder.HasIndex(x => new { x.OrganizationId, x.DaysRelativeToDue });
-        
         builder.Property(x => x.TemplateId).IsRequired();
-
         builder.HasOne<CommunityPlan>()
-               .WithMany()
-               .HasForeignKey(x => x.PlanId)
-               .OnDelete(DeleteBehavior.SetNull)
-               .IsRequired(false);
+            .WithMany()
+            .HasForeignKey(x => x.PlanId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
     }
 }
 
@@ -126,7 +119,6 @@ public class ReminderDispatchLogConfiguration : IEntityTypeConfiguration<Reminde
     public void Configure(EntityTypeBuilder<ReminderDispatchLog> builder)
     {
         builder.HasKey(x => x.Id);
-        
         builder.HasIndex(x => new { x.SubscriptionId, x.ScheduleId, x.TargetRenewalDate }).IsUnique();
     }
 }
@@ -139,17 +131,17 @@ public class MessageTemplateConfiguration : IEntityTypeConfiguration<MessageTemp
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => x.OrganizationId);
 
-        var jsonOptions = new JsonSerializerOptions 
-        { 
+        var jsonOptions = new JsonSerializerOptions
+        {
             PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
         var stringListConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
             v => JsonSerializer.Serialize(v, jsonOptions),
             v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
         );
-        
+
         var stringListComparer = new ValueComparer<IReadOnlyCollection<string>>(
             (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
             c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -157,11 +149,11 @@ public class MessageTemplateConfiguration : IEntityTypeConfiguration<MessageTemp
         );
 
         builder.Property(x => x.RequiredVariables)
-               .HasConversion(stringListConverter, stringListComparer)
-               .HasColumnType("jsonb");
-               
+            .HasConversion(stringListConverter, stringListComparer)
+            .HasColumnType("jsonb");
+
         builder.Property(x => x.OptionalVariables)
-               .HasConversion(stringListConverter, stringListComparer)
-               .HasColumnType("jsonb");
+            .HasConversion(stringListConverter, stringListComparer)
+            .HasColumnType("jsonb");
     }
 }

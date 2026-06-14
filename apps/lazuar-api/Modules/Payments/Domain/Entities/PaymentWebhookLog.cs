@@ -8,17 +8,17 @@ namespace Modules.Payments.Domain.Entities;
 public class PaymentWebhookLog : Entity
 {
     public Guid Id { get; private set; }
-    
+
     /// <summary>
     /// The unique ID assigned to the webhook event by the provider (e.g., Stripe Event ID).
     /// </summary>
     public string EventId { get; private set; }
-    
+
     /// <summary>
     /// STRIPE, BILLPLZ, etc.
     /// </summary>
     public string Provider { get; private set; }
-    
+
     public DateTime ProcessedAt { get; private set; }
 
 #pragma warning disable CS8618 

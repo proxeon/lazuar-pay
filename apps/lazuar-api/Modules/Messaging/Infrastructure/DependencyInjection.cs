@@ -42,7 +42,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UseMessagingSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        
+
         eventBus.Subscribe<TenantProvisionedIntegrationEvent, TenantProvisionedIntegrationEventHandler>();
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();
         eventBus.Subscribe<WorkspaceUpdatedIntegrationEvent, WorkspaceUpdatedIntegrationEventHandler>();

@@ -30,6 +30,7 @@ public static class DependencyInjection
 
         services.AddScoped<IPaymentGatewayAdapter, StripeGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();
+        services.AddScoped<IPaymentGatewayAdapter, RazorpayGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>("PaymentsEventBus");
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddHostedService<PaymentsOutboxPublisherJob>();
 
         services.AddTransient<GatewayRefundRequestedIntegrationEventHandler>();
+        services.AddTransient<ExecuteOffSessionChargeIntegrationEventHandler>();
 
         return services;
     }
@@ -45,8 +47,9 @@ public static class DependencyInjection
     public static IApplicationBuilder UsePaymentsSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        
+
         eventBus.Subscribe<GatewayRefundRequestedIntegrationEvent, GatewayRefundRequestedIntegrationEventHandler>();
+        eventBus.Subscribe<ExecuteOffSessionChargeIntegrationEvent, ExecuteOffSessionChargeIntegrationEventHandler>();
 
         return app;
     }

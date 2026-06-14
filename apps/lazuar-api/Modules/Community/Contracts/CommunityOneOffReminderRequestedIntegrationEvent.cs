@@ -15,7 +15,7 @@ public record CommunityOneOffReminderRequestedIntegrationEvent(
     string RenewalLink) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
-    
+
     // Maintain outbox scheduling capability
     public DateTime OccurredOn { get; init; } = ScheduledAt ?? DateTime.UtcNow;
 }

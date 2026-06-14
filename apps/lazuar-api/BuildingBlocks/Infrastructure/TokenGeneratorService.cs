@@ -11,12 +11,12 @@ public class TokenGeneratorService : ITokenGeneratorService
         var bytes = new byte[length];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(bytes);
-        
+
         var plainToken = Convert.ToBase64String(bytes)
             .Replace("+", "-").Replace("/", "_").Replace("=", "");
 
         var hash = HashToken(plainToken);
-        
+
         return new GeneratedToken(plainToken, hash);
     }
 

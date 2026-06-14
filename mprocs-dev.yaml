@@ -1,4 +1,7 @@
 procs:
+  one-admin:
+    shell: cd apps/one-admin && pnpm dev
+    autostart: true
   one-page:
     shell: cd apps/one-page && pnpm dev
     autostart: true

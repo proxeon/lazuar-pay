@@ -39,7 +39,6 @@ tasks:
   # ==========================================
   # .NET API Tasks
   # ==========================================
-
   api:restore:
     desc: Restore the .NET API solution dependencies
     dir: apps/lazuar-api
@@ -53,6 +52,12 @@ tasks:
     cmds:
       - dotnet build Lazuar.slnx
 
+  api:test:
+    desc: Run .NET architecture and unit tests
+    dir: apps/lazuar-api
+    cmds:
+      - dotnet test tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj
+
   api:db:migrate:
     desc: Apply all pending migrations for all modular contexts sequentially
     dir: apps/lazuar-api/src/Lazuar.Api
@@ -62,6 +67,8 @@ tasks:
       - dotnet ef database update --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:init:
     desc: Generate the initial EF Core migrations for all core modules
@@ -72,6 +79,8 @@ tasks:
       - dotnet ef migrations add InitialCommunitySchema --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialPaymentsSchema --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialCrmSchema --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialOpsSchema --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialBillingSchema --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:
     desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"
@@ -84,16 +93,20 @@ tasks:
   # ==========================================
   # Ngrok Tunnel Tasks
   # ==========================================
+  tunnel:stop:
+    desc: Force kill any orphaned ngrok processes running in the background
+    cmds:
+      - pkill -9 ngrok || echo "No ngrok processes were running."
 
   tunnel:api:
-    desc: Start ngrok tunnel for the .NET API on port 8080 (rewrites host-headers)
+    desc: Start ngrok tunnel for the .NET API on port 8080
     cmds:
-      - ngrok http 8080 --host-header="localhost:8080"
+      - ngrok http 8080
 
   tunnel:fe:
-    desc: Start ngrok tunnel for Next.js community-page on port 3020 (rewrites host-headers)
+    desc: Start ngrok tunnel for Next.js community-page on port 3020
     cmds:
-      - ngrok http 3020 --host-header="localhost:3020"
+      - ngrok http 3020
 
   tunnel:status:
     desc: Query the local ngrok agent API to print active public tunnel URLs
@@ -102,9 +115,7 @@ tasks:
         echo "Querying active ngrok tunnels..."
         curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | sed 's/"public_url":"//' || echo "No active ngrok agents detected. Ensure ngrok is running."
 
-
   # ─── CODE GENERATION (TypeSpec -> OpenAPI -> Clients) ──────────────────────
-
   gen:
     desc: Run the full code-generation pipeline
     cmds:

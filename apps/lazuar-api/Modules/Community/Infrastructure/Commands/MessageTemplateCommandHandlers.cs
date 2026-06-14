@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Application.Commands;
@@ -28,10 +30,41 @@ public class UpdateMessageTemplateCommandHandler : ICommandHandler<UpdateMessage
             .FirstOrDefaultAsync(t => t.Id == request.TemplateId && t.OrganizationId == request.OrganizationId, cancellationToken);
 
         if (template == null) throw new InvalidOperationException("Template not found.");
-        
+
+        ValidateTemplateVariables(request.Subject, request.Body, template.RequiredVariables, template.OptionalVariables);
+
         template.UpdateContent(request.Subject, request.Body);
-        
+
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ValidateTemplateVariables(
+        string subject, 
+        string body, 
+        IEnumerable<string> requiredVariables, 
+        IEnumerable<string> optionalVariables)
+    {
+        var combinedText = $"{subject} {body}";
+
+        var extractedTags = Regex.Matches(combinedText, @"\{\{([a-zA-Z0-9_]+)\}\}")
+            .Select(m => m.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allowedVariables = new HashSet<string>(requiredVariables.Concat(optionalVariables), StringComparer.OrdinalIgnoreCase);
+
+        var unsupportedTags = extractedTags.Except(allowedVariables).ToList();
+        if (unsupportedTags.Any())
+        {
+            var joined = string.Join(", ", unsupportedTags);
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Unsupported variables detected: {joined}. Please use only the allowed tags for this template."));
+        }
+
+        var missingTags = requiredVariables.Except(extractedTags, StringComparer.OrdinalIgnoreCase).ToList();
+        if (missingTags.Any())
+        {
+            var joined = string.Join(", ", missingTags);
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Missing required variables: {joined}. You must include these tags in either the subject or body to ensure the message functions correctly."));
+        }
     }
 }
 
@@ -86,7 +119,7 @@ public class SendTestReminderCommandHandler : ICommandHandler<SendTestReminderCo
     private readonly IEventBus _eventBus;
 
     public SendTestReminderCommandHandler(
-        IMessageTemplateQueryService templateService, 
+        IMessageTemplateQueryService templateService,
         [FromKeyedServices("CommunityEventBus")] IEventBus eventBus)
     {
         _templateService = templateService;

@@ -31,7 +31,7 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
-                
+
                 var eventBus = scope.ServiceProvider.GetRequiredService<InMemoryEventBus>();
 
                 var entityType = db.Model.FindEntityType(typeof(OutboxMessage));

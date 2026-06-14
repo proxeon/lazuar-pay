@@ -14,20 +14,19 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public Guid ClientProfileId { get; private set; }
     public Guid PlanId { get; private set; }
     public Guid? PendingPlanId { get; private set; }
-
     public string Status { get; private set; }
     public DateTime? CurrentPeriodEnd { get; private set; }
     public DateTime? NextRenewalDate { get; private set; }
-
     public string Source { get; private set; }
     public string? PreferredChannel { get; private set; }
     public bool IsReminderOnly { get; private set; }
     public string? AdminNotes { get; private set; }
     public DateTime? RemindersPausedUntil { get; private set; }
-
     public string? PaymentGatewaySessionId { get; private set; }
     public string? GatewaySubscriptionId { get; private set; }
-
+    public Guid? PendingCouponId { get; private set; }
+    public string? VaultedCustomerId { get; private set; }
+    public string? VaultedTokenId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -42,7 +41,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
 #pragma warning restore CS8618
 
     public CommunitySubscription(
-        Guid organizationId, Guid clientProfileId, Guid planId, 
+        Guid organizationId, Guid clientProfileId, Guid planId,
         string source, bool isReminderOnly, string? preferredChannel, string? adminNotes = null)
     {
         Id = Guid.CreateVersion7();
@@ -55,6 +54,20 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         PreferredChannel = preferredChannel;
         AdminNotes = adminNotes;
         CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void StoreVaultedToken(string customerId, string tokenId)
+    {
+        VaultedCustomerId = customerId;
+        VaultedTokenId = tokenId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearVaultedToken()
+    {
+        VaultedCustomerId = null;
+        VaultedTokenId = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -75,12 +88,23 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void SetPendingCoupon(Guid? couponId)
+    {
+        PendingCouponId = couponId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearPendingCoupon()
+    {
+        PendingCouponId = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void Activate(
-        DateTime periodStart, DateTime periodEnd, decimal amount, 
+        DateTime periodStart, DateTime periodEnd, decimal amount,
         string currency, string paymentMethod, string? externalReference, string recordedBy, string? receiptUrl = null)
     {
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
-
         bool isFirstPayment = Status == "PENDING";
 
         if (PendingPlanId.HasValue)
@@ -95,14 +119,32 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
 
         var payment = new PaymentRecord(
-            Id, amount, currency, paymentMethod, externalReference, 
-            recordedBy, periodStart, periodEnd, 
-            isFirstPayment ? "Initial subscription payment" : "Renewal payment", 
+            Id, amount, currency, paymentMethod, externalReference,
+            recordedBy, periodStart, periodEnd,
+            isFirstPayment ? "Initial subscription payment" : "Renewal payment",
             receiptUrl);
 
         _paymentRecords.Add(payment);
-
         AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, isFirstPayment));
+    }
+
+    public void Reactivate(string recordedBy)
+    {
+        CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
+        Status = "ACTIVE";
+
+        var now = DateTime.UtcNow;
+        var periodEnd = now.AddDays(30);
+        CurrentPeriodEnd = periodEnd;
+        NextRenewalDate = periodEnd;
+        UpdatedAt = now;
+
+        var payment = new PaymentRecord(
+            Id, 0m, "MYR", "SYSTEM_REACTIVATION", null,
+            recordedBy, now, periodEnd, "Manual account reactivation");
+
+        _paymentRecords.Add(payment);
+        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, false));
     }
 
     public void ReplayActivationEvent()
@@ -113,7 +155,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public void MarkAsPastDue()
     {
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "PAST_DUE", IsReminderOnly));
-        
         Status = "PAST_DUE";
         UpdatedAt = DateTime.UtcNow;
     }
@@ -121,17 +162,14 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public void Cancel()
     {
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "CANCELLED", IsReminderOnly));
-
         Status = "CANCELLED";
         UpdatedAt = DateTime.UtcNow;
-
         AddDomainEvent(new SubscriptionCancelledDomainEvent(Id, OrganizationId, ClientProfileId));
     }
 
     public void Expire()
     {
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "EXPIRED", IsReminderOnly));
-
         Status = "EXPIRED";
         UpdatedAt = DateTime.UtcNow;
     }
@@ -139,11 +177,9 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public void Ban()
     {
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "BANNED", IsReminderOnly));
-
         Status = "BANNED";
         CurrentPeriodEnd = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
-
         AddDomainEvent(new SubscriptionBannedDomainEvent(Id, OrganizationId, ClientProfileId));
     }
 
@@ -155,7 +191,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public void RecordRefund(decimal refundAmount, string currency, string originalReference)
     {
         var negativeAmount = refundAmount > 0 ? -refundAmount : refundAmount;
-
         var refundRecord = new PaymentRecord(
             Id, negativeAmount, currency, "SYSTEM_REFUND", originalReference,
             "SYSTEM", DateTime.UtcNow, DateTime.UtcNow, "Refund processed");
@@ -186,7 +221,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         RemindersPausedUntil = pauseUntil;
         UpdatedAt = DateTime.UtcNow;
-
         AddDomainEvent(new SubscriptionRemindersPausedDomainEvent(Id, OrganizationId, ClientProfileId, pauseUntil));
     }
 
@@ -196,9 +230,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         PreferredChannel = preferredChannel;
         AdminNotes = adminNotes;
         if (nextRenewalDate.HasValue) NextRenewalDate = nextRenewalDate.Value;
-        
         UpdatedAt = DateTime.UtcNow;
-
         AddDomainEvent(new SubscriptionProfileUpdatedDomainEvent(Id, OrganizationId, ClientProfileId, isReminderOnly, preferredChannel, nextRenewalDate));
     }
 
@@ -213,7 +245,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         {
             throw new InvalidOperationException("Either a template ID or a custom message must be provided to send a reminder.");
         }
-
         if (string.IsNullOrWhiteSpace(channel))
         {
             throw new ArgumentException("Channel cannot be empty.", nameof(channel));
@@ -234,7 +265,6 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         {
             throw new InvalidOperationException("Either a template ID or a custom message must be provided to schedule a reminder.");
         }
-
         if (string.IsNullOrWhiteSpace(channel))
         {
             throw new ArgumentException("Channel cannot be empty.", nameof(channel));

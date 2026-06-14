@@ -9,16 +9,16 @@ namespace Modules.CRM.Infrastructure;
 public class CrmDbContext : PlatformDbContext
 {
     public DbSet<ClientProfileEntity> ClientProfiles { get; set; } = null!;
-    
+
     // Outbox/Inbox tables to satisfy platform job patterns
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
     public CrmDbContext(
-        DbContextOptions<CrmDbContext> options, 
-        IExecutionContextAccessor executionContext, 
-        IMediator mediator, 
-        DatabaseJobTrigger jobTrigger) 
+        DbContextOptions<CrmDbContext> options,
+        IExecutionContextAccessor executionContext,
+        IMediator mediator,
+        DatabaseJobTrigger jobTrigger)
         : base(options, executionContext, mediator, jobTrigger)
     {
     }
@@ -26,7 +26,7 @@ public class CrmDbContext : PlatformDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         // Isolate CRM context tables inside their own private schema
         modelBuilder.HasDefaultSchema("crm");
 
@@ -39,7 +39,7 @@ public class CrmDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.ProcessedAt, x.OccurredOn }).HasFilter("\"ProcessedAt\" IS NULL");
         });
-        
+
         modelBuilder.Entity<InboxMessage>(builder =>
         {
             builder.ToTable("InboxMessages");

@@ -1,7 +1,9 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/ExtendGracePeriodCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Grant a user extra time to pay before their account is suspended.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record ExtendGracePeriodCommand(Guid OrganizationId, Guid SubscriptionId, int Days) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

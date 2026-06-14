@@ -39,7 +39,7 @@ public class InMemoryEventBus : IEventBus, IEventBusSubscriptions
         foreach (var handlerType in handlers)
         {
             var handler = scope.ServiceProvider.GetRequiredService(handlerType);
-            
+
             // Retrieve the specific overload matching the exact concrete type of the event to prevent AmbiguousMatchException
             var method = handlerType.GetMethod("HandleAsync", new[] { @event.GetType() });
             if (method != null)
@@ -66,8 +66,8 @@ internal static class ConcurrentDictionaryExtensions
 {
     public static void AvoidDuplicateAdd(this ConcurrentDictionary<string, List<Type>> dict, string key, Type val)
     {
-        dict.AddOrUpdate(key, 
-            _ => new List<Type> { val }, 
+        dict.AddOrUpdate(key,
+            _ => new List<Type> { val },
             (_, list) => { lock (list) { if (!list.Contains(val)) list.Add(val); } return list; });
     }
 }

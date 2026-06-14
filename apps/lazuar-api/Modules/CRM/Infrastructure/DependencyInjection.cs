@@ -15,7 +15,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddCrmModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default") 
+        var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Default connection string was not found.");
 
         services.AddDbContext<CrmDbContext>(options =>
@@ -35,7 +35,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UseCrmSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        
+
         eventBus.Subscribe<GlobalUserProfileUpdatedIntegrationEvent, GlobalUserProfileUpdatedIntegrationEventHandler>();
 
         return app;

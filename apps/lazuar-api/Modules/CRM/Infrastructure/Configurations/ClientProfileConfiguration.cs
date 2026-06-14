@@ -9,11 +9,11 @@ public class ClientProfileConfiguration : IEntityTypeConfiguration<ClientProfile
     public void Configure(EntityTypeBuilder<ClientProfileEntity> builder)
     {
         builder.ToTable("ClientProfiles");
-        
+
         builder.HasKey(x => x.Id);
-        
+
         builder.HasIndex(x => new { x.OrganizationId, x.Email, x.Phone }).IsUnique();
-        
+
         // Index for fast lookup by Global Identity
         builder.HasIndex(x => x.GlobalUserId);
 

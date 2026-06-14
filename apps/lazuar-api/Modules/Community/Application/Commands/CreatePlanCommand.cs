@@ -1,9 +1,11 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/CreatePlanCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Domain.Aggregates;
 using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Generate a new product or subscription tier.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreatePlanCommand(
     Guid OrganizationId,
     string Slug,
@@ -33,7 +35,7 @@ public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
     private readonly ICommunitySubscriptionRepository _uow;
 
     public CreatePlanCommandHandler(
-        ICommunityPlanRepository planRepository, 
+        ICommunityPlanRepository planRepository,
         ICommunitySubscriptionRepository uow)
     {
         _planRepository = planRepository;
@@ -62,10 +64,10 @@ public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
             request.DisplayOrder,
             request.Methodology);
 
-        if (request.Features.Any())
+        if (request.Features != null && request.Features.Any())
             plan.UpdateFeatures(request.Features);
 
-        if (request.Faq.Any())
+        if (request.Faq != null && request.Faq.Any())
         {
             var faqs = request.Faq.Select(f => new FaqItem(f.Id, f.Question, f.Answer)).ToList();
             plan.UpdateFaq(faqs);

@@ -97,6 +97,12 @@ namespace Modules.Payments.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal>("EstimatedFeePercentage")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("FixedFee")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("GatewayType")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -110,6 +116,9 @@ namespace Modules.Payments.Infrastructure.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("numeric");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

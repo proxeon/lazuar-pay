@@ -28,14 +28,14 @@ public class MagicLinkTokenService : IMagicLinkTokenService
 
     public Guid? ValidateToken(string token)
     {
-        try 
+        try
         {
             var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(token));
             var parts = decoded.Split(':');
             if (parts.Length != 3) return null;
             if (!Guid.TryParse(parts[0], out var subId)) return null;
             if (!long.TryParse(parts[1], out var expiry)) return null;
-            
+
             var expectedHash = Convert.ToHexString(HMACSHA256.HashData(
                 Encoding.UTF8.GetBytes(_secret),
                 Encoding.UTF8.GetBytes($"{subId}:{expiry}"))).ToLowerInvariant();
@@ -44,10 +44,10 @@ public class MagicLinkTokenService : IMagicLinkTokenService
             if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expiry) return null;
 
             return subId;
-        } 
-        catch 
-        { 
-            return null; 
+        }
+        catch
+        {
+            return null;
         }
     }
 }

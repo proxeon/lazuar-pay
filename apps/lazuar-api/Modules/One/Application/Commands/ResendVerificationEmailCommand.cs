@@ -24,8 +24,8 @@ public class ResendVerificationEmailCommandHandler : ICommandHandler<ResendVerif
     public async Task Handle(ResendVerificationEmailCommand request, CancellationToken ct)
     {
         var user = await _repository.GetUserByEmailAsync(request.Email, ct);
-        
-        if (user == null || !user.IsActive || user.IsEmailVerified) 
+
+        if (user == null || !user.IsActive || user.IsEmailVerified)
             return;
 
         var token = _tokenGenerator.GenerateSecureToken();

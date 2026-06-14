@@ -1,8 +1,10 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/UpdateReminderScheduleCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Modify an existing global automated reminder schedule.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record UpdateReminderScheduleCommand(
     Guid OrganizationId,
     Guid ScheduleId,
@@ -38,7 +40,6 @@ public class UpdateReminderScheduleCommandHandler : ICommandHandler<UpdateRemind
         if (schedule == null || schedule.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Reminder schedule not found.");
 
-        // 1. Validate PlanId if the client wants to change it
         if (request.PlanId.HasValue && request.PlanId.Value != Guid.Empty)
         {
             var plan = await _planRepository.GetByIdAsync(request.PlanId.Value, ct);
@@ -48,7 +49,6 @@ public class UpdateReminderScheduleCommandHandler : ICommandHandler<UpdateRemind
             }
         }
 
-        // 2. Validate TemplateId within localized Community templates if changing
         if (request.TemplateId.HasValue)
         {
             var templates = await _templateService.GetTemplatesAsync(new[] { request.TemplateId.Value });
@@ -58,7 +58,6 @@ public class UpdateReminderScheduleCommandHandler : ICommandHandler<UpdateRemind
             }
         }
 
-        // 3. Update Domain Entity and save
         schedule.Update(
             request.PlanId ?? schedule.PlanId,
             request.TemplateId ?? schedule.TemplateId,

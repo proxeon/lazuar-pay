@@ -1,8 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -14,12 +19,22 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 {
     private const string ProductionApiUrl = "https://www.billplz.com/api/v3/";
     private const string SandboxApiUrl = "https://www.billplz-sandbox.com/api/v3/";
-
+    
     private readonly IHttpClientFactory _httpFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<BillplzGatewayAdapter> _logger;
 
     public string GatewayType => "BILLPLZ";
+
+    private static readonly HashSet<string> ExtraFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "paid_at", "transaction_id", "transaction_status"
+    };
+
+    private static readonly HashSet<string> AlwaysExclude = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "x_signature"
+    };
 
     public BillplzGatewayAdapter(
         IHttpClientFactory httpFactory,
@@ -34,34 +49,36 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
     public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
-        string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId)
+        string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false)
     {
         if (string.IsNullOrEmpty(merchantId))
         {
             return new GatewayCheckoutResult(false, null, null, "MerchantId (Collection ID) is required for Billplz.");
         }
 
+        if (setupFutureUsage)
+        {
+            _logger.LogWarning("Billplz does not support off-session tokenization. Proceeding with standard one-time checkout.");
+        }
+
         var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
         var isProd = apiBaseUrl.Contains("lazuar.com");
         var endpoint = isProd ? ProductionApiUrl : SandboxApiUrl;
 
-        // Billplz only allows two references. We map our metadata to them.
         metadata.TryGetValue("type", out var type);
         var ref1 = metadata.TryGetValue("subscription_id", out var subId) ? subId : tenantId.ToString();
+        var typeValue = type ?? "payment";
+        
+        var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}";
 
-        var queryParams = $"?type={Uri.EscapeDataString(type ?? "payment")}&subscription_id={Uri.EscapeDataString(ref1)}";
-        var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}{queryParams}";
-
-        // FIX: Billplz API strictly rejects 'localhost' in callback_url.
-        // If testing locally without ngrok, replace with a dummy domain so checkout UI doesn't crash.
-        // (Webhooks won't arrive locally, but the user can successfully reach the payment page to verify flow).
         if (webhookUrl.Contains("localhost"))
         {
             webhookUrl = webhookUrl.Replace("localhost", "lazuar-local-dev.com");
         }
 
-        var amountCents = (int)(amount * 100);
+        webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&subscription_id={Uri.EscapeDataString(ref1)}";
 
+        var amountCents = (int)(amount * 100);
         var payload = new Dictionary<string, object>
         {
             ["collection_id"] = merchantId,
@@ -74,7 +91,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             ["reference_1_label"] = "Reference",
             ["reference_1"] = ref1,
             ["reference_2_label"] = "Type",
-            ["reference_2"] = type ?? "payment",
+            ["reference_2"] = typeValue,
         };
 
         try
@@ -96,7 +113,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
             using var doc = JsonDocument.Parse(responseBody);
             var root = doc.RootElement;
-
             var billUrl = root.TryGetProperty("url", out var urlEl) ? urlEl.GetString() : null;
             var billId = root.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
 
@@ -115,7 +131,8 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
     }
 
     public Task<GatewayWebhookParsedResult> ParseWebhookAsync(
-        string webhookSecret, string rawBody, Dictionary<string, string> headers)
+        string apiKey, string webhookSecret, string rawBody, Dictionary<string, string> headers,
+        decimal estimatedFeePercentage = 0, decimal fixedFee = 0, decimal taxRate = 0)
     {
         try
         {
@@ -123,19 +140,19 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
             if (!formData.TryGetValue("x_signature", out var providedSignature) || string.IsNullOrEmpty(providedSignature))
             {
-                return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), "Missing x_signature in Billplz callback."));
+                _logger.LogWarning("Missing x_signature in Billplz callback.");
+                return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing x_signature in Billplz callback."));
             }
 
-            // Strategy 1: Include extra fields in signature computation
-            var computedSig = ComputeHmac(formData, webhookSecret, excludeExtra: false);
+            var computedSigWithExtra = ComputeHmac(formData, webhookSecret, excludeExtra: false);
 
-            if (!string.Equals(providedSignature, computedSig, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(providedSignature, computedSigWithExtra, StringComparison.OrdinalIgnoreCase))
             {
-                // Strategy 2: Exclude extra fields
-                computedSig = ComputeHmac(formData, webhookSecret, excludeExtra: true);
-                if (!string.Equals(providedSignature, computedSig, StringComparison.OrdinalIgnoreCase))
+                var computedSigWithoutExtra = ComputeHmac(formData, webhookSecret, excludeExtra: true);
+                if (!string.Equals(providedSignature, computedSigWithoutExtra, StringComparison.OrdinalIgnoreCase))
                 {
-                    return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), "Billplz x_signature verification failed."));
+                    _logger.LogWarning("Billplz x_signature verification failed.");
+                    return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Billplz x_signature verification failed."));
                 }
             }
 
@@ -148,36 +165,59 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             var isPaid = paid.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                          state.Equals("paid", StringComparison.OrdinalIgnoreCase);
 
-            // Extract metadata from custom Query headers appended by the API webhook router endpoint
-            var reference1 = headers.GetValueOrDefault("Query-subscription_id", "");
-            var reference2 = headers.GetValueOrDefault("Query-type", "");
+            var reference1 = formData.GetValueOrDefault("reference_1", "");
+            if (string.IsNullOrEmpty(reference1) && headers.TryGetValue("Query-subscription_id", out var qsSubId))
+            {
+                reference1 = qsSubId;
+            }
 
-            // Reconstruct the metadata dictionary
+            var reference2 = formData.GetValueOrDefault("reference_2", "");
+            if (string.IsNullOrEmpty(reference2) && headers.TryGetValue("Query-type", out var qsType))
+            {
+                reference2 = qsType;
+            }
+
             var metadata = new Dictionary<string, string>();
             if (!string.IsNullOrEmpty(reference2)) metadata["type"] = reference2;
             if (!string.IsNullOrEmpty(reference1)) metadata["subscription_id"] = reference1;
 
+            decimal gatewayFee = (paidAmountMyr * (estimatedFeePercentage / 100m)) + fixedFee;
+            if (gatewayFee < 0) gatewayFee = 0;
+            
+            decimal taxAmount = 0; 
+            decimal netAmount = paidAmountMyr - gatewayFee;
+
             return Task.FromResult(new GatewayWebhookParsedResult(
                 Verified: true,
                 EventType: isPaid ? "PAYMENT_COMPLETED" : "PAYMENT_FAILED",
-                EventId: billId, 
+                EventId: billId,
                 AmountPaid: paidAmountMyr,
                 Currency: "MYR",
                 GatewayTransactionId: billId,
                 Metadata: metadata,
+                GatewayFee: gatewayFee,
+                TaxAmount: taxAmount,
+                NetAmount: netAmount,
+                FxRate: 1,
+                BaseCurrency: "MYR",
                 Error: null
             ));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to parse Billplz webhook");
-            return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), ex.Message));
+            return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message));
         }
+    }
+
+    public Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt)
+    {
+        throw new NotSupportedException("Billplz does not support vaulted token off-session charges.");
     }
 
     public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
     {
-        _logger.LogWarning("Billplz does not support automated API refunds. Transaction {TransactionId} must be refunded manually via the Billplz Dashboard.", transactionId);
+        _logger.LogWarning("Billplz does not support automated API refunds. Process manually.");
         return Task.FromResult(false);
     }
 
@@ -188,11 +228,13 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
     private static string ComputeHmac(Dictionary<string, string> formData, string secretKey, bool excludeExtra)
     {
-        var extraFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "paid_at", "transaction_id", "transaction_status" };
-
         var elements = formData
-            .Where(kv => !string.Equals(kv.Key, "x_signature", StringComparison.OrdinalIgnoreCase))
-            .Where(kv => !(excludeExtra && extraFields.Contains(kv.Key)))
+            .Where(kv =>
+            {
+                if (AlwaysExclude.Contains(kv.Key)) return false;
+                if (excludeExtra && ExtraFields.Contains(kv.Key)) return false;
+                return true;
+            })
             .Select(kv => $"{kv.Key}{kv.Value}")
             .OrderBy(element => element, StringComparer.Ordinal)
             .ToList();
@@ -201,11 +243,11 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var keyBytes = Encoding.UTF8.GetBytes(secretKey);
         var dataBytes = Encoding.UTF8.GetBytes(sourceString);
         var hash = HMACSHA256.HashData(keyBytes, dataBytes);
-
+        
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
-    private static Dictionary<string, string> ParseFormBody(string body)
+    internal static Dictionary<string, string> ParseFormBody(string body)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrEmpty(body)) return result;

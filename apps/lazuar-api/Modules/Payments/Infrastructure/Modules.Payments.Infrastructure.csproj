@@ -12,6 +12,7 @@
     
     <!-- Gateways -->
     <PackageReference Include="Stripe.net" />
+    <PackageReference Include="Razorpay" />
     <!-- Force secure version resolution -->
     <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>

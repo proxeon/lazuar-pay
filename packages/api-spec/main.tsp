@@ -2,20 +2,22 @@ import "@typespec/http";
 import "@typespec/openapi";
 import "@typespec/openapi3";
 
-// 1. Core/Shared Types
 import "./common/models.tsp";
 
-// 2. One Module (Replaces Auth and Tenant)
 import "./modules/one/models.tsp";
 import "./modules/one/routes.tsp";
 
-// 3. Messaging Module
 import "./modules/messaging/models.tsp";
 
-// 4. Community Module
 import "./modules/community/models.tsp";
 import "./modules/community/admin-routes.tsp";
 import "./modules/community/public-routes.tsp";
+
+import "./modules/ops/models.tsp";
+import "./modules/ops/routes.tsp";
+
+import "./modules/billing/models.tsp";
+import "./modules/billing/routes.tsp";
 
 using TypeSpec.Http;
 

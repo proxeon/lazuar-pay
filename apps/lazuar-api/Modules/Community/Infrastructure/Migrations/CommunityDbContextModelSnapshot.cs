@@ -85,6 +85,113 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.ToTable("OutboxMessages", "community");
                 });
 
+            modelBuilder.Entity("Modules.Community.Domain.Aggregates.BroadcastCampaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool?>("TargetIsReminderOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("TargetPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("TotalRecipients")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Status");
+
+                    b.ToTable("BroadcastCampaigns", "community");
+                });
+
+            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunityCoupon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxUses")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MinimumOriginalPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReservedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("Coupons", "community");
+                });
+
             modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunityPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -243,6 +350,9 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.Property<string>("PaymentGatewaySessionId")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("PendingCouponId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("PendingPlanId")
                         .HasColumnType("uuid");
 
@@ -266,11 +376,20 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("VaultedCustomerId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VaultedTokenId")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClientProfileId");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("PendingCouponId")
+                        .HasFilter("\"PendingCouponId\" IS NOT NULL");
 
                     b.HasIndex("PlanId");
 

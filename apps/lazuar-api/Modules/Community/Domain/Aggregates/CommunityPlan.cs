@@ -19,12 +19,12 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public string LongDescription { get; private set; }
     public decimal Price { get; private set; }
     public string Interval { get; private set; }
-    
+
     private readonly List<string> _features = new();
     public IReadOnlyCollection<string> Features => _features.AsReadOnly();
-    
+
     public string Methodology { get; private set; }
-    
+
     private readonly List<FaqItem> _faq = new();
     public IReadOnlyCollection<FaqItem> Faq => _faq.AsReadOnly();
 
@@ -44,9 +44,9 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
 #pragma warning restore CS8618
 
     public CommunityPlan(
-        Guid organizationId, string slug, string name, string audience, 
-        string shortDescription, string longDescription, decimal price, 
-        string interval, int gracePeriodDays, int? maxCapacity, int displayOrder, 
+        Guid organizationId, string slug, string name, string audience,
+        string shortDescription, string longDescription, decimal price,
+        string interval, int gracePeriodDays, int? maxCapacity, int displayOrder,
         string methodology)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
@@ -70,8 +70,8 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     }
 
     public void UpdateDetails(
-        string name, string audience, string shortDesc, string longDesc, 
-        decimal price, string interval, int gracePeriodDays, int? maxCapacity, 
+        string name, string audience, string shortDesc, string longDesc,
+        decimal price, string interval, int gracePeriodDays, int? maxCapacity,
         int displayOrder, bool isActive, string methodology)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));

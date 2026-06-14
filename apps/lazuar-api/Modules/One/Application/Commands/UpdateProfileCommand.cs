@@ -22,7 +22,7 @@ public class UpdateProfileCommandHandler : ICommandHandler<UpdateProfileCommand>
         if (user == null || !user.IsActive) throw new InvalidOperationException("User not found or inactive.");
 
         user.UpdateProfile(request.Name);
-        
+
         await _repository.SaveChangesAsync(ct);
     }
 }

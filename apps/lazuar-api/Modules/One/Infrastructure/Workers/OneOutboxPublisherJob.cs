@@ -6,7 +6,7 @@ namespace Modules.One.Infrastructure.Workers;
 
 public class OneOutboxPublisherJob : OutboxPublisherJob<OneDbContext>
 {
-    public OneOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<OneOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger) 
+    public OneOutboxPublisherJob(IServiceScopeFactory scopeFactory, ILogger<OneOutboxPublisherJob> logger, DatabaseJobTrigger jobTrigger)
         : base(scopeFactory, logger, jobTrigger)
     {
     }

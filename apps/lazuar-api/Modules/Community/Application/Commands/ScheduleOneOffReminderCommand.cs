@@ -1,7 +1,9 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/ScheduleOneOffReminderCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Schedule a message to be sent to a user in the future.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record ScheduleOneOffReminderCommand(
     Guid OrganizationId,
     Guid SubscriptionId,

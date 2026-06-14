@@ -18,11 +18,11 @@ public class WorkspaceUpdatedEventHandler : INotificationHandler<WorkspaceUpdate
     public async Task Handle(WorkspaceUpdatedIntegrationEvent notification, CancellationToken cancellationToken)
     {
         var replica = await _repository.GetByIdAsync(notification.OrganizationId);
-        
+
         if (replica != null)
         {
             replica.Update(notification.Name, notification.Slug, replica.IsActive);
-            
+
             _repository.Update(replica);
             await _repository.SaveChangesAsync();
         }

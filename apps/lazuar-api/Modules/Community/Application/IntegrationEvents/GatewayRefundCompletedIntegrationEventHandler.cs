@@ -15,7 +15,7 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
     public async Task HandleAsync(GatewayRefundCompletedIntegrationEvent @event)
     {
         var subscription = await _repository.GetByIdAsync(@event.SubscriptionId);
-        
+
         if (subscription == null || subscription.OrganizationId != @event.OrganizationId)
             return;
 

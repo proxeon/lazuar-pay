@@ -1,7 +1,9 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/SendOneOffReminderCommand.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Instantly send a custom message to a specific subscriber.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record SendOneOffReminderCommand(
     Guid OrganizationId,
     Guid SubscriptionId,

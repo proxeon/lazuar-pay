@@ -3,7 +3,7 @@ using Lazuar.ApiTypes;
 
 namespace Modules.Community.Application.Queries;
 
-public record GetPortalSubscriptionQuery(Guid OrganizationId, Guid SubscriptionId) 
+public record GetPortalSubscriptionQuery(Guid OrganizationId, Guid SubscriptionId)
     : IQuery<CommunitySubscriptionDto?>;
 
 public class GetPortalSubscriptionQueryHandler : IQueryHandler<GetPortalSubscriptionQuery, CommunitySubscriptionDto?>

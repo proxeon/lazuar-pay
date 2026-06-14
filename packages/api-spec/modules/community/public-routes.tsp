@@ -21,6 +21,14 @@ interface PublicCommunityOperations {
     @path slug: string,
   ): CommunityPlanDto | LazuarApi.Core.ProblemDetailsResponse;
 
+  @get
+  @route("/{tenantSlug}/validate-coupon")
+  validateCoupon(
+    @path tenantSlug: string,
+    @query code: string,
+    @query plan_slug: string,
+  ): ValidateCouponResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
   @post
   @route("/checkout")
   initiateCheckout(

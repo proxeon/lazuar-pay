@@ -72,3 +72,4 @@ plan/
 ctx.ignore
 system-architecture
 bash
+dump/

@@ -1,7 +1,12 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Manually register an offline or cash payment and force the subscription to active status.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record RecordSubscriptionPaymentCommand(
     Guid OrganizationId,
     Guid SubscriptionId,
@@ -19,13 +24,16 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
 {
     private readonly ICommunitySubscriptionRepository _subscriptionRepository;
     private readonly ICommunityPlanRepository _planRepository;
+    private readonly ICommunityCouponRepository _couponRepository;
 
     public RecordSubscriptionPaymentCommandHandler(
-        ICommunitySubscriptionRepository subscriptionRepository, 
-        ICommunityPlanRepository planRepository)
+        ICommunitySubscriptionRepository subscriptionRepository,
+        ICommunityPlanRepository planRepository,
+        ICommunityCouponRepository couponRepository)
     {
         _subscriptionRepository = subscriptionRepository;
         _planRepository = planRepository;
+        _couponRepository = couponRepository;
     }
 
     public async Task Handle(RecordSubscriptionPaymentCommand request, CancellationToken ct)
@@ -38,27 +46,35 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
         if (plan == null)
             throw new InvalidOperationException("Plan not found.");
 
-        // Calculate billing periods
         var now = DateTime.UtcNow;
         var intervalDays = plan.Interval == "yr" ? 365 : 30;
-        
-        var baseDate = (subscription.CurrentPeriodEnd.HasValue && subscription.CurrentPeriodEnd.Value > now) 
-            ? subscription.CurrentPeriodEnd.Value 
+        var baseDate = (subscription.CurrentPeriodEnd.HasValue && subscription.CurrentPeriodEnd.Value > now)
+            ? subscription.CurrentPeriodEnd.Value
             : now;
-            
+
         var periodStart = now;
         var periodEnd = baseDate.AddDays(intervalDays);
 
-        // Execute domain logic
         subscription.Activate(
-            periodStart, 
-            periodEnd, 
-            request.Amount, 
-            request.Currency, 
-            request.PaymentMethod, 
-            request.ExternalReference, 
-            request.RecordedBy, 
+            periodStart,
+            periodEnd,
+            request.Amount,
+            request.Currency,
+            request.PaymentMethod,
+            request.ExternalReference,
+            request.RecordedBy,
             request.ReceiptUrl);
+
+        if (subscription.PendingCouponId.HasValue)
+        {
+            var coupon = await _couponRepository.GetByIdAsync(subscription.PendingCouponId.Value, ct);
+            if (coupon != null)
+            {
+                coupon.ConfirmReservation();
+                _couponRepository.Update(coupon);
+            }
+            subscription.ClearPendingCoupon();
+        }
 
         await _subscriptionRepository.SaveChangesAsync(ct);
     }

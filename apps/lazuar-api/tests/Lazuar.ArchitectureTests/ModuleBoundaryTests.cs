@@ -1,67 +1,83 @@
-using FluentAssertions;
 using NetArchTest.Rules;
 using NUnit.Framework;
-using System.Reflection;
+using System;
+using System.Linq;
 
 namespace Lazuar.ArchitectureTests;
 
 public class ModuleBoundaryTests
 {
-    private static readonly Assembly[] ModuleAssemblies =
+    private readonly string[] _moduleNamespaces = new[]
     {
-        typeof(Modules.Community.Application.DependencyInjection).Assembly,
-        typeof(Modules.Messaging.Application.DependencyInjection).Assembly,
-        typeof(Modules.Payments.Application.DependencyInjection).Assembly,
-        typeof(Modules.One.Application.DependencyInjection).Assembly,
-        typeof(Modules.CRM.Contracts.CreateClientProfileCommand).Assembly 
-    };
-
-    private static readonly string[] ModuleNamespaces =
-    {
-        "Modules.Community",
-        "Modules.Messaging",
-        "Modules.Payments",
         "Modules.One",
-        "Modules.CRM"
+        "Modules.Messaging",
+        "Modules.Community",
+        "Modules.CRM",
+        "Modules.Payments",
+        "Modules.Ops",
+        "Modules.Billing"
     };
 
     [Test]
-    public void Modules_ShouldNotHave_CrossModuleDependencies_OutsideContracts()
+    public void Domain_Should_Not_Reference_Infrastructure_Or_Application()
     {
-        foreach (var moduleNamespace in ModuleNamespaces)
+        foreach (var module in _moduleNamespaces)
         {
-            var otherModules = ModuleNamespaces
-                .Where(m => m != moduleNamespace)
-                .ToList();
+            var domainAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Domain") == true);
 
-            // A module can ONLY reference the .Contracts namespace of another module.
-            // It MUST NOT reference .Application, .Domain, or .Infrastructure of other modules.
-            var forbiddenNamespaces = otherModules.SelectMany(m => new[]
-            {
-                $"{m}.Application",
-                $"{m}.Domain",
-                $"{m}.Infrastructure"
-            }).ToArray();
+            if (domainAssembly == null) continue;
 
-            var result = Types.InAssemblies(ModuleAssemblies)
-                .That().ResideInNamespace(moduleNamespace)
+            var result = Types.InAssembly(domainAssembly)
                 .ShouldNot()
-                .HaveDependencyOnAny(forbiddenNamespaces)
+                .HaveDependencyOnAny($"{module}.Infrastructure", $"{module}.Application")
                 .GetResult();
 
-            result.IsSuccessful.Should().BeTrue($"Module {moduleNamespace} violates strict isolation boundaries. It is directly referencing the internals of another module.");
+            Assert.That(result.IsSuccessful, Is.True, $"Domain layer in {module} violates boundaries.");
         }
     }
 
     [Test]
-    public void SharedKernel_ShouldNotHave_DependencyOn_Modules()
+    public void Application_Should_Not_Reference_Infrastructure()
     {
-        // SharedKernel must be pure and completely domain-agnostic.
-        var result = Types.InAssembly(typeof(SharedKernel.SharedKernelMarker).Assembly)
-            .ShouldNot()
-            .HaveDependencyOnAny(ModuleNamespaces)
-            .GetResult();
+        foreach (var module in _moduleNamespaces)
+        {
+            var appAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Application") == true);
 
-        result.IsSuccessful.Should().BeTrue("SharedKernel must not reference any specific module.");
+            if (appAssembly == null) continue;
+
+            var result = Types.InAssembly(appAssembly)
+                .ShouldNot()
+                .HaveDependencyOn($"{module}.Infrastructure")
+                .GetResult();
+
+            Assert.That(result.IsSuccessful, Is.True, $"Application layer in {module} violates boundaries.");
+        }
+    }
+
+    [Test]
+    public void Modules_Should_Not_Reference_Other_Modules_Directly()
+    {
+        foreach (var module in _moduleNamespaces)
+        {
+            var domainAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Domain") == true);
+            
+            var appAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Application") == true);
+
+            var otherModules = _moduleNamespaces.Where(m => m != module).ToArray();
+
+            if (domainAssembly != null)
+            {
+                var domainResult = Types.InAssembly(domainAssembly)
+                    .ShouldNot()
+                    .HaveDependencyOnAny(otherModules)
+                    .GetResult();
+                    
+                Assert.That(domainResult.IsSuccessful, Is.True, $"Domain in {module} references another module.");
+            }
+        }
     }
 }

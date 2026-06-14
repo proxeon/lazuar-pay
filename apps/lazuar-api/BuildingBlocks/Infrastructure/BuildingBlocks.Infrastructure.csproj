@@ -15,5 +15,6 @@
     <PackageReference Include="Dapper" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="OpenAI" />
   </ItemGroup>
 </Project>

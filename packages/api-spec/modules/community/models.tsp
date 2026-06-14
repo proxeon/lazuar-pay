@@ -1,7 +1,7 @@
 namespace LazuarApi.Community;
 
 model FaqItemDto {
-  id: string;
+  id: string; // GUID
   question: string;
   answer: string;
 }
@@ -47,6 +47,8 @@ model CommunitySubscriptionDto {
   current_period_end?: utcDateTime;
   next_billing_date?: utcDateTime;
   days_overdue?: int32;
+  vaulted_customer_id?: string;
+  vaulted_token_id?: string;
   created_at: utcDateTime;
 }
 
@@ -121,6 +123,21 @@ model PaymentConfigDto {
   webhook_secret?: string;
   secret_key?: string;
   is_active: boolean;
+  estimated_fee_percentage: float64;
+  fixed_fee: float64;
+  tax_rate: float64;
+}
+
+model SavePaymentConfigRequestDto {
+  gateway_type: string;
+  api_key?: string;
+  collection_id?: string;
+  webhook_secret?: string;
+  secret_key?: string;
+  is_active: boolean;
+  estimated_fee_percentage?: float64;
+  fixed_fee?: float64;
+  tax_rate?: float64;
 }
 
 model CreatePlanRequestDto {
@@ -228,21 +245,14 @@ model UpdateReminderScheduleRequestDto {
   is_enabled?: boolean;
 }
 
-model SavePaymentConfigRequestDto {
-  gateway_type: string;
-  api_key?: string;
-  collection_id?: string;
-  webhook_secret?: string;
-  secret_key?: string;
-  is_active: boolean;
-}
-
 model PublicCheckoutRequestDto {
   tenant_slug: string;
   plan_slug: string;
   name: string;
   email: string;
   phone: string;
+  is_guest_checkout?: boolean;
+  coupon_code?: string;
 }
 
 model MagicLinkRequestDto {
@@ -251,6 +261,14 @@ model MagicLinkRequestDto {
 
 model CheckoutResponse {
   url: string;
+  is_zero_amount_bypass?: boolean;
+}
+
+model ValidateCouponResponseDto {
+  is_valid: boolean;
+  discount_amount: float64;
+  final_price: float64;
+  error_message?: string;
 }
 
 model PortalDataResponse {
@@ -258,7 +276,7 @@ model PortalDataResponse {
 }
 
 model CancelPortalRequest {
-  subscription_id: string;
+  subscription_id: string; // GUID
 }
 
 model MessageTemplateDto {
@@ -299,4 +317,25 @@ model RefundRequestDto {
 
 model BillingLinkResponseDto {
   url: string;
+}
+
+model CouponDto {
+  id: string; // GUID
+  code: string;
+  discount_type: string;
+  amount: float64;
+  max_uses: int32;
+  used_count: int32;
+  reserved_count: int32;
+  minimum_original_price: float64;
+  expires_at?: utcDateTime;
+}
+
+model CreateCouponRequestDto {
+  code: string;
+  discount_type: string;
+  amount: float64;
+  max_uses: int32;
+  minimum_original_price?: float64;
+  expires_at?: utcDateTime;
 }

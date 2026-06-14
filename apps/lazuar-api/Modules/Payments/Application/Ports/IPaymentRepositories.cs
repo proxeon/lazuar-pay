@@ -12,7 +12,7 @@ public interface IPaymentWebhookLogRepository
 {
     Task<bool> HasBeenProcessedAsync(string eventId, string provider, CancellationToken ct = default);
     void Add(PaymentWebhookLog log);
-    
+
     /// <summary>
     /// Saves changes to the database, committing both the log and the outbox messages transactionally.
     /// </summary>

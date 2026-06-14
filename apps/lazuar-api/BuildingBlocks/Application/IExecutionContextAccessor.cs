@@ -6,4 +6,5 @@ public interface IExecutionContextAccessor
     Guid UserId { get; }
     string UserRole { get; }
     bool IsSystemAdmin { get; }
+    string AuditSignature { get; }
 }

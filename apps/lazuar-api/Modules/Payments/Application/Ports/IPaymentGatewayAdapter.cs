@@ -7,45 +7,66 @@ namespace Modules.Payments.Application.Ports;
 public record GatewayCheckoutResult(bool Success, string? CheckoutUrl, string? SessionId, string? Error);
 
 public record GatewayWebhookParsedResult(
-    bool Verified, 
-    string EventType, 
-    string EventId, 
-    decimal AmountPaid, 
-    string Currency, 
-    string? GatewayTransactionId, 
-    Dictionary<string, string> Metadata, 
-    string? Error);
+    bool Verified,
+    string EventType,
+    string EventId,
+    decimal AmountPaid,
+    string Currency,
+    string? GatewayTransactionId,
+    Dictionary<string, string> Metadata,
+    decimal GatewayFee,
+    decimal TaxAmount,
+    decimal NetAmount,
+    decimal FxRate,
+    string BaseCurrency,
+    string? Error,
+    string? GatewayCustomerId = null,
+    string? GatewayTokenId = null);
 
 public interface IPaymentGatewayAdapter
 {
     string GatewayType { get; }
     
     Task<GatewayCheckoutResult> GenerateCheckoutAsync(
-        string apiKey, 
-        Guid tenantId, 
-        decimal amount, 
-        string currency, 
+        string apiKey,
+        Guid tenantId,
+        decimal amount,
+        string currency,
         string productName,
         string customerEmail,
-        string successUrl, 
-        string cancelUrl, 
+        string successUrl,
+        string cancelUrl,
         Dictionary<string, string> metadata,
-        string? merchantId);
+        string? merchantId,
+        bool setupFutureUsage = false);
         
     Task<GatewayWebhookParsedResult> ParseWebhookAsync(
+        string apiKey,
         string webhookSecret,
-        string rawBody, 
-        Dictionary<string, string> headers);
-
+        string rawBody,
+        Dictionary<string, string> headers,
+        decimal estimatedFeePercentage = 0,
+        decimal fixedFee = 0,
+        decimal taxRate = 0);
+        
     Task<bool> IssueRefundAsync(
-        string apiKey, 
-        string transactionId, 
+        string apiKey,
+        string transactionId,
         decimal amount);
-
+        
     Task<string> GenerateCustomerPortalAsync(
-        string apiKey, 
-        string customerEmail, 
+        string apiKey,
+        string customerEmail,
         string returnUrl);
+
+    Task<bool> ChargeOffSessionAsync(
+        string apiKey,
+        string customerId,
+        string tokenId,
+        decimal amount,
+        string currency,
+        string description,
+        string receipt);
 }
 
 public interface IPaymentGatewayFactory

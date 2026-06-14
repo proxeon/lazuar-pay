@@ -8,7 +8,7 @@ export default async function CatalogPage({ params }: { params: Promise<{ tenant
   
   const { data: plans, error } = await serverClient.GET("/public/community/{tenantSlug}/plans", {
     params: { path: { tenantSlug: resolvedParams.tenantSlug } },
-    next: { revalidate: 60 } // Cache and revalidate every 60 seconds
+    cache: "no-store" // Bypass Next.js cache completely for real-time updates
   });
 
   if (error || !plans) {

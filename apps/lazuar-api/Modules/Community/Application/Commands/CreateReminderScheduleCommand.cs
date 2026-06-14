@@ -1,9 +1,11 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/CreateReminderScheduleCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Domain.Aggregates;
 using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Add a new global automated reminder schedule.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreateReminderScheduleCommand(
     Guid OrganizationId,
     Guid? PlanId,
@@ -34,7 +36,6 @@ public class CreateReminderScheduleCommandHandler : ICommandHandler<CreateRemind
 
     public async Task<Guid> Handle(CreateReminderScheduleCommand request, CancellationToken ct)
     {
-        // 1. Validate PlanId (if provided)
         if (request.PlanId.HasValue && request.PlanId.Value != Guid.Empty)
         {
             var plan = await _planRepository.GetByIdAsync(request.PlanId.Value, ct);
@@ -44,14 +45,12 @@ public class CreateReminderScheduleCommandHandler : ICommandHandler<CreateRemind
             }
         }
 
-        // 2. Validate TemplateId within localized Community templates
         var templates = await _templateService.GetTemplatesAsync(new[] { request.TemplateId });
         if (!templates.Any())
         {
             throw new InvalidOperationException("Template not found in Community module.");
         }
 
-        // 3. Construct and save the Aggregate
         var schedule = new CommunityReminderSchedule(
             request.OrganizationId,
             request.PlanId,

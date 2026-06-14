@@ -23,32 +23,51 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(c => c.OrganizationId == request.OrganizationId && c.GatewayType == request.GatewayType.ToUpperInvariant(), ct);
 
+        var finalApiKey = string.IsNullOrEmpty(request.ApiKey) || request.ApiKey.Contains("••••") 
+            ? config?.ApiKey 
+            : request.ApiKey.Trim();
+
+        var finalWebhookSecret = string.IsNullOrEmpty(request.WebhookSecret) || request.WebhookSecret.Contains("••••") 
+            ? config?.WebhookSecret 
+            : request.WebhookSecret.Trim();
+
+        var finalSecretKey = string.IsNullOrEmpty(request.SecretKey) || request.SecretKey.Contains("••••") 
+            ? config?.ApiKey // In Stripe, SecretKey replaces ApiKey
+            : request.SecretKey.Trim();
+            
+        var finalMerchantId = string.IsNullOrEmpty(request.MerchantId) || request.MerchantId.Contains("••••") 
+            ? config?.MerchantId 
+            : request.MerchantId.Trim();
+
+        var resolvedGatewayKey = request.GatewayType.ToUpperInvariant() == "STRIPE" ? finalSecretKey : finalApiKey;
+
         if (config == null)
         {
             config = new TenantPaymentConfiguration(
                 request.OrganizationId,
                 request.GatewayType,
-                request.ApiKey,
-                request.WebhookSecret,
-                request.MerchantId,
-                request.IsActive);
-
+                resolvedGatewayKey,
+                finalWebhookSecret,
+                finalMerchantId,
+                request.IsActive,
+                request.EstimatedFeePercentage,
+                request.FixedFee,
+                request.TaxRate);
             _context.TenantPaymentConfigurations.Add(config);
         }
         else
         {
-            var finalApiKey = string.IsNullOrEmpty(request.ApiKey) || request.ApiKey.Contains("••••") ? config.ApiKey : request.ApiKey.Trim();
-            var finalWebhookSecret = string.IsNullOrEmpty(request.WebhookSecret) || request.WebhookSecret.Contains("••••") ? config.WebhookSecret : request.WebhookSecret.Trim();
-            var finalSecretKey = string.IsNullOrEmpty(request.SecretKey) || request.SecretKey.Contains("••••") ? config.ApiKey : request.SecretKey.Trim();
-
             config.UpdateCredentials(
                 request.GatewayType,
-                request.GatewayType == "STRIPE" ? finalSecretKey : finalApiKey,
+                resolvedGatewayKey,
                 finalWebhookSecret,
-                request.MerchantId,
-                request.IsActive);
+                finalMerchantId,
+                request.IsActive,
+                request.EstimatedFeePercentage,
+                request.FixedFee,
+                request.TaxRate);
         }
-
+        
         await _context.SaveChangesAsync(ct);
     }
 }

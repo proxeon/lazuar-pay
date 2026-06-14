@@ -1,7 +1,6 @@
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
-
 using TypeSpec.Http;
 
 namespace LazuarApi.Community;
@@ -206,4 +205,14 @@ interface AdminCommunityOperations {
   testReminder(
     @body body: TestReminderRequestDto,
   ): TestReminderResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/coupons")
+  getCoupons(): CouponDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/coupons")
+  createCoupon(
+    @body body: CreateCouponRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

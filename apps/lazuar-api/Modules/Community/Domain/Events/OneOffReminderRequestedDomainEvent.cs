@@ -12,7 +12,7 @@ public record OneOffReminderRequestedDomainEvent(
     DateTime? ScheduledAt = null) : IDomainEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
-    
+
     // Allow future scheduling for the Outbox Job Queue
     public DateTime OccurredOn { get; init; } = ScheduledAt ?? DateTime.UtcNow;
 }

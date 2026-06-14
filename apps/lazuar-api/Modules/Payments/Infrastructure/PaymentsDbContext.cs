@@ -11,16 +11,16 @@ public class PaymentsDbContext : PlatformDbContext
 {
     public DbSet<TenantPaymentConfiguration> TenantPaymentConfigurations { get; set; } = null!;
     public DbSet<PaymentWebhookLog> PaymentWebhookLogs { get; set; } = null!;
-    
+
     // Platform Box pattern tables
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
 
     public PaymentsDbContext(
-        DbContextOptions<PaymentsDbContext> options, 
-        IExecutionContextAccessor executionContext, 
-        IMediator mediator, 
-        DatabaseJobTrigger jobTrigger) 
+        DbContextOptions<PaymentsDbContext> options,
+        IExecutionContextAccessor executionContext,
+        IMediator mediator,
+        DatabaseJobTrigger jobTrigger)
         : base(options, executionContext, mediator, jobTrigger)
     {
     }
@@ -28,7 +28,7 @@ public class PaymentsDbContext : PlatformDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.HasDefaultSchema("payments");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PaymentsDbContext).Assembly);
 
@@ -39,7 +39,7 @@ public class PaymentsDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.ProcessedAt, x.OccurredOn }).HasFilter("\"ProcessedAt\" IS NULL");
         });
-        
+
         modelBuilder.Entity<InboxMessage>(builder =>
         {
             builder.ToTable("InboxMessages");

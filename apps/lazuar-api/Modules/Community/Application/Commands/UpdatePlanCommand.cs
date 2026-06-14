@@ -1,8 +1,10 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/UpdatePlanCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Application.Commands;
 
+[AgentTool("Modify pricing, descriptions, or capacity limits of an existing plan.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record UpdatePlanCommand(
     Guid OrganizationId,
     Guid PlanId,
@@ -29,7 +31,7 @@ public record UpdatePlanCommand(
 public class UpdatePlanCommandHandler : ICommandHandler<UpdatePlanCommand>
 {
     private readonly ICommunityPlanRepository _planRepository;
-    private readonly ICommunitySubscriptionRepository _uow; // Shared Unit of Work / SaveChanges
+    private readonly ICommunitySubscriptionRepository _uow;
 
     public UpdatePlanCommandHandler(ICommunityPlanRepository planRepository, ICommunitySubscriptionRepository uow)
     {
@@ -78,7 +80,7 @@ public class UpdatePlanCommandHandler : ICommandHandler<UpdatePlanCommand>
         if (request.TelegramInviteLink != null || request.WeeklyMeetingLink != null)
         {
             plan.SetFulfillmentLinks(
-                request.TelegramInviteLink ?? plan.TelegramInviteLink, 
+                request.TelegramInviteLink ?? plan.TelegramInviteLink,
                 request.WeeklyMeetingLink ?? plan.WeeklyMeetingLink);
         }
 

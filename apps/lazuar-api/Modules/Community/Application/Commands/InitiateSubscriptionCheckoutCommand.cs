@@ -1,15 +1,21 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
 using Modules.Payments.Contracts.Queries;
 using Modules.CRM.Contracts;
+using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
 
 public record InitiateSubscriptionCheckoutCommand(
-    Guid OrganizationId, 
+    Guid OrganizationId,
     Guid SubscriptionId,
     string SuccessUrl,
-    string CancelUrl) : ICommand<string>
+    string CancelUrl,
+    string? CouponCode = null) : ICommand<string>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -18,17 +24,20 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
 {
     private readonly ICommunitySubscriptionRepository _repository;
     private readonly ICommunityPlanRepository _planRepository;
+    private readonly ICommunityCouponRepository _couponRepository;
     private readonly ICrmQueryService _crmQueryService;
     private readonly IMediator _mediator;
 
     public InitiateSubscriptionCheckoutCommandHandler(
         ICommunitySubscriptionRepository repository,
         ICommunityPlanRepository planRepository,
+        ICommunityCouponRepository couponRepository,
         ICrmQueryService crmQueryService,
         IMediator mediator)
     {
         _repository = repository;
         _planRepository = planRepository;
+        _couponRepository = couponRepository;
         _crmQueryService = crmQueryService;
         _mediator = mediator;
     }
@@ -36,7 +45,6 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
     public async Task<string> Handle(InitiateSubscriptionCheckoutCommand request, CancellationToken ct)
     {
         var subscription = await _repository.GetByIdAsync(request.SubscriptionId, ct);
-        
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Subscription not found.");
 
@@ -44,34 +52,72 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         if (plan == null)
             throw new InvalidOperationException("Plan not found.");
 
-        // 1. Update Domain State (Drops Abandoned Cart Event to Outbox)
         subscription.InitiateCheckout();
+
+        decimal finalPrice = plan.Price;
+        CommunityCoupon? appliedCoupon = null;
+
+        if (!string.IsNullOrWhiteSpace(request.CouponCode))
+        {
+            var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
+            if (coupon == null) throw new InvalidOperationException("Invalid coupon code.");
+
+            coupon.Validate(plan.Price);
+            coupon.Reserve();
+            subscription.SetPendingCoupon(coupon.Id);
+            appliedCoupon = coupon;
+
+            _couponRepository.Update(coupon);
+            finalPrice = plan.Price - coupon.CalculateDiscount(plan.Price);
+            if (finalPrice < 0) finalPrice = 0;
+        }
+
         await _repository.SaveChangesAsync(ct);
 
-        // 2. Fetch Customer Data via CRM Read Model (Cross-module query without DB Join)
-        var customerProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
-        var customerEmail = customerProfile?.Email ?? "";
+        if (finalPrice <= 0 && appliedCoupon != null)
+        {
+            var periodStart = DateTime.UtcNow;
+            var intervalDays = plan.Interval == "yr" ? 365 : 30;
+            var periodEnd = periodStart.AddDays(intervalDays);
 
-        // 3. Cross-Module Query to get the Checkout URL synchronously
+            subscription.Activate(
+                periodStart,
+                periodEnd,
+                0m,
+                "MYR",
+                "COUPON_100_OFF",
+                null,
+                "SYSTEM");
+
+            appliedCoupon.ConfirmReservation();
+            subscription.ClearPendingCoupon();
+
+            await _repository.SaveChangesAsync(ct);
+            return request.SuccessUrl;
+        }
+
+        var customerProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
+
         var metadata = new Dictionary<string, string>
         {
             ["type"] = "community_subscription",
-            ["subscription_id"] = subscription.Id.ToString()
+            ["subscription_id"] = subscription.Id.ToString(),
+            ["customer_name"] = customerProfile?.FullName ?? "",
+            ["customer_phone"] = customerProfile?.Phone ?? ""
         };
 
         var query = new GenerateCheckoutSessionQuery(
             request.OrganizationId,
-            plan.Price,
-            "MYR", // Currency can be hardcoded or fetched from Org settings
-            plan.Name, // Pre-fill Product Name
-            customerEmail, // Pre-fill Customer Email
+            finalPrice,
+            "MYR",
+            plan.Name,
+            customerProfile?.Email ?? "",
             request.SuccessUrl,
             request.CancelUrl,
-            metadata);
+            metadata,
+            SetupFutureUsage: true);
 
-        // Ask the Payments module for the URL
         var checkoutUrl = await _mediator.Send(query, ct);
-
         return checkoutUrl;
     }
 }
