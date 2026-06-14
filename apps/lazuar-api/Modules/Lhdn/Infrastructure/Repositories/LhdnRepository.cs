@@ -28,6 +28,12 @@ public class LhdnRepository : ILhdnRepository
         return await _context.TaxDocuments.FirstOrDefaultAsync(d => d.Id == id, ct);
     }
 
+    public async Task<TaxDocument?> GetTaxDocumentByInternalIdAsync(Guid organizationId, string internalReferenceId, CancellationToken ct = default)
+    {
+        return await _context.TaxDocuments
+            .FirstOrDefaultAsync(d => d.OrganizationId == organizationId && d.InternalReferenceId == internalReferenceId, ct);
+    }
+
     public void AddTaxDocument(TaxDocument document)
     {
         _context.TaxDocuments.Add(document);

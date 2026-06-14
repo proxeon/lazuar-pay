@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Billing.Contracts.Events;
+using Modules.Payments.Contracts.Events;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Infrastructure.EventHandlers;
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddSingleton<ILhdnLinkService, LhdnLinkService>();
 
         services.AddTransient<InvoiceIssuedIntegrationEventHandler>();
+        services.AddTransient<GatewayRefundCompletedIntegrationEventHandler>();
 
         services.AddHostedService<LhdnSubmissionJob>();
         services.AddHostedService<LhdnStatusPollingJob>();
@@ -56,6 +58,7 @@ public static class DependencyInjection
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedIntegrationEventHandler>();
+        eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedIntegrationEventHandler>();
 
         return app;
     }

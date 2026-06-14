@@ -11,6 +11,8 @@ public interface ILhdnRepository
     Task<LhdnTenantConfig?> GetTenantConfigAsync(Guid organizationId, CancellationToken ct = default);
     
     Task<TaxDocument?> GetTaxDocumentAsync(Guid id, CancellationToken ct = default);
+    Task<TaxDocument?> GetTaxDocumentByInternalIdAsync(Guid organizationId, string internalReferenceId, CancellationToken ct = default);
+
     void AddTaxDocument(TaxDocument document);
     
     Task<IEnumerable<WebhookSubscription>> GetActiveWebhooksAsync(Guid organizationId, CancellationToken ct = default);

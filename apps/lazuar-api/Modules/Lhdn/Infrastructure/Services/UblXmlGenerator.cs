@@ -11,7 +11,7 @@ public class UblXmlGenerator : IUblXmlGenerator
     private const string CacNamespace = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
     private const string CbcNamespace = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
 
-    public XmlDocument GenerateInvoiceXml(SubmitDocumentRequestDto request)
+    public XmlDocument GenerateInvoiceXml(SubmitDocumentRequestDto request, string? originalUuid = null)
     {
         var doc = new XmlDocument();
         var root = doc.CreateElement("Invoice", InvoiceNamespace);
@@ -29,12 +29,19 @@ public class UblXmlGenerator : IUblXmlGenerator
         
         root.AppendChild(CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
 
+        if (!string.IsNullOrEmpty(originalUuid))
+        {
+            var billingRef = doc.CreateElement("cac", "BillingReference", CacNamespace);
+            var addDocRef = doc.CreateElement("cac", "AdditionalDocumentReference", CacNamespace);
+            addDocRef.AppendChild(CreateCbcElement(doc, "ID", originalUuid));
+            billingRef.AppendChild(addDocRef);
+            root.AppendChild(billingRef);
+        }
+
         root.AppendChild(BuildSupplierParty(doc));
         root.AppendChild(BuildCustomerParty(doc, request));
         
-        // Add root level TaxTotal
         root.AppendChild(BuildTaxTotal(doc, request.Total_excluding_tax, request.Total_tax));
-
         root.AppendChild(BuildLegalMonetaryTotal(doc, request));
 
         for (int i = 0; i < request.Items.Count; i++)
@@ -158,7 +165,7 @@ public class UblXmlGenerator : IUblXmlGenerator
         taxSubtotal.AppendChild(subTaxAmount);
 
         var taxCategory = doc.CreateElement("cac", "TaxCategory", CacNamespace);
-        taxCategory.AppendChild(CreateCbcElement(doc, "ID", "06")); // 06 = Not Applicable
+        taxCategory.AppendChild(CreateCbcElement(doc, "ID", "06"));
         taxCategory.AppendChild(CreateCbcElement(doc, "TaxExemptionReason", "Not subject to tax"));
         
         var taxScheme = doc.CreateElement("cac", "TaxScheme", CacNamespace);
@@ -207,7 +214,6 @@ public class UblXmlGenerator : IUblXmlGenerator
         extAmount.SetAttribute("currencyID", "MYR");
         line.AppendChild(extAmount);
 
-        // Add line level TaxTotal
         line.AppendChild(BuildTaxTotal(doc, item.Subtotal, item.Tax_amount));
 
         var cacItem = doc.CreateElement("cac", "Item", CacNamespace);
