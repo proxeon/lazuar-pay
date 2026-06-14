@@ -91,7 +91,8 @@ public class LhdnStatusPollingJob : BackgroundService
                     }
                     else if (result.Status == "INVALID")
                     {
-                        var errorMessage = "Validation failed at LHDN. " + result.ErrorMessage;
+                        // Use the extracted error message from the details API
+                        var errorMessage = result.ErrorMessage ?? "Validation failed at LHDN.";
                         doc.MarkAsInvalid(errorMessage);
 
                         await mediator.Send(new DispatchExternalWebhookCommand(

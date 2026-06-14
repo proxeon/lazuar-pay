@@ -122,7 +122,6 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
             var firstReject = rejectedDocs[0];
             if (firstReject.TryGetProperty("error", out var errObj))
             {
-                // Attempt to grab the deeply nested "details[0].message" which contains the actual reason
                 string rejectMessage = "Validation Error";
                 if (errObj.TryGetProperty("details", out var errDetails) && errDetails.GetArrayLength() > 0)
                 {
@@ -156,6 +155,8 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         var response = await client.SendAsync(request, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
+        _logger.LogInformation("LHDN Polling Response: {Response}", responseBody);
+
         if (!response.IsSuccessStatusCode)
         {
             return new LhdnDocumentStatusResult(false, null, null, null, responseBody);
@@ -180,6 +181,53 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
             }
         }
 
-        return new LhdnDocumentStatusResult(true, status?.ToUpperInvariant(), uuid, longId, null);
+        string? errorMessage = null;
+
+        if (status?.Equals("Invalid", StringComparison.OrdinalIgnoreCase) == true && !string.IsNullOrEmpty(uuid))
+        {
+            var detailsReq = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/documents/{uuid}/details");
+            detailsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var detailsRes = await client.SendAsync(detailsReq, ct);
+            var detailsBody = await detailsRes.Content.ReadAsStringAsync(ct);
+            
+            _logger.LogInformation("LHDN Validation Details: {Details}", detailsBody);
+
+            try
+            {
+                var detailsJson = JsonDocument.Parse(detailsBody);
+                if (detailsJson.RootElement.TryGetProperty("validationResults", out var valRes) &&
+                    valRes.TryGetProperty("validationSteps", out var valSteps))
+                {
+                    var errors = new List<string>();
+                    foreach (var step in valSteps.EnumerateArray())
+                    {
+                        if (step.TryGetProperty("status", out var stepStatus) && stepStatus.GetString() == "Invalid")
+                        {
+                            if (step.TryGetProperty("error", out var errObj))
+                            {
+                                // We extract the inner error message if available
+                                if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
+                                {
+                                    errors.Add(innerArr[0].GetProperty("message").GetString()!);
+                                }
+                                else if (errObj.TryGetProperty("message", out var errMsg))
+                                {
+                                    errors.Add(errMsg.GetString()!);
+                                }
+                            }
+                        }
+                    }
+                    if (errors.Count > 0)
+                        errorMessage = string.Join(" | ", errors);
+                }
+            }
+            catch { }
+            
+            // If the extraction logic misses it, just dump the raw JSON so we can read it!
+            if (string.IsNullOrEmpty(errorMessage))
+                errorMessage = detailsBody;
+        }
+
+        return new LhdnDocumentStatusResult(true, status?.ToUpperInvariant(), uuid, longId, errorMessage);
     }
 }
