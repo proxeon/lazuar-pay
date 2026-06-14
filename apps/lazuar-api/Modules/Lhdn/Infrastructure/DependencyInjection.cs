@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
+using Modules.Lhdn.Infrastructure.Gateways;
 using Modules.Lhdn.Infrastructure.Services;
-using System.Security.Cryptography.Xml;
 
 namespace Modules.Lhdn.Infrastructure;
 
@@ -12,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<ICertificateVaultService, CertificateVaultService>();
         services.AddScoped<IXmlSignatureService, XmlSignatureService>();
         services.AddScoped<IUblXmlGenerator, UblXmlGenerator>();
+        services.AddScoped<ILhdnGatewayAdapter, LhdnGatewayAdapter>();
 
         return services;
     }
