@@ -58,6 +58,10 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             request.Name,
             request.Email,
             request.Phone,
+            null,
+            null,
+            null,
+            null,
             request.GlobalUserId);
 
         var profileId = await _mediator.Send(profileCommand, ct);

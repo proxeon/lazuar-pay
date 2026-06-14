@@ -8,10 +8,6 @@ using Modules.Lhdn.Application.Commands;
 
 namespace Modules.Lhdn.Infrastructure.EventHandlers;
 
-/// <summary>
-/// Listens for finalized invoices from the Billing module and maps them into LHDN submission commands.
-/// Transforms internal billing concepts into the strict UBL API contract.
-/// </summary>
 public class InvoiceIssuedIntegrationEventHandler : IIntegrationEventHandler<InvoiceIssuedIntegrationEvent>
 {
     private readonly IMediator _mediator;
@@ -26,18 +22,18 @@ public class InvoiceIssuedIntegrationEventHandler : IIntegrationEventHandler<Inv
         var payload = new SubmitDocumentRequestDto
         {
             Internal_id = @event.InvoiceNumber,
-            Document_type = "01",
+            Document_type = SubmitDocumentRequestDtoDocument_type._01,
             Issue_date = new DateTimeOffset(@event.IssueDate),
             Buyer_name = "Resolved via CRM",
             Buyer_tin = "IG1234567890", 
-            Buyer_id_type = "BRN",
+            Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
             Buyer_id_value = "202001012345",
             Buyer_address = new LhdnAddressDto 
             { 
                 Line1 = "Address Line 1", 
                 City = "Kuala Lumpur", 
                 Postal_code = "50000", 
-                State_code = "14", 
+                State_code = LhdnAddressDtoState_code._14, 
                 Country_code = "MYS" 
             },
             Items = new List<LhdnItemDto> 
@@ -50,7 +46,8 @@ public class InvoiceIssuedIntegrationEventHandler : IIntegrationEventHandler<Inv
                     Unit_price = (double)@event.Amount, 
                     Tax_rate = 0, 
                     Tax_amount = 0, 
-                    Subtotal = (double)@event.Amount 
+                    Subtotal = (double)@event.Amount,
+                    Tax_type_code = LhdnItemDtoTax_type_code._06
                 } 
             },
             Total_excluding_tax = (double)@event.Amount,

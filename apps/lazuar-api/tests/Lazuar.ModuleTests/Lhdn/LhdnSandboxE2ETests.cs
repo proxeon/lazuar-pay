@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Memory;
@@ -54,7 +55,8 @@ public class LhdnSandboxE2ETests
         var token = await _adapter.GetTokenAsync(Guid.NewGuid(), _clientId, _clientSecret, false, null);
         var knownSubmissionUid = Environment.GetEnvironmentVariable("LHDN_KNOWN_SUBMISSION_UID") ?? "mock_uid";
 
-        var result = await _adapter.GetDocumentStatusAsync(token, knownSubmissionUid);
+        // Fix 3: Passed the missing 'clientId', 'isIntermediary', and 'tenantTin' parameters
+        var result = await _adapter.GetDocumentStatusAsync(_clientId, token, knownSubmissionUid, false, null, CancellationToken.None);
 
         result.Success.Should().BeTrue();
         result.Status.Should().NotBeNullOrWhiteSpace();

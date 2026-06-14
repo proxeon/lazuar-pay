@@ -25,7 +25,7 @@ public class UblXmlGenerator : IUblXmlGenerator
         root.AppendChild(CreateCbcElement(doc, "IssueDate", request.Issue_date.ToString("yyyy-MM-dd")));
         root.AppendChild(CreateCbcElement(doc, "IssueTime", request.Issue_date.ToString("HH:mm:ssZ")));
         
-        var invoiceTypeCode = CreateCbcElement(doc, "InvoiceTypeCode", request.Document_type);
+        var invoiceTypeCode = CreateCbcElement(doc, "InvoiceTypeCode", request.Document_type.ToString() ?? "01");
         invoiceTypeCode.SetAttribute("listVersionID", "1.0"); 
         root.AppendChild(invoiceTypeCode);
         
@@ -118,14 +118,14 @@ public class UblXmlGenerator : IUblXmlGenerator
 
         var partyId2 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
         var id2 = CreateCbcElement(doc, "ID", isB2c ? "NA" : request.Buyer_id_value);
-        id2.SetAttribute("schemeID", isB2c ? "BRN" : request.Buyer_id_type);
+        id2.SetAttribute("schemeID", isB2c ? "BRN" : request.Buyer_id_type.ToString() ?? "BRN");
         partyId2.AppendChild(id2);
         cacParty.AppendChild(partyId2);
 
         var postalAddress = doc.CreateElement("cac", "PostalAddress", CacNamespace);
         postalAddress.AppendChild(CreateCbcElement(doc, "CityName", isB2c ? "NA" : request.Buyer_address.City));
         postalAddress.AppendChild(CreateCbcElement(doc, "PostalZone", isB2c ? "00000" : request.Buyer_address.Postal_code));
-        postalAddress.AppendChild(CreateCbcElement(doc, "CountrySubentityCode", isB2c ? "17" : request.Buyer_address.State_code));
+        postalAddress.AppendChild(CreateCbcElement(doc, "CountrySubentityCode", isB2c ? "17" : request.Buyer_address.State_code.ToString() ?? "17"));
 
         var addressLine = doc.CreateElement("cac", "AddressLine", CacNamespace);
         addressLine.AppendChild(CreateCbcElement(doc, "Line", isB2c ? "NA" : request.Buyer_address.Line1));
@@ -223,7 +223,7 @@ public class UblXmlGenerator : IUblXmlGenerator
         extAmount.SetAttribute("currencyID", "MYR");
         line.AppendChild(extAmount);
 
-        line.AppendChild(BuildTaxTotal(doc, item.Subtotal, item.Tax_amount, item.Tax_type_code));
+        line.AppendChild(BuildTaxTotal(doc, item.Subtotal, item.Tax_amount, item.Tax_type_code.ToString() ?? "06"));
 
         var cacItem = doc.CreateElement("cac", "Item", CacNamespace);
         cacItem.AppendChild(CreateCbcElement(doc, "Description", item.Description));
@@ -235,7 +235,7 @@ public class UblXmlGenerator : IUblXmlGenerator
         cacItem.AppendChild(commodity);
 
         var classifiedTax = doc.CreateElement("cac", "ClassifiedTaxCategory", CacNamespace);
-        classifiedTax.AppendChild(CreateCbcElement(doc, "ID", item.Tax_type_code));
+        classifiedTax.AppendChild(CreateCbcElement(doc, "ID", item.Tax_type_code.ToString() ?? "06"));
         var taxScheme = doc.CreateElement("cac", "TaxScheme", CacNamespace);
         taxScheme.AppendChild(CreateCbcElement(doc, "ID", "OTH"));
         classifiedTax.AppendChild(taxScheme);

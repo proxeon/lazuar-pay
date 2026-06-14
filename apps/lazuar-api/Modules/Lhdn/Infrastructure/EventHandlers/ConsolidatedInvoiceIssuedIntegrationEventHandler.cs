@@ -23,18 +23,18 @@ public class ConsolidatedInvoiceIssuedIntegrationEventHandler : IIntegrationEven
         var payload = new SubmitDocumentRequestDto
         {
             Internal_id = @event.InternalReferenceId,
-            Document_type = "01",
+            Document_type = SubmitDocumentRequestDtoDocument_type._01,
             Issue_date = new DateTimeOffset(@event.IssueDate),
             Buyer_name = "General Public",
             Buyer_tin = "EI00000000010",
-            Buyer_id_type = "BRN",
+            Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
             Buyer_id_value = "NA",
             Buyer_address = new LhdnAddressDto
             {
                 Line1 = "NA",
                 City = "NA",
                 Postal_code = "00000",
-                State_code = "17",
+                State_code = LhdnAddressDtoState_code._17,
                 Country_code = "MYS"
             },
             Items = @event.Items.Select(i => new LhdnItemDto
@@ -46,7 +46,7 @@ public class ConsolidatedInvoiceIssuedIntegrationEventHandler : IIntegrationEven
                 Tax_rate = (double)i.TaxRate,
                 Tax_amount = (double)i.TaxAmount,
                 Subtotal = (double)i.Subtotal,
-                Tax_type_code = i.TaxTypeCode
+                Tax_type_code = Enum.Parse<LhdnItemDtoTax_type_code>("_" + i.TaxTypeCode)
             }).ToList(),
             Total_excluding_tax = (double)@event.TotalExcludingTax,
             Total_tax = (double)@event.TotalTax,

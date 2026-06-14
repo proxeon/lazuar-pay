@@ -74,18 +74,18 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
             var payload = new SubmitDocumentRequestDto
             {
                 Internal_id = creditNoteInternalId,
-                Document_type = "02",
+                Document_type = SubmitDocumentRequestDtoDocument_type._02,
                 Issue_date = DateTimeOffset.UtcNow,
                 Buyer_name = "Resolved via CRM",
                 Buyer_tin = "IG1234567890",
-                Buyer_id_type = "BRN",
+                Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
                 Buyer_id_value = "202001012345",
                 Buyer_address = new LhdnAddressDto 
                 { 
                     Line1 = "Address Line 1", 
                     City = "Kuala Lumpur", 
                     Postal_code = "50000", 
-                    State_code = "14", 
+                    State_code = LhdnAddressDtoState_code._14, 
                     Country_code = "MYS" 
                 },
                 Items = new List<LhdnItemDto>
@@ -99,7 +99,7 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
                         Tax_rate = 0, 
                         Tax_amount = 0, 
                         Subtotal = (double)@event.RefundedAmount, 
-                        Tax_type_code = "06" 
+                        Tax_type_code = LhdnItemDtoTax_type_code._06 
                     }
                 },
                 Total_excluding_tax = (double)@event.RefundedAmount,

@@ -102,7 +102,7 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         {
             ["type"] = "community_subscription",
             ["subscription_id"] = subscription.Id.ToString(),
-            ["customer_name"] = customerProfile?.FullName ?? "",
+            ["customer_name"] = customerProfile?.Full_name ?? "",
             ["customer_phone"] = customerProfile?.Phone ?? ""
         };
 

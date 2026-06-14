@@ -36,7 +36,9 @@ public class LhdnRateLimitingTests
         var gatewayMock = Substitute.For<ILhdnGatewayAdapter>();
         gatewayMock.GetTokenAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns("mock_token");
-        gatewayMock.SubmitDocumentAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            
+        // Fix 1: Passed the missing 'clientId', 'isIntermediary', and 'tenantTin' parameter signatures
+        gatewayMock.SubmitDocumentAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new LhdnSubmissionResult(true, "sub_123", "uuid_123", null));
 
         var vaultMock = Substitute.For<ICertificateVaultService>();
@@ -53,7 +55,11 @@ public class LhdnRateLimitingTests
             var db = scope.ServiceProvider.GetRequiredService<LhdnDbContext>();
             var orgId = Guid.CreateVersion7();
             
-            db.TenantConfigs.Add(new LhdnTenantConfig(orgId, false));
+            // Fix 2: Used the updated TenantConfig constructor fields 
+            // (organizationId, intermediaryMode, supplierTin, idType, idValue, environment, msicCode)
+            var config = new LhdnTenantConfig(orgId, false, "C1234567890", "BRN", "202401234567", "SANDBOX", "62010");
+            config.UpdateApiCredentials("mock_client_id", "mock_client_secret");
+            db.TenantConfigs.Add(config);
             
             for (int i = 0; i < 150; i++)
             {
@@ -62,11 +68,7 @@ public class LhdnRateLimitingTests
             await db.SaveChangesAsync();
         }
 
-        // Mock the configuration so the job can "read" the Client ID and Secret
         var configMock = Substitute.For<IConfiguration>();
-        configMock["Lhdn:ClientId"].Returns("mock_client_id");
-        configMock["Lhdn:ClientSecret"].Returns("mock_client_secret");
-
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
         var job = new LhdnSubmissionJob(scopeFactory, NullLogger<LhdnSubmissionJob>.Instance, configMock);
 

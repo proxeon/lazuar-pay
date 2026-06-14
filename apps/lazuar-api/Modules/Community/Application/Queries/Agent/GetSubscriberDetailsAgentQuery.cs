@@ -67,7 +67,7 @@ public class GetSubscriberDetailsAgentQueryHandler : IQueryHandler<GetSubscriber
             plan.Interval,
             subscription.NextRenewalDate,
             subscription.CurrentPeriodEnd,
-            profile.FullName,
+            profile.Full_name,
             profile.Email,
             profile.Phone,
             subscription.AdminNotes,

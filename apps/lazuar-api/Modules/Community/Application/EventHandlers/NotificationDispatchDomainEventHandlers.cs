@@ -11,7 +11,6 @@ using Modules.Community.Application.Queries;
 using Modules.CRM.Contracts;
 using Modules.Messaging.Contracts;
 
-// Alias to prevent ambiguity
 using ILocalMessageTemplateQueryService = Modules.Community.Application.Queries.IMessageTemplateQueryService;
 
 namespace Modules.Community.Application.EventHandlers;
@@ -62,7 +61,6 @@ public class NotificationDispatchDomainEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        // FIX: Use EF Repositories instead of Dapper so we can read uncommitted data
         var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
         if (sub == null) return;
 
@@ -74,7 +72,7 @@ public class NotificationDispatchDomainEventHandlers :
 
         var variables = new Dictionary<string, string>
         {
-            ["customer_name"] = profile.FullName,
+            ["customer_name"] = profile.Full_name,
             ["business_name"] = "Our Community",
             ["plan_name"] = plan.Name,
             ["group_link"] = plan.TelegramInviteLink ?? "",
@@ -83,7 +81,7 @@ public class NotificationDispatchDomainEventHandlers :
         };
 
         var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Active";
-        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.FullName}, your subscription to {plan.Name} is now active.";
+        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active.";
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, template?.Channel ?? "EMAIL"));
     }
@@ -103,14 +101,14 @@ public class NotificationDispatchDomainEventHandlers :
 
         var variables = new Dictionary<string, string>
         {
-            ["customer_name"] = profile.FullName,
+            ["customer_name"] = profile.Full_name,
             ["business_name"] = "Our Community",
             ["plan_name"] = plan.Name,
             ["current_period_end"] = sub.CurrentPeriodEnd?.ToString("dd MMM yyyy") ?? "the end of your billing cycle"
         };
 
         var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Cancelled";
-        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.FullName}, your subscription has been cancelled.";
+        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, your subscription has been cancelled.";
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, template?.Channel ?? "EMAIL"));
     }
@@ -135,7 +133,7 @@ public class NotificationDispatchDomainEventHandlers :
 
         var variables = new Dictionary<string, string>
         {
-            ["customer_name"] = profile.FullName,
+            ["customer_name"] = profile.Full_name,
             ["business_name"] = "Our Community",
             ["plan_name"] = plan.Name,
             ["renewal_link"] = renewalLink
@@ -152,7 +150,7 @@ public class NotificationDispatchDomainEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var body = $"Hi {profile.FullName},<br><br>Click the link below to access your subscriber portal to manage or cancel your subscription. This link expires in 24 hours.<br><br><a href=\"{notification.MagicLinkUrl}\">Access Portal</a><br><br>— Lazuar Support";
+        var body = $"Hi {profile.Full_name},<br><br>Click the link below to access your subscriber portal to manage or cancel your subscription. This link expires in 24 hours.<br><br><a href=\"{notification.MagicLinkUrl}\">Access Portal</a><br><br>— Lazuar Support";
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, "Your Subscriber Portal Access", body, "EMAIL"));
     }
@@ -178,21 +176,21 @@ public class NotificationDispatchDomainEventHandlers :
 
         if (!string.IsNullOrWhiteSpace(notification.CustomMessage))
         {
-            body = $"Hi {profile.FullName},<br><br>{notification.CustomMessage.Replace("\n", "<br>")}";
+            body = $"Hi {profile.Full_name},<br><br>{notification.CustomMessage.Replace("\n", "<br>")}";
         }
         else if (notification.TemplateId.HasValue)
         {
             var template = (await _templateService.GetTemplatesAsync(new[] { notification.TemplateId.Value })).FirstOrDefault();
             var variables = new Dictionary<string, string>
             {
-                ["customer_name"] = profile.FullName,
+                ["customer_name"] = profile.Full_name,
                 ["business_name"] = "Our Community",
                 ["plan_name"] = plan.Name,
                 ["total_price"] = plan.Price.ToString("F2"),
                 ["renewal_link"] = renewalLink
             };
             subject = template != null ? RenderTemplate(template.Subject, variables) : subject;
-            body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.FullName}, notification regarding your subscription.";
+            body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, notification regarding your subscription.";
         }
         else return;
 
