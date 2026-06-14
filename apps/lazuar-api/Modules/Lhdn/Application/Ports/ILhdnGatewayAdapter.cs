@@ -8,6 +8,8 @@ public record LhdnSubmissionResult(bool Success, string? SubmissionUid, string? 
 
 public record LhdnDocumentStatusResult(bool Success, string? Status, string? Uuid, string? LongId, string? ErrorMessage);
 
+public record LhdnTinValidationResult(bool Success, bool IsValid, string? TaxpayerName, string? ErrorMessage);
+
 public interface ILhdnGatewayAdapter
 {
     Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default);
@@ -15,4 +17,6 @@ public interface ILhdnGatewayAdapter
     Task<LhdnSubmissionResult> SubmitDocumentAsync(string token, string payloadJson, CancellationToken ct = default);
     
     Task<LhdnDocumentStatusResult> GetDocumentStatusAsync(string token, string submissionUid, CancellationToken ct = default);
+
+    Task<LhdnTinValidationResult> ValidateTaxpayerTinAsync(string token, string tin, string idType, string idValue, CancellationToken ct = default);
 }

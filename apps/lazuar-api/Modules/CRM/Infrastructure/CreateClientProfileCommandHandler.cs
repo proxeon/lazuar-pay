@@ -22,7 +22,6 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
         var emailNormalized = request.Email.Trim().ToLowerInvariant();
         var phoneNormalized = NormalizePhone(request.Phone);
 
-        // 1. Check for existing profile by email or phone across database boundary (Idempotency)
         var existingProfile = await _dbContext.ClientProfiles
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId
@@ -30,7 +29,6 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
 
         if (existingProfile != null)
         {
-            // If an old guest profile exists, but the user is now logged in via Lazuar One, bind the IDs!
             if (existingProfile.GlobalUserId == null && request.GlobalUserId.HasValue)
             {
                 existingProfile.GlobalUserId = request.GlobalUserId.Value;
@@ -40,7 +38,20 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
             return existingProfile.Id;
         }
 
-        // 2. Map and insert new CRM Profile
+        BillingAddress? address = null;
+        if (request.BillingAddress != null)
+        {
+            address = new BillingAddress(
+                request.BillingAddress.Line1,
+                request.BillingAddress.Line2,
+                request.BillingAddress.Line3,
+                request.BillingAddress.City,
+                request.BillingAddress.Postal_code,
+                request.BillingAddress.State_code,
+                request.BillingAddress.Country_code
+            );
+        }
+
         var profile = new ClientProfileEntity
         {
             Id = Guid.CreateVersion7(),
@@ -49,6 +60,10 @@ public class CreateClientProfileCommandHandler : ICommandHandler<CreateClientPro
             FullName = request.FullName.Trim(),
             Email = emailNormalized,
             Phone = phoneNormalized,
+            Tin = request.Tin,
+            IdType = request.IdType,
+            IdValue = request.IdValue,
+            Address = address,
             ConsentedToMarketing = true
         };
 

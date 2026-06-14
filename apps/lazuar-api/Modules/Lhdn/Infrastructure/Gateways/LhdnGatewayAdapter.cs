@@ -205,7 +205,6 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
                         {
                             if (step.TryGetProperty("error", out var errObj))
                             {
-                                // We extract the inner error message if available
                                 if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
                                 {
                                     errors.Add(innerArr[0].GetProperty("message").GetString()!);
@@ -223,11 +222,43 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
             }
             catch { }
             
-            // If the extraction logic misses it, just dump the raw JSON so we can read it!
             if (string.IsNullOrEmpty(errorMessage))
                 errorMessage = detailsBody;
         }
 
         return new LhdnDocumentStatusResult(true, status?.ToUpperInvariant(), uuid, longId, errorMessage);
+    }
+
+    public async Task<LhdnTinValidationResult> ValidateTaxpayerTinAsync(string token, string tin, string idType, string idValue, CancellationToken ct = default)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/taxpayer/validate/{Uri.EscapeDataString(tin)}?idType={Uri.EscapeDataString(idType)}&idValue={Uri.EscapeDataString(idValue)}");
+        
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.SendAsync(request, ct);
+        var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+        if (response.IsSuccessStatusCode)
+        {
+            try
+            {
+                var json = JsonDocument.Parse(responseBody);
+                var taxpayerName = json.RootElement.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+                return new LhdnTinValidationResult(true, true, taxpayerName, null);
+            }
+            catch
+            {
+                return new LhdnTinValidationResult(true, true, null, null);
+            }
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return new LhdnTinValidationResult(true, false, null, null);
+        }
+
+        _logger.LogError("LHDN TIN Validation failed: {Status} {Body}", response.StatusCode, responseBody);
+        return new LhdnTinValidationResult(false, false, null, responseBody);
     }
 }

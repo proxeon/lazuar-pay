@@ -18,6 +18,7 @@ public class LhdnDbContext : PlatformDbContext
     public DbSet<MsicCode> MsicCodes { get; set; } = null!;
     public DbSet<CountryCode> CountryCodes { get; set; } = null!;
     public DbSet<TaxType> TaxTypes { get; set; } = null!;
+    public DbSet<TinValidateCache> TinValidateCaches { get; set; } = null!;
     
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -41,17 +42,28 @@ public class LhdnDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId).IsUnique();
 
-            // SEED DATA FOR DEVELOPMENT (lazuar-hq tenant)
             builder.HasData(new
             {
                 Id = new Guid("00000000-0000-0000-0000-000000000001"),
-                OrganizationId = new Guid("7d97963c-063c-4598-86cc-9ddd9d47d9b1"), // Matches lazuar-hq
+                OrganizationId = new Guid("7d97963c-063c-4598-86cc-9ddd9d47d9b1"),
                 IntermediaryMode = true,
+                SupplierTin = "C12345678901",
+                IdType = "BRN",
+                IdValue = "202401234567",
+                Environment = "SANDBOX",
+                MsicCode = "62010",
                 EncryptedPfxBase64 = (string?)null,
                 PfxPasswordCiphertext = (string?)null,
                 CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 UpdatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             });
+        });
+
+        modelBuilder.Entity<TinValidateCache>(builder =>
+        {
+            builder.ToTable("TinValidateCaches");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.Tin, x.IdType, x.IdValueHash }).IsUnique();
         });
 
         modelBuilder.Entity<TaxDocument>(builder =>
