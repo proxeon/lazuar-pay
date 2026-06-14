@@ -19,6 +19,9 @@ import "./modules/ops/routes.tsp";
 import "./modules/billing/models.tsp";
 import "./modules/billing/routes.tsp";
 
+import "./modules/lhdn/models.tsp";
+import "./modules/lhdn/routes.tsp";
+
 using TypeSpec.Http;
 
 @service({

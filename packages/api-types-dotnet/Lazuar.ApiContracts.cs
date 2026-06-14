@@ -1482,6 +1482,228 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LhdnAddressDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("line1")]
+        public string Line1 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("line2")]
+        public string? Line2 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("line3")]
+        public string? Line3 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("city")]
+        public string City { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("postal_code")]
+        public string Postal_code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state_code")]
+        public string State_code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country_code")]
+        public string Country_code { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LhdnDocumentResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("internal_id")]
+        public string Internal_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lhdn_uuid")]
+        public string? Lhdn_uuid { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("long_id")]
+        public string? Long_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("qr_link")]
+        public string? Qr_link { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("error_message")]
+        public string? Error_message { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("submitted_at")]
+        public System.DateTimeOffset Submitted_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("validated_at")]
+        public System.DateTimeOffset? Validated_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LhdnItemDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("classification_code")]
+        public string Classification_code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
+        public double Quantity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("unit_price")]
+        public double Unit_price { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tax_rate")]
+        public double Tax_rate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tax_amount")]
+        public double Tax_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("subtotal")]
+        public double Subtotal { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RegisterWebhookRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        public string Secret { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("events")]
+        public System.Collections.Generic.List<string> Events { get; set; } = new System.Collections.Generic.List<string>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SubmitDocumentRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("internal_id")]
+        public string Internal_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("document_type")]
+        public string Document_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("issue_date")]
+        public System.DateTimeOffset Issue_date { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buyer_name")]
+        public string Buyer_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buyer_tin")]
+        public string Buyer_tin { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buyer_id_type")]
+        public string Buyer_id_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buyer_id_value")]
+        public string Buyer_id_value { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buyer_email")]
+        public string? Buyer_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buyer_phone")]
+        public string? Buyer_phone { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("buyer_address")]
+        public LhdnAddressDto Buyer_address { get; set; } = new LhdnAddressDto();
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
+        public System.Collections.Generic.List<LhdnItemDto> Items { get; set; } = new System.Collections.Generic.List<LhdnItemDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_excluding_tax")]
+        public double Total_excluding_tax { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_tax")]
+        public double Total_tax { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_including_tax")]
+        public double Total_including_tax { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookSubscriptionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("events")]
+        public System.Collections.Generic.List<string> Events { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool Is_active { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class AcceptWorkspaceInvitationDto
     {
 
