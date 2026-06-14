@@ -10,6 +10,12 @@ namespace LazuarApi.Lhdn;
 @route("/api/v1/lhdn")
 interface LhdnOperations {
   @post
+  @route("/taxpayer/validate")
+  validateTaxpayerTin(
+    @body body: ValidateTinRequestDto,
+  ): ValidateTinResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
   @route("/documents")
   submitDocument(
     @body body: SubmitDocumentRequestDto,

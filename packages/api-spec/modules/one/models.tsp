@@ -122,3 +122,21 @@ model AppAccessRequestDto {
   status: string;
   created_at: utcDateTime;
 }
+
+alias EnvironmentType = "PROD" | "SANDBOX";
+
+model WorkspaceLhdnConfigDto {
+  myinvois_client_id?: string;
+  myinvois_client_secret?: string;
+  myinvois_env: EnvironmentType;
+  supplier_tin?: string;
+  msic_code?: string;
+}
+
+model UpdateWorkspaceLhdnConfigRequestDto {
+  myinvois_client_id?: string;
+  myinvois_client_secret?: string;
+  myinvois_env: EnvironmentType;
+  supplier_tin?: string;
+  msic_code?: string;
+}

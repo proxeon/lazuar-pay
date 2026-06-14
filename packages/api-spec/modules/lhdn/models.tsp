@@ -1,5 +1,39 @@
 namespace LazuarApi.Lhdn;
 
+alias IdType = "BRN" | "NRIC" | "PASSPORT" | "ARMY";
+alias TaxTypeCode = "01" | "02" | "03" | "04" | "05" | "06" | "E";
+alias StateCode =
+  | "01"
+  | "02"
+  | "03"
+  | "04"
+  | "05"
+  | "06"
+  | "07"
+  | "08"
+  | "09"
+  | "10"
+  | "11"
+  | "12"
+  | "13"
+  | "14"
+  | "15"
+  | "16"
+  | "17";
+alias DocumentType = "01" | "02" | "03" | "04" | "11" | "12" | "13" | "14";
+
+model ValidateTinRequestDto {
+  tin: string;
+  id_type: IdType;
+  id_value: string;
+}
+
+model ValidateTinResponseDto {
+  is_valid: boolean;
+  tin: string;
+  taxpayer_name?: string;
+}
+
 model LhdnItemDto {
   description: string;
   classification_code: string;
@@ -8,6 +42,7 @@ model LhdnItemDto {
   tax_rate: float64;
   tax_amount: float64;
   subtotal: float64;
+  tax_type_code: TaxTypeCode;
 }
 
 model LhdnAddressDto {
@@ -16,17 +51,17 @@ model LhdnAddressDto {
   line3?: string;
   city: string;
   postal_code: string;
-  state_code: string;
+  state_code: StateCode;
   country_code: string;
 }
 
 model SubmitDocumentRequestDto {
   internal_id: string;
-  document_type: string;
+  document_type: DocumentType;
   issue_date: utcDateTime;
   buyer_name: string;
   buyer_tin: string;
-  buyer_id_type: string;
+  buyer_id_type: IdType;
   buyer_id_value: string;
   buyer_email?: string;
   buyer_phone?: string;
