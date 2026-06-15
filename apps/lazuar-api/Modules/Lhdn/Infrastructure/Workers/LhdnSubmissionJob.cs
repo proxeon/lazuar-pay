@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -13,7 +14,6 @@ using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain.Aggregates;
-using System.Security.Cryptography;
 
 namespace Modules.Lhdn.Infrastructure.Workers;
 
@@ -74,8 +74,10 @@ public class LhdnSubmissionJob : BackgroundService
                     continue;
                 }
 
-                var xmlDoc = new XmlDocument();
-                xmlDoc.PreserveWhitespace = true; 
+                var xmlDoc = new XmlDocument
+                {
+                    PreserveWhitespace = true
+                };
                 xmlDoc.LoadXml(doc.RawXmlContent);
 
                 if (!string.IsNullOrEmpty(config.EncryptedPfxBase64) && !string.IsNullOrEmpty(config.PfxPasswordCiphertext))
@@ -84,8 +86,7 @@ public class LhdnSubmissionJob : BackgroundService
                     xmlSigner.SignDocument(xmlDoc, cert);
                 }
 
-                var finalXmlString = xmlDoc.OuterXml;
-                var finalXmlBytes = Encoding.UTF8.GetBytes(finalXmlString);
+                var finalXmlBytes = Encoding.UTF8.GetBytes(xmlDoc.OuterXml);
 
                 var documentHashBytes = SHA256.HashData(finalXmlBytes);
                 var documentHashHex = Convert.ToHexString(documentHashBytes).ToLowerInvariant();
