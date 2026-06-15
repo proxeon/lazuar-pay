@@ -59,6 +59,16 @@ model SubmitDocumentRequestDto {
   internal_id: string;
   document_type: DocumentType;
   issue_date: utcDateTime;
+
+  /* Required to link adjustments like Credit/Debit notes to the original LHDN document */
+  original_lhdn_uuid?: string;
+
+  adjustment_reason?: string;
+
+  /* Required to define the consolidation scope for B2C public receipts */
+  billing_period_start?: utcDateTime;
+
+  billing_period_end?: utcDateTime;
   buyer_name: string;
   buyer_tin: string;
   buyer_id_type: IdType;

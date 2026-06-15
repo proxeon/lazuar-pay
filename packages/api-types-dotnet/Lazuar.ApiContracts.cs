@@ -1794,6 +1794,18 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("issue_date")]
         public System.DateTimeOffset Issue_date { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("original_lhdn_uuid")]
+        public string? Original_lhdn_uuid { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("adjustment_reason")]
+        public string? Adjustment_reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("billing_period_start")]
+        public System.DateTimeOffset? Billing_period_start { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("billing_period_end")]
+        public System.DateTimeOffset? Billing_period_end { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("buyer_name")]
         public string Buyer_name { get; set; } = default!;
 

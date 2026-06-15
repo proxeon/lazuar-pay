@@ -1687,6 +1687,12 @@ export interface components {
             document_type: "01" | "02" | "03" | "04" | "11" | "12" | "13" | "14";
             /** Format: date-time */
             issue_date: string;
+            original_lhdn_uuid?: string;
+            adjustment_reason?: string;
+            /** Format: date-time */
+            billing_period_start?: string;
+            /** Format: date-time */
+            billing_period_end?: string;
             buyer_name: string;
             buyer_tin: string;
             /** @enum {string} */
