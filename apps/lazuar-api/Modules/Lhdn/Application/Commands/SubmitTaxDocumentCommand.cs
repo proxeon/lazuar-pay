@@ -19,12 +19,12 @@ public record SubmitTaxDocumentCommand(Guid OrganizationId, SubmitDocumentReques
 public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocumentCommand, Guid>
 {
     private readonly ILhdnRepository _repository;
-    private readonly IUblXmlGenerator _xmlGenerator;
+    private readonly IDocumentStrategyFactory _strategyFactory;
 
-    public SubmitTaxDocumentCommandHandler(ILhdnRepository repository, IUblXmlGenerator xmlGenerator)
+    public SubmitTaxDocumentCommandHandler(ILhdnRepository repository, IDocumentStrategyFactory strategyFactory)
     {
         _repository = repository;
-        _xmlGenerator = xmlGenerator;
+        _strategyFactory = strategyFactory;
     }
 
     public async Task<Guid> Handle(SubmitTaxDocumentCommand request, CancellationToken ct)
@@ -35,9 +35,10 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
             throw new InvalidOperationException("LHDN Tenant Configuration is missing.");
         }
 
-        var xmlDoc = _xmlGenerator.GenerateInvoiceXml(request.Payload, config);
+        var strategy = _strategyFactory.GetStrategy(request.Payload);
+        var xmlDoc = strategy.Generate(request.Payload, config);
+        
         var rawXmlString = xmlDoc.OuterXml;
-
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
         var documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
 

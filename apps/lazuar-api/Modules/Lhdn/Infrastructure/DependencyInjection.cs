@@ -12,6 +12,7 @@ using Modules.Lhdn.Infrastructure.EventHandlers;
 using Modules.Lhdn.Infrastructure.Gateways;
 using Modules.Lhdn.Infrastructure.Repositories;
 using Modules.Lhdn.Infrastructure.Services;
+using Modules.Lhdn.Infrastructure.Services.Strategies;
 using Modules.Lhdn.Infrastructure.Workers;
 
 namespace Modules.Lhdn.Infrastructure;
@@ -37,7 +38,11 @@ public static class DependencyInjection
         services.AddScoped<ILhdnQueryService, LhdnQueryService>();
         services.AddScoped<ICertificateVaultService, CertificateVaultService>();
         services.AddScoped<IXmlSignatureService, XmlSignatureService>();
-        services.AddScoped<IUblXmlGenerator, UblXmlGenerator>();
+        
+        services.AddScoped<IDocumentStrategyFactory, DocumentStrategyFactory>();
+        services.AddKeyedScoped<IUblDocumentStrategy, StandardInvoiceStrategy>("B2BStandardInvoice");
+        services.AddKeyedScoped<IUblDocumentStrategy, ConsolidatedInvoiceStrategy>("B2CConsolidatedInvoice");
+
         services.AddScoped<ILhdnGatewayAdapter, LhdnGatewayAdapter>();
         services.AddScoped<IWebhookSenderService, WebhookSenderService>();
         services.AddScoped<ITaxpayerValidationService, TaxpayerValidationService>();
