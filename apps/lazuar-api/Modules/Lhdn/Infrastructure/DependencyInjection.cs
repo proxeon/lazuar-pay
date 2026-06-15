@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentStrategyFactory, DocumentStrategyFactory>();
         services.AddKeyedScoped<IUblDocumentStrategy, StandardInvoiceStrategy>("B2BStandardInvoice");
         services.AddKeyedScoped<IUblDocumentStrategy, ConsolidatedInvoiceStrategy>("B2CConsolidatedInvoice");
+        services.AddKeyedScoped<IUblDocumentStrategy, CreditNoteStrategy>("CreditNote");
 
         services.AddScoped<ILhdnGatewayAdapter, LhdnGatewayAdapter>();
         services.AddScoped<IWebhookSenderService, WebhookSenderService>();

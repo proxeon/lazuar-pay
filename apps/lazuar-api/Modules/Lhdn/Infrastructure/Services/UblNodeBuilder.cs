@@ -27,6 +27,18 @@ public static class UblNodeBuilder
         return signature;
     }
 
+    public static XmlElement BuildInvoiceDocumentReference(XmlDocument doc, string originalInternalId, string originalLhdnUuid)
+    {
+        var billingRef = doc.CreateElement("cac", "BillingReference", CacNamespace);
+        var invoiceDocRef = doc.CreateElement("cac", "InvoiceDocumentReference", CacNamespace);
+
+        invoiceDocRef.AppendChild(CreateCbcElement(doc, "ID", string.IsNullOrWhiteSpace(originalInternalId) ? "NA" : originalInternalId));
+        invoiceDocRef.AppendChild(CreateCbcElement(doc, "UUID", originalLhdnUuid));
+
+        billingRef.AppendChild(invoiceDocRef);
+        return billingRef;
+    }
+
     public static XmlElement BuildSupplierParty(XmlDocument doc, LhdnTenantConfig tenantConfig)
     {
         var party = doc.CreateElement("cac", "AccountingSupplierParty", CacNamespace);
