@@ -35,7 +35,7 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
                 new LhdnBillingReference(
                     AdditionalDocumentReference: new[]
                     {
-                        new LhdnDocumentReference(new[] { new UblValue<string>(request.Internal_id) })
+                        new LhdnDocumentReference(request.Internal_id)
                     }
                 )
             },
