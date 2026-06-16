@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -67,7 +66,6 @@ public class LhdnSubmissionJob : BackgroundService
                     continue;
                 }
 
-                // Explicitly encode the raw XML string exactly as the Bash script did
                 var base64Document = Convert.ToBase64String(Encoding.UTF8.GetBytes(doc.RawXmlContent));
 
                 var payload = new
@@ -76,7 +74,7 @@ public class LhdnSubmissionJob : BackgroundService
                     {
                         new
                         {
-                            format = "XML", // ABSOLUTELY CRITICAL. Forces LHDN to bypass JSON parser.
+                            format = "XML", 
                             documentHash = doc.DocumentHash, 
                             codeNumber = doc.InternalReferenceId,
                             document = base64Document
@@ -86,11 +84,6 @@ public class LhdnSubmissionJob : BackgroundService
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
                 
-                // Print the payload to the console so we can visually verify "format": "XML"
-                _logger.LogInformation("--- SENDING PAYLOAD TO LHDN ---");
-                _logger.LogInformation(jsonPayload);
-                _logger.LogInformation("-------------------------------");
-
                 var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin, ct);
                 var result = await gateway.SubmitDocumentAsync(config.MyInvoisClientId, token, jsonPayload, config.IntermediaryMode, config.SupplierTin, ct);
 

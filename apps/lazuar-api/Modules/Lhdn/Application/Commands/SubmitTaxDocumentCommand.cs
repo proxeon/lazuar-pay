@@ -20,19 +20,13 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 {
     private readonly ILhdnRepository _repository;
     private readonly IDocumentStrategyFactory _strategyFactory;
-    private readonly IJsonSignatureService _signatureService;
-    private readonly ICertificateVaultService _vaultService;
 
     public SubmitTaxDocumentCommandHandler(
         ILhdnRepository repository, 
-        IDocumentStrategyFactory strategyFactory,
-        IJsonSignatureService signatureService,
-        ICertificateVaultService vaultService)
+        IDocumentStrategyFactory strategyFactory)
     {
         _repository = repository;
         _strategyFactory = strategyFactory;
-        _signatureService = signatureService;
-        _vaultService = vaultService;
     }
 
     public async Task<Guid> Handle(SubmitTaxDocumentCommand request, CancellationToken ct)
@@ -47,37 +41,19 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 
         var strategy = _strategyFactory.GetStrategy(request.Payload);
         
-        // Generate the raw XML string directly from the strategy
         var rawXmlString = strategy.Generate(request.Payload, config, documentVersion);
 
-        // Compute SHA256 directly from the UTF-8 bytes of the raw XML string to match the payload format exactly
-        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
-        var documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-        /*
-        Temporarily bypassed signature logic for v1.1.
-        We are securing v1.0 raw XML submission first before reintroducing v1.1 XAdES XML signatures.
+        var normalizedXmlString = rawXmlString.Replace("\r\n", "\n");
+        var xmlBytes = Encoding.UTF8.GetBytes(normalizedXmlString);
         
-        if (documentVersion == "1.1")
-        {
-            if (string.IsNullOrEmpty(config.EncryptedPfxBase64) || string.IsNullOrEmpty(config.PfxPasswordCiphertext))
-            {
-                throw new InvalidOperationException("Certificate missing for v1.1 document. Please upload a valid PKCS#12 certificate.");
-            }
-
-            using var cert = _vaultService.GetDecryptedCertificate(config.EncryptedPfxBase64, config.PfxPasswordCiphertext);
-            
-            var signingResult = _signatureService.SignDocument(jsonDocument, cert);
-            rawXmlString = signingResult.FinalJsonString;
-            documentHashHex = signingResult.HexDigest;
-        }
-        */
+        var hashBytes = SHA256.HashData(xmlBytes);
+        var documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
         var taxDocument = new TaxDocument(
             request.OrganizationId,
             request.Payload.Internal_id,
             documentHashHex,
-            rawXmlString 
+            normalizedXmlString 
         );
 
         _repository.AddTaxDocument(taxDocument);
