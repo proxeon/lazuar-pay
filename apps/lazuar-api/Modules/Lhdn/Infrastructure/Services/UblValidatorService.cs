@@ -20,27 +20,34 @@ public class UblValidatorService : IUblValidatorService
     {
         _schemaSet = new XmlSchemaSet
         {
-            // Custom resolver to trace <xsd:import> tags across embedded resources
             XmlResolver = new EmbeddedResourceXmlResolver()
         };
 
         var assembly = typeof(UblValidatorService).Assembly;
 
-        // Load root Invoice Schema
-        using var invoiceStream = assembly.GetManifestResourceStream("Modules.Lhdn.Infrastructure.Schemas.UBL-Invoice-2.1.xsd");
-        if (invoiceStream != null)
+        // W3C Schema files contain <!DOCTYPE> declarations. 
+        // We must explicitly allow DTD parsing to load them.
+        // This is safe because we are only reading embedded assembly resources, not user input.
+        var xsdSettings = new XmlReaderSettings
         {
-            _schemaSet.Add("urn:oasis:names:specification:ubl:schema:xsd:Invoice-2", XmlReader.Create(invoiceStream));
+            DtdProcessing = DtdProcessing.Parse 
+        };
+
+        // Pre-load ALL embedded XSDs to bypass internal schemaLocation filename mismatches.
+        // The XmlSchemaSet will automatically map them by their internal targetNamespace.
+        foreach (var resourceName in assembly.GetManifestResourceNames())
+        {
+            if (resourceName.Contains(".Schemas.") && resourceName.EndsWith(".xsd", StringComparison.OrdinalIgnoreCase))
+            {
+                using var stream = assembly.GetManifestResourceStream(resourceName);
+                if (stream != null)
+                {
+                    _schemaSet.Add(null, XmlReader.Create(stream, xsdSettings));
+                }
+            }
         }
 
-        // Load root CreditNote Schema
-        using var creditNoteStream = assembly.GetManifestResourceStream("Modules.Lhdn.Infrastructure.Schemas.UBL-CreditNote-2.1.xsd");
-        if (creditNoteStream != null)
-        {
-            _schemaSet.Add("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2", XmlReader.Create(creditNoteStream));
-        }
-
-        if (invoiceStream != null || creditNoteStream != null)
+        if (_schemaSet.Count > 0)
         {
             _schemaSet.Compile();
         }
@@ -48,7 +55,6 @@ public class UblValidatorService : IUblValidatorService
 
     public void Validate(string xmlString, string documentType)
     {
-        // Bypass validation if developer hasn't downloaded the XSD files into the directory yet
         if (_schemaSet.Count == 0) return;
 
         var errors = new List<string>();
@@ -69,7 +75,6 @@ public class UblValidatorService : IUblValidatorService
         using var stringReader = new StringReader(xmlString);
         using var xmlReader = XmlReader.Create(stringReader, settings);
 
-        // Reads the entire document to trigger all validation events
         while (xmlReader.Read()) { }
 
         if (errors.Count > 0)
@@ -84,14 +89,11 @@ public class UblValidatorService : IUblValidatorService
         public override object? GetEntity(Uri absoluteUri, string? role, Type? ofObjectToReturn)
         {
             var assembly = typeof(UblValidatorService).Assembly;
-            
-            // XSD internal references use relative paths (e.g., ../common/UBL-CommonBasicComponents-2.1.xsd)
-            // We format the URI path to match the C# Embedded Resource dot-notation standard.
-            var path = absoluteUri.LocalPath.Replace("/", ".").Replace("\\", ".");
+            var fileName = Path.GetFileName(absoluteUri.LocalPath);
 
             foreach (var resourceName in assembly.GetManifestResourceNames())
             {
-                if (resourceName.EndsWith(path, StringComparison.OrdinalIgnoreCase))
+                if (resourceName.EndsWith("." + fileName, StringComparison.OrdinalIgnoreCase))
                 {
                     return assembly.GetManifestResourceStream(resourceName);
                 }
