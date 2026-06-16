@@ -4,7 +4,6 @@ namespace Modules.Lhdn.Application.Services;
 
 public record JsonSigningResult(
     string FinalJsonString,
-    string Base64Digest,
     string HexDigest,
     string SignatureValue
 );

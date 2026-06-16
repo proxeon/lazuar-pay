@@ -81,7 +81,6 @@ public class JsonSignatureService : IJsonSignatureService
         
         var signatureValue = Convert.ToBase64String(signatureBytes);
 
-        // Uses direct array assignment rather than double-nested wrapper
         var ublExtensions = new[]
         {
             new LhdnUblExtension(
@@ -157,11 +156,15 @@ public class JsonSignatureService : IJsonSignatureService
         };
 
         var finalDocument = typedDocument with { Invoice = new[] { signedInvoice } };
-        
+        var finalJsonString = JsonSerializer.Serialize(finalDocument, LhdnJsonOptions.Instance);
+
+        // Compute the SHA256 hash of the completely assembled and signed document string to match API submission requirements
+        var finalHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(finalJsonString));
+        var finalDocumentHexDigest = Convert.ToHexString(finalHashBytes).ToLowerInvariant();
+
         return new JsonSigningResult(
-            FinalJsonString: JsonSerializer.Serialize(finalDocument, LhdnJsonOptions.Instance),
-            Base64Digest: documentBase64Digest,
-            HexDigest: "", // Not used, handled in Phase 3
+            FinalJsonString: finalJsonString,
+            HexDigest: finalDocumentHexDigest,
             SignatureValue: signatureValue
         );
     }

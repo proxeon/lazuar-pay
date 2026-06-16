@@ -69,11 +69,9 @@ public class LhdnSubmissionJob : BackgroundService
                     continue;
                 }
 
-                // Retrieve the finalized JSON string from the database and prepare for Base64 encoding
                 var finalJsonBytes = Encoding.UTF8.GetBytes(doc.RawXmlContent);
                 var base64Document = Convert.ToBase64String(finalJsonBytes);
 
-                // Construct the JSON API envelope mapped identically to MyInvois expectations
                 var payload = new
                 {
                     documents = new[]
@@ -81,7 +79,7 @@ public class LhdnSubmissionJob : BackgroundService
                         new
                         {
                             format = "JSON",
-                            documentHash = doc.DocumentHash, // Direct mapped from pre-computed HexDigest
+                            documentHash = doc.DocumentHash, 
                             codeNumber = doc.InternalReferenceId,
                             document = base64Document
                         }

@@ -45,7 +45,6 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 
         var strategy = _strategyFactory.GetStrategy(request.Payload);
         
-        // Treat as a generic object so Application layer doesn't depend on Infrastructure models
         var jsonDocument = strategy.Generate(request.Payload, config, documentVersion);
 
         string finalJsonString;
