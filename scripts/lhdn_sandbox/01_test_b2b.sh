@@ -44,7 +44,7 @@ EOF
 
 curl -s -X POST "$LAZUAR_API/lhdn/documents" -b cookies.txt -H "X-Tenant-Slug: $TENANT_SLUG" -H "Content-Type: application/json" -d "$PAYLOAD" > /dev/null
 
-for i in {1..20}; do
+for i in {1..40}; do
     STATUS_RES=$(curl -s -X GET "$LAZUAR_API/lhdn/documents/$INTERNAL_ID" -b cookies.txt -H "X-Tenant-Slug: $TENANT_SLUG")
     STATUS=$(echo "$STATUS_RES" | jq -r '.status')
     
