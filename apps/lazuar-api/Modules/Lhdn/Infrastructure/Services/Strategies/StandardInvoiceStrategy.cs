@@ -28,6 +28,17 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
         root.AppendChild(invoiceTypeCode);
 
         root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
+        root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "TaxCurrencyCode", "MYR"));
+
+        // Add Invoice Period (Mandatory for robust XSD passing)
+        var invoicePeriod = doc.CreateElement("cac", "InvoicePeriod", UblNodeBuilder.CacNamespace);
+        var startDate = request.Billing_period_start?.ToString("yyyy-MM-dd") ?? request.Issue_date.ToString("yyyy-MM-dd");
+        var endDate = request.Billing_period_end?.ToString("yyyy-MM-dd") ?? request.Issue_date.ToString("yyyy-MM-dd");
+        
+        invoicePeriod.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "StartDate", startDate));
+        invoicePeriod.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "EndDate", endDate));
+        invoicePeriod.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "Description", "Monthly"));
+        root.AppendChild(invoicePeriod);
 
         root.AppendChild(UblNodeBuilder.BuildEmptySignatureNode(doc));
         root.AppendChild(UblNodeBuilder.BuildSupplierParty(doc, config));

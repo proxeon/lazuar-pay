@@ -7,10 +7,6 @@ using Modules.Lhdn.Application.Services;
 
 namespace Modules.Lhdn.Infrastructure.Services;
 
-/// <summary>
-/// Applies an enveloped XAdES RSA-SHA256 signature to a UBL 2.1 XML document using native DOM manipulation.
-/// Strict avoidance of string concatenation to preserve xml-c14n11 canonicalization integrity.
-/// </summary>
 public class XmlSignatureService : IXmlSignatureService
 {
     private const string XadesNamespaceUrl = "http://uri.etsi.org/01903/v1.3.2#";
@@ -22,31 +18,72 @@ public class XmlSignatureService : IXmlSignatureService
 
     static XmlSignatureService()
     {
-        CryptoConfig.AddAlgorithm(typeof(XmlDsigExcC14NTransform), "http://www.w3.org/2006/12/xml-c14n11");
+        CryptoConfig.AddAlgorithm(typeof(XmlDsigExcC14NTransform), "http://www.w3.org/2001/10/xml-exc-c14n#");
     }
 
     public void SignDocument(XmlDocument document, X509Certificate2 certificate)
     {
-        var rsaKey = certificate.GetRSAPrivateKey() ?? throw new InvalidOperationException("Certificate does not contain an RSA private key.");
+        var root = document.DocumentElement ?? throw new InvalidOperationException("XML document has no root element.");
 
-        var signedXml = new SignedXml(document)
-        {
-            SigningKey = rsaKey
-        };
+        // 1. Inject the <ext:UBLExtensions> skeleton AT THE TOP of the DOM before computing the signature
+        var ublExtensions = document.CreateElement("ext", "UBLExtensions", ExtNamespaceUrl);
+        var ublExtension = document.CreateElement("ext", "UBLExtension", ExtNamespaceUrl);
+        var extensionUri = document.CreateElement("ext", "ExtensionURI", ExtNamespaceUrl);
+        extensionUri.InnerText = "urn:oasis:names:specification:ubl:dsig:enveloped:xades";
+        
+        var extensionContent = document.CreateElement("ext", "ExtensionContent", ExtNamespaceUrl);
+        var ublDocumentSignatures = document.CreateElement("sig", "UBLDocumentSignatures", SigNamespaceUrl);
+        ublDocumentSignatures.SetAttribute("xmlns:sac", SacNamespaceUrl);
+        ublDocumentSignatures.SetAttribute("xmlns:sbc", SbcNamespaceUrl);
+
+        var signatureInformation = document.CreateElement("sac", "SignatureInformation", SacNamespaceUrl);
+        
+        var cbcId = document.CreateElement("cbc", "ID", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
+        cbcId.InnerText = "urn:oasis:names:specification:ubl:signature:1";
+        
+        var sbcReferencedSignatureId = document.CreateElement("sbc", "ReferencedSignatureID", SbcNamespaceUrl);
+        sbcReferencedSignatureId.InnerText = "urn:oasis:names:specification:ubl:signature:Invoice";
+
+        signatureInformation.AppendChild(cbcId);
+        signatureInformation.AppendChild(sbcReferencedSignatureId);
+        
+        ublDocumentSignatures.AppendChild(signatureInformation);
+        extensionContent.AppendChild(ublDocumentSignatures);
+        ublExtension.AppendChild(extensionUri);
+        ublExtension.AppendChild(extensionContent);
+        ublExtensions.AppendChild(ublExtension);
+
+        root.InsertBefore(ublExtensions, root.FirstChild);
+
+        // 2. Setup SignedXml
+        var rsaKey = certificate.GetRSAPrivateKey() ?? throw new InvalidOperationException("Certificate does not contain an RSA private key.");
+        var signedXml = new SignedXml(document) { SigningKey = rsaKey };
 
         signedXml.SignedInfo!.SignatureMethod = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
-        signedXml.SignedInfo!.CanonicalizationMethod = "http://www.w3.org/2006/12/xml-c14n11";
+        signedXml.SignedInfo.CanonicalizationMethod = "http://www.w3.org/2001/10/xml-exc-c14n#";
 
-        var docReference = new Reference
-        {
-            Uri = "",
-            Id = "id-doc-signed-data"
-        };
-        docReference.AddTransform(new XmlDsigEnvelopedSignatureTransform());
+        // 3. Document Reference and XPath Transforms (Required by LHDN)
+        var docReference = new Reference { Uri = "", Id = "id-doc-signed-data" };
+
+        var extXPathElement = document.CreateElement("XPath");
+        extXPathElement.InnerText = "not(//ancestor-or-self::ext:UBLExtensions)";
+        extXPathElement.SetAttribute("xmlns:ext", ExtNamespaceUrl);
+        var xpathTransform1 = new XmlDsigXPathTransform();
+        xpathTransform1.LoadInnerXml(extXPathElement.SelectNodes(".")!);
+        docReference.AddTransform(xpathTransform1);
+
+        var cacXPathElement = document.CreateElement("XPath");
+        cacXPathElement.InnerText = "not(//ancestor-or-self::cac:Signature)";
+        cacXPathElement.SetAttribute("xmlns:cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2");
+        var xpathTransform2 = new XmlDsigXPathTransform();
+        xpathTransform2.LoadInnerXml(cacXPathElement.SelectNodes(".")!);
+        docReference.AddTransform(xpathTransform2);
+
         docReference.AddTransform(new XmlDsigExcC14NTransform());
         docReference.DigestMethod = "http://www.w3.org/2001/04/xmlenc#sha256";
         signedXml.AddReference(docReference);
 
+        // 4. Create and attach XAdES Object
         var dataObject = CreateXadesObject(document, certificate);
         signedXml.AddObject(dataObject);
 
@@ -61,10 +98,10 @@ public class XmlSignatureService : IXmlSignatureService
         keyInfo.AddClause(new KeyInfoX509Data(certificate));
         signedXml.KeyInfo = keyInfo;
 
+        // 5. Compute signature against the exact final structure and embed it
         signedXml.ComputeSignature();
         var signatureElement = signedXml.GetXml();
-
-        AppendEnvelopedSignature(document, signatureElement);
+        signatureInformation.AppendChild(document.ImportNode(signatureElement, true));
     }
 
     private DataObject CreateXadesObject(XmlDocument document, X509Certificate2 certificate)
@@ -107,48 +144,7 @@ public class XmlSignatureService : IXmlSignatureService
         signedProperties.AppendChild(signedSignatureProperties);
         qualifyingProperties.AppendChild(signedProperties);
 
-        var dataObject = new DataObject
-        {
-            Data = qualifyingProperties.SelectNodes(".")!
-        };
-
-        return dataObject;
-    }
-
-    private void AppendEnvelopedSignature(XmlDocument document, XmlElement signatureElement)
-    {
-        var ublExtensions = document.CreateElement("ext", "UBLExtensions", ExtNamespaceUrl);
-        var ublExtension = document.CreateElement("ext", "UBLExtension", ExtNamespaceUrl);
-        var extensionUri = document.CreateElement("ext", "ExtensionURI", ExtNamespaceUrl);
-        extensionUri.InnerText = "urn:oasis:names:specification:ubl:dsig:enveloped:xades";
-        
-        var extensionContent = document.CreateElement("ext", "ExtensionContent", ExtNamespaceUrl);
-        var ublDocumentSignatures = document.CreateElement("sig", "UBLDocumentSignatures", SigNamespaceUrl);
-        ublDocumentSignatures.SetAttribute("xmlns:sac", SacNamespaceUrl);
-        ublDocumentSignatures.SetAttribute("xmlns:sbc", SbcNamespaceUrl);
-
-        var signatureInformation = document.CreateElement("sac", "SignatureInformation", SacNamespaceUrl);
-        
-        var cbcId = document.CreateElement("cbc", "ID", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
-        cbcId.InnerText = "urn:oasis:names:specification:ubl:signature:1";
-        
-        var sbcReferencedSignatureId = document.CreateElement("sbc", "ReferencedSignatureID", SbcNamespaceUrl);
-        sbcReferencedSignatureId.InnerText = "urn:oasis:names:specification:ubl:signature:Invoice";
-
-        signatureInformation.AppendChild(cbcId);
-        signatureInformation.AppendChild(sbcReferencedSignatureId);
-        
-        var importedSignature = document.ImportNode(signatureElement, true);
-        signatureInformation.AppendChild(importedSignature);
-
-        ublDocumentSignatures.AppendChild(signatureInformation);
-        extensionContent.AppendChild(ublDocumentSignatures);
-        ublExtension.AppendChild(extensionUri);
-        ublExtension.AppendChild(extensionContent);
-        ublExtensions.AppendChild(ublExtension);
-
-        var root = document.DocumentElement ?? throw new InvalidOperationException("XML document has no root element.");
-        root.InsertBefore(ublExtensions, root.FirstChild);
+        return new DataObject { Data = qualifyingProperties.SelectNodes(".")! };
     }
 
     private static string ParseSerialNumber(string hexString)

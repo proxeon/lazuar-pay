@@ -5,10 +5,6 @@ using Modules.Lhdn.Domain.Aggregates;
 
 namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
-/// <summary>
-/// Implements the UBL 2.1 schema for LHDN Credit Notes (02).
-/// Enforces the mandatory InvoiceDocumentReference to link the adjustment to the original UUID.
-/// </summary>
 public class CreditNoteStrategy : IUblDocumentStrategy
 {
     public XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config)
@@ -34,11 +30,11 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         }
 
         root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
+        root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "TaxCurrencyCode", "MYR"));
 
         if (!string.IsNullOrWhiteSpace(request.Original_lhdn_uuid))
         {
-            var originalInternalId = request.Internal_id.Replace("CN-", "");
-            root.AppendChild(UblNodeBuilder.BuildInvoiceDocumentReference(doc, originalInternalId, request.Original_lhdn_uuid));
+            root.AppendChild(UblNodeBuilder.BuildInvoiceDocumentReference(doc, "NA", request.Original_lhdn_uuid));
         }
 
         root.AppendChild(UblNodeBuilder.BuildEmptySignatureNode(doc));

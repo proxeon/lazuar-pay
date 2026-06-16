@@ -5,10 +5,6 @@ using Modules.Lhdn.Domain.Aggregates;
 
 namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
-/// <summary>
-/// Implements the UBL 2.1 schema explicitly for B2C Consolidated E-Invoices.
-/// Maps receipt references to the root-level AdditionalDocumentReference block.
-/// </summary>
 public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
 {
     public XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config)
@@ -29,6 +25,7 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
         root.AppendChild(invoiceTypeCode);
 
         root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
+        root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "TaxCurrencyCode", "MYR"));
 
         var invoicePeriod = doc.CreateElement("cac", "InvoicePeriod", UblNodeBuilder.CacNamespace);
         var startDate = request.Billing_period_start?.ToString("yyyy-MM-dd") ?? request.Issue_date.ToString("yyyy-MM-dd");
@@ -39,9 +36,7 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
         invoicePeriod.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "Description", "Consolidated Invoice"));
         root.AppendChild(invoicePeriod);
 
-        var additionalDocRef = doc.CreateElement("cac", "AdditionalDocumentReference", UblNodeBuilder.CacNamespace);
-        additionalDocRef.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "ID", request.Internal_id));
-        root.AppendChild(additionalDocRef);
+        root.AppendChild(UblNodeBuilder.BuildInvoiceDocumentReference(doc, request.Internal_id, null));
 
         root.AppendChild(UblNodeBuilder.BuildEmptySignatureNode(doc));
         root.AppendChild(UblNodeBuilder.BuildSupplierParty(doc, config));

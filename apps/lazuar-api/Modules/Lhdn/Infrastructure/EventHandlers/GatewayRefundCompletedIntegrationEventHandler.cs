@@ -17,18 +17,18 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 {
     private readonly ILhdnRepository _repository;
     private readonly ILhdnGatewayAdapter _gateway;
-    private readonly IUblXmlGenerator _xmlGenerator;
+    private readonly IDocumentStrategyFactory _strategyFactory;
     private readonly ILogger<GatewayRefundCompletedIntegrationEventHandler> _logger;
 
     public GatewayRefundCompletedIntegrationEventHandler(
         ILhdnRepository repository,
         ILhdnGatewayAdapter gateway,
-        IUblXmlGenerator xmlGenerator,
+        IDocumentStrategyFactory strategyFactory,
         ILogger<GatewayRefundCompletedIntegrationEventHandler> logger)
     {
         _repository = repository;
         _gateway = gateway;
-        _xmlGenerator = xmlGenerator;
+        _strategyFactory = strategyFactory;
         _logger = logger;
     }
 
@@ -76,6 +76,8 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
                 Internal_id = creditNoteInternalId,
                 Document_type = SubmitDocumentRequestDtoDocument_type._02,
                 Issue_date = DateTimeOffset.UtcNow,
+                Original_lhdn_uuid = originalDocument.LhdnUuid,
+                Adjustment_reason = "Customer requested refund",
                 Buyer_name = "Resolved via CRM",
                 Buyer_tin = "IG1234567890",
                 Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
@@ -107,7 +109,8 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
                 Total_including_tax = (double)@event.RefundedAmount
             };
 
-            var xmlDoc = _xmlGenerator.GenerateInvoiceXml(payload, config, originalDocument.LhdnUuid);
+            var strategy = _strategyFactory.GetStrategy(payload);
+            var xmlDoc = strategy.Generate(payload, config);
             var rawXmlString = xmlDoc.OuterXml;
 
             var documentHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));

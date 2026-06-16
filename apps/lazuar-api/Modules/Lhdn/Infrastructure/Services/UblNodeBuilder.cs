@@ -27,13 +27,17 @@ public static class UblNodeBuilder
         return signature;
     }
 
-    public static XmlElement BuildInvoiceDocumentReference(XmlDocument doc, string originalInternalId, string originalLhdnUuid)
+    public static XmlElement BuildInvoiceDocumentReference(XmlDocument doc, string internalId, string? lhdnUuid)
     {
         var billingRef = doc.CreateElement("cac", "BillingReference", CacNamespace);
         var invoiceDocRef = doc.CreateElement("cac", "InvoiceDocumentReference", CacNamespace);
 
-        invoiceDocRef.AppendChild(CreateCbcElement(doc, "ID", string.IsNullOrWhiteSpace(originalInternalId) ? "NA" : originalInternalId));
-        invoiceDocRef.AppendChild(CreateCbcElement(doc, "UUID", originalLhdnUuid));
+        invoiceDocRef.AppendChild(CreateCbcElement(doc, "ID", string.IsNullOrWhiteSpace(internalId) ? "NA" : internalId));
+        
+        if (!string.IsNullOrWhiteSpace(lhdnUuid))
+        {
+            invoiceDocRef.AppendChild(CreateCbcElement(doc, "UUID", lhdnUuid));
+        }
 
         billingRef.AppendChild(invoiceDocRef);
         return billingRef;
@@ -58,6 +62,18 @@ public static class UblNodeBuilder
         id2.SetAttribute("schemeID", tenantConfig.IdType);
         partyId2.AppendChild(id2);
         cacParty.AppendChild(partyId2);
+
+        var partyId3 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
+        var id3 = CreateCbcElement(doc, "ID", "NA");
+        id3.SetAttribute("schemeID", "SST");
+        partyId3.AppendChild(id3);
+        cacParty.AppendChild(partyId3);
+
+        var partyId4 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
+        var id4 = CreateCbcElement(doc, "ID", "NA");
+        id4.SetAttribute("schemeID", "TTX");
+        partyId4.AppendChild(id4);
+        cacParty.AppendChild(partyId4);
 
         var postalAddress = doc.CreateElement("cac", "PostalAddress", CacNamespace);
         postalAddress.AppendChild(CreateCbcElement(doc, "CityName", "NA"));
@@ -115,6 +131,18 @@ public static class UblNodeBuilder
         id2.SetAttribute("schemeID", isB2c ? "BRN" : cleanBuyerIdType);
         partyId2.AppendChild(id2);
         cacParty.AppendChild(partyId2);
+
+        var partyId3 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
+        var id3 = CreateCbcElement(doc, "ID", "NA");
+        id3.SetAttribute("schemeID", "SST");
+        partyId3.AppendChild(id3);
+        cacParty.AppendChild(partyId3);
+
+        var partyId4 = doc.CreateElement("cac", "PartyIdentification", CacNamespace);
+        var id4 = CreateCbcElement(doc, "ID", "NA");
+        id4.SetAttribute("schemeID", "TTX");
+        partyId4.AppendChild(id4);
+        cacParty.AppendChild(partyId4);
 
         var cleanStateCode = request.Buyer_address.State_code switch
         {
@@ -261,12 +289,21 @@ public static class UblNodeBuilder
         var cacItem = doc.CreateElement("cac", "Item", CacNamespace);
         cacItem.AppendChild(CreateCbcElement(doc, "Description", item.Description));
 
-        var commodity = doc.CreateElement("cac", "CommodityClassification", CacNamespace);
+        var originCountry = doc.CreateElement("cac", "OriginCountry", CacNamespace);
+        originCountry.AppendChild(CreateCbcElement(doc, "IdentificationCode", "MYS"));
+        cacItem.AppendChild(originCountry);
 
+        var commodityPtc = doc.CreateElement("cac", "CommodityClassification", CacNamespace);
+        var ptcCode = CreateCbcElement(doc, "ItemClassificationCode", "NA");
+        ptcCode.SetAttribute("listID", "PTC");
+        commodityPtc.AppendChild(ptcCode);
+        cacItem.AppendChild(commodityPtc);
+
+        var commodityClass = doc.CreateElement("cac", "CommodityClassification", CacNamespace);
         var classificationCode = CreateCbcElement(doc, "ItemClassificationCode", isB2c ? "004" : item.Classification_code);
         classificationCode.SetAttribute("listID", "CLASS");
-        commodity.AppendChild(classificationCode);
-        cacItem.AppendChild(commodity);
+        commodityClass.AppendChild(classificationCode);
+        cacItem.AppendChild(commodityClass);
 
         var classifiedTax = doc.CreateElement("cac", "ClassifiedTaxCategory", CacNamespace);
         classifiedTax.AppendChild(CreateCbcElement(doc, "ID", cleanTaxCode));

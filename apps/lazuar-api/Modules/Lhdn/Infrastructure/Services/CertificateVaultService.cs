@@ -30,6 +30,8 @@ public class CertificateVaultService : ICertificateVaultService
         using var aes = Aes.Create();
         aes.Key = _masterKey;
         
+        // The IV was prepended to the ciphertext during encryption.
+        // We slice the first 16 bytes here to retrieve it safely.
         var iv = new byte[16];
         Array.Copy(passwordBytes, 0, iv, 0, 16);
         aes.IV = iv;
