@@ -6,6 +6,10 @@ using Modules.Lhdn.Infrastructure.Services.Strategies.ViewModels;
 
 namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
+/// <summary>
+/// Transforms incoming API DTOs into structured ViewModels for logic-less template rendering.
+/// Calculates required mathematical groupings (like TaxSubtotals) to satisfy LHDN Schematron rules.
+/// </summary>
 public static class ViewModelMapper
 {
     public static UblInvoiceViewModel MapToViewModel(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
@@ -44,7 +48,8 @@ public static class ViewModelMapper
                 IdType = request.Buyer_id_type.ToString(),
                 IdValue = string.IsNullOrWhiteSpace(request.Buyer_id_value) ? "NA" : request.Buyer_id_value,
                 Email = string.IsNullOrWhiteSpace(request.Buyer_email) ? "" : request.Buyer_email,
-                Phone = string.IsNullOrWhiteSpace(request.Buyer_phone) ? "" : request.Buyer_phone,
+                // LHDN explicitly requires a Buyer Contact Number. If omitted, apply a safe fallback.
+                Phone = string.IsNullOrWhiteSpace(request.Buyer_phone) ? "+60000000000" : request.Buyer_phone,
                 AddressLine1 = string.IsNullOrWhiteSpace(request.Buyer_address?.Line1) ? "NA" : request.Buyer_address.Line1,
                 City = string.IsNullOrWhiteSpace(request.Buyer_address?.City) ? "NA" : request.Buyer_address.City,
                 PostalCode = string.IsNullOrWhiteSpace(request.Buyer_address?.Postal_code) ? "00000" : request.Buyer_address.Postal_code,
