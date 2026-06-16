@@ -13,8 +13,6 @@ public class CreditNoteStrategy : IUblDocumentStrategy
     public object Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
     {
         var issueDate = request.Issue_date.UtcDateTime;
-        var startDate = request.Billing_period_start?.UtcDateTime ?? issueDate;
-        var endDate = request.Billing_period_end?.UtcDateTime ?? issueDate;
 
         var isB2c = string.IsNullOrWhiteSpace(request.Buyer_tin) || request.Buyer_tin == "EI00000000010";
 
@@ -32,20 +30,13 @@ public class CreditNoteStrategy : IUblDocumentStrategy
             InvoiceTypeCode: new[] { new UblInvoiceTypeCode("02", documentVersion) },
             DocumentCurrencyCode: "MYR",
             TaxCurrencyCode: "MYR",
-            InvoicePeriod: new[]
-            {
-                new LhdnInvoicePeriod(
-                    StartDate: startDate.ToString("yyyy-MM-dd"),
-                    EndDate: endDate.ToString("yyyy-MM-dd"),
-                    Description: "Monthly"
-                )
-            },
+            InvoicePeriod: null, 
             BillingReference: billingReference,
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c),
-            PaymentMeans: null,
-            LegalMonetaryTotal: BuildLegalMonetaryTotal(request),
+            PaymentMeans: new[] { new LhdnPaymentMeans("08") },
             TaxTotal: BuildTaxTotal(request.Total_excluding_tax, request.Total_tax, "06"),
+            LegalMonetaryTotal: BuildLegalMonetaryTotal(request),
             InvoiceLine: BuildInvoiceLines(request.Items, isB2c)
         );
 
@@ -78,8 +69,8 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         [property: JsonPropertyOrder(9)] LhdnAccountingParty[] AccountingSupplierParty,
         [property: JsonPropertyOrder(10)] LhdnAccountingParty[] AccountingCustomerParty,
         [property: JsonPropertyOrder(11)] LhdnPaymentMeans[]? PaymentMeans,
-        [property: JsonPropertyOrder(12)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
-        [property: JsonPropertyOrder(13)] LhdnTaxTotal[] TaxTotal,
+        [property: JsonPropertyOrder(12)] LhdnTaxTotal[] TaxTotal,
+        [property: JsonPropertyOrder(13)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
         [property: JsonPropertyOrder(14)] LhdnInvoiceLine[] InvoiceLine,
         [property: JsonPropertyOrder(100)] object[]? UBLExtensions = null, 
         [property: JsonPropertyOrder(101)] object[]? Signature = null 
@@ -107,17 +98,17 @@ public class CreditNoteStrategy : IUblDocumentStrategy
                         new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "SST") }),
                         new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "TTX") })
                     },
-                    PartyLegalEntity: new[] { new LhdnPartyLegalEntity("System Supplier") },
                     PostalAddress: new[]
                     {
                         new LhdnPostalAddress(
-                            AddressLine: new[] { new LhdnAddressLine("Lot 66") },
                             CityName: "Kuala Lumpur",
                             PostalZone: "50480",
                             CountrySubentityCode: "14",
+                            AddressLine: new[] { new LhdnAddressLine("Lot 66") },
                             Country: new[] { new LhdnCountry(new[] { new LhdnIdentificationCode("MYS", "ISO3166-1", "6") }) }
                         )
                     },
+                    PartyLegalEntity: new[] { new LhdnPartyLegalEntity("System Supplier") },
                     Contact: new[] { new LhdnContact("+60123456789", "admin@lazuar.com") }
                 )
             }
@@ -149,17 +140,17 @@ public class CreditNoteStrategy : IUblDocumentStrategy
                             new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "SST") }),
                             new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "TTX") })
                         },
-                        PartyLegalEntity: new[] { new LhdnPartyLegalEntity(name) },
                         PostalAddress: new[]
                         {
                             new LhdnPostalAddress(
-                                AddressLine: new[] { new LhdnAddressLine(isB2c ? "NA" : (request.Buyer_address.Line1 ?? "NA")) },
                                 CityName: isB2c ? "NA" : (request.Buyer_address.City ?? "NA"),
                                 PostalZone: isB2c ? "00000" : (request.Buyer_address.Postal_code ?? "00000"),
                                 CountrySubentityCode: stateCode,
+                                AddressLine: new[] { new LhdnAddressLine(isB2c ? "NA" : (request.Buyer_address.Line1 ?? "NA")) },
                                 Country: new[] { new LhdnCountry(new[] { new LhdnIdentificationCode(isB2c ? "MYS" : (request.Buyer_address.Country_code ?? "MYS"), "ISO3166-1", "6") }) }
                             )
                         },
+                        PartyLegalEntity: new[] { new LhdnPartyLegalEntity(name) },
                         Contact: new[] { new LhdnContact(phone, email) }
                     )
                 }
@@ -180,7 +171,7 @@ public class CreditNoteStrategy : IUblDocumentStrategy
                     {
                         new LhdnTaxCategory(
                             ID: taxTypeCode,
-                            Percent: null,
+                            Percent: (UblValue<decimal>?)null,
                             TaxExemptionReason: taxTypeCode is "E" or "06" ? new UblValue<string>("Not subject to tax") : (UblValue<string>?)null,
                             TaxScheme: new[] { new LhdnTaxScheme(new[] { new LhdnTaxSchemeId("OTH", "UN/ECE 5153", "6") }) }
                         )

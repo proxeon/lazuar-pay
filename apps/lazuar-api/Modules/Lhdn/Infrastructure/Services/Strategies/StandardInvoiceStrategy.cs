@@ -33,7 +33,7 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
             BillingReference: null,
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c: false),
-            PaymentMeans: null,
+            PaymentMeans: new[] { new LhdnPaymentMeans("08") },
             TaxTotal: BuildTaxTotal(request.Total_excluding_tax, request.Total_tax, "06"),
             LegalMonetaryTotal: BuildLegalMonetaryTotal(request),
             InvoiceLine: BuildInvoiceLines(request.Items, isB2c: false)
@@ -135,7 +135,7 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
                     {
                         new LhdnTaxCategory(
                             ID: taxTypeCode,
-                            Percent: null,
+                            Percent: (UblValue<decimal>?)null,
                             TaxExemptionReason: taxTypeCode is "E" or "06" ? new UblValue<string>("Not subject to tax") : (UblValue<string>?)null,
                             TaxScheme: new[] { new LhdnTaxScheme(new[] { new LhdnTaxSchemeId("OTH", "UN/ECE 5153", "6") }) }
                         )

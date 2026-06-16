@@ -15,7 +15,7 @@ PAYLOAD=$(cat <<EOF
   "document_type": "01",
   "issue_date": "$CURRENT_UTC",
   "buyer_name": "Corporate Client Sdn Bhd",
-  "buyer_tin": "IG56848407100",
+  "buyer_tin": "C2584563200", 
   "buyer_id_type": "BRN",
   "buyer_id_value": "202001012345",
   "buyer_address": {

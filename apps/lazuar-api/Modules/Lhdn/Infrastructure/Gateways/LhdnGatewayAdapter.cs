@@ -219,6 +219,13 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
             return new LhdnDocumentStatusResult(false, null, null, null, "Rate limit exceeded by LHDN.", ExtractRetryAfterSeconds(response));
         }
 
+        // Extremely common LHDN Sandbox behavior: They queue submissions asynchronously. 
+        // A 404 here just means their internal processor hasn't reached it yet. Do not crash.
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return new LhdnDocumentStatusResult(false, "PENDING", null, null, null, 5); // Force retry in 5 seconds
+        }
+
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
         if (!response.IsSuccessStatusCode)
@@ -247,48 +254,55 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
 
         string? errorMessage = null;
 
+        // Fetch detailed error messages if the document was marked as invalid
         if (status?.Equals("Invalid", StringComparison.OrdinalIgnoreCase) == true && !string.IsNullOrEmpty(uuid))
         {
             var detailsReq = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/documents/{uuid}/details");
             detailsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             TryAddIntermediaryHeader(detailsReq, isIntermediary, tenantTin);
 
-            var detailsRes = await client.SendAsync(detailsReq, ct);
-            var detailsBody = await detailsRes.Content.ReadAsStringAsync(ct);
-
-            try
+            try 
             {
-                var detailsJson = JsonDocument.Parse(detailsBody);
-                if (detailsJson.RootElement.TryGetProperty("validationResults", out var valRes) &&
-                    valRes.TryGetProperty("validationSteps", out var valSteps))
+                var detailsRes = await client.SendAsync(detailsReq, ct);
+                if (detailsRes.IsSuccessStatusCode)
                 {
-                    var errors = new List<string>();
-                    foreach (var step in valSteps.EnumerateArray())
+                    var detailsBody = await detailsRes.Content.ReadAsStringAsync(ct);
+                    var detailsJson = JsonDocument.Parse(detailsBody);
+                    
+                    if (detailsJson.RootElement.TryGetProperty("validationResults", out var valRes) &&
+                        valRes.TryGetProperty("validationSteps", out var valSteps))
                     {
-                        if (step.TryGetProperty("status", out var stepStatus) && stepStatus.GetString() == "Invalid" && step.TryGetProperty("error", out var errObj))
+                        var errors = new List<string>();
+                        foreach (var step in valSteps.EnumerateArray())
                         {
-                            if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
+                            if (step.TryGetProperty("status", out var stepStatus) && stepStatus.GetString() == "Invalid" && step.TryGetProperty("error", out var errObj))
                             {
-                                var innerObj = innerArr[0];
-                                if (innerObj.TryGetProperty("error", out var innerErrMsg))
+                                if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
                                 {
-                                    errors.Add(innerErrMsg.GetString()!);
+                                    var innerObj = innerArr[0];
+                                    if (innerObj.TryGetProperty("error", out var innerErrMsg))
+                                    {
+                                        errors.Add(innerErrMsg.GetString()!);
+                                    }
+                                }
+                                else if (errObj.TryGetProperty("error", out var errMsg))
+                                {
+                                    errors.Add(errMsg.GetString()!);
                                 }
                             }
-                            else if (errObj.TryGetProperty("error", out var errMsg))
-                            {
-                                errors.Add(errMsg.GetString()!);
-                            }
+                        }
+                        if (errors.Count > 0)
+                        {
+                            errorMessage = string.Join(" | ", errors);
                         }
                     }
-                    if (errors.Count > 0)
-                        errorMessage = string.Join(" | ", errors);
                 }
             }
-            catch { }
-            
-            if (string.IsNullOrEmpty(errorMessage))
-                errorMessage = detailsBody;
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch detailed validation errors for UUID {Uuid}", uuid);
+                errorMessage = "Validation failed at LHDN. Detailed error fetch failed.";
+            }
         }
 
         return new LhdnDocumentStatusResult(true, status?.ToUpperInvariant(), uuid, longId, errorMessage);
