@@ -27,6 +27,22 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         <cbc:UUID>{request.Original_lhdn_uuid}</cbc:UUID>
     </cac:InvoiceDocumentReference>
   </cac:BillingReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>E12345678912</cbc:ID>
+    <cbc:DocumentType>CustomsImportForm</cbc:DocumentType>
+  </cac:AdditionalDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>ASEAN-Australia-New Zealand FTA (AANZFTA)</cbc:ID>
+    <cbc:DocumentType>FreeTradeAgreement</cbc:DocumentType>
+    <cbc:DocumentDescription>Sample Description</cbc:DocumentDescription>
+  </cac:AdditionalDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>E12345678912</cbc:ID>
+    <cbc:DocumentType>K2</cbc:DocumentType>
+  </cac:AdditionalDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>CIF</cbc:ID>
+  </cac:AdditionalDocumentReference>
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cbc:IndustryClassificationCode>62010</cbc:IndustryClassificationCode>
@@ -59,27 +75,27 @@ public class CreditNoteStrategy : IUblDocumentStrategy
   <cac:AccountingCustomerParty>
     <cac:Party>
       <cac:PartyIdentification>
-        <cbc:ID schemeID=""TIN"">C2584563200</cbc:ID>
+        <cbc:ID schemeID=""TIN"">IG56848407100</cbc:ID>
       </cac:PartyIdentification>
       <cac:PartyIdentification>
-        <cbc:ID schemeID=""BRN"">201901234567</cbc:ID>
+        <cbc:ID schemeID=""NRIC"">990806086487</cbc:ID>
       </cac:PartyIdentification>
       <cac:PostalAddress>
-        <cbc:CityName>Kuala Lumpur</cbc:CityName>
-        <cbc:PostalZone>50000</cbc:PostalZone>
-        <cbc:CountrySubentityCode>14</cbc:CountrySubentityCode>
+        <cbc:CityName>CHEMOR</cbc:CityName>
+        <cbc:PostalZone>31200</cbc:PostalZone>
+        <cbc:CountrySubentityCode>08</cbc:CountrySubentityCode>
         <cac:AddressLine>
-          <cbc:Line>Level 1, Menara Test</cbc:Line>
+          <cbc:Line>NO 16, HALA KLEBANG RESTU 18, MEDAN KLEBANG RESTU</cbc:Line>
         </cac:AddressLine>
         <cac:Country>
           <cbc:IdentificationCode>MYS</cbc:IdentificationCode>
         </cac:Country>
       </cac:PostalAddress>
       <cac:PartyLegalEntity>
-        <cbc:RegistrationName>Hebat Group</cbc:RegistrationName>
+        <cbc:RegistrationName>AXXX_XXXXRI</cbc:RegistrationName>
       </cac:PartyLegalEntity>
       <cac:Contact>
-        <cbc:Telephone>+60123456789</cbc:Telephone>
+        <cbc:Telephone>01160714390</cbc:Telephone>
       </cac:Contact>
     </cac:Party>
   </cac:AccountingCustomerParty>

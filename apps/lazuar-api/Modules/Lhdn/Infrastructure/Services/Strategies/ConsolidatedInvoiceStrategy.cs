@@ -29,8 +29,29 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
   <cac:InvoicePeriod>
     <cbc:StartDate>{startStr}</cbc:StartDate>
     <cbc:EndDate>{endStr}</cbc:EndDate>
-    <cbc:Description>Consolidated Invoice</cbc:Description>
+    <cbc:Description>Monthly</cbc:Description>
   </cac:InvoicePeriod>
+  <cac:BillingReference>
+    <cac:AdditionalDocumentReference>
+      <cbc:ID>E12345678912</cbc:ID>
+    </cac:AdditionalDocumentReference>
+  </cac:BillingReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>E12345678912</cbc:ID>
+    <cbc:DocumentType>CustomsImportForm</cbc:DocumentType>
+  </cac:AdditionalDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>ASEAN-Australia-New Zealand FTA (AANZFTA)</cbc:ID>
+    <cbc:DocumentType>FreeTradeAgreement</cbc:DocumentType>
+    <cbc:DocumentDescription>Sample Description</cbc:DocumentDescription>
+  </cac:AdditionalDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>E12345678912</cbc:ID>
+    <cbc:DocumentType>K2</cbc:DocumentType>
+  </cac:AdditionalDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>CIF</cbc:ID>
+  </cac:AdditionalDocumentReference>
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cbc:IndustryClassificationCode>62010</cbc:IndustryClassificationCode>
@@ -83,14 +104,14 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
         <cbc:RegistrationName>General Public</cbc:RegistrationName>
       </cac:PartyLegalEntity>
       <cac:Contact>
-        <cbc:Telephone>+60123456789</cbc:Telephone>
+        <cbc:Telephone>01160714390</cbc:Telephone>
       </cac:Contact>
     </cac:Party>
   </cac:AccountingCustomerParty>
   <cac:TaxTotal>
     <cbc:TaxAmount currencyID=""MYR"">0.00</cbc:TaxAmount>
     <cac:TaxSubtotal>
-        <cbc:TaxableAmount currencyID=""MYR"">3000.00</cbc:TaxableAmount>
+        <cbc:TaxableAmount currencyID=""MYR"">1000.00</cbc:TaxableAmount>
         <cbc:TaxAmount currencyID=""MYR"">0.00</cbc:TaxAmount>
         <cac:TaxCategory>
             <cbc:ID>06</cbc:ID>
@@ -102,19 +123,19 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
     </cac:TaxSubtotal>
   </cac:TaxTotal>
   <cac:LegalMonetaryTotal>
-    <cbc:LineExtensionAmount currencyID=""MYR"">3000.00</cbc:LineExtensionAmount>
-    <cbc:TaxExclusiveAmount currencyID=""MYR"">3000.00</cbc:TaxExclusiveAmount>
-    <cbc:TaxInclusiveAmount currencyID=""MYR"">3000.00</cbc:TaxInclusiveAmount>
-    <cbc:PayableAmount currencyID=""MYR"">3000.00</cbc:PayableAmount>
+    <cbc:LineExtensionAmount currencyID=""MYR"">1000.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID=""MYR"">1000.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID=""MYR"">1000.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID=""MYR"">1000.00</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>
   <cac:InvoiceLine>
     <cbc:ID>1</cbc:ID>
     <cbc:InvoicedQuantity unitCode=""C62"">1</cbc:InvoicedQuantity>
-    <cbc:LineExtensionAmount currencyID=""MYR"">3000.00</cbc:LineExtensionAmount>
+    <cbc:LineExtensionAmount currencyID=""MYR"">1000.00</cbc:LineExtensionAmount>
     <cac:TaxTotal>
         <cbc:TaxAmount currencyID=""MYR"">0.00</cbc:TaxAmount>
         <cac:TaxSubtotal>
-            <cbc:TaxableAmount currencyID=""MYR"">3000.00</cbc:TaxableAmount>
+            <cbc:TaxableAmount currencyID=""MYR"">1000.00</cbc:TaxableAmount>
             <cbc:TaxAmount currencyID=""MYR"">0.00</cbc:TaxAmount>
             <cac:TaxCategory>
                 <cbc:ID>06</cbc:ID>
@@ -126,7 +147,7 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
         </cac:TaxSubtotal>
     </cac:TaxTotal>
     <cac:Item>
-      <cbc:Description>Consolidated Receipts</cbc:Description>
+      <cbc:Description>Software Development Service</cbc:Description>
       <cac:CommodityClassification>
           <cbc:ItemClassificationCode listID=""CLASS"">022</cbc:ItemClassificationCode>
       </cac:CommodityClassification>
@@ -138,10 +159,10 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
       </cac:ClassifiedTaxCategory>
     </cac:Item>
     <cac:Price>
-      <cbc:PriceAmount currencyID=""MYR"">3000.00</cbc:PriceAmount>
+      <cbc:PriceAmount currencyID=""MYR"">1000.00</cbc:PriceAmount>
     </cac:Price>
     <cac:ItemPriceExtension>
-        <cbc:Amount currencyID=""MYR"">3000.00</cbc:Amount>
+        <cbc:Amount currencyID=""MYR"">1000.00</cbc:Amount>
     </cac:ItemPriceExtension>
   </cac:InvoiceLine>
 </Invoice>";
