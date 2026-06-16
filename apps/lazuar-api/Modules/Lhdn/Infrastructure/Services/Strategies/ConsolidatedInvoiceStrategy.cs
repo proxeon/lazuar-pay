@@ -39,7 +39,7 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
                     }
                 )
             },
-            AdditionalDocumentReference: null, // Set to null for compatibility
+            AdditionalDocumentReference: null, 
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c: true),
             PaymentMeans: new[] { new LhdnPaymentMeans("08") },
@@ -52,6 +52,12 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
             D: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
             A: "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
             B: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+            E: "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
+            Sig: "urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2",
+            Sac: "urn:oasis:names:specification:ubl:schema:xsd:SignatureAggregateComponents-2",
+            Sbc: "urn:oasis:names:specification:ubl:schema:xsd:SignatureBasicComponents-2",
+            Ds: "http://www.w3.org/2000/09/xmldsig#",
+            Xades: "http://uri.etsi.org/01903/v1.3.2#",
             Invoice: new[] { invoice }
         );
     }
@@ -172,7 +178,6 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
         return items.Select((item, index) =>
         {
             var cleanTaxCode = item.Tax_type_code.ToString().TrimStart('_');
-            // FIX: Prioritize dynamically supplied classification code
             var classCode = item.Classification_code ?? (isB2c ? "004" : "022");
 
             return new LhdnInvoiceLine(

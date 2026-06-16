@@ -44,6 +44,12 @@ public class CreditNoteStrategy : IUblDocumentStrategy
             D: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
             A: "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
             B: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+            E: "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
+            Sig: "urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2",
+            Sac: "urn:oasis:names:specification:ubl:schema:xsd:SignatureAggregateComponents-2",
+            Sbc: "urn:oasis:names:specification:ubl:schema:xsd:SignatureBasicComponents-2",
+            Ds: "http://www.w3.org/2000/09/xmldsig#",
+            Xades: "http://uri.etsi.org/01903/v1.3.2#",
             Invoice: new[] { invoice }
         );
     }
@@ -72,7 +78,7 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         [property: JsonPropertyOrder(12)] LhdnTaxTotal[] TaxTotal,
         [property: JsonPropertyOrder(13)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
         [property: JsonPropertyOrder(14)] LhdnInvoiceLine[] InvoiceLine,
-        [property: JsonPropertyOrder(100)] object[]? UBLExtensions = null, 
+        [property: JsonPropertyOrder(100)] LhdnUblExtension[]? UBLExtensions = null, 
         [property: JsonPropertyOrder(101)] object[]? Signature = null 
     );
 
@@ -80,7 +86,13 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         [property: JsonPropertyOrder(1), JsonPropertyName("_D")] string D,
         [property: JsonPropertyOrder(2), JsonPropertyName("_A")] string A,
         [property: JsonPropertyOrder(3), JsonPropertyName("_B")] string B,
-        [property: JsonPropertyOrder(4)] LhdnJsonCreditNoteInvoice[] Invoice
+        [property: JsonPropertyOrder(4), JsonPropertyName("_E")] string E,
+        [property: JsonPropertyOrder(5), JsonPropertyName("_sig")] string Sig,
+        [property: JsonPropertyOrder(6), JsonPropertyName("_sac")] string Sac,
+        [property: JsonPropertyOrder(7), JsonPropertyName("_sbc")] string Sbc,
+        [property: JsonPropertyOrder(8), JsonPropertyName("_ds")] string Ds,
+        [property: JsonPropertyOrder(9), JsonPropertyName("_xades")] string Xades,
+        [property: JsonPropertyOrder(10)] LhdnJsonCreditNoteInvoice[] Invoice
     );
 
     private static LhdnAccountingParty[] BuildSupplierParty(LhdnTenantConfig config) => new[]

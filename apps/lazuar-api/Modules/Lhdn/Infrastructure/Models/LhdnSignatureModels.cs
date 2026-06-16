@@ -3,10 +3,6 @@ using Modules.Lhdn.Infrastructure.Serialization;
 
 namespace Modules.Lhdn.Infrastructure.Models;
 
-public record LhdnUblExtensionWrapper(
-    [property: JsonPropertyOrder(1)] LhdnUblExtension[] UBLExtension
-);
-
 public record LhdnUblExtension(
     [property: JsonPropertyOrder(1)] UblValue<string> ExtensionURI,
     [property: JsonPropertyOrder(2)] LhdnExtensionContent[] ExtensionContent

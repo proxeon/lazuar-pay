@@ -3,15 +3,17 @@ using Modules.Lhdn.Infrastructure.Serialization;
 
 namespace Modules.Lhdn.Infrastructure.Models;
 
-/// <summary>
-/// Root document schema mapping directly to LHDN's expected JSON representation.
-/// [JsonPropertyOrder] guarantees deterministic top-to-bottom serialization to match Node.js exactly.
-/// </summary>
 public record LhdnJsonDocument(
     [property: JsonPropertyOrder(1), JsonPropertyName("_D")] string D,
     [property: JsonPropertyOrder(2), JsonPropertyName("_A")] string A,
     [property: JsonPropertyOrder(3), JsonPropertyName("_B")] string B,
-    [property: JsonPropertyOrder(4)] LhdnJsonInvoice[] Invoice
+    [property: JsonPropertyOrder(4), JsonPropertyName("_E")] string E,
+    [property: JsonPropertyOrder(5), JsonPropertyName("_sig")] string Sig,
+    [property: JsonPropertyOrder(6), JsonPropertyName("_sac")] string Sac,
+    [property: JsonPropertyOrder(7), JsonPropertyName("_sbc")] string Sbc,
+    [property: JsonPropertyOrder(8), JsonPropertyName("_ds")] string Ds,
+    [property: JsonPropertyOrder(9), JsonPropertyName("_xades")] string Xades,
+    [property: JsonPropertyOrder(10)] LhdnJsonInvoice[] Invoice
 );
 
 public record LhdnJsonInvoice(
@@ -30,7 +32,7 @@ public record LhdnJsonInvoice(
     [property: JsonPropertyOrder(13)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
     [property: JsonPropertyOrder(14)] LhdnTaxTotal[] TaxTotal,
     [property: JsonPropertyOrder(15)] LhdnInvoiceLine[] InvoiceLine,
-    [property: JsonPropertyOrder(100)] object[]? UBLExtensions = null, 
+    [property: JsonPropertyOrder(100)] LhdnUblExtension[]? UBLExtensions = null, 
     [property: JsonPropertyOrder(101)] object[]? Signature = null 
 );
 

@@ -25,7 +25,6 @@ public class JsonSignatureService : IJsonSignatureService
 
         var documentHashBytes = HashDocument(typedDocument);
         var documentBase64Digest = Convert.ToBase64String(documentHashBytes);
-        var documentHexDigest = Convert.ToHexString(documentHashBytes).ToLowerInvariant();
 
         var certDigestBase64 = Convert.ToBase64String(SHA256.HashData(certificate.RawData));
         var certContent = Convert.ToBase64String(certificate.RawData);
@@ -82,89 +81,87 @@ public class JsonSignatureService : IJsonSignatureService
         
         var signatureValue = Convert.ToBase64String(signatureBytes);
 
-        var ublExtension = new LhdnUblExtensionWrapper(
-            UBLExtension: new[]
-            {
-                new LhdnUblExtension(
-                    ExtensionURI: ExtensionUri,
-                    ExtensionContent: new[]
-                    {
-                        new LhdnExtensionContent(
-                            UBLDocumentSignatures: new[]
-                            {
-                                new LhdnUblDocumentSignatures(
-                                    SignatureInformation: new[]
-                                    {
-                                        new LhdnSignatureInformation(
-                                            ID: SignatureId,
-                                            ReferencedSignatureID: ReferencedSignatureId,
-                                            Signature: new[]
-                                            {
-                                                new LhdnSignature(
-                                                    Id: "signature",
-                                                    Object: new[] { new LhdnSignatureObject(new[] { qualifyingProperties }) },
-                                                    KeyInfo: new[]
-                                                    {
-                                                        new LhdnKeyInfo(
-                                                            X509Data: new[]
-                                                            {
-                                                                new LhdnX509Data(
-                                                                    X509Certificate: certContent,
-                                                                    X509SubjectName: subjectName,
-                                                                    X509IssuerSerial: new[] { new LhdnIssuerSerial(issuerName, serialNumber) }
-                                                                )
-                                                            }
-                                                        )
-                                                    },
-                                                    SignatureValue: signatureValue,
-                                                    SignedInfo: new[]
-                                                    {
-                                                        new LhdnSignedInfo(
-                                                            SignatureMethod: new[] { new LhdnSignatureMethod("", SignatureMethodAlgo) },
-                                                            Reference: new[]
-                                                            {
-                                                                new LhdnReference(
-                                                                    Type: "http://uri.etsi.org/01903/v1.3.2#SignedProperties",
-                                                                    URI: "#id-xades-signed-props",
-                                                                    DigestMethod: new[] { new LhdnDigestMethod("", DigestMethodAlgo) },
-                                                                    DigestValue: propsBase64Digest
-                                                                ),
-                                                                new LhdnReference(
-                                                                    Type: "",
-                                                                    URI: "",
-                                                                    DigestMethod: new[] { new LhdnDigestMethod("", DigestMethodAlgo) },
-                                                                    DigestValue: documentBase64Digest
-                                                                )
-                                                            }
-                                                        )
-                                                    }
-                                                )
-                                            }
-                                        )
-                                    }
-                                )
-                            }
-                        )
-                    }
-                )
-            }
-        );
+        // Uses direct array assignment rather than double-nested wrapper
+        var ublExtensions = new[]
+        {
+            new LhdnUblExtension(
+                ExtensionURI: ExtensionUri,
+                ExtensionContent: new[]
+                {
+                    new LhdnExtensionContent(
+                        UBLDocumentSignatures: new[]
+                        {
+                            new LhdnUblDocumentSignatures(
+                                SignatureInformation: new[]
+                                {
+                                    new LhdnSignatureInformation(
+                                        ID: SignatureId,
+                                        ReferencedSignatureID: ReferencedSignatureId,
+                                        Signature: new[]
+                                        {
+                                            new LhdnSignature(
+                                                Id: "signature",
+                                                Object: new[] { new LhdnSignatureObject(new[] { qualifyingProperties }) },
+                                                KeyInfo: new[]
+                                                {
+                                                    new LhdnKeyInfo(
+                                                        X509Data: new[]
+                                                        {
+                                                            new LhdnX509Data(
+                                                                X509Certificate: certContent,
+                                                                X509SubjectName: subjectName,
+                                                                X509IssuerSerial: new[] { new LhdnIssuerSerial(issuerName, serialNumber) }
+                                                            )
+                                                        }
+                                                    )
+                                                },
+                                                SignatureValue: signatureValue,
+                                                SignedInfo: new[]
+                                                {
+                                                    new LhdnSignedInfo(
+                                                        SignatureMethod: new[] { new LhdnSignatureMethod("", SignatureMethodAlgo) },
+                                                        Reference: new[]
+                                                        {
+                                                            new LhdnReference(
+                                                                Type: "http://uri.etsi.org/01903/v1.3.2#SignedProperties",
+                                                                URI: "#id-xades-signed-props",
+                                                                DigestMethod: new[] { new LhdnDigestMethod("", DigestMethodAlgo) },
+                                                                DigestValue: propsBase64Digest
+                                                            ),
+                                                            new LhdnReference(
+                                                                Type: "",
+                                                                URI: "",
+                                                                DigestMethod: new[] { new LhdnDigestMethod("", DigestMethodAlgo) },
+                                                                DigestValue: documentBase64Digest
+                                                            )
+                                                        }
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    )
+                }
+            )
+        };
 
         var signatureReference = new LhdnSignatureReference(ReferencedSignatureId, ExtensionUri);
 
         var signedInvoice = typedDocument.Invoice[0] with
         {
-            UBLExtensions = new object[] { ublExtension },
+            UBLExtensions = ublExtensions,
             Signature = new object[] { signatureReference }
         };
 
         var finalDocument = typedDocument with { Invoice = new[] { signedInvoice } };
-        var finalJsonString = JsonSerializer.Serialize(finalDocument, LhdnJsonOptions.Instance);
-
+        
         return new JsonSigningResult(
-            FinalJsonString: finalJsonString,
+            FinalJsonString: JsonSerializer.Serialize(finalDocument, LhdnJsonOptions.Instance),
             Base64Digest: documentBase64Digest,
-            HexDigest: documentHexDigest,
+            HexDigest: "", // Not used, handled in Phase 3
             SignatureValue: signatureValue
         );
     }
