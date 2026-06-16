@@ -31,6 +31,14 @@ public class DocumentStrategyFactory : IDocumentStrategyFactory
             SubmitDocumentRequestDtoDocument_type._04 => 
                 _serviceProvider.GetRequiredKeyedService<IUblDocumentStrategy>("CreditNote"),
                 
+            SubmitDocumentRequestDtoDocument_type._11 => 
+                _serviceProvider.GetRequiredKeyedService<IUblDocumentStrategy>("SelfBilledInvoice"),
+                
+            SubmitDocumentRequestDtoDocument_type._12 or 
+            SubmitDocumentRequestDtoDocument_type._13 or 
+            SubmitDocumentRequestDtoDocument_type._14 => 
+                _serviceProvider.GetRequiredKeyedService<IUblDocumentStrategy>("SelfBilledCredit"),
+                
             _ => throw new NotSupportedException($"Document type {request.Document_type} is not currently supported in this iteration.")
         };
     }
