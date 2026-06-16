@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddTransient<ManualPaymentRecordedHandler>();
         services.AddTransient<CommissionAccruedHandler>();
         services.AddTransient<LhdnDocumentValidatedIntegrationEventHandler>();
+        services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -69,6 +70,7 @@ public static class DependencyInjection
         eventBus.Subscribe<ManualPaymentRecordedIntegrationEvent, ManualPaymentRecordedHandler>();
         eventBus.Subscribe<CommissionAccruedIntegrationEvent, CommissionAccruedHandler>();
         eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
+        eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();
 
         return app;
     }

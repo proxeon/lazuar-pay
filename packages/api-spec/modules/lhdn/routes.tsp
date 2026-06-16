@@ -28,6 +28,13 @@ interface LhdnOperations {
   ): LhdnDocumentResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
+  @route("/documents/{internalId}/cancel")
+  cancelDocument(
+    @path internalId: string,
+    @body body: CancelDocumentRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
   @route("/webhooks")
   registerWebhook(
     @body body: RegisterWebhookRequestDto,

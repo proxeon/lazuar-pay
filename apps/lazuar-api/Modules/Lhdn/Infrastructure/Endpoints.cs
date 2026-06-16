@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -36,6 +37,27 @@ public static class Endpoints
         {
             var result = await mediator.Send(new GetLhdnDocumentStatusQuery(ctx.TenantId, internalId));
             return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
+        });
+
+        group.MapPost("/documents/{internalId}/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            string internalId, 
+            [FromBody] CancelDocumentRequestDto req, 
+            IExecutionContextAccessor ctx, 
+            IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new CancelTaxDocumentCommand(ctx.TenantId, internalId, req.Reason));
+                return TypedResults.Ok(new StatusResponse { Status = "cancelled" });
+            }
+            catch (BusinessRuleValidationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         });
 
         group.MapPost("/webhooks", async Task<Ok<IdResponse>> (

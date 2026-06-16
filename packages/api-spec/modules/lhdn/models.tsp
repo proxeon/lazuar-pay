@@ -106,3 +106,7 @@ model UpdateLhdnCertificateRequestDto {
   p12_base64_file: string;
   passphrase: string;
 }
+
+model CancelDocumentRequestDto {
+  reason: string;
+}
