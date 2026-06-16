@@ -64,6 +64,18 @@ public static class Endpoints
             return TypedResults.Ok(new StatusResponse { Status = "deleted" });
         });
 
+        group.MapPut("/workspaces/{id:guid}/lhdn-certificate", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (
+            Guid id, 
+            [FromBody] UpdateLhdnCertificateRequestDto req, 
+            IExecutionContextAccessor ctx, 
+            IMediator mediator) =>
+        {
+            if (ctx.TenantId != id && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            
+            await mediator.Send(new UpdateLhdnCertificateCommand(id, req.P12_base64_file, req.Passphrase));
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
+        });
+
         return endpoints;
     }
 }

@@ -43,4 +43,11 @@ interface LhdnOperations {
   deleteWebhook(
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/workspaces/{id}/lhdn-certificate")
+  updateCertificate(
+    @path id: string,
+    @body body: UpdateLhdnCertificateRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

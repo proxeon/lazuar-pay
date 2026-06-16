@@ -60,15 +60,9 @@ model SubmitDocumentRequestDto {
   document_type: DocumentType;
   document_version?: string;
   issue_date: utcDateTime;
-
-  /* Required to link adjustments like Credit/Debit notes to the original LHDN document */
   original_lhdn_uuid?: string;
-
   adjustment_reason?: string;
-
-  /* Required to define the consolidation scope for B2C public receipts */
   billing_period_start?: utcDateTime;
-
   billing_period_end?: utcDateTime;
   buyer_name: string;
   buyer_tin: string;
@@ -106,4 +100,9 @@ model WebhookSubscriptionDto {
   events: string[];
   is_active: boolean;
   created_at: utcDateTime;
+}
+
+model UpdateLhdnCertificateRequestDto {
+  p12_base64_file: string;
+  passphrase: string;
 }

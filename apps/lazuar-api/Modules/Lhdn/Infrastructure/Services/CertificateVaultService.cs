@@ -8,10 +8,6 @@ using Modules.Lhdn.Application.Services;
 
 namespace Modules.Lhdn.Infrastructure.Services;
 
-/// <summary>
-/// Simulates an Envelope Encryption flow using a Cloud KMS Master Key.
-/// Decrypts the tenant's PKI certificate securely in memory without writing to disk.
-/// </summary>
 public class CertificateVaultService : ICertificateVaultService
 {
     private readonly byte[] _masterKey;
@@ -30,8 +26,6 @@ public class CertificateVaultService : ICertificateVaultService
         using var aes = Aes.Create();
         aes.Key = _masterKey;
         
-        // The IV was prepended to the ciphertext during encryption.
-        // We slice the first 16 bytes here to retrieve it safely.
         var iv = new byte[16];
         Array.Copy(passwordBytes, 0, iv, 0, 16);
         aes.IV = iv;
@@ -44,5 +38,22 @@ public class CertificateVaultService : ICertificateVaultService
         var rawPassword = reader.ReadToEnd();
 
         return X509CertificateLoader.LoadPkcs12(pfxBytes, rawPassword, X509KeyStorageFlags.EphemeralKeySet);
+    }
+
+    public (string EncryptedPfx, string CipherText) EncryptCertificate(string base64P12, string passphrase)
+    {
+        using var aes = Aes.Create();
+        aes.Key = _masterKey;
+        aes.GenerateIV();
+
+        var passwordBytes = Encoding.UTF8.GetBytes(passphrase);
+        using var encryptor = aes.CreateEncryptor();
+        var cipherText = encryptor.TransformFinalBlock(passwordBytes, 0, passwordBytes.Length);
+
+        var finalBytes = new byte[aes.IV.Length + cipherText.Length];
+        Buffer.BlockCopy(aes.IV, 0, finalBytes, 0, aes.IV.Length);
+        Buffer.BlockCopy(cipherText, 0, finalBytes, aes.IV.Length, cipherText.Length);
+
+        return (base64P12, Convert.ToBase64String(finalBytes));
     }
 }
