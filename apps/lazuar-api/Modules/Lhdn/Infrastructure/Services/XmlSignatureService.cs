@@ -23,7 +23,23 @@ public class XmlSignatureService : IXmlSignatureService
 
     public void SignDocument(XmlDocument document, X509Certificate2 certificate)
     {
+        // 1. Inject the XML declaration to ensure strict parser compliance
+        if (document.FirstChild is not XmlDeclaration)
+        {
+            var xmlDeclaration = document.CreateXmlDeclaration("1.0", "UTF-8", null);
+            document.InsertBefore(xmlDeclaration, document.DocumentElement);
+        }
+
         var root = document.DocumentElement ?? throw new InvalidOperationException("XML document has no root element.");
+
+        // 2. Explicitly define all namespaces at the root level.
+        // This guarantees that when we force the 'ds:' prefix later, the XML parser knows what it means.
+        root.SetAttribute("xmlns:ext", ExtNamespaceUrl);
+        root.SetAttribute("xmlns:sig", SigNamespaceUrl);
+        root.SetAttribute("xmlns:sac", SacNamespaceUrl);
+        root.SetAttribute("xmlns:sbc", SbcNamespaceUrl);
+        root.SetAttribute("xmlns:ds", SignatureNamespaceUrl);
+        root.SetAttribute("xmlns:xades", XadesNamespaceUrl);
 
         var ublExtensions = document.CreateElement("ext", "UBLExtensions", ExtNamespaceUrl);
         var ublExtension = document.CreateElement("ext", "UBLExtension", ExtNamespaceUrl);
@@ -64,15 +80,18 @@ public class XmlSignatureService : IXmlSignatureService
 
         var docReference = new Reference { Uri = "", Id = "id-doc-signed-data" };
 
-        // Use ds prefix and namespace for XPath transforms to ensure proper serialization
+        // Bind xmlns:ext so the XPath evaluator understands the prefix
         var extXPathElement = document.CreateElement("ds", "XPath", SignatureNamespaceUrl);
         extXPathElement.InnerText = "not(//ancestor-or-self::ext:UBLExtensions)";
+        extXPathElement.SetAttribute("xmlns:ext", ExtNamespaceUrl); 
         var xpathTransform1 = new XmlDsigXPathTransform();
         xpathTransform1.LoadInnerXml(extXPathElement.SelectNodes(".")!);
         docReference.AddTransform(xpathTransform1);
 
+        // Bind xmlns:cac so the XPath evaluator understands the prefix
         var cacXPathElement = document.CreateElement("ds", "XPath", SignatureNamespaceUrl);
         cacXPathElement.InnerText = "not(//ancestor-or-self::cac:Signature)";
+        cacXPathElement.SetAttribute("xmlns:cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2");
         var xpathTransform2 = new XmlDsigXPathTransform();
         xpathTransform2.LoadInnerXml(cacXPathElement.SelectNodes(".")!);
         docReference.AddTransform(xpathTransform2);
@@ -101,6 +120,7 @@ public class XmlSignatureService : IXmlSignatureService
         // Enforce the 'ds:' prefix across all generated signature nodes for LHDN regex parser compatibility
         ApplyPrefix(signatureElement, "ds", SignatureNamespaceUrl);
 
+        // Strip the empty generic xmlns attribute now that ds is mapped properly at the root
         if (signatureElement.Attributes?["xmlns"] != null)
         {
             signatureElement.Attributes.RemoveNamedItem("xmlns");

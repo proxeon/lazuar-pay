@@ -37,7 +37,11 @@ public class CertificateVaultService : ICertificateVaultService
         
         var rawPassword = reader.ReadToEnd();
 
-        return X509CertificateLoader.LoadPkcs12(pfxBytes, rawPassword, X509KeyStorageFlags.EphemeralKeySet);
+        // Cross-Platform compliance (macOS/Linux reject EphemeralKeySet)
+        return X509CertificateLoader.LoadPkcs12(
+            pfxBytes, 
+            rawPassword, 
+            X509KeyStorageFlags.DefaultKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
     }
 
     public (string EncryptedPfx, string CipherText) EncryptCertificate(string base64P12, string passphrase)
