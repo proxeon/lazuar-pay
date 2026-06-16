@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Xml;
 using Lazuar.ApiTypes;
 using Modules.Lhdn.Domain.Aggregates;
@@ -11,6 +12,15 @@ public static class UblNodeBuilder
     public const string CacNamespace = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
     public const string CbcNamespace = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
     public const string GeneralPublicTin = "EI00000000010";
+
+    /// <summary>
+    /// Applies strict Banker's "Half-Up" rounding expected by LHDN validation systems
+    /// to prevent TotalsMismatch errors when summing lines.
+    /// </summary>
+    private static string FormatDecimal(double value)
+    {
+        return Math.Round(value, 2, MidpointRounding.AwayFromZero).ToString("0.00", CultureInfo.InvariantCulture);
+    }
 
     public static XmlElement CreateCbcElement(XmlDocument doc, string name, string value)
     {
@@ -201,17 +211,17 @@ public static class UblNodeBuilder
     {
         var taxTotal = doc.CreateElement("cac", "TaxTotal", CacNamespace);
 
-        var cbcTaxAmount = CreateCbcElement(doc, "TaxAmount", taxAmount.ToString("F2"));
+        var cbcTaxAmount = CreateCbcElement(doc, "TaxAmount", FormatDecimal(taxAmount));
         cbcTaxAmount.SetAttribute("currencyID", "MYR");
         taxTotal.AppendChild(cbcTaxAmount);
 
         var taxSubtotal = doc.CreateElement("cac", "TaxSubtotal", CacNamespace);
 
-        var cbcTaxableAmount = CreateCbcElement(doc, "TaxableAmount", taxableAmount.ToString("F2"));
+        var cbcTaxableAmount = CreateCbcElement(doc, "TaxableAmount", FormatDecimal(taxableAmount));
         cbcTaxableAmount.SetAttribute("currencyID", "MYR");
         taxSubtotal.AppendChild(cbcTaxableAmount);
 
-        var subTaxAmount = CreateCbcElement(doc, "TaxAmount", taxAmount.ToString("F2"));
+        var subTaxAmount = CreateCbcElement(doc, "TaxAmount", FormatDecimal(taxAmount));
         subTaxAmount.SetAttribute("currencyID", "MYR");
         taxSubtotal.AppendChild(subTaxAmount);
 
@@ -240,19 +250,19 @@ public static class UblNodeBuilder
     {
         var total = doc.CreateElement("cac", "LegalMonetaryTotal", CacNamespace);
 
-        var extAmount = CreateCbcElement(doc, "LineExtensionAmount", request.Total_excluding_tax.ToString("F2"));
+        var extAmount = CreateCbcElement(doc, "LineExtensionAmount", FormatDecimal(request.Total_excluding_tax));
         extAmount.SetAttribute("currencyID", "MYR");
         total.AppendChild(extAmount);
 
-        var exclusive = CreateCbcElement(doc, "TaxExclusiveAmount", request.Total_excluding_tax.ToString("F2"));
+        var exclusive = CreateCbcElement(doc, "TaxExclusiveAmount", FormatDecimal(request.Total_excluding_tax));
         exclusive.SetAttribute("currencyID", "MYR");
         total.AppendChild(exclusive);
 
-        var inclusive = CreateCbcElement(doc, "TaxInclusiveAmount", request.Total_including_tax.ToString("F2"));
+        var inclusive = CreateCbcElement(doc, "TaxInclusiveAmount", FormatDecimal(request.Total_including_tax));
         inclusive.SetAttribute("currencyID", "MYR");
         total.AppendChild(inclusive);
 
-        var payable = CreateCbcElement(doc, "PayableAmount", request.Total_including_tax.ToString("F2"));
+        var payable = CreateCbcElement(doc, "PayableAmount", FormatDecimal(request.Total_including_tax));
         payable.SetAttribute("currencyID", "MYR");
         total.AppendChild(payable);
 
@@ -264,11 +274,11 @@ public static class UblNodeBuilder
         var line = doc.CreateElement("cac", "InvoiceLine", CacNamespace);
         line.AppendChild(CreateCbcElement(doc, "ID", index.ToString()));
 
-        var quantity = CreateCbcElement(doc, "InvoicedQuantity", item.Quantity.ToString("F2"));
+        var quantity = CreateCbcElement(doc, "InvoicedQuantity", FormatDecimal(item.Quantity));
         quantity.SetAttribute("unitCode", "C62");
         line.AppendChild(quantity);
 
-        var extAmount = CreateCbcElement(doc, "LineExtensionAmount", item.Subtotal.ToString("F2"));
+        var extAmount = CreateCbcElement(doc, "LineExtensionAmount", FormatDecimal(item.Subtotal));
         extAmount.SetAttribute("currencyID", "MYR");
         line.AppendChild(extAmount);
 
@@ -318,14 +328,14 @@ public static class UblNodeBuilder
         line.AppendChild(cacItem);
 
         var price = doc.CreateElement("cac", "Price", CacNamespace);
-        var priceAmount = CreateCbcElement(doc, "PriceAmount", item.Unit_price.ToString("F2"));
+        var priceAmount = CreateCbcElement(doc, "PriceAmount", FormatDecimal(item.Unit_price));
         priceAmount.SetAttribute("currencyID", "MYR");
         price.AppendChild(priceAmount);
 
         line.AppendChild(price);
 
         var itemPriceExtension = doc.CreateElement("cac", "ItemPriceExtension", CacNamespace);
-        var itemExtAmount = CreateCbcElement(doc, "Amount", item.Subtotal.ToString("F2"));
+        var itemExtAmount = CreateCbcElement(doc, "Amount", FormatDecimal(item.Subtotal));
         itemExtAmount.SetAttribute("currencyID", "MYR");
         itemPriceExtension.AppendChild(itemExtAmount);
         line.AppendChild(itemPriceExtension);

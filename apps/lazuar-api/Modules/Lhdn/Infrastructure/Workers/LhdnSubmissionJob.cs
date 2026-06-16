@@ -80,8 +80,22 @@ public class LhdnSubmissionJob : BackgroundService
                 };
                 xmlDoc.LoadXml(doc.RawXmlContent);
 
-                if (!string.IsNullOrEmpty(config.EncryptedPfxBase64) && !string.IsNullOrEmpty(config.PfxPasswordCiphertext))
+                // Enforce Fail-Fast for v1.1 documents requiring signature
+                var nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
+                nsManager.AddNamespace("cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
+                
+                var typeCodeNode = xmlDoc.SelectSingleNode("//cbc:InvoiceTypeCode | //cbc:CreditNoteTypeCode | //cbc:DebitNoteTypeCode", nsManager);
+                var documentVersion = typeCodeNode?.Attributes?["listVersionID"]?.Value ?? "1.0";
+
+                if (documentVersion == "1.1")
                 {
+                    if (string.IsNullOrEmpty(config.EncryptedPfxBase64) || string.IsNullOrEmpty(config.PfxPasswordCiphertext))
+                    {
+                        doc.MarkAsFailed("Certificate missing for v1.1 document. Please upload a valid PKCS#12 certificate.");
+                        await db.SaveChangesAsync(ct);
+                        continue;
+                    }
+
                     using var cert = vault.GetDecryptedCertificate(config.EncryptedPfxBase64, config.PfxPasswordCiphertext);
                     xmlSigner.SignDocument(xmlDoc, cert);
                 }

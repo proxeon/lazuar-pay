@@ -7,7 +7,7 @@ namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
 public class CreditNoteStrategy : IUblDocumentStrategy
 {
-    public XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config)
+    public XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
     {
         var doc = new XmlDocument { PreserveWhitespace = true };
         
@@ -21,7 +21,7 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "IssueTime", request.Issue_date.ToString("HH:mm:ssZ")));
 
         var invoiceTypeCode = UblNodeBuilder.CreateCbcElement(doc, "InvoiceTypeCode", "02");
-        invoiceTypeCode.SetAttribute("listVersionID", "1.1");
+        invoiceTypeCode.SetAttribute("listVersionID", documentVersion);
         root.AppendChild(invoiceTypeCode);
 
         if (!string.IsNullOrWhiteSpace(request.Adjustment_reason))

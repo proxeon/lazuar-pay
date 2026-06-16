@@ -5,12 +5,9 @@ using Modules.Lhdn.Domain.Aggregates;
 
 namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
-/// <summary>
-/// Implements the UBL 2.1 schema explicitly for Standard B2B Invoices.
-/// </summary>
 public class StandardInvoiceStrategy : IUblDocumentStrategy
 {
-    public XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config)
+    public XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
     {
         var doc = new XmlDocument { PreserveWhitespace = true };
         
@@ -24,13 +21,12 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
         root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "IssueTime", request.Issue_date.ToString("HH:mm:ssZ")));
 
         var invoiceTypeCode = UblNodeBuilder.CreateCbcElement(doc, "InvoiceTypeCode", "01");
-        invoiceTypeCode.SetAttribute("listVersionID", "1.1");
+        invoiceTypeCode.SetAttribute("listVersionID", documentVersion);
         root.AppendChild(invoiceTypeCode);
 
         root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "DocumentCurrencyCode", "MYR"));
         root.AppendChild(UblNodeBuilder.CreateCbcElement(doc, "TaxCurrencyCode", "MYR"));
 
-        // Add Invoice Period (Mandatory for robust XSD passing)
         var invoicePeriod = doc.CreateElement("cac", "InvoicePeriod", UblNodeBuilder.CacNamespace);
         var startDate = request.Billing_period_start?.ToString("yyyy-MM-dd") ?? request.Issue_date.ToString("yyyy-MM-dd");
         var endDate = request.Billing_period_end?.ToString("yyyy-MM-dd") ?? request.Issue_date.ToString("yyyy-MM-dd");

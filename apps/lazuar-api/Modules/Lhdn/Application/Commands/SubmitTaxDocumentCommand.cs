@@ -35,8 +35,10 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
             throw new InvalidOperationException("LHDN Tenant Configuration is missing.");
         }
 
+        var documentVersion = string.IsNullOrWhiteSpace(request.Payload.Document_version) ? "1.0" : request.Payload.Document_version;
+
         var strategy = _strategyFactory.GetStrategy(request.Payload);
-        var xmlDoc = strategy.Generate(request.Payload, config);
+        var xmlDoc = strategy.Generate(request.Payload, config, documentVersion);
         
         var rawXmlString = xmlDoc.OuterXml;
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));

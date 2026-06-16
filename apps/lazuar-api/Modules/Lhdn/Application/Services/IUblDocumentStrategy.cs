@@ -6,5 +6,5 @@ namespace Modules.Lhdn.Application.Services;
 
 public interface IUblDocumentStrategy
 {
-    XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config);
+    XmlDocument Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion);
 }

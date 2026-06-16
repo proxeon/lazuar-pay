@@ -58,6 +58,7 @@ model LhdnAddressDto {
 model SubmitDocumentRequestDto {
   internal_id: string;
   document_type: DocumentType;
+  document_version?: string;
   issue_date: utcDateTime;
 
   /* Required to link adjustments like Credit/Debit notes to the original LHDN document */
