@@ -30,12 +30,6 @@
 			<cac:PartyIdentification>
 				<cbc:ID schemeID="{{ supplier.id_type }}">{{ supplier.id_value }}</cbc:ID>
 			</cac:PartyIdentification>
-			<cac:PartyIdentification>
-				<cbc:ID schemeID="SST">NA</cbc:ID>
-			</cac:PartyIdentification>
-			<cac:PartyIdentification>
-				<cbc:ID schemeID="TTX">NA</cbc:ID>
-			</cac:PartyIdentification>
 			<cac:PostalAddress>
 				<cbc:CityName>Kuala Lumpur</cbc:CityName>
 				<cbc:PostalZone>50480</cbc:PostalZone>
@@ -59,28 +53,27 @@
 		</cac:Party>
 	</cac:AccountingSupplierParty>
 
-	<!-- Fixed General Public Buyer Requirements for Consolidations -->
 	<cac:AccountingCustomerParty>
 		<cac:Party>
 			<cac:PartyIdentification>
-				<cbc:ID schemeID="TIN">EI00000000010</cbc:ID>
+				<cbc:ID schemeID="TIN">{{ buyer.tin }}</cbc:ID>
 			</cac:PartyIdentification>
 			<cac:PartyIdentification>
-				<cbc:ID schemeID="BRN">NA</cbc:ID>
+				<cbc:ID schemeID="{{ buyer.id_type }}">{{ buyer.id_value }}</cbc:ID>
 			</cac:PartyIdentification>
 			<cac:PostalAddress>
-				<cbc:CityName>NA</cbc:CityName>
-				<cbc:PostalZone>00000</cbc:PostalZone>
-				<cbc:CountrySubentityCode>17</cbc:CountrySubentityCode>
+				<cbc:CityName>{{ buyer.city | xml_escape }}</cbc:CityName>
+				<cbc:PostalZone>{{ buyer.postal_code }}</cbc:PostalZone>
+				<cbc:CountrySubentityCode>{{ buyer.state_code }}</cbc:CountrySubentityCode>
 				<cac:AddressLine>
-					<cbc:Line>NA</cbc:Line>
+					<cbc:Line>{{ buyer.address_line1 | xml_escape }}</cbc:Line>
 				</cac:AddressLine>
 				<cac:Country>
-					<cbc:IdentificationCode listID="ISO3166-1" listAgencyID="6">MYS</cbc:IdentificationCode>
+					<cbc:IdentificationCode listID="ISO3166-1" listAgencyID="6">{{ buyer.country_code }}</cbc:IdentificationCode>
 				</cac:Country>
 			</cac:PostalAddress>
 			<cac:PartyLegalEntity>
-				<cbc:RegistrationName>General Public</cbc:RegistrationName>
+				<cbc:RegistrationName>{{ buyer.name | xml_escape }}</cbc:RegistrationName>
 			</cac:PartyLegalEntity>
 			{{ if buyer.phone != "" || buyer.email != "" }}
 			<cac:Contact>
