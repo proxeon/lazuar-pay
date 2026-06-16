@@ -37,7 +37,8 @@ public static class DependencyInjection
         services.AddScoped<ILhdnRepository, LhdnRepository>();
         services.AddScoped<ILhdnQueryService, LhdnQueryService>();
         services.AddScoped<ICertificateVaultService, CertificateVaultService>();
-        services.AddScoped<IXmlSignatureService, XmlSignatureService>();
+        
+        services.AddScoped<IJsonSignatureService, JsonSignatureService>();
         
         services.AddScoped<IDocumentStrategyFactory, DocumentStrategyFactory>();
         services.AddKeyedScoped<IUblDocumentStrategy, StandardInvoiceStrategy>("B2BStandardInvoice");
