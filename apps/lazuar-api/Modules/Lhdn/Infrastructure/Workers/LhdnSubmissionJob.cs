@@ -17,13 +17,11 @@ public class LhdnSubmissionJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<LhdnSubmissionJob> _logger;
-    private readonly IConfiguration _configuration;
 
-    public LhdnSubmissionJob(IServiceScopeFactory scopeFactory, ILogger<LhdnSubmissionJob> logger, IConfiguration configuration)
+    public LhdnSubmissionJob(IServiceScopeFactory scopeFactory, ILogger<LhdnSubmissionJob> logger)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
-        _configuration = configuration;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,8 +67,8 @@ public class LhdnSubmissionJob : BackgroundService
                     continue;
                 }
 
-                var finalXmlBytes = Encoding.UTF8.GetBytes(doc.RawXmlContent);
-                var base64Document = Convert.ToBase64String(finalXmlBytes);
+                // Explicitly encode the raw XML string exactly as the Bash script did
+                var base64Document = Convert.ToBase64String(Encoding.UTF8.GetBytes(doc.RawXmlContent));
 
                 var payload = new
                 {
@@ -78,7 +76,7 @@ public class LhdnSubmissionJob : BackgroundService
                     {
                         new
                         {
-                            format = "XML", 
+                            format = "XML", // ABSOLUTELY CRITICAL. Forces LHDN to bypass JSON parser.
                             documentHash = doc.DocumentHash, 
                             codeNumber = doc.InternalReferenceId,
                             document = base64Document
@@ -87,8 +85,13 @@ public class LhdnSubmissionJob : BackgroundService
                 };
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
-                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin, ct);
                 
+                // Print the payload to the console so we can visually verify "format": "XML"
+                _logger.LogInformation("--- SENDING PAYLOAD TO LHDN ---");
+                _logger.LogInformation(jsonPayload);
+                _logger.LogInformation("-------------------------------");
+
+                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin, ct);
                 var result = await gateway.SubmitDocumentAsync(config.MyInvoisClientId, token, jsonPayload, config.IntermediaryMode, config.SupplierTin, ct);
 
                 if (result.Success && !string.IsNullOrEmpty(result.SubmissionUid))
