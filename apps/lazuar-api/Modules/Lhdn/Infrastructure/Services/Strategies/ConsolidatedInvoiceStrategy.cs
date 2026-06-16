@@ -136,7 +136,7 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
                         new LhdnTaxCategory(
                             ID: taxTypeCode,
                             Percent: null,
-                            TaxExemptionReason: taxTypeCode is "E" or "06" ? new UblValue<string>("Not subject to tax") : null,
+                            TaxExemptionReason: taxTypeCode is "E" or "06" ? new UblValue<string>("Not subject to tax") : (UblValue<string>?)null,
                             TaxScheme: new[] { new LhdnTaxScheme(new[] { new LhdnTaxSchemeId("OTH", "UN/ECE 5153", "6") }) }
                         )
                     }

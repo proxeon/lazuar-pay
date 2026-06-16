@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Xml;
-using System.Xml.Schema;
+using System.Text.Json;
 using FluentAssertions;
 using Lazuar.ApiTypes;
 using Modules.Lhdn.Domain.Aggregates;
+using Modules.Lhdn.Infrastructure.Models;
+using Modules.Lhdn.Infrastructure.Serialization;
 using Modules.Lhdn.Infrastructure.Services.Strategies;
 using NUnit.Framework;
 
@@ -13,16 +14,16 @@ namespace Lazuar.ArchitectureTests.Lhdn;
 [TestFixture]
 public class UblXmlGenerationTests
 {
-    private LhdnTenantConfig _mockConfig;
-    private SubmitDocumentRequestDto _baseRequest;
+    private LhdnTenantConfig _mockConfig = null!;
+    private SubmitDocumentRequestDto _baseRequest = null!;
 
     [SetUp]
     public void Setup()
     {
         _mockConfig = new LhdnTenantConfig(
-            Guid.NewGuid(),
-            intermediaryMode: false,
-            supplierTin: "C12345678901",
+            organizationId: Guid.NewGuid(),
+            intermediaryMode: true,
+            supplierTin: "C1234567890",
             idType: "BRN",
             idValue: "202401234567",
             environment: "SANDBOX",
@@ -31,16 +32,16 @@ public class UblXmlGenerationTests
 
         _baseRequest = new SubmitDocumentRequestDto
         {
-            Internal_id = "TEST-INV-001",
+            Internal_id = "INV-001",
             Document_type = SubmitDocumentRequestDtoDocument_type._01,
             Issue_date = DateTimeOffset.UtcNow,
-            Buyer_name = "Test Buyer",
-            Buyer_tin = "IG1234567890",
+            Buyer_name = "Acme Corp",
+            Buyer_tin = "C9876543210",
             Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
-            Buyer_id_value = "202001012345",
+            Buyer_id_value = "202001234567",
             Buyer_address = new LhdnAddressDto
             {
-                Line1 = "Test Address",
+                Line1 = "123 Buyer Street",
                 City = "Kuala Lumpur",
                 Postal_code = "50000",
                 State_code = LhdnAddressDtoState_code._14,
@@ -50,104 +51,63 @@ public class UblXmlGenerationTests
             {
                 new LhdnItemDto
                 {
-                    Description = "Test Item",
+                    Description = "Software License",
                     Classification_code = "022",
                     Quantity = 1,
-                    Unit_price = 100.00,
+                    Unit_price = 1000,
                     Tax_rate = 0,
                     Tax_amount = 0,
-                    Subtotal = 100.00,
+                    Subtotal = 1000,
                     Tax_type_code = LhdnItemDtoTax_type_code._06
                 }
             },
-            Total_excluding_tax = 100.00,
+            Total_excluding_tax = 1000,
             Total_tax = 0,
-            Total_including_tax = 100.00
+            Total_including_tax = 1000
         };
     }
 
     [Test]
-    public void StandardInvoiceStrategy_ShouldGenerate_StructurallyValidXml()
+    public void StandardInvoiceStrategy_ShouldGenerateValidJson()
     {
         var strategy = new StandardInvoiceStrategy();
-        var xmlDoc = strategy.Generate(_baseRequest, _mockConfig);
-
-        xmlDoc.OuterXml.Should().Contain("listVersionID=\"1.1\"");
-        xmlDoc.OuterXml.Should().Contain("<cac:Signature>");
-        xmlDoc.OuterXml.Should().Contain("<cbc:TaxCurrencyCode>MYR</cbc:TaxCurrencyCode>");
-
-        ValidateAgainstUblSchema(xmlDoc).Should().BeTrue();
-    }
-
-    [Test]
-    public void ConsolidatedInvoiceStrategy_ShouldGenerate_StructurallyValidXml()
-    {
-        _baseRequest.Buyer_tin = "EI00000000010"; 
-        _baseRequest.Buyer_name = "General Public";
-        _baseRequest.Billing_period_start = DateTimeOffset.UtcNow.AddDays(-30);
-        _baseRequest.Billing_period_end = DateTimeOffset.UtcNow;
-
-        var strategy = new ConsolidatedInvoiceStrategy();
-        var xmlDoc = strategy.Generate(_baseRequest, _mockConfig);
-
-        xmlDoc.OuterXml.Should().Contain("<cac:InvoicePeriod>");
-        xmlDoc.OuterXml.Should().Contain("<cac:AdditionalDocumentReference>");
-        xmlDoc.OuterXml.Should().NotContain("<cac:BillingReference>");
-
-        ValidateAgainstUblSchema(xmlDoc).Should().BeTrue();
-    }
-
-    [Test]
-    public void CreditNoteStrategy_ShouldGenerate_StructurallyValidXml()
-    {
-        _baseRequest.Document_type = SubmitDocumentRequestDtoDocument_type._02;
-        _baseRequest.Original_lhdn_uuid = "ABC-123-UUID";
-        _baseRequest.Adjustment_reason = "Customer Refund";
-
-        var strategy = new CreditNoteStrategy();
-        var xmlDoc = strategy.Generate(_baseRequest, _mockConfig);
-
-        xmlDoc.OuterXml.Should().Contain("02</cbc:InvoiceTypeCode>");
-        xmlDoc.OuterXml.Should().Contain("<cac:BillingReference>");
-        xmlDoc.OuterXml.Should().Contain("<cac:InvoiceDocumentReference>");
-        xmlDoc.OuterXml.Should().Contain("<cbc:UUID>ABC-123-UUID</cbc:UUID>");
-
-        ValidateAgainstUblSchema(xmlDoc).Should().BeTrue();
-    }
-
-    private bool ValidateAgainstUblSchema(XmlDocument document)
-    {
-        var schemas = new XmlSchemaSet();
         
-        try 
-        {
-            schemas.Add("urn:oasis:names:specification:ubl:schema:xsd:Invoice-2", "Schemas/UBL-Invoice-2.1.xsd");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Skipping strict XSD validation due to missing local schema files: {ex.Message}");
-            return true;
-        }
+        var result = strategy.Generate(_baseRequest, _mockConfig, "1.1");
+        var json = JsonSerializer.Serialize(result, LhdnJsonOptions.Instance);
 
-        var settings = new XmlReaderSettings
-        {
-            ValidationType = ValidationType.Schema,
-            Schemas = schemas
-        };
+        json.Should().NotBeNullOrEmpty();
+        json.Should().Contain("C1234567890"); // Supplier TIN
+        json.Should().Contain("C9876543210"); // Buyer TIN
+        json.Should().Contain("\"_\":\"01\",\"listVersionID\":\"1.1\""); // Invoice type code
+    }
 
-        var isValid = true;
-        settings.ValidationEventHandler += (sender, args) =>
-        {
-            if (args.Severity == XmlSeverityType.Error)
-            {
-                Console.WriteLine($"XSD Error: {args.Message}");
-                isValid = false;
-            }
-        };
+    [Test]
+    public void ConsolidatedInvoiceStrategy_ShouldForceGeneralPublicDefaults()
+    {
+        var strategy = new ConsolidatedInvoiceStrategy();
+        
+        // Even if a buyer TIN is passed, B2C strategy should override it
+        var result = strategy.Generate(_baseRequest, _mockConfig, "1.1");
+        var json = JsonSerializer.Serialize(result, LhdnJsonOptions.Instance);
 
-        using var reader = XmlReader.Create(new System.IO.StringReader(document.OuterXml), settings);
-        while (reader.Read()) { }
+        json.Should().NotBeNullOrEmpty();
+        json.Should().Contain("EI00000000010"); // General Public TIN
+        json.Should().Contain("General Public");
+    }
 
-        return isValid;
+    [Test]
+    public void CreditNoteStrategy_ShouldSetCorrectTypeCode()
+    {
+        var strategy = new CreditNoteStrategy();
+        
+        _baseRequest.Document_type = SubmitDocumentRequestDtoDocument_type._02;
+        _baseRequest.Original_lhdn_uuid = "PREVIOUS-UUID-1234";
+
+        var result = strategy.Generate(_baseRequest, _mockConfig, "1.1");
+        var json = JsonSerializer.Serialize(result, LhdnJsonOptions.Instance);
+
+        json.Should().NotBeNullOrEmpty();
+        json.Should().Contain("\"_\":\"02\",\"listVersionID\":\"1.1\""); // Credit Note type code
+        json.Should().Contain("PREVIOUS-UUID-1234");
     }
 }

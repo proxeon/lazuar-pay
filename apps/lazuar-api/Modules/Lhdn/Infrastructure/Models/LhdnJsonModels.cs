@@ -5,7 +5,7 @@ namespace Modules.Lhdn.Infrastructure.Models;
 
 /// <summary>
 /// Root document schema mapping directly to LHDN's expected JSON representation.
-/// [JsonPropertyOrder] guarantees deterministic top-to-bottom serialization.
+/// [JsonPropertyOrder] guarantees deterministic top-to-bottom serialization to match Node.js exactly.
 /// </summary>
 public record LhdnJsonDocument(
     [property: JsonPropertyOrder(1), JsonPropertyName("_D")] string D,
@@ -26,8 +26,8 @@ public record LhdnJsonInvoice(
     [property: JsonPropertyOrder(9)] LhdnAccountingParty[] AccountingSupplierParty,
     [property: JsonPropertyOrder(10)] LhdnAccountingParty[] AccountingCustomerParty,
     [property: JsonPropertyOrder(11)] LhdnPaymentMeans[]? PaymentMeans,
-    [property: JsonPropertyOrder(12)] LhdnTaxTotal[] TaxTotal,
-    [property: JsonPropertyOrder(13)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
+    [property: JsonPropertyOrder(12)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
+    [property: JsonPropertyOrder(13)] LhdnTaxTotal[] TaxTotal,
     [property: JsonPropertyOrder(14)] LhdnInvoiceLine[] InvoiceLine,
     [property: JsonPropertyOrder(100)] object[]? UBLExtensions = null, 
     [property: JsonPropertyOrder(101)] object[]? Signature = null 
@@ -65,8 +65,8 @@ public record LhdnAdditionalAccountId(
 public record LhdnParty(
     [property: JsonPropertyOrder(1)] LhdnIndustryClassificationCode[]? IndustryClassificationCode,
     [property: JsonPropertyOrder(2)] LhdnPartyIdentification[] PartyIdentification,
-    [property: JsonPropertyOrder(3)] LhdnPostalAddress[] PostalAddress,
-    [property: JsonPropertyOrder(4)] LhdnPartyLegalEntity[] PartyLegalEntity,
+    [property: JsonPropertyOrder(3)] LhdnPartyLegalEntity[] PartyLegalEntity,
+    [property: JsonPropertyOrder(4)] LhdnPostalAddress[] PostalAddress,
     [property: JsonPropertyOrder(5)] LhdnContact[] Contact
 );
 
@@ -85,10 +85,10 @@ public record LhdnSchemeId(
 );
 
 public record LhdnPostalAddress(
-    [property: JsonPropertyOrder(1)] UblValue<string> CityName,
-    [property: JsonPropertyOrder(2)] UblValue<string> PostalZone,
-    [property: JsonPropertyOrder(3)] UblValue<string> CountrySubentityCode,
-    [property: JsonPropertyOrder(4)] LhdnAddressLine[] AddressLine,
+    [property: JsonPropertyOrder(1)] LhdnAddressLine[] AddressLine,
+    [property: JsonPropertyOrder(2)] UblValue<string> CityName,
+    [property: JsonPropertyOrder(3)] UblValue<string> PostalZone,
+    [property: JsonPropertyOrder(4)] UblValue<string> CountrySubentityCode,
     [property: JsonPropertyOrder(5)] LhdnCountry[] Country
 );
 
@@ -111,8 +111,8 @@ public record LhdnPartyLegalEntity(
 );
 
 public record LhdnContact(
-    [property: JsonPropertyOrder(1)] UblValue<string> Telephone,
-    [property: JsonPropertyOrder(2)] UblValue<string> ElectronicMail
+    [property: JsonPropertyOrder(1)] UblValue<string>? Telephone,
+    [property: JsonPropertyOrder(2)] UblValue<string>? ElectronicMail
 );
 
 public record LhdnPaymentMeans(
