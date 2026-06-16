@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -17,8 +19,6 @@ public class LhdnRateLimitingTests
 {
     private ILhdnRepository _repository = null!;
     private IDocumentStrategyFactory _strategyFactory = null!;
-    private IJsonSignatureService _signatureService = null!;
-    private ICertificateVaultService _vaultService = null!;
     private IUblDocumentStrategy _mockStrategy = null!;
     private SubmitTaxDocumentCommandHandler _handler = null!;
 
@@ -27,15 +27,11 @@ public class LhdnRateLimitingTests
     {
         _repository = Substitute.For<ILhdnRepository>();
         _strategyFactory = Substitute.For<IDocumentStrategyFactory>();
-        _signatureService = Substitute.For<IJsonSignatureService>();
-        _vaultService = Substitute.For<ICertificateVaultService>();
         _mockStrategy = Substitute.For<IUblDocumentStrategy>();
 
         _handler = new SubmitTaxDocumentCommandHandler(
             _repository,
-            _strategyFactory,
-            _signatureService,
-            _vaultService
+            _strategyFactory
         );
     }
 
@@ -54,12 +50,13 @@ public class LhdnRateLimitingTests
 
         var config = new LhdnTenantConfig(orgId, false, "C1234567890", "BRN", "12345");
         
+        var dummyXmlString = "<xml>dummy</xml>";
+        var normalizedXml = dummyXmlString.Replace("\r\n", "\n");
+        var expectedHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedXml))).ToLowerInvariant();
+
         _repository.GetTenantConfigAsync(orgId, Arg.Any<CancellationToken>()).Returns(config);
         _strategyFactory.GetStrategy(request).Returns(_mockStrategy);
-        _mockStrategy.Generate(request, config, "1.0").Returns(new object());
-
-        _signatureService.SerializeUnsignedDocument(Arg.Any<object>())
-            .Returns(("{\"dummy\":\"json\"}", "dummy_hex_hash"));
+        _mockStrategy.Generate(request, config, "1.0").Returns(dummyXmlString);
 
         var command = new SubmitTaxDocumentCommand(orgId, request);
 
@@ -68,6 +65,6 @@ public class LhdnRateLimitingTests
         resultId.Should().NotBeEmpty();
         _repository.Received(1).AddTaxDocument(Arg.Is<TaxDocument>(d => 
             d.InternalReferenceId == "INV-123" && 
-            d.DocumentHash == "dummy_hex_hash"));
+            d.DocumentHash == expectedHash));
     }
 }

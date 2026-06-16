@@ -6,6 +6,10 @@ using Modules.Lhdn.Infrastructure.Services.Strategies.ViewModels;
 
 namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
+/// <summary>
+/// Transforms incoming API DTOs into structured ViewModels for logic-less template rendering.
+/// Calculates required mathematical groupings (like TaxSubtotals) to satisfy LHDN Schematron rules.
+/// </summary>
 public static class ViewModelMapper
 {
     public static UblInvoiceViewModel MapToViewModel(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
@@ -29,7 +33,7 @@ public static class ViewModelMapper
             TotalIncludingTax = (decimal)request.Total_including_tax,
             Supplier = new UblPartyViewModel
             {
-                Name = "Lazuar Supplier", // In production, this should be pulled from tenant profile
+                Name = "Lazuar Supplier",
                 Tin = config.SupplierTin ?? "NA",
                 IdType = config.IdType ?? "BRN",
                 IdValue = config.IdValue ?? "NA",

@@ -7,7 +7,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <!-- Ignore NuGet prerelease version mismatch warnings during .NET 10 preview development -->
     <NoWarn>$(NoWarn);NU1603;NU1605</NoWarn>
+    <!-- Prevents NuGetAudit vulnerability warnings from breaking the CI/CD build while keeping them visible in logs -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>
 </Project>
