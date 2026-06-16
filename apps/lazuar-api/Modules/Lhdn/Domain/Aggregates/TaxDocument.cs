@@ -97,7 +97,13 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
 
     public void Cancel()
     {
+        if (ValidationStatus != "VALID" || string.IsNullOrEmpty(LhdnUuid))
+        {
+            throw new InvalidOperationException($"Cannot cancel document. Current status is {ValidationStatus}. Document must be VALID before cancellation.");
+        }
+
         CheckRule(new CancelWindowMustBeValidRule(ValidatedAt));
+        
         ValidationStatus = "CANCELLED";
         NextPollAt = null;
         UpdatedAt = DateTime.UtcNow;
