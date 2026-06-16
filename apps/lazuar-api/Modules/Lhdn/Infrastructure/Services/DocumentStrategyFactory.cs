@@ -16,7 +16,7 @@ public class DocumentStrategyFactory : IDocumentStrategyFactory
 
     public IUblDocumentStrategy GetStrategy(SubmitDocumentRequestDto request)
     {
-        bool isB2c = string.IsNullOrWhiteSpace(request.Buyer_tin) || request.Buyer_tin == UblNodeBuilder.GeneralPublicTin;
+        bool isB2c = string.IsNullOrWhiteSpace(request.Buyer_tin) || request.Buyer_tin == "EI00000000010";
 
         return request.Document_type switch
         {

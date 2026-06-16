@@ -1,10 +1,9 @@
 using System.Security.Cryptography.X509Certificates;
-using Modules.Lhdn.Infrastructure.Models;
 
 namespace Modules.Lhdn.Application.Services;
 
 public record JsonSigningResult(
-    LhdnJsonDocument SignedPayload,
+    string FinalJsonString,
     string Base64Digest,
     string HexDigest,
     string SignatureValue
@@ -12,5 +11,6 @@ public record JsonSigningResult(
 
 public interface IJsonSignatureService
 {
-    JsonSigningResult SignDocument(LhdnJsonDocument document, X509Certificate2 certificate);
+    JsonSigningResult SignDocument(object document, X509Certificate2 certificate);
+    (string JsonString, string DocumentHashHex) SerializeUnsignedDocument(object document);
 }

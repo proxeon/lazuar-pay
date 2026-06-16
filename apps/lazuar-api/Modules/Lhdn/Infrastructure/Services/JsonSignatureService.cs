@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Infrastructure.Models;
@@ -17,25 +18,22 @@ public class JsonSignatureService : IJsonSignatureService
     private const string SignatureMethodAlgo = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
     private const string DigestMethodAlgo = "http://www.w3.org/2001/04/xmlenc#sha256";
 
-    public JsonSigningResult SignDocument(LhdnJsonDocument document, X509Certificate2 certificate)
+    public JsonSigningResult SignDocument(object document, X509Certificate2 certificate)
     {
+        var typedDocument = document as LhdnJsonDocument ?? throw new ArgumentException("Provided document is not a valid LhdnJsonDocument.", nameof(document));
         var signingTime = DateTime.UtcNow;
 
-        // Step 1: Hash the canonical document directly from a stream to avoid LOH string allocations.
-        var documentHashBytes = HashDocument(document);
+        var documentHashBytes = HashDocument(typedDocument);
         var documentBase64Digest = Convert.ToBase64String(documentHashBytes);
         var documentHexDigest = Convert.ToHexString(documentHashBytes).ToLowerInvariant();
 
-        // Step 2: Hash the X509 Certificate (DER encoded)
         var certDigestBase64 = Convert.ToBase64String(SHA256.HashData(certificate.RawData));
-
         var certContent = Convert.ToBase64String(certificate.RawData);
         var issuerName = ParseDistinguishedName(certificate.Issuer);
         var subjectName = ParseDistinguishedName(certificate.Subject);
         var serialNumber = ParseSerialNumber(certificate.SerialNumber);
         var formattedSigningTime = signingTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-        // Step 3: Construct the QualifyingProperties and hash it for the SignedProperties digest.
         var qualifyingProperties = new LhdnQualifyingProperties(
             Target: "signature",
             SignedProperties: new[]
@@ -76,16 +74,14 @@ public class JsonSignatureService : IJsonSignatureService
         var propsHashBytes = HashDocument(qualifyingProperties);
         var propsBase64Digest = Convert.ToBase64String(propsHashBytes);
 
-        // Step 4: Sign the canonicalized document bytes using RSA-SHA256 with PKCS#1 v1.5 padding.
         var rsa = certificate.GetRSAPrivateKey() ?? throw new InvalidOperationException("Certificate does not contain an RSA private key.");
         
-#pragma warning disable CA1416 // LHDN specification strictly requires legacy PKCS#1 v1.5 padding. Do not upgrade to PSS.
+#pragma warning disable CA1416 
         var signatureBytes = rsa.SignData(documentHashBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 #pragma warning restore CA1416
         
         var signatureValue = Convert.ToBase64String(signatureBytes);
 
-        // Step 5: Assemble the final Signature and UBLExtensions blocks.
         var ublExtension = new LhdnUblExtensionWrapper(
             UBLExtension: new[]
             {
@@ -156,21 +152,29 @@ public class JsonSignatureService : IJsonSignatureService
 
         var signatureReference = new LhdnSignatureReference(ReferencedSignatureId, ExtensionUri);
 
-        // Step 6: Mutate the document to append the extensions at the end of the Invoice array element.
-        var signedInvoice = document.Invoice[0] with
+        var signedInvoice = typedDocument.Invoice[0] with
         {
             UBLExtensions = new object[] { ublExtension },
             Signature = new object[] { signatureReference }
         };
 
-        var finalDocument = document with { Invoice = new[] { signedInvoice } };
+        var finalDocument = typedDocument with { Invoice = new[] { signedInvoice } };
+        var finalJsonString = JsonSerializer.Serialize(finalDocument, LhdnJsonOptions.Instance);
 
         return new JsonSigningResult(
-            SignedPayload: finalDocument,
+            FinalJsonString: finalJsonString,
             Base64Digest: documentBase64Digest,
             HexDigest: documentHexDigest,
             SignatureValue: signatureValue
         );
+    }
+
+    public (string JsonString, string DocumentHashHex) SerializeUnsignedDocument(object document)
+    {
+        var finalJsonString = JsonSerializer.Serialize(document, LhdnJsonOptions.Instance);
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(finalJsonString));
+        var documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
+        return (finalJsonString, documentHashHex);
     }
 
     private static byte[] HashDocument<T>(T document)

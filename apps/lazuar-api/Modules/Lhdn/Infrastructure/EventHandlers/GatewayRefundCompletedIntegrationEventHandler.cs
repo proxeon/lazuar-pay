@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain.Aggregates;
+using Modules.Lhdn.Infrastructure.Serialization;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Lhdn.Infrastructure.EventHandlers;
@@ -112,17 +114,18 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
             };
 
             var strategy = _strategyFactory.GetStrategy(payload);
-            var xmlDoc = strategy.Generate(payload, config, documentVersion);
-            var rawXmlString = xmlDoc.OuterXml;
+            var jsonDocument = strategy.Generate(payload, config, documentVersion);
+            
+            var rawJsonString = JsonSerializer.Serialize(jsonDocument, LhdnJsonOptions.Instance);
 
-            var documentHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
+            var documentHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawJsonString));
             var documentHashHex = Convert.ToHexString(documentHashBytes).ToLowerInvariant();
 
             var creditNoteDoc = new TaxDocument(
                 @event.OrganizationId,
                 creditNoteInternalId,
                 documentHashHex,
-                rawXmlString
+                rawJsonString
             );
 
             _repository.AddTaxDocument(creditNoteDoc);

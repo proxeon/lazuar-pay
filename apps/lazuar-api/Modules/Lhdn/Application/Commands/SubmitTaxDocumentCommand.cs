@@ -1,7 +1,4 @@
 using System;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -9,8 +6,6 @@ using Lazuar.ApiTypes;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain.Aggregates;
-using Modules.Lhdn.Infrastructure.Models;
-using Modules.Lhdn.Infrastructure.Serialization;
 
 namespace Modules.Lhdn.Application.Commands;
 
@@ -49,7 +44,9 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
         var documentVersion = string.IsNullOrWhiteSpace(request.Payload.Document_version) ? "1.0" : request.Payload.Document_version;
 
         var strategy = _strategyFactory.GetStrategy(request.Payload);
-        var jsonDocument = (LhdnJsonDocument)strategy.Generate(request.Payload, config, documentVersion);
+        
+        // Treat as a generic object so Application layer doesn't depend on Infrastructure models
+        var jsonDocument = strategy.Generate(request.Payload, config, documentVersion);
 
         string finalJsonString;
         string documentHashHex;
@@ -63,20 +60,17 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 
             using var cert = _vaultService.GetDecryptedCertificate(config.EncryptedPfxBase64, config.PfxPasswordCiphertext);
             
-            // Sign the document and retrieve the consolidated JSON payload and hashes
             var signingResult = _signatureService.SignDocument(jsonDocument, cert);
-
-            finalJsonString = JsonSerializer.Serialize(signingResult.SignedPayload, LhdnJsonOptions.Instance);
+            finalJsonString = signingResult.FinalJsonString;
             documentHashHex = signingResult.HexDigest;
         }
         else
         {
-            finalJsonString = JsonSerializer.Serialize(jsonDocument, LhdnJsonOptions.Instance);
-            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(finalJsonString));
-            documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            var serializedResult = _signatureService.SerializeUnsignedDocument(jsonDocument);
+            finalJsonString = serializedResult.JsonString;
+            documentHashHex = serializedResult.DocumentHashHex;
         }
 
-        // Store the final serialized JSON in the existing column, avoiding the need to process JSON in background workers
         var taxDocument = new TaxDocument(
             request.OrganizationId,
             request.Payload.Internal_id,

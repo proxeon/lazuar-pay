@@ -57,8 +57,8 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
                     IndustryClassificationCode: new[] { new LhdnIndustryClassificationCode(config.MsicCode ?? "00000", "System Supplier") },
                     PartyIdentification: new[]
                     {
-                        new LhdnPartyIdentification(new[] { new LhdnSchemeId(config.SupplierTin, "TIN") }),
-                        new LhdnPartyIdentification(new[] { new LhdnSchemeId(config.IdValue, config.IdType) }),
+                        new LhdnPartyIdentification(new[] { new LhdnSchemeId(config.SupplierTin ?? "NA", "TIN") }),
+                        new LhdnPartyIdentification(new[] { new LhdnSchemeId(config.IdValue ?? "NA", config.IdType ?? "BRN") }),
                         new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "SST") }),
                         new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "TTX") })
                     },
@@ -81,10 +81,10 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
 
     private static LhdnAccountingParty[] BuildCustomerParty(SubmitDocumentRequestDto request, bool isB2c)
     {
-        var tin = isB2c ? "EI00000000010" : request.Buyer_tin;
+        var tin = isB2c ? "EI00000000010" : (request.Buyer_tin ?? "NA");
         var idType = isB2c ? "BRN" : request.Buyer_id_type.ToString();
-        var idValue = isB2c ? "NA" : request.Buyer_id_value;
-        var name = isB2c ? "General Public" : request.Buyer_name;
+        var idValue = isB2c ? "NA" : (request.Buyer_id_value ?? "NA");
+        var name = isB2c ? "General Public" : (request.Buyer_name ?? "NA");
         var phone = isB2c ? "+60123456789" : (request.Buyer_phone ?? "+60123456789");
         var email = isB2c ? "na@example.com" : (request.Buyer_email ?? "na@example.com");
         var stateCode = isB2c ? "17" : request.Buyer_address.State_code.ToString().TrimStart('_');
@@ -107,11 +107,11 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
                         PostalAddress: new[]
                         {
                             new LhdnPostalAddress(
-                                CityName: isB2c ? "NA" : request.Buyer_address.City,
-                                PostalZone: isB2c ? "00000" : request.Buyer_address.Postal_code,
+                                CityName: isB2c ? "NA" : (request.Buyer_address.City ?? "NA"),
+                                PostalZone: isB2c ? "00000" : (request.Buyer_address.Postal_code ?? "00000"),
                                 CountrySubentityCode: stateCode,
-                                AddressLine: new[] { new LhdnAddressLine(isB2c ? "NA" : request.Buyer_address.Line1) },
-                                Country: new[] { new LhdnCountry(new[] { new LhdnIdentificationCode(isB2c ? "MYS" : request.Buyer_address.Country_code, "ISO3166-1", "6") }) }
+                                AddressLine: new[] { new LhdnAddressLine(isB2c ? "NA" : (request.Buyer_address.Line1 ?? "NA")) },
+                                Country: new[] { new LhdnCountry(new[] { new LhdnIdentificationCode(isB2c ? "MYS" : (request.Buyer_address.Country_code ?? "MYS"), "ISO3166-1", "6") }) }
                             )
                         },
                         PartyLegalEntity: new[] { new LhdnPartyLegalEntity(name) },
@@ -136,7 +136,7 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
                         new LhdnTaxCategory(
                             ID: taxTypeCode,
                             Percent: null,
-                            TaxExemptionReason: taxTypeCode is "E" or "06" ? "Not subject to tax" : null,
+                            TaxExemptionReason: taxTypeCode is "E" or "06" ? new UblValue<string>("Not subject to tax") : null,
                             TaxScheme: new[] { new LhdnTaxScheme(new[] { new LhdnTaxSchemeId("OTH", "UN/ECE 5153", "6") }) }
                         )
                     }
@@ -163,7 +163,7 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
         return items.Select((item, index) =>
         {
             var cleanTaxCode = item.Tax_type_code.ToString().TrimStart('_');
-            var classCode = isB2c ? "004" : item.Classification_code;
+            var classCode = isB2c ? "004" : (item.Classification_code ?? "022");
 
             return new LhdnInvoiceLine(
                 ID: (index + 1).ToString(),
@@ -174,7 +174,7 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
                 Item: new[]
                 {
                     new LhdnItem(
-                        Description: item.Description,
+                        Description: item.Description ?? "Item",
                         CommodityClassification: new[]
                         {
                             new LhdnCommodityClassification(new[] { new LhdnItemClassificationCode("NA", "PTC") }),
