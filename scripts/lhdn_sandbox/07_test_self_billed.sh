@@ -15,9 +15,9 @@ PAYLOAD=$(cat <<EOF
   "document_type": "11",
   "issue_date": "$CURRENT_UTC",
   "buyer_name": "Freelance Consultant",
-  "buyer_tin": "EI00000000020", 
+  "buyer_tin": "IG56848407100", 
   "buyer_id_type": "NRIC",
-  "buyer_id_value": "900101145321",
+  "buyer_id_value": "990806086487",
   "buyer_address": {
     "line1": "123 Remote Work Ave",
     "city": "Cyberjaya",

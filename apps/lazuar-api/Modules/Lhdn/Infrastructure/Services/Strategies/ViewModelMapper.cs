@@ -19,8 +19,12 @@ public static class ViewModelMapper
         var startDate = request.Billing_period_start?.UtcDateTime ?? issueDate.AddDays(-30);
         var endDate = request.Billing_period_end?.UtcDateTime ?? issueDate;
 
-        var isGeneralPublic = request.Buyer_tin == "EI00000000010";
-        var docTypeCodeString = request.Document_type.ToString().TrimStart('_');
+        // LHDN rule: Classification '004' is strictly for Consolidated B2C (General TIN + ID = NA). 
+        // We must not flag a valid individual freelancer (who has an NRIC) as a Consolidated B2C.
+        var isConsolidatedB2c = request.Buyer_tin == "EI00000000010" && request.Buyer_id_value == "NA";
+        
+        int rawEnumValue = (int)request.Document_type;
+        var docTypeCodeString = rawEnumValue.ToString("D2");
         
         var isSelfBilled = docTypeCodeString is "11" or "12" or "13" or "14";
 
@@ -32,13 +36,19 @@ public static class ViewModelMapper
             IdValue = config.IdValue ?? "NA",
             MsicCode = config.MsicCode ?? "62010",
             Phone = "+60123456789",
-            Email = "tenant@example.com"
+            Email = "tenant@example.com",
+            
+            AddressLine1 = "Lazuar HQ",
+            City = "Kuala Lumpur",
+            PostalCode = "50000",
+            StateCode = "14",
+            CountryCode = "MYS"
         };
 
         var requestParty = new UblPartyViewModel
         {
             Name = string.IsNullOrWhiteSpace(request.Buyer_name) ? "NA" : request.Buyer_name,
-            Tin = isGeneralPublic ? "EI00000000010" : (string.IsNullOrWhiteSpace(request.Buyer_tin) ? "NA" : request.Buyer_tin),
+            Tin = string.IsNullOrWhiteSpace(request.Buyer_tin) ? "NA" : request.Buyer_tin,
             IdType = request.Buyer_id_type.ToString(),
             IdValue = string.IsNullOrWhiteSpace(request.Buyer_id_value) ? "NA" : request.Buyer_id_value,
             Email = string.IsNullOrWhiteSpace(request.Buyer_email) ? "" : request.Buyer_email,
@@ -48,7 +58,7 @@ public static class ViewModelMapper
             PostalCode = string.IsNullOrWhiteSpace(request.Buyer_address?.Postal_code) ? "00000" : request.Buyer_address.Postal_code,
             StateCode = request.Buyer_address?.State_code.ToString().TrimStart('_') ?? "14",
             CountryCode = string.IsNullOrWhiteSpace(request.Buyer_address?.Country_code) ? "MYS" : request.Buyer_address.Country_code,
-            MsicCode = "00000" // Fallback for external vendors who do not provide their MSIC code
+            MsicCode = "00000" 
         };
 
         var model = new UblInvoiceViewModel
@@ -65,6 +75,7 @@ public static class ViewModelMapper
             TotalTax = (decimal)request.Total_tax,
             TotalIncludingTax = (decimal)request.Total_including_tax,
             
+            // Entity Swap
             Supplier = isSelfBilled ? requestParty : configParty,
             Buyer = isSelfBilled ? configParty : requestParty
         };
@@ -74,7 +85,7 @@ public static class ViewModelMapper
             model.InvoiceLines = request.Items.Select(i => new UblInvoiceLineViewModel
             {
                 Description = string.IsNullOrWhiteSpace(i.Description) ? "NA" : i.Description,
-                ClassificationCode = isGeneralPublic ? "004" : (string.IsNullOrWhiteSpace(i.Classification_code) ? "022" : i.Classification_code),
+                ClassificationCode = isConsolidatedB2c ? "004" : (string.IsNullOrWhiteSpace(i.Classification_code) ? "022" : i.Classification_code),
                 Quantity = (decimal)i.Quantity,
                 UnitPrice = (decimal)i.Unit_price,
                 TaxRate = (decimal)i.Tax_rate,
