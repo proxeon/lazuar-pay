@@ -5,6 +5,8 @@ cd "$(dirname "$0")"
 ./01_test_b2b.sh && \
 ./02_test_credit_note.sh && \
 ./03_test_b2c.sh
+# ./04_upload_dummy_cert.sh && \
+# ./05_test_b2b_v1_1.sh
 
 if [ $? -eq 0 ]; then
     echo ""
