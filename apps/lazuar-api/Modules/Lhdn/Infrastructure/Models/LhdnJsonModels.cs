@@ -7,13 +7,13 @@ public record LhdnJsonDocument(
     [property: JsonPropertyOrder(1), JsonPropertyName("_D")] string D,
     [property: JsonPropertyOrder(2), JsonPropertyName("_A")] string A,
     [property: JsonPropertyOrder(3), JsonPropertyName("_B")] string B,
-    [property: JsonPropertyOrder(4), JsonPropertyName("_E")] string E,
-    [property: JsonPropertyOrder(5), JsonPropertyName("_sig")] string Sig,
-    [property: JsonPropertyOrder(6), JsonPropertyName("_sac")] string Sac,
-    [property: JsonPropertyOrder(7), JsonPropertyName("_sbc")] string Sbc,
-    [property: JsonPropertyOrder(8), JsonPropertyName("_ds")] string Ds,
-    [property: JsonPropertyOrder(9), JsonPropertyName("_xades")] string Xades,
-    [property: JsonPropertyOrder(10)] LhdnJsonInvoice[] Invoice
+    [property: JsonPropertyOrder(4), JsonPropertyName("_E")] string? E = null,
+    [property: JsonPropertyOrder(5), JsonPropertyName("_sig")] string? Sig = null,
+    [property: JsonPropertyOrder(6), JsonPropertyName("_sac")] string? Sac = null,
+    [property: JsonPropertyOrder(7), JsonPropertyName("_sbc")] string? Sbc = null,
+    [property: JsonPropertyOrder(8), JsonPropertyName("_ds")] string? Ds = null,
+    [property: JsonPropertyOrder(9), JsonPropertyName("_xades")] string? Xades = null,
+    [property: JsonPropertyOrder(10)] LhdnJsonInvoice[] Invoice = null!
 );
 
 public record LhdnJsonInvoice(
