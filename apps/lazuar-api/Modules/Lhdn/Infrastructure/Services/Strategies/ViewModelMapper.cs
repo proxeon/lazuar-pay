@@ -18,6 +18,9 @@ public static class ViewModelMapper
         var startDate = request.Billing_period_start?.UtcDateTime ?? issueDate.AddDays(-30);
         var endDate = request.Billing_period_end?.UtcDateTime ?? issueDate;
 
+        // Check if this is a B2C / General Public transaction
+        var isGeneralPublic = request.Buyer_tin == "EI00000000010";
+
         var model = new UblInvoiceViewModel
         {
             InternalId = request.Internal_id,
@@ -44,11 +47,10 @@ public static class ViewModelMapper
             Buyer = new UblPartyViewModel
             {
                 Name = string.IsNullOrWhiteSpace(request.Buyer_name) ? "NA" : request.Buyer_name,
-                Tin = string.IsNullOrWhiteSpace(request.Buyer_tin) ? "NA" : request.Buyer_tin,
+                Tin = isGeneralPublic ? "EI00000000010" : (string.IsNullOrWhiteSpace(request.Buyer_tin) ? "NA" : request.Buyer_tin),
                 IdType = request.Buyer_id_type.ToString(),
                 IdValue = string.IsNullOrWhiteSpace(request.Buyer_id_value) ? "NA" : request.Buyer_id_value,
                 Email = string.IsNullOrWhiteSpace(request.Buyer_email) ? "" : request.Buyer_email,
-                // LHDN explicitly requires a Buyer Contact Number. If omitted, apply a safe fallback.
                 Phone = string.IsNullOrWhiteSpace(request.Buyer_phone) ? "+60000000000" : request.Buyer_phone,
                 AddressLine1 = string.IsNullOrWhiteSpace(request.Buyer_address?.Line1) ? "NA" : request.Buyer_address.Line1,
                 City = string.IsNullOrWhiteSpace(request.Buyer_address?.City) ? "NA" : request.Buyer_address.City,
@@ -63,7 +65,10 @@ public static class ViewModelMapper
             model.InvoiceLines = request.Items.Select(i => new UblInvoiceLineViewModel
             {
                 Description = string.IsNullOrWhiteSpace(i.Description) ? "NA" : i.Description,
-                ClassificationCode = string.IsNullOrWhiteSpace(i.Classification_code) ? "022" : i.Classification_code,
+                
+                // LHDN Rule: B2C General Public transactions MUST use classification code '004'
+                ClassificationCode = isGeneralPublic ? "004" : (string.IsNullOrWhiteSpace(i.Classification_code) ? "022" : i.Classification_code),
+                
                 Quantity = (decimal)i.Quantity,
                 UnitPrice = (decimal)i.Unit_price,
                 TaxRate = (decimal)i.Tax_rate,
