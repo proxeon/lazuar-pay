@@ -30,7 +30,15 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
                     Description: "Consolidated Invoice"
                 )
             },
-            BillingReference: null,
+            BillingReference: new[]
+            {
+                new LhdnBillingReference(
+                    AdditionalDocumentReference: new[]
+                    {
+                        new LhdnDocumentReference(new[] { new UblValue<string>(request.Internal_id) })
+                    }
+                )
+            },
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c: true),
             PaymentMeans: new[] { new LhdnPaymentMeans("08") },

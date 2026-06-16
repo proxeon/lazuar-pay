@@ -14,10 +14,10 @@ PAYLOAD=$(cat <<EOF
   "internal_id": "$INTERNAL_ID",
   "document_type": "01",
   "issue_date": "$CURRENT_UTC",
-  "buyer_name": "Corporate Client Sdn Bhd",
-  "buyer_tin": "C2584563200", 
+  "buyer_name": "General Public",
+  "buyer_tin": "EI00000000010", 
   "buyer_id_type": "BRN",
-  "buyer_id_value": "202001012345",
+  "buyer_id_value": "NA",
   "buyer_address": {
     "line1": "Level 1, Menara Test",
     "city": "Kuala Lumpur",
