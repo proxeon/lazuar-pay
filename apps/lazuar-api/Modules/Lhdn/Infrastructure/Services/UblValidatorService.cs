@@ -25,47 +25,30 @@ public class UblValidatorService : IUblValidatorService
         };
 
         var assembly = typeof(UblValidatorService).Assembly;
-        
-        // W3C Schema files contain <!DOCTYPE> declarations. 
-        // We explicitly allow DTD parsing to load them securely from our embedded resources.
-        var xsdSettings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Parse };
 
-        // 1. Manually preload the W3C Signature schema to bypass DTD restrictions during dynamic compilation
-        var w3cResourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("UBL-xmldsig-core-schema-2.1.xsd", StringComparison.OrdinalIgnoreCase));
-        
-        if (w3cResourceName != null)
-        {
-            using var w3cStream = assembly.GetManifestResourceStream(w3cResourceName);
-            if (w3cStream != null)
-            {
-                _schemaSet.Add("http://www.w3.org/2000/09/xmldsig#", XmlReader.Create(w3cStream, xsdSettings));
-            }
-        }
-
-        // 2. Load Root Invoice Schema
+        // Load Root Invoice Schema
         var invoiceResourceName = assembly.GetManifestResourceNames()
             .FirstOrDefault(n => n.EndsWith("UBL-Invoice-2.1.xsd", StringComparison.OrdinalIgnoreCase));
         
         if (invoiceResourceName != null)
         {
             using var stream = assembly.GetManifestResourceStream(invoiceResourceName);
-            if (stream != null) _schemaSet.Add("urn:oasis:names:specification:ubl:schema:xsd:Invoice-2", XmlReader.Create(stream, xsdSettings));
+            if (stream != null) _schemaSet.Add("urn:oasis:names:specification:ubl:schema:xsd:Invoice-2", XmlReader.Create(stream));
         }
 
-        // 3. Load Root CreditNote Schema
+        // Load Root CreditNote Schema
         var cnResourceName = assembly.GetManifestResourceNames()
             .FirstOrDefault(n => n.EndsWith("UBL-CreditNote-2.1.xsd", StringComparison.OrdinalIgnoreCase));
         
         if (cnResourceName != null)
         {
             using var stream = assembly.GetManifestResourceStream(cnResourceName);
-            if (stream != null) _schemaSet.Add("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2", XmlReader.Create(stream, xsdSettings));
+            if (stream != null) _schemaSet.Add("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2", XmlReader.Create(stream));
         }
 
         if (_schemaSet.Count > 0)
         {
-            // The compiler will now use EmbeddedResourceXmlResolver to find all other safe dependencies
+            // The compiler will now use EmbeddedResourceXmlResolver to securely fetch all dependencies
             _schemaSet.Compile();
         }
     }
@@ -113,7 +96,29 @@ public class UblValidatorService : IUblValidatorService
             {
                 if (resourceName.EndsWith("." + fileName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return assembly.GetManifestResourceStream(resourceName);
+                    var stream = assembly.GetManifestResourceStream(resourceName);
+                    if (stream == null) return null;
+
+                    // The W3C xmldsig schema contains a DTD which .NET violently rejects by default for security.
+                    // We dynamically strip the DOCTYPE block in-memory to allow the compiler to parse it securely.
+                    if (fileName.Contains("xmldsig", StringComparison.OrdinalIgnoreCase))
+                    {
+                        using var reader = new StreamReader(stream);
+                        var content = reader.ReadToEnd();
+                        
+                        var start = content.IndexOf("<!DOCTYPE");
+                        if (start >= 0)
+                        {
+                            var end = content.IndexOf("]>", start);
+                            if (end >= 0)
+                            {
+                                content = content.Remove(start, end - start + 2);
+                            }
+                        }
+                        return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content));
+                    }
+
+                    return stream;
                 }
             }
 
