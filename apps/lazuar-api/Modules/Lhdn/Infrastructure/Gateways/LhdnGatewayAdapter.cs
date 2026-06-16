@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -70,6 +71,24 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         }
     }
 
+    private static int? ExtractRetryAfterSeconds(HttpResponseMessage response)
+    {
+        if (response.Headers.RetryAfter?.Delta.HasValue == true)
+        {
+            return (int)response.Headers.RetryAfter.Delta.Value.TotalSeconds;
+        }
+
+        if (response.Headers.TryGetValues("x-rate-limit-reset", out var resetValues) &&
+            long.TryParse(resetValues.FirstOrDefault(), out var resetEpoch))
+        {
+            var resetTime = DateTimeOffset.FromUnixTimeSeconds(resetEpoch).UtcDateTime;
+            var delay = (int)(resetTime - DateTime.UtcNow).TotalSeconds;
+            return delay > 0 ? delay : 60;
+        }
+
+        return 60; 
+    }
+
     public async Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default)
     {
         var cacheKey = $"lhdn_token_{organizationId}";
@@ -124,6 +143,12 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         TryAddIntermediaryHeader(request, isIntermediary, tenantTin);
 
         var response = await client.SendAsync(request, ct);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        {
+            return new LhdnSubmissionResult(false, null, null, "Rate limit exceeded by LHDN.", ExtractRetryAfterSeconds(response));
+        }
+
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
         if (!response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.Accepted)
@@ -133,7 +158,6 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
                 var errorJson = JsonDocument.Parse(responseBody);
                 if (errorJson.RootElement.TryGetProperty("error", out var err) && err.TryGetProperty("details", out var details) && details.GetArrayLength() > 0)
                 {
-                    // FIX: Extract "error" instead of "message"
                     var msg = details[0].TryGetProperty("error", out var m) ? m.GetString() : responseBody;
                     return new LhdnSubmissionResult(false, null, null, $"LHDN Rejected: {msg}");
                 }
@@ -189,6 +213,12 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
         TryAddIntermediaryHeader(request, isIntermediary, tenantTin);
 
         var response = await client.SendAsync(request, ct);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        {
+            return new LhdnDocumentStatusResult(false, null, null, null, "Rate limit exceeded by LHDN.", ExtractRetryAfterSeconds(response));
+        }
+
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
         if (!response.IsSuccessStatusCode)
@@ -237,7 +267,6 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
                     {
                         if (step.TryGetProperty("status", out var stepStatus) && stepStatus.GetString() == "Invalid" && step.TryGetProperty("error", out var errObj))
                         {
-                            // FIX: Extract "error" instead of "message"
                             if (errObj.TryGetProperty("innerError", out var innerArr) && innerArr.ValueKind == JsonValueKind.Array && innerArr.GetArrayLength() > 0)
                             {
                                 var innerObj = innerArr[0];

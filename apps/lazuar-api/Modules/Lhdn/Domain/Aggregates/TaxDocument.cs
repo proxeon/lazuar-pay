@@ -49,11 +49,24 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void ScheduleNextPoll()
+    public void DelayPendingSubmission(int delaySeconds)
+    {
+        NextPollAt = DateTime.UtcNow.AddSeconds(delaySeconds);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ScheduleNextPoll(int? explicitDelaySeconds = null)
     {
         PollAttempts++;
-        var secondsToWait = Math.Pow(3, Math.Min(PollAttempts, 10));
-        NextPollAt = DateTime.UtcNow.AddSeconds(secondsToWait);
+        if (explicitDelaySeconds.HasValue)
+        {
+            NextPollAt = DateTime.UtcNow.AddSeconds(explicitDelaySeconds.Value);
+        }
+        else
+        {
+            var secondsToWait = Math.Pow(3, Math.Min(PollAttempts, 10));
+            NextPollAt = DateTime.UtcNow.AddSeconds(secondsToWait);
+        }
         UpdatedAt = DateTime.UtcNow;
     }
 

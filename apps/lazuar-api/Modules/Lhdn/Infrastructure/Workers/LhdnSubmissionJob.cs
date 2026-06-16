@@ -55,8 +55,9 @@ public class LhdnSubmissionJob : BackgroundService
         var vault = scope.ServiceProvider.GetRequiredService<ICertificateVaultService>();
         var xmlSigner = scope.ServiceProvider.GetRequiredService<IXmlSignatureService>();
 
+        var now = DateTime.UtcNow;
         var pendingDocs = await db.TaxDocuments
-            .Where(d => d.ValidationStatus == "PENDING")
+            .Where(d => d.ValidationStatus == "PENDING" && (d.NextPollAt == null || d.NextPollAt <= now))
             .OrderBy(d => d.CreatedAt)
             .Take(50)
             .ToListAsync(ct);
@@ -80,7 +81,6 @@ public class LhdnSubmissionJob : BackgroundService
                 };
                 xmlDoc.LoadXml(doc.RawXmlContent);
 
-                // Enforce Fail-Fast for v1.1 documents requiring signature
                 var nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
                 nsManager.AddNamespace("cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
                 
@@ -131,7 +131,14 @@ public class LhdnSubmissionJob : BackgroundService
                 }
                 else
                 {
-                    doc.MarkAsFailed(result.ErrorMessage ?? "Unknown gateway error.");
+                    if (result.RetryAfterSeconds.HasValue)
+                    {
+                        doc.DelayPendingSubmission(result.RetryAfterSeconds.Value);
+                    }
+                    else
+                    {
+                        doc.MarkAsFailed(result.ErrorMessage ?? "Unknown gateway error.");
+                    }
                 }
             }
             catch (Exception ex)

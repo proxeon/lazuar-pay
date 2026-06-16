@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 
 namespace Modules.Lhdn.Application.Ports;
 
-public record LhdnSubmissionResult(bool Success, string? SubmissionUid, string? Uuid, string? ErrorMessage);
+public record LhdnSubmissionResult(bool Success, string? SubmissionUid, string? Uuid, string? ErrorMessage, int? RetryAfterSeconds = null);
 
-public record LhdnDocumentStatusResult(bool Success, string? Status, string? Uuid, string? LongId, string? ErrorMessage);
+public record LhdnDocumentStatusResult(bool Success, string? Status, string? Uuid, string? LongId, string? ErrorMessage, int? RetryAfterSeconds = null);
 
 public record LhdnTinValidationResult(bool Success, bool IsValid, string? TaxpayerName, string? ErrorMessage);
 

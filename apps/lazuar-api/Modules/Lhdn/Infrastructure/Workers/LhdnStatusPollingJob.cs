@@ -100,7 +100,7 @@ public class LhdnStatusPollingJob : BackgroundService
                 }
                 else
                 {
-                    doc.ScheduleNextPoll();
+                    doc.ScheduleNextPoll(result.RetryAfterSeconds);
                 }
             }
             catch (Exception ex)
