@@ -14,6 +14,7 @@ using Modules.Lhdn.Infrastructure.Repositories;
 using Modules.Lhdn.Infrastructure.Services;
 using Modules.Lhdn.Infrastructure.Services.Strategies;
 using Modules.Lhdn.Infrastructure.Workers;
+using System;
 
 namespace Modules.Lhdn.Infrastructure;
 
@@ -39,6 +40,8 @@ public static class DependencyInjection
         services.AddScoped<ICertificateVaultService, CertificateVaultService>();
         
         services.AddScoped<IJsonSignatureService, JsonSignatureService>();
+
+        services.AddSingleton<ITemplateRendererService, ScribanTemplateRendererService>();
         
         services.AddScoped<IDocumentStrategyFactory, DocumentStrategyFactory>();
         services.AddKeyedScoped<IUblDocumentStrategy, StandardInvoiceStrategy>("B2BStandardInvoice");
