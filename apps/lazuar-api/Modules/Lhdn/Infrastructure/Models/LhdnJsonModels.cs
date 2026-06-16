@@ -23,12 +23,13 @@ public record LhdnJsonInvoice(
     [property: JsonPropertyOrder(6)] UblValue<string>? TaxCurrencyCode,
     [property: JsonPropertyOrder(7)] LhdnInvoicePeriod[]? InvoicePeriod,
     [property: JsonPropertyOrder(8)] LhdnBillingReference[]? BillingReference,
-    [property: JsonPropertyOrder(9)] LhdnAccountingParty[] AccountingSupplierParty,
-    [property: JsonPropertyOrder(10)] LhdnAccountingParty[] AccountingCustomerParty,
-    [property: JsonPropertyOrder(11)] LhdnPaymentMeans[]? PaymentMeans,
-    [property: JsonPropertyOrder(12)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
-    [property: JsonPropertyOrder(13)] LhdnTaxTotal[] TaxTotal,
-    [property: JsonPropertyOrder(14)] LhdnInvoiceLine[] InvoiceLine,
+    [property: JsonPropertyOrder(9)] LhdnRootAdditionalDocumentReference[]? AdditionalDocumentReference,
+    [property: JsonPropertyOrder(10)] LhdnAccountingParty[] AccountingSupplierParty,
+    [property: JsonPropertyOrder(11)] LhdnAccountingParty[] AccountingCustomerParty,
+    [property: JsonPropertyOrder(12)] LhdnPaymentMeans[]? PaymentMeans,
+    [property: JsonPropertyOrder(13)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
+    [property: JsonPropertyOrder(14)] LhdnTaxTotal[] TaxTotal,
+    [property: JsonPropertyOrder(15)] LhdnInvoiceLine[] InvoiceLine,
     [property: JsonPropertyOrder(100)] object[]? UBLExtensions = null, 
     [property: JsonPropertyOrder(101)] object[]? Signature = null 
 );
@@ -50,6 +51,12 @@ public record LhdnBillingReference(
 
 public record LhdnDocumentReference(
     [property: JsonPropertyOrder(1)] UblValue<string> ID
+);
+
+public record LhdnRootAdditionalDocumentReference(
+    [property: JsonPropertyOrder(1)] UblValue<string> ID,
+    [property: JsonPropertyOrder(2)] UblValue<string>? DocumentType = null,
+    [property: JsonPropertyOrder(3)] UblValue<string>? DocumentDescription = null
 );
 
 public record LhdnAccountingParty(

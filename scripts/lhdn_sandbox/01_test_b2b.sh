@@ -15,9 +15,9 @@ PAYLOAD=$(cat <<EOF
   "document_type": "01",
   "issue_date": "$CURRENT_UTC",
   "buyer_name": "General Public",
-  "buyer_tin": "EI00000000010", 
-  "buyer_id_type": "BRN",
-  "buyer_id_value": "NA",
+  "buyer_tin": "IG56848407100", 
+  "buyer_id_type": "NRIC",
+  "buyer_id_value": "990806086487",
   "buyer_address": {
     "line1": "Level 1, Menara Test",
     "city": "Kuala Lumpur",

@@ -39,6 +39,7 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
                     }
                 )
             },
+            AdditionalDocumentReference: null, // Set to null for compatibility
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c: true),
             PaymentMeans: new[] { new LhdnPaymentMeans("08") },
@@ -171,7 +172,8 @@ public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
         return items.Select((item, index) =>
         {
             var cleanTaxCode = item.Tax_type_code.ToString().TrimStart('_');
-            var classCode = isB2c ? "004" : (item.Classification_code ?? "022");
+            // FIX: Prioritize dynamically supplied classification code
+            var classCode = item.Classification_code ?? (isB2c ? "004" : "022");
 
             return new LhdnInvoiceLine(
                 ID: (index + 1).ToString(),

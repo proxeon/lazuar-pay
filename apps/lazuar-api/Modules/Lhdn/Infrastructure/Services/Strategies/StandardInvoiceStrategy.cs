@@ -12,8 +12,6 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
     public object Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
     {
         var issueDate = request.Issue_date.UtcDateTime;
-        var startDate = request.Billing_period_start?.UtcDateTime ?? issueDate;
-        var endDate = request.Billing_period_end?.UtcDateTime ?? issueDate;
 
         var invoice = new LhdnJsonInvoice(
             ID: request.Internal_id,
@@ -22,15 +20,9 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
             InvoiceTypeCode: new[] { new UblInvoiceTypeCode("01", documentVersion) },
             DocumentCurrencyCode: "MYR",
             TaxCurrencyCode: "MYR",
-            InvoicePeriod: new[]
-            {
-                new LhdnInvoicePeriod(
-                    StartDate: startDate.ToString("yyyy-MM-dd"),
-                    EndDate: endDate.ToString("yyyy-MM-dd"),
-                    Description: "Monthly"
-                )
-            },
+            InvoicePeriod: null, // FIX: Strictly null for standard B2B invoices to avoid 'Reference Document missing' error
             BillingReference: null,
+            AdditionalDocumentReference: null,
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c: false),
             PaymentMeans: new[] { new LhdnPaymentMeans("08") },
@@ -163,7 +155,8 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
         return items.Select((item, index) =>
         {
             var cleanTaxCode = item.Tax_type_code.ToString().TrimStart('_');
-            var classCode = isB2c ? "004" : (item.Classification_code ?? "022");
+            // FIX: Prioritize dynamically supplied classification code over hardcoded defaults
+            var classCode = item.Classification_code ?? (isB2c ? "004" : "022");
 
             return new LhdnInvoiceLine(
                 ID: (index + 1).ToString(),

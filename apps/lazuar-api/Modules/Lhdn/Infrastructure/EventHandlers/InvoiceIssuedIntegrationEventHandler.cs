@@ -25,7 +25,7 @@ public class InvoiceIssuedIntegrationEventHandler : IIntegrationEventHandler<Inv
             Document_type = SubmitDocumentRequestDtoDocument_type._01,
             Issue_date = new DateTimeOffset(@event.IssueDate),
             Buyer_name = "Resolved via CRM",
-            Buyer_tin = "IG1234567890", 
+            Buyer_tin = "C1234567890", // FIX: Changed from IG to C to match BRN format requirement
             Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
             Buyer_id_value = "202001012345",
             Buyer_address = new LhdnAddressDto 
