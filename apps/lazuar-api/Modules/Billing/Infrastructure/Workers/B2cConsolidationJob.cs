@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using BuildingBlocks.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,21 +28,40 @@ public class B2cConsolidationJob : BackgroundService
         {
             try
             {
-                var now = DateTime.UtcNow;
-                var isLastDayOfMonth = now.Day == DateTime.DaysInMonth(now.Year, now.Month);
+                var timeUntilExecution = CalculateTimeToNextConsolidation();
+                
+                _logger.LogInformation("Next B2C Consolidation scheduled in {DelayHours:F2} hours.", timeUntilExecution.TotalHours);
 
-                if (isLastDayOfMonth)
-                {
-                    await ProcessB2cConsolidationAsync(stoppingToken);
-                }
+                await Task.Delay(timeUntilExecution, stoppingToken);
+
+                await ProcessB2cConsolidationAsync(stoppingToken);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred executing B2C Consolidation worker.");
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
-
-            await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
         }
+    }
+
+    private TimeSpan CalculateTimeToNextConsolidation()
+    {
+        var nowUtc = DateTime.UtcNow;
+        var mytNow = nowUtc.AddHours(8);
+
+        var targetMyt = new DateTime(mytNow.Year, mytNow.Month, 28, 2, 0, 0, DateTimeKind.Unspecified);
+
+        if (mytNow >= targetMyt)
+        {
+            targetMyt = targetMyt.AddMonths(1);
+        }
+
+        var targetUtc = targetMyt.AddHours(-8);
+        return targetUtc - nowUtc;
     }
 
     private async Task ProcessB2cConsolidationAsync(CancellationToken ct)
@@ -51,6 +69,14 @@ public class B2cConsolidationJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("BillingEventBus");
+
+        var today = DateTime.UtcNow.Date;
+        bool alreadyRan = await db.LedgerEntries.AnyAsync(e => 
+            e.TaxInvoiceId != null && 
+            e.TaxInvoiceId.StartsWith("B2C-CONS-") && 
+            e.Timestamp.Date == today, ct);
+
+        if (alreadyRan) return;
 
         var uninvoicedEntries = await db.LedgerEntries
             .Include(e => e.Lines)
