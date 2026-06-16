@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ICertificateVaultService, CertificateVaultService>();
         
         services.AddSingleton<ITemplateRendererService, ScribanTemplateRendererService>();
+        services.AddSingleton<IUblValidatorService, UblValidatorService>();
         
         services.AddScoped<IDocumentStrategyFactory, DocumentStrategyFactory>();
         services.AddKeyedScoped<IUblDocumentStrategy, StandardInvoiceStrategy>("B2BStandardInvoice");

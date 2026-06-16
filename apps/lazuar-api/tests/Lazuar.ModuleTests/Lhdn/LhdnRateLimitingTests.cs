@@ -19,6 +19,7 @@ public class LhdnRateLimitingTests
 {
     private ILhdnRepository _repository = null!;
     private IDocumentStrategyFactory _strategyFactory = null!;
+    private IUblValidatorService _validatorService = null!;
     private IUblDocumentStrategy _mockStrategy = null!;
     private SubmitTaxDocumentCommandHandler _handler = null!;
 
@@ -27,11 +28,13 @@ public class LhdnRateLimitingTests
     {
         _repository = Substitute.For<ILhdnRepository>();
         _strategyFactory = Substitute.For<IDocumentStrategyFactory>();
+        _validatorService = Substitute.For<IUblValidatorService>();
         _mockStrategy = Substitute.For<IUblDocumentStrategy>();
 
         _handler = new SubmitTaxDocumentCommandHandler(
             _repository,
-            _strategyFactory
+            _strategyFactory,
+            _validatorService
         );
     }
 
@@ -57,6 +60,9 @@ public class LhdnRateLimitingTests
         _repository.GetTenantConfigAsync(orgId, Arg.Any<CancellationToken>()).Returns(config);
         _strategyFactory.GetStrategy(request).Returns(_mockStrategy);
         _mockStrategy.Generate(request, config, "1.0").Returns(dummyXmlString);
+
+        // Tell the mock validator to do nothing (simulate successful validation)
+        _validatorService.When(x => x.Validate(Arg.Any<string>(), Arg.Any<string>())).DoNotCallBase();
 
         var command = new SubmitTaxDocumentCommand(orgId, request);
 

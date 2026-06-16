@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using Lazuar.ApiTypes;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
@@ -20,13 +21,16 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 {
     private readonly ILhdnRepository _repository;
     private readonly IDocumentStrategyFactory _strategyFactory;
+    private readonly IUblValidatorService _validatorService;
 
     public SubmitTaxDocumentCommandHandler(
         ILhdnRepository repository, 
-        IDocumentStrategyFactory strategyFactory)
+        IDocumentStrategyFactory strategyFactory,
+        IUblValidatorService validatorService)
     {
         _repository = repository;
         _strategyFactory = strategyFactory;
+        _validatorService = validatorService;
     }
 
     public async Task<Guid> Handle(SubmitTaxDocumentCommand request, CancellationToken ct)
@@ -44,8 +48,17 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
         var rawXmlString = strategy.Generate(request.Payload, config, documentVersion);
 
         var normalizedXmlString = rawXmlString.Replace("\r\n", "\n");
+
+        try
+        {
+            _validatorService.Validate(normalizedXmlString, request.Payload.Document_type.ToString());
+        }
+        catch (Exception ex) when (ex is not BusinessRuleValidationException)
+        {
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"XML Schema Validation Error: {ex.Message}"));
+        }
+
         var xmlBytes = Encoding.UTF8.GetBytes(normalizedXmlString);
-        
         var hashBytes = SHA256.HashData(xmlBytes);
         var documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
 

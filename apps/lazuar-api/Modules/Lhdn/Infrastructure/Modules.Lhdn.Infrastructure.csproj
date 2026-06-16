@@ -18,5 +18,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Templates\*.xml" />
+    <EmbeddedResource Include="Schemas\**\*.xsd" />
   </ItemGroup>
 </Project>
