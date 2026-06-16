@@ -15,6 +15,7 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         var issueDate = request.Issue_date.UtcDateTime;
 
         var isB2c = string.IsNullOrWhiteSpace(request.Buyer_tin) || request.Buyer_tin == "EI00000000010";
+        var isSelfBilledImportation = request.Buyer_tin == config.SupplierTin;
 
         var billingReference = string.IsNullOrWhiteSpace(request.Original_lhdn_uuid) ? null : new[]
         {
@@ -22,6 +23,17 @@ public class CreditNoteStrategy : IUblDocumentStrategy
                 InvoiceDocumentReference: new[] { new LhdnCreditNoteDocumentReference("NA", request.Original_lhdn_uuid) }
             )
         };
+
+        LhdnRootAdditionalDocumentReference[]? additionalDocRefs = null;
+        if (isSelfBilledImportation)
+        {
+            additionalDocRefs = new[]
+            {
+                new LhdnRootAdditionalDocumentReference("E12345678912", "CustomsImportForm"),
+                new LhdnRootAdditionalDocumentReference("E12345678912", "K2"),
+                new LhdnRootAdditionalDocumentReference("CIF")
+            };
+        }
 
         var invoice = new LhdnJsonCreditNoteInvoice(
             ID: request.Internal_id,
@@ -32,6 +44,7 @@ public class CreditNoteStrategy : IUblDocumentStrategy
             TaxCurrencyCode: "MYR",
             InvoicePeriod: null, 
             BillingReference: billingReference,
+            AdditionalDocumentReference: additionalDocRefs,
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c),
             PaymentMeans: new[] { new LhdnPaymentMeans("08") },
@@ -66,12 +79,13 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         [property: JsonPropertyOrder(6)] UblValue<string>? TaxCurrencyCode,
         [property: JsonPropertyOrder(7)] LhdnInvoicePeriod[]? InvoicePeriod,
         [property: JsonPropertyOrder(8)] LhdnCreditNoteBillingReference[]? BillingReference,
-        [property: JsonPropertyOrder(9)] LhdnAccountingParty[] AccountingSupplierParty,
-        [property: JsonPropertyOrder(10)] LhdnAccountingParty[] AccountingCustomerParty,
-        [property: JsonPropertyOrder(11)] LhdnPaymentMeans[]? PaymentMeans,
-        [property: JsonPropertyOrder(12)] LhdnTaxTotal[] TaxTotal,
-        [property: JsonPropertyOrder(13)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
-        [property: JsonPropertyOrder(14)] LhdnInvoiceLine[] InvoiceLine,
+        [property: JsonPropertyOrder(9)] LhdnRootAdditionalDocumentReference[]? AdditionalDocumentReference,
+        [property: JsonPropertyOrder(10)] LhdnAccountingParty[] AccountingSupplierParty,
+        [property: JsonPropertyOrder(11)] LhdnAccountingParty[] AccountingCustomerParty,
+        [property: JsonPropertyOrder(12)] LhdnPaymentMeans[]? PaymentMeans,
+        [property: JsonPropertyOrder(13)] LhdnTaxTotal[] TaxTotal,
+        [property: JsonPropertyOrder(14)] LhdnLegalMonetaryTotal[] LegalMonetaryTotal,
+        [property: JsonPropertyOrder(15)] LhdnInvoiceLine[] InvoiceLine,
         [property: JsonPropertyOrder(100)] LhdnUblExtension[]? UBLExtensions = null, 
         [property: JsonPropertyOrder(101)] object[]? Signature = null 
     );

@@ -13,6 +13,19 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
     {
         var issueDate = request.Issue_date.UtcDateTime;
 
+        var isSelfBilledImportation = request.Buyer_tin == config.SupplierTin;
+        LhdnRootAdditionalDocumentReference[]? additionalDocRefs = null;
+
+        if (isSelfBilledImportation)
+        {
+            additionalDocRefs = new[]
+            {
+                new LhdnRootAdditionalDocumentReference("E12345678912", "CustomsImportForm"),
+                new LhdnRootAdditionalDocumentReference("E12345678912", "K2"),
+                new LhdnRootAdditionalDocumentReference("CIF")
+            };
+        }
+
         var invoice = new LhdnJsonInvoice(
             ID: request.Internal_id,
             IssueDate: issueDate.ToString("yyyy-MM-dd"),
@@ -22,7 +35,7 @@ public class StandardInvoiceStrategy : IUblDocumentStrategy
             TaxCurrencyCode: "MYR",
             InvoicePeriod: null, 
             BillingReference: null,
-            AdditionalDocumentReference: null,
+            AdditionalDocumentReference: additionalDocRefs,
             AccountingSupplierParty: BuildSupplierParty(config),
             AccountingCustomerParty: BuildCustomerParty(request, isB2c: false),
             PaymentMeans: new[] { new LhdnPaymentMeans("08") },

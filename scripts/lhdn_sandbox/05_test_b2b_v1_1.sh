@@ -9,17 +9,16 @@ echo "========================================="
 echo " 5. Submitting v1.1 B2B Signed Invoice"
 echo "========================================="
 
-# A distinct corporate Buyer TIN/BRN is used to prevent LHDN from treating this as a self-billed importation transaction.
 PAYLOAD=$(cat <<EOF
 {
   "internal_id": "$INTERNAL_ID",
   "document_type": "01",
   "document_version": "1.1",
   "issue_date": "$CURRENT_UTC",
-  "buyer_name": "Hebat Group",
-  "buyer_tin": "C2584563200",
-  "buyer_id_type": "BRN",
-  "buyer_id_value": "201901234567",
+  "buyer_name": "AXXX_XXXXRI",
+  "buyer_tin": "IG56848407100",
+  "buyer_id_type": "NRIC",
+  "buyer_id_value": "990806086487",
   "buyer_address": {
     "line1": "Level 1, Menara Test",
     "city": "Kuala Lumpur",
