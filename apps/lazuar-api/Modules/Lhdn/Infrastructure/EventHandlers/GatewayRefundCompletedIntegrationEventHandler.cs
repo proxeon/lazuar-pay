@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain.Aggregates;
-using Modules.Lhdn.Infrastructure.Serialization;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Lhdn.Infrastructure.EventHandlers;
@@ -114,18 +113,18 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
             };
 
             var strategy = _strategyFactory.GetStrategy(payload);
-            var jsonDocument = strategy.Generate(payload, config, documentVersion);
             
-            var rawJsonString = JsonSerializer.Serialize(jsonDocument, LhdnJsonOptions.Instance);
-
-            var documentHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawJsonString));
+            // Generate raw XML string natively
+            var rawXmlString = strategy.Generate(payload, config, documentVersion);
+            
+            var documentHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
             var documentHashHex = Convert.ToHexString(documentHashBytes).ToLowerInvariant();
 
             var creditNoteDoc = new TaxDocument(
                 @event.OrganizationId,
                 creditNoteInternalId,
                 documentHashHex,
-                rawJsonString
+                rawXmlString
             );
 
             _repository.AddTaxDocument(creditNoteDoc);

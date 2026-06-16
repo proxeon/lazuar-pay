@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -45,11 +47,17 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 
         var strategy = _strategyFactory.GetStrategy(request.Payload);
         
-        var jsonDocument = strategy.Generate(request.Payload, config, documentVersion);
+        // Generate the raw XML string directly from the strategy
+        var rawXmlString = strategy.Generate(request.Payload, config, documentVersion);
 
-        string finalJsonString;
-        string documentHashHex;
+        // Compute SHA256 directly from the UTF-8 bytes of the raw XML string to match the payload format exactly
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
+        var documentHashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
+        /*
+        Temporarily bypassed signature logic for v1.1.
+        We are securing v1.0 raw XML submission first before reintroducing v1.1 XAdES XML signatures.
+        
         if (documentVersion == "1.1")
         {
             if (string.IsNullOrEmpty(config.EncryptedPfxBase64) || string.IsNullOrEmpty(config.PfxPasswordCiphertext))
@@ -60,21 +68,16 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
             using var cert = _vaultService.GetDecryptedCertificate(config.EncryptedPfxBase64, config.PfxPasswordCiphertext);
             
             var signingResult = _signatureService.SignDocument(jsonDocument, cert);
-            finalJsonString = signingResult.FinalJsonString;
+            rawXmlString = signingResult.FinalJsonString;
             documentHashHex = signingResult.HexDigest;
         }
-        else
-        {
-            var serializedResult = _signatureService.SerializeUnsignedDocument(jsonDocument);
-            finalJsonString = serializedResult.JsonString;
-            documentHashHex = serializedResult.DocumentHashHex;
-        }
+        */
 
         var taxDocument = new TaxDocument(
             request.OrganizationId,
             request.Payload.Internal_id,
             documentHashHex,
-            finalJsonString 
+            rawXmlString 
         );
 
         _repository.AddTaxDocument(taxDocument);

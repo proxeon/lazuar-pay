@@ -69,8 +69,8 @@ public class LhdnSubmissionJob : BackgroundService
                     continue;
                 }
 
-                var finalJsonBytes = Encoding.UTF8.GetBytes(doc.RawXmlContent);
-                var base64Document = Convert.ToBase64String(finalJsonBytes);
+                var finalXmlBytes = Encoding.UTF8.GetBytes(doc.RawXmlContent);
+                var base64Document = Convert.ToBase64String(finalXmlBytes);
 
                 var payload = new
                 {
@@ -78,7 +78,7 @@ public class LhdnSubmissionJob : BackgroundService
                     {
                         new
                         {
-                            format = "JSON",
+                            format = "XML", 
                             documentHash = doc.DocumentHash, 
                             codeNumber = doc.InternalReferenceId,
                             document = base64Document

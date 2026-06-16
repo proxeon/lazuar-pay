@@ -1,199 +1,169 @@
 using System.Linq;
+using System.Security;
+using System.Text;
 using Lazuar.ApiTypes;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain.Aggregates;
-using Modules.Lhdn.Infrastructure.Models;
-using Modules.Lhdn.Infrastructure.Serialization;
 
 namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
 public class ConsolidatedInvoiceStrategy : IUblDocumentStrategy
 {
-    public object Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
+    public string Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
     {
         var issueDate = request.Issue_date.UtcDateTime;
+        var dateStr = issueDate.ToString("yyyy-MM-dd");
+        var timeStr = issueDate.ToString("HH:mm:ssZ");
+
         var startDate = request.Billing_period_start?.UtcDateTime ?? issueDate;
         var endDate = request.Billing_period_end?.UtcDateTime ?? issueDate;
+        var startStr = startDate.ToString("yyyy-MM-dd");
+        var endStr = endDate.ToString("yyyy-MM-dd");
 
-        var invoice = new LhdnJsonInvoice(
-            ID: request.Internal_id,
-            IssueDate: issueDate.ToString("yyyy-MM-dd"),
-            IssueTime: issueDate.ToString("HH:mm:ssZ"),
-            InvoiceTypeCode: new[] { new UblInvoiceTypeCode("01", documentVersion) },
-            DocumentCurrencyCode: "MYR",
-            TaxCurrencyCode: "MYR",
-            InvoicePeriod: new[]
-            {
-                new LhdnInvoicePeriod(
-                    StartDate: startDate.ToString("yyyy-MM-dd"),
-                    EndDate: endDate.ToString("yyyy-MM-dd"),
-                    Description: "Consolidated Invoice"
-                )
-            },
-            BillingReference: new[]
-            {
-                new LhdnBillingReference(
-                    AdditionalDocumentReference: new[]
-                    {
-                        new LhdnDocumentReference(request.Internal_id)
-                    }
-                )
-            },
-            AdditionalDocumentReference: null, 
-            AccountingSupplierParty: BuildSupplierParty(config),
-            AccountingCustomerParty: BuildCustomerParty(request, isB2c: true),
-            PaymentMeans: new[] { new LhdnPaymentMeans("08") },
-            TaxTotal: BuildTaxTotal(request.Total_excluding_tax, request.Total_tax, "06"),
-            LegalMonetaryTotal: BuildLegalMonetaryTotal(request),
-            InvoiceLine: BuildInvoiceLines(request.Items, isB2c: true)
-        );
-
-        return new LhdnJsonDocument(
-            D: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
-            A: "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
-            B: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
-            Invoice: new[] { invoice }
-        );
-    }
-
-    private static LhdnAccountingParty[] BuildSupplierParty(LhdnTenantConfig config) => new[]
-    {
-        new LhdnAccountingParty(
-            AdditionalAccountID: new[] { new LhdnAdditionalAccountId("CPT-CCN-W-211111-KL-000002", "CertEX") },
-            Party: new[]
-            {
-                new LhdnParty(
-                    IndustryClassificationCode: new[] { new LhdnIndustryClassificationCode(config.MsicCode ?? "00000", "System Supplier") },
-                    PartyIdentification: new[]
-                    {
-                        new LhdnPartyIdentification(new[] { new LhdnSchemeId(config.SupplierTin ?? "NA", "TIN") }),
-                        new LhdnPartyIdentification(new[] { new LhdnSchemeId(config.IdValue ?? "NA", config.IdType ?? "BRN") }),
-                        new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "SST") }),
-                        new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "TTX") })
-                    },
-                    PostalAddress: new[]
-                    {
-                        new LhdnPostalAddress(
-                            CityName: "Kuala Lumpur",
-                            PostalZone: "50480",
-                            CountrySubentityCode: "14",
-                            AddressLine: new[] { new LhdnAddressLine("Lot 66") },
-                            Country: new[] { new LhdnCountry(new[] { new LhdnIdentificationCode("MYS", "ISO3166-1", "6") }) }
-                        )
-                    },
-                    PartyLegalEntity: new[] { new LhdnPartyLegalEntity("System Supplier") },
-                    Contact: new[] { new LhdnContact("+60123456789", "admin@lazuar.com") }
-                )
-            }
-        )
-    };
-
-    private static LhdnAccountingParty[] BuildCustomerParty(SubmitDocumentRequestDto request, bool isB2c)
-    {
-        var tin = isB2c ? "EI00000000010" : (request.Buyer_tin ?? "NA");
-        var idType = isB2c ? "BRN" : request.Buyer_id_type.ToString();
-        var idValue = isB2c ? "NA" : (request.Buyer_id_value ?? "NA");
-        var name = isB2c ? "General Public" : (request.Buyer_name ?? "NA");
-        var phone = isB2c ? "+60123456789" : (request.Buyer_phone ?? "+60123456789");
-        var email = isB2c ? "na@example.com" : (request.Buyer_email ?? "na@example.com");
-        var stateCode = isB2c ? "17" : request.Buyer_address.State_code.ToString().TrimStart('_');
-
-        return new[]
+        var invoiceLines = new StringBuilder();
+        for (int i = 0; i < request.Items.Count; i++)
         {
-            new LhdnAccountingParty(
-                AdditionalAccountID: null,
-                Party: new[]
-                {
-                    new LhdnParty(
-                        IndustryClassificationCode: null,
-                        PartyIdentification: new[]
-                        {
-                            new LhdnPartyIdentification(new[] { new LhdnSchemeId(tin, "TIN") }),
-                            new LhdnPartyIdentification(new[] { new LhdnSchemeId(idValue, idType) }),
-                            new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "SST") }),
-                            new LhdnPartyIdentification(new[] { new LhdnSchemeId("NA", "TTX") })
-                        },
-                        PostalAddress: new[]
-                        {
-                            new LhdnPostalAddress(
-                                CityName: isB2c ? "NA" : (request.Buyer_address.City ?? "NA"),
-                                PostalZone: isB2c ? "00000" : (request.Buyer_address.Postal_code ?? "00000"),
-                                CountrySubentityCode: stateCode,
-                                AddressLine: new[] { new LhdnAddressLine(isB2c ? "NA" : (request.Buyer_address.Line1 ?? "NA")) },
-                                Country: new[] { new LhdnCountry(new[] { new LhdnIdentificationCode(isB2c ? "MYS" : (request.Buyer_address.Country_code ?? "MYS"), "ISO3166-1", "6") }) }
-                            )
-                        },
-                        PartyLegalEntity: new[] { new LhdnPartyLegalEntity(name) },
-                        Contact: new[] { new LhdnContact(phone, email) }
-                    )
-                }
-            )
-        };
-    }
+            var item = request.Items.ElementAt(i);
+            var taxCode = item.Tax_type_code.ToString().TrimStart('_');
+            var classCode = item.Classification_code ?? "004";
 
-    private static LhdnTaxTotal[] BuildTaxTotal(double taxableAmount, double taxAmount, string taxTypeCode) => new[]
-    {
-        new LhdnTaxTotal(
-            TaxAmount: new[] { new UblAmount((decimal)taxAmount, "MYR") },
-            TaxSubtotal: new[]
-            {
-                new LhdnTaxSubtotal(
-                    TaxableAmount: new[] { new UblAmount((decimal)taxableAmount, "MYR") },
-                    TaxAmount: new[] { new UblAmount((decimal)taxAmount, "MYR") },
-                    TaxCategory: new[]
-                    {
-                        new LhdnTaxCategory(
-                            ID: taxTypeCode,
-                            Percent: (UblValue<decimal>?)null,
-                            TaxExemptionReason: taxTypeCode is "E" or "06" ? new UblValue<string>("Not subject to tax") : (UblValue<string>?)null,
-                            TaxScheme: new[] { new LhdnTaxScheme(new[] { new LhdnTaxSchemeId("OTH", "UN/ECE 5153", "6") }) }
-                        )
-                    }
-                )
-            }
-        )
-    };
+            invoiceLines.Append($@"
+  <cac:InvoiceLine>
+    <cbc:ID>{i + 1}</cbc:ID>
+    <cbc:InvoicedQuantity unitCode=""C62"">{item.Quantity:0.00}</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID=""MYR"">{item.Subtotal:0.00}</cbc:LineExtensionAmount>
+    <cac:TaxTotal>
+        <cbc:TaxAmount currencyID=""MYR"">{item.Tax_amount:0.00}</cbc:TaxAmount>
+        <cac:TaxSubtotal>
+            <cbc:TaxableAmount currencyID=""MYR"">{item.Subtotal:0.00}</cbc:TaxableAmount>
+            <cbc:TaxAmount currencyID=""MYR"">{item.Tax_amount:0.00}</cbc:TaxAmount>
+            <cac:TaxCategory>
+                <cbc:ID>{taxCode}</cbc:ID>
+                <cbc:TaxExemptionReason>Not subject to tax</cbc:TaxExemptionReason>
+                <cac:TaxScheme>
+                    <cbc:ID>OTH</cbc:ID>
+                </cac:TaxScheme>
+            </cac:TaxCategory>
+        </cac:TaxSubtotal>
+    </cac:TaxTotal>
+    <cac:Item>
+      <cbc:Description>{SecurityElement.Escape(item.Description ?? "Item")}</cbc:Description>
+      <cac:CommodityClassification>
+          <cbc:ItemClassificationCode listID=""CLASS"">{classCode}</cbc:ItemClassificationCode>
+      </cac:CommodityClassification>
+      <cac:ClassifiedTaxCategory>
+          <cbc:ID>{taxCode}</cbc:ID>
+          <cac:TaxScheme>
+              <cbc:ID>OTH</cbc:ID>
+          </cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID=""MYR"">{item.Unit_price:0.00}</cbc:PriceAmount>
+    </cac:Price>
+    <cac:ItemPriceExtension>
+        <cbc:Amount currencyID=""MYR"">{item.Subtotal:0.00}</cbc:Amount>
+    </cac:ItemPriceExtension>
+  </cac:InvoiceLine>");
+        }
 
-    private static LhdnLegalMonetaryTotal[] BuildLegalMonetaryTotal(SubmitDocumentRequestDto request) => new[]
-    {
-        new LhdnLegalMonetaryTotal(
-            LineExtensionAmount: new[] { new UblAmount((decimal)request.Total_excluding_tax, "MYR") },
-            TaxExclusiveAmount: new[] { new UblAmount((decimal)request.Total_excluding_tax, "MYR") },
-            TaxInclusiveAmount: new[] { new UblAmount((decimal)request.Total_including_tax, "MYR") },
-            AllowanceTotalAmount: new[] { new UblAmount(0m, "MYR") },
-            ChargeTotalAmount: new[] { new UblAmount(0m, "MYR") },
-            PayableRoundingAmount: new[] { new UblAmount(0m, "MYR") },
-            PayableAmount: new[] { new UblAmount((decimal)request.Total_including_tax, "MYR") }
-        )
-    };
+        var xml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+<Invoice xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2""
+  xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2""
+  xmlns:cbc=""urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"">
+  <cbc:ID>{request.Internal_id}</cbc:ID>
+  <cbc:IssueDate>{dateStr}</cbc:IssueDate>
+  <cbc:IssueTime>{timeStr}</cbc:IssueTime>
+  <cbc:InvoiceTypeCode listVersionID=""{documentVersion}"">01</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>MYR</cbc:DocumentCurrencyCode>
+  <cac:InvoicePeriod>
+    <cbc:StartDate>{startStr}</cbc:StartDate>
+    <cbc:EndDate>{endStr}</cbc:EndDate>
+    <cbc:Description>Consolidated Invoice</cbc:Description>
+  </cac:InvoicePeriod>
+  <cac:BillingReference>
+    <cac:AdditionalDocumentReference>
+        <cbc:ID>{request.Internal_id}</cbc:ID>
+    </cac:AdditionalDocumentReference>
+  </cac:BillingReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cbc:IndustryClassificationCode>{config.MsicCode ?? "00000"}</cbc:IndustryClassificationCode>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID=""TIN"">{config.SupplierTin ?? "NA"}</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID=""{config.IdType ?? "BRN"}"">{config.IdValue ?? "NA"}</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PostalAddress>
+        <cbc:CityName>Kuala Lumpur</cbc:CityName>
+        <cbc:PostalZone>50480</cbc:PostalZone>
+        <cbc:CountrySubentityCode>14</cbc:CountrySubentityCode>
+        <cac:AddressLine>
+            <cbc:Line>Lot 66</cbc:Line>
+        </cac:AddressLine>
+        <cac:Country>
+          <cbc:IdentificationCode>MYS</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>System Supplier</cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+      <cac:Contact>
+        <cbc:Telephone>+60123456789</cbc:Telephone>
+        <cbc:ElectronicMail>admin@lazuar.com</cbc:ElectronicMail>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID=""TIN"">{request.Buyer_tin ?? "NA"}</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID=""{request.Buyer_id_type}"">{request.Buyer_id_value ?? "NA"}</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PostalAddress>
+        <cbc:CityName>{SecurityElement.Escape(request.Buyer_address.City ?? "NA")}</cbc:CityName>
+        <cbc:PostalZone>{request.Buyer_address.Postal_code ?? "00000"}</cbc:PostalZone>
+        <cbc:CountrySubentityCode>{request.Buyer_address.State_code.ToString().TrimStart('_')}</cbc:CountrySubentityCode>
+        <cac:AddressLine>
+          <cbc:Line>{SecurityElement.Escape(request.Buyer_address.Line1 ?? "NA")}</cbc:Line>
+        </cac:AddressLine>
+        <cac:Country>
+          <cbc:IdentificationCode>{request.Buyer_address.Country_code ?? "MYS"}</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>{SecurityElement.Escape(request.Buyer_name ?? "NA")}</cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+      <cac:Contact>
+        <cbc:Telephone>{request.Buyer_phone ?? "+60123456789"}</cbc:Telephone>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID=""MYR"">{request.Total_tax:0.00}</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+        <cbc:TaxableAmount currencyID=""MYR"">{request.Total_excluding_tax:0.00}</cbc:TaxableAmount>
+        <cbc:TaxAmount currencyID=""MYR"">{request.Total_tax:0.00}</cbc:TaxAmount>
+        <cac:TaxCategory>
+            <cbc:ID>06</cbc:ID>
+            <cbc:TaxExemptionReason>Not subject to tax</cbc:TaxExemptionReason>
+            <cac:TaxScheme>
+                <cbc:ID>OTH</cbc:ID>
+            </cac:TaxScheme>
+        </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID=""MYR"">{request.Total_excluding_tax:0.00}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID=""MYR"">{request.Total_excluding_tax:0.00}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID=""MYR"">{request.Total_including_tax:0.00}</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID=""MYR"">{request.Total_including_tax:0.00}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>{invoiceLines.ToString()}
+</Invoice>";
 
-    private static LhdnInvoiceLine[] BuildInvoiceLines(System.Collections.Generic.IEnumerable<LhdnItemDto> items, bool isB2c)
-    {
-        return items.Select((item, index) =>
-        {
-            var cleanTaxCode = item.Tax_type_code.ToString().TrimStart('_');
-            var classCode = item.Classification_code ?? (isB2c ? "004" : "022");
-
-            return new LhdnInvoiceLine(
-                ID: (index + 1).ToString(),
-                InvoicedQuantity: new[] { new UblQuantity((decimal)item.Quantity, "C62") },
-                LineExtensionAmount: new[] { new UblAmount((decimal)item.Subtotal, "MYR") },
-                AllowanceCharge: null,
-                TaxTotal: BuildTaxTotal(item.Subtotal, item.Tax_amount, cleanTaxCode),
-                Item: new[]
-                {
-                    new LhdnItem(
-                        Description: item.Description ?? "Item",
-                        CommodityClassification: new[]
-                        {
-                            new LhdnCommodityClassification(new[] { new LhdnItemClassificationCode("NA", "PTC") }),
-                            new LhdnCommodityClassification(new[] { new LhdnItemClassificationCode(classCode, "CLASS") })
-                        }
-                    )
-                },
-                Price: new[] { new LhdnPrice(new[] { new UblAmount((decimal)item.Unit_price, "MYR") }) },
-                ItemPriceExtension: new[] { new LhdnItemPriceExtension(new[] { new UblAmount((decimal)item.Subtotal, "MYR") }) }
-            );
-        }).ToArray();
+        return xml;
     }
 }

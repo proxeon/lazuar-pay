@@ -10,6 +10,8 @@ public record JsonSigningResult(
 
 public interface IJsonSignatureService
 {
-    JsonSigningResult SignDocument(object document, X509Certificate2 certificate);
+    JsonSigningResult SignDocument(string rawXml, X509Certificate2 certificate);
+    
+    // Dummy method restored to satisfy legacy test mocks without triggering Obsolete warnings.
     (string JsonString, string DocumentHashHex) SerializeUnsignedDocument(object document);
 }
