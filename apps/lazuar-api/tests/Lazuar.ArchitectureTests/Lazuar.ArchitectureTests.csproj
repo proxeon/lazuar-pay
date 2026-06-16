@@ -2,53 +2,29 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- Core Foundations -->
-    <ProjectReference Include="..\..\BuildingBlocks\Domain\BuildingBlocks.Domain.csproj" />
-    <ProjectReference Include="..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
-    <ProjectReference Include="..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\SharedKernel\SharedKernel.csproj" />
-    
-    <!-- One Module references -->
-    <ProjectReference Include="..\..\Modules\One\Contracts\Modules.One.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\One\Domain\Modules.One.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\One\Application\Modules.One.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
-    
-    <!-- Messaging Module references -->
-    <ProjectReference Include="..\..\Modules\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
-    
-    <!-- Community Module references -->
-    <ProjectReference Include="..\..\Modules\Community\Contracts\Modules.Community.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\Community\Domain\Modules.Community.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Community\Application\Modules.Community.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\Community\Infrastructure\Modules.Community.Infrastructure.csproj" />
-
-    <!-- CRM Module references -->
-    <ProjectReference Include="..\..\Modules\CRM\Contracts\Modules.CRM.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\CRM\Infrastructure\Modules.CRM.Infrastructure.csproj" />
-
-    <!-- Payments Module references -->
-    <ProjectReference Include="..\..\Modules\Payments\Contracts\Modules.Payments.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\Payments\Domain\Modules.Payments.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Payments\Application\Modules.Payments.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\Payments\Infrastructure\Modules.Payments.Infrastructure.csproj" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="NSubstitute" />
     <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the main API project so tests can evaluate architectural boundaries -->
+    <ProjectReference Include="..\..\src\Lazuar.Api\Lazuar.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embeds the static test vector into the compiled test assembly -->
+    <EmbeddedResource Include="TestData\lhdn-golden-master.json" />
   </ItemGroup>
 
 </Project>

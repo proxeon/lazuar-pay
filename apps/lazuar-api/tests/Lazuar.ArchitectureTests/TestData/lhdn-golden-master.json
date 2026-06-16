@@ -1,0 +1,5 @@
+{
+  "PreHashedJson": "{\"_D\":\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\",\"Invoice\":[{\"ID\":[{\"_\":\"XML-INV12345\"}],\"IssueDate\":[{\"_\":\"2024-07-23\"}],\"Amount\":[{\"_\":100}]}]}",
+  "ExpectedBase64Hash": "p2rL/0Kz1kXYz0Z1eA7u0GfD4iOqYxVwA3Lw0E7v9E0=",
+  "ExpectedHexHash": "a76acbff42b3d645d8cf4675780eeed067c3e223aa6315700372f0d04eeff44d"
+}
