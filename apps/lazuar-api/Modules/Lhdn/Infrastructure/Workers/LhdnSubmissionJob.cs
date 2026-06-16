@@ -1,19 +1,15 @@
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Ports;
-using Modules.Lhdn.Application.Services;
-using Modules.Lhdn.Domain.Aggregates;
 
 namespace Modules.Lhdn.Infrastructure.Workers;
 
@@ -52,8 +48,6 @@ public class LhdnSubmissionJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LhdnDbContext>();
         var gateway = scope.ServiceProvider.GetRequiredService<ILhdnGatewayAdapter>();
-        var vault = scope.ServiceProvider.GetRequiredService<ICertificateVaultService>();
-        var xmlSigner = scope.ServiceProvider.GetRequiredService<IXmlSignatureService>();
 
         var now = DateTime.UtcNow;
         var pendingDocs = await db.TaxDocuments
@@ -75,45 +69,19 @@ public class LhdnSubmissionJob : BackgroundService
                     continue;
                 }
 
-                var xmlDoc = new XmlDocument
-                {
-                    PreserveWhitespace = true
-                };
-                xmlDoc.LoadXml(doc.RawXmlContent);
+                // Retrieve the finalized JSON string from the database and prepare for Base64 encoding
+                var finalJsonBytes = Encoding.UTF8.GetBytes(doc.RawXmlContent);
+                var base64Document = Convert.ToBase64String(finalJsonBytes);
 
-                var nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
-                nsManager.AddNamespace("cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
-                
-                var typeCodeNode = xmlDoc.SelectSingleNode("//cbc:InvoiceTypeCode | //cbc:CreditNoteTypeCode | //cbc:DebitNoteTypeCode", nsManager);
-                var documentVersion = typeCodeNode?.Attributes?["listVersionID"]?.Value ?? "1.0";
-
-                if (documentVersion == "1.1")
-                {
-                    if (string.IsNullOrEmpty(config.EncryptedPfxBase64) || string.IsNullOrEmpty(config.PfxPasswordCiphertext))
-                    {
-                        doc.MarkAsFailed("Certificate missing for v1.1 document. Please upload a valid PKCS#12 certificate.");
-                        await db.SaveChangesAsync(ct);
-                        continue;
-                    }
-
-                    using var cert = vault.GetDecryptedCertificate(config.EncryptedPfxBase64, config.PfxPasswordCiphertext);
-                    xmlSigner.SignDocument(xmlDoc, cert);
-                }
-
-                var finalXmlBytes = Encoding.UTF8.GetBytes(xmlDoc.OuterXml);
-
-                var documentHashBytes = SHA256.HashData(finalXmlBytes);
-                var documentHashHex = Convert.ToHexString(documentHashBytes).ToLowerInvariant();
-                var base64Document = Convert.ToBase64String(finalXmlBytes);
-
+                // Construct the JSON API envelope mapped identically to MyInvois expectations
                 var payload = new
                 {
                     documents = new[]
                     {
                         new
                         {
-                            format = "XML",
-                            documentHash = documentHashHex,
+                            format = "JSON",
+                            documentHash = doc.DocumentHash, // Direct mapped from pre-computed HexDigest
                             codeNumber = doc.InternalReferenceId,
                             document = base64Document
                         }
