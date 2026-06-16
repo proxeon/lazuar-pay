@@ -25,7 +25,6 @@ public class XmlSignatureService : IXmlSignatureService
     {
         var root = document.DocumentElement ?? throw new InvalidOperationException("XML document has no root element.");
 
-        // 1. Inject the <ext:UBLExtensions> skeleton AT THE TOP of the DOM before computing the signature
         var ublExtensions = document.CreateElement("ext", "UBLExtensions", ExtNamespaceUrl);
         var ublExtension = document.CreateElement("ext", "UBLExtension", ExtNamespaceUrl);
         var extensionUri = document.CreateElement("ext", "ExtensionURI", ExtNamespaceUrl);
@@ -55,26 +54,25 @@ public class XmlSignatureService : IXmlSignatureService
 
         root.InsertBefore(ublExtensions, root.FirstChild);
 
-        // 2. Setup SignedXml
         var rsaKey = certificate.GetRSAPrivateKey() ?? throw new InvalidOperationException("Certificate does not contain an RSA private key.");
         var signedXml = new SignedXml(document) { SigningKey = rsaKey };
 
+        // Explicitly set the Signature ID to match LHDN's expected format
+        signedXml.Signature.Id = "signature";
         signedXml.SignedInfo!.SignatureMethod = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
         signedXml.SignedInfo.CanonicalizationMethod = "http://www.w3.org/2001/10/xml-exc-c14n#";
 
-        // 3. Document Reference and XPath Transforms (Required by LHDN)
         var docReference = new Reference { Uri = "", Id = "id-doc-signed-data" };
 
-        var extXPathElement = document.CreateElement("XPath");
+        // Use ds prefix and namespace for XPath transforms to ensure proper serialization
+        var extXPathElement = document.CreateElement("ds", "XPath", SignatureNamespaceUrl);
         extXPathElement.InnerText = "not(//ancestor-or-self::ext:UBLExtensions)";
-        extXPathElement.SetAttribute("xmlns:ext", ExtNamespaceUrl);
         var xpathTransform1 = new XmlDsigXPathTransform();
         xpathTransform1.LoadInnerXml(extXPathElement.SelectNodes(".")!);
         docReference.AddTransform(xpathTransform1);
 
-        var cacXPathElement = document.CreateElement("XPath");
+        var cacXPathElement = document.CreateElement("ds", "XPath", SignatureNamespaceUrl);
         cacXPathElement.InnerText = "not(//ancestor-or-self::cac:Signature)";
-        cacXPathElement.SetAttribute("xmlns:cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2");
         var xpathTransform2 = new XmlDsigXPathTransform();
         xpathTransform2.LoadInnerXml(cacXPathElement.SelectNodes(".")!);
         docReference.AddTransform(xpathTransform2);
@@ -83,7 +81,6 @@ public class XmlSignatureService : IXmlSignatureService
         docReference.DigestMethod = "http://www.w3.org/2001/04/xmlenc#sha256";
         signedXml.AddReference(docReference);
 
-        // 4. Create and attach XAdES Object
         var dataObject = CreateXadesObject(document, certificate);
         signedXml.AddObject(dataObject);
 
@@ -98,10 +95,31 @@ public class XmlSignatureService : IXmlSignatureService
         keyInfo.AddClause(new KeyInfoX509Data(certificate));
         signedXml.KeyInfo = keyInfo;
 
-        // 5. Compute signature against the exact final structure and embed it
         signedXml.ComputeSignature();
         var signatureElement = signedXml.GetXml();
+
+        // Enforce the 'ds:' prefix across all generated signature nodes for LHDN regex parser compatibility
+        ApplyPrefix(signatureElement, "ds", SignatureNamespaceUrl);
+
+        if (signatureElement.Attributes?["xmlns"] != null)
+        {
+            signatureElement.Attributes.RemoveNamedItem("xmlns");
+        }
+
         signatureInformation.AppendChild(document.ImportNode(signatureElement, true));
+    }
+
+    private static void ApplyPrefix(XmlNode node, string prefix, string namespaceUri)
+    {
+        if (node.NamespaceURI == namespaceUri)
+        {
+            node.Prefix = prefix;
+        }
+
+        foreach (XmlNode child in node.ChildNodes)
+        {
+            ApplyPrefix(child, prefix, namespaceUri);
+        }
     }
 
     private DataObject CreateXadesObject(XmlDocument document, X509Certificate2 certificate)
