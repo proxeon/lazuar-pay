@@ -1641,6 +1641,24 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CancelDocumentRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string Reason { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class LhdnAddressDto
     {
 
@@ -1791,6 +1809,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public SubmitDocumentRequestDtoDocument_type Document_type { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("document_version")]
+        public string? Document_version { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("issue_date")]
         public System.DateTimeOffset Issue_date { get; set; } = default!;
 
@@ -1839,6 +1860,27 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("total_including_tax")]
         public double Total_including_tax { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateLhdnCertificateRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("p12_base64_file")]
+        public string P12_base64_file { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("passphrase")]
+        public string Passphrase { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

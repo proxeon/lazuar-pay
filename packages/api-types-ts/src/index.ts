@@ -484,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/lhdn/documents/{internalId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["LhdnOperations_cancelDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/lhdn/taxpayer/validate": {
         parameters: {
             query?: never;
@@ -527,6 +543,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["LhdnOperations_deleteWebhook"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lhdn/workspaces/{id}/lhdn-certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["LhdnOperations_updateCertificate"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1638,6 +1670,9 @@ export interface components {
             billing_address?: components["schemas"]["Crm.BillingAddressDto"];
             consented_to_marketing?: boolean;
         };
+        "Lhdn.CancelDocumentRequestDto": {
+            reason: string;
+        };
         "Lhdn.LhdnAddressDto": {
             line1: string;
             line2?: string;
@@ -1685,6 +1720,7 @@ export interface components {
             internal_id: string;
             /** @enum {string} */
             document_type: "01" | "02" | "03" | "04" | "11" | "12" | "13" | "14";
+            document_version?: string;
             /** Format: date-time */
             issue_date: string;
             original_lhdn_uuid?: string;
@@ -1708,6 +1744,10 @@ export interface components {
             total_tax: number;
             /** Format: double */
             total_including_tax: number;
+        };
+        "Lhdn.UpdateLhdnCertificateRequestDto": {
+            p12_base64_file: string;
+            passphrase: string;
         };
         "Lhdn.ValidateTinRequestDto": {
             tin: string;
@@ -4587,6 +4627,77 @@ export interface operations {
             };
         };
     };
+    LhdnOperations_cancelDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                internalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Lhdn.CancelDocumentRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     LhdnOperations_validateTaxpayerTin: {
         parameters: {
             query?: never;
@@ -4800,6 +4911,77 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    LhdnOperations_updateCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Lhdn.UpdateLhdnCertificateRequestDto"];
+            };
+        };
         responses: {
             /** @description The request has succeeded. */
             200: {

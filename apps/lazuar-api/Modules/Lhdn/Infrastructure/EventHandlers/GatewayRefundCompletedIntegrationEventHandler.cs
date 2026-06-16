@@ -70,11 +70,13 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
         else
         {
             var creditNoteInternalId = $"CN-{@event.PaymentRecordId}";
+            var documentVersion = "1.0"; 
             
             var payload = new SubmitDocumentRequestDto
             {
                 Internal_id = creditNoteInternalId,
                 Document_type = SubmitDocumentRequestDtoDocument_type._02,
+                Document_version = documentVersion,
                 Issue_date = DateTimeOffset.UtcNow,
                 Original_lhdn_uuid = originalDocument.LhdnUuid,
                 Adjustment_reason = "Customer requested refund",
@@ -110,7 +112,7 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
             };
 
             var strategy = _strategyFactory.GetStrategy(payload);
-            var xmlDoc = strategy.Generate(payload, config);
+            var xmlDoc = strategy.Generate(payload, config, documentVersion);
             var rawXmlString = xmlDoc.OuterXml;
 
             var documentHashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawXmlString));
