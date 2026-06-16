@@ -26,7 +26,9 @@ public class DocumentStrategyFactory : IDocumentStrategyFactory
             SubmitDocumentRequestDtoDocument_type._01 => 
                 _serviceProvider.GetRequiredKeyedService<IUblDocumentStrategy>("B2BStandardInvoice"),
                 
-            SubmitDocumentRequestDtoDocument_type._02 => 
+            SubmitDocumentRequestDtoDocument_type._02 or 
+            SubmitDocumentRequestDtoDocument_type._03 or 
+            SubmitDocumentRequestDtoDocument_type._04 => 
                 _serviceProvider.GetRequiredKeyedService<IUblDocumentStrategy>("CreditNote"),
                 
             _ => throw new NotSupportedException($"Document type {request.Document_type} is not currently supported in this iteration.")

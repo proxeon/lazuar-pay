@@ -12,6 +12,9 @@ public class CreditNoteStrategy : IUblDocumentStrategy
         var dateStr = issueDate.ToString("yyyy-MM-dd");
         var timeStr = issueDate.ToString("HH:mm:ssZ");
 
+        // Dynamically resolves to "02" (Credit), "03" (Debit), or "04" (Refund)
+        var docTypeCode = request.Document_type.ToString().TrimStart('_');
+
         return $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <Invoice xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2""
   xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2""
@@ -19,7 +22,7 @@ public class CreditNoteStrategy : IUblDocumentStrategy
   <cbc:ID>{request.Internal_id}</cbc:ID>
   <cbc:IssueDate>{dateStr}</cbc:IssueDate>
   <cbc:IssueTime>{timeStr}</cbc:IssueTime>
-  <cbc:InvoiceTypeCode listVersionID=""{documentVersion}"">02</cbc:InvoiceTypeCode>
+  <cbc:InvoiceTypeCode listVersionID=""{documentVersion}"">{docTypeCode}</cbc:InvoiceTypeCode>
   <cbc:DocumentCurrencyCode>MYR</cbc:DocumentCurrencyCode>
   <cac:BillingReference>
     <cac:InvoiceDocumentReference>
