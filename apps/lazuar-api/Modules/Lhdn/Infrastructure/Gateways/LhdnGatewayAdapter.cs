@@ -86,7 +86,7 @@ public class LhdnGatewayAdapter : ILhdnGatewayAdapter
             return delay > 0 ? delay : 60;
         }
 
-        return 60; 
+        return 60;
     }
 
     public async Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default)

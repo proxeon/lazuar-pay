@@ -23,17 +23,9 @@ public class XmlSignatureService : IXmlSignatureService
 
     public void SignDocument(XmlDocument document, X509Certificate2 certificate)
     {
-        // 1. Inject the XML declaration to ensure strict parser compliance
-        if (document.FirstChild is not XmlDeclaration)
-        {
-            var xmlDeclaration = document.CreateXmlDeclaration("1.0", "UTF-8", null);
-            document.InsertBefore(xmlDeclaration, document.DocumentElement);
-        }
-
         var root = document.DocumentElement ?? throw new InvalidOperationException("XML document has no root element.");
 
-        // 2. Explicitly define all namespaces at the root level.
-        // This guarantees that when we force the 'ds:' prefix later, the XML parser knows what it means.
+        // Explicitly define namespaces at the root level so the LHDN parser handles forced 'ds:' prefixes safely.
         root.SetAttribute("xmlns:ext", ExtNamespaceUrl);
         root.SetAttribute("xmlns:sig", SigNamespaceUrl);
         root.SetAttribute("xmlns:sac", SacNamespaceUrl);
@@ -73,27 +65,24 @@ public class XmlSignatureService : IXmlSignatureService
         var rsaKey = certificate.GetRSAPrivateKey() ?? throw new InvalidOperationException("Certificate does not contain an RSA private key.");
         var signedXml = new SignedXml(document) { SigningKey = rsaKey };
 
-        // Explicitly set the Signature ID to match LHDN's expected format
+        // Match LHDN's exact expected ID formatting
         signedXml.Signature.Id = "signature";
         signedXml.SignedInfo!.SignatureMethod = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
         signedXml.SignedInfo.CanonicalizationMethod = "http://www.w3.org/2001/10/xml-exc-c14n#";
 
         var docReference = new Reference { Uri = "", Id = "id-doc-signed-data" };
 
-        // Bind xmlns:ext so the XPath evaluator understands the prefix
-        var extXPathElement = document.CreateElement("ds", "XPath", SignatureNamespaceUrl);
-        extXPathElement.InnerText = "not(//ancestor-or-self::ext:UBLExtensions)";
-        extXPathElement.SetAttribute("xmlns:ext", ExtNamespaceUrl); 
+        // Use a dummy XmlDocument to safely initialize XPath transforms with perfect namespace mappings in .NET
+        var dummyDoc = new XmlDocument();
+        
+        dummyDoc.LoadXml($"<XPath xmlns:ext=\"{ExtNamespaceUrl}\">not(//ancestor-or-self::ext:UBLExtensions)</XPath>");
         var xpathTransform1 = new XmlDsigXPathTransform();
-        xpathTransform1.LoadInnerXml(extXPathElement.SelectNodes(".")!);
+        xpathTransform1.LoadInnerXml(dummyDoc.ChildNodes);
         docReference.AddTransform(xpathTransform1);
 
-        // Bind xmlns:cac so the XPath evaluator understands the prefix
-        var cacXPathElement = document.CreateElement("ds", "XPath", SignatureNamespaceUrl);
-        cacXPathElement.InnerText = "not(//ancestor-or-self::cac:Signature)";
-        cacXPathElement.SetAttribute("xmlns:cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2");
+        dummyDoc.LoadXml($"<XPath xmlns:cac=\"urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2\">not(//ancestor-or-self::cac:Signature)</XPath>");
         var xpathTransform2 = new XmlDsigXPathTransform();
-        xpathTransform2.LoadInnerXml(cacXPathElement.SelectNodes(".")!);
+        xpathTransform2.LoadInnerXml(dummyDoc.ChildNodes);
         docReference.AddTransform(xpathTransform2);
 
         docReference.AddTransform(new XmlDsigExcC14NTransform());
@@ -117,10 +106,9 @@ public class XmlSignatureService : IXmlSignatureService
         signedXml.ComputeSignature();
         var signatureElement = signedXml.GetXml();
 
-        // Enforce the 'ds:' prefix across all generated signature nodes for LHDN regex parser compatibility
+        // Recursively enforce the 'ds:' prefix across all generated nodes inside the signature block
         ApplyPrefix(signatureElement, "ds", SignatureNamespaceUrl);
 
-        // Strip the empty generic xmlns attribute now that ds is mapped properly at the root
         if (signatureElement.Attributes?["xmlns"] != null)
         {
             signatureElement.Attributes.RemoveNamedItem("xmlns");
