@@ -14,6 +14,7 @@ echo "========================================="
 echo " 2. Submitting Credit Note for B2B Invoice"
 echo "========================================="
 
+# The buyer fields accurately match the original B2B invoice to maintain linkage integrity.
 PAYLOAD=$(cat <<EOF
 {
   "internal_id": "$INTERNAL_ID",
@@ -21,10 +22,10 @@ PAYLOAD=$(cat <<EOF
   "issue_date": "$CURRENT_UTC",
   "original_lhdn_uuid": "$ORIGINAL_UUID",
   "adjustment_reason": "Refund for unused service period",
-  "buyer_name": "Corporate Client Sdn Bhd",
-  "buyer_tin": "IG56848407100",
+  "buyer_name": "Hebat Group",
+  "buyer_tin": "C2584563200",
   "buyer_id_type": "BRN",
-  "buyer_id_value": "202001012345",
+  "buyer_id_value": "201901234567",
   "buyer_address": {
     "line1": "Level 1, Menara Test",
     "city": "Kuala Lumpur",

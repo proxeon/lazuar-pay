@@ -11,6 +11,7 @@ echo "========================================="
 echo " 3. Submitting B2C Consolidated Invoice"
 echo "========================================="
 
+# Uses the generic LHDN B2C TIN to ensure the DocumentStrategyFactory routes this to the Consolidated Invoice strategy.
 PAYLOAD=$(cat <<EOF
 {
   "internal_id": "$INTERNAL_ID",
@@ -19,7 +20,7 @@ PAYLOAD=$(cat <<EOF
   "billing_period_start": "$START_DATE",
   "billing_period_end": "$CURRENT_UTC",
   "buyer_name": "General Public",
-  "buyer_tin": "IG56848407100",
+  "buyer_tin": "EI00000000010",
   "buyer_id_type": "BRN",
   "buyer_id_value": "NA",
   "buyer_address": {
