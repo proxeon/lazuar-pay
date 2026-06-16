@@ -39,8 +39,6 @@ public static class DependencyInjection
         services.AddScoped<ILhdnQueryService, LhdnQueryService>();
         services.AddScoped<ICertificateVaultService, CertificateVaultService>();
         
-        services.AddScoped<IJsonSignatureService, JsonSignatureService>();
-
         services.AddSingleton<ITemplateRendererService, ScribanTemplateRendererService>();
         
         services.AddScoped<IDocumentStrategyFactory, DocumentStrategyFactory>();
