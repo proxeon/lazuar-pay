@@ -59,9 +59,12 @@
 			<cac:PartyLegalEntity>
 				<cbc:RegistrationName>{{ supplier.name | xml_escape }}</cbc:RegistrationName>
 			</cac:PartyLegalEntity>
+			{{ if supplier.phone != "" || supplier.email != "" }}
 			<cac:Contact>
-				<cbc:Telephone>+60123456789</cbc:Telephone>
+				{{ if supplier.phone != "" }}<cbc:Telephone>{{ supplier.phone }}</cbc:Telephone>{{ end }}
+				{{ if supplier.email != "" }}<cbc:ElectronicMail>{{ supplier.email | xml_escape }}</cbc:ElectronicMail>{{ end }}
 			</cac:Contact>
+			{{ end }}
 		</cac:Party>
 	</cac:AccountingSupplierParty>
 
@@ -93,10 +96,12 @@
 			<cac:PartyLegalEntity>
 				<cbc:RegistrationName>{{ buyer.name | xml_escape }}</cbc:RegistrationName>
 			</cac:PartyLegalEntity>
+			{{ if buyer.phone != "" || buyer.email != "" }}
 			<cac:Contact>
-				<cbc:Telephone>{{ buyer.phone }}</cbc:Telephone>
-				<cbc:ElectronicMail>{{ buyer.email | xml_escape }}</cbc:ElectronicMail>
+				{{ if buyer.phone != "" }}<cbc:Telephone>{{ buyer.phone }}</cbc:Telephone>{{ end }}
+				{{ if buyer.email != "" }}<cbc:ElectronicMail>{{ buyer.email | xml_escape }}</cbc:ElectronicMail>{{ end }}
 			</cac:Contact>
+			{{ end }}
 		</cac:Party>
 	</cac:AccountingCustomerParty>
 

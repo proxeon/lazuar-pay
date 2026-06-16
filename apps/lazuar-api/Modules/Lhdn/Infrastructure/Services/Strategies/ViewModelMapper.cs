@@ -6,10 +6,6 @@ using Modules.Lhdn.Infrastructure.Services.Strategies.ViewModels;
 
 namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 
-/// <summary>
-/// Transforms incoming API DTOs into structured ViewModels for logic-less template rendering.
-/// Calculates required mathematical groupings (like TaxSubtotals) to satisfy LHDN Schematron rules.
-/// </summary>
 public static class ViewModelMapper
 {
     public static UblInvoiceViewModel MapToViewModel(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
@@ -37,7 +33,9 @@ public static class ViewModelMapper
                 Tin = config.SupplierTin ?? "NA",
                 IdType = config.IdType ?? "BRN",
                 IdValue = config.IdValue ?? "NA",
-                MsicCode = config.MsicCode ?? "62010"
+                MsicCode = config.MsicCode ?? "62010",
+                Phone = "+60123456789",
+                Email = "supplier@example.com"
             },
             Buyer = new UblPartyViewModel
             {
@@ -45,8 +43,8 @@ public static class ViewModelMapper
                 Tin = string.IsNullOrWhiteSpace(request.Buyer_tin) ? "NA" : request.Buyer_tin,
                 IdType = request.Buyer_id_type.ToString(),
                 IdValue = string.IsNullOrWhiteSpace(request.Buyer_id_value) ? "NA" : request.Buyer_id_value,
-                Email = string.IsNullOrWhiteSpace(request.Buyer_email) ? "NA" : request.Buyer_email,
-                Phone = string.IsNullOrWhiteSpace(request.Buyer_phone) ? "NA" : request.Buyer_phone,
+                Email = string.IsNullOrWhiteSpace(request.Buyer_email) ? "" : request.Buyer_email,
+                Phone = string.IsNullOrWhiteSpace(request.Buyer_phone) ? "" : request.Buyer_phone,
                 AddressLine1 = string.IsNullOrWhiteSpace(request.Buyer_address?.Line1) ? "NA" : request.Buyer_address.Line1,
                 City = string.IsNullOrWhiteSpace(request.Buyer_address?.City) ? "NA" : request.Buyer_address.City,
                 PostalCode = string.IsNullOrWhiteSpace(request.Buyer_address?.Postal_code) ? "00000" : request.Buyer_address.Postal_code,
