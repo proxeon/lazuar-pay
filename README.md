@@ -20,7 +20,6 @@
 +-------------+                   +-------------+                   +-------------+
 ```
 
-
 ## Playbook
 
 ```txt
@@ -47,8 +46,7 @@ Where:
    - Step 1: Use our own platform to generate revenue (Default Alive).
    - Step 2: Use revenue to refine the API/AI-agent architecture.
    - Step 3: Sell frontends to external users who want to replicate our success.
-   - Step 4: Expose APIs/MCP to developers.
-
+   - Step 4: Expose APIs/MCP to developers
 
 ---
 
