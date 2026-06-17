@@ -1,6 +1,6 @@
 {
   "name": "@lazuar/lhdn-sdk",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Official TypeScript SDK for the Lazuar LHDN e-Invoicing API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

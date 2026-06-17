@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <Title>Lazuar LHDN API SDK</Title>
     <Description>Official .NET SDK for the Lazuar LHDN e-Invoicing API.</Description>
-    <Version>1.0.0</Version>
+    <Version>0.1.0</Version>
     <Authors>Lazuar</Authors>
     <PackageId>Lazuar.Lhdn.Sdk</PackageId>
   </PropertyGroup>
