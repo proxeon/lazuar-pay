@@ -16,6 +16,13 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     public string? LongId { get; private set; }
     public string ValidationStatus { get; private set; }
     public string? ErrorMessage { get; private set; }
+    
+    /// <summary>
+    /// Flags documents submitted via sandbox API keys. Used by the UI to filter out 
+    /// test documents from production accounting ledgers.
+    /// </summary>
+    public bool IsTestMode { get; private set; }
+    
     public DateTime? ValidatedAt { get; private set; }
     public DateTime? NextPollAt { get; private set; }
     public int PollAttempts { get; private set; }
@@ -26,7 +33,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
     private TaxDocument() { }
 #pragma warning restore CS8618
 
-    public TaxDocument(Guid organizationId, string internalReferenceId, string documentHash, string rawXmlContent)
+    public TaxDocument(Guid organizationId, string internalReferenceId, string documentHash, string rawXmlContent, bool isTestMode = false)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -34,6 +41,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         DocumentHash = documentHash;
         RawXmlContent = rawXmlContent;
         ValidationStatus = "PENDING";
+        IsTestMode = isTestMode;
         PollAttempts = 0;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;

@@ -18,6 +18,7 @@ public interface ILhdnRepository
     Task<IEnumerable<WebhookSubscription>> GetActiveWebhooksAsync(Guid organizationId, CancellationToken ct = default);
     void AddWebhookSubscription(WebhookSubscription subscription);
     
+    Task<DeveloperApiKey?> GetDeveloperApiKeyAsync(Guid id, CancellationToken ct = default);
     void AddDeveloperApiKey(DeveloperApiKey key);
 
     Task SaveChangesAsync(CancellationToken ct = default);

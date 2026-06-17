@@ -14,6 +14,7 @@ public class LhdnDbContext : PlatformDbContext
     public DbSet<TaxDocument> TaxDocuments { get; set; } = null!;
     public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; } = null!;
     public DbSet<DeveloperApiKey> DeveloperApiKeys { get; set; } = null!;
+    public DbSet<IdempotencyLog> IdempotencyLogs { get; set; } = null!;
     
     public DbSet<MsicCode> MsicCodes { get; set; } = null!;
     public DbSet<CountryCode> CountryCodes { get; set; } = null!;
@@ -42,6 +43,7 @@ public class LhdnDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId).IsUnique();
 
+            // Seed Genesis Configuration
             builder.HasData(new
             {
                 Id = new Guid("00000000-0000-0000-0000-000000000001"),
@@ -72,6 +74,14 @@ public class LhdnDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.ValidationStatus });
             builder.HasIndex(x => x.ValidationStatus);
+            builder.HasIndex(x => x.IsTestMode);
+        });
+
+        modelBuilder.Entity<IdempotencyLog>(builder =>
+        {
+            builder.ToTable("IdempotencyLogs");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.IdempotencyKey }).IsUnique();
         });
 
         modelBuilder.Entity<WebhookSubscription>(builder =>
