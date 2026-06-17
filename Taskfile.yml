@@ -124,6 +124,7 @@ tasks:
       - task: gen:spec
       - task: gen:types-ts
       - task: gen:types-dotnet
+      - task: gen:sdk-lhdn
     sources:
       - "packages/api-spec/*.tsp"
     generates:
@@ -144,3 +145,9 @@ tasks:
     desc: Generate C# DTOs for the Backend API
     cmds:
       - pnpm --filter @repo/api-types-dotnet generate
+
+  gen:sdk-lhdn:
+    desc: Generate the external LHDN SDKs using Microsoft Kiota
+    cmds:
+      - dotnet tool run kiota generate -l typescript -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-ts/src/generated --class-name LhdnClient --clean-output
+      - dotnet tool run kiota generate -l csharp -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-dotnet/src/Generated --class-name LhdnClient --namespace-name Lazuar.Lhdn.Sdk.Generated --clean-output

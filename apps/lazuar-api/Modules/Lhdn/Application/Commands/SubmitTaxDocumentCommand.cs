@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using Lazuar.ApiTypes;
-using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Contracts;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
@@ -46,7 +45,6 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
     {
         var isTestMode = _executionContext.IsTestMode;
 
-        // Pre-Flight Check: Disallow real submissions if the wallet is empty
         if (!isTestMode)
         {
             var hasCredits = await _billingQueryService.HasPositiveCreditBalanceAsync(request.OrganizationId);
@@ -56,7 +54,6 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
             }
         }
 
-        // Idempotency Check
         if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
         {
             var existingLog = await _repository.GetIdempotencyLogAsync(request.OrganizationId, request.IdempotencyKey, ct);
@@ -76,7 +73,6 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
             throw new InvalidOperationException("LHDN Tenant Configuration is missing.");
         }
 
-        // Force Sandbox routing for SK_TEST keys regardless of user UI configuration
         if (isTestMode)
         {
             config.UpdateProfile(config.SupplierTin, config.IdType, config.IdValue, "SANDBOX", config.MsicCode, config.IntermediaryMode);
@@ -120,9 +116,8 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
         {
             await _repository.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("IX_IdempotencyLogs") == true)
+        catch (Exception ex) when (ex.InnerException?.Message.Contains("IX_IdempotencyLogs") == true)
         {
-            // Another thread beat us to the idempotency insert. Return the cached result safely.
             var concurrentLog = await _repository.GetIdempotencyLogAsync(request.OrganizationId, request.IdempotencyKey, ct);
             if (concurrentLog != null && Guid.TryParse(concurrentLog.ResponseBody, out var concurrentDocId))
             {

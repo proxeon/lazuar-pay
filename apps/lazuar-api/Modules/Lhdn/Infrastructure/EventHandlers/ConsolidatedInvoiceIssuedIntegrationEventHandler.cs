@@ -53,7 +53,10 @@ public class ConsolidatedInvoiceIssuedIntegrationEventHandler : IIntegrationEven
             Total_including_tax = (double)@event.TotalIncludingTax
         };
 
-        var command = new SubmitTaxDocumentCommand(@event.OrganizationId, payload);
+        // Added dynamic idempotency key generation for internal system events
+        var idempotencyKey = Guid.CreateVersion7().ToString();
+        var command = new SubmitTaxDocumentCommand(@event.OrganizationId, idempotencyKey, payload);
+        
         await _mediator.Send(command);
     }
 }

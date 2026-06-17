@@ -1,0 +1,25 @@
+{
+  "name": "@lazuar/lhdn-sdk",
+  "version": "1.0.0",
+  "description": "Official TypeScript SDK for the Lazuar LHDN e-Invoicing API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@microsoft/kiota-abstractions": "^1.0.0-preview.20",
+    "@microsoft/kiota-http-fetchlibrary": "^1.0.0-preview.20",
+    "@microsoft/kiota-serialization-json": "^1.0.0-preview.20",
+    "@microsoft/kiota-serialization-form": "^1.0.0-preview.20",
+    "@microsoft/kiota-serialization-text": "^1.0.0-preview.20",
+    "@microsoft/kiota-serialization-multipart": "^1.0.0-preview.20",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.0.0"
+  }
+}

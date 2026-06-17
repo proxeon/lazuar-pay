@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -25,7 +26,7 @@ public class InvoiceIssuedIntegrationEventHandler : IIntegrationEventHandler<Inv
             Document_type = SubmitDocumentRequestDtoDocument_type._01,
             Issue_date = new DateTimeOffset(@event.IssueDate),
             Buyer_name = "Resolved via CRM",
-            Buyer_tin = "C1234567890", // FIX: Changed from IG to C to match BRN format requirement
+            Buyer_tin = "C1234567890",
             Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
             Buyer_id_value = "202001012345",
             Buyer_address = new LhdnAddressDto 
@@ -55,7 +56,10 @@ public class InvoiceIssuedIntegrationEventHandler : IIntegrationEventHandler<Inv
             Total_including_tax = (double)@event.Amount
         };
 
-        var command = new SubmitTaxDocumentCommand(@event.OrganizationId, payload);
+        // Added dynamic idempotency key generation for internal system events
+        var idempotencyKey = Guid.CreateVersion7().ToString();
+        var command = new SubmitTaxDocumentCommand(@event.OrganizationId, idempotencyKey, payload);
+        
         await _mediator.Send(command);
     }
 }

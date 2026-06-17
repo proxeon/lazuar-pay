@@ -63,4 +63,8 @@
     <Project Path="Modules\Billing\Application\Modules.Billing.Application.csproj" />
     <Project Path="Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
   </Folder>
+  
+  <Folder Name="/Packages/">
+    <Project Path="../../packages/lhdn-sdk-dotnet/Lazuar.Lhdn.Sdk.csproj" />
+  </Folder>
 </Solution>
