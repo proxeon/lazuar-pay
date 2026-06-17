@@ -2,13 +2,11 @@
 # Lazuar Platform
 
 ```txt
-
                      +---------------------------------------+
                      |             COGNITIVE CORE            |
-                     |          Your Custom AI-Agent         |
-                     +-------------------+-------------------+
-                                         |
-                                         | Orchestrates / Optimizes
+                     |          Your Custom AI-Agent         |  <-- Used internally by Founder
+                     +-------------------+-------------------+                                         
+                                         | Orchestrates / Optimizes via API
                                          v
        +---------------------------------+---------------------------------+
        |                                 |                                 |
@@ -17,34 +15,45 @@
 |  - Bio      | (Linktree)        |  - Vault    | (Gumroad)         | - Community | (Skool)
 |  - Form     | (Typeform)        |  - Editorial| (Substack)        | - Broadcast | (Mailchimp)
 |  - Funnel   | (ClickFunnels)    |  - Academy  | (Kajabi)          | - Affiliate | (Rewardful)
-|  - Event    | (Eventbrite)      |  - Invoice  | <-- NEW           | - Sponsor   | (Passionfroot)
-|  - Consult  | (Calendly)        |  - Pipeline | <-- NEW           | - Support   | <-- NEW
+|  - Event    | (Eventbrite)      |  - Invoice  |                   | - Sponsor   | (Passionfroot)
+|  - Consult  | (Calendly)        |  - Pipeline |                   | - Support   | 
 +-------------+                   +-------------+                   +-------------+
 ```
+
 
 ## Playbook
 
 ```txt
 True Wealth =
 ((Value × Ψ) / Friction × Distribution)
-× (Code × Math)
-× (Timing × Leverage × Retention)
+× (Code × Math × AI Leverage)
+× (Timing × Focus × Retention)
 
 Where:
 - (Value × Ψ) / Friction × Distribution = The Conversion Engine
-- (Code × Math) = The Sovereign Infrastructure
-- (Timing × Leverage × Retention) = The Asymmetric Compounders
+- (Code × Math × AI Leverage) = The Sovereign Infrastructure (Solo Founder Scale)
+- (Timing × Focus × Retention) = The Asymmetric Compounders
 ```
-* Distribution = Content × Cadence × Channel Fit
-* Treat `Acquisition, Fulfillment, and Retention` as first-class citizens
-* Avoid VCs, external funding, and grants
-* “Default Dead” vs. “Default Alive”
-* Optimize teams with a code-first approach
-* Follow zero-friction principles
-* Follow `Elon Musk's Secret Master Plan`
-* Follow `Barbell Strategy`
 
-Open here `http://localhost:8000`.
+### Core Principles
+1. **Founder as Power User:** We build the API and AI-agent (Cognitive Core) for ourselves first. We use our own 15 modules to run our education/media business. We are Default Alive from Day 1.
+2. **API-First, Frontend-Optional:** All domain logic lives in clean, decoupled APIs. The AI agent orchestrates these APIs for us. External frontends are built only when paying customers demand them, not before.
+3. **The Barbell Strategy:** 
+   - Safe Bet (Now): Use our own modules to generate revenue (Docker bootcamps, communities, digital products).
+   - High Upside (Later): Productize the platform and sell access to external creators and developers.
+4. **Zero-Friction Principles:** Avoid VCs, external funding, and grants. Let revenue from our own usage fund the infrastructure.
+5. **Treat `Acquisition, Fulfillment, and Retention` as first-class citizens:** Every module must map to a stage of the customer journey.
+6. **The Elon Musk Master Plan (Adapted):** 
+   - Step 1: Use our own platform to generate revenue (Default Alive).
+   - Step 2: Use revenue to refine the API/AI-agent architecture.
+   - Step 3: Sell frontends to external users who want to replicate our success.
+   - Step 4: Expose APIs/MCP to developers.
+
+
+---
+
+
+> Open here `http://localhost:8000`
 
 ### Standardized Port Mapping (3000 to 3011)
 1. **`one-admin`** (Vite) -> **`3000`**
