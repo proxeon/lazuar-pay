@@ -49,4 +49,20 @@ public class BillingQueryService : IBillingQueryService
             Currency = "MYR"
         };
     }
+
+    public async Task<bool> HasPositiveCreditBalanceAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""AvailableCredits"" 
+            FROM billing.""TenantCreditBalances"" 
+            WHERE ""OrganizationId"" = @OrgId 
+            LIMIT 1";
+
+        var credits = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { OrgId = organizationId });
+        
+        return credits.HasValue && credits.Value > 0;
+    }
 }

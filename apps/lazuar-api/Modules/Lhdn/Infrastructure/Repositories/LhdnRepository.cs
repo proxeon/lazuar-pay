@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Domain.Aggregates;
+using Modules.Lhdn.Domain.Entities;
 
 namespace Modules.Lhdn.Infrastructure.Repositories;
 
@@ -59,6 +60,18 @@ public class LhdnRepository : ILhdnRepository
     public void AddDeveloperApiKey(DeveloperApiKey key)
     {
         _context.DeveloperApiKeys.Add(key);
+    }
+
+    public async Task<IdempotencyLog?> GetIdempotencyLogAsync(Guid organizationId, string key, CancellationToken ct = default)
+    {
+        return await _context.IdempotencyLogs
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(l => l.OrganizationId == organizationId && l.IdempotencyKey == key, ct);
+    }
+
+    public void AddIdempotencyLog(IdempotencyLog log)
+    {
+        _context.IdempotencyLogs.Add(log);
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)

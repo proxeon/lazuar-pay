@@ -7,4 +7,5 @@ namespace Modules.Billing.Contracts;
 public interface IBillingQueryService
 {
     Task<FinancialSummaryDto> GetFinancialSummaryAsync(Guid organizationId);
+    Task<bool> HasPositiveCreditBalanceAsync(Guid organizationId);
 }

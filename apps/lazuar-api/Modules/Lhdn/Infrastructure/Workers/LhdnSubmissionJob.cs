@@ -4,11 +4,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Ports;
+using Modules.Lhdn.Contracts.Events;
 
 namespace Modules.Lhdn.Infrastructure.Workers;
 
@@ -45,6 +47,7 @@ public class LhdnSubmissionJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LhdnDbContext>();
         var gateway = scope.ServiceProvider.GetRequiredService<ILhdnGatewayAdapter>();
+        var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("LhdnEventBus");
 
         var now = DateTime.UtcNow;
         var pendingDocs = await db.TaxDocuments
@@ -64,6 +67,12 @@ public class LhdnSubmissionJob : BackgroundService
                 {
                     doc.MarkAsFailed("Tenant configuration or API credentials missing.");
                     continue;
+                }
+
+                // Force Sandbox URL resolution for test documents during network transmission
+                if (doc.IsTestMode)
+                {
+                    config.UpdateProfile(config.SupplierTin, config.IdType, config.IdValue, "SANDBOX", config.MsicCode, config.IntermediaryMode);
                 }
 
                 var base64Document = Convert.ToBase64String(Encoding.UTF8.GetBytes(doc.RawXmlContent));
@@ -90,6 +99,9 @@ public class LhdnSubmissionJob : BackgroundService
                 if (result.Success && !string.IsNullOrEmpty(result.SubmissionUid))
                 {
                     doc.MarkAsSubmitted(result.SubmissionUid, result.Uuid);
+
+                    // Publish the event to deduct the API credit in the Billing module
+                    await eventBus.PublishAsync(new LhdnDocumentSubmittedIntegrationEvent(doc.OrganizationId, doc.InternalReferenceId, doc.IsTestMode));
                 }
                 else
                 {
