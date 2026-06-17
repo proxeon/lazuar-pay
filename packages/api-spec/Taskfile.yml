@@ -1,0 +1,40 @@
+version: '3'
+
+tasks:
+  gen:
+    desc: Compile all TypeSpec specifications and generate TypeScript and C# client SDKs
+    cmds:
+      - task: compile
+      - task: sdk-restore
+      - task: sdk-ts
+      - task: sdk-csharp
+
+  compile:
+    desc: Compile both the main contract and all product-scoped API documentation specs
+    cmds:
+      - npx tsp compile main.tsp --output-dir dist
+      - npx tsp compile docs-one.tsp --output-dir dist/one
+      - npx tsp compile docs-community.tsp --output-dir dist/community
+      - npx tsp compile docs-ops.tsp --output-dir dist/ops
+      - npx tsp compile docs-billing.tsp --output-dir dist/billing
+      - npx tsp compile docs-lhdn.tsp --output-dir dist/lhdn
+
+  watch:
+    desc: Watch and hot-compile the main TypeSpec specification on change
+    cmds:
+      - npx tsp compile main.tsp --watch
+
+  sdk-restore:
+    desc: Restore local dotnet CLI tools (including Kiota) from the repository root manifest
+    cmds:
+      - dotnet tool restore
+
+  sdk-ts:
+    desc: Compile a strongly-typed TypeScript Client SDK using Microsoft Kiota
+    cmds:
+      - DOTNET_ROLL_FORWARD=LatestMajor dotnet kiota generate --openapi ./dist/openapi.yaml --language typescript --output ../sdk-ts --namespace-name Lazuar.Sdk --clean-output
+
+  sdk-csharp:
+    desc: Compile a strongly-typed C# Client SDK using Microsoft Kiota
+    cmds:
+      - DOTNET_ROLL_FORWARD=LatestMajor dotnet kiota generate --openapi ./dist/openapi.yaml --language csharp --output ../sdk-csharp --namespace-name Lazuar.Sdk --clean-output

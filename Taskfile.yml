@@ -1,6 +1,11 @@
 # Taskfile.yml (Monorepo Root)
 version: '3'
 
+includes:
+  api-spec:
+    taskfile: ./packages/api-spec/Taskfile.yml
+    dir: ./packages/api-spec
+
 tasks:
   infra:up:
     desc: Start local Docker dependencies (PostgreSQL, MinIO) in the background
@@ -26,9 +31,6 @@ tasks:
     desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
     deps: [infra:up]
     cmds:
-      # We dont need to run "task: api:db:migrate" all the time. Only run this
-      # on fresh db. Otherwise we will get error "Entity XYZ already exist".
-      # - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
   fe:
@@ -80,7 +82,7 @@ tasks:
       - dotnet ef migrations add InitialCommunitySchema --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialPaymentsSchema --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialCrmSchema --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      - dotnet ef migrations add InitialOpsSchema --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialMetadataSchema --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialBillingSchema --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialLhdnSchema --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
@@ -121,7 +123,8 @@ tasks:
   gen:
     desc: Run the full code-generation pipeline
     cmds:
-      - task: gen:spec
+      - task: gen:install-emitters
+      - task: api-spec:gen
       - task: gen:types-ts
       - task: gen:types-dotnet
     sources:
@@ -129,11 +132,11 @@ tasks:
     generates:
       - "packages/api-spec/dist/openapi.yaml"
 
-  gen:spec:
-    desc: Compile TypeSpec to OpenAPI.yaml
+  gen:install-emitters:
+    desc: Install native TypeSpec SDK emitters
     dir: packages/api-spec
     cmds:
-      - pnpm build
+      - pnpm install
 
   gen:types-ts:
     desc: Generate TypeScript types for Frontend apps

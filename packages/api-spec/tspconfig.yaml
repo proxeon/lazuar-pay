@@ -1,7 +1,7 @@
-output-dir: "{project-root}/dist"
+# Cleaned config: Emit ONLY standard, stable OpenAPI specs
 emit:
   - "@typespec/openapi3"
+
 options:
   "@typespec/openapi3":
-    output-file: openapi.yaml
-    emitter-output-dir: "{output-dir}"
+    emitter-output-dir: "{project-root}/dist"
