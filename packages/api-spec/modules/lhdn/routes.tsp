@@ -18,6 +18,7 @@ interface LhdnOperations {
   @post
   @route("/documents")
   submitDocument(
+    @header("Idempotency-Key") idempotencyKey: string,
     @body body: SubmitDocumentRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
@@ -56,5 +57,21 @@ interface LhdnOperations {
   updateCertificate(
     @path id: string,
     @body body: UpdateLhdnCertificateRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/api-keys")
+  generateApiKey(
+    @body body: GenerateApiKeyRequestDto,
+  ): GenerateApiKeyResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/api-keys")
+  listApiKeys(): ApiKeyDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @delete
+  @route("/api-keys/{id}")
+  revokeApiKey(
+    @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

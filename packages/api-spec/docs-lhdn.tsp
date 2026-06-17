@@ -14,4 +14,5 @@ using TypeSpec.Http;
 })
 @server("https://api.lazuar.com/api/v1", "Production server")
 @server("http://localhost:8080/api/v1", "Local development server")
+@useAuth(ApiKeyAuth<ApiKeyLocation.header, "Authorization"> | BearerAuth)
 namespace LazuarApi;

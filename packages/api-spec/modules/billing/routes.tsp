@@ -30,4 +30,9 @@ interface AdminBillingOperations {
   getNetProfit(
     @query period?: string = "monthly",
   ): NetProfitDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/credits")
+  getApiCreditBalance(
+  ): CreditBalanceDto | LazuarApi.Core.ProblemDetailsResponse;
 }

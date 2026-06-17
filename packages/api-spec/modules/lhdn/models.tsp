@@ -84,6 +84,7 @@ model LhdnDocumentResponseDto {
   status: string;
   qr_link?: string;
   error_message?: string;
+  is_test_mode: boolean;
   submitted_at: utcDateTime;
   validated_at?: utcDateTime;
 }
@@ -109,4 +110,21 @@ model UpdateLhdnCertificateRequestDto {
 
 model CancelDocumentRequestDto {
   reason: string;
+}
+
+model GenerateApiKeyRequestDto {
+  name: string;
+  is_test_mode: boolean;
+}
+
+model GenerateApiKeyResponseDto {
+  plain_key: string;
+}
+
+model ApiKeyDto {
+  id: string; // GUID
+  name: string;
+  prefix: string;
+  is_active: boolean;
+  created_at: utcDateTime;
 }

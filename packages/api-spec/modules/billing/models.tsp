@@ -37,3 +37,7 @@ model NetProfitDto {
   net_profit: float64;
   currency: string;
 }
+
+model CreditBalanceDto {
+  available_credits: int32;
+}
