@@ -16,6 +16,13 @@ public class TenantSecurityMiddleware
 
     public async Task InvokeAsync(HttpContext context, IOneQueryService oneQueryService)
     {
+        // Bypass resolution if the context was already securely authenticated via an API Key
+        if (context.User.Identity?.AuthenticationType == "ApiKey")
+        {
+            await _next(context);
+            return;
+        }
+
         Guid? resolvedTenantId = null;
 
         if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader) && Guid.TryParse(tenantIdHeader, out var parsedId))
@@ -56,11 +63,10 @@ public class TenantSecurityMiddleware
                         }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
                         await context.Response.WriteAsync(error);
-                        return; // Halt request pipeline
+                        return;
                     }
                     else
                     {
-                        // Dynamically elevate the principal's claims with their localized tenant role
                         var identity = context.User.Identity as ClaimsIdentity;
                         identity?.AddClaim(new Claim(ClaimTypes.Role, role));
                     }

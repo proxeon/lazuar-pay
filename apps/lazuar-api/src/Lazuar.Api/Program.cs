@@ -60,7 +60,6 @@ if (!string.IsNullOrEmpty(keyVaultName))
 {
     try
     {
-        // Prevent local dev crashes if Azure CLI credentials (az login) are missing or expired
         builder.Configuration.AddAzureKeyVault(
             new Uri($"https://{keyVaultName}.vault.azure.net/"),
             new DefaultAzureCredential());
@@ -110,6 +109,9 @@ builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
+
+// API Key Cache Eviction Handler
+builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -217,6 +219,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
+app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 app.UseMiddleware<TenantSecurityMiddleware>();
 app.UseAuthorization();
 
@@ -228,6 +231,10 @@ app.UsePaymentsSubscriptions();
 app.UseOpsSubscriptions();
 app.UseBillingSubscriptions();
 app.UseLhdnSubscriptions();
+
+// API Key Cache Eviction Subscription
+var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
+eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
