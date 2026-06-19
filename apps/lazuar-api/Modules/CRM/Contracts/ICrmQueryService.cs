@@ -1,6 +1,9 @@
-namespace Modules.CRM.Contracts;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Lazuar.ApiTypes;
 
-public record ClientProfileDto(Guid Id, string FullName, string Email, string Phone, Guid? GlobalUserId);
+namespace Modules.CRM.Contracts;
 
 public interface ICrmQueryService
 {

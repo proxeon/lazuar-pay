@@ -55,14 +55,14 @@ public class ListGlobalTransactionsAgentQueryHandler : IQueryHandler<ListGlobalT
 
         var profileIds = transactionList.Select(t => t.ClientProfileId).Distinct();
         var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
-        var profileDict = profiles.ToDictionary(p => p.Id);
+        var profileDict = profiles.ToDictionary(p => Guid.Parse(p.Id));
 
         return transactionList.Select(t =>
         {
             profileDict.TryGetValue(t.ClientProfileId, out var profile);
             return new AgentTransactionResult(
                 t.Id.ToString(),
-                profile?.FullName ?? "Unknown",
+                profile?.Full_name ?? "Unknown",
                 profile?.Email ?? "Unknown",
                 t.Amount,
                 t.Currency,

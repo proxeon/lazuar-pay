@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+	xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+	xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+	xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">
+
+	{{ if document_version == "1.1" }}<ext:UBLExtensions>
+		<!-- SIGNATURE_PLACEHOLDER -->
+	</ext:UBLExtensions>{{ end }}
+
+	<cbc:ID>{{ internal_id }}</cbc:ID>
+	<cbc:IssueDate>{{ issue_date_string }}</cbc:IssueDate>
+	<cbc:IssueTime>{{ issue_time_string }}</cbc:IssueTime>
+	<cbc:InvoiceTypeCode listVersionID="{{ document_version }}">01</cbc:InvoiceTypeCode>
+	<cbc:DocumentCurrencyCode>MYR</cbc:DocumentCurrencyCode>
+	<cbc:TaxCurrencyCode>MYR</cbc:TaxCurrencyCode>
+	
+	<cac:InvoicePeriod>
+		<cbc:StartDate>{{ billing_period_start_string }}</cbc:StartDate>
+		<cbc:EndDate>{{ billing_period_end_string }}</cbc:EndDate>
+		<cbc:Description>Monthly</cbc:Description>
+	</cac:InvoicePeriod>
+
+	<cac:AccountingSupplierParty>
+		<cac:Party>
+			<cbc:IndustryClassificationCode name="Supplier Industry">{{ supplier.msic_code }}</cbc:IndustryClassificationCode>
+			<cac:PartyIdentification>
+				<cbc:ID schemeID="TIN">{{ supplier.tin }}</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PartyIdentification>
+				<cbc:ID schemeID="{{ supplier.id_type }}">{{ supplier.id_value }}</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PostalAddress>
+				<cbc:CityName>Kuala Lumpur</cbc:CityName>
+				<cbc:PostalZone>50480</cbc:PostalZone>
+				<cbc:CountrySubentityCode>14</cbc:CountrySubentityCode>
+				<cac:AddressLine>
+					<cbc:Line>Lot 66</cbc:Line>
+				</cac:AddressLine>
+				<cac:AddressLine>
+					<cbc:Line>Bangunan Merdeka</cbc:Line>
+				</cac:AddressLine>
+				<cac:AddressLine>
+					<cbc:Line>Persiaran Jaya</cbc:Line>
+				</cac:AddressLine>
+				<cac:Country>
+					<cbc:IdentificationCode listID="ISO3166-1" listAgencyID="6">MYS</cbc:IdentificationCode>
+				</cac:Country>
+			</cac:PostalAddress>
+			<cac:PartyLegalEntity>
+				<cbc:RegistrationName>{{ supplier.name | xml_escape }}</cbc:RegistrationName>
+			</cac:PartyLegalEntity>
+			{{ if supplier.phone != "" || supplier.email != "" }}
+			<cac:Contact>
+				{{ if supplier.phone != "" }}<cbc:Telephone>{{ supplier.phone }}</cbc:Telephone>{{ end }}
+				{{ if supplier.email != "" }}<cbc:ElectronicMail>{{ supplier.email | xml_escape }}</cbc:ElectronicMail>{{ end }}
+			</cac:Contact>
+			{{ end }}
+		</cac:Party>
+	</cac:AccountingSupplierParty>
+
+	<cac:AccountingCustomerParty>
+		<cac:Party>
+			<cac:PartyIdentification>
+				<cbc:ID schemeID="TIN">{{ buyer.tin }}</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PartyIdentification>
+				<cbc:ID schemeID="{{ buyer.id_type }}">{{ buyer.id_value }}</cbc:ID>
+			</cac:PartyIdentification>
+			<cac:PostalAddress>
+				<cbc:CityName>{{ buyer.city | xml_escape }}</cbc:CityName>
+				<cbc:PostalZone>{{ buyer.postal_code }}</cbc:PostalZone>
+				<cbc:CountrySubentityCode>{{ buyer.state_code }}</cbc:CountrySubentityCode>
+				<cac:AddressLine>
+					<cbc:Line>{{ buyer.address_line1 | xml_escape }}</cbc:Line>
+				</cac:AddressLine>
+				<cac:Country>
+					<cbc:IdentificationCode listID="ISO3166-1" listAgencyID="6">{{ buyer.country_code }}</cbc:IdentificationCode>
+				</cac:Country>
+			</cac:PostalAddress>
+			<cac:PartyLegalEntity>
+				<cbc:RegistrationName>{{ buyer.name | xml_escape }}</cbc:RegistrationName>
+			</cac:PartyLegalEntity>
+			{{ if buyer.phone != "" || buyer.email != "" }}
+			<cac:Contact>
+				{{ if buyer.phone != "" }}<cbc:Telephone>{{ buyer.phone }}</cbc:Telephone>{{ end }}
+				{{ if buyer.email != "" }}<cbc:ElectronicMail>{{ buyer.email | xml_escape }}</cbc:ElectronicMail>{{ end }}
+			</cac:Contact>
+			{{ end }}
+		</cac:Party>
+	</cac:AccountingCustomerParty>
+
+	<cac:TaxTotal>
+		<cbc:TaxAmount currencyID="MYR">{{ format_amount total_tax }}</cbc:TaxAmount>
+		{{ for subtotal in tax_subtotals }}
+		<cac:TaxSubtotal>
+			<cbc:TaxableAmount currencyID="MYR">{{ format_amount subtotal.taxable_amount }}</cbc:TaxableAmount>
+			<cbc:TaxAmount currencyID="MYR">{{ format_amount subtotal.tax_amount }}</cbc:TaxAmount>
+			<cac:TaxCategory>
+				<cbc:ID>{{ subtotal.tax_category_code }}</cbc:ID>
+				{{ if subtotal.tax_category_code == "E" }}
+				<cbc:TaxExemptionReason>Exempt</cbc:TaxExemptionReason>
+				{{ end }}
+				<cac:TaxScheme>
+					<cbc:ID schemeID="UN/ECE 5153" schemeAgencyID="6">OTH</cbc:ID>
+				</cac:TaxScheme>
+			</cac:TaxCategory>
+		</cac:TaxSubtotal>
+		{{ end }}
+	</cac:TaxTotal>
+
+	<cac:LegalMonetaryTotal>
+		<cbc:LineExtensionAmount currencyID="MYR">{{ format_amount total_excluding_tax }}</cbc:LineExtensionAmount>
+		<cbc:TaxExclusiveAmount currencyID="MYR">{{ format_amount total_excluding_tax }}</cbc:TaxExclusiveAmount>
+		<cbc:TaxInclusiveAmount currencyID="MYR">{{ format_amount total_including_tax }}</cbc:TaxInclusiveAmount>
+		<cbc:AllowanceTotalAmount currencyID="MYR">0.00</cbc:AllowanceTotalAmount>
+		<cbc:ChargeTotalAmount currencyID="MYR">0.00</cbc:ChargeTotalAmount>
+		<cbc:PayableRoundingAmount currencyID="MYR">0.00</cbc:PayableRoundingAmount>
+		<cbc:PayableAmount currencyID="MYR">{{ format_amount total_including_tax }}</cbc:PayableAmount>
+	</cac:LegalMonetaryTotal>
+
+	{{ for line in invoice_lines }}
+	<cac:InvoiceLine>
+		<cbc:ID>{{ for.index + 1 }}</cbc:ID>
+		<cbc:InvoicedQuantity unitCode="C62">{{ line.quantity }}</cbc:InvoicedQuantity>
+		<cbc:LineExtensionAmount currencyID="MYR">{{ format_amount line.subtotal }}</cbc:LineExtensionAmount>
+		<cac:TaxTotal>
+			<cbc:TaxAmount currencyID="MYR">{{ format_amount line.tax_amount }}</cbc:TaxAmount>
+			<cac:TaxSubtotal>
+				<cbc:TaxableAmount currencyID="MYR">{{ format_amount line.subtotal }}</cbc:TaxableAmount>
+				<cbc:TaxAmount currencyID="MYR">{{ format_amount line.tax_amount }}</cbc:TaxAmount>
+				<cbc:Percent>{{ format_amount line.tax_rate }}</cbc:Percent>
+				<cac:TaxCategory>
+					<cbc:ID>{{ line.tax_type_code }}</cbc:ID>
+					{{ if line.tax_type_code == "E" }}
+					<cbc:TaxExemptionReason>Exempt</cbc:TaxExemptionReason>
+					{{ end }}
+					<cac:TaxScheme>
+						<cbc:ID schemeID="UN/ECE 5153" schemeAgencyID="6">OTH</cbc:ID>
+					</cac:TaxScheme>
+				</cac:TaxCategory>
+			</cac:TaxSubtotal>
+		</cac:TaxTotal>
+		<cac:Item>
+			<cbc:Description>{{ line.description | xml_escape }}</cbc:Description>
+			<cac:CommodityClassification>
+				<cbc:ItemClassificationCode listID="CLASS">{{ line.classification_code }}</cbc:ItemClassificationCode>
+			</cac:CommodityClassification>
+		</cac:Item>
+		<cac:Price>
+			<cbc:PriceAmount currencyID="MYR">{{ format_amount line.unit_price }}</cbc:PriceAmount>
+		</cac:Price>
+		<cac:ItemPriceExtension>
+			<cbc:Amount currencyID="MYR">{{ format_amount line.subtotal }}</cbc:Amount>
+		</cac:ItemPriceExtension>
+	</cac:InvoiceLine>
+	{{ end }}
+</Invoice>

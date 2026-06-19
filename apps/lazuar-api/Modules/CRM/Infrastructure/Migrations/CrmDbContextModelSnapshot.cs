@@ -109,6 +109,14 @@ namespace Modules.CRM.Infrastructure.Migrations
                     b.Property<Guid?>("GlobalUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("IdType")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("IdValue")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
@@ -116,6 +124,10 @@ namespace Modules.CRM.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Tin")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
@@ -125,6 +137,64 @@ namespace Modules.CRM.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ClientProfiles", "crm");
+                });
+
+            modelBuilder.Entity("Modules.CRM.Domain.ClientProfileEntity", b =>
+                {
+                    b.OwnsOne("Modules.CRM.Domain.BillingAddress", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("ClientProfileEntityId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("City")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("City");
+
+                            b1.Property<string>("CountryCode")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("CountryCode");
+
+                            b1.Property<string>("Line1")
+                                .IsRequired()
+                                .HasMaxLength(150)
+                                .HasColumnType("character varying(150)")
+                                .HasColumnName("AddressLine1");
+
+                            b1.Property<string>("Line2")
+                                .HasMaxLength(150)
+                                .HasColumnType("character varying(150)")
+                                .HasColumnName("AddressLine2");
+
+                            b1.Property<string>("Line3")
+                                .HasMaxLength(150)
+                                .HasColumnType("character varying(150)")
+                                .HasColumnName("AddressLine3");
+
+                            b1.Property<string>("PostalCode")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("PostalCode");
+
+                            b1.Property<string>("StateCode")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("StateCode");
+
+                            b1.HasKey("ClientProfileEntityId");
+
+                            b1.ToTable("ClientProfiles", "crm");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ClientProfileEntityId");
+                        });
+
+                    b.Navigation("Address");
                 });
 #pragma warning restore 612, 618
         }

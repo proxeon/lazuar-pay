@@ -30,19 +30,15 @@ public class RequestMagicLinkCommandHandler : ICommandHandler<RequestMagicLinkCo
 
     public async Task Handle(RequestMagicLinkCommand request, CancellationToken ct)
     {
-        // 1. Resolve Profile
         var profile = await _crmQueryService.GetClientProfileByEmailAsync(request.OrganizationId, request.Email);
-        if (profile == null) return; // Silent return for security (don't leak if email exists)
+        if (profile == null) return; 
 
-        // 2. Find active subscription
-        var subscription = await _repository.GetActiveByProfileIdAsync(request.OrganizationId, profile.Id, ct);
-        if (subscription == null) return; // Silent return
+        var subscription = await _repository.GetActiveByProfileIdAsync(request.OrganizationId, Guid.Parse(profile.Id), ct);
+        if (subscription == null) return; 
 
-        // 3. Generate Token and URL
         var token = _tokenService.GenerateToken(subscription.Id);
         var magicLinkUrl = $"{request.BaseUrl.TrimEnd('/')}/{request.TenantSlug}/portal?token={Uri.EscapeDataString(token)}";
 
-        // 4. Update Domain (Fires outbox event)
         subscription.RequestMagicLink(magicLinkUrl);
 
         await _repository.SaveChangesAsync(ct);

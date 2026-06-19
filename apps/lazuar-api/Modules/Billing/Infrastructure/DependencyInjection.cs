@@ -15,6 +15,8 @@ using Modules.Billing.Infrastructure.Services;
 using Modules.Billing.Infrastructure.Workers;
 using Modules.Community.Contracts;
 using Modules.Payments.Contracts.Events;
+using Modules.Lhdn.Contracts.Events;
+using System;
 
 namespace Modules.Billing.Infrastructure;
 
@@ -45,10 +47,14 @@ public static class DependencyInjection
         services.AddTransient<InvoiceIssuedHandler>();
         services.AddTransient<ManualPaymentRecordedHandler>();
         services.AddTransient<CommissionAccruedHandler>();
+        services.AddTransient<LhdnDocumentValidatedIntegrationEventHandler>();
+        services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
+        services.AddTransient<LhdnDocumentSubmittedIntegrationEventHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
         services.AddHostedService<RevenueRecognitionJob>();
+        services.AddHostedService<B2cConsolidationJob>();
 
         services.AddSingleton<IAgentPromptProvider, BillingPromptProvider>();
 
@@ -65,6 +71,9 @@ public static class DependencyInjection
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedHandler>();
         eventBus.Subscribe<ManualPaymentRecordedIntegrationEvent, ManualPaymentRecordedHandler>();
         eventBus.Subscribe<CommissionAccruedIntegrationEvent, CommissionAccruedHandler>();
+        eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
+        eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();
+        eventBus.Subscribe<LhdnDocumentSubmittedIntegrationEvent, LhdnDocumentSubmittedIntegrationEventHandler>();
 
         return app;
     }

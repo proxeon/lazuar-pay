@@ -48,7 +48,9 @@ public partial class CommunityQueryService
 
         var profileIds = rawSubs.Select(x => x.ClientProfileId).Distinct();
         var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
-        var profileDict = profiles.ToDictionary(p => p.Id);
+        
+        // FIX: Parse the string Id from the DTO back to a Guid for the dictionary key
+        var profileDict = profiles.ToDictionary(p => Guid.Parse(p.Id));
 
         var now = DateTime.UtcNow;
         var dtos = rawSubs.Select(s =>
@@ -63,7 +65,8 @@ public partial class CommunityQueryService
             {
                 Id = s.Id.ToString(),
                 Client_profile_id = s.ClientProfileId.ToString(),
-                Customer_name = profile?.FullName ?? "Unknown",
+                // FIX: Use Full_name instead of FullName to match TypeSpec DTO
+                Customer_name = profile?.Full_name ?? "Unknown",
                 Customer_email = profile?.Email ?? "",
                 Customer_phone = profile?.Phone ?? "",
                 Plan_id = s.PlanId.ToString(),
@@ -118,7 +121,8 @@ public partial class CommunityQueryService
         {
             Id = rawSub.Id.ToString(),
             Client_profile_id = rawSub.ClientProfileId.ToString(),
-            Customer_name = profile?.FullName ?? "Unknown",
+            // FIX: Use Full_name instead of FullName to match TypeSpec DTO
+            Customer_name = profile?.Full_name ?? "Unknown",
             Customer_email = profile?.Email ?? "",
             Customer_phone = profile?.Phone ?? "",
             Plan_id = rawSub.PlanId.ToString(),

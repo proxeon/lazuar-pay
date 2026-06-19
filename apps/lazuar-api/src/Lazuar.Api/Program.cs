@@ -10,6 +10,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
 using System.IO;
+using System;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
@@ -22,12 +24,14 @@ using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Modules.Ops.Infrastructure;
 using Modules.Billing.Infrastructure;
+using Modules.Lhdn.Infrastructure;
 using Lazuar.Api;
 using Lazuar.Api.Middleware;
 using Lazuar.ApiTypes;
 using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Azure.Identity;
 
 var envPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../../../.env"));
 if (File.Exists(envPath))
@@ -50,6 +54,21 @@ if (File.Exists(envPath))
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
+
+var keyVaultName = Environment.GetEnvironmentVariable("AZURE_KEY_VAULT_NAME");
+if (!string.IsNullOrEmpty(keyVaultName))
+{
+    try
+    {
+        builder.Configuration.AddAzureKeyVault(
+            new Uri($"https://{keyVaultName}.vault.azure.net/"),
+            new DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[WARNING] Failed to authenticate with Azure Key Vault: {ex.Message}. Falling back to local secrets.");
+    }
+}
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -90,6 +109,9 @@ builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
+
+// API Key Cache Eviction Handler
+builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -171,6 +193,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Ops.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Application.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Lhdn.Application.DependencyInjection).Assembly);
     
     cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
@@ -179,6 +202,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.CRM.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Ops.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Lhdn.Infrastructure.DependencyInjection).Assembly);
 });
 
 builder.Services.AddOneModule(builder.Configuration);
@@ -188,12 +212,14 @@ builder.Services.AddCrmModule(builder.Configuration);
 builder.Services.AddPaymentsModule(builder.Configuration);
 builder.Services.AddOpsModule(builder.Configuration);
 builder.Services.AddBillingModule(builder.Configuration);
+builder.Services.AddLhdnModule(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
+app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 app.UseMiddleware<TenantSecurityMiddleware>();
 app.UseAuthorization();
 
@@ -204,6 +230,11 @@ app.UseCrmSubscriptions();
 app.UsePaymentsSubscriptions();
 app.UseOpsSubscriptions();
 app.UseBillingSubscriptions();
+app.UseLhdnSubscriptions();
+
+// API Key Cache Eviction Subscription
+var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
+eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
@@ -213,6 +244,7 @@ apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();
 apiGroup.MapOpsEndpoints();
 apiGroup.MapBillingEndpoints();
+apiGroup.MapLhdnEndpoints();
 
 app.Run();
 

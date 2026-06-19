@@ -187,4 +187,19 @@ interface OneOperations {
     @path appId: string,
     @body body: ToggleAppEntitlementRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @get
+  @route("/workspaces/{id}/lhdn-config")
+  getWorkspaceLhdnConfig(
+    @path id: string,
+  ): WorkspaceLhdnConfigDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @put
+  @route("/workspaces/{id}/lhdn-config")
+  updateWorkspaceLhdnConfig(
+    @path id: string,
+    @body body: UpdateWorkspaceLhdnConfigRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

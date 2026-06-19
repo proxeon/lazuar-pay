@@ -132,6 +132,10 @@ namespace Modules.Billing.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CustomerType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
@@ -165,6 +169,58 @@ namespace Modules.Billing.Infrastructure.Migrations
                     b.ToTable("LedgerEntries", "billing");
                 });
 
+            modelBuilder.Entity("Modules.Billing.Domain.Aggregates.TenantCreditBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AvailableCredits")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("TenantCreditBalances", "billing");
+                });
+
+            modelBuilder.Entity("Modules.Billing.Domain.Entities.CreditLedger", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantCreditBalanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantCreditBalanceId");
+
+                    b.ToTable("CreditLedgers", "billing");
+                });
+
             modelBuilder.Entity("Modules.Billing.Domain.Entities.LedgerLine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -194,11 +250,28 @@ namespace Modules.Billing.Infrastructure.Migrations
                     b.Property<Guid>("LedgerEntryId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("MsicCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaxTypeCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LedgerEntryId");
 
                     b.ToTable("LedgerLines", "billing");
+                });
+
+            modelBuilder.Entity("Modules.Billing.Domain.Entities.CreditLedger", b =>
+                {
+                    b.HasOne("Modules.Billing.Domain.Aggregates.TenantCreditBalance", null)
+                        .WithMany("Transactions")
+                        .HasForeignKey("TenantCreditBalanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Modules.Billing.Domain.Entities.LedgerLine", b =>
@@ -213,6 +286,11 @@ namespace Modules.Billing.Infrastructure.Migrations
             modelBuilder.Entity("Modules.Billing.Domain.Aggregates.LedgerEntry", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Modules.Billing.Domain.Aggregates.TenantCreditBalance", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

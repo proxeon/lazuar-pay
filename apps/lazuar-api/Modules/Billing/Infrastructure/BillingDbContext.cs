@@ -12,6 +12,8 @@ public class BillingDbContext : PlatformDbContext
     public DbSet<LedgerEntry> LedgerEntries { get; set; } = null!;
     public DbSet<LedgerLine> LedgerLines { get; set; } = null!;
     public DbSet<DeferredRevenueSchedule> DeferredRevenueSchedules { get; set; } = null!;
+    public DbSet<TenantCreditBalance> TenantCreditBalances { get; set; } = null!;
+    public DbSet<CreditLedger> CreditLedgers { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
@@ -56,6 +58,26 @@ public class BillingDbContext : PlatformDbContext
             builder.HasIndex(x => x.LedgerEntryId);
             builder.Property(x => x.TotalDeferredAmount).HasPrecision(18, 4);
             builder.Property(x => x.RecognizedAmount).HasPrecision(18, 4);
+        });
+
+        modelBuilder.Entity<TenantCreditBalance>(builder =>
+        {
+            builder.ToTable("TenantCreditBalances");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId).IsUnique();
+            
+            builder.HasMany(x => x.Transactions)
+                   .WithOne()
+                   .HasForeignKey("TenantCreditBalanceId")
+                   .OnDelete(DeleteBehavior.Cascade);
+                   
+            builder.Metadata.FindNavigation("Transactions")?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<CreditLedger>(builder =>
+        {
+            builder.ToTable("CreditLedgers");
+            builder.HasKey(x => x.Id);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

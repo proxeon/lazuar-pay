@@ -10,6 +10,10 @@ public class ClientProfileEntity : Entity, IMustHaveTenant
     public string FullName { get; set; } = "";
     public string Email { get; set; } = "";
     public string Phone { get; set; } = "";
+    public string? Tin { get; set; }
+    public string? IdType { get; set; }
+    public string? IdValue { get; set; }
+    public BillingAddress? Address { get; set; }
     public bool ConsentedToMarketing { get; set; } = false;
 
     public void Anonymize()
@@ -17,6 +21,10 @@ public class ClientProfileEntity : Entity, IMustHaveTenant
         FullName = "Anonymized User";
         Email = $"deleted_{Id}@localhost";
         Phone = "";
+        Tin = null;
+        IdType = null;
+        IdValue = null;
+        Address = null;
         ConsentedToMarketing = false;
         GlobalUserId = null;
     }

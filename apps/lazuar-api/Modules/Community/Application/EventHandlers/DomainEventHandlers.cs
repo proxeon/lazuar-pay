@@ -1,9 +1,13 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Contracts;
 using Modules.Community.Domain.Events;
-using Modules.CRM.Contracts; // <-- ADDED
+using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.EventHandlers;
 
@@ -51,7 +55,7 @@ public class DomainEventHandlers :
                 notification.OrganizationId,
                 notification.SubscriptionId,
                 notification.ClientProfileId,
-                profile?.GlobalUserId, // <-- ADDED: Pass the GlobalUserId
+                profile?.Global_user_id != null ? Guid.Parse(profile.Global_user_id) : null,
                 notification.IsFirstPayment,
                 plan.Name,
                 plan.TelegramInviteLink ?? "(link coming soon)",
@@ -61,7 +65,6 @@ public class DomainEventHandlers :
         );
     }
 
-    // ... rest of the handlers remain exactly the same ...
     public async Task Handle(SubscriptionCancelledDomainEvent notification, CancellationToken ct)
     {
         var sub = await _subscriptionRepository.GetByIdAsync(notification.SubscriptionId, ct);
