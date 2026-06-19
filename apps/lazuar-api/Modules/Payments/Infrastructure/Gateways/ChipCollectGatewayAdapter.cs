@@ -221,11 +221,81 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public Task<bool> ChargeOffSessionAsync(
+    public async Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount, 
         string currency, string description, string receipt)
     {
-        throw new NotImplementedException("Implementation will be added in Phase 5.");
+        try
+        {
+            var client = _httpFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+            // Fetch the original purchase to extract required fields (brand_id and client details)
+            var oldPurchaseResponse = await client.GetAsync($"{ApiBaseUrl}purchases/{tokenId}/");
+            if (!oldPurchaseResponse.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to fetch original CHIP purchase {TokenId} for off-session charge.", tokenId);
+                return false;
+            }
+
+            var oldPurchaseJson = await oldPurchaseResponse.Content.ReadAsStringAsync();
+            using var oldDoc = JsonDocument.Parse(oldPurchaseJson);
+            var oldRoot = oldDoc.RootElement;
+            
+            var brandId = oldRoot.GetProperty("brand_id").GetString();
+            var clientNode = oldRoot.GetProperty("client");
+            var clientEmail = clientNode.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : "customer@example.com";
+            var clientName = clientNode.TryGetProperty("full_name", out var nameProp) ? nameProp.GetString() : "Customer";
+
+            // Create a new unpaid purchase mapped to the original customer
+            var amountInCents = (int)Math.Round(amount * 100, 0);
+            var newPurchasePayload = new Dictionary<string, object>
+            {
+                ["brand_id"] = brandId!,
+                ["client"] = new { email = clientEmail, full_name = clientName },
+                ["purchase"] = new
+                {
+                    products = new[]
+                    {
+                        new { name = description, price = amountInCents }
+                    }
+                }
+            };
+
+            var createResponse = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/", newPurchasePayload);
+            if (!createResponse.IsSuccessStatusCode)
+            {
+                var errorBody = await createResponse.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to create new CHIP purchase for off-session charge. Error: {Error}", errorBody);
+                return false;
+            }
+
+            var createJson = await createResponse.Content.ReadAsStringAsync();
+            using var createDoc = JsonDocument.Parse(createJson);
+            var newPurchaseId = createDoc.RootElement.GetProperty("id").GetString();
+
+            // Execute the charge using the vaulted recurring_token
+            var chargePayload = new { recurring_token = tokenId };
+            var chargeResponse = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/{newPurchaseId}/charge/", chargePayload);
+            
+            if (chargeResponse.IsSuccessStatusCode)
+            {
+                var chargeJson = await chargeResponse.Content.ReadAsStringAsync();
+                using var chargeDoc = JsonDocument.Parse(chargeJson);
+                var status = chargeDoc.RootElement.GetProperty("status").GetString();
+                
+                return status == "paid" || status == "pending_charge";
+            }
+
+            var chargeError = await chargeResponse.Content.ReadAsStringAsync();
+            _logger.LogError("Failed to charge CHIP token {TokenId} for purchase {NewPurchaseId}. Error: {Error}", tokenId, newPurchaseId, chargeError);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during CHIP off-session charge for token {TokenId}", tokenId);
+            return false;
+        }
     }
 
     public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
