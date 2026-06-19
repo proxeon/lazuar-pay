@@ -84,3 +84,13 @@ vault.lazuar.com {
 }
 ```
 
+### Development
+
+```sh
+fd -t f --ignore-file ctx.ignore | ctx | hxn
+```
+
+```sh
+cat ctx.include | ctx | hxn
+```
+
