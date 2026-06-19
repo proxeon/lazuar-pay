@@ -230,7 +230,6 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var client = _httpFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-            // Fetch the original purchase to extract required fields (brand_id and client details)
             var oldPurchaseResponse = await client.GetAsync($"{ApiBaseUrl}purchases/{tokenId}/");
             if (!oldPurchaseResponse.IsSuccessStatusCode)
             {
@@ -247,7 +246,6 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var clientEmail = clientNode.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : "customer@example.com";
             var clientName = clientNode.TryGetProperty("full_name", out var nameProp) ? nameProp.GetString() : "Customer";
 
-            // Create a new unpaid purchase mapped to the original customer
             var amountInCents = (int)Math.Round(amount * 100, 0);
             var newPurchasePayload = new Dictionary<string, object>
             {
@@ -274,7 +272,6 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             using var createDoc = JsonDocument.Parse(createJson);
             var newPurchaseId = createDoc.RootElement.GetProperty("id").GetString();
 
-            // Execute the charge using the vaulted recurring_token
             var chargePayload = new { recurring_token = tokenId };
             var chargeResponse = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/{newPurchaseId}/charge/", chargePayload);
             
@@ -298,9 +295,36 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
+    public async Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
     {
-        throw new NotImplementedException("Implementation will be added in Phase 6.");
+        try
+        {
+            var client = _httpFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+            object payload = new { };
+            
+            if (amount > 0)
+            {
+                payload = new { amount = (int)Math.Round(amount * 100, 0) };
+            }
+
+            var response = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/{transactionId}/refund/", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var errorBody = await response.Content.ReadAsStringAsync();
+            _logger.LogError("CHIP Collect refund failed for Transaction {TransactionId}. Status: {Status}, Error: {Error}", transactionId, response.StatusCode, errorBody);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception occurred during CHIP Collect refund for Transaction {TransactionId}", transactionId);
+            return false;
+        }
     }
 
     public Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)
