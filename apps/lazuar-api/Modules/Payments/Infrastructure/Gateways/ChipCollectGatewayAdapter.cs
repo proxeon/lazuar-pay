@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -75,7 +78,6 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         {
             payload["force_recurring"] = true;
 
-            // Free trial / Pre-Auth logic
             if (amountInCents == 0)
             {
                 payload["skip_capture"] = true;
@@ -121,7 +123,102 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, string webhookSecret, string rawBody, Dictionary<string, string> headers,
         decimal estimatedFeePercentage = 0, decimal fixedFee = 0, decimal taxRate = 0)
     {
-        throw new NotImplementedException("Implementation will be added in Phase 4.");
+        try
+        {
+            var signatureHeaderKey = headers.Keys.FirstOrDefault(k => k.Equals("X-Signature", StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrEmpty(signatureHeaderKey) || !headers.TryGetValue(signatureHeaderKey, out var signatureBase64))
+            {
+                return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing X-Signature header."));
+            }
+
+            var bodyBytes = Encoding.UTF8.GetBytes(rawBody);
+            var signatureBytes = Convert.FromBase64String(signatureBase64);
+
+            using var rsa = RSA.Create();
+            rsa.ImportFromPem(webhookSecret);
+
+            bool isValid = rsa.VerifyData(bodyBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            if (!isValid)
+            {
+                _logger.LogWarning("CHIP Collect RSA signature verification failed.");
+                return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "RSA signature verification failed."));
+            }
+
+            using var doc = JsonDocument.Parse(rawBody);
+            var root = doc.RootElement;
+
+            var rawEventType = root.TryGetProperty("event_type", out var etProp) ? etProp.GetString() : null;
+            var mappedEventType = "";
+
+            if (rawEventType == "purchase.paid" || rawEventType == "purchase.preauthorized")
+            {
+                mappedEventType = "PAYMENT_COMPLETED";
+            }
+            else if (rawEventType == "purchase.payment_failure")
+            {
+                mappedEventType = "PAYMENT_FAILED";
+            }
+            else
+            {
+                return Task.FromResult(new GatewayWebhookParsedResult(true, rawEventType ?? "", "", 0, "", null, new(), 0, 0, 0, 1, "", null));
+            }
+
+            var eventId = root.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString();
+            var purchaseId = eventId; 
+
+            var purchaseNode = root.TryGetProperty("purchase", out var pNode) ? pNode : default;
+            var amountCents = purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("total", out var tProp) ? tProp.GetDecimal() : 0m;
+            var amountPaid = amountCents / 100m;
+            
+            var currency = purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("currency", out var cProp) ? cProp.GetString() ?? "MYR" : "MYR";
+
+            decimal gatewayFee = 0m;
+            decimal netAmount = amountPaid;
+
+            if (root.TryGetProperty("payment", out var paymentNode) && paymentNode.ValueKind == JsonValueKind.Object)
+            {
+                gatewayFee = paymentNode.TryGetProperty("fee_amount", out var faProp) ? faProp.GetDecimal() / 100m : 0m;
+                netAmount = paymentNode.TryGetProperty("net_amount", out var naProp) ? naProp.GetDecimal() / 100m : amountPaid;
+            }
+
+            var meta = new Dictionary<string, string>();
+            if (purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("metadata", out var metaNode) && metaNode.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in metaNode.EnumerateObject())
+                {
+                    meta[prop.Name] = prop.Value.GetString() ?? "";
+                }
+            }
+
+            string? tokenId = null;
+            if (root.TryGetProperty("is_recurring_token", out var isRecProp) && isRecProp.GetBoolean())
+            {
+                tokenId = purchaseId;
+            }
+
+            return Task.FromResult(new GatewayWebhookParsedResult(
+                Verified: true,
+                EventType: mappedEventType,
+                EventId: eventId,
+                AmountPaid: amountPaid,
+                Currency: currency,
+                GatewayTransactionId: purchaseId,
+                Metadata: meta,
+                GatewayFee: gatewayFee,
+                TaxAmount: 0m,
+                NetAmount: netAmount,
+                FxRate: 1m,
+                BaseCurrency: currency,
+                Error: null,
+                GatewayCustomerId: null, 
+                GatewayTokenId: tokenId
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse CHIP Collect webhook");
+            return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message));
+        }
     }
 
     public Task<bool> ChargeOffSessionAsync(
