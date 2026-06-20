@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using BuildingBlocks.Application;
@@ -118,6 +119,17 @@ public class ToolRegistry : IToolRegistry
         if (underlyingType == typeof(string) || underlyingType == typeof(Guid) || underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
         {
             schema["type"] = "string";
+            return schema;
+        }
+
+        // Terminal path to prevent infinite recursion on unstructured JSON data types and dictionaries
+        if (underlyingType == typeof(object) || 
+            typeof(JsonNode).IsAssignableFrom(underlyingType) || 
+            typeof(JsonDocument).IsAssignableFrom(underlyingType) || 
+            typeof(JsonElement).IsAssignableFrom(underlyingType) ||
+            (underlyingType.IsGenericType && underlyingType.GetGenericTypeDefinition() == typeof(Dictionary<,>)))
+        {
+            schema["type"] = "object";
             return schema;
         }
 

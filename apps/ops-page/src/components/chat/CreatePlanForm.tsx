@@ -1,7 +1,7 @@
 // apps/ops-page/src/components/chat/CreatePlanForm.tsx
 import { useState } from "react";
 import { Send } from "lucide-react";
-import { CustomFormProps } from "./FormRegistry";
+import type { CustomFormProps } from "./FormRegistry";
 
 export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: CustomFormProps) {
   const [name, setName] = useState(prefillData?.name || "");

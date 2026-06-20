@@ -64,9 +64,16 @@ export default function OpsChatWorkspace() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // FIX: Provided explicit queryFn to satisfy TanStack Query v5 requirements
   const { data: conversationData } = useQuery<OpsConversationDto[]>({
     queryKey: ["conversations", activeWorkspaceId],
-    enabled: false
+    queryFn: async () => {
+      if (!activeWorkspaceId) return [];
+      const { data, error } = await client.GET("/ops/chat/conversations", { params: { query: { limit: 20, offset: 0 } } });
+      if (error) throw new Error(error.detail);
+      return data.data;
+    },
+    enabled: !!activeWorkspaceId
   });
 
   const activeConversationTitle = !id 

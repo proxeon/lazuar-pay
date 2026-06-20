@@ -1,3 +1,4 @@
+// apps/lazuar-api/src/Lazuar.Api/Middleware/TenantSecurityMiddleware.cs
 using Microsoft.AspNetCore.Http;
 using Modules.One.Contracts;
 using System.Security.Claims;
