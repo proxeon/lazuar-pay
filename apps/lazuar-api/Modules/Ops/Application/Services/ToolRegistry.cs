@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -116,13 +117,31 @@ public class ToolRegistry : IToolRegistry
             return schema;
         }
 
-        if (underlyingType == typeof(string) || underlyingType == typeof(Guid) || underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+        if (underlyingType == typeof(string) || underlyingType == typeof(Guid))
         {
             schema["type"] = "string";
             return schema;
         }
 
-        // Terminal path to prevent infinite recursion on unstructured JSON data types and dictionaries
+        if (underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+        {
+            schema["type"] = "string";
+            schema["format"] = "date-time";
+            return schema;
+        }
+
+        if (underlyingType.IsEnum)
+        {
+            schema["type"] = "string";
+            var enumArray = new JsonArray();
+            foreach (var name in Enum.GetNames(underlyingType))
+            {
+                enumArray.Add(name);
+            }
+            schema["enum"] = enumArray;
+            return schema;
+        }
+
         if (underlyingType == typeof(object) || 
             typeof(JsonNode).IsAssignableFrom(underlyingType) || 
             typeof(JsonDocument).IsAssignableFrom(underlyingType) || 
@@ -156,7 +175,15 @@ public class ToolRegistry : IToolRegistry
 
             if (propName == "OrganizationId" || propName == "Id" || propName == "RecordedBy") continue;
 
-            properties[propName] = GetSchemaForType(prop.PropertyType);
+            var propSchema = GetSchemaForType(prop.PropertyType);
+
+            var descriptionAttr = prop.GetCustomAttribute<DescriptionAttribute>();
+            if (descriptionAttr != null && propSchema is JsonObject propSchemaObj)
+            {
+                propSchemaObj["description"] = descriptionAttr.Description;
+            }
+
+            properties[propName] = propSchema;
 
             var isNullableValueType = Nullable.GetUnderlyingType(prop.PropertyType) != null;
             if (!isNullableValueType && (prop.PropertyType.IsValueType || prop.PropertyType == typeof(string)))
