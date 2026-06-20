@@ -1,4 +1,6 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/CreateCouponCommand.cs
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -6,12 +8,18 @@ using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
 
+public enum DiscountType
+{
+    FIXED,
+    PERCENTAGE
+}
+
 [AgentTool("Create a new promotional coupon code for discounts.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record CreateCouponCommand(
     Guid OrganizationId,
-    string Code,
-    string DiscountType,
-    decimal Amount,
+    [property: Description("e.g. SUMMER20")] string Code,
+    DiscountType DiscountType,
+    [property: Description("e.g. 10.00")] decimal Amount,
     int MaxUses,
     DateTime? ExpiresAt,
     decimal MinimumOriginalPrice = 0) : ICommand<Guid>
@@ -33,7 +41,7 @@ public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, G
         var coupon = new CommunityCoupon(
             request.OrganizationId,
             request.Code,
-            request.DiscountType,
+            request.DiscountType.ToString(),
             request.Amount,
             request.MaxUses,
             request.ExpiresAt,
