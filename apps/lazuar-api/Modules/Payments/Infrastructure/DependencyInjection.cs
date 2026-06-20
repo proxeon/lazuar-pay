@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentGatewayAdapter, StripeGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, RazorpayGatewayAdapter>();
+        services.AddScoped<IPaymentGatewayAdapter, ChipCollectGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>("PaymentsEventBus");

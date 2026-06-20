@@ -10,7 +10,7 @@ export default function PaymentSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY">("BILLPLZ");
+  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP">("BILLPLZ");
   const [isActive, setIsActive] = useState(true);
   
   const [apiKey, setApiKey] = useState("");
@@ -61,6 +61,11 @@ export default function PaymentSettingsPage() {
         toast.error("Collection ID is required for Billplz.");
         return;
       }
+    }
+
+    if (gatewayType === "CHIP" && !collectionId.trim()) {
+      toast.error("Brand ID is required for CHIP Collect.");
+      return;
     }
 
     setIsSaving(true);
@@ -118,9 +123,10 @@ export default function PaymentSettingsPage() {
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#09090b]">Gateway Type</label>
                     <select value={gatewayType} onChange={e => setGatewayType(e.target.value as any)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
+                      <option value="CHIP">CHIP Collect (Malaysia)</option>
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
-                      <option value="RAZORPAY">Razorpay (Global/India)</option>
+                      <option value="RAZORPAY">Razorpay (Global)</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">
@@ -136,6 +142,20 @@ export default function PaymentSettingsPage() {
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Secure Credentials</label>
                 
+                {gatewayType === "CHIP" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">Brand ID</label>
+                      <input type="text" value={collectionId} onChange={e => setCollectionId(e.target.value)} required placeholder="e.g. 75a76529-..." className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">Secret Key (API Key)</label>
+                      <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} required placeholder="••••••••" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
+                      <p className="text-[10px] text-[#a1a1aa] mt-1">Lazuar will autonomously fetch your RSA Public Key and configure your webhook endpoints upon saving.</p>
+                    </div>
+                  </>
+                )}
+
                 {gatewayType === "BILLPLZ" && (
                   <>
                     <div className="space-y-1.5">
@@ -149,7 +169,7 @@ export default function PaymentSettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">X-Signature Key (Webhook Secret)</label>
                       <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} required placeholder="128-character hex string" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
-                      <p className="text-[10px] text-[#a1a1aa]">Must be exactly 128 characters long for signature verification.</p>
+                      <p className="text-[10px] text-[#a1a1aa] mt-1">Must be exactly 128 characters long for signature verification.</p>
                     </div>
                   </>
                 )}
@@ -172,7 +192,7 @@ export default function PaymentSettingsPage() {
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">API Key (KeyId:KeySecret)</label>
                       <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} required placeholder="rzp_live_xxx:secret_yyy" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
-                      <p className="text-[10px] text-[#a1a1aa]">Format must be KeyId:KeySecret</p>
+                      <p className="text-[10px] text-[#a1a1aa] mt-1">Format must be KeyId:KeySecret</p>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Webhook Signing Secret</label>

@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Lhdn/Application/Commands/SubmitTaxDocumentCommand.cs
 using System;
 using System.Security.Cryptography;
 using System.Text;
@@ -71,11 +72,6 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
         if (config == null)
         {
             throw new InvalidOperationException("LHDN Tenant Configuration is missing.");
-        }
-
-        if (isTestMode)
-        {
-            config.UpdateProfile(config.SupplierTin, config.IdType, config.IdValue, "SANDBOX", config.MsicCode, config.IntermediaryMode);
         }
 
         var documentVersion = string.IsNullOrWhiteSpace(request.Payload.Document_version) ? "1.0" : request.Payload.Document_version;
