@@ -258,25 +258,63 @@ public partial class LlmOrchestratorService : ILlmOrchestratorService
                     {
                         if (toolCall.FunctionName == nameof(RequestFormInputCommand))
                         {
-                            var args = JsonSerializer.Deserialize<RequestFormInputCommand>(
-                                toolCall.FunctionArguments.ToString(), 
-                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                                
-                            if (args != null)
-                            {
-                                var toolName = args.TargetToolName ?? string.Empty;
-                                var schemaNode = _toolRegistry.GetSchemaForTool(toolName);
-                                
-                                var uiRequest = new UiRequestDto
-                                {
-                                    Tool_name = toolName,
-                                    Schema_json = schemaNode ?? new JsonObject(),
-                                    Prefill_data = args.PartialData,
-                                    Is_resolved = false
-                                };
+                            UiRequestDto? pendingUiRequest = null;
+                            bool parseFailed = false;
 
-                                finalUiRequestJson = JsonSerializer.Serialize(uiRequest);
-                                yield return new ChatStreamChunkDto { Type = "ui_request", Ui_request = uiRequest };
+                            // Safely parse the JSON outside of any yield blocks to satisfy the compiler
+                            try
+                            {
+                                var args = JsonSerializer.Deserialize<RequestFormInputCommand>(
+                                    toolCall.FunctionArguments.ToString(), 
+                                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                                    
+                                if (args != null && !string.IsNullOrWhiteSpace(args.TargetToolName))
+                                {
+                                    var toolName = args.TargetToolName;
+                                    var schemaNode = _toolRegistry.GetSchemaForTool(toolName);
+                                    
+                                    JsonNode? partialDataNode = null;
+                                    if (args.PartialData != null)
+                                    {
+                                        if (args.PartialData is string strData && !string.IsNullOrWhiteSpace(strData))
+                                        {
+                                            try { partialDataNode = JsonNode.Parse(strData); } catch { }
+                                        }
+                                        else if (args.PartialData is JsonElement element)
+                                        {
+                                            try { partialDataNode = JsonNode.Parse(element.GetRawText()); } catch { }
+                                        }
+                                        else
+                                        {
+                                            try { partialDataNode = JsonSerializer.SerializeToNode(args.PartialData); } catch { }
+                                        }
+                                    }
+                                    
+                                    pendingUiRequest = new UiRequestDto
+                                    {
+                                        Tool_name = toolName,
+                                        Schema_json = schemaNode ?? new JsonObject(),
+                                        Prefill_data = partialDataNode,
+                                        Is_resolved = false
+                                    };
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to parse RequestFormInputCommand arguments securely.");
+                                parseFailed = true;
+                            }
+
+                            if (parseFailed)
+                            {
+                                messages.Add(new ToolChatMessage(toolCall.Id, "System Error: The generated form request arguments were invalid JSON. Please verify your data and try calling the tool again."));
+                                continue;
+                            }
+
+                            if (pendingUiRequest != null)
+                            {
+                                finalUiRequestJson = JsonSerializer.Serialize(pendingUiRequest);
+                                yield return new ChatStreamChunkDto { Type = "ui_request", Ui_request = pendingUiRequest };
                                 yield break; 
                             }
                         }

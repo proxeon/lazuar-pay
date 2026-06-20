@@ -88,7 +88,7 @@ public partial class LlmOrchestratorService
             ChatTool.CreateFunctionTool(
                 nameof(RequestFormInputCommand),
                 "Request a user interface form to collect missing parameters for a target command.",
-                BinaryData.FromString(@"{""type"":""object"",""properties"":{""targetToolName"":{""type"":""string""},""partialData"":{""type"":""object""}},""required"":[""targetToolName""]}")
+                BinaryData.FromString(@"{""type"":""object"",""properties"":{""targetToolName"":{""type"":""string""},""partialData"":{""type"":""object"",""description"":""A JSON object containing any fields you already know. Must be an object or omitted entirely.""}},""required"":[""targetToolName""]}")
             )
         );
         options.Tools.Add(formToolDefinition.ChatTool);

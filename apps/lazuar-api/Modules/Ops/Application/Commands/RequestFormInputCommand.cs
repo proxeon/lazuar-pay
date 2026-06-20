@@ -1,6 +1,5 @@
 // apps/lazuar-api/Modules/Ops/Application/Commands/RequestFormInputCommand.cs
 using System;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -8,7 +7,7 @@ using BuildingBlocks.Application;
 namespace Modules.Ops.Application.Commands;
 
 [AgentTool("Request a user interface form to collect missing parameters for a target command.", "CORE", "low", "SUPER_ADMIN", "ADMIN")]
-public record RequestFormInputCommand(string TargetToolName, JsonObject? PartialData) : ICommand
+public record RequestFormInputCommand(string TargetToolName, object? PartialData) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
