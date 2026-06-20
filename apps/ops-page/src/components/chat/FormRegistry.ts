@@ -1,0 +1,13 @@
+// apps/ops-page/src/components/chat/FormRegistry.ts
+import { FC } from "react";
+
+export interface CustomFormProps {
+  prefillData?: Record<string, any>;
+  onSubmit: (data: Record<string, any>) => void;
+  onCancel: () => void;
+}
+
+export const FormRegistry: Record<string, FC<CustomFormProps>> = {
+  // Register highly complex custom forms here. Example:
+  // CreatePlanCommand: CreatePlanForm,
+};
