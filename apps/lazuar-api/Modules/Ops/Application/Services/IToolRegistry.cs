@@ -1,5 +1,7 @@
+// apps/lazuar-api/Modules/Ops/Application/Services/IToolRegistry.cs
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using OpenAI.Chat;
 
 namespace Modules.Ops.Application.Services;
@@ -16,4 +18,5 @@ public interface IToolRegistry
 {
     IEnumerable<AgentToolDefinition> GetAvailableTools(string userRole, IEnumerable<string> activeAppIds);
     AgentToolDefinition? GetToolDefinition(string toolName);
+    JsonObject? GetSchemaForTool(string toolName);
 }

@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Ops/Infrastructure/Repositories/OpsRepository.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,6 +33,12 @@ public class OpsRepository : IOpsRepository
             .Skip(offset)
             .Take(limit)
             .ToListAsync(ct);
+    }
+
+    public async Task<OpsMessage?> GetMessageByIdAsync(Guid organizationId, Guid messageId, CancellationToken ct = default)
+    {
+        return await _context.Messages
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.OrganizationId == organizationId, ct);
     }
 
     public async Task<IEnumerable<OpsMessage>> GetMessagesAsync(Guid organizationId, Guid conversationId, CancellationToken ct = default)

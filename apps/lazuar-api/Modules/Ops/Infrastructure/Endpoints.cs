@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Ops/Infrastructure/Endpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -64,6 +65,10 @@ public static class Endpoints
                 Proposed_action = m.ProposedActionJson != null
                     ? JsonSerializer.Deserialize<ProposedActionDto>(m.ProposedActionJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                     : null,
+                Ui_request = m.UiRequestJson != null
+                    ? JsonSerializer.Deserialize<UiRequestDto>(m.UiRequestJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                    : null,
+                Is_resolved = m.IsResolved,
                 Created_at = new DateTimeOffset(m.CreatedAt)
             }).ToList();
 
@@ -139,6 +144,20 @@ public static class Endpoints
             {
                 return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
             }
+        });
+
+        group.MapPut("/chat/messages/{id:guid}/resolve", async Task<IResult> (Guid id, IOpsRepository repo, IExecutionContextAccessor ctx) =>
+        {
+            var tenantId = ctx.TenantId;
+            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+
+            var message = await repo.GetMessageByIdAsync(tenantId, id);
+            if (message == null) return Results.NotFound();
+
+            message.ResolveUiRequest();
+            await repo.SaveChangesAsync();
+
+            return Results.Ok(new StatusResponse { Status = "resolved" });
         });
 
         group.MapPost("/execute-action", async Task<IResult> (

@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Ops/Application/Services/ToolRegistry.cs
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -75,6 +76,15 @@ public class ToolRegistry : IToolRegistry
     {
         _tools.TryGetValue(toolName, out var definition);
         return definition;
+    }
+
+    public JsonObject? GetSchemaForTool(string toolName)
+    {
+        if (_tools.TryGetValue(toolName, out var definition))
+        {
+            return GenerateJsonSchema(definition.RequestType);
+        }
+        return null;
     }
 
     private JsonObject GenerateJsonSchema(Type type)

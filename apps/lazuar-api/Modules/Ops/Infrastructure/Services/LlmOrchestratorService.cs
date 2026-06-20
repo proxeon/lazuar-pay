@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -30,18 +29,19 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
 using Lazuar.ApiTypes;
 using MediatR;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Modules.One.Contracts;
 using Modules.Ops.Application;
+using Modules.Ops.Application.Commands;
 using Modules.Ops.Application.Services;
 using Modules.Ops.Domain;
 using OpenAI.Chat;
 
 namespace Modules.Ops.Infrastructure.Services;
 
-public class LlmOrchestratorService : ILlmOrchestratorService
+public partial class LlmOrchestratorService : ILlmOrchestratorService
 {
     private readonly IChatClientFactory _clientFactory;
     private readonly IToolRegistry _toolRegistry;
@@ -143,6 +143,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         
         List<string> executedTools = new();
         string? finalProposedActionJson = null;
+        string? finalUiRequestJson = null;
 
         try
         {
@@ -250,11 +251,36 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                         assistantParts.Add(ChatMessageContentPart.CreateTextPart(currentIterationText));
                     }
 
-                    var assistantMsg = new AssistantChatMessage(toolCalls);
-                    messages.Add(assistantMsg);
+                    var assistantMsgObj = new AssistantChatMessage(toolCalls);
+                    messages.Add(assistantMsgObj);
 
                     foreach (var toolCall in toolCalls)
                     {
+                        if (toolCall.FunctionName == nameof(RequestFormInputCommand))
+                        {
+                            var args = JsonSerializer.Deserialize<RequestFormInputCommand>(
+                                toolCall.FunctionArguments.ToString(), 
+                                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                                
+                            if (args != null)
+                            {
+                                var toolName = args.TargetToolName ?? string.Empty;
+                                var schemaNode = _toolRegistry.GetSchemaForTool(toolName);
+                                
+                                var uiRequest = new UiRequestDto
+                                {
+                                    Tool_name = toolName,
+                                    Schema_json = schemaNode ?? new JsonObject(),
+                                    Prefill_data = args.PartialData,
+                                    Is_resolved = false
+                                };
+
+                                finalUiRequestJson = JsonSerializer.Serialize(uiRequest);
+                                yield return new ChatStreamChunkDto { Type = "ui_request", Ui_request = uiRequest };
+                                yield break; 
+                            }
+                        }
+
                         var definition = _toolRegistry.GetToolDefinition(toolCall.FunctionName);
                         if (definition == null)
                         {
@@ -267,7 +293,7 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                             var proposedAction = BuildProposedAction(definition, toolCall.FunctionArguments.ToString());
                             finalProposedActionJson = JsonSerializer.Serialize(proposedAction);
                             yield return new ChatStreamChunkDto { Type = "proposed_action", Proposed_action = proposedAction };
-                            yield break;
+                            yield break; 
                         }
 
                         executedTools.Add(definition.Name);
@@ -307,7 +333,9 @@ public class LlmOrchestratorService : ILlmOrchestratorService
                     "assistant",
                     string.IsNullOrWhiteSpace(accumulatedAssistantText) ? "[Tool Execution]" : accumulatedAssistantText,
                     finalExecutedToolsJson,
-                    finalProposedActionJson);
+                    finalProposedActionJson,
+                    finalUiRequestJson,
+                    isResolved: false);
 
                 repo.AddMessage(assistantMsg);
 
@@ -346,144 +374,5 @@ public class LlmOrchestratorService : ILlmOrchestratorService
         if (usage == null) return;
         _logger.LogInformation("FinOps [Tenant: {TenantId}] - Input: {Input}, Output: {Output}",
             tenantId, usage.InputTokenCount, usage.OutputTokenCount);
-    }
-
-    private List<ChatMessage> BuildInitialMessages(Guid tenantId, IEnumerable<OpsMessage> history, string currentMessage, IEnumerable<string> activeApps)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"You are Lazuar Ops, a highly capable internal operations agent.");
-        sb.AppendLine($"The current Target OrganizationId is {tenantId}.");
-        sb.AppendLine("**CRITICAL RULE 1**: You must ALWAYS use search tools to find exact GUID identifiers before executing any write commands. NEVER guess or hallucinate a Guid!");
-        sb.AppendLine("**CRITICAL RULE 2**: You MUST use the native tool calling API. NEVER output raw JSON or fake system messages in your text response.");
-        sb.AppendLine("**CRITICAL RULE 3**: NEVER guess or manually construct URLs. You MUST ALWAYS use the appropriate tool to retrieve exact URLs.");
-        sb.AppendLine("**CRITICAL RULE 4**: When you need to collect multiple fields of data from the user, output a markdown code block with the language `form`. Inside it, list the exact field names you need, one per line, ending with a colon. Put default data after the colon if you have it.");
-        sb.AppendLine("**CRITICAL RULE 5**: When executing bulk actions (Broadcasts) or financial lookups (Global Ledger), rely on the dedicated batch tools. Never attempt to loop through individual subscriber tools to send bulk messages, as this will violate system timeout boundaries.");
-        sb.AppendLine("**CRITICAL RULE 6**: When discussing revenue, strictly differentiate between 'Gross Revenue' (total catalog value of sales) and 'Net Cash in Bank' (actual cash deposited after deducting Gateway Fees like Stripe/Billplz). Always remind the user of 'Tax Liabilities' (SST/VAT) that are owed to the government and should not be counted as profit. Use the GetFinancialHealthAgentQuery tool for accurate ledger-based metrics.");
-        sb.AppendLine("**CRITICAL RULE 7**: If a tool returns an error or empty result, DO NOT execute the exact same tool with the exact same parameters again. Try a different approach or ask the user for clarification.");
-
-        var activeAppsSet = new HashSet<string>(activeApps, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var provider in _promptProviders)
-        {
-            if (activeAppsSet.Contains(provider.GetAppId()))
-            {
-                sb.AppendLine();
-                sb.AppendLine(provider.GetSystemPromptRules());
-            }
-        }
-
-        var messages = new List<ChatMessage>
-        {
-            new SystemChatMessage(sb.ToString())
-        };
-
-        foreach (var msg in history)
-        {
-            if (string.IsNullOrWhiteSpace(msg.Content) && string.IsNullOrWhiteSpace(msg.ProposedActionJson))
-                continue;
-
-            var content = msg.Content;
-
-            if (msg.Role == "user")
-            {
-                messages.Add(new UserChatMessage(content));
-            }
-            else if (msg.Role == "assistant")
-            {
-                messages.Add(new AssistantChatMessage(content));
-                if (!string.IsNullOrEmpty(msg.ProposedActionJson))
-                {
-                    messages.Add(new SystemChatMessage($"[System Log: You invoked a tool with payload: {msg.ProposedActionJson}]"));
-                }
-            }
-            else if (msg.Role == "system")
-            {
-                messages.Add(new SystemChatMessage(content));
-            }
-        }
-
-        messages.Add(new UserChatMessage(currentMessage));
-        return messages;
-    }
-
-    private ChatCompletionOptions BuildChatOptions(IEnumerable<string> activeApps)
-    {
-        var options = new ChatCompletionOptions();
-        var tools = _toolRegistry.GetAvailableTools("SUPER_ADMIN", activeApps).ToList();
-        if (tools.Any()) foreach (var tool in tools) options.Tools.Add(tool.ChatTool);
-        return options;
-    }
-
-    private ProposedActionDto BuildProposedAction(AgentToolDefinition definition, string arguments)
-    {
-        object payload;
-        try
-        {
-            var cleanArgs = string.IsNullOrWhiteSpace(arguments) ? "{}" : arguments;
-            payload = JsonSerializer.Deserialize<object>(cleanArgs) ?? new object();
-        }
-        catch (JsonException)
-        {
-            payload = new { _error = "The AI generated invalid parameters.", _raw_output = arguments };
-        }
-
-        var name = definition.Name.Replace("Command", "");
-        var intent = string.Concat(name.Select(x => char.IsUpper(x) ? " " + x : x.ToString())).TrimStart();
-
-        return new ProposedActionDto
-        {
-            Idempotency_key = Guid.CreateVersion7().ToString(),
-            Tool_name = definition.Name,
-            Intent_title = intent,
-            Severity = definition.Severity,
-            Human_readable_summary = $"Proposing to execute {intent}.",
-            Command_payload = payload
-        };
-    }
-
-    private async Task<string> ExecuteReadToolAsync(AgentToolDefinition definition, string arguments, Guid tenantId, CancellationToken ct)
-    {
-        try
-        {
-            var cleanArgs = string.IsNullOrWhiteSpace(arguments) || arguments.Trim() == "{}"
-                ? "{}"
-                : arguments;
-
-            JsonNode jsonNode;
-            try
-            {
-                var jsonObject = JsonSerializer.Deserialize<JsonElement>(cleanArgs);
-                jsonNode = JsonNode.Parse(jsonObject.GetRawText()) as JsonObject ?? new JsonObject();
-            }
-            catch (JsonException)
-            {
-                jsonNode = new JsonObject();
-            }
-
-            jsonNode["OrganizationId"] = tenantId.ToString();
-
-            var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
-
-            if (args == null)
-            {
-                return "Error: Failed to deserialize arguments into command.";
-            }
-
-            var result = await _mediator.Send(args, ct);
-            return JsonSerializer.Serialize(result);
-        }
-        catch (Exception ex)
-        {
-            return $"Error: {ex.Message}";
-        }
-    }
-
-    private class ToolCallAccumulator : IDisposable
-    {
-        public string Id { get; set; } = "";
-        public string Name { get; set; } = "";
-        public MemoryStream ArgumentsStream { get; } = new MemoryStream();
-        public void Dispose() => ArgumentsStream.Dispose();
     }
 }
