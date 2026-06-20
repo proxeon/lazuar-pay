@@ -1,7 +1,9 @@
+// apps/ops-page/src/components/chat/ChatMessageBubble.tsx
 import { useState } from "react";
 import { Copy, ThumbsUp, ThumbsDown, RotateCcw, Check, Activity, Pencil } from "lucide-react";
 import { cn } from "../../lib/utils";
 import ActionApprovalCard from "../ActionApprovalCard";
+import UiRequestCard from "./UiRequestCard";
 import type { Message } from "../../types/chat";
 import type { ProposedActionDto } from "../../lib/api-client";
 import { MarkdownContent } from "./MarkdownContent";
@@ -10,6 +12,8 @@ interface ChatMessageBubbleProps {
   msg: Message;
   onSend: (text: string) => void;
   onActionResolved: (success: boolean, message?: string, actionRef?: ProposedActionDto) => void;
+  onUiSubmit: (messageId: string, toolName: string, data: Record<string, any>) => void;
+  onUiCancel: (messageId: string) => void;
   previousUserMsgContent?: string;
 }
 
@@ -17,6 +21,8 @@ export default function ChatMessageBubble({
   msg, 
   onSend, 
   onActionResolved, 
+  onUiSubmit,
+  onUiCancel,
   previousUserMsgContent 
 }: ChatMessageBubbleProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -28,10 +34,15 @@ export default function ChatMessageBubble({
   };
 
   if (msg.role === "system") {
+    const isSuccess = msg.content.toLowerCase().includes("successfully") || msg.content.toLowerCase().includes("submitted data");
+    const isCancel = msg.content.toLowerCase().includes("cancelled");
+
     return (
       <div className="w-full flex justify-center py-2">
         <span className={cn("text-[11px] font-mono px-3 py-1.5 rounded-sm border", 
-          msg.content.includes("successfully") ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+          isCancel ? "bg-amber-50 text-amber-700 border-amber-200" :
+          isSuccess ? "bg-emerald-50 text-emerald-700 border-emerald-200" : 
+          "bg-rose-50 text-rose-700 border-rose-200"
         )}>
           {msg.content}
         </span>
@@ -43,7 +54,7 @@ export default function ChatMessageBubble({
     return (
       <div className="group flex flex-col items-end w-full relative">
         <div className="bg-[#f4f4f5] px-4 py-2.5 max-w-[80%] rounded-2xl border border-[#e5e5e5] break-words shrink-0 [&_.prose>*:first-child]:mt-0 [&_.prose>*:last-child]:mb-0">
-          <MarkdownContent content={msg.content} onSend={onSend} />
+          <MarkdownContent content={msg.content} />
         </div>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mt-2 select-none text-[#71717a] text-[11px] font-sans">
           <button onClick={() => onSend(msg.content)} className="p-1 hover:text-[#09090b] transition-colors" title="Retry">
@@ -74,7 +85,7 @@ export default function ChatMessageBubble({
         </div>
       )}
 
-      {msg.isStreaming && !msg.content && !msg.proposedAction ? (
+      {msg.isStreaming && !msg.content && !msg.proposedAction && !msg.uiRequest ? (
         <div className="flex items-center gap-1.5 h-6 px-1 my-2">
           <Activity size={14} className="animate-pulse text-[#09090b]" />
           <span className="text-[11px] font-mono text-[#71717a] animate-pulse">Thinking...</span>
@@ -82,7 +93,7 @@ export default function ChatMessageBubble({
       ) : (
         msg.content && (
           <div className="w-full">
-            <MarkdownContent content={msg.content} onSend={onSend} />
+            <MarkdownContent content={msg.content} />
           </div>
         )
       )}
@@ -92,6 +103,16 @@ export default function ChatMessageBubble({
           <ActionApprovalCard
             action={msg.proposedAction}
             onResolved={onActionResolved}
+          />
+        </div>
+      )}
+
+      {msg.uiRequest && (
+        <div className="mt-3 w-full">
+          <UiRequestCard
+            uiRequest={msg.uiRequest}
+            onSubmit={(data) => onUiSubmit(msg.id, msg.uiRequest!.tool_name, data)}
+            onCancel={() => onUiCancel(msg.id)}
           />
         </div>
       )}

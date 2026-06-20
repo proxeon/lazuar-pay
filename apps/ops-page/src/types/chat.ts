@@ -1,4 +1,5 @@
-import type { ProposedActionDto } from "../lib/api-client";
+// apps/ops-page/src/types/chat.ts
+import type { ProposedActionDto, UiRequestDto } from "../lib/api-client";
 
 export interface Message {
   id: string;
@@ -7,4 +8,5 @@ export interface Message {
   isStreaming?: boolean;
   executedTools?: string[];
   proposedAction?: ProposedActionDto;
+  uiRequest?: UiRequestDto;
 }

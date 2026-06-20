@@ -1,3 +1,4 @@
+// apps/ops-page/src/components/OpsChatWorkspace.tsx
 import { useRef, useEffect, useState } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
@@ -38,14 +39,17 @@ export default function OpsChatWorkspace() {
           role: m.role as "user" | "assistant" | "system",
           content: m.content,
           executedTools: m.executed_tools,
-          proposedAction: m.proposed_action
+          proposedAction: m.proposed_action,
+          uiRequest: m.ui_request
+            ? { ...m.ui_request, is_resolved: m.is_resolved ?? false }
+            : undefined
         })));
       }
     }
     loadMessages();
   }, [id]);
 
-  const { handleSend, handleActionResolved, isProcessing } = useChatStream(
+  const { handleSend, handleActionResolved, handleUiSubmit, handleUiCancel, isProcessing } = useChatStream(
     id || "new",
     setMessages,
     (newId) => {
@@ -69,7 +73,7 @@ export default function OpsChatWorkspace() {
     ? "New Chat" 
     : conversationData?.find(c => c.id === id)?.title || "Active Query Control";
 
-  const visibleMessages = messages.filter((m) => m.role !== "system" || m.content.includes("successfully") || m.content.includes("failed"));
+  const visibleMessages = messages.filter((m) => m.role !== "system" || m.content.includes("successfully") || m.content.includes("failed") || m.content.includes("submitted data") || m.content.includes("cancelled"));
   const isEmpty = visibleMessages.length === 0;
 
   return (
@@ -99,6 +103,8 @@ export default function OpsChatWorkspace() {
                     msg={msg}
                     onSend={handleSend}
                     onActionResolved={handleActionResolved}
+                    onUiSubmit={handleUiSubmit}
+                    onUiCancel={handleUiCancel}
                     previousUserMsgContent={visibleMessages[index - 1]?.content}
                   />
                 </div>

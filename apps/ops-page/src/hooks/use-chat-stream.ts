@@ -1,3 +1,4 @@
+// apps/ops-page/src/hooks/use-chat-stream.ts
 import { useState } from "react";
 import { API_URL, type ChatStreamChunkDto, type ProposedActionDto } from "../lib/api-client";
 import type { Message } from "../types/chat";
@@ -62,6 +63,7 @@ export function useChatStream(
                     if (chunk.type === "text" && chunk.content) return { ...msg, content: msg.content + chunk.content };
                     if (chunk.type === "tool_status" && chunk.executed_tools) return { ...msg, executedTools: chunk.executed_tools };
                     if (chunk.type === "proposed_action" && chunk.proposed_action) return { ...msg, proposedAction: chunk.proposed_action };
+                    if (chunk.type === "ui_request" && chunk.ui_request) return { ...msg, uiRequest: chunk.ui_request };
                     return msg;
                   })
                 );
@@ -131,5 +133,53 @@ export function useChatStream(
     }
   };
 
-  return { handleSend, handleActionResolved, isProcessing };
+  const markUiRequestResolved = async (messageId: string) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId && msg.uiRequest) {
+        return { ...msg, uiRequest: { ...msg.uiRequest, is_resolved: true } };
+      }
+      return msg;
+    }));
+
+    if (activeConversationId && activeConversationId !== "new") {
+      try {
+        await fetch(`${API_URL}/ops/chat/messages/${messageId}/resolve`, {
+          method: "PUT",
+          headers: { "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "" },
+          credentials: "include"
+        });
+      } catch (e) {
+        console.error("Failed to mark UI request as resolved in DB", e);
+      }
+    }
+  };
+
+  const handleUiSubmit = async (messageId: string, toolName: string, formData: Record<string, any>) => {
+    await markUiRequestResolved(messageId);
+    const systemFeedback = `[System: User submitted data for ${toolName}: ${JSON.stringify(formData)}]`;
+    
+    const userMsgId = Date.now().toString();
+    const assistantMsgId = (Date.now() + 1).toString();
+
+    setMessages(prev => [
+      ...prev,
+      { id: userMsgId, role: "user", content: systemFeedback },
+      { id: assistantMsgId, role: "assistant", content: "", isStreaming: true }
+    ]);
+
+    setIsProcessing(true);
+    await executeStreamCall(systemFeedback, assistantMsgId);
+  };
+
+  const handleUiCancel = async (messageId: string) => {
+    await markUiRequestResolved(messageId);
+    const systemFeedback = `[System: User cancelled the form submission.]`;
+    
+    setMessages(prev => [
+      ...prev,
+      { id: Date.now().toString(), role: "system", content: systemFeedback }
+    ]);
+  };
+
+  return { handleSend, handleActionResolved, handleUiSubmit, handleUiCancel, isProcessing };
 }

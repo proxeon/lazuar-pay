@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+// apps/ops-page/src/components/chat/MarkdownContent.tsx
+import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -8,7 +9,6 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import type { Components } from 'react-markdown'
 import { CopyButton } from './CopyButton'
-import { Send } from 'lucide-react'
 
 const sanitizeSchema = {
   ...defaultSchema,
@@ -22,7 +22,6 @@ const sanitizeSchema = {
 
 interface MarkdownContentProps {
   content: string
-  onSend?: (text: string) => void
 }
 
 function normalizeLatexDelimiters(content: string): string {
@@ -62,96 +61,7 @@ function normalizeLatexDelimiters(content: string): string {
   return parsed
 }
 
-function GenUIForm({ rawContent, onSend }: { rawContent: string, onSend?: (text: string) => void }) {
-  const parsedFields = useMemo(() => {
-    return rawContent.split('\n')
-      .map(line => line.trim())
-      .filter(Boolean)
-      .map(line => {
-        const colonIndex = line.indexOf(':');
-        if (colonIndex !== -1) {
-          const name = line.slice(0, colonIndex).trim();
-          const initialValue = line.slice(colonIndex + 1).trim();
-          return { name, initialValue };
-        }
-        return { name: line.replace(/:$/, '').trim(), initialValue: "" };
-      });
-  }, [rawContent]);
-
-  const [formData, setFormData] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    parsedFields.forEach(f => {
-      initial[f.name] = f.initialValue;
-    });
-    return initial;
-  });
-  
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!onSend || submitted) return;
-
-    const formattedMessage = parsedFields
-      .map(f => {
-        const val = formData[f.name]?.trim();
-        return `${f.name}: ${val ? val : "(empty)"}`;
-      })
-      .join('\n');
-    
-    setSubmitted(true);
-    onSend(`Here is the requested information:\n\n${formattedMessage}`);
-  };
-
-  return (
-    <div className="not-prose my-5 w-full max-w-xl rounded-lg border border-[#e5e5e5] bg-white overflow-hidden font-sans">
-      <div className="bg-[#fafafa] border-b border-[#e5e5e5] px-4 py-2.5">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Action Required</span>
-      </div>
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
-        {parsedFields.map(field => {
-          const isLongText = field.name.toLowerCase().includes('description') || 
-                             field.name.toLowerCase().includes('summary') || 
-                             (formData[field.name]?.length || 0) > 60;
-          return (
-            <div key={field.name} className="space-y-1">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">{field.name}</label>
-              {isLongText ? (
-                <textarea 
-                  disabled={submitted}
-                  value={formData[field.name] || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
-                  rows={4}
-                  className="flex w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-2 text-[13px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5] resize-y" 
-                />
-              ) : (
-                <input 
-                  type="text" 
-                  disabled={submitted}
-                  value={formData[field.name] || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
-                  className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5]" 
-                />
-              )}
-            </div>
-          );
-        })}
-        <div className="pt-2">
-          <button 
-            type="submit"
-            disabled={submitted}
-            className="w-full h-9 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-sm flex items-center justify-center gap-2 hover:bg-[#27272a] disabled:opacity-50 transition-colors"
-          >
-            <Send size={13} />
-            {submitted ? "Submitted" : "Submit Data"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function createComponents(onSend?: (text: string) => void): Components {
+function createComponents(): Components {
   return {
     pre({ children }) {
       return <>{children}</>
@@ -160,10 +70,6 @@ function createComponents(onSend?: (text: string) => void): Components {
       const match = /language-(\w+)/.exec(className || '')
       const raw = String(children)
       const codeString = raw.replace(/\n$/, '')
-
-      if (match && match[1] === 'form') {
-        return <GenUIForm rawContent={codeString} onSend={onSend} />
-      }
 
       if (match || raw.includes('\n')) {
         const language = match?.[1] ?? 'text'
@@ -236,8 +142,8 @@ function createComponents(onSend?: (text: string) => void): Components {
   }
 }
 
-export function MarkdownContent({ content, onSend }: MarkdownContentProps) {
-  const components = useMemo(() => createComponents(onSend), [onSend])
+export function MarkdownContent({ content }: MarkdownContentProps) {
+  const components = useMemo(() => createComponents(), [])
   const normalizedContent = useMemo(() => normalizeLatexDelimiters(content), [content])
 
   return (
