@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Lhdn/Infrastructure/Workers/LhdnSubmissionJob.cs
 using System;
 using System.Linq;
 using System.Text;
@@ -67,12 +68,6 @@ public class LhdnSubmissionJob : BackgroundService
                 {
                     doc.MarkAsFailed("Tenant configuration or API credentials missing.");
                     continue;
-                }
-
-                // Force Sandbox URL resolution for test documents during network transmission
-                if (doc.IsTestMode)
-                {
-                    config.UpdateProfile(config.SupplierTin, config.IdType, config.IdValue, "SANDBOX", config.MsicCode, config.IntermediaryMode);
                 }
 
                 var base64Document = Convert.ToBase64String(Encoding.UTF8.GetBytes(doc.RawXmlContent));
