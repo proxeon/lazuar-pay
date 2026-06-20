@@ -2686,6 +2686,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("proposed_action")]
         public ProposedActionDto? Proposed_action { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("ui_request")]
+        public UiRequestDto? Ui_request { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2743,6 +2746,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("proposed_action")]
         public ProposedActionDto? Proposed_action { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("ui_request")]
+        public UiRequestDto? Ui_request { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_resolved")]
+        public bool? Is_resolved { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
 
@@ -2796,6 +2805,33 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
         public string Title { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UiRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("tool_name")]
+        public string Tool_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("schema_json")]
+        public object Schema_json { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("prefill_data")]
+        public object? Prefill_data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_resolved")]
+        public bool Is_resolved { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

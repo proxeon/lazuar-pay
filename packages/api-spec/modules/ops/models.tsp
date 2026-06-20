@@ -1,3 +1,4 @@
+// packages/api-spec/modules/ops/models.tsp
 namespace LazuarApi.Ops;
 
 model ChatRequestDto {
@@ -19,12 +20,20 @@ model ProposedActionDto {
   command_payload: unknown;
 }
 
+model UiRequestDto {
+  tool_name: string;
+  schema_json: unknown;
+  prefill_data?: unknown;
+  is_resolved: boolean;
+}
+
 model ChatStreamChunkDto {
   type: string;
   content?: string;
   tool_name?: string;
   executed_tools?: string[];
   proposed_action?: ProposedActionDto;
+  ui_request?: UiRequestDto;
 }
 
 model OpsConversationDto {
@@ -40,6 +49,8 @@ model OpsMessageDto {
   content: string;
   executed_tools?: string[];
   proposed_action?: ProposedActionDto;
+  ui_request?: UiRequestDto;
+  is_resolved?: boolean;
   created_at: utcDateTime;
 }
 

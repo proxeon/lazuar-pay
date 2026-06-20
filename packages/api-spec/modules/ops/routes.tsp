@@ -1,3 +1,4 @@
+// packages/api-spec/modules/ops/routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -44,6 +45,12 @@ interface OpsOperations {
   @delete
   @route("/chat/conversations/{id}")
   deleteConversation(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/chat/messages/{id}/resolve")
+  resolveUiRequest(
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

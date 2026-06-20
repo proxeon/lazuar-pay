@@ -1092,6 +1092,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ops/chat/messages/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["OpsOperations_resolveUiRequest"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ops/execute-action": {
         parameters: {
             query?: never;
@@ -1971,6 +1987,7 @@ export interface components {
             tool_name?: string;
             executed_tools?: string[];
             proposed_action?: components["schemas"]["Ops.ProposedActionDto"];
+            ui_request?: components["schemas"]["Ops.UiRequestDto"];
         };
         "Ops.OpsConversationDto": {
             id: string;
@@ -1985,6 +2002,8 @@ export interface components {
             content: string;
             executed_tools?: string[];
             proposed_action?: components["schemas"]["Ops.ProposedActionDto"];
+            ui_request?: components["schemas"]["Ops.UiRequestDto"];
+            is_resolved?: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -1998,6 +2017,12 @@ export interface components {
         };
         "Ops.RenameConversationRequestDto": {
             title: string;
+        };
+        "Ops.UiRequestDto": {
+            tool_name: string;
+            schema_json: unknown;
+            prefill_data?: unknown;
+            is_resolved: boolean;
         };
     };
     responses: never;
@@ -7642,6 +7667,73 @@ export interface operations {
                 "application/json": components["schemas"]["Ops.RenameConversationRequestDto"];
             };
         };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OpsOperations_resolveUiRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description The request has succeeded. */
             200: {
