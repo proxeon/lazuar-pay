@@ -1,7 +1,6 @@
-// apps/ops-page/src/components/chat/CreatePlanForm.tsx
 import { useState } from "react";
 import { Send } from "lucide-react";
-import type { CustomFormProps } from "./FormRegistry";
+import type { CustomFormProps } from "./types";
 
 export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: CustomFormProps) {
   const [name, setName] = useState(prefillData?.name || "");
@@ -29,10 +28,6 @@ export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: Cust
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col font-sans">
-      <div className="p-4 bg-blue-50 border-b border-blue-100 text-[12px] text-blue-800">
-        <strong>Custom Registry Active:</strong> This UI is intercepting the AutoForm to provide a tailored plan creation layout.
-      </div>
-      
       <div className="p-4 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -65,7 +60,7 @@ export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: Cust
           Cancel
         </button>
         <button type="submit" className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors">
-          <Send size={13} /> Create Plan
+          <Send size={13} /> Save Plan
         </button>
       </div>
     </form>

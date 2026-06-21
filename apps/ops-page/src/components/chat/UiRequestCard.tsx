@@ -1,8 +1,7 @@
-// apps/ops-page/src/components/chat/UiRequestCard.tsx
 import { useState } from "react";
 import { Check, FileText, X } from "lucide-react";
 import { FormRegistry } from "./FormRegistry";
-import AutoForm from "./AutoForm";
+import AutoForm from "../forms/AutoForm";
 import type { components } from "../../lib/api-client";
 
 type UiRequestDto = components["schemas"]["Ops.UiRequestDto"];

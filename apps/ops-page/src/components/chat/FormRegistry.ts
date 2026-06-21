@@ -1,12 +1,8 @@
-// apps/ops-page/src/components/chat/FormRegistry.ts
 import { FC } from "react";
-import CreatePlanForm from "./CreatePlanForm";
+import CreatePlanForm from "../forms/CreatePlanForm";
+import type { CustomFormProps } from "../forms/types";
 
-export interface CustomFormProps {
-  prefillData?: Record<string, any>;
-  onSubmit: (data: Record<string, any>) => void;
-  onCancel: () => void;
-}
+export type { CustomFormProps };
 
 export const FormRegistry: Record<string, FC<CustomFormProps>> = {
   CreatePlanCommand: CreatePlanForm,
