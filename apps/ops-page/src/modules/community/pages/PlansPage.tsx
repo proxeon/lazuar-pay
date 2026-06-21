@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, AlertTriangle, Link as LinkIcon, Edit2, Archive, RotateCcw, MessagesSquare, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -106,10 +106,10 @@ export default function PlansPage() {
     onError: (err: any) => toast.error("Failed to archive plan", { description: err.message })
   });
 
+  // Replaced brittle client.fetch check with standard DOM window check
   const generateCheckoutUrl = (planSlug: string) => {
     if (!activeWorkspaceSlug) return "";
-    const isProd = client.fetch.name.includes('client') === false; // Rudimentary dev/prod check based on fetch config
-    const baseUrl = isProd ? "https://community.lazuar.com" : "http://localhost:3021";
+    const baseUrl = window.location.hostname === "localhost" ? "http://localhost:3021" : "https://community.lazuar.com";
     return `${baseUrl}/${activeWorkspaceSlug}/${planSlug}/checkout`;
   };
 
@@ -391,7 +391,7 @@ export default function PlansPage() {
         )}
       </SidePanel>
 
-      {/* Global Create Modal (z-60 to sit above SidePanel if necessary) */}
+      {/* Global Create Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />

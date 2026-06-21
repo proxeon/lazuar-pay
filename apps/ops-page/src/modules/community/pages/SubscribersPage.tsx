@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle } from "lucide-react";
+import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { client, type CommunitySubscriptionDto } from "../../../lib/api-client";
+import { client, API_URL, type CommunitySubscriptionDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import SidePanel from "../../core/components/SidePanel";
@@ -52,10 +52,11 @@ export default function SubscribersPage() {
     enabled: !!selectedSub
   });
 
+  // Replaced brittle client.fetch check with standard API_URL import
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch(`${client.fetch.name.includes('client') ? "http://localhost:8080/api/v1" : ""}/admin/community/subscribers/export`, {
+      const response = await fetch(`${API_URL}/admin/community/subscribers/export`, {
         headers: { "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "" },
       });
       const blob = await response.blob();
@@ -105,7 +106,6 @@ export default function SubscribersPage() {
         setRefundModal({ isOpen: false, paymentId: "", reason: "" });
       }
       
-      // Update local state so the open SidePanel instantly shows fresh data
       setSelectedSub(prev => {
         if (!prev) return null;
         if (variables.action === "cancel") return { ...prev, status: "CANCELLED" };
@@ -221,7 +221,7 @@ export default function SubscribersPage() {
         disableOutsideClick={activeAction !== null}
       >
         {selectedSub && (
-          <div className="space-y-8">
+          <div className="space-y-8 animate-in fade-in duration-200">
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Customer Profile</h3>
               <div className="space-y-3 text-[12px]">
@@ -294,7 +294,7 @@ export default function SubscribersPage() {
                   {paymentsData?.data?.map((payment: any) => {
                     const isRefunding = activeAction === `refund-${payment.id}`;
                     return (
-                      <div key={payment.id} className="p-3 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
+                      <div key={payment.id} className="p-3 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between rounded-sm">
                         <div>
                           <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.payment_method}</span></p>
                           <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
@@ -304,7 +304,7 @@ export default function SubscribersPage() {
                             {isRefunding && <Loader2 size={10} className="animate-spin" />} Refund
                           </button>
                         )}
-                        {payment.status === "REFUNDED" && <span className="text-[10px] font-bold uppercase text-amber-600">Refunded</span>}
+                        {payment.status === "REFUNDED" && <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 border border-amber-200 bg-amber-50 px-1.5 py-0.5">Refunded</span>}
                       </div>
                     );
                   })}
@@ -316,14 +316,14 @@ export default function SubscribersPage() {
         )}
       </SidePanel>
 
-      {/* Record Payment Modal */}
+      {/* Record Payment Modal Overlay (Remains unchanged but layered above side-panel z-60) */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setIsPaymentModalOpen(false)} />
-          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "record-payment", payload: { amount: parseFloat(paymentAmount), payment_method: paymentMethod, reference_number: paymentRef }}); }} className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 flex items-center justify-between">
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "record-payment", payload: { amount: parseFloat(paymentAmount), payment_method: paymentMethod, reference_number: paymentRef }}); }} className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Log Offline Payment</h3>
-              <button type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50"><X size={16} /></button>
+              <button type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50 p-1"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-4">
               <div className="space-y-1.5">
@@ -344,8 +344,8 @@ export default function SubscribersPage() {
               </div>
             </div>
             <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
-              <button type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50">Cancel</button>
-              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5">
+              <button type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
+              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
                 {activeAction === "record-payment" && <Loader2 size={13} className="animate-spin" />} Save Payment
               </button>
             </div>
@@ -357,10 +357,10 @@ export default function SubscribersPage() {
       {extendGraceModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setExtendGraceModal({ isOpen: false, days: "7" })} />
-          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "extend-grace", payload: { days: parseInt(extendGraceModal.days) }}); }} className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-xs flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 flex items-center justify-between">
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "extend-grace", payload: { days: parseInt(extendGraceModal.days) }}); }} className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-xs flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Extend Grace Period</h3>
-              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50"><X size={16} /></button>
+              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50 p-1"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-4">
               <div className="space-y-1.5">
@@ -369,8 +369,8 @@ export default function SubscribersPage() {
               </div>
             </div>
             <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
-              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50">Cancel</button>
-              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5">
+              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
+              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
                 {activeAction === "extend-grace" && <Loader2 size={13} className="animate-spin" />} Confirm
               </button>
             </div>
@@ -382,10 +382,10 @@ export default function SubscribersPage() {
       {refundModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setRefundModal({ isOpen: false, paymentId: "", reason: "" })} />
-          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "refund", payload: { payment_record_id: refundModal.paymentId, reason: refundModal.reason }}); }} className="relative bg-white border border-rose-200 shadow-xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-[#e5e5e5] bg-rose-50 flex items-center justify-between">
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "refund", payload: { payment_record_id: refundModal.paymentId, reason: refundModal.reason }}); }} className="relative bg-white border border-rose-200 shadow-2xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-rose-200 bg-rose-50 flex items-center justify-between">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-rose-700">Issue Refund</h3>
-              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="text-rose-400 hover:text-rose-700 disabled:opacity-50"><X size={16} /></button>
+              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="text-rose-400 hover:text-rose-700 disabled:opacity-50 p-1"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-4">
               <p className="text-[12px] text-[#52525b] leading-relaxed">You are about to issue a full refund for this transaction. This action cannot be undone.</p>
@@ -394,9 +394,9 @@ export default function SubscribersPage() {
                 <input type="text" value={refundModal.reason} onChange={e => setRefundModal({ ...refundModal, reason: e.target.value })} disabled={activeAction !== null} placeholder="e.g. Customer requested cancellation" className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
               </div>
             </div>
-            <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
-              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50">Cancel</button>
-              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 disabled:opacity-50 flex items-center gap-1.5">
+            <div className="p-4 border-t border-rose-100 bg-rose-50/50 flex justify-end gap-2">
+              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
+              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
                 {activeAction === "refund" && <Loader2 size={13} className="animate-spin" />} Process Refund
               </button>
             </div>
