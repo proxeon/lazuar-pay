@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints/TemplateEndpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,8 +37,8 @@ public static class TemplateEndpoints
                 req.Subject, 
                 req.Body, 
                 req.Channel,
-                req.Required_variables ?? Array.Empty<string>(), 
-                req.Optional_variables ?? Array.Empty<string>());
+                req.Required_variables ?? new List<string>(), 
+                req.Optional_variables ?? new List<string>());
             
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });

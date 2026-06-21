@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints/PublicEndpoints.cs
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,6 +13,9 @@ using Modules.Community.Application;
 using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
 using Modules.One.Contracts;
+
+// Explicitly alias ASP.NET Core's ProblemDetails to resolve collisions with TypeSpec-generated DTOs.
+using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
 namespace Modules.Community.Infrastructure;
 
