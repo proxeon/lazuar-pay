@@ -6,11 +6,12 @@ import {
   PanelLeftClose, 
   PanelLeftOpen, 
   Building2, 
-  Settings, 
-  Users, 
-  Activity, 
-  Package, 
-  Tag, 
+  Settings,
+  ChevronDown,
+  Users,
+  Activity,
+  Package,
+  Tag,
   Zap,
   Mail
 } from "lucide-react";
@@ -46,28 +47,127 @@ export default function Sidebar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const NavItem = ({ to, icon: Icon, label }: { to: string, icon: any, label: string }) => {
-    const isActive = location.pathname.startsWith(to);
+  const ModuleNav = ({ title, basePath, icon: Icon, links }: { title: string, basePath: string, icon: any, links: { label: string, href: string }[] }) => {
+    const isActiveModule = location.pathname.startsWith(basePath);
+    const [isAccordionOpen, setIsAccordionOpen] = useState(isActiveModule);
+    const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
+    const navRef = useRef<HTMLDivElement>(null);
+
+    // Auto-expand the accordion if the user navigates into this module's routes while expanded
+    useEffect(() => {
+      if (isActiveModule && expanded) {
+        setIsAccordionOpen(true);
+      }
+    }, [isActiveModule, expanded]);
+
+    // Close the flyout menu when clicking anywhere outside of it
+    useEffect(() => {
+      function handleClickOutside(event: MouseEvent) {
+        if (navRef.current && !navRef.current.contains(event.target as Node)) {
+          setIsFlyoutOpen(false);
+        }
+      }
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleToggle = () => {
+      if (expanded) {
+        setIsAccordionOpen(!isAccordionOpen);
+      } else {
+        setIsFlyoutOpen(!isFlyoutOpen);
+      }
+    };
+
     return (
-      <Link 
-        to={to} 
-        onClick={() => isMobile && setIsOpen()} 
-        className={cn(
-          "group flex h-9 w-full items-center text-left focus:outline-none transition-colors relative", 
-          isActive ? "bg-[#f4f4f5] text-[#09090b] font-semibold" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
-        )}
-      >
-        <div className="w-12 h-full shrink-0 flex items-center justify-center">
-          <Icon size={16} />
-        </div>
-        {expanded ? (
-          <span className="text-[13px] truncate pr-4">{label}</span>
-        ) : (
-          <div className="absolute left-full ml-1 px-2 py-1.5 bg-[#09090b] text-white text-[10px] font-bold uppercase tracking-widest rounded-sm opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto z-50 whitespace-nowrap transition-opacity shadow-md">
-            {label}
+      <div className="flex flex-col w-full relative mb-1" ref={navRef}>
+        <button 
+          onClick={handleToggle} 
+          className={cn(
+            "group flex h-9 w-full items-center text-left focus:outline-none transition-colors", 
+            isActiveModule ? "text-[#09090b]" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
+          )}
+        >
+          {/* Strict 48px anchor guarantees the icon never shifts horizontally during transitions */}
+          <div className="w-12 h-full shrink-0 flex items-center justify-center">
+            <Icon size={16} />
           </div>
-        )}
-      </Link>
+          
+          <motion.div 
+            initial={false} 
+            animate={{ opacity: expanded ? 1 : 0 }} 
+            className="flex flex-1 items-center justify-between min-w-0 overflow-hidden pr-4"
+          >
+            <span className="text-[11px] font-bold uppercase tracking-widest whitespace-nowrap truncate">{title}</span>
+            <ChevronDown size={14} className={cn("transition-transform duration-200 shrink-0", isAccordionOpen && "rotate-180")} />
+          </motion.div>
+        </button>
+        
+        {/* Expanded Accordion View */}
+        <AnimatePresence initial={false}>
+          {expanded && isAccordionOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="flex flex-col py-1 space-y-0.5">
+                {links.map((link) => {
+                  const isExactActive = location.pathname.startsWith(link.href);
+                  return (
+                    <Link 
+                      key={link.href} 
+                      to={link.href} 
+                      onClick={() => isMobile && setIsOpen()}
+                      className={cn(
+                        "flex h-8 w-full items-center pl-[48px] pr-4 text-[13px] transition-colors focus:outline-none", 
+                        isExactActive ? "text-[#09090b] font-medium bg-[#f4f4f5]" : "text-[#71717a] hover:text-[#09090b] hover:bg-[#fafafa]"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Collapsed Flyout View (Identical to User Profile behavior) */}
+        <AnimatePresence>
+          {!expanded && isFlyoutOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              transition={{ duration: 0.15 }}
+              className="absolute left-[calc(100%+8px)] top-0 z-[100] min-w-[200px] rounded-none border border-[#e5e5e5] bg-white p-1 shadow-sm"
+            >
+              <div className="px-2 py-1.5 mb-1 border-b border-[#f4f4f5]">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#09090b]">{title}</span>
+              </div>
+              {links.map((link) => {
+                const isExactActive = location.pathname.startsWith(link.href);
+                return (
+                  <Link 
+                    key={link.href} 
+                    to={link.href}
+                    onClick={() => setIsFlyoutOpen(false)}
+                    className={cn(
+                      "flex items-center px-2 py-1.5 text-xs transition-colors focus:outline-none",
+                      isExactActive ? "text-[#09090b] font-medium bg-[#fafafa]" : "text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b]"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     );
   };
 
@@ -111,26 +211,24 @@ export default function Sidebar({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-6">
-        
-        {/* Module Section: Community */}
-        <div>
-          {expanded && (
-            <div className="px-4 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#a1a1aa]">Community</span>
-            </div>
-          )}
-          <nav className="space-y-0.5">
-            <NavItem to="/community/dashboard" icon={Activity} label="Dashboard" />
-            <NavItem to="/community/subscribers" icon={Users} label="Subscribers" />
-            <NavItem to="/community/plans" icon={Package} label="Plans & Products" />
-            <NavItem to="/community/coupons" icon={Tag} label="Promotions" />
-            <NavItem to="/community/automations" icon={Zap} label="Automations" />
-            <NavItem to="/community/settings/payment" icon={Settings} label="Payment Settings" />
-            <NavItem to="/community/settings/templates" icon={Mail} label="Message Templates" />
-          </nav>
-        </div>
-
+      {/* Removed overflow-y-auto to allow flyouts to escape the container boundaries */}
+      <div className="flex-1 py-4 flex flex-col gap-6">
+        <nav className="space-y-0.5">
+          <ModuleNav 
+            title="Community" 
+            basePath="/community" 
+            icon={Users}
+            links={[
+              { label: "Dashboard", href: "/community/dashboard" },
+              { label: "Subscribers", href: "/community/subscribers" },
+              { label: "Plans & Products", href: "/community/plans" },
+              { label: "Promotions", href: "/community/coupons" },
+              { label: "Automations", href: "/community/automations" },
+              { label: "Payment Settings", href: "/community/settings/payment" },
+              { label: "Message Templates", href: "/community/settings/templates" }
+            ]} 
+          />
+        </nav>
       </div>
 
       <div className="shrink-0 relative border-t border-[#e5e5e5]">
@@ -149,7 +247,6 @@ export default function Sidebar({
             {isUserMenuOpen && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className={cn("absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1", expanded ? "bottom-[calc(100%+8px)] left-2 w-[calc(100%-16px)] min-w-[200px]" : "bottom-1 left-[calc(100%+8px)] min-w-[200px]")}>
                 
-                {/* Clean global settings menu stripped of module-specific features */}
                 <a 
                   href="http://localhost:3001/profile" 
                   target="_blank" 
