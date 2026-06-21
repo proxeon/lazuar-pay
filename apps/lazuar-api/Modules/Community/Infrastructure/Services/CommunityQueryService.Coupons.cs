@@ -16,7 +16,7 @@ public partial class CommunityQueryService
     private record RawCouponDto(
         Guid Id, string Code, string DiscountType, decimal Amount,
         int MaxUses, int UsedCount, int ReservedCount, decimal MinimumOriginalPrice, DateTime? ExpiresAt,
-        string? ApplicablePlanIds);
+        string? ApplicablePlanIds, bool IsActive);
 
     public async Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId)
     {
@@ -24,7 +24,7 @@ public partial class CommunityQueryService
         if (connection.State != ConnectionState.Open) connection.Open();
 
         const string sql = @"
-            SELECT ""Id"", ""Code"", ""DiscountType"", ""Amount"", ""MaxUses"", ""UsedCount"", ""ReservedCount"", ""MinimumOriginalPrice"", ""ExpiresAt"", ""ApplicablePlanIds""::text
+            SELECT ""Id"", ""Code"", ""DiscountType"", ""Amount"", ""MaxUses"", ""UsedCount"", ""ReservedCount"", ""MinimumOriginalPrice"", ""ExpiresAt"", ""ApplicablePlanIds""::text, ""IsActive""
             FROM community.""Coupons""
             WHERE ""OrganizationId"" = @OrgId
             ORDER BY ""CreatedAt"" DESC";
@@ -43,13 +43,13 @@ public partial class CommunityQueryService
 
             if (!string.IsNullOrWhiteSpace(c.ApplicablePlanIds))
             {
+                // Safely catch ANY parsing exception, completely preventing HTTP 500 crashes
                 try
                 {
                     planIds = JsonSerializer.Deserialize<List<string>>(c.ApplicablePlanIds, jsonOptions) ?? new List<string>();
                 }
-                catch (JsonException)
+                catch (Exception)
                 {
-                    // Fallback to global (empty list) if legacy DB rows contain invalid JSON arrays like "{}"
                     planIds = new List<string>();
                 }
             }
@@ -65,7 +65,8 @@ public partial class CommunityQueryService
                 Reserved_count = c.ReservedCount,
                 Minimum_original_price = (double)c.MinimumOriginalPrice,
                 Expires_at = c.ExpiresAt.HasValue ? new DateTimeOffset(c.ExpiresAt.Value) : null,
-                Applicable_plan_ids = planIds
+                Applicable_plan_ids = planIds,
+                Is_active = c.IsActive
             };
         }).ToList();
     }

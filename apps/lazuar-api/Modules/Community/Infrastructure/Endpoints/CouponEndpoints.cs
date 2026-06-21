@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints/CouponEndpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +38,8 @@ public static class CouponEndpoints
                 (decimal)req.Amount,
                 req.Max_uses,
                 req.Expires_at?.UtcDateTime,
-                req.Minimum_original_price.HasValue ? (decimal)req.Minimum_original_price.Value : 0);
+                req.Minimum_original_price.HasValue ? (decimal)req.Minimum_original_price.Value : 0,
+                req.Applicable_plan_ids?.Select(Guid.Parse).ToList());
             
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
@@ -54,9 +54,14 @@ public static class CouponEndpoints
             var command = new UpdateCouponCommand(
                 ctx.TenantId,
                 id,
+                req.Code,
+                req.Discount_type,
+                req.Amount.HasValue ? (decimal)req.Amount.Value : null,
                 req.Max_uses ?? 0,
                 req.Minimum_original_price.HasValue ? (decimal)req.Minimum_original_price.Value : 0m,
-                req.Expires_at?.UtcDateTime);
+                req.Expires_at?.UtcDateTime,
+                req.Is_active,
+                req.Applicable_plan_ids?.Select(Guid.Parse).ToList());
             
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "updated" });

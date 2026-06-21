@@ -555,6 +555,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("applicable_plan_ids")]
         public System.Collections.Generic.List<string>? Applicable_plan_ids { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool Is_active { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -1413,6 +1416,15 @@ namespace Lazuar.ApiTypes
     public partial class UpdateCouponRequestDto
     {
 
+        [System.Text.Json.Serialization.JsonPropertyName("code")]
+        public string? Code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("discount_type")]
+        public string? Discount_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double? Amount { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("max_uses")]
         public int? Max_uses { get; set; } = default!;
 
@@ -1424,6 +1436,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("applicable_plan_ids")]
         public System.Collections.Generic.List<string>? Applicable_plan_ids { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool? Is_active { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

@@ -1498,6 +1498,7 @@ export interface components {
             /** Format: date-time */
             expires_at?: string;
             applicable_plan_ids?: string[];
+            is_active: boolean;
         };
         "Community.CreateBroadcastRequestDto": {
             subject: string;
@@ -1725,6 +1726,10 @@ export interface components {
             sent_to: string;
         };
         "Community.UpdateCouponRequestDto": {
+            code?: string;
+            discount_type?: string;
+            /** Format: double */
+            amount?: number;
             /** Format: int32 */
             max_uses?: number;
             /** Format: double */
@@ -1732,6 +1737,7 @@ export interface components {
             /** Format: date-time */
             expires_at?: string;
             applicable_plan_ids?: string[];
+            is_active?: boolean;
         };
         "Community.UpdatePlanRequestDto": {
             slug?: string;

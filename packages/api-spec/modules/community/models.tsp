@@ -339,6 +339,7 @@ model CouponDto {
   minimum_original_price: float64;
   expires_at?: utcDateTime;
   applicable_plan_ids?: string[]; // GUID array
+  is_active: boolean;
 }
 
 model CreateCouponRequestDto {
@@ -352,10 +353,14 @@ model CreateCouponRequestDto {
 }
 
 model UpdateCouponRequestDto {
+  code?: string;
+  discount_type?: string;
+  amount?: float64;
   max_uses?: int32;
   minimum_original_price?: float64;
   expires_at?: utcDateTime;
   applicable_plan_ids?: string[]; // GUID array
+  is_active?: boolean;
 }
 
 model TemplateVariableDto {
