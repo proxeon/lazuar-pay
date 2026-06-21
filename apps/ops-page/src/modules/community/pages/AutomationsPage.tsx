@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/community/pages/AutomationsPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Zap, Megaphone, Check } from "lucide-react";
@@ -15,6 +14,13 @@ export default function AutomationsPage() {
   const [body, setBody] = useState("");
   const [channel, setChannel] = useState("EMAIL");
   const [targetPlanId, setTargetPlanId] = useState("");
+
+  const [isCreateScheduleModalOpen, setIsCreateScheduleModalOpen] = useState(false);
+  const [schedulePlanId, setSchedulePlanId] = useState("");
+  const [scheduleTemplateId, setScheduleTemplateId] = useState("");
+  const [scheduleChannel, setScheduleChannel] = useState("EMAIL");
+  const [scheduleDays, setScheduleDays] = useState(0);
+  const [scheduleTime, setScheduleTime] = useState("08:00");
 
   const { data: schedules, isLoading: isSchedulesLoading } = useQuery({
     queryKey: ["community-reminder-schedules"],
@@ -33,6 +39,14 @@ export default function AutomationsPage() {
     }
   });
 
+  const { data: templates } = useQuery({
+    queryKey: ["community-templates"],
+    queryFn: async () => {
+      const { data } = await client.GET("/admin/community/templates");
+      return data || [];
+    }
+  });
+
   const toggleMutation = useMutation({
     mutationFn: async ({ id, is_enabled }: { id: string, is_enabled: boolean }) => {
       const { error } = await client.PUT("/admin/community/reminder-schedules/{id}", {
@@ -45,6 +59,35 @@ export default function AutomationsPage() {
       queryClient.invalidateQueries({ queryKey: ["community-reminder-schedules"] });
     },
     onError: (err: any) => toast.error(err.message)
+  });
+
+  const createScheduleMutation = useMutation({
+    mutationFn: async () => {
+      if (!scheduleTemplateId) throw new Error("A message template is required.");
+
+      const { error } = await client.POST("/admin/community/reminder-schedules", {
+        body: {
+          plan_id: schedulePlanId || undefined,
+          template_id: scheduleTemplateId,
+          channel: scheduleChannel,
+          days_relative_to_due: Number(scheduleDays),
+          time_of_day: scheduleTime,
+          is_enabled: true
+        }
+      });
+      if (error) throw new Error(error.detail);
+    },
+    onSuccess: () => {
+      toast.success("Reminder schedule created successfully.");
+      queryClient.invalidateQueries({ queryKey: ["community-reminder-schedules"] });
+      setIsCreateScheduleModalOpen(false);
+      setSchedulePlanId("");
+      setScheduleTemplateId("");
+      setScheduleChannel("EMAIL");
+      setScheduleDays(0);
+      setScheduleTime("08:00");
+    },
+    onError: (err: any) => toast.error("Failed to create schedule", { description: err.message })
   });
 
   const broadcastMutation = useMutation({
