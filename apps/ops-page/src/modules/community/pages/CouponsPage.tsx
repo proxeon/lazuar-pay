@@ -9,7 +9,6 @@ export default function CouponsPage() {
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Form State
   const [code, setCode] = useState("");
   const [discountType, setDiscountType] = useState("PERCENTAGE");
   const [amount, setAmount] = useState(0);
@@ -64,16 +63,16 @@ export default function CouponsPage() {
         </button>
       }
     >
-      <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
-        <div className="overflow-x-auto min-h-[400px]">
-          <table className="w-full text-left text-[13px]">
+      <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full overflow-hidden">
+        <div className="w-full overflow-x-auto min-h-[400px]">
+          <table className="w-full text-left text-[13px] min-w-[700px]">
             <thead className="bg-[#fafafa] border-b border-[#e5e5e5]">
               <tr>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Promo Code</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Discount</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Usage Limit</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Redeemed</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Expiration</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Promo Code</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Discount</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Usage Limit</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Redeemed</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Expiration</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
@@ -84,22 +83,22 @@ export default function CouponsPage() {
               ) : (
                 coupons?.map((coupon) => (
                   <tr key={coupon.id} className="hover:bg-[#fafafa]/50 transition-colors">
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Tag size={13} className="text-[#a1a1aa]" />
                         <span className="font-mono font-bold text-[#09090b] bg-zinc-100 px-2 py-0.5 border border-zinc-200">{coupon.code}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-[#52525b]">
+                    <td className="px-5 py-3.5 font-mono text-[#52525b] whitespace-nowrap">
                       {coupon.discount_type === "PERCENTAGE" ? `${coupon.amount}%` : `RM ${coupon.amount.toFixed(2)}`}
                     </td>
-                    <td className="px-5 py-3.5 text-[#52525b]">
+                    <td className="px-5 py-3.5 text-[#52525b] whitespace-nowrap">
                       {coupon.max_uses > 0 ? coupon.max_uses : "Unlimited"}
                     </td>
-                    <td className="px-5 py-3.5 text-[#52525b]">
+                    <td className="px-5 py-3.5 text-[#52525b] whitespace-nowrap">
                       <span className="font-bold text-[#09090b]">{coupon.used_count}</span> <span className="text-[10px]">({coupon.reserved_count} pending)</span>
                     </td>
-                    <td className="px-5 py-3.5 text-[#52525b] text-[11px] font-mono">
+                    <td className="px-5 py-3.5 text-[#52525b] text-[11px] font-mono whitespace-nowrap">
                       {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString('en-GB') : "Never"}
                     </td>
                   </tr>
@@ -112,48 +111,50 @@ export default function CouponsPage() {
 
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setIsCreateModalOpen(false)} />
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Promo Code</h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1"><X size={16} /></button>
+              <button onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50">
+                <X size={16} />
+              </button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="flex flex-col">
               <div className="p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code *</label>
-                  <input required value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="e.g. SUMMER20" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 font-mono text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
+                  <input required value={code} onChange={e => setCode(e.target.value.toUpperCase())} disabled={createMutation.isPending} placeholder="e.g. SUMMER20" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 font-mono text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Type</label>
-                    <select value={discountType} onChange={e => setDiscountType(e.target.value)} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]">
+                    <select value={discountType} onChange={e => setDiscountType(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
                       <option value="PERCENTAGE">Percentage (%)</option>
                       <option value="FIXED">Fixed Amount (RM)</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Amount *</label>
-                    <input type="number" step="0.01" required value={amount} onChange={e => setAmount(Number(e.target.value))} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
+                    <input type="number" step="0.01" required value={amount} onChange={e => setAmount(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Max Uses (0 = ∞)</label>
-                    <input type="number" value={maxUses} onChange={e => setMaxUses(Number(e.target.value))} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
+                    <input type="number" value={maxUses} onChange={e => setMaxUses(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Min. Plan Price</label>
-                    <input type="number" step="0.01" value={minPrice} onChange={e => setMinPrice(Number(e.target.value))} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
+                    <input type="number" step="0.01" value={minPrice} onChange={e => setMinPrice(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Expires At (Optional)</label>
-                  <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
+                  <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
                 </div>
               </div>
               <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
-                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors">
+                <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">
                   Cancel
                 </button>
                 <button type="submit" disabled={createMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">

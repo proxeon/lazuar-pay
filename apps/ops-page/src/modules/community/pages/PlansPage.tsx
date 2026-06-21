@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Link as LinkIcon, Plus, X } from "lucide-react";
+import { Loader2, Link as LinkIcon, Plus, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { client, type EntitlementDto } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
@@ -19,6 +19,17 @@ export default function PlansPage() {
       if (error) throw new Error(error.detail);
       return data;
     }
+  });
+
+  const { data: paymentConfig, isLoading: isConfigLoading } = useQuery({
+    queryKey: ["payment-config"],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/community/payment-config");
+      // Allow 404s to pass through as null (not configured yet)
+      if (error && error.status !== 404) throw new Error(error.detail);
+      return data || null;
+    },
+    retry: false
   });
 
   const { data: entitlements } = useQuery({
@@ -54,6 +65,8 @@ export default function PlansPage() {
     toast.success("Checkout link copied to clipboard.");
   };
 
+  const isGatewayActive = paymentConfig?.is_active ?? false;
+
   return (
     <PageLayout 
       title="Plans & Products" 
@@ -68,6 +81,18 @@ export default function PlansPage() {
         </button>
       }
     >
+      {!isConfigLoading && !isGatewayActive && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
+          <AlertTriangle className="text-amber-600 mt-0.5 shrink-0" size={16} />
+          <div>
+            <h4 className="text-[12px] font-bold text-amber-800 uppercase tracking-widest">Gateway Not Configured</h4>
+            <p className="text-[13px] text-amber-700 mt-1 leading-relaxed">
+              Your payment gateway is currently disabled or missing API keys. Users will not be able to complete public checkouts until you configure it in Settings.
+            </p>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
       ) : (
@@ -111,11 +136,17 @@ export default function PlansPage() {
 
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setIsCreateModalOpen(false)} />
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-lg flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create New Plan</h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1"><X size={16} /></button>
+              <button 
+                onClick={() => setIsCreateModalOpen(false)} 
+                disabled={createMutation.isPending}
+                className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"
+              >
+                <X size={16} />
+              </button>
             </div>
             <div className="overflow-y-auto flex-1">
               <CreatePlanForm 
@@ -123,6 +154,11 @@ export default function PlansPage() {
                 onCancel={() => setIsCreateModalOpen(false)} 
               />
             </div>
+            {createMutation.isPending && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+                <Loader2 className="animate-spin text-[#09090b] h-8 w-8" />
+              </div>
+            )}
           </div>
         </div>
       )}

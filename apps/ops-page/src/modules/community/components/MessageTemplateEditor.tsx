@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { ArrowLeft, Loader2, Save, RotateCcw } from "lucide-react";
-import { cn } from "../lib/utils";
-import type { components } from "../lib/api-client";
+import { cn } from "../../../lib/utils";
+import type { components } from "../../../lib/api-client";
 
 type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"];
 
@@ -111,8 +111,6 @@ export default function MessageTemplateEditor({ template, onSave, onReset, onCan
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0">
-        
-        {/* Editor Pane */}
         <div className="flex flex-col border-r border-[#e5e5e5] overflow-y-auto p-6 bg-white">
           <div className="mb-6 space-y-2">
             <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Variable Dictionary</label>
@@ -156,7 +154,6 @@ export default function MessageTemplateEditor({ template, onSave, onReset, onCan
           </div>
         </div>
 
-        {/* Live Preview Pane */}
         <div className="bg-[#f4f4f5] overflow-y-auto flex flex-col">
           <div className="px-4 py-2 border-b border-[#e5e5e5] bg-[#e4e4e7] flex items-center justify-between sticky top-0 z-10">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#71717a]">Live Preview</span>
@@ -175,7 +172,6 @@ export default function MessageTemplateEditor({ template, onSave, onReset, onCan
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
