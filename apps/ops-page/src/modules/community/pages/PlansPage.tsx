@@ -12,13 +12,14 @@ export default function PlansPage() {
   const queryClient = useQueryClient();
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<any | null>(null);
+  const [planToDelete, setPlanToDelete] = useState<any | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // Robust global click-outside listener that prevents React-to-Native event conflicts
+  // Global click-outside listener to manage dropdown closure without event collisions
   useEffect(() => {
     const closeMenu = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      // If clicking a trigger button or its nested SVG/path, bypass the generic document closure
       if (target.closest("[data-menu-trigger]")) {
         return;
       }
@@ -71,6 +72,41 @@ export default function PlansPage() {
     onError: (err: any) => toast.error("Failed to create plan", { description: err.message })
   });
 
+  const editMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const { id, ...body } = payload;
+      // PUT request to update plan fields
+      const { error } = await client.PUT("/admin/community/plans/{id}" as any, {
+        params: { path: { id } },
+        body
+      });
+      if (error) throw new Error(error.detail);
+    },
+    onSuccess: () => {
+      toast.success("Plan configuration saved successfully");
+      queryClient.invalidateQueries({ queryKey: ["community-plans"] });
+      setEditingPlan(null);
+    },
+    onError: (err: any) => toast.error("Failed to update plan", { description: err.message })
+  });
+
+  const softDeleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Soft deletion/archiving deactivates the target plan
+      const { error } = await client.PUT("/admin/community/plans/{id}" as any, {
+        params: { path: { id } },
+        body: { is_active: false }
+      });
+      if (error) throw new Error(error.detail);
+    },
+    onSuccess: () => {
+      toast.success("Plan soft-deleted and archived");
+      queryClient.invalidateQueries({ queryKey: ["community-plans"] });
+      setPlanToDelete(null);
+    },
+    onError: (err: any) => toast.error("Failed to archive plan", { description: err.message })
+  });
+
   const copyCheckoutLink = (planSlug: string) => {
     if (!activeWorkspaceSlug) {
       toast.error("Could not resolve workspace slug.");
@@ -79,13 +115,6 @@ export default function PlansPage() {
     const publicUrl = `http://localhost:3021/${activeWorkspaceSlug}/${planSlug}/checkout`;
     navigator.clipboard.writeText(publicUrl);
     toast.success("Checkout link copied to clipboard.");
-  };
-
-  const handleSoftDelete = (plan: any) => {
-    if (window.confirm(`Are you sure you want to archive / soft delete "${plan.name}"?`)) {
-      toast.info(`Archived "${plan.name}" (UI Simulator)`);
-      queryClient.invalidateQueries({ queryKey: ["community-plans"] });
-    }
   };
 
   const isGatewayActive = paymentConfig?.is_active ?? false;
@@ -122,7 +151,6 @@ export default function PlansPage() {
         <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
       ) : (
         <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
-          {/* min-h-[320px] ensures vertical space for absolute dropdowns without container clipping */}
           <div className="w-full overflow-x-auto min-h-[320px]">
             <table className="w-full text-left text-[13px] min-w-[750px]">
               <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
@@ -197,7 +225,7 @@ export default function PlansPage() {
                         </span>
                       </td>
 
-                      {/* Ellipsis Actions Dropdown Trigger (Flat design - shadow removed) */}
+                      {/* Actions Trigger Dropdown */}
                       <td className="px-5 py-3.5 text-right relative">
                         <button 
                           data-menu-trigger={plan.id}
@@ -209,7 +237,7 @@ export default function PlansPage() {
                         {openMenuId === plan.id && (
                           <div className="absolute right-5 top-full mt-1 w-44 bg-white border border-[#e5e5e5] rounded-none py-1 z-50 text-left animate-in fade-in slide-in-from-top-1 duration-150">
                             <button 
-                              onClick={() => toast.info(`Prefilling Edit Form for ${plan.name} (Simulator)`)}
+                              onClick={() => setEditingPlan(plan)}
                               className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center gap-2"
                             >
                               <Edit2 size={12} className="text-[#71717a]" /> Edit Plan
@@ -222,7 +250,7 @@ export default function PlansPage() {
                             </button>
                             <div className="h-px w-full bg-[#f4f4f5] my-1" />
                             <button 
-                              onClick={() => handleSoftDelete(plan)}
+                              onClick={() => setPlanToDelete(plan)}
                               className="w-full text-left px-3 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2"
                             >
                               <Trash2 size={12} className="text-rose-500" /> Soft Delete
@@ -239,7 +267,7 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* Create Plan Modal Overlay Container */}
+      {/* 1. CREATE PLAN MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
@@ -265,6 +293,73 @@ export default function PlansPage() {
                 <Loader2 className="animate-spin text-[#09090b] h-8 w-8" />
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 2. EDIT PLAN MODAL */}
+      {editingPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !editMutation.isPending && setEditingPlan(null)} />
+          <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-lg flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
+              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Edit Plan: {editingPlan.name}</h3>
+              <button 
+                onClick={() => setEditingPlan(null)} 
+                disabled={editMutation.isPending}
+                className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <CreatePlanForm 
+                prefillData={editingPlan}
+                onSubmit={(data) => editMutation.mutate({ id: editingPlan.id, ...data })} 
+                onCancel={() => setEditingPlan(null)} 
+              />
+            </div>
+            {editMutation.isPending && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+                <Loader2 className="animate-spin text-[#09090b] h-8 w-8" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. CUSTOM SOFT DELETE CONFIRMATION MODAL */}
+      {planToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !softDeleteMutation.isPending && setPlanToDelete(null)} />
+          <div className="relative bg-white border border-rose-200 w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 flex flex-col items-center text-center">
+              <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center mb-4">
+                <AlertTriangle className="text-rose-600" size={20} />
+              </div>
+              <h3 className="text-[14px] font-bold uppercase tracking-widest text-[#09090b] mb-2">Soft Delete Plan?</h3>
+              <p className="text-[13px] text-[#71717a] leading-relaxed max-w-xs">
+                You are archiving <strong>{planToDelete.name}</strong>. Active subscribers will not lose access, but no new members will be allowed to check out or enroll.
+              </p>
+            </div>
+            <div className="px-5 py-3.5 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2">
+              <button 
+                type="button" 
+                onClick={() => setPlanToDelete(null)} 
+                disabled={softDeleteMutation.isPending}
+                className="h-8 px-4 border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={() => softDeleteMutation.mutate(planToDelete.id)}
+                disabled={softDeleteMutation.isPending}
+                className="h-8 px-5 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {softDeleteMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Confirm Archive
+              </button>
+            </div>
           </div>
         </div>
       )}
