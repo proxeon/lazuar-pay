@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/CreatePlanCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Domain.Aggregates;
 using Modules.Community.Domain.ValueObjects;
@@ -20,14 +19,14 @@ public record CreatePlanCommand(
     int DisplayOrder,
     List<string> Features,
     string Methodology,
-    List<FaqItemDto> Faq,
+    List<FaqItemInput> Faq,
     string? TelegramInviteLink,
     string? WeeklyMeetingLink) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
 
-public record FaqItemDto(string Id, string Question, string Answer);
+public record FaqItemInput(string Id, string Question, string Answer);
 
 public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
 {

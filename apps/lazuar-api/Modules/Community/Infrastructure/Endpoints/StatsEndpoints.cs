@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application.Queries;
 
-namespace Modules.Community.Infrastructure.Endpoints;
+namespace Modules.Community.Infrastructure;
 
 public static class StatsEndpoints
 {

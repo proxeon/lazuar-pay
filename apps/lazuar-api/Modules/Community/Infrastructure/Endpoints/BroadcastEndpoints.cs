@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application.Commands.Agent;
 
-namespace Modules.Community.Infrastructure.Endpoints;
+namespace Modules.Community.Infrastructure;
 
 public static class BroadcastEndpoints
 {

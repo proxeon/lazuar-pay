@@ -1,7 +1,7 @@
 // apps/lazuar-api/Modules/Community/Infrastructure/Endpoints.cs
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Modules.Community.Infrastructure.Endpoints;
+// using Modules.Community.Infrastructure.Endpoints;
 
 namespace Modules.Community.Infrastructure;
 

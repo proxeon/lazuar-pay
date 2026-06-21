@@ -39,10 +39,12 @@ export default function TemplatesPage() {
     enabled: isWikiOpen
   });
 
-  const templates = rawTemplates?.filter(t => t.channel === "EMAIL") || [];
+  // Fixed Issue 1: Include templates where channel is 'ALL' to display default lifecycle emails
+  const templates = rawTemplates?.filter(t => t.channel === "EMAIL" || t.channel === "ALL") || [];
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Fixed Issue 2: Removed "as any" hack now that the POST endpoint is natively typed in TypeSpec
       const { error } = await client.POST("/admin/community/templates", {
         body: {
           name: newName,
@@ -51,7 +53,7 @@ export default function TemplatesPage() {
           channel: "EMAIL",
           required_variables: ["{{customer_name}}"],
           optional_variables: ["{{plan_name}}", "{{renewal_link}}"]
-        } as any // Cast required due to TypeSpec missing post endpoint in original definition, though REST supports it in DTO.
+        }
       });
       if (error) throw new Error(error.detail);
     },

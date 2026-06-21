@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints/PlanEndpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
 
-namespace Modules.Community.Infrastructure.Endpoints;
+namespace Modules.Community.Infrastructure;
 
 public static class PlanEndpoints
 {
@@ -45,7 +44,7 @@ public static class PlanEndpoints
                 ctx.TenantId, req.Slug, req.Name, req.Audience, req.Short_description,
                 req.Long_description, (decimal)req.Price, req.Interval, req.Grace_period_days,
                 req.Max_capacity, req.Display_order, req.Features?.ToList() ?? new List<string>(), req.Methodology,
-                req.Faq?.Select(f => new FaqItemDto(f.Id, f.Question, f.Answer)).ToList() ?? new List<FaqItemDto>(),
+                req.Faq?.Select(f => new FaqItemInput(f.Id, f.Question, f.Answer)).ToList() ?? new List<FaqItemInput>(),
                 req.Telegram_invite_link, req.Weekly_meeting_link);
             
             var id = await mediator.Send(command);
@@ -61,7 +60,7 @@ public static class PlanEndpoints
             var command = new UpdatePlanCommand(
                 ctx.TenantId, id, req.Slug, req.Name, req.Audience, req.Short_description,
                 req.Long_description, req.Price.HasValue ? (decimal)req.Price.Value : null, req.Interval, req.Features?.ToList(), req.Methodology,
-                req.Faq?.Select(f => new FaqItemDto(f.Id, f.Question, f.Answer)).ToList(),
+                req.Faq?.Select(f => new FaqItemInput(f.Id, f.Question, f.Answer)).ToList(),
                 req.Is_active, req.Display_order, req.Max_capacity, req.Grace_period_days,
                 req.Telegram_invite_link, req.Weekly_meeting_link);
             

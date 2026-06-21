@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/UpdatePlanCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Domain.ValueObjects;
 
@@ -17,7 +16,7 @@ public record UpdatePlanCommand(
     string? Interval,
     List<string>? Features,
     string? Methodology,
-    List<FaqItemDto>? Faq,
+    List<FaqItemInput>? Faq,
     bool? IsActive,
     int? DisplayOrder,
     int? MaxCapacity,

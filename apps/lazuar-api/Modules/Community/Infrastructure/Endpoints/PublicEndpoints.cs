@@ -15,7 +15,7 @@ using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
 using Modules.One.Contracts;
 
-namespace Modules.Community.Infrastructure.Endpoints;
+namespace Modules.Community.Infrastructure;
 
 public static class PublicEndpoints
 {

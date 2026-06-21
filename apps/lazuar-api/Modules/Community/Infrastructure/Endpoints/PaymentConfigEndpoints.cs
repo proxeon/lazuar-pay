@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Routing;
 using Modules.Payments.Application.Commands;
 using Modules.Payments.Application.Queries;
 
-namespace Modules.Community.Infrastructure.Endpoints;
+namespace Modules.Community.Infrastructure;
 
 public static class PaymentConfigEndpoints
 {
