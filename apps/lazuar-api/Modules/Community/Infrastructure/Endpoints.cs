@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -401,7 +402,7 @@ public static class Endpoints
             var command = new CreateCouponCommand(
                 ctx.TenantId,
                 req.Code,
-                req.Discount_type,
+                Enum.Parse<DiscountType>(req.Discount_type, ignoreCase: true),
                 (decimal)req.Amount,
                 req.Max_uses,
                 req.Expires_at?.UtcDateTime,
