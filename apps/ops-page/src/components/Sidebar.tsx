@@ -8,12 +8,7 @@ import {
   Building2, 
   Settings,
   ChevronDown,
-  Users,
-  Activity,
-  Package,
-  Tag,
-  Zap,
-  Mail
+  Users
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser, EntitlementDto } from "../lib/api-client";
@@ -53,14 +48,12 @@ export default function Sidebar({
     const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
     const navRef = useRef<HTMLDivElement>(null);
 
-    // Auto-expand the accordion if the user navigates into this module's routes while expanded
     useEffect(() => {
       if (isActiveModule && expanded) {
         setIsAccordionOpen(true);
       }
     }, [isActiveModule, expanded]);
 
-    // Close the flyout menu when clicking anywhere outside of it
     useEffect(() => {
       function handleClickOutside(event: MouseEvent) {
         if (navRef.current && !navRef.current.contains(event.target as Node)) {
@@ -88,7 +81,6 @@ export default function Sidebar({
             isActiveModule ? "text-[#09090b]" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]"
           )}
         >
-          {/* Strict 48px anchor guarantees the icon never shifts horizontally during transitions */}
           <div className="w-12 h-full shrink-0 flex items-center justify-center">
             <Icon size={16} />
           </div>
@@ -135,7 +127,7 @@ export default function Sidebar({
           )}
         </AnimatePresence>
 
-        {/* Collapsed Flyout View (Identical to User Profile behavior) */}
+        {/* Collapsed Flyout View */}
         <AnimatePresence>
           {!expanded && isFlyoutOpen && (
             <motion.div
@@ -211,7 +203,6 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Removed overflow-y-auto to allow flyouts to escape the container boundaries */}
       <div className="flex-1 py-4 flex flex-col gap-6">
         <nav className="space-y-0.5">
           <ModuleNav 
@@ -224,8 +215,8 @@ export default function Sidebar({
               { label: "Plans & Products", href: "/community/plans" },
               { label: "Promotions", href: "/community/coupons" },
               { label: "Automations", href: "/community/automations" },
-              { label: "Payment Settings", href: "/community/settings/payment" },
-              { label: "Message Templates", href: "/community/settings/templates" }
+              { label: "Payment Settings", href: "/community/payment" },
+              { label: "Message Templates", href: "/community/templates" }
             ]} 
           />
         </nav>
@@ -246,7 +237,6 @@ export default function Sidebar({
           <AnimatePresence>
             {isUserMenuOpen && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className={cn("absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1", expanded ? "bottom-[calc(100%+8px)] left-2 w-[calc(100%-16px)] min-w-[200px]" : "bottom-1 left-[calc(100%+8px)] min-w-[200px]")}>
-                
                 <a 
                   href="http://localhost:3001/profile" 
                   target="_blank" 

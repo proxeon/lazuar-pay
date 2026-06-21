@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit2, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
-import SettingsLayout from "./SettingsLayout";
+import PageLayout from "../../core/components/PageLayout";
 import MessageTemplateEditor from "../components/MessageTemplateEditor";
 
 type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"];
@@ -52,7 +52,6 @@ export default function TemplatesPage() {
     onError: (err: any) => toast.error(err.message)
   });
 
-  // If a template is selected, render the editor full-screen (bypassing the SettingsLayout constraint)
   if (selectedTemplate) {
     return (
       <div className="fixed inset-0 z-50 bg-white flex flex-col animate-in fade-in zoom-in-95 duration-200">
@@ -69,7 +68,11 @@ export default function TemplatesPage() {
   }
 
   return (
-    <SettingsLayout>
+    <PageLayout
+      title="System Message Templates"
+      description="Customize notification templates, modify variable definitions, and adjust delivery channels for automated communications."
+      breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Message Templates" }]}
+    >
       <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
         <div className="px-5 py-4 border-b border-[#f4f4f5] bg-[#fafafa]/50 flex items-center gap-2">
           <Mail size={15} className="text-[#a1a1aa]" />
@@ -103,6 +106,6 @@ export default function TemplatesPage() {
           )}
         </div>
       </div>
-    </SettingsLayout>
+    </PageLayout>
   );
 }

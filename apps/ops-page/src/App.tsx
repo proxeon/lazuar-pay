@@ -159,9 +159,9 @@ export default function App() {
         <Route path="/community/coupons" element={<CouponsPage />} />
         <Route path="/community/automations" element={<AutomationsPage />} />
         
-        {/* Settings split by domain */}
-        <Route path="/community/settings/payment" element={<PaymentSettingsPage />} />
-        <Route path="/community/settings/templates" element={<TemplatesPage />} />
+        {/* Flat Settings Routes */}
+        <Route path="/community/payment" element={<PaymentSettingsPage />} />
+        <Route path="/community/templates" element={<TemplatesPage />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/community/dashboard" replace />} />

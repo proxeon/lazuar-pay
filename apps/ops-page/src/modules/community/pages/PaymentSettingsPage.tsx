@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
-import SettingsLayout from "./SettingsLayout";
+import PageLayout from "../../core/components/PageLayout";
 
 export default function PaymentSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +92,11 @@ export default function PaymentSettingsPage() {
   };
 
   return (
-    <SettingsLayout>
+    <PageLayout
+      title="Payment Gateway Settings"
+      description="Configure payment processing routing, secure merchant API credentials, and accounting fee overrides."
+      breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Payment Gateway" }]}
+    >
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col">
         {isLoading ? (
           <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
@@ -201,6 +205,6 @@ export default function PaymentSettingsPage() {
           </form>
         )}
       </div>
-    </SettingsLayout>
+    </PageLayout>
   );
 }
