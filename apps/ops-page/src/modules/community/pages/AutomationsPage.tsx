@@ -1,3 +1,4 @@
+// apps/ops-page/src/modules/community/pages/AutomationsPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Zap, Megaphone, Check } from "lucide-react";
@@ -48,23 +49,13 @@ export default function AutomationsPage() {
 
   const broadcastMutation = useMutation({
     mutationFn: async () => {
-      // NOTE: Because SendBroadcastCommand uses AgentTool, it executes via the universal action executor 
-      // instead of a dedicated endpoint to keep the API surface area small.
-      const payload = {
-        Subject: subject,
-        Body: body,
-        Channel: channel,
-        TargetPlanId: targetPlanId || undefined
-      };
-      
-      const { error } = await client.POST("/ops/execute-action", {
+      const { error } = await client.POST("/admin/community/broadcasts", {
         body: {
-          idempotency_key: crypto.randomUUID(),
-          tool_name: "SendBroadcastCommand",
-          intent_title: "Dispatch Broadcast",
-          severity: "high",
-          human_readable_summary: "Manual UI dispatch",
-          command_payload: payload
+          subject,
+          body,
+          channel,
+          target_plan_id: targetPlanId || undefined,
+          target_status: "ACTIVE"
         }
       });
       if (error) throw new Error(error.detail);
@@ -105,8 +96,8 @@ export default function AutomationsPage() {
               <thead className="bg-[#fafafa]/50 border-b border-[#f4f4f5]">
                 <tr>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Timing Rule</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Template</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Channel</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Template Content</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Target Plan</th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Status</th>
                 </tr>
               </thead>
@@ -128,9 +119,9 @@ export default function AutomationsPage() {
                       </td>
                       <td className="px-5 py-3.5">
                         <p className="text-[12px] font-medium text-[#09090b]">{schedule.template_name}</p>
-                        <p className="text-[10px] text-[#71717a] uppercase">{schedule.plan_name || "All Plans"}</p>
+                        <p className="text-[10px] text-[#71717a] uppercase">{schedule.channel}</p>
                       </td>
-                      <td className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[#52525b]">{schedule.channel}</td>
+                      <td className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[#52525b]">{schedule.plan_name || "All Plans"}</td>
                       <td className="px-5 py-3.5">
                         <button 
                           onClick={() => toggleMutation.mutate({ id: schedule.id, is_enabled: !schedule.is_enabled })}

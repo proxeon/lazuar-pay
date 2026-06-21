@@ -1,3 +1,4 @@
+// apps/ops-page/src/components/Sidebar.tsx
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -95,7 +96,6 @@ export default function Sidebar({
           </motion.div>
         </button>
         
-        {/* Expanded Accordion View */}
         <AnimatePresence initial={false}>
           {expanded && isAccordionOpen && (
             <motion.div
@@ -127,7 +127,6 @@ export default function Sidebar({
           )}
         </AnimatePresence>
 
-        {/* Collapsed Flyout View */}
         <AnimatePresence>
           {!expanded && isFlyoutOpen && (
             <motion.div
@@ -216,7 +215,7 @@ export default function Sidebar({
               { label: "Promotions", href: "/community/coupons" },
               { label: "Automations", href: "/community/automations" },
               { label: "Payment Settings", href: "/community/payment" },
-              { label: "Email Templates", href: "/community/templates" } // Renamed
+              { label: "Email Templates", href: "/community/templates" }
             ]} 
           />
         </nav>

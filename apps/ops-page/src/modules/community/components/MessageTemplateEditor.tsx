@@ -1,7 +1,9 @@
 // apps/ops-page/src/modules/community/components/MessageTemplateEditor.tsx
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Loader2, Save, RotateCcw } from "lucide-react";
-import type { components } from "../../../lib/api-client";
+import { toast } from "sonner";
+import { client, type components } from "../../../lib/api-client";
+import { useDebounce } from "../../../hooks/use-debounce";
 
 type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"];
 
@@ -19,10 +21,37 @@ export default function MessageTemplateEditor({
 }: MessageTemplateEditorProps) {
   const [subject, setSubject] = useState(template.subject);
   const [body, setBody] = useState(template.body);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewSubject, setPreviewSubject] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  const debouncedSubject = useDebounce(subject, 500);
+  const debouncedBody = useDebounce(body, 500);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
   const [lastFocused, setLastFocused] = useState<"subject" | "body">("body");
+
+  useEffect(() => {
+    async function fetchPreview() {
+      if (!debouncedSubject && !debouncedBody) return;
+      setIsPreviewLoading(true);
+      try {
+        const { data, error } = await client.POST("/admin/community/templates/preview", {
+          body: { subject: debouncedSubject, body: debouncedBody }
+        });
+        if (data && !error) {
+          setPreviewHtml(data.html_content);
+          setPreviewSubject(data.subject_content);
+        }
+      } catch (err) {
+        toast.error("Failed to fetch live preview");
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    }
+    fetchPreview();
+  }, [debouncedSubject, debouncedBody]);
 
   const insertVariable = (variable: string) => {
     const el = lastFocused === "subject" ? subjectRef.current : textareaRef.current;
@@ -46,10 +75,6 @@ export default function MessageTemplateEditor({
   };
 
   const hasChanges = subject !== template.subject || body !== template.body;
-
-  // Placeholder for Live Preview rendering (Replaced in Phase 5)
-  const renderedPreview = body.replace(/\n/g, "<br/>");
-  const renderedSubject = subject;
 
   return (
     <div className="flex flex-col h-full bg-white animate-in fade-in duration-300">
@@ -127,17 +152,22 @@ export default function MessageTemplateEditor({
           </div>
         </div>
 
-        <div className="bg-[#f4f4f5] overflow-y-auto flex flex-col">
+        <div className="bg-[#f4f4f5] overflow-y-auto flex flex-col relative">
           <div className="px-4 py-2 border-b border-[#e5e5e5] bg-[#e4e4e7] flex items-center justify-between sticky top-0 z-10">
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#71717a]">Live Preview</span>
-            <span className="text-[11px] text-[#52525b] truncate max-w-[250px] font-medium">Subject: {renderedSubject}</span>
+            <span className="text-[11px] text-[#52525b] truncate max-w-[250px] font-medium">Subject: {previewSubject}</span>
           </div>
           
-          <div className="p-8 flex-1 flex items-start justify-center">
+          <div className="p-8 flex-1 flex items-start justify-center relative">
+            {isPreviewLoading && (
+              <div className="absolute inset-0 bg-[#f4f4f5]/50 flex items-center justify-center z-20 backdrop-blur-[1px]">
+                <Loader2 className="animate-spin text-[#a1a1aa]" />
+              </div>
+            )}
             <div className="w-full max-w-[600px] bg-white border border-[#e5e5e5] rounded-lg overflow-hidden shadow-sm">
               <div 
-                className="p-10 text-[#09090b] text-[15px] font-sans leading-[1.6]"
-                dangerouslySetInnerHTML={{ __html: renderedPreview }}
+                className="p-10 text-[#09090b] text-[14px] font-sans leading-[1.6]"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
               />
               <div className="bg-[#fafafa] border-t border-[#e5e5e5] px-10 py-5 text-center">
                 <p className="m-0 text-[12px] text-[#71717a] font-sans">Powered by <strong className="text-[#09090b]">Lazuar</strong></p>

@@ -10,33 +10,6 @@ import { cn } from "../../../lib/utils";
 
 type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"];
 
-const DICTIONARY_GROUPS = [
-  {
-    title: "Customer Profile Context",
-    items: [
-      { tag: "{{customer_name}}", desc: "The full display name of the member." },
-      { tag: "{{customer_email}}", desc: "The registered email address of the member." },
-      { tag: "{{customer_phone}}", desc: "The phone number of the member." }
-    ]
-  },
-  {
-    title: "Billing & Subscriptions",
-    items: [
-      { tag: "{{plan_name}}", desc: "The subscription name (e.g. Premium Tier)." },
-      { tag: "{{plan_price}}", desc: "The cost formatted in MYR." },
-      { tag: "{{renewal_link}}", desc: "Direct, secure checkout billing link." },
-      { tag: "{{total_price}}", desc: "Final charge total (factoring fees and tax overlays)." }
-    ]
-  },
-  {
-    title: "Community Assets",
-    items: [
-      { tag: "{{meeting_link}}", desc: "Zoom or private scheduling access links." },
-      { tag: "{{group_link}}", desc: "Direct invitation link for Telegram or WhatsApp." }
-    ]
-  }
-];
-
 export default function TemplatesPage() {
   const queryClient = useQueryClient();
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplateDto | null>(null);
@@ -47,7 +20,7 @@ export default function TemplatesPage() {
   const [newSubject, setNewSubject] = useState("");
   const [newBody, setNewBody] = useState("");
 
-  const { data: templates, isLoading } = useQuery<MessageTemplateDto[]>({
+  const { data: rawTemplates, isLoading } = useQuery<MessageTemplateDto[]>({
     queryKey: ["message-templates"],
     queryFn: async () => {
       const { data, error } = await client.GET("/admin/community/templates");
@@ -56,10 +29,21 @@ export default function TemplatesPage() {
     }
   });
 
+  const { data: dictionaryGroups } = useQuery({
+    queryKey: ["template-variables"],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/community/templates/variables");
+      if (error) throw new Error(error.detail);
+      return data;
+    },
+    enabled: isWikiOpen
+  });
+
+  const templates = rawTemplates?.filter(t => t.channel === "EMAIL") || [];
+
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Create a template with no routing logic attached
-      const { error } = await client.POST("/admin/community/templates" as any, {
+      const { error } = await client.POST("/admin/community/templates", {
         body: {
           name: newName,
           subject: newSubject,
@@ -67,7 +51,7 @@ export default function TemplatesPage() {
           channel: "EMAIL",
           required_variables: ["{{customer_name}}"],
           optional_variables: ["{{plan_name}}", "{{renewal_link}}"]
-        }
+        } as any // Cast required due to TypeSpec missing post endpoint in original definition, though REST supports it in DTO.
       });
       if (error) throw new Error(error.detail);
     },
@@ -98,7 +82,9 @@ export default function TemplatesPage() {
 
   const resetMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await client.DELETE("/admin/community/templates/{id}");
+      const { error } = await client.DELETE("/admin/community/templates/{id}", {
+        params: { path: { id } }
+      });
       if (error) throw new Error(error.detail);
     },
     onSuccess: () => {
@@ -138,7 +124,7 @@ export default function TemplatesPage() {
   return (
     <PageLayout 
       title="Email Templates" 
-      description="Configure automated notification schedules and email templates."
+      description="Manage the content and wording of your automated notifications."
       breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Email Templates" }]}
       actionButton={
         <div className="flex gap-2">
@@ -153,30 +139,36 @@ export default function TemplatesPage() {
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Email Notifications Index</h2>
         </div>
 
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto min-h-[300px]">
           <table className="w-full text-left text-[13px] min-w-[750px]">
             <thead className="bg-[#fafafa] border-b border-[#e5e5e5]">
               <tr>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Notification Template</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[30%]">Notification Template</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Type</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Subject Line</th>
                 <th className="px-5 py-3 w-[5%]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLoading ? (
-                <tr><td colSpan={3} className="py-12 text-center"><Loader2 className="animate-spin text-[#a1a1aa] mx-auto" /></td></tr>
+                <tr><td colSpan={4} className="py-12 text-center"><Loader2 className="animate-spin text-[#a1a1aa] mx-auto" /></td></tr>
               ) : (
                 templates?.map((template) => (
                   <tr key={template.id} className="hover:bg-[#fafafa]/50 transition-colors group">
                     <td className="px-5 py-3.5 font-bold text-[#09090b]">
                       <div className="flex items-center gap-2">
                         <span>{template.name}</span>
-                        {!template.is_default && (
-                          <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-bold uppercase tracking-wider">Customized</span>
-                        )}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-[#71717a] truncate max-w-xs">{template.subject}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={cn(
+                        "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
+                        template.is_default ? "bg-zinc-100 text-zinc-600 border-zinc-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                      )}>
+                        {template.is_default ? "System Default" : "Custom"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-[#71717a] truncate max-w-sm">{template.subject}</td>
                     <td className="px-5 py-3.5 text-right">
                       <button onClick={() => setSelectedTemplate(template)} className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#e5e5e5] text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-all">
                         <Edit2 size={10} /> Edit
@@ -202,22 +194,26 @@ export default function TemplatesPage() {
               <button onClick={() => setIsWikiOpen(false)} className="p-1 text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors rounded-sm"><X size={16} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {DICTIONARY_GROUPS.map((group) => (
-                <div key={group.title} className="space-y-3">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">{group.title}</h4>
-                  <div className="space-y-2">
-                    {group.items.map((item) => (
-                      <div key={item.tag} className="flex flex-col gap-1 p-2 bg-[#fafafa] border border-[#e5e5e5]">
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-[11px] font-bold text-[#09090b] bg-white border border-zinc-200 px-1.5 py-0.5">{item.tag}</span>
-                          <button onClick={() => copyVariable(item.tag)} className="text-[#a1a1aa] hover:text-[#09090b] p-0.5 rounded-sm"><Copy size={12} /></button>
+              {!dictionaryGroups ? (
+                <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
+              ) : (
+                dictionaryGroups.map((group) => (
+                  <div key={group.title} className="space-y-3">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">{group.title}</h4>
+                    <div className="space-y-2">
+                      {group.items.map((item) => (
+                        <div key={item.tag} className="flex flex-col gap-1 p-2 bg-[#fafafa] border border-[#e5e5e5]">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-[11px] font-bold text-[#09090b] bg-white border border-zinc-200 px-1.5 py-0.5">{item.tag}</span>
+                            <button onClick={() => copyVariable(item.tag)} className="text-[#a1a1aa] hover:text-[#09090b] p-0.5 rounded-sm"><Copy size={12} /></button>
+                          </div>
+                          <p className="text-[11px] text-[#71717a]">{item.description}</p>
                         </div>
-                        <p className="text-[11px] text-[#71717a]">{item.desc}</p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -249,7 +245,7 @@ export default function TemplatesPage() {
               <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
-                  {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Create Template
+                  {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Save & Continue
                 </button>
               </div>
             </form>
