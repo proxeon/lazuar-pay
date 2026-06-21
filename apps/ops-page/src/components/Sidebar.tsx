@@ -216,7 +216,7 @@ export default function Sidebar({
               { label: "Promotions", href: "/community/coupons" },
               { label: "Automations", href: "/community/automations" },
               { label: "Payment Settings", href: "/community/payment" },
-              { label: "Message Templates", href: "/community/templates" }
+              { label: "Email Templates", href: "/community/templates" } // Renamed
             ]} 
           />
         </nav>

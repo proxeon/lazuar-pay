@@ -1,13 +1,15 @@
 import { useState, useRef, useMemo } from "react";
 import { ArrowLeft, Loader2, Save, RotateCcw } from "lucide-react";
-import { cn } from "../../../lib/utils";
 import type { components } from "../../../lib/api-client";
 
-type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"];
+type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"] & {
+  target_audience?: string;
+  trigger_rule?: string;
+};
 
 interface MessageTemplateEditorProps {
   template: MessageTemplateDto;
-  onSave: (subject: string, body: string) => void;
+  onSave: (subject: string, body: string, target_audience?: string, trigger_rule?: string) => void;
   onReset: () => void;
   onCancel: () => void;
   isSaving: boolean;
@@ -27,9 +29,14 @@ const MOCK_DATA: Record<string, string> = {
   "{{checkout_url}}": "https://lazuar.com/cart"
 };
 
-export default function MessageTemplateEditor({ template, onSave, onReset, onCancel, isSaving, isResetting }: MessageTemplateEditorProps) {
+export default function MessageTemplateEditor({ 
+  template, onSave, onReset, onCancel, isSaving, isResetting 
+}: MessageTemplateEditorProps) {
   const [subject, setSubject] = useState(template.subject);
   const [body, setBody] = useState(template.body);
+  const [targetAudience, setTargetAudience] = useState(template.target_audience || "ALL_SUBSCRIBERS");
+  const [triggerRule, setTriggerRule] = useState(template.trigger_rule || "ON_SIGNUP");
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
   const [lastFocused, setLastFocused] = useState<"subject" | "body">("body");
@@ -76,7 +83,11 @@ export default function MessageTemplateEditor({ template, onSave, onReset, onCan
     return parsed;
   }, [subject]);
 
-  const hasChanges = subject !== template.subject || body !== template.body;
+  const hasChanges = 
+    subject !== template.subject || 
+    body !== template.body ||
+    targetAudience !== (template.target_audience || "ALL_SUBSCRIBERS") ||
+    triggerRule !== (template.trigger_rule || "ON_SIGNUP");
 
   return (
     <div className="flex flex-col h-full bg-white animate-in fade-in duration-300">
@@ -101,7 +112,7 @@ export default function MessageTemplateEditor({ template, onSave, onReset, onCan
             </button>
           )}
           <button 
-            onClick={() => onSave(subject, body)}
+            onClick={() => onSave(subject, body, targetAudience, triggerRule)}
             disabled={!hasChanges || isSaving || isResetting}
             className="h-8 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none hover:bg-[#27272a] disabled:opacity-50 transition-colors flex items-center gap-1.5"
           >
@@ -129,6 +140,36 @@ export default function MessageTemplateEditor({ template, onSave, onReset, onCan
           </div>
 
           <div className="space-y-4 flex-1 flex flex-col">
+            {/* AUDIENCE & TRIGGER SETTINGS */}
+            <div className="grid grid-cols-2 gap-4 border-b border-zinc-100 pb-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Audience (Who)</label>
+                <select 
+                  value={targetAudience} 
+                  onChange={e => setTargetAudience(e.target.value)} 
+                  className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]"
+                >
+                  <option value="ALL_SUBSCRIBERS">All Subscribers</option>
+                  <option value="ACTIVE_ONLY">Active Members Only</option>
+                  <option value="PAST_DUE_ONLY">Past Due Members Only</option>
+                  <option value="CANCELLED_ONLY">Cancelled Only</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Dispatch Trigger (When)</label>
+                <select 
+                  value={triggerRule} 
+                  onChange={e => setTriggerRule(e.target.value)} 
+                  className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]"
+                >
+                  <option value="ON_SIGNUP">Immediately on Signup</option>
+                  <option value="RELATIVE_TO_DUE_DATE">Relative to Due Date</option>
+                  <option value="ON_CANCELLATION">On Cancellation</option>
+                  <option value="MANUAL_ONLY">Manual Dispatch Only</option>
+                </select>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Subject Line</label>
               <input 
