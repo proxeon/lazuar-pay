@@ -62,7 +62,7 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             var coupon = await _couponRepository.GetByCodeAsync(request.OrganizationId, request.CouponCode, ct);
             if (coupon == null) throw new InvalidOperationException("Invalid coupon code.");
 
-            coupon.Validate(plan.Price);
+            coupon.Validate(plan.Price, plan.Id);
             coupon.Reserve();
             subscription.SetPendingCoupon(coupon.Id);
             appliedCoupon = coupon;

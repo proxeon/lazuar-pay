@@ -1,5 +1,5 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/CreateCouponCommand.cs
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +22,8 @@ public record CreateCouponCommand(
     [property: Description("e.g. 10.00")] decimal Amount,
     int MaxUses,
     DateTime? ExpiresAt,
-    decimal MinimumOriginalPrice = 0) : ICommand<Guid>
+    decimal MinimumOriginalPrice = 0,
+    IEnumerable<Guid>? ApplicablePlanIds = null) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -45,7 +46,8 @@ public class CreateCouponCommandHandler : ICommandHandler<CreateCouponCommand, G
             request.Amount,
             request.MaxUses,
             request.ExpiresAt,
-            request.MinimumOriginalPrice);
+            request.MinimumOriginalPrice,
+            request.ApplicablePlanIds);
 
         _couponRepository.Add(coupon);
         await _couponRepository.SaveChangesAsync(ct);

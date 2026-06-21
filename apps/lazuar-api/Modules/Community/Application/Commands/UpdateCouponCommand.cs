@@ -1,5 +1,5 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/UpdateCouponCommand.cs
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -11,7 +11,8 @@ public record UpdateCouponCommand(
     Guid CouponId,
     int MaxUses,
     decimal MinimumOriginalPrice,
-    DateTime? ExpiresAt) : ICommand
+    DateTime? ExpiresAt,
+    IEnumerable<Guid>? ApplicablePlanIds = null) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -32,7 +33,7 @@ public class UpdateCouponCommandHandler : ICommandHandler<UpdateCouponCommand>
         if (coupon == null || coupon.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Coupon not found.");
 
-        coupon.UpdateLimits(request.MaxUses, request.MinimumOriginalPrice, request.ExpiresAt);
+        coupon.UpdateLimits(request.MaxUses, request.MinimumOriginalPrice, request.ExpiresAt, request.ApplicablePlanIds);
         
         _repository.Update(coupon);
         await _repository.SaveChangesAsync(ct);
