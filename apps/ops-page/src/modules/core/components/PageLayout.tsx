@@ -17,15 +17,20 @@ interface PageLayoutProps {
 
 export default function PageLayout({ title, description, breadcrumbs, actionButton, children }: PageLayoutProps) {
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fafafa]">
-      <div className="px-6 py-5 md:px-8 border-b border-[#e5e5e5] bg-white sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto w-full">
-          {breadcrumbs && breadcrumbs.length > 0 && (
-            <nav className="flex items-center gap-1.5 mb-3">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fafafa]">
+      
+      {/* Slim Anchored Top Bar (Breadcrumbs Only) */}
+      {breadcrumbs && breadcrumbs.length > 0 && (
+        <div className="px-6 py-3.5 md:px-8 border-b border-[#e5e5e5] bg-white shrink-0 z-20">
+          <div className="max-w-6xl mx-auto w-full">
+            <nav className="flex items-center gap-1.5">
               {breadcrumbs.map((bc, idx) => (
                 <div key={idx} className="flex items-center gap-1.5">
                   {bc.href ? (
-                    <Link to={bc.href} className="text-[10px] font-bold uppercase tracking-widest text-[#a1a1aa] hover:text-[#09090b] transition-colors">
+                    <Link 
+                      to={bc.href} 
+                      className="text-[10px] font-bold uppercase tracking-widest text-[#a1a1aa] hover:text-[#09090b] transition-colors"
+                    >
                       {bc.label}
                     </Link>
                   ) : (
@@ -33,27 +38,47 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
                       {bc.label}
                     </span>
                   )}
-                  {idx < breadcrumbs.length - 1 && <ChevronRight size={12} className="text-[#d4d4d8]" />}
+                  {idx < breadcrumbs.length - 1 && (
+                    <ChevronRight size={12} className="text-[#d4d4d8] shrink-0" />
+                  )}
                 </div>
               ))}
             </nav>
-          )}
-          
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-[#09090b] tracking-tight">{title}</h1>
-              {description && <p className="text-[13px] text-[#71717a] mt-1">{description}</p>}
-            </div>
-            {actionButton && <div>{actionButton}</div>}
           </div>
         </div>
-      </div>
-      
-      <div className="flex-1 p-6 md:p-8">
-        <div className="max-w-6xl mx-auto w-full h-full">
-          {children}
+      )}
+
+      {/* Scrollable Main Content Container */}
+      <div className="flex-1 overflow-y-auto p-6 md:p-8">
+        <div className="max-w-6xl mx-auto w-full">
+          
+          {/* Page Heading, Description & Action Button Section */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8 pb-6 border-b border-[#e5e5e5]">
+            <div className="space-y-1.5 max-w-2xl">
+              <h1 className="text-xl font-bold text-[#09090b] tracking-tight">
+                {title}
+              </h1>
+              {description && (
+                <p className="text-[13px] text-[#71717a] leading-normal">
+                  {description}
+                </p>
+              )}
+            </div>
+            {actionButton && (
+              <div className="shrink-0 pt-0.5">
+                {actionButton}
+              </div>
+            )}
+          </div>
+
+          {/* Child Components and Workspace Content */}
+          <div className="w-full">
+            {children}
+          </div>
+
         </div>
       </div>
+
     </div>
   );
 }
