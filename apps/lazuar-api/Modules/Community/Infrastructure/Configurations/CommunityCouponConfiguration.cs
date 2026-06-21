@@ -21,6 +21,7 @@ public class CommunityCouponConfiguration : IEntityTypeConfiguration<CommunityCo
         builder.Property(x => x.DiscountType).HasMaxLength(20).IsRequired();
         builder.Property(x => x.Amount).HasPrecision(10, 2);
         builder.Property(x => x.MinimumOriginalPrice).HasPrecision(10, 2);
+        builder.Property(x => x.IsActive).HasDefaultValue(true);
 
         var jsonOptions = new JsonSerializerOptions
         {
@@ -30,7 +31,7 @@ public class CommunityCouponConfiguration : IEntityTypeConfiguration<CommunityCo
 
         var guidListConverter = new ValueConverter<IReadOnlyCollection<Guid>, string>(
             v => JsonSerializer.Serialize(v, jsonOptions),
-            v => JsonSerializer.Deserialize<List<Guid>>(v, jsonOptions) ?? new List<Guid>()
+            v => DeserializeSafe(v, jsonOptions)
         );
 
         var guidListComparer = new ValueComparer<IReadOnlyCollection<Guid>>(
@@ -42,5 +43,20 @@ public class CommunityCouponConfiguration : IEntityTypeConfiguration<CommunityCo
         builder.Property(x => x.ApplicablePlanIds)
             .HasConversion(guidListConverter, guidListComparer)
             .HasColumnType("jsonb");
+    }
+
+    // Gracefully handle malformed database JSON to prevent API 500 crash loops
+    private static List<Guid> DeserializeSafe(string json, JsonSerializerOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<Guid>();
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<Guid>>(json, options) ?? new List<Guid>();
+        }
+        catch (Exception)
+        {
+            return new List<Guid>();
+        }
     }
 }

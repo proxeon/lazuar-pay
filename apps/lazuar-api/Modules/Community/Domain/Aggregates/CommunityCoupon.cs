@@ -18,6 +18,7 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
     public int ReservedCount { get; private set; }
     public decimal MinimumOriginalPrice { get; private set; }
     public DateTime? ExpiresAt { get; private set; }
+    public bool IsActive { get; private set; }
     
     private readonly List<Guid> _applicablePlanIds = new();
     public IReadOnlyCollection<Guid> ApplicablePlanIds => _applicablePlanIds.AsReadOnly();
@@ -52,6 +53,7 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
         ReservedCount = 0;
         MinimumOriginalPrice = minimumOriginalPrice;
         ExpiresAt = expiresAt;
+        IsActive = true;
 
         if (applicablePlanIds != null && applicablePlanIds.Any())
         {
@@ -73,6 +75,11 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
 
     public void Validate(decimal originalPrice, Guid targetPlanId)
     {
+        if (!IsActive)
+        {
+            CheckRule(new GenericBusinessRule("This coupon has been archived and is no longer valid."));
+        }
+
         if (ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow)
         {
             CheckRule(new GenericBusinessRule("This coupon has expired."));
@@ -121,8 +128,22 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
         }
     }
 
-    public void UpdateLimits(int maxUses, decimal minimumOriginalPrice, DateTime? expiresAt, IEnumerable<Guid>? applicablePlanIds)
+    public void UpdateDetails(string code, string discountType, decimal amount, int maxUses, decimal minimumOriginalPrice, DateTime? expiresAt, IEnumerable<Guid>? applicablePlanIds)
     {
+        var codeChanged = !string.Equals(Code, code, StringComparison.OrdinalIgnoreCase);
+        var typeChanged = !string.Equals(DiscountType, discountType, StringComparison.OrdinalIgnoreCase);
+        var amountChanged = Amount != amount;
+
+        // Prevent modification of financial parameters if the coupon is already in use
+        if ((codeChanged || typeChanged || amountChanged) && UsedCount > 0)
+        {
+            CheckRule(new GenericBusinessRule("Core coupon details (Code, Type, Amount) cannot be modified after the coupon has been redeemed."));
+        }
+
+        if (codeChanged) Code = code.ToUpperInvariant().Trim();
+        if (typeChanged) DiscountType = discountType;
+        if (amountChanged) Amount = amount;
+
         MaxUses = maxUses;
         MinimumOriginalPrice = minimumOriginalPrice;
         ExpiresAt = expiresAt;
@@ -136,6 +157,11 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
 
     public void Archive()
     {
-        ExpiresAt = DateTime.UtcNow;
+        IsActive = false;
+    }
+
+    public void Restore()
+    {
+        IsActive = true;
     }
 }
