@@ -189,6 +189,12 @@ interface AdminCommunityOperations {
   @route("/templates")
   getTemplates(): MessageTemplateDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/templates")
+  createTemplate(
+    @body body: CreateTemplateRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @get
   @route("/templates/variables")
   getTemplateVariables(

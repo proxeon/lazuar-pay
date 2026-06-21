@@ -292,6 +292,15 @@ model MessageTemplateDto {
   updated_at: utcDateTime;
 }
 
+model CreateTemplateRequestDto {
+  name: string;
+  subject: string;
+  body: string;
+  channel: string;
+  required_variables: string[];
+  optional_variables: string[];
+}
+
 model UpdateTemplateRequestDto {
   subject: string;
   body: string;

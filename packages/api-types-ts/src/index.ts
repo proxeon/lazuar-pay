@@ -477,7 +477,7 @@ export interface paths {
         };
         get: operations["AdminCommunityOperations_getTemplates"];
         put?: never;
-        post?: never;
+        post: operations["AdminCommunityOperations_createTemplate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1561,6 +1561,14 @@ export interface components {
             payment_method?: string;
             reference_number?: string;
             notes?: string;
+        };
+        "Community.CreateTemplateRequestDto": {
+            name: string;
+            subject: string;
+            body: string;
+            channel: string;
+            required_variables: string[];
+            optional_variables: string[];
         };
         "Community.DeliveryHistoryItemDto": {
             id: string;
@@ -4766,6 +4774,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Community.MessageTemplateDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_createTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Community.CreateTemplateRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.IdResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
