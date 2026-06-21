@@ -1,4 +1,5 @@
 using Dapper;
+using System;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,9 +39,20 @@ public partial class CommunityQueryService
 
         return rawCoupons.Select(c => 
         {
-            var planIds = string.IsNullOrWhiteSpace(c.ApplicablePlanIds) 
-                ? new List<string>() 
-                : JsonSerializer.Deserialize<List<string>>(c.ApplicablePlanIds, jsonOptions) ?? new List<string>();
+            var planIds = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(c.ApplicablePlanIds))
+            {
+                try
+                {
+                    planIds = JsonSerializer.Deserialize<List<string>>(c.ApplicablePlanIds, jsonOptions) ?? new List<string>();
+                }
+                catch (JsonException)
+                {
+                    // Fallback to global (empty list) if legacy DB rows contain invalid JSON arrays like "{}"
+                    planIds = new List<string>();
+                }
+            }
 
             return new CouponDto
             {
