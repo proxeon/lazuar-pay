@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.One.Contracts;
 using Modules.Community.Domain.Entities;
+using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Infrastructure.EventHandlers;
 
@@ -41,6 +43,20 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
             };
 
             _dbContext.MessageTemplates.AddRange(templates);
+            await _dbContext.SaveChangesAsync();
+
+            var preDunningTemplate = templates.First(t => t.Name == "Community Renewal (3 Days)");
+            var dayOfDunningTemplate = templates.First(t => t.Name == "Community Renewal Due Today");
+            var postDunningTemplate = templates.First(t => t.Name == "Community Renewal Overdue");
+
+            var defaultSchedules = new List<CommunityReminderSchedule>
+            {
+                new CommunityReminderSchedule(@event.TenantId, null, preDunningTemplate.Id, "ALL", -3, "08:00", true),
+                new CommunityReminderSchedule(@event.TenantId, null, dayOfDunningTemplate.Id, "ALL", 0, "08:00", true),
+                new CommunityReminderSchedule(@event.TenantId, null, postDunningTemplate.Id, "ALL", 3, "08:00", true)
+            };
+
+            _dbContext.ReminderSchedules.AddRange(defaultSchedules);
             await _dbContext.SaveChangesAsync();
         }
     }
