@@ -26,22 +26,17 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { data, error: apiError } = await client.POST("/one/auth/login", {
+      const { error: apiError } = await client.POST("/one/auth/login", {
         body: { email, password }
       });
 
       if (apiError) throw new Error(apiError.detail || "Invalid credentials.");
 
-      if (data?.user?.role === "SUPER_ADMIN") {
-        window.location.href = "http://localhost:3000/dashboard";
-        return;
-      }
-
       const returnUrl = searchParams.get("returnUrl");
       if (returnUrl) {
         window.location.href = returnUrl;
       } else {
-        window.location.href = "/chat";
+        window.location.href = "/community/dashboard";
       }
     } catch (err: any) {
       setError(err.message || "Invalid credentials.");
@@ -78,7 +73,7 @@ export default function LoginPage() {
       if (returnUrl) {
         window.location.href = returnUrl;
       } else {
-        window.location.href = "/chat";
+        window.location.href = "/community/dashboard";
       }
     } catch (err: any) {
       setError(err.message || "Registration failed.");
@@ -87,6 +82,7 @@ export default function LoginPage() {
     }
   };
 
+  // The rest of the JSX remains exactly the same
   return (
     <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] font-sans">
       <div className="w-full max-w-[380px] mx-4 animate-in fade-in zoom-in-95 duration-300">
