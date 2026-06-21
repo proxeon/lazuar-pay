@@ -363,6 +363,24 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<MessageTemplateDto>)templates.ToList());
         });
 
+        admin.MapPost("/templates", async Task<Ok<IdResponse>> (
+        CreateTemplateRequestDto req,
+        IExecutionContextAccessor ctx,
+        IMediator mediator) =>
+        {
+            var command = new CreateMessageTemplateCommand(
+                ctx.TenantId, 
+                req.Name, 
+                req.Subject, 
+                req.Body, 
+                req.Channel,
+                req.Required_variables ?? Array.Empty<string>(), 
+                req.Optional_variables ?? Array.Empty<string>());
+            
+            var id = await mediator.Send(command);
+            return TypedResults.Ok(new IdResponse { Id = id.ToString() });
+        });
+
         admin.MapGet("/templates/variables", async Task<Ok<ICollection<TemplateVariableCategoryDto>>> (
         IMediator mediator) =>
         {

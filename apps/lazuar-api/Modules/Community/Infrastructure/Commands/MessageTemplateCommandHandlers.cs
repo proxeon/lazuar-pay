@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Commands/MessageTemplateCommandHandlers.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,65 @@ using Modules.Community.Application.Queries;
 using Modules.Messaging.Contracts;
 
 namespace Modules.Community.Infrastructure.Commands;
+
+public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessageTemplateCommand, Guid>
+{
+    private readonly CommunityDbContext _context;
+
+    public CreateMessageTemplateCommandHandler(CommunityDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Guid> Handle(CreateMessageTemplateCommand request, CancellationToken cancellationToken)
+    {
+        ValidateTemplateVariables(request.Subject, request.Body, request.RequiredVariables, request.OptionalVariables);
+
+        var template = new Domain.Entities.MessageTemplate(
+            request.OrganizationId,
+            request.Name,
+            request.Channel,
+            request.Subject,
+            request.Body,
+            isDefault: false,
+            request.RequiredVariables,
+            request.OptionalVariables);
+
+        _context.MessageTemplates.Add(template);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return template.Id;
+    }
+
+    private void ValidateTemplateVariables(
+        string subject, 
+        string body, 
+        IEnumerable<string> requiredVariables, 
+        IEnumerable<string> optionalVariables)
+    {
+        var combinedText = $"{subject} {body}";
+
+        var extractedTags = Regex.Matches(combinedText, @"\{\{([a-zA-Z0-9_]+)\}\}")
+            .Select(m => m.Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allowedVariables = new HashSet<string>(requiredVariables.Concat(optionalVariables), StringComparer.OrdinalIgnoreCase);
+
+        var unsupportedTags = extractedTags.Except(allowedVariables).ToList();
+        if (unsupportedTags.Any())
+        {
+            var joined = string.Join(", ", unsupportedTags);
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Unsupported variables detected: {joined}. Please use only the allowed tags for this template."));
+        }
+
+        var missingTags = requiredVariables.Except(extractedTags, StringComparer.OrdinalIgnoreCase).ToList();
+        if (missingTags.Any())
+        {
+            var joined = string.Join(", ", missingTags);
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Missing required variables: {joined}. You must include these tags in either the subject or body to ensure the message functions correctly."));
+        }
+    }
+}
 
 public class UpdateMessageTemplateCommandHandler : ICommandHandler<UpdateMessageTemplateCommand>
 {
