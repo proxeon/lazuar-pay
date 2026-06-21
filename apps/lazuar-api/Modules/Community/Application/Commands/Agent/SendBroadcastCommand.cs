@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/Agent/SendBroadcastCommand.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,12 +15,12 @@ public record SendBroadcastCommand(
     string Channel,
     Guid? TargetPlanId = null,
     string? TargetStatus = null,
-    bool? TargetIsReminderOnly = null) : ICommand<string>
+    bool? TargetIsReminderOnly = null) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
 
-public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand, string>
+public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand, Guid>
 {
     private readonly IBroadcastCampaignRepository _repository;
 
@@ -28,7 +29,7 @@ public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand,
         _repository = repository;
     }
 
-    public async Task<string> Handle(SendBroadcastCommand request, CancellationToken ct)
+    public async Task<Guid> Handle(SendBroadcastCommand request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Subject))
             throw new InvalidOperationException("Subject cannot be empty.");
@@ -48,6 +49,6 @@ public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand,
         _repository.Add(campaign);
         await _repository.SaveChangesAsync(ct);
 
-        return $"Broadcast campaign scheduled successfully. Campaign ID: {campaign.Id}. It will be processed shortly.";
+        return campaign.Id;
     }
 }

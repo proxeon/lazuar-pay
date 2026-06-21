@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Domain/Aggregates/CommunityCoupon.cs
 using System;
 using BuildingBlocks.Domain;
 using Modules.Community.Domain.Events;
@@ -94,5 +95,17 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
             ReservedCount--;
             AddDomainEvent(new CouponReleasedDomainEvent(Id, OrganizationId, Code));
         }
+    }
+
+    public void UpdateLimits(int maxUses, decimal minimumOriginalPrice, DateTime? expiresAt)
+    {
+        MaxUses = maxUses;
+        MinimumOriginalPrice = minimumOriginalPrice;
+        ExpiresAt = expiresAt;
+    }
+
+    public void Archive()
+    {
+        ExpiresAt = DateTime.UtcNow;
     }
 }

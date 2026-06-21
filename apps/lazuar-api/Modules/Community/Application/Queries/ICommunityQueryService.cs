@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Queries/ICommunityQueryService.cs
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ public interface ICommunityQueryService
     Task<IEnumerable<CommunityPlanDto>> GetAdminPlansAsync(Guid organizationId);
     Task<CommunityPlanDto?> GetAdminPlanByIdAsync(Guid organizationId, Guid planId);
     Task<IEnumerable<CommunityPlanDto>> GetPublicPlansAsync(Guid organizationId);
-    Task<PaginatedResponse<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit);
+    Task<PaginatedResponse<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null);
     Task<CommunitySubscriptionDto?> GetPortalSubscriptionAsync(Guid organizationId, Guid subscriptionId);
     Task<IEnumerable<CommunityReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId);
     Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId);
