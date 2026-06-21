@@ -1,3 +1,4 @@
+// packages/api-spec/modules/community/models.tsp
 namespace LazuarApi.Community;
 
 model FaqItemDto {
@@ -338,4 +339,39 @@ model CreateCouponRequestDto {
   max_uses: int32;
   minimum_original_price?: float64;
   expires_at?: utcDateTime;
+}
+
+model UpdateCouponRequestDto {
+  max_uses?: int32;
+  minimum_original_price?: float64;
+  expires_at?: utcDateTime;
+}
+
+model TemplateVariableDto {
+  tag: string;
+  description: string;
+}
+
+model TemplateVariableCategoryDto {
+  title: string;
+  items: TemplateVariableDto[];
+}
+
+model TemplatePreviewRequestDto {
+  subject: string;
+  body: string;
+}
+
+model TemplatePreviewResponseDto {
+  html_content: string;
+  subject_content: string;
+}
+
+model CreateBroadcastRequestDto {
+  subject: string;
+  body: string;
+  channel: string;
+  target_plan_id?: string; // GUID
+  target_status?: string;
+  target_is_reminder_only?: boolean;
 }

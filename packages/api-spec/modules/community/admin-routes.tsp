@@ -1,3 +1,4 @@
+// packages/api-spec/modules/community/admin-routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -42,6 +43,7 @@ interface AdminCommunityOperations {
   getSubscribers(
     @query page?: int32 = 1,
     @query limit?: int32 = 50,
+    @query search?: string,
   ): LazuarApi.Core.PaginatedResponse<CommunitySubscriptionDto> | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
@@ -187,6 +189,17 @@ interface AdminCommunityOperations {
   @route("/templates")
   getTemplates(): MessageTemplateDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
+  @get
+  @route("/templates/variables")
+  getTemplateVariables(
+  ): TemplateVariableCategoryDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/templates/preview")
+  previewTemplate(
+    @body body: TemplatePreviewRequestDto,
+  ): TemplatePreviewResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
   @put
   @route("/templates/{id}")
   updateTemplate(
@@ -214,5 +227,24 @@ interface AdminCommunityOperations {
   @route("/coupons")
   createCoupon(
     @body body: CreateCouponRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/coupons/{id}")
+  updateCoupon(
+    @path id: string,
+    @body body: UpdateCouponRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @delete
+  @route("/coupons/{id}")
+  deleteCoupon(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/broadcasts")
+  sendBroadcast(
+    @body body: CreateBroadcastRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 }
