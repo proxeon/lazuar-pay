@@ -1,11 +1,12 @@
-// apps/ops-page/src/modules/community/pages/SubscribersPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy } from "lucide-react";
+import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle } from "lucide-react";
 import { toast } from "sonner";
 import { client, type CommunitySubscriptionDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
+import SidePanel from "../../core/components/SidePanel";
+import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
 
 export default function SubscribersPage() {
@@ -104,6 +105,7 @@ export default function SubscribersPage() {
         setRefundModal({ isOpen: false, paymentId: "", reason: "" });
       }
       
+      // Update local state so the open SidePanel instantly shows fresh data
       setSelectedSub(prev => {
         if (!prev) return null;
         if (variables.action === "cancel") return { ...prev, status: "CANCELLED" };
@@ -180,7 +182,10 @@ export default function SubscribersPage() {
                         <p className="font-medium text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{sub.customer_name}</p>
                         {sub.vaulted_token_id && <Zap size={12} className="text-blue-500" title="Auto-Debit Enabled" />}
                       </div>
-                      <p className="text-[11px] text-[#71717a]">{sub.customer_email}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-[11px] text-[#71717a]">{sub.customer_email}</p>
+                        <QuickCopy text={sub.customer_email} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
+                      </div>
                     </td>
                     <td className="px-5 py-3.5">
                       <p className="text-[12px] text-[#09090b]">{sub.plan_name}</p>
@@ -208,123 +213,108 @@ export default function SubscribersPage() {
         </div>
       </div>
 
-      {selectedSub && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !activeAction && setSelectedSub(null)} />
-          <div className="relative w-full max-w-md bg-white border-l border-[#e5e5e5] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
-              <div>
-                <h2 className="text-[15px] font-bold text-[#09090b]">Member Console</h2>
-                <p className="text-[11px] font-mono text-[#71717a] mt-0.5">ID: {selectedSub.id.toUpperCase()}</p>
+      <SidePanel
+        isOpen={!!selectedSub}
+        onClose={() => setSelectedSub(null)}
+        title="Member Console"
+        subtitle={selectedSub ? `ID: ${selectedSub.id.toUpperCase()}` : ""}
+        disableOutsideClick={activeAction !== null}
+      >
+        {selectedSub && (
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Customer Profile</h3>
+              <div className="space-y-3 text-[12px]">
+                <div>
+                  <span className="text-[#a1a1aa] block mb-0.5">Name</span>
+                  <span className="font-semibold text-[#09090b] text-[13px]">{selectedSub.customer_name}</span>
+                </div>
+                <div>
+                  <span className="text-[#a1a1aa] block mb-0.5">Email Address</span>
+                  <div className="flex items-center gap-2">
+                    <a href={`mailto:${selectedSub.customer_email}`} className="font-medium text-blue-600 hover:opacity-85 transition-opacity underline underline-offset-2">
+                      {selectedSub.customer_email}
+                    </a>
+                    <QuickCopy text={selectedSub.customer_email} iconSize={11} className="hover:bg-[#fafafa]" />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[#a1a1aa] block mb-0.5">Phone Number</span>
+                  <div className="flex items-center gap-2">
+                    {selectedSub.customer_phone ? (
+                      <>
+                        <a href={`tel:${selectedSub.customer_phone.replace(/[^0-9+]/g, "")}`} className="font-mono text-[#52525b] hover:text-blue-600 transition-colors underline underline-offset-2">
+                          {selectedSub.customer_phone}
+                        </a>
+                        <QuickCopy text={selectedSub.customer_phone} iconSize={11} className="hover:bg-[#fafafa]" />
+                        <a href={`https://wa.me/${selectedSub.customer_phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:text-emerald-700 transition-colors">
+                          WhatsApp
+                        </a>
+                      </>
+                    ) : (
+                      <span className="text-[#a1a1aa] italic">Not Provided</span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <button 
-                onClick={() => setSelectedSub(null)} 
-                disabled={activeAction !== null}
-                className="p-1.5 text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors rounded-sm disabled:opacity-50"
-              >
-                <X size={16} />
-              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Customer Profile</h3>
-                <div className="space-y-3 text-[12px]">
-                  <div>
-                    <span className="text-[#a1a1aa] block mb-0.5">Name</span>
-                    <span className="font-semibold text-[#09090b] text-[13px]">{selectedSub.customer_name}</span>
-                  </div>
-                  <div>
-                    <span className="text-[#a1a1aa] block mb-0.5">Email Address</span>
-                    <div className="flex items-center gap-2">
-                      <a href={`mailto:${selectedSub.customer_email}`} className="font-medium text-blue-600 hover:opacity-85 transition-opacity underline underline-offset-2">
-                        {selectedSub.customer_email}
-                      </a>
-                      <button onClick={() => { navigator.clipboard.writeText(selectedSub.customer_email); toast.success("Email address copied"); }} className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]">
-                        <Copy size={11} />
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[#a1a1aa] block mb-0.5">Phone Number</span>
-                    <div className="flex items-center gap-2">
-                      {selectedSub.customer_phone ? (
-                        <>
-                          <a href={`tel:${selectedSub.customer_phone.replace(/[^0-9+]/g, "")}`} className="font-mono text-[#52525b] hover:text-blue-600 transition-colors underline underline-offset-2">
-                            {selectedSub.customer_phone}
-                          </a>
-                          <button onClick={() => { navigator.clipboard.writeText(selectedSub.customer_phone); toast.success("Phone number copied"); }} className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]">
-                            <Copy size={11} />
-                          </button>
-                          <a href={`https://wa.me/${selectedSub.customer_phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:text-emerald-700 transition-colors">
-                            WhatsApp
-                          </a>
-                        </>
-                      ) : (
-                        <span className="text-[#a1a1aa] italic">Not Provided</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Subscription Details</h3>
+              <div className="grid grid-cols-2 gap-4 text-[12px]">
+                <div><span className="text-[#a1a1aa] block mb-1">Plan</span><span className="font-medium text-[#09090b]">{selectedSub.plan_name}</span></div>
+                <div><span className="text-[#a1a1aa] block mb-1">Status</span><span className="font-bold text-[#09090b]">{selectedSub.status.replace("_", " ")}</span></div>
+                <div><span className="text-[#a1a1aa] block mb-1">Period Ends</span><span className="font-mono text-[#52525b]">{selectedSub.current_period_end ? new Date(selectedSub.current_period_end).toLocaleDateString() : '-'}</span></div>
+                <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.vaulted_token_id ? "Active" : "None"}</span></div>
               </div>
+            </div>
 
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Subscription Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-[12px]">
-                  <div><span className="text-[#a1a1aa] block mb-1">Plan</span><span className="font-medium text-[#09090b]">{selectedSub.plan_name}</span></div>
-                  <div><span className="text-[#a1a1aa] block mb-1">Status</span><span className="font-bold text-[#09090b]">{selectedSub.status.replace("_", " ")}</span></div>
-                  <div><span className="text-[#a1a1aa] block mb-1">Period Ends</span><span className="font-mono text-[#52525b]">{selectedSub.current_period_end ? new Date(selectedSub.current_period_end).toLocaleDateString() : '-'}</span></div>
-                  <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.vaulted_token_id ? "Active" : "None"}</span></div>
-                </div>
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
+                <button onClick={() => setExtendGraceModal({ isOpen: true, days: "7" })} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  {activeAction === "extend-grace" && <Loader2 size={12} className="animate-spin" />} Extend Grace
+                </button>
+                <button onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }} disabled={activeAction !== null} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                  {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
+                </button>
+                <button onClick={() => { if (window.confirm("CRITICAL: Ban user and revoke all access immediately?")) actionMutation.mutate({ action: "ban" }); }} disabled={activeAction !== null} className="h-8 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
+                  {activeAction === "ban" ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />} Ban User
+                </button>
               </div>
+            </div>
 
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
-                  <button onClick={() => setExtendGraceModal({ isOpen: true, days: "7" })} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
-                    {activeAction === "extend-grace" && <Loader2 size={12} className="animate-spin" />} Extend Grace
-                  </button>
-                  <button onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }} disabled={activeAction !== null} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
-                    {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
-                  </button>
-                  <button onClick={() => { if (window.confirm("CRITICAL: Ban user and revoke all access immediately?")) actionMutation.mutate({ action: "ban" }); }} disabled={activeAction !== null} className="h-8 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
-                    {activeAction === "ban" ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />} Ban User
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Payment Ledger</h3>
-                {isPaymentsLoading ? (
-                  <div className="flex justify-center p-4"><Loader2 className="animate-spin text-[#a1a1aa]" size={16} /></div>
-                ) : (
-                  <div className="space-y-2">
-                    {paymentsData?.data?.map((payment: any) => {
-                      const isRefunding = activeAction === `refund-${payment.id}`;
-                      return (
-                        <div key={payment.id} className="p-3 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
-                          <div>
-                            <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.payment_method}</span></p>
-                            <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
-                          </div>
-                          {payment.status === "CONFIRMED" && payment.amount > 0 && (
-                            <button onClick={() => setRefundModal({ isOpen: true, paymentId: payment.id, reason: "" })} disabled={activeAction !== null} className="text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 flex items-center gap-1">
-                              {isRefunding && <Loader2 size={10} className="animate-spin" />} Refund
-                            </button>
-                          )}
-                          {payment.status === "REFUNDED" && <span className="text-[10px] font-bold uppercase text-amber-600">Refunded</span>}
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Payment Ledger</h3>
+              {isPaymentsLoading ? (
+                <div className="flex justify-center p-4"><Loader2 className="animate-spin text-[#a1a1aa]" size={16} /></div>
+              ) : (
+                <div className="space-y-2">
+                  {paymentsData?.data?.map((payment: any) => {
+                    const isRefunding = activeAction === `refund-${payment.id}`;
+                    return (
+                      <div key={payment.id} className="p-3 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.payment_method}</span></p>
+                          <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
                         </div>
-                      );
-                    })}
-                    {paymentsData?.data?.length === 0 && <p className="text-[11px] text-[#a1a1aa]">No payments logged.</p>}
-                  </div>
-                )}
-              </div>
+                        {payment.status === "CONFIRMED" && payment.amount > 0 && (
+                          <button onClick={() => setRefundModal({ isOpen: true, paymentId: payment.id, reason: "" })} disabled={activeAction !== null} className="text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 flex items-center gap-1">
+                            {isRefunding && <Loader2 size={10} className="animate-spin" />} Refund
+                          </button>
+                        )}
+                        {payment.status === "REFUNDED" && <span className="text-[10px] font-bold uppercase text-amber-600">Refunded</span>}
+                      </div>
+                    );
+                  })}
+                  {paymentsData?.data?.length === 0 && <p className="text-[11px] text-[#a1a1aa]">No payments logged.</p>}
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </SidePanel>
 
       {/* Record Payment Modal */}
       {isPaymentModalOpen && (
