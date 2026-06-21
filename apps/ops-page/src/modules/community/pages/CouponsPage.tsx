@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/community/pages/CouponsPage.tsx
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X, Tag, MoreHorizontal, Link as LinkIcon, Edit2, Trash2, AlertTriangle } from "lucide-react";
@@ -20,6 +19,7 @@ export default function CouponsPage() {
   const [maxUses, setMaxUses] = useState(0);
   const [minPrice, setMinPrice] = useState(0);
   const [expiresAt, setExpiresAt] = useState("");
+  const [applicablePlans, setApplicablePlans] = useState<string[]>([]);
 
   useEffect(() => {
     const closeMenu = (event: MouseEvent) => {
@@ -33,6 +33,14 @@ export default function CouponsPage() {
     document.addEventListener("click", closeMenu);
     return () => document.removeEventListener("click", closeMenu);
   }, []);
+
+  const { data: plans } = useQuery({
+    queryKey: ["community-plans-lookup"],
+    queryFn: async () => {
+      const { data } = await client.GET("/admin/community/plans");
+      return data || [];
+    }
+  });
 
   const { data: coupons, isLoading } = useQuery({
     queryKey: ["community-coupons"],
@@ -52,7 +60,8 @@ export default function CouponsPage() {
           amount: Number(amount),
           max_uses: Number(maxUses),
           minimum_original_price: Number(minPrice),
-          expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined
+          expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+          applicable_plan_ids: applicablePlans.length > 0 ? applicablePlans : undefined
         }
       });
       if (error) throw new Error(error.detail);
@@ -74,7 +83,8 @@ export default function CouponsPage() {
         body: {
           max_uses: Number(maxUses),
           minimum_original_price: Number(minPrice),
-          expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined
+          expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+          applicable_plan_ids: applicablePlans.length > 0 ? applicablePlans : undefined
         }
       });
       if (error) throw new Error(error.detail);
@@ -110,6 +120,7 @@ export default function CouponsPage() {
     setMaxUses(0);
     setMinPrice(0);
     setExpiresAt("");
+    setApplicablePlans([]);
   };
 
   const openCreateModal = () => {
@@ -124,12 +135,21 @@ export default function CouponsPage() {
     setMaxUses(coupon.max_uses);
     setMinPrice(coupon.minimum_original_price);
     setExpiresAt(coupon.expires_at ? coupon.expires_at.slice(0, 16) : "");
+    setApplicablePlans(coupon.applicable_plan_ids || []);
     setEditingCoupon(coupon);
   };
 
   const copyPromo = (promoCode: string) => {
     navigator.clipboard.writeText(promoCode);
     toast.success(`Promo code "${promoCode}" copied to clipboard`);
+  };
+
+  const handlePlanToggle = (planId: string) => {
+    setApplicablePlans(prev => 
+      prev.includes(planId) 
+        ? prev.filter(id => id !== planId)
+        : [...prev, planId]
+    );
   };
 
   return (
@@ -153,6 +173,7 @@ export default function CouponsPage() {
               <tr>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Promo Code</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Discount</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Applies To</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Usage Limit</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Redeemed</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] whitespace-nowrap">Expiration</th>
@@ -161,9 +182,9 @@ export default function CouponsPage() {
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLoading ? (
-                <tr><td colSpan={6} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
               ) : coupons?.length === 0 ? (
-                <tr><td colSpan={6} className="py-12 text-center text-[12px] text-[#71717a]">No promotional codes found.</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-[12px] text-[#71717a]">No promotional codes found.</td></tr>
               ) : (
                 coupons?.map((coupon) => {
                   const isExpired = coupon.expires_at ? new Date(coupon.expires_at).getTime() < Date.now() : false;
@@ -179,6 +200,17 @@ export default function CouponsPage() {
                       </td>
                       <td className="px-5 py-3.5 font-mono text-[#52525b] whitespace-nowrap font-medium text-[12px]">
                         {coupon.discount_type === "PERCENTAGE" ? `${coupon.amount}%` : `RM ${coupon.amount.toFixed(2)}`}
+                      </td>
+                      <td className="px-5 py-3.5 text-[#52525b] whitespace-nowrap">
+                        {coupon.applicable_plan_ids && coupon.applicable_plan_ids.length > 0 ? (
+                          <span className="text-[9px] font-bold uppercase tracking-widest bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-sm">
+                            Specific ({coupon.applicable_plan_ids.length})
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-sm">
+                            Global
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 text-[#52525b] whitespace-nowrap">
                         {coupon.max_uses > 0 ? coupon.max_uses : "Unlimited"}
@@ -212,52 +244,78 @@ export default function CouponsPage() {
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
-          <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Promo Code</h3>
               <button onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
-              <div className="p-5 space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code *</label>
-                  <input required value={code} onChange={e => setCode(e.target.value.toUpperCase())} disabled={createMutation.isPending} placeholder="e.g. SUMMER20" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 font-mono text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+            <div className="overflow-y-auto flex-1">
+              <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
+                <div className="p-5 space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Type</label>
-                    <select value={discountType} onChange={e => setDiscountType(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
-                      <option value="PERCENTAGE">Percentage (%)</option>
-                      <option value="FIXED">Fixed Amount (RM)</option>
-                    </select>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code *</label>
+                    <input required value={code} onChange={e => setCode(e.target.value.toUpperCase())} disabled={createMutation.isPending} placeholder="e.g. SUMMER20" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 font-mono text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Type</label>
+                      <select value={discountType} onChange={e => setDiscountType(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
+                        <option value="PERCENTAGE">Percentage (%)</option>
+                        <option value="FIXED">Fixed Amount (RM)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Amount *</label>
+                      <input type="number" step="0.01" required value={amount} onChange={e => setAmount(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Scope (Applies To)</label>
+                    <div className="border border-[#e5e5e5] rounded-sm bg-white overflow-hidden">
+                      <div className="max-h-[120px] overflow-y-auto p-2 space-y-1">
+                        {plans?.map((plan: any) => (
+                          <label key={plan.id} className="flex items-center gap-2 p-1.5 hover:bg-[#fafafa] cursor-pointer rounded-sm">
+                            <input 
+                              type="checkbox" 
+                              checked={applicablePlans.includes(plan.id)}
+                              onChange={() => handlePlanToggle(plan.id)}
+                              disabled={createMutation.isPending}
+                              className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]"
+                            />
+                            <span className="text-[12px] text-[#09090b] font-medium">{plan.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="bg-[#fafafa] border-t border-[#e5e5e5] px-3 py-2 text-[10px] text-[#71717a]">
+                        {applicablePlans.length === 0 ? "Applies to ALL plans (Global)" : `Applies to ${applicablePlans.length} specific plan(s)`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Max Uses (0 = ∞)</label>
+                      <input type="number" value={maxUses} onChange={e => setMaxUses(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Min. Plan Price</label>
+                      <input type="number" step="0.01" value={minPrice} onChange={e => setMinPrice(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Amount *</label>
-                    <input type="number" step="0.01" required value={amount} onChange={e => setAmount(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Expires At (Optional)</label>
+                    <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Max Uses (0 = ∞)</label>
-                    <input type="number" value={maxUses} onChange={e => setMaxUses(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Min. Plan Price</label>
-                    <input type="number" step="0.01" value={minPrice} onChange={e => setMinPrice(Number(e.target.value))} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-                  </div>
+                <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
+                  <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
+                  <button type="submit" disabled={createMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
+                    {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Create
+                  </button>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Expires At (Optional)</label>
-                  <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-                </div>
-              </div>
-              <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
-                <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={createMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
-                  {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Create
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -265,52 +323,78 @@ export default function CouponsPage() {
       {editingCoupon && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !editMutation.isPending && setEditingCoupon(null)} />
-          <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Edit Promo Limits</h3>
               <button onClick={() => setEditingCoupon(null)} disabled={editMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate(); }}>
-              <div className="p-5 space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code</label>
-                  <input disabled value={code} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-[#fafafa] px-3 py-1 font-mono text-[13px] focus:outline-none text-[#71717a]" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+            <div className="overflow-y-auto flex-1">
+              <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate(); }}>
+                <div className="p-5 space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Type</label>
-                    <select disabled value={discountType} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-[#fafafa] px-3 text-[13px] focus:outline-none text-[#71717a]">
-                      <option value="PERCENTAGE">Percentage (%)</option>
-                      <option value="FIXED">Fixed Amount (RM)</option>
-                    </select>
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code</label>
+                    <input disabled value={code} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-[#fafafa] px-3 py-1 font-mono text-[13px] focus:outline-none text-[#71717a]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Type</label>
+                      <select disabled value={discountType} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-[#fafafa] px-3 text-[13px] focus:outline-none text-[#71717a]">
+                        <option value="PERCENTAGE">Percentage (%)</option>
+                        <option value="FIXED">Fixed Amount (RM)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Amount</label>
+                      <input disabled type="number" value={amount} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-[#fafafa] px-3 py-1 text-[13px] focus:outline-none text-[#71717a]" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Scope (Applies To)</label>
+                    <div className="border border-[#e5e5e5] rounded-sm bg-white overflow-hidden">
+                      <div className="max-h-[120px] overflow-y-auto p-2 space-y-1">
+                        {plans?.map((plan: any) => (
+                          <label key={plan.id} className="flex items-center gap-2 p-1.5 hover:bg-[#fafafa] cursor-pointer rounded-sm">
+                            <input 
+                              type="checkbox" 
+                              checked={applicablePlans.includes(plan.id)}
+                              onChange={() => handlePlanToggle(plan.id)}
+                              disabled={editMutation.isPending}
+                              className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]"
+                            />
+                            <span className="text-[12px] text-[#09090b] font-medium">{plan.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="bg-[#fafafa] border-t border-[#e5e5e5] px-3 py-2 text-[10px] text-[#71717a]">
+                        {applicablePlans.length === 0 ? "Applies to ALL plans (Global)" : `Applies to ${applicablePlans.length} specific plan(s)`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Max Uses (0 = ∞)</label>
+                      <input type="number" value={maxUses} onChange={e => setMaxUses(Number(e.target.value))} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Min. Plan Price</label>
+                      <input type="number" step="0.01" value={minPrice} onChange={e => setMinPrice(Number(e.target.value))} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Amount</label>
-                    <input disabled type="number" value={amount} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-[#fafafa] px-3 py-1 text-[13px] focus:outline-none text-[#71717a]" />
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Expires At (Optional)</label>
+                    <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Max Uses (0 = ∞)</label>
-                    <input type="number" value={maxUses} onChange={e => setMaxUses(Number(e.target.value))} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Min. Plan Price</label>
-                    <input type="number" step="0.01" value={minPrice} onChange={e => setMinPrice(Number(e.target.value))} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-                  </div>
+                <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
+                  <button type="button" onClick={() => setEditingCoupon(null)} disabled={editMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
+                  <button type="submit" disabled={editMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
+                    {editMutation.isPending && <Loader2 size={13} className="animate-spin" />} Save Changes
+                  </button>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Expires At (Optional)</label>
-                  <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-                </div>
-              </div>
-              <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
-                <button type="button" onClick={() => setEditingCoupon(null)} disabled={editMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={editMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
-                  {editMutation.isPending && <Loader2 size={13} className="animate-spin" />} Save Changes
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
