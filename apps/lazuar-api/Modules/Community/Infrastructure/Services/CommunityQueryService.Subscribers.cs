@@ -1,5 +1,9 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Services/CommunityQueryService.Subscribers.cs
 using Dapper;
+using System;
 using System.Data;
+using System.Linq;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 
@@ -15,17 +19,21 @@ public partial class CommunityQueryService
         DateTime? NextBillingDate, DateTime CreatedAt,
         string? VaultedCustomerId, string? VaultedTokenId);
 
-    public async Task<PaginatedResponse<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit)
+    public async Task<PaginatedResponse<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
         int offset = (page - 1) * limit;
+        var searchPattern = string.IsNullOrWhiteSpace(searchTerm) ? null : $"%{searchTerm}%";
 
         const string sql = @"
             SELECT COUNT(*)::int
-            FROM community.""Subscriptions""
-            WHERE ""OrganizationId"" = @OrgId AND ""Status"" != 'PENDING';
+            FROM community.""Subscriptions"" s
+            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
+            WHERE s.""OrganizationId"" = @OrgId 
+            AND s.""Status"" != 'PENDING'
+            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm);
 
             SELECT
                 s.""Id"", s.""OrganizationId"", s.""ClientProfileId"", s.""PlanId"",
@@ -36,11 +44,20 @@ public partial class CommunityQueryService
                 s.""VaultedCustomerId"", s.""VaultedTokenId""
             FROM community.""Subscriptions"" s
             JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
-            WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'
+            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
+            WHERE s.""OrganizationId"" = @OrgId 
+            AND s.""Status"" != 'PENDING'
+            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm)
             ORDER BY s.""CreatedAt"" DESC
             LIMIT @Limit OFFSET @Offset;";
 
-        using var multi = await connection.QueryMultipleAsync(sql, new { OrgId = organizationId, Limit = limit, Offset = offset });
+        using var multi = await connection.QueryMultipleAsync(sql, new { 
+            OrgId = organizationId, 
+            Limit = limit, 
+            Offset = offset,
+            SearchTerm = searchPattern 
+        });
+        
         var totalCount = await multi.ReadFirstAsync<int>();
         var rawSubs = (await multi.ReadAsync<RawSubDto>()).ToList();
 
@@ -49,7 +66,6 @@ public partial class CommunityQueryService
         var profileIds = rawSubs.Select(x => x.ClientProfileId).Distinct();
         var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
         
-        // FIX: Parse the string Id from the DTO back to a Guid for the dictionary key
         var profileDict = profiles.ToDictionary(p => Guid.Parse(p.Id));
 
         var now = DateTime.UtcNow;
@@ -65,7 +81,6 @@ public partial class CommunityQueryService
             {
                 Id = s.Id.ToString(),
                 Client_profile_id = s.ClientProfileId.ToString(),
-                // FIX: Use Full_name instead of FullName to match TypeSpec DTO
                 Customer_name = profile?.Full_name ?? "Unknown",
                 Customer_email = profile?.Email ?? "",
                 Customer_phone = profile?.Phone ?? "",
@@ -121,7 +136,6 @@ public partial class CommunityQueryService
         {
             Id = rawSub.Id.ToString(),
             Client_profile_id = rawSub.ClientProfileId.ToString(),
-            // FIX: Use Full_name instead of FullName to match TypeSpec DTO
             Customer_name = profile?.Full_name ?? "Unknown",
             Customer_email = profile?.Email ?? "",
             Customer_phone = profile?.Phone ?? "",

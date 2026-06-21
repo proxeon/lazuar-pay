@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application;
 using Modules.Community.Application.Commands;
+using Modules.Community.Application.Commands.Agent;
 using Modules.Community.Application.Queries;
 using Modules.Payments.Application.Queries;
 using Modules.Payments.Application.Commands;
@@ -48,12 +49,13 @@ public static class Endpoints
         admin.MapGet("/subscribers", async Task<Ok<PaginatedResponse<CommunitySubscriptionDto>>> (
         [FromQuery] int page,
         [FromQuery] int limit,
+        [FromQuery] string? search,
         IExecutionContextAccessor ctx,
         ICommunityQueryService queryService) =>
         {
             var p = page < 1 ? 1 : page;
             var l = limit < 1 || limit > 100 ? 50 : limit;
-            var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l);
+            var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l, search);
             return TypedResults.Ok(response);
         });
 
@@ -361,6 +363,21 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<MessageTemplateDto>)templates.ToList());
         });
 
+        admin.MapGet("/templates/variables", async Task<Ok<ICollection<TemplateVariableCategoryDto>>> (
+        IMediator mediator) =>
+        {
+            var variables = await mediator.Send(new GetTemplateVariablesQuery());
+            return TypedResults.Ok((ICollection<TemplateVariableCategoryDto>)variables.ToList());
+        });
+
+        admin.MapPost("/templates/preview", async Task<Ok<TemplatePreviewResponseDto>> (
+        TemplatePreviewRequestDto req,
+        IMediator mediator) =>
+        {
+            var response = await mediator.Send(new RenderTemplatePreviewQuery(req.Subject, req.Body));
+            return TypedResults.Ok(response);
+        });
+
         admin.MapPut("/templates/{id:guid}", async Task<Ok<StatusResponse>> (
         Guid id,
         UpdateTemplateRequestDto req,
@@ -407,6 +424,39 @@ public static class Endpoints
                 req.Max_uses,
                 req.Expires_at?.UtcDateTime,
                 req.Minimum_original_price.HasValue ? (decimal)req.Minimum_original_price.Value : 0);
+            var id = await mediator.Send(command);
+            return TypedResults.Ok(new IdResponse { Id = id.ToString() });
+        });
+
+        admin.MapPut("/coupons/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, UpdateCouponRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            var command = new UpdateCouponCommand(
+                ctx.TenantId,
+                id,
+                req.Max_uses ?? 0,
+                req.Minimum_original_price.HasValue ? (decimal)req.Minimum_original_price.Value : 0m,
+                req.Expires_at?.UtcDateTime);
+            await mediator.Send(command);
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
+        });
+
+        admin.MapDelete("/coupons/{id:guid}", async Task<Ok<StatusResponse>> (Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            await mediator.Send(new ArchiveCouponCommand(ctx.TenantId, id));
+            return TypedResults.Ok(new StatusResponse { Status = "archived" });
+        });
+
+        admin.MapPost("/broadcasts", async Task<Ok<IdResponse>> (CreateBroadcastRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        {
+            Guid? targetPlanId = !string.IsNullOrEmpty(req.Target_plan_id) ? Guid.Parse(req.Target_plan_id) : null;
+            var command = new SendBroadcastCommand(
+                ctx.TenantId,
+                req.Subject,
+                req.Body,
+                req.Channel,
+                targetPlanId,
+                req.Target_status,
+                req.Target_is_reminder_only);
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         });
