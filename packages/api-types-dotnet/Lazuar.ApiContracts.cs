@@ -552,6 +552,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
         public System.DateTimeOffset? Expires_at { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("applicable_plan_ids")]
+        public System.Collections.Generic.List<string>? Applicable_plan_ids { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -617,6 +620,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
         public System.DateTimeOffset? Expires_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("applicable_plan_ids")]
+        public System.Collections.Generic.List<string>? Applicable_plan_ids { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1415,6 +1421,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
         public System.DateTimeOffset? Expires_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("applicable_plan_ids")]
+        public System.Collections.Generic.List<string>? Applicable_plan_ids { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

@@ -1,4 +1,3 @@
-// packages/api-spec/modules/community/models.tsp
 namespace LazuarApi.Community;
 
 model FaqItemDto {
@@ -339,6 +338,7 @@ model CouponDto {
   reserved_count: int32;
   minimum_original_price: float64;
   expires_at?: utcDateTime;
+  applicable_plan_ids?: string[]; // GUID array
 }
 
 model CreateCouponRequestDto {
@@ -348,12 +348,14 @@ model CreateCouponRequestDto {
   max_uses: int32;
   minimum_original_price?: float64;
   expires_at?: utcDateTime;
+  applicable_plan_ids?: string[]; // GUID array
 }
 
 model UpdateCouponRequestDto {
   max_uses?: int32;
   minimum_original_price?: float64;
   expires_at?: utcDateTime;
+  applicable_plan_ids?: string[]; // GUID array
 }
 
 model TemplateVariableDto {

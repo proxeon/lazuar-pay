@@ -1497,6 +1497,7 @@ export interface components {
             minimum_original_price: number;
             /** Format: date-time */
             expires_at?: string;
+            applicable_plan_ids?: string[];
         };
         "Community.CreateBroadcastRequestDto": {
             subject: string;
@@ -1517,6 +1518,7 @@ export interface components {
             minimum_original_price?: number;
             /** Format: date-time */
             expires_at?: string;
+            applicable_plan_ids?: string[];
         };
         "Community.CreatePlanRequestDto": {
             slug: string;
@@ -1729,6 +1731,7 @@ export interface components {
             minimum_original_price?: number;
             /** Format: date-time */
             expires_at?: string;
+            applicable_plan_ids?: string[];
         };
         "Community.UpdatePlanRequestDto": {
             slug?: string;
