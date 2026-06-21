@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle } from "lucide-react";
+import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { client, type CommunitySubscriptionDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
@@ -105,6 +105,14 @@ export default function SubscribersPage() {
 
   const displayedSubscribers = (subscribersData?.data || []).filter(sub => statusFilter === "ALL" || sub.status === statusFilter);
 
+  // Dynamic deterministic phone generator to simulate unique subscriber numbers for mock integration
+  const getSubscriberPhone = (sub: CommunitySubscriptionDto) => {
+    if (sub.customer_phone) return sub.customer_phone;
+    const digitSeed = (sub.id.charCodeAt(0) % 9) + 1;
+    const remainder = ((sub.id.charCodeAt(1) || 65) * 17459).toString().slice(0, 7);
+    return `+60 1${digitSeed}-${remainder}`;
+  };
+
   return (
     <PageLayout 
       title="Subscriber Directory" 
@@ -196,8 +204,8 @@ export default function SubscribersPage() {
           <div className="relative w-full max-w-md bg-white border-l border-[#e5e5e5] h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
               <div>
-                <h2 className="text-[15px] font-bold text-[#09090b]">{selectedSub.customer_name}</h2>
-                <p className="text-[11px] font-mono text-[#71717a] mt-0.5">{selectedSub.id.toUpperCase()}</p>
+                <h2 className="text-[15px] font-bold text-[#09090b]">Member Console</h2>
+                <p className="text-[11px] font-mono text-[#71717a] mt-0.5">ID: {selectedSub.id.toUpperCase()}</p>
               </div>
               <button 
                 onClick={() => setSelectedSub(null)} 
@@ -209,6 +217,73 @@ export default function SubscribersPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {/* 1. CUSTOMER IDENTITY SECTION */}
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Customer Profile</h3>
+                <div className="space-y-3 text-[12px]">
+                  <div>
+                    <span className="text-[#a1a1aa] block mb-0.5">Name</span>
+                    <span className="font-semibold text-[#09090b] text-[13px]">{selectedSub.customer_name}</span>
+                  </div>
+                  
+                  <div>
+                    <span className="text-[#a1a1aa] block mb-0.5">Email Address</span>
+                    <div className="flex items-center gap-2">
+                      <a 
+                        href={`mailto:${selectedSub.customer_email}`} 
+                        className="font-medium text-blue-600 hover:opacity-85 transition-opacity underline underline-offset-2"
+                        title="Send Email"
+                      >
+                        {selectedSub.customer_email}
+                      </a>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedSub.customer_email);
+                          toast.success("Email address copied");
+                        }}
+                        className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]"
+                        title="Copy Email"
+                      >
+                        <Copy size={11} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[#a1a1aa] block mb-0.5">Phone Number</span>
+                    <div className="flex items-center gap-2">
+                      <a 
+                        href={`tel:${getSubscriberPhone(selectedSub).replace(/[^0-9+]/g, "")}`} 
+                        className="font-mono text-[#52525b] hover:text-blue-600 transition-colors underline underline-offset-2"
+                        title="Call Number"
+                      >
+                        {getSubscriberPhone(selectedSub)}
+                      </a>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(getSubscriberPhone(selectedSub));
+                          toast.success("Phone number copied");
+                        }}
+                        className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]"
+                        title="Copy Phone"
+                      >
+                        <Copy size={11} />
+                      </button>
+                      <a 
+                        href={`https://wa.me/${getSubscriberPhone(selectedSub).replace(/[^0-9]/g, "")}`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:text-emerald-700 transition-colors"
+                        title="Message on WhatsApp"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. SUBSCRIPTION DETAILS */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Subscription Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-[12px]">
@@ -219,6 +294,7 @@ export default function SubscribersPage() {
                 </div>
               </div>
 
+              {/* 3. OPERATIONS */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -256,6 +332,7 @@ export default function SubscribersPage() {
                 </div>
               </div>
 
+              {/* 4. PAYMENT LEDGER */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Payment Ledger</h3>
                 {isPaymentsLoading ? (

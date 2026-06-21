@@ -1,11 +1,10 @@
-# Taskfile.yml (Monorepo Root)
 version: '3'
 
 tasks:
   infra:up:
-    desc: Start local Docker dependencies (PostgreSQL, MinIO) in the background
+    desc: Start local Docker dependencies (PostgreSQL) in the background
     cmds:
-      - docker-compose up db minio minio-provisioner -d
+      - docker-compose up db -d
 
   infra:down:
     desc: Stop and remove local Docker containers
@@ -13,7 +12,7 @@ tasks:
       - docker-compose down
 
   infra:reset:
-    desc: "Stop containers and completely wipe local database/storage volumes (Warning: destructive)"
+    desc: "Stop containers and completely wipe local database volumes (Warning: destructive)"
     cmds:
       - docker-compose down -v
 
@@ -26,9 +25,6 @@ tasks:
     desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
     deps: [infra:up]
     cmds:
-      # We dont need to run "task: api:db:migrate" all the time. Only run this
-      # on fresh db. Otherwise we will get error "Entity XYZ already exist".
-      # - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
   fe:

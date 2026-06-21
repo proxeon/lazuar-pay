@@ -1,4 +1,3 @@
-# docker-compose.yml (Monorepo Root)
 services:
   db:
     image: postgres:16-alpine
@@ -19,36 +18,6 @@ services:
     networks:
       - lazuar-network
 
-  minio:
-    image: minio/minio:latest
-    container_name: lazuar-storage
-    ports:
-      - "9000:9000"     # S3 API Port
-      - "9001:9001"     # MinIO Web Console Port
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadminpassword
-    entrypoint: sh -c "minio server /data --console-address :9001"
-    volumes:
-      - miniodata:/data
-    networks:
-      - lazuar-network
-
-  minio-provisioner:
-    image: minio/mc:latest
-    depends_on:
-      - minio
-    entrypoint: >
-      sh -c "
-      sleep 2;
-      mc alias set localminio http://minio:9000 minioadmin minioadminpassword;
-      mc mb --ignore-existing localminio/lazuar-media;
-      mc anonymous set public localminio/lazuar-media;
-      exit 0;
-      "
-    networks:
-      - lazuar-network
-
   api:
     build:
       context: .
@@ -61,23 +30,20 @@ services:
       - ConnectionStrings__Default=Host=db;Port=5432;Database=lazuar_mvp;Username=postgres;Password=postgres;Maximum Pool Size=50;
       - ConnectionStrings__TenantConnection=Host=db;Port=5432;Database=lazuar_mvp;Username=postgres;Password=postgres;Maximum Pool Size=50;
       - ConnectionStrings__MessagingConnection=Host=db;Port=5432;Database=lazuar_mvp;Username=postgres;Password=postgres;Maximum Pool Size=20;
-      - R2__AccountId=
-      - R2__AccessKey=minioadmin
-      - R2__SecretKey=minioadminpassword
-      - R2__BucketName=lazuar-media
-      - R2__ServiceUrl=http://minio:9000
-      - R2__PublicUrl=http://localhost:9000/lazuar-media
+      - R2__AccountId=${R2_ACCOUNT_ID}
+      - R2__AccessKey=${R2_ACCESS_KEY}
+      - R2__SecretKey=${R2_SECRET_KEY}
+      - R2__BucketName=${R2_BUCKET_NAME:-lazuar-media-sandbox}
+      - R2__ServiceUrl=https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+      - R2__PublicUrl=${R2_PUBLIC_URL}
     depends_on:
       db:
         condition: service_healthy
-      minio:
-        condition: service_started
     networks:
       - lazuar-network
 
 volumes:
   pgdata:
-  miniodata:
 
 networks:
   lazuar-network:
