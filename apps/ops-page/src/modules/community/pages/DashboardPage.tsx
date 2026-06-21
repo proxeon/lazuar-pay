@@ -1,20 +1,15 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, Copy, Check, ChevronLeft, ChevronRight, Zap } from "lucide-react";
-import { toast } from "sonner";
-import { client, type CommunitySubscriptionDto } from "../lib/api-client";
+import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2 } from "lucide-react";
+import { client } from "../../../lib/api-client";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { cn } from "../lib/utils";
+import { cn } from "../../../lib/utils";
+import PageLayout from "../../core/components/PageLayout";
 
-export default function CommunityInsights() {
-  const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
+export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["community-stats"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/stats" as any);
+      const { data, error } = await client.GET("/admin/community/stats");
       if (error) throw new Error(error.detail);
       return data;
     }
@@ -23,7 +18,7 @@ export default function CommunityInsights() {
   const { data: financials, isLoading: financialsLoading } = useQuery({
     queryKey: ["financial-summary"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/billing/summary" as any);
+      const { data, error } = await client.GET("/admin/billing/summary");
       if (error) throw new Error(error.detail);
       return data;
     }
@@ -32,18 +27,7 @@ export default function CommunityInsights() {
   const { data: plans, isLoading: plansLoading } = useQuery({
     queryKey: ["community-plans"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/plans" as any);
-      if (error) throw new Error(error.detail);
-      return data;
-    }
-  });
-
-  const { data: subscribersData, isLoading: subsLoading } = useQuery({
-    queryKey: ["community-subscribers", page],
-    queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/subscribers" as any, {
-        params: { query: { page, limit: 50 } }
-      });
+      const { data, error } = await client.GET("/admin/community/plans");
       if (error) throw new Error(error.detail);
       return data;
     }
@@ -66,25 +50,13 @@ export default function CommunityInsights() {
     { label: "Cancellation Rate", value: `${stats?.churn_rate_percentage || 0}%`, icon: Activity },
   ];
 
-  const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedId(id);
-    toast.success("ID Copied", { description: "Paste this ID into the Ops Chat to execute actions." });
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const displayedSubscribers = (subscribersData?.data as CommunitySubscriptionDto[] || [])
-    .filter(sub => statusFilter === "ALL" || sub.status === statusFilter);
-
   return (
-    <div className="flex-1 overflow-y-auto bg-[#fafafa] p-6 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        <div>
-          <h1 className="text-xl font-bold text-[#09090b]">Community Insights</h1>
-          <p className="text-xs text-[#71717a] mt-1">High-density overview of your financial and retention health.</p>
-        </div>
-
+    <PageLayout 
+      title="Community Insights" 
+      description="High-density overview of your financial and retention health."
+      breadcrumbs={[{ label: "Community" }, { label: "Dashboard" }]}
+    >
+      <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {topMetrics.map((kpi, i) => (
             <div key={i} className={cn(
@@ -158,115 +130,7 @@ export default function CommunityInsights() {
             </div>
           </div>
         </div>
-
-        <div className="bg-white border border-[#e5e5e5] flex flex-col">
-          <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Subscriber Directory</h3>
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 px-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-[#e5e5e5] text-[#09090b] focus:outline-none focus:border-[#09090b]"
-            >
-              <option value="ALL">ALL STATUSES</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="PAST_DUE">PAST DUE</option>
-              <option value="CANCELLED">CANCELLED</option>
-              <option value="EXPIRED">EXPIRED</option>
-            </select>
-          </div>
-
-          <div className="overflow-x-auto min-h-[400px]">
-            <table className="w-full text-left text-[13px]">
-              <thead className="bg-white border-b border-[#f4f4f5]">
-                <tr>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">ID</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Customer</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Plan</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Status</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] text-right">Period End</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#f4f4f5]">
-                {subsLoading ? (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td>
-                  </tr>
-                ) : displayedSubscribers.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-[12px] text-[#71717a]">No subscribers found.</td>
-                  </tr>
-                ) : (
-                  displayedSubscribers.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-[#fafafa]/50 transition-colors group">
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[#71717a] text-[11px]">{sub.id.substring(0, 8)}...</span>
-                          <button 
-                            onClick={() => handleCopyId(sub.id)}
-                            className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm opacity-0 group-hover:opacity-100"
-                            title="Copy ID for Ops Chat"
-                          >
-                            {copiedId === sub.id ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 min-w-[200px]">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-[#09090b] text-[13px]">{sub.customer_name}</p>
-                          {sub.vaulted_token_id && (
-                            <Zap size={12} className="text-blue-500" title="Auto-Debit Token Saved" />
-                          )}
-                        </div>
-                        <p className="text-[11px] text-[#71717a]">{sub.customer_email}</p>
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        <p className="text-[12px] text-[#09090b]">{sub.plan_name}</p>
-                        <p className="text-[10px] font-mono text-[#71717a]">RM {sub.plan_price.toFixed(2)}</p>
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        <span className={cn(
-                          "text-[10px] font-bold uppercase tracking-widest",
-                          sub.status === "ACTIVE" ? "text-emerald-600" :
-                          sub.status === "PAST_DUE" ? "text-rose-600" :
-                          sub.status === "CANCELLED" ? "text-amber-600" : "text-[#a1a1aa]"
-                        )}>
-                          {sub.status.replace("_", " ")}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap text-right font-mono text-[#52525b] text-[11px]">
-                        {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#a1a1aa]">
-              Page {subscribersData?.current_page || 1} of {subscribersData?.total_pages || 1}
-            </span>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1 || subsLoading}
-                className="h-7 px-2 border border-[#e5e5e5] bg-white hover:bg-[#f4f4f5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 flex items-center gap-1"
-              >
-                <ChevronLeft size={13} /> Prev
-              </button>
-              <button 
-                onClick={() => setPage(p => p + 1)}
-                disabled={!subscribersData || page >= (subscribersData.total_pages || 1) || subsLoading}
-                className="h-7 px-2 border border-[#e5e5e5] bg-white hover:bg-[#f4f4f5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 flex items-center gap-1"
-              >
-                Next <ChevronRight size={13} />
-              </button>
-            </div>
-          </div>
-        </div>
-
       </div>
-    </div>
+    </PageLayout>
   );
 }
