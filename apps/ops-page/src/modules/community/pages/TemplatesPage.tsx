@@ -1,3 +1,4 @@
+// apps/ops-page/src/modules/community/pages/TemplatesPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit2, Loader2, Mail, Plus, BookOpen, X, Copy } from "lucide-react";
@@ -7,12 +8,8 @@ import PageLayout from "../../core/components/PageLayout";
 import MessageTemplateEditor from "../components/MessageTemplateEditor";
 import { cn } from "../../../lib/utils";
 
-type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"] & {
-  target_audience?: string;
-  trigger_rule?: string;
-};
+type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"];
 
-// Global unified variable dictionary
 const DICTIONARY_GROUPS = [
   {
     title: "Customer Profile Context",
@@ -46,12 +43,9 @@ export default function TemplatesPage() {
   const [isWikiOpen, setIsWikiOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // New Template Inputs
   const [newName, setNewName] = useState("");
   const [newSubject, setNewSubject] = useState("");
   const [newBody, setNewBody] = useState("");
-  const [newAudience, setNewAudience] = useState("ALL_SUBSCRIBERS");
-  const [newTrigger, setNewTrigger] = useState("ON_SIGNUP");
 
   const { data: templates, isLoading } = useQuery<MessageTemplateDto[]>({
     queryKey: ["message-templates"],
@@ -64,13 +58,12 @@ export default function TemplatesPage() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Create a template with no routing logic attached
       const { error } = await client.POST("/admin/community/templates" as any, {
         body: {
           name: newName,
           subject: newSubject,
           body: newBody,
-          target_audience: newAudience,
-          trigger_rule: newTrigger,
           channel: "EMAIL",
           required_variables: ["{{customer_name}}"],
           optional_variables: ["{{plan_name}}", "{{renewal_link}}"]
@@ -88,15 +81,10 @@ export default function TemplatesPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, subject, body, target_audience, trigger_rule }: { id: string, subject: string, body: string, target_audience?: string, trigger_rule?: string }) => {
+    mutationFn: async ({ id, subject, body }: { id: string, subject: string, body: string }) => {
       const { error } = await client.PUT("/admin/community/templates/{id}", {
         params: { path: { id } },
-        body: { 
-          subject, 
-          body,
-          target_audience,
-          trigger_rule 
-        } as any
+        body: { subject, body }
       });
       if (error) throw new Error(error.detail);
     },
@@ -125,8 +113,6 @@ export default function TemplatesPage() {
     setNewName("");
     setNewSubject("");
     setNewBody("");
-    setNewAudience("ALL_SUBSCRIBERS");
-    setNewTrigger("ON_SIGNUP");
   };
 
   const copyVariable = (tag: string) => {
@@ -139,9 +125,7 @@ export default function TemplatesPage() {
       <div className="fixed inset-0 z-50 bg-white flex flex-col animate-in fade-in zoom-in-95 duration-200">
         <MessageTemplateEditor 
           template={selectedTemplate}
-          onSave={(subject, body, target_audience, trigger_rule) => 
-            updateMutation.mutate({ id: selectedTemplate.id, subject, body, target_audience, trigger_rule })
-          }
+          onSave={(subject, body) => updateMutation.mutate({ id: selectedTemplate.id, subject, body })}
           onReset={() => resetMutation.mutate(selectedTemplate.id)}
           onCancel={() => setSelectedTemplate(null)}
           isSaving={updateMutation.isPending}
@@ -158,18 +142,8 @@ export default function TemplatesPage() {
       breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Email Templates" }]}
       actionButton={
         <div className="flex gap-2">
-          <button 
-            onClick={() => setIsWikiOpen(true)}
-            className="h-9 px-4 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#fafafa] transition-colors"
-          >
-            <BookOpen size={13} /> Variable Wiki
-          </button>
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
-          >
-            <Plus size={14} /> Create Template
-          </button>
+          <button onClick={() => setIsWikiOpen(true)} className="h-9 px-4 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#fafafa] transition-colors"><BookOpen size={13} /> Variable Wiki</button>
+          <button onClick={() => setIsCreateModalOpen(true)} className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"><Plus size={14} /> Create Template</button>
         </div>
       }
     >
@@ -183,62 +157,39 @@ export default function TemplatesPage() {
           <table className="w-full text-left text-[13px] min-w-[750px]">
             <thead className="bg-[#fafafa] border-b border-[#e5e5e5]">
               <tr>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Notification Scope</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Schedule Trigger (When)</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Target Audience (Who)</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Notification Template</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Subject Line</th>
                 <th className="px-5 py-3 w-[5%]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLoading ? (
-                <tr><td colSpan={5} className="py-12 text-center"><Loader2 className="animate-spin text-[#a1a1aa] mx-auto" /></td></tr>
+                <tr><td colSpan={3} className="py-12 text-center"><Loader2 className="animate-spin text-[#a1a1aa] mx-auto" /></td></tr>
               ) : (
-                templates?.map((template) => {
-                  const targetWho = template.target_audience || "ALL_SUBSCRIBERS";
-                  const triggerWhen = template.trigger_rule || "ON_SIGNUP";
-                  return (
-                    <tr key={template.id} className="hover:bg-[#fafafa]/50 transition-colors group">
-                      <td className="px-5 py-3.5 font-bold text-[#09090b]">
-                        <div className="flex items-center gap-2">
-                          <span>{template.name}</span>
-                          {!template.is_default && (
-                            <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-bold uppercase tracking-wider">Customized</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 text-[#52525b] font-medium font-mono text-[11px] uppercase tracking-wider">
-                        {triggerWhen.replace(/_/g, " ")}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={cn(
-                          "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
-                          targetWho === "ACTIVE_ONLY" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                          targetWho === "PAST_DUE_ONLY" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                          "bg-zinc-100 text-zinc-600 border-zinc-200"
-                        )}>
-                          {targetWho.replace(/_/g, " ")}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-[#71717a] truncate max-w-xs">{template.subject}</td>
-                      <td className="px-5 py-3.5 text-right">
-                        <button 
-                          onClick={() => setSelectedTemplate(template)}
-                          className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#e5e5e5] text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-all"
-                        >
-                          <Edit2 size={10} /> Edit
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                templates?.map((template) => (
+                  <tr key={template.id} className="hover:bg-[#fafafa]/50 transition-colors group">
+                    <td className="px-5 py-3.5 font-bold text-[#09090b]">
+                      <div className="flex items-center gap-2">
+                        <span>{template.name}</span>
+                        {!template.is_default && (
+                          <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-bold uppercase tracking-wider">Customized</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-[#71717a] truncate max-w-xs">{template.subject}</td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button onClick={() => setSelectedTemplate(template)} className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#e5e5e5] text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-all">
+                        <Edit2 size={10} /> Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* 1. VARIABLE WIKI REFERENCE DRAWER */}
       {isWikiOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setIsWikiOpen(false)} />
@@ -272,7 +223,6 @@ export default function TemplatesPage() {
         </div>
       )}
 
-      {/* 2. CREATE TEMPLATE WIZARD MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
@@ -287,33 +237,10 @@ export default function TemplatesPage() {
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Template Title *</label>
                   <input required value={newName} onChange={e => setNewName(e.target.value)} disabled={createMutation.isPending} placeholder="e.g. Signup Receipt" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Audience (Who)</label>
-                    <select value={newAudience} onChange={e => setNewAudience(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]">
-                      <option value="ALL_SUBSCRIBERS">All Subscribers</option>
-                      <option value="ACTIVE_ONLY">Active Members Only</option>
-                      <option value="PAST_DUE_ONLY">Past Due Members Only</option>
-                      <option value="CANCELLED_ONLY">Cancelled Only</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Dispatch trigger (When)</label>
-                    <select value={newTrigger} onChange={e => setNewTrigger(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]">
-                      <option value="ON_SIGNUP">Immediately on Signup</option>
-                      <option value="RELATIVE_TO_DUE_DATE">Relative to Due Date</option>
-                      <option value="ON_CANCELLATION">On Cancellation</option>
-                      <option value="MANUAL_ONLY">Manual Dispatch Only</option>
-                    </select>
-                  </div>
-                </div>
-
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Subject Line *</label>
                   <input required value={newSubject} onChange={e => setNewSubject(e.target.value)} disabled={createMutation.isPending} placeholder="e.g. Welcome onboard {{customer_name}}!" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
                 </div>
-
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Message Body *</label>
                   <textarea required value={newBody} onChange={e => setNewBody(e.target.value)} rows={6} disabled={createMutation.isPending} placeholder="Write copy... (Markdown supported)" className="w-full p-3 border border-[#e5e5e5] bg-white text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] resize-y font-mono" />

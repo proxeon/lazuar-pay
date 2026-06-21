@@ -1,3 +1,4 @@
+// apps/ops-page/src/modules/community/pages/PlansPage.tsx
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X, AlertTriangle, MoreHorizontal, Link as LinkIcon, Edit2, Trash2 } from "lucide-react";
@@ -16,7 +17,6 @@ export default function PlansPage() {
   const [planToDelete, setPlanToDelete] = useState<any | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // Global click-outside listener to manage dropdown closure without event collisions
   useEffect(() => {
     const closeMenu = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -75,8 +75,7 @@ export default function PlansPage() {
   const editMutation = useMutation({
     mutationFn: async (payload: any) => {
       const { id, ...body } = payload;
-      // PUT request to update plan fields
-      const { error } = await client.PUT("/admin/community/plans/{id}" as any, {
+      const { error } = await client.PUT("/admin/community/plans/{id}", {
         params: { path: { id } },
         body
       });
@@ -92,10 +91,8 @@ export default function PlansPage() {
 
   const softDeleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Soft deletion/archiving deactivates the target plan
-      const { error } = await client.PUT("/admin/community/plans/{id}" as any, {
-        params: { path: { id } },
-        body: { is_active: false }
+      const { error } = await client.DELETE("/admin/community/plans/{id}", {
+        params: { path: { id } }
       });
       if (error) throw new Error(error.detail);
     },
@@ -133,7 +130,6 @@ export default function PlansPage() {
         </button>
       }
     >
-      {/* Gateway Status Banner */}
       {!isConfigLoading && !isGatewayActive && (
         <div className="mb-6 bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
           <AlertTriangle className="text-amber-600 mt-0.5 shrink-0" size={16} />
@@ -146,7 +142,6 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* Main Tabular Plans List */}
       {isLoading ? (
         <div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
       ) : (
@@ -179,7 +174,6 @@ export default function PlansPage() {
                         !plan.is_active && "opacity-60 bg-[#fafafa]/30"
                       )}
                     >
-                      {/* Name, Description, and Audience Badge */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-bold text-[#09090b] text-[13px]">{plan.name}</span>
@@ -191,29 +185,21 @@ export default function PlansPage() {
                           {plan.short_description || "No description provided."}
                         </p>
                       </td>
-
-                      {/* Pricing Tier Details */}
                       <td className="px-5 py-3.5">
                         <div className="font-mono text-[#09090b]">
                           <span className="font-bold">RM {plan.price.toFixed(2)}</span>
                           <span className="text-[11px] text-[#71717a]"> / {plan.interval}</span>
                         </div>
                       </td>
-
-                      {/* Enrollment Limits */}
                       <td className="px-5 py-3.5">
                         <div className="font-mono text-[#52525b]">
                           <span className="font-bold text-[#09090b]">{plan.enrolled_count}</span>
                           <span className="text-[11px] text-[#a1a1aa]"> / {plan.max_capacity || "∞"}</span>
                         </div>
                       </td>
-
-                      {/* Grace Period Duration */}
                       <td className="px-5 py-3.5">
                         <span className="text-[12px] text-[#52525b] font-medium">{plan.grace_period_days} days</span>
                       </td>
-
-                      {/* Visibility Status */}
                       <td className="px-5 py-3.5">
                         <span className={cn(
                           "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
@@ -224,8 +210,6 @@ export default function PlansPage() {
                           {plan.is_active ? "Active" : "Archived"}
                         </span>
                       </td>
-
-                      {/* Actions Trigger Dropdown */}
                       <td className="px-5 py-3.5 text-right relative">
                         <button 
                           data-menu-trigger={plan.id}
@@ -237,7 +221,7 @@ export default function PlansPage() {
                         {openMenuId === plan.id && (
                           <div className="absolute right-5 top-full mt-1 w-44 bg-white border border-[#e5e5e5] rounded-none py-1 z-50 text-left animate-in fade-in slide-in-from-top-1 duration-150">
                             <button 
-                              onClick={() => setEditingPlan(plan)}
+                              onClick={() => openEditModal(plan)}
                               className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center gap-2"
                             >
                               <Edit2 size={12} className="text-[#71717a]" /> Edit Plan
@@ -267,68 +251,36 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* 1. CREATE PLAN MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-lg flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create New Plan</h3>
-              <button 
-                onClick={() => setIsCreateModalOpen(false)} 
-                disabled={createMutation.isPending}
-                className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"
-              >
-                <X size={16} />
-              </button>
+              <button onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
             </div>
             <div className="overflow-y-auto flex-1">
-              <CreatePlanForm 
-                onSubmit={(data) => createMutation.mutate(data)} 
-                onCancel={() => setIsCreateModalOpen(false)} 
-              />
+              <CreatePlanForm onSubmit={(data) => createMutation.mutate(data)} onCancel={() => setIsCreateModalOpen(false)} />
             </div>
-            {createMutation.isPending && (
-              <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
-                <Loader2 className="animate-spin text-[#09090b] h-8 w-8" />
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* 2. EDIT PLAN MODAL */}
       {editingPlan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !editMutation.isPending && setEditingPlan(null)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-lg flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Edit Plan: {editingPlan.name}</h3>
-              <button 
-                onClick={() => setEditingPlan(null)} 
-                disabled={editMutation.isPending}
-                className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"
-              >
-                <X size={16} />
-              </button>
+              <button onClick={() => setEditingPlan(null)} disabled={editMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
             </div>
             <div className="overflow-y-auto flex-1">
-              <CreatePlanForm 
-                prefillData={editingPlan}
-                onSubmit={(data) => editMutation.mutate({ id: editingPlan.id, ...data })} 
-                onCancel={() => setEditingPlan(null)} 
-              />
+              <CreatePlanForm prefillData={editingPlan} onSubmit={(data) => editMutation.mutate({ id: editingPlan.id, ...data })} onCancel={() => setEditingPlan(null)} />
             </div>
-            {editMutation.isPending && (
-              <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
-                <Loader2 className="animate-spin text-[#09090b] h-8 w-8" />
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* 3. CUSTOM SOFT DELETE CONFIRMATION MODAL */}
       {planToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !softDeleteMutation.isPending && setPlanToDelete(null)} />
@@ -343,20 +295,8 @@ export default function PlansPage() {
               </p>
             </div>
             <div className="px-5 py-3.5 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2">
-              <button 
-                type="button" 
-                onClick={() => setPlanToDelete(null)} 
-                disabled={softDeleteMutation.isPending}
-                className="h-8 px-4 border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                onClick={() => softDeleteMutation.mutate(planToDelete.id)}
-                disabled={softDeleteMutation.isPending}
-                className="h-8 px-5 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
+              <button onClick={() => setPlanToDelete(null)} disabled={softDeleteMutation.isPending} className="h-8 px-4 border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
+              <button onClick={() => softDeleteMutation.mutate(planToDelete.id)} disabled={softDeleteMutation.isPending} className="h-8 px-5 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
                 {softDeleteMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Confirm Archive
               </button>
             </div>

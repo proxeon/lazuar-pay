@@ -1,3 +1,4 @@
+// apps/ops-page/src/modules/community/pages/CouponsPage.tsx
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, X, Tag, MoreHorizontal, Link as LinkIcon, Edit2, Trash2, AlertTriangle } from "lucide-react";
@@ -13,7 +14,6 @@ export default function CouponsPage() {
   const [couponToDelete, setCouponToDelete] = useState<any | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // Form input states
   const [code, setCode] = useState("");
   const [discountType, setDiscountType] = useState("PERCENTAGE");
   const [amount, setAmount] = useState(0);
@@ -21,7 +21,6 @@ export default function CouponsPage() {
   const [minPrice, setMinPrice] = useState(0);
   const [expiresAt, setExpiresAt] = useState("");
 
-  // Global click-outside listener to prevent native-to-synthetic event collisions
   useEffect(() => {
     const closeMenu = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -70,8 +69,7 @@ export default function CouponsPage() {
   const editMutation = useMutation({
     mutationFn: async () => {
       if (!editingCoupon) return;
-      // PUT updates non-critical usage metrics and expirations
-      const { error } = await client.PUT("/admin/community/coupons/{id}" as any, {
+      const { error } = await client.PUT("/admin/community/coupons/{id}", {
         params: { path: { id: editingCoupon.id } },
         body: {
           max_uses: Number(maxUses),
@@ -92,10 +90,8 @@ export default function CouponsPage() {
 
   const softDeleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Soft deletion/deactivation is modeled by setting the coupon's expiration date to past
-      const { error } = await client.PUT("/admin/community/coupons/{id}" as any, {
-        params: { path: { id } },
-        body: { expires_at: new Date(0).toISOString() }
+      const { error } = await client.DELETE("/admin/community/coupons/{id}", {
+        params: { path: { id } }
       });
       if (error) throw new Error(error.detail);
     },
@@ -151,7 +147,6 @@ export default function CouponsPage() {
       }
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full overflow-hidden">
-        {/* min-h-[320px] allocates necessary scrolling space for context dropdowns */}
         <div className="w-full overflow-x-auto min-h-[320px]">
           <table className="w-full text-left text-[13px] min-w-[700px]">
             <thead className="bg-[#fafafa] border-b border-[#e5e5e5]">
@@ -173,22 +168,11 @@ export default function CouponsPage() {
                 coupons?.map((coupon) => {
                   const isExpired = coupon.expires_at ? new Date(coupon.expires_at).getTime() < Date.now() : false;
                   return (
-                    <tr 
-                      key={coupon.id} 
-                      className={cn(
-                        "hover:bg-[#fafafa]/50 transition-colors",
-                        isExpired && "opacity-60 bg-[#fafafa]/30"
-                      )}
-                    >
+                    <tr key={coupon.id} className={cn("hover:bg-[#fafafa]/50 transition-colors", isExpired && "opacity-60 bg-[#fafafa]/30")}>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <Tag size={13} className="text-[#a1a1aa]" />
-                          <span className={cn(
-                            "font-mono font-bold px-2 py-0.5 border text-[11px]",
-                            isExpired 
-                              ? "bg-zinc-100 text-zinc-500 border-zinc-200" 
-                              : "bg-zinc-100 text-[#09090b] border-zinc-200"
-                          )}>
+                          <span className={cn("font-mono font-bold px-2 py-0.5 border text-[11px]", isExpired ? "bg-zinc-100 text-zinc-500 border-zinc-200" : "bg-zinc-100 text-[#09090b] border-zinc-200")}>
                             {coupon.code}
                           </span>
                         </div>
@@ -203,43 +187,16 @@ export default function CouponsPage() {
                         <span className="font-bold text-[#09090b]">{coupon.used_count}</span> <span className="text-[10px] text-[#71717a]">({coupon.reserved_count} pending)</span>
                       </td>
                       <td className="px-5 py-3.5 text-[#52525b] text-[11px] font-mono whitespace-nowrap">
-                        {coupon.expires_at ? (
-                          <span className={cn(isExpired ? "text-rose-600 font-semibold" : "text-[#52525b]")}>
-                            {new Date(coupon.expires_at).toLocaleDateString('en-GB')} {isExpired && "(Expired)"}
-                          </span>
-                        ) : "Never"}
+                        {coupon.expires_at ? <span className={cn(isExpired ? "text-rose-600 font-semibold" : "text-[#52525b]")}>{new Date(coupon.expires_at).toLocaleDateString('en-GB')} {isExpired && "(Expired)"}</span> : "Never"}
                       </td>
-
-                      {/* Ellipsis Actions Menu Trigger */}
                       <td className="px-5 py-3.5 text-right relative">
-                        <button 
-                          data-menu-trigger={coupon.id}
-                          onClick={() => setOpenMenuId(openMenuId === coupon.id ? null : coupon.id)}
-                          className="p-1.5 text-[#a1a1aa] hover:text-[#09090b] hover:bg-[#f4f4f5] transition-colors rounded-sm focus:outline-none"
-                        >
-                          <MoreHorizontal size={15} />
-                        </button>
+                        <button data-menu-trigger={coupon.id} onClick={() => setOpenMenuId(openMenuId === coupon.id ? null : coupon.id)} className="p-1.5 text-[#a1a1aa] hover:text-[#09090b] hover:bg-[#f4f4f5] transition-colors rounded-sm focus:outline-none"><MoreHorizontal size={15} /></button>
                         {openMenuId === coupon.id && (
                           <div className="absolute right-5 top-full mt-1 w-44 bg-white border border-[#e5e5e5] rounded-none py-1 z-50 text-left animate-in fade-in slide-in-from-top-1 duration-150">
-                            <button 
-                              onClick={() => openEditModal(coupon)}
-                              className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center gap-2"
-                            >
-                              <Edit2 size={12} className="text-[#71717a]" /> Edit Details
-                            </button>
-                            <button 
-                              onClick={() => { setOpenMenuId(null); copyPromo(coupon.code); }}
-                              className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center gap-2"
-                            >
-                              <LinkIcon size={12} className="text-[#71717a]" /> Copy Code
-                            </button>
+                            <button onClick={() => openEditModal(coupon)} className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center gap-2"><Edit2 size={12} className="text-[#71717a]" /> Edit Details</button>
+                            <button onClick={() => { setOpenMenuId(null); copyPromo(coupon.code); }} className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center gap-2"><LinkIcon size={12} className="text-[#71717a]" /> Copy Code</button>
                             <div className="h-px w-full bg-[#f4f4f5] my-1" />
-                            <button 
-                              onClick={() => setCouponToDelete(coupon)}
-                              className="w-full text-left px-3 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2"
-                            >
-                              <Trash2 size={12} className="text-rose-500" /> Soft Delete
-                            </button>
+                            <button onClick={() => setCouponToDelete(coupon)} className="w-full text-left px-3 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2"><Trash2 size={12} className="text-rose-500" /> Soft Delete</button>
                           </div>
                         )}
                       </td>
@@ -252,18 +209,15 @@ export default function CouponsPage() {
         </div>
       </div>
 
-      {/* 1. CREATE PROMO MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Promo Code</h3>
-              <button onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50">
-                <X size={16} />
-              </button>
+              <button onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="flex flex-col">
+            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
               <div className="p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code *</label>
@@ -298,9 +252,7 @@ export default function CouponsPage() {
                 </div>
               </div>
               <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
-                <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">
-                  Cancel
-                </button>
+                <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
                   {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Create
                 </button>
@@ -310,18 +262,15 @@ export default function CouponsPage() {
         </div>
       )}
 
-      {/* 2. EDIT PROMO MODAL */}
       {editingCoupon && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !editMutation.isPending && setEditingCoupon(null)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-md flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Edit Promo Limits</h3>
-              <button onClick={() => setEditingCoupon(null)} disabled={editMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50">
-                <X size={16} />
-              </button>
+              <button onClick={() => setEditingCoupon(null)} disabled={editMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate(); }} className="flex flex-col">
+            <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate(); }}>
               <div className="p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code</label>
@@ -356,9 +305,7 @@ export default function CouponsPage() {
                 </div>
               </div>
               <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2.5">
-                <button type="button" onClick={() => setEditingCoupon(null)} disabled={editMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">
-                  Cancel
-                </button>
+                <button type="button" onClick={() => setEditingCoupon(null)} disabled={editMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={editMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
                   {editMutation.isPending && <Loader2 size={13} className="animate-spin" />} Save Changes
                 </button>
@@ -368,7 +315,6 @@ export default function CouponsPage() {
         </div>
       )}
 
-      {/* 3. CUSTOM SOFT DELETE CONFIRMATION MODAL */}
       {couponToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !softDeleteMutation.isPending && setCouponToDelete(null)} />
@@ -383,20 +329,8 @@ export default function CouponsPage() {
               </p>
             </div>
             <div className="px-5 py-3.5 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex items-center justify-end gap-2">
-              <button 
-                type="button" 
-                onClick={() => setCouponToDelete(null)} 
-                disabled={softDeleteMutation.isPending}
-                className="h-8 px-4 border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                onClick={() => softDeleteMutation.mutate(couponToDelete.id)}
-                disabled={softDeleteMutation.isPending}
-                className="h-8 px-5 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
+              <button onClick={() => setCouponToDelete(null)} disabled={softDeleteMutation.isPending} className="h-8 px-4 border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
+              <button onClick={() => softDeleteMutation.mutate(couponToDelete.id)} disabled={softDeleteMutation.isPending} className="h-8 px-5 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
                 {softDeleteMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Confirm Archive
               </button>
             </div>

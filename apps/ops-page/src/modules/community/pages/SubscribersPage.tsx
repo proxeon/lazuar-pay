@@ -1,3 +1,4 @@
+// apps/ops-page/src/modules/community/pages/SubscribersPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy } from "lucide-react";
@@ -5,11 +6,15 @@ import { toast } from "sonner";
 import { client, type CommunitySubscriptionDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
+import { useDebounce } from "../../../hooks/use-debounce";
 
 export default function SubscribersPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const [selectedSub, setSelectedSub] = useState<CommunitySubscriptionDto | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -19,11 +24,14 @@ export default function SubscribersPage() {
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("BANK_TRANSFER");
 
+  const [extendGraceModal, setExtendGraceModal] = useState({ isOpen: false, days: "7" });
+  const [refundModal, setRefundModal] = useState({ isOpen: false, paymentId: "", reason: "" });
+
   const { data: subscribersData, isLoading } = useQuery({
-    queryKey: ["community-subscribers", page],
+    queryKey: ["community-subscribers", page, debouncedSearchTerm],
     queryFn: async () => {
       const { data, error } = await client.GET("/admin/community/subscribers", {
-        params: { query: { page, limit: 50 } }
+        params: { query: { page, limit: 50, search: debouncedSearchTerm || undefined } }
       });
       if (error) throw new Error(error.detail);
       return data;
@@ -90,6 +98,10 @@ export default function SubscribersPage() {
         setIsPaymentModalOpen(false);
         setPaymentAmount("");
         setPaymentRef("");
+      } else if (variables.action === "extend-grace") {
+        setExtendGraceModal({ isOpen: false, days: "7" });
+      } else if (variables.action === "refund") {
+        setRefundModal({ isOpen: false, paymentId: "", reason: "" });
       }
       
       setSelectedSub(prev => {
@@ -104,14 +116,6 @@ export default function SubscribersPage() {
   });
 
   const displayedSubscribers = (subscribersData?.data || []).filter(sub => statusFilter === "ALL" || sub.status === statusFilter);
-
-  // Dynamic deterministic phone generator to simulate unique subscriber numbers for mock integration
-  const getSubscriberPhone = (sub: CommunitySubscriptionDto) => {
-    if (sub.customer_phone) return sub.customer_phone;
-    const digitSeed = (sub.id.charCodeAt(0) % 9) + 1;
-    const remainder = ((sub.id.charCodeAt(1) || 65) * 17459).toString().slice(0, 7);
-    return `+60 1${digitSeed}-${remainder}`;
-  };
 
   return (
     <PageLayout 
@@ -133,7 +137,13 @@ export default function SubscribersPage() {
         <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
           <div className="relative w-64">
             <Search size={14} className="absolute left-3 top-2 text-[#a1a1aa]" />
-            <input type="text" placeholder="Search (disabled in UI demo)" className="w-full h-8 pl-9 pr-3 text-[12px] bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#09090b]" disabled />
+            <input 
+              type="text" 
+              placeholder="Search by name or email..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full h-8 pl-9 pr-3 text-[12px] bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#09090b]" 
+            />
           </div>
           <select 
             value={statusFilter} 
@@ -217,7 +227,6 @@ export default function SubscribersPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
-              {/* 1. CUSTOMER IDENTITY SECTION */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Customer Profile</h3>
                 <div className="space-y-3 text-[12px]">
@@ -225,65 +234,40 @@ export default function SubscribersPage() {
                     <span className="text-[#a1a1aa] block mb-0.5">Name</span>
                     <span className="font-semibold text-[#09090b] text-[13px]">{selectedSub.customer_name}</span>
                   </div>
-                  
                   <div>
                     <span className="text-[#a1a1aa] block mb-0.5">Email Address</span>
                     <div className="flex items-center gap-2">
-                      <a 
-                        href={`mailto:${selectedSub.customer_email}`} 
-                        className="font-medium text-blue-600 hover:opacity-85 transition-opacity underline underline-offset-2"
-                        title="Send Email"
-                      >
+                      <a href={`mailto:${selectedSub.customer_email}`} className="font-medium text-blue-600 hover:opacity-85 transition-opacity underline underline-offset-2">
                         {selectedSub.customer_email}
                       </a>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(selectedSub.customer_email);
-                          toast.success("Email address copied");
-                        }}
-                        className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]"
-                        title="Copy Email"
-                      >
+                      <button onClick={() => { navigator.clipboard.writeText(selectedSub.customer_email); toast.success("Email address copied"); }} className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]">
                         <Copy size={11} />
                       </button>
                     </div>
                   </div>
-
                   <div>
                     <span className="text-[#a1a1aa] block mb-0.5">Phone Number</span>
                     <div className="flex items-center gap-2">
-                      <a 
-                        href={`tel:${getSubscriberPhone(selectedSub).replace(/[^0-9+]/g, "")}`} 
-                        className="font-mono text-[#52525b] hover:text-blue-600 transition-colors underline underline-offset-2"
-                        title="Call Number"
-                      >
-                        {getSubscriberPhone(selectedSub)}
-                      </a>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(getSubscriberPhone(selectedSub));
-                          toast.success("Phone number copied");
-                        }}
-                        className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]"
-                        title="Copy Phone"
-                      >
-                        <Copy size={11} />
-                      </button>
-                      <a 
-                        href={`https://wa.me/${getSubscriberPhone(selectedSub).replace(/[^0-9]/g, "")}`}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:text-emerald-700 transition-colors"
-                        title="Message on WhatsApp"
-                      >
-                        WhatsApp
-                      </a>
+                      {selectedSub.customer_phone ? (
+                        <>
+                          <a href={`tel:${selectedSub.customer_phone.replace(/[^0-9+]/g, "")}`} className="font-mono text-[#52525b] hover:text-blue-600 transition-colors underline underline-offset-2">
+                            {selectedSub.customer_phone}
+                          </a>
+                          <button onClick={() => { navigator.clipboard.writeText(selectedSub.customer_phone); toast.success("Phone number copied"); }} className="p-1 text-[#a1a1aa] hover:text-[#09090b] transition-colors rounded-sm hover:bg-[#fafafa]">
+                            <Copy size={11} />
+                          </button>
+                          <a href={`https://wa.me/${selectedSub.customer_phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:text-emerald-700 transition-colors">
+                            WhatsApp
+                          </a>
+                        </>
+                      ) : (
+                        <span className="text-[#a1a1aa] italic">Not Provided</span>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 2. SUBSCRIPTION DETAILS */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Subscription Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-[12px]">
@@ -294,45 +278,22 @@ export default function SubscribersPage() {
                 </div>
               </div>
 
-              {/* 3. OPERATIONS */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => setIsPaymentModalOpen(true)}
-                    disabled={activeAction !== null}
-                    className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50"
-                  >
-                    Log Payment
-                  </button>
-                  <button 
-                    onClick={() => {
-                      const days = window.prompt("Extend by how many days?", "7");
-                      if (days) actionMutation.mutate({ action: "extend-grace", payload: { days: parseInt(days) } });
-                    }}
-                    disabled={activeAction !== null}
-                    className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
+                  <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
+                  <button onClick={() => setExtendGraceModal({ isOpen: true, days: "7" })} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                     {activeAction === "extend-grace" && <Loader2 size={12} className="animate-spin" />} Extend Grace
                   </button>
-                  <button 
-                    onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }}
-                    disabled={activeAction !== null}
-                    className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
+                  <button onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }} disabled={activeAction !== null} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                     {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
                   </button>
-                  <button 
-                    onClick={() => { if (window.confirm("CRITICAL: Ban user and revoke all access immediately?")) actionMutation.mutate({ action: "ban" }); }}
-                    disabled={activeAction !== null}
-                    className="h-8 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
+                  <button onClick={() => { if (window.confirm("CRITICAL: Ban user and revoke all access immediately?")) actionMutation.mutate({ action: "ban" }); }} disabled={activeAction !== null} className="h-8 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
                     {activeAction === "ban" ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />} Ban User
                   </button>
                 </div>
               </div>
 
-              {/* 4. PAYMENT LEDGER */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Payment Ledger</h3>
                 {isPaymentsLoading ? (
@@ -348,14 +309,7 @@ export default function SubscribersPage() {
                             <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
                           </div>
                           {payment.status === "CONFIRMED" && payment.amount > 0 && (
-                            <button 
-                              onClick={() => {
-                                const reason = window.prompt("Refund reason (optional):");
-                                if (reason !== null) actionMutation.mutate({ action: "refund", payload: { payment_record_id: payment.id, reason } });
-                              }}
-                              disabled={activeAction !== null}
-                              className="text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 flex items-center gap-1"
-                            >
+                            <button onClick={() => setRefundModal({ isOpen: true, paymentId: payment.id, reason: "" })} disabled={activeAction !== null} className="text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 flex items-center gap-1">
                               {isRefunding && <Loader2 size={10} className="animate-spin" />} Refund
                             </button>
                           )}
@@ -372,13 +326,11 @@ export default function SubscribersPage() {
         </div>
       )}
 
+      {/* Record Payment Modal */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setIsPaymentModalOpen(false)} />
-          <form 
-            onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "record-payment", payload: { amount: parseFloat(paymentAmount), payment_method: paymentMethod, reference_number: paymentRef }}); }}
-            className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200"
-          >
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "record-payment", payload: { amount: parseFloat(paymentAmount), payment_method: paymentMethod, reference_number: paymentRef }}); }} className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 flex items-center justify-between">
               <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Log Offline Payment</h3>
               <button type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50"><X size={16} /></button>
@@ -405,6 +357,57 @@ export default function SubscribersPage() {
               <button type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50">Cancel</button>
               <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5">
                 {activeAction === "record-payment" && <Loader2 size={13} className="animate-spin" />} Save Payment
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Extend Grace Modal */}
+      {extendGraceModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setExtendGraceModal({ isOpen: false, days: "7" })} />
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "extend-grace", payload: { days: parseInt(extendGraceModal.days) }}); }} className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-xs flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 flex items-center justify-between">
+              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Extend Grace Period</h3>
+              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Additional Days *</label>
+                <input required type="number" min="1" max="90" value={extendGraceModal.days} onChange={e => setExtendGraceModal({ ...extendGraceModal, days: e.target.value })} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+              </div>
+            </div>
+            <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
+              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50">Cancel</button>
+              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5">
+                {activeAction === "extend-grace" && <Loader2 size={13} className="animate-spin" />} Confirm
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Refund Modal */}
+      {refundModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setRefundModal({ isOpen: false, paymentId: "", reason: "" })} />
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "refund", payload: { payment_record_id: refundModal.paymentId, reason: refundModal.reason }}); }} className="relative bg-white border border-rose-200 shadow-xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-[#e5e5e5] bg-rose-50 flex items-center justify-between">
+              <h3 className="text-[13px] font-bold uppercase tracking-widest text-rose-700">Issue Refund</h3>
+              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="text-rose-400 hover:text-rose-700 disabled:opacity-50"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-[12px] text-[#52525b] leading-relaxed">You are about to issue a full refund for this transaction. This action cannot be undone.</p>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Reason (Optional)</label>
+                <input type="text" value={refundModal.reason} onChange={e => setRefundModal({ ...refundModal, reason: e.target.value })} disabled={activeAction !== null} placeholder="e.g. Customer requested cancellation" className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+              </div>
+            </div>
+            <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
+              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50">Cancel</button>
+              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 disabled:opacity-50 flex items-center gap-1.5">
+                {activeAction === "refund" && <Loader2 size={13} className="animate-spin" />} Process Refund
               </button>
             </div>
           </form>
