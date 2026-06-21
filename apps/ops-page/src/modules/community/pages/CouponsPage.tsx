@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, X, Tag, Edit2, Archive, RotateCcw, AlertTriangle, Infinity } from "lucide-react";
+import { Loader2, Plus, X, Tag, Edit2, Archive, RotateCcw, Infinity } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import PageLayout from "../../core/components/PageLayout";
@@ -69,15 +69,19 @@ export default function CouponsPage() {
   });
 
   const editMutation = useMutation({
-    mutationFn: async (payload: { id: string, max_uses: number, minimum_original_price: number, expires_at: string | null, applicable_plan_ids: string[] | undefined }) => {
+    mutationFn: async (payload: { id: string, code: string, discount_type: string, amount: number, max_uses: number, minimum_original_price: number, expires_at: string | null, applicable_plan_ids: string[] | undefined, is_active?: boolean }) => {
       const { id, ...body } = payload;
       const { error } = await client.PUT("/admin/community/coupons/{id}", {
         params: { path: { id } },
         body: {
+          code: body.code,
+          discount_type: body.discount_type,
+          amount: body.amount,
           max_uses: body.max_uses,
           minimum_original_price: body.minimum_original_price,
           expires_at: body.expires_at || undefined,
-          applicable_plan_ids: body.applicable_plan_ids
+          applicable_plan_ids: body.applicable_plan_ids,
+          is_active: body.is_active
         }
       });
       if (error) throw new Error(error.detail);
@@ -85,17 +89,21 @@ export default function CouponsPage() {
     onMutate: () => setIsActionLoading(true),
     onSettled: () => setIsActionLoading(false),
     onSuccess: (_, variables) => {
-      toast.success("Promo limits saved successfully");
+      toast.success(variables.is_active ? "Promo code restored successfully" : "Promo configuration saved successfully");
       queryClient.invalidateQueries({ queryKey: ["community-coupons"] });
       
       setSelectedCoupon(prev => {
         if (!prev) return null;
         return {
           ...prev,
+          code: variables.code,
+          discount_type: variables.discount_type,
+          amount: variables.amount,
           max_uses: variables.max_uses,
           minimum_original_price: variables.minimum_original_price,
           expires_at: variables.expires_at,
-          applicable_plan_ids: variables.applicable_plan_ids
+          applicable_plan_ids: variables.applicable_plan_ids || [],
+          is_active: variables.is_active ?? prev.is_active
         };
       });
       
@@ -114,12 +122,12 @@ export default function CouponsPage() {
     onMutate: () => setIsActionLoading(true),
     onSettled: () => setIsActionLoading(false),
     onSuccess: () => {
-      toast.success("Promo code soft-deleted and deactivated");
+      toast.success("Promo code soft-deleted and archived");
       queryClient.invalidateQueries({ queryKey: ["community-coupons"] });
       
       setSelectedCoupon(prev => {
         if (!prev) return null;
-        return { ...prev, expires_at: new Date().toISOString() };
+        return { ...prev, is_active: false };
       });
     },
     onError: (err: any) => toast.error("Failed to archive coupon", { description: err.message })
@@ -142,6 +150,9 @@ export default function CouponsPage() {
 
   const startEditingInSlider = () => {
     if (!selectedCoupon) return;
+    setCode(selectedCoupon.code);
+    setDiscountType(selectedCoupon.discount_type);
+    setAmount(selectedCoupon.amount);
     setMaxUses(selectedCoupon.max_uses);
     setMinPrice(selectedCoupon.minimum_original_price);
     setExpiresAt(selectedCoupon.expires_at ? selectedCoupon.expires_at.slice(0, 16) : "");
@@ -161,6 +172,8 @@ export default function CouponsPage() {
     if (!dateString) return false;
     return new Date(dateString).getTime() < Date.now();
   };
+
+  const isLocked = selectedCoupon ? selectedCoupon.used_count > 0 : false;
 
   return (
     <PageLayout 
@@ -196,20 +209,27 @@ export default function CouponsPage() {
                 <tr><td colSpan={6} className="py-12 text-center text-[12px] text-[#71717a]">No promotional codes found.</td></tr>
               ) : (
                 coupons?.map((coupon) => {
-                  const isExpired = isCouponExpired(coupon.expires_at);
+                  const expired = isCouponExpired(coupon.expires_at);
+                  const archived = !coupon.is_active;
+
                   return (
                     <tr 
                       key={coupon.id} 
                       onClick={() => setSelectedCoupon(coupon)}
                       className={cn(
                         "hover:bg-[#fafafa] transition-colors cursor-pointer group", 
-                        isExpired && "opacity-60 bg-[#fafafa]/30"
+                        (expired || archived) && "opacity-60 bg-[#fafafa]/30"
                       )}
                     >
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <Tag size={13} className="text-[#a1a1aa] mr-0.5" />
-                          <span className={cn("font-mono font-bold px-2 py-0.5 border text-[11px]", isExpired ? "bg-zinc-100 text-zinc-500 border-zinc-200" : "bg-zinc-100 text-[#09090b] border-zinc-200")}>
+                          <span className={cn(
+                            "font-mono font-bold px-2 py-0.5 border text-[11px]", 
+                            archived ? "bg-zinc-100 text-zinc-500 border-zinc-200" :
+                            expired ? "bg-rose-50 text-rose-700 border-rose-200" : 
+                            "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          )}>
                             {coupon.code}
                           </span>
                           <QuickCopy text={coupon.code} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
@@ -224,7 +244,7 @@ export default function CouponsPage() {
                             Specific ({coupon.applicable_plan_ids.length})
                           </span>
                         ) : (
-                          <span className="text-[9px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-sm">
+                          <span className="text-[9px] font-bold uppercase tracking-widest bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded-sm">
                             Global
                           </span>
                         )}
@@ -236,7 +256,9 @@ export default function CouponsPage() {
                         <span className="font-bold text-[#09090b]">{coupon.used_count}</span> <span className="text-[10px] text-[#71717a]">({coupon.reserved_count} pending)</span>
                       </td>
                       <td className="px-5 py-3.5 text-[#52525b] text-[11px] font-mono whitespace-nowrap">
-                        {coupon.expires_at ? <span className={cn(isExpired ? "text-rose-600 font-semibold" : "text-[#52525b]")}>{new Date(coupon.expires_at).toLocaleDateString('en-GB')} {isExpired && "(Expired)"}</span> : "Never"}
+                        {archived ? <span className="text-[#a1a1aa] font-semibold font-sans">Archived</span> :
+                         expired ? <span className="text-rose-600 font-semibold font-sans">Expired</span> :
+                         coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString('en-GB') : "Never"}
                       </td>
                     </tr>
                   );
@@ -260,9 +282,9 @@ export default function CouponsPage() {
               <div className="flex items-center gap-3">
                 <span className={cn(
                   "px-3 py-1 font-mono text-xl font-bold tracking-tight border",
-                  isCouponExpired(selectedCoupon.expires_at) 
-                    ? "bg-rose-50 text-rose-700 border-rose-200" 
-                    : "bg-[#09090b] text-white border-[#09090b]"
+                  !selectedCoupon.is_active ? "bg-zinc-100 text-zinc-500 border-zinc-200" :
+                  isCouponExpired(selectedCoupon.expires_at) ? "bg-rose-50 text-rose-700 border-rose-200" : 
+                  "bg-[#09090b] text-white border-[#09090b]"
                 )}>
                   {selectedCoupon.code}
                 </span>
@@ -306,8 +328,8 @@ export default function CouponsPage() {
                   })}
                 </ul>
               ) : (
-                <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-sm">
-                  <span className="text-[12px] font-medium text-emerald-800">Applies globally to all community plans and products.</span>
+                <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-200 rounded-sm">
+                  <span className="text-[12px] font-medium text-indigo-800">Applies globally to all community plans and products.</span>
                 </div>
               )}
             </div>
@@ -335,24 +357,24 @@ export default function CouponsPage() {
                   disabled={isActionLoading} 
                   className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  <Edit2 size={12} /> Edit Limits
+                  <Edit2 size={12} /> Edit Config
                 </button>
                 
-                {isCouponExpired(selectedCoupon.expires_at) ? (
-                  <button 
-                    onClick={() => { if(window.confirm("Restore this promotion? It will become valid immediately.")) editMutation.mutate({ id: selectedCoupon.id, max_uses: selectedCoupon.max_uses, minimum_original_price: selectedCoupon.minimum_original_price, expires_at: null, applicable_plan_ids: selectedCoupon.applicable_plan_ids }); }} 
-                    disabled={isActionLoading} 
-                    className="h-8 border border-[#09090b] bg-[#09090b] text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
-                    {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Restore Promo
-                  </button>
-                ) : (
+                {selectedCoupon.is_active ? (
                   <button 
                     onClick={() => { if(window.confirm("Archive this promotion? Future checkouts will reject it immediately.")) softDeleteMutation.mutate(selectedCoupon.id); }} 
                     disabled={isActionLoading} 
                     className="h-8 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                   >
                     {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <Archive size={12} />} Archive Promo
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => { if(window.confirm("Restore this promotion? It will become valid immediately.")) editMutation.mutate({ id: selectedCoupon.id, code: selectedCoupon.code, discount_type: selectedCoupon.discount_type, amount: selectedCoupon.amount, max_uses: selectedCoupon.max_uses, minimum_original_price: selectedCoupon.minimum_original_price, expires_at: selectedCoupon.expires_at ? new Date(selectedCoupon.expires_at).toISOString() : null, applicable_plan_ids: selectedCoupon.applicable_plan_ids || [], is_active: true }); }} 
+                    disabled={isActionLoading} 
+                    className="h-8 border border-[#09090b] bg-[#09090b] text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Restore Promo
                   </button>
                 )}
               </div>
@@ -364,7 +386,7 @@ export default function CouponsPage() {
           <div className="absolute inset-0 bg-white z-10 flex flex-col animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
               <div>
-                <h3 className="text-[15px] font-bold text-[#09090b]">Edit Promo Limits</h3>
+                <h3 className="text-[15px] font-bold text-[#09090b]">Edit Configuration</h3>
                 <p className="text-[11px] font-mono text-[#71717a] mt-0.5">{selectedCoupon.code}</p>
               </div>
             </div>
@@ -373,14 +395,40 @@ export default function CouponsPage() {
               <form onSubmit={(e) => { 
                 e.preventDefault(); 
                 editMutation.mutate({ 
-                  id: selectedCoupon.id, 
+                  id: selectedCoupon.id,
+                  code: code.trim().toUpperCase(),
+                  discount_type: discountType,
+                  amount: Number(amount),
                   max_uses: Number(maxUses), 
                   minimum_original_price: Number(minPrice), 
                   expires_at: expiresAt ? new Date(expiresAt).toISOString() : null, 
-                  applicable_plan_ids: applicablePlans.length > 0 ? applicablePlans : undefined 
+                  applicable_plan_ids: applicablePlans.length > 0 ? applicablePlans : undefined,
+                  is_active: selectedCoupon.is_active
                 }); 
               }}>
                 <div className="p-6 space-y-6">
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Core Values</label>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Coupon Code *</label>
+                      <input required value={code} onChange={e => setCode(e.target.value.toUpperCase())} disabled={editMutation.isPending || isLocked} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 font-mono text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5]" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Type</label>
+                        <select value={discountType} onChange={e => setDiscountType(e.target.value)} disabled={editMutation.isPending || isLocked} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5]">
+                          <option value="PERCENTAGE">Percentage (%)</option>
+                          <option value="FIXED">Fixed Amount (RM)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Amount *</label>
+                        <input type="number" step="0.01" required value={amount} onChange={e => setAmount(Number(e.target.value))} disabled={editMutation.isPending || isLocked} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 disabled:bg-[#f4f4f5]" />
+                      </div>
+                    </div>
+                    {isLocked && <p className="text-[10px] text-amber-600 mt-1">Core values cannot be changed after a promo code has been redeemed.</p>}
+                  </div>
                   
                   <div className="space-y-4">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Target Scope</label>
@@ -440,7 +488,7 @@ export default function CouponsPage() {
 
       {/* Global Create Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-lg flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
