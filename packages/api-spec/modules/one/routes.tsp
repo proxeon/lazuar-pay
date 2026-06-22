@@ -1,3 +1,4 @@
+// packages/api-spec/modules/one/routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -72,6 +73,12 @@ interface OneOperations {
   @get
   @route("/me/entitlements")
   getMyEntitlements(): EntitlementDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @get
+  @route("/me/invitations")
+  getMyInvitations(
+  ): MyPendingInvitationDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
   @post

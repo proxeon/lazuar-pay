@@ -1,3 +1,4 @@
+// packages/api-spec/modules/community/models.tsp
 namespace LazuarApi.Community;
 
 model FaqItemDto {
@@ -390,4 +391,18 @@ model CreateBroadcastRequestDto {
   target_plan_id?: string; // GUID
   target_status?: string;
   target_is_reminder_only?: boolean;
+}
+
+model MyGlobalSubscriptionDto {
+  subscription_id: string; // GUID
+  tenant_slug: string;
+  workspace_name: string;
+  plan_name: string;
+  status: string;
+  next_billing_date?: utcDateTime;
+  amount: float64;
+}
+
+model GeneratePortalLinkResponseDto {
+  url: string;
 }

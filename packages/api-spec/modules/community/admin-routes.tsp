@@ -254,3 +254,18 @@ interface AdminCommunityOperations {
     @body body: CreateBroadcastRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 }
+
+@useAuth(BearerAuth)
+@route("/community")
+interface AuthenticatedCommunityOperations {
+  @get
+  @route("/me/subscriptions")
+  getMySubscriptions(
+  ): MyGlobalSubscriptionDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/me/subscriptions/{id}/portal-link")
+  generateMyPortalLink(
+    @path id: string,
+  ): GeneratePortalLinkResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+}

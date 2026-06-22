@@ -1,3 +1,4 @@
+// packages/api-spec/modules/one/models.tsp
 namespace LazuarApi.One;
 
 model LoginRequest {
@@ -139,4 +140,11 @@ model UpdateWorkspaceLhdnConfigRequestDto {
   myinvois_env: EnvironmentType;
   supplier_tin?: string;
   msic_code?: string;
+}
+
+model MyPendingInvitationDto {
+  id: string; // GUID
+  workspace_name: string;
+  role: string;
+  expires_at: utcDateTime;
 }
