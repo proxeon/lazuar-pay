@@ -19,7 +19,6 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fafafa]">
       
-      {/* Slim Anchored Top Bar (Breadcrumbs Only) */}
       {breadcrumbs && breadcrumbs.length > 0 && (
         <div className="px-6 py-3.5 md:px-8 border-b border-[#e5e5e5] bg-white shrink-0 z-20">
           <div className="max-w-6xl mx-auto w-full">
@@ -48,11 +47,9 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
         </div>
       )}
 
-      {/* Scrollable Main Content Container */}
       <div className="flex-1 overflow-y-auto p-6 md:p-8">
         <div className="max-w-6xl mx-auto w-full">
           
-          {/* Page Heading, Description & Action Button Section */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8 pb-6 border-b border-[#e5e5e5]">
             <div className="space-y-1.5 max-w-2xl">
               <h1 className="text-xl font-bold text-[#09090b] tracking-tight">
@@ -71,7 +68,6 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
             )}
           </div>
 
-          {/* Child Components and Workspace Content */}
           <div className="w-full">
             {children}
           </div>

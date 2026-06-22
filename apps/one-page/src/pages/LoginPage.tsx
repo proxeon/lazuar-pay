@@ -1,91 +1,92 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { client, OPS_URL } from "../lib/api-client";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Loader2, KeyRound } from "lucide-react";
+import { toast } from "sonner";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const executeBouncerRouting = async () => {
-    const returnUrl = searchParams.get("returnUrl");
-    if (returnUrl) {
-      window.location.href = returnUrl;
-      return;
-    }
-
-    const { data: entitlements } = await client.GET("/one/me/entitlements");
-    
-    if (entitlements && entitlements.length > 0) {
-      window.location.href = OPS_URL;
-    } else {
-      navigate("/profile");
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    setIsSubmitting(true);
 
     try {
-      const { error: apiError } = await client.POST("/one/auth/login", {
-        body: { email, password }
+      const response = await fetch(`${API_URL}/one/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include"
       });
 
-      if (apiError) throw new Error(apiError.detail || "Invalid credentials.");
+      const data = await response.json();
 
-      await executeBouncerRouting();
+      if (!response.ok) {
+        throw new Error(data.detail || "Authentication failed. Check your credentials.");
+      }
+
+      toast.success("Identity verified.");
+
+      const returnUrl = searchParams.get("returnUrl");
+      if (returnUrl) {
+        window.location.href = decodeURIComponent(returnUrl);
+      } else {
+        navigate("/launchpad");
+      }
     } catch (err: any) {
-      setError(err.message);
-      setIsLoading(false);
+      toast.error("Authentication Failed", { description: err.message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] font-sans">
-      <div className="w-full max-w-[380px] mx-4">
-        <div className="bg-white border border-[#e5e5e5] p-8 rounded-none">
-          <div className="text-center mb-8">
-            <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Sign In</h1>
-            <p className="text-[13px] text-[#71717a] mt-1.5">Access your Lazuar account.</p>
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 font-sans text-zinc-900 antialiased">
+      <div className="bg-white border border-zinc-200 p-8 w-full max-w-md shadow-sm">
+        <div className="flex flex-col items-center mb-8">
+          <div className="p-2.5 bg-zinc-50 border border-zinc-200 text-zinc-800 mb-3">
+            <KeyRound size={20} />
           </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-[10px] font-bold tracking-wide uppercase text-rose-600">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm focus:outline-none focus:border-[#09090b]" />
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Password</label>
-                <Link to="/forgot-password" className="text-[11px] font-medium text-[#09090b] hover:underline">Forgot?</Link>
-              </div>
-              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm focus:outline-none focus:border-[#09090b]" />
-            </div>
-
-            <button type="submit" disabled={isLoading} className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2">
-              {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Sign In"}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-[12px] text-[#71717a]">
-              Don't have an account? <Link to={`/register?${searchParams.toString()}`} className="text-[#09090b] font-semibold hover:underline">Sign up</Link>
-            </p>
-          </div>
+          <h2 className="text-[14px] font-bold uppercase tracking-widest">Sign In to Lazuar</h2>
+          <p className="text-xs text-zinc-500 mt-1">Authenticate your master identity</p>
         </div>
+
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Email Address</label>
+            <input 
+              required 
+              type="email" 
+              value={email} 
+              onChange={e => setEmail(e.target.value)} 
+              disabled={isSubmitting}
+              className="flex h-10 w-full border border-zinc-200 bg-white px-3 text-[13px] focus:outline-none focus:border-zinc-900 disabled:opacity-50" 
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Password</label>
+            <input 
+              required 
+              type="password" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              disabled={isSubmitting}
+              className="flex h-10 w-full border border-zinc-200 bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" 
+            />
+          </div>
+
+          <div className="pt-2">
+            <button type="submit" disabled={isSubmitting || !email.trim() || !password} className="w-full h-10 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              {isSubmitting && <Loader2 size={13} className="animate-spin" />} Authenticate Session
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
