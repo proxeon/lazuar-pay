@@ -31,7 +31,7 @@ export default function WorkspaceSettingsPage() {
     queryKey: ["workspaces"],
     queryFn: async () => {
       const { data, error } = await client.GET("/one/workspaces");
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to load workspaces.");
       return data;
     },
     enabled: !!activeWorkspaceId
@@ -52,7 +52,7 @@ export default function WorkspaceSettingsPage() {
     queryKey: ["workspace-members", activeWorkspaceId],
     queryFn: async () => {
       const { data, error } = await client.GET("/one/workspaces/{id}/members", { params: { path: { id: activeWorkspaceId! } } });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to load members.");
       return data;
     },
     enabled: activeTab === "members" && !!activeWorkspaceId
@@ -62,7 +62,7 @@ export default function WorkspaceSettingsPage() {
     queryKey: ["workspace-invites", activeWorkspaceId],
     queryFn: async () => {
       const { data, error } = await client.GET("/one/workspaces/{id}/invites", { params: { path: { id: activeWorkspaceId! } } });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to load invitations.");
       return data;
     },
     enabled: activeTab === "members" && !!activeWorkspaceId
@@ -72,19 +72,22 @@ export default function WorkspaceSettingsPage() {
     queryKey: ["workspace-apps", activeWorkspaceId],
     queryFn: async () => {
       const { data, error } = await client.GET("/one/workspaces/{id}/apps", { params: { path: { id: activeWorkspaceId! } } });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to load apps.");
       return data.map((a: any) => a.app_id);
     },
     enabled: activeTab === "apps" && !!activeWorkspaceId
   });
 
   const updateWorkspaceMutation = useMutation({
-    mutationFn: async ({ currentName, currentSlug }: { currentName: string, currentSlug: string }) => {
-      const { error } = await client.PUT("/one/workspaces/{id}", {
+    mutationFn: async ({ currentName, currentSlug }: { currentName: string; currentSlug: string }) => {
+      const { data, error } = await client.PUT("/one/workspaces/{id}", {
         params: { path: { id: activeWorkspaceId! } },
         body: { name: currentName, slug: currentSlug }
       });
-      if (error) throw new Error(error.detail);
+      if (error) {
+        throw new Error(error.detail || "Failed to save workspace modifications.");
+      }
+      return data;
     },
     onSuccess: (_, variables) => {
       toast.success("Workspace updated successfully.");
@@ -92,7 +95,9 @@ export default function WorkspaceSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       queryClient.invalidateQueries({ queryKey: ["entitlements"] });
     },
-    onError: (err: any) => toast.error(err.message)
+    onError: (err: any) => {
+      toast.error("Update Failed", { description: err.message });
+    }
   });
 
   const inviteMutation = useMutation({
@@ -101,7 +106,7 @@ export default function WorkspaceSettingsPage() {
         params: { path: { id: activeWorkspaceId! } },
         body: { email: inviteEmail, role: inviteRole }
       });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to send invitation.");
     },
     onSuccess: () => {
       toast.success("Invitation sent.");
@@ -116,7 +121,7 @@ export default function WorkspaceSettingsPage() {
       const { error } = await client.DELETE("/one/workspaces/{id}/invites/{inviteId}", {
         params: { path: { id: activeWorkspaceId!, inviteId } }
       });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to revoke invitation.");
     },
     onSuccess: () => {
       toast.success("Invitation revoked.");
@@ -130,7 +135,7 @@ export default function WorkspaceSettingsPage() {
       const { error } = await client.DELETE("/one/workspaces/{id}/members/{userId}", {
         params: { path: { id: activeWorkspaceId!, userId } }
       });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to remove member.");
     },
     onSuccess: () => {
       toast.success("Member removed.");
@@ -140,12 +145,12 @@ export default function WorkspaceSettingsPage() {
   });
 
   const toggleAppMutation = useMutation({
-    mutationFn: async ({ appId, isActive }: { appId: string, isActive: boolean }) => {
+    mutationFn: async ({ appId, isActive }: { appId: string; isActive: boolean }) => {
       const { error } = await client.POST("/one/workspaces/{id}/apps/{appId}", {
         params: { path: { id: activeWorkspaceId!, appId } },
         body: { is_active: isActive }
       });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error(error.detail || "Failed to toggle app entitlement.");
     },
     onSuccess: () => {
       toast.success("App entitlement updated.");
@@ -155,7 +160,7 @@ export default function WorkspaceSettingsPage() {
   });
 
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let sanitized = e.target.value
+    const sanitized = e.target.value
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "")
