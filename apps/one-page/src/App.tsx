@@ -1,23 +1,29 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
-import AcceptInvitePage from "./pages/AcceptInvitePage";
+import IdentityHubLayout from "./components/IdentityHubLayout";
+import HubPage from "./pages/HubPage";
 import ProfilePage from "./pages/ProfilePage";
+import SecurityPage from "./pages/SecurityPage";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
+// Assuming LoginPage and RegisterPage exist based on earlier auth flows
+import Login from "./pages/Login"; 
+import Register from "./pages/Register";
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      {/* Public Auth Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
-      <Route path="/profile" element={<ProfilePage />} />
+
+      {/* Authenticated Identity Hub Routes */}
+      <Route element={<IdentityHubLayout />}>
+        <Route path="/" element={<Navigate to="/hub" replace />} />
+        <Route path="/hub" element={<HubPage />} />
+        <Route path="/settings/profile" element={<ProfilePage />} />
+        <Route path="/settings/security" element={<SecurityPage />} />
+      </Route>
+
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
