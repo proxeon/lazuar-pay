@@ -1,3 +1,4 @@
+// Update existing Endpoints.cs to include the /me/invitations route.
 using System.Security.Claims;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
@@ -179,6 +180,23 @@ public static class Endpoints
             }
         }).RequireAuthorization();
 
+        group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, OneDbContext db) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var entitlements = await db.TenantMemberships.IgnoreQueryFilters().Where(m => m.GlobalUserId == ctx.UserId)
+                .Join(db.Organizations.IgnoreQueryFilters(), m => m.OrganizationId, o => o.Id, (m, o) => new EntitlementDto { Workspace_id = o.Id.ToString(), Workspace_name = o.Name, Workspace_slug = o.Slug, Role = m.Role }).ToListAsync();
+            return TypedResults.Ok((ICollection<EntitlementDto>)entitlements);
+        }).RequireAuthorization();
+
+        group.MapGet("/me/invitations", async Task<Results<Ok<ICollection<MyPendingInvitationDto>>, UnauthorizedHttpResult>> (ClaimsPrincipal principal, IOneQueryService queryService) =>
+        {
+            var email = principal.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email)) return TypedResults.Unauthorized();
+            
+            var invites = await queryService.GetMyPendingInvitationsAsync(email);
+            return TypedResults.Ok((ICollection<MyPendingInvitationDto>)invites.ToList());
+        }).RequireAuthorization();
+
         group.MapPost("/workspaces", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             CreateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
@@ -337,14 +355,6 @@ public static class Endpoints
             await mediator.Send(new ToggleAppEntitlementCommand(id, appId, req.Is_active));
             return TypedResults.Ok(new StatusResponse { Status = req.Is_active ? "enabled" : "disabled" });
         }).RequireAuthorization(); 
-
-        group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, OneDbContext db) =>
-        {
-            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
-            var entitlements = await db.TenantMemberships.IgnoreQueryFilters().Where(m => m.GlobalUserId == ctx.UserId)
-                .Join(db.Organizations.IgnoreQueryFilters(), m => m.OrganizationId, o => o.Id, (m, o) => new EntitlementDto { Workspace_id = o.Id.ToString(), Workspace_name = o.Name, Workspace_slug = o.Slug, Role = m.Role }).ToListAsync();
-            return TypedResults.Ok((ICollection<EntitlementDto>)entitlements);
-        }).RequireAuthorization();
 
         return endpoints;
     }

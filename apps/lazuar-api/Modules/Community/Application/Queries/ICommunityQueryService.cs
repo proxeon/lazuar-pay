@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Queries/ICommunityQueryService.cs
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -30,4 +29,5 @@ public interface ICommunityQueryService
     Task<PaginatedResponse<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId, int page, int limit);
     Task<IEnumerable<GlobalTransactionDto>> GetGlobalTransactionsAsync(Guid organizationId, DateTime? fromDate, DateTime? toDate, string? status);
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
+    Task<IEnumerable<MyGlobalSubscriptionDto>> GetMyGlobalSubscriptionsAsync(Guid globalUserId);
 }

@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Services/CommunityQueryService.Subscribers.cs
 using Dapper;
 using System;
 using System.Data;
@@ -18,6 +17,10 @@ public partial class CommunityQueryService
         DateTime? RemindersPausedUntil, DateTime? CurrentPeriodEnd,
         DateTime? NextBillingDate, DateTime CreatedAt,
         string? VaultedCustomerId, string? VaultedTokenId);
+
+    private record RawGlobalSubscriptionDto(
+        Guid SubscriptionId, string TenantSlug, string WorkspaceName, 
+        string PlanName, string Status, DateTime? NextBillingDate, decimal Amount);
 
     public async Task<PaginatedResponse<CommunitySubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null)
     {
@@ -155,5 +158,41 @@ public partial class CommunityQueryService
             Vaulted_token_id = rawSub.VaultedTokenId,
             Created_at = new DateTimeOffset(rawSub.CreatedAt)
         };
+    }
+
+    public async Task<IEnumerable<MyGlobalSubscriptionDto>> GetMyGlobalSubscriptionsAsync(Guid globalUserId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT
+                s.""Id"" as SubscriptionId,
+                org.""Slug"" as TenantSlug,
+                org.""Name"" as WorkspaceName,
+                p.""Name"" as PlanName,
+                s.""Status"" as Status,
+                s.""NextRenewalDate"" as NextBillingDate,
+                p.""Price"" as Amount
+            FROM community.""Subscriptions"" s
+            JOIN community.""Plans"" p ON s.""PlanId"" = p.""Id""
+            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
+            JOIN one.""Organizations"" org ON s.""OrganizationId"" = org.""Id""
+            WHERE cp.""GlobalUserId"" = @UserId 
+              AND s.""Status"" NOT IN ('PENDING', 'BANNED')
+            ORDER BY s.""CreatedAt"" DESC";
+
+        var results = await connection.QueryAsync<RawGlobalSubscriptionDto>(sql, new { UserId = globalUserId });
+
+        return results.Select(r => new MyGlobalSubscriptionDto
+        {
+            Subscription_id = r.SubscriptionId.ToString(),
+            Tenant_slug = r.TenantSlug,
+            Workspace_name = r.WorkspaceName,
+            Plan_name = r.PlanName,
+            Status = r.Status,
+            Next_billing_date = r.NextBillingDate.HasValue ? new DateTimeOffset(r.NextBillingDate.Value) : null,
+            Amount = (double)r.Amount
+        });
     }
 }

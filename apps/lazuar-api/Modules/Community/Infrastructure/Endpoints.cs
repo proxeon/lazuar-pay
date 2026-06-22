@@ -1,7 +1,6 @@
 // apps/lazuar-api/Modules/Community/Infrastructure/Endpoints.cs
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-// using Modules.Community.Infrastructure.Endpoints;
 
 namespace Modules.Community.Infrastructure;
 
@@ -11,6 +10,7 @@ public static class Endpoints
     {
         var adminGroup = endpoints.MapGroup("/admin/community").RequireAuthorization("OrgAdmin");
         var publicGroup = endpoints.MapGroup("/public/community");
+        var authGroup = endpoints.MapGroup("/community").RequireAuthorization();
 
         adminGroup.MapPlanEndpoints();
         adminGroup.MapSubscriberEndpoints();
@@ -22,6 +22,8 @@ public static class Endpoints
         adminGroup.MapPaymentConfigEndpoints();
 
         publicGroup.MapPublicEndpoints();
+        
+        authGroup.MapAuthenticatedCommunityEndpoints();
 
         return endpoints;
     }

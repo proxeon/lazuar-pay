@@ -1,5 +1,8 @@
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Modules.One.Contracts;
 
@@ -20,4 +23,5 @@ public interface IOneQueryService
     Task<IEnumerable<WorkspaceEntitlementSnapshotDto>> GetWorkspaceEntitlementsAsync(Guid tenantId);
     Task<IEnumerable<WorkspaceMemberSnapshotDto>> GetWorkspaceMembersAsync(Guid tenantId);
     Task<IEnumerable<WorkspaceInvitationSnapshotDto>> GetWorkspaceInvitationsAsync(Guid tenantId);
+    Task<IEnumerable<MyPendingInvitationDto>> GetMyPendingInvitationsAsync(string email);
 }

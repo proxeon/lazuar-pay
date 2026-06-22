@@ -1,20 +1,28 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Modules.One.Contracts;
+using BuildingBlocks.Application;
+using Dapper;
 using Lazuar.ApiTypes;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Modules.One.Contracts;
 
 namespace Modules.One.Infrastructure.Services;
 
 public class OneQueryService : IOneQueryService
 {
     private readonly OneDbContext _context;
+    private readonly ISqlConnectionFactory _connectionFactory;
 
-    public OneQueryService(OneDbContext context)
+    public OneQueryService(
+        OneDbContext context, 
+        [FromKeyedServices("OneSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
         _context = context;
+        _connectionFactory = connectionFactory;
     }
 
     public async Task<WorkspaceSnapshotDto?> GetWorkspaceByIdAsync(Guid tenantId)
@@ -95,8 +103,6 @@ public class OneQueryService : IOneQueryService
 
     public async Task<IEnumerable<WorkspaceMemberSnapshotDto>> GetWorkspaceMembersAsync(Guid tenantId)
     {
-        // Fix: Execute the join and ordering against EF anonymous types first to prevent translation crashes,
-        // then project into the strongly-typed DTO record in memory.
         var query = await _context.TenantMemberships
             .AsNoTracking()
             .IgnoreQueryFilters()
@@ -126,5 +132,32 @@ public class OneQueryService : IOneQueryService
             .OrderByDescending(i => i.CreatedAt)
             .Select(i => new WorkspaceInvitationSnapshotDto(i.Id, i.Email, i.Role, i.Status, i.ExpiresAt))
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<MyPendingInvitationDto>> GetMyPendingInvitationsAsync(string email)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT 
+                i.""Id"", 
+                o.""Name"" as WorkspaceName, 
+                i.""Role"", 
+                i.""ExpiresAt""
+            FROM one.""WorkspaceInvitations"" i
+            JOIN one.""Organizations"" o ON i.""OrganizationId"" = o.""Id""
+            WHERE i.""Email"" = @Email AND i.""Status"" = 'PENDING' AND i.""ExpiresAt"" > NOW()
+            ORDER BY i.""CreatedAt"" DESC";
+
+        var results = await connection.QueryAsync<dynamic>(sql, new { Email = email.Trim().ToLowerInvariant() });
+
+        return results.Select(r => new MyPendingInvitationDto
+        {
+            Id = r.Id.ToString(),
+            Workspace_name = r.workspacename,
+            Role = r.role,
+            Expires_at = new DateTimeOffset(r.expiresat)
+        });
     }
 }
