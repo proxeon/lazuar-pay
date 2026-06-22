@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/One/Infrastructure/Services/OneQueryService.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -117,28 +116,5 @@ public class OneQueryService : IOneQueryService
             .OrderByDescending(i => i.CreatedAt)
             .Select(i => new WorkspaceInvitationSnapshotDto(i.Id, i.Email, i.Role, i.Status, i.ExpiresAt))
             .ToListAsync();
-    }
-
-    public async Task<IEnumerable<AppAccessRequestDto>> GetAppAccessRequestsAsync()
-    {
-        var requests = await _context.AppAccessRequests
-            .AsNoTracking()
-            .Join(_context.GlobalUsers.AsNoTracking(),
-                  r => r.GlobalUserId,
-                  u => u.Id,
-                  (r, u) => new { r, u })
-            .OrderByDescending(x => x.r.CreatedAt)
-            .ToListAsync();
-
-        return requests.Select(x => new AppAccessRequestDto
-        {
-            Id = x.r.Id.ToString(),
-            Global_user_id = x.r.GlobalUserId.ToString(),
-            Name = x.u.Name,
-            Email = x.u.Email,
-            Requested_apps = x.r.RequestedApps,
-            Status = x.r.Status,
-            Created_at = new DateTimeOffset(x.r.CreatedAt)
-        }).ToList();
     }
 }

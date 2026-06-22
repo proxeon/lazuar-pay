@@ -34,33 +34,27 @@ public class CreateWorkspaceCommandHandler : ICommandHandler<CreateWorkspaceComm
 
     public async Task<Guid> Handle(CreateWorkspaceCommand request, CancellationToken ct)
     {
-        // Add invariant check for email verification
         var user = await _repository.GetUserByIdAsync(request.OwnerUserId, ct);
-        if (user == null || !user.IsEmailVerified)
+        if (user == null)
         {
-            throw new BusinessRuleValidationException(new GenericBusinessRule("Workspace creation requires a verified email address."));
+            throw new BusinessRuleValidationException(new GenericBusinessRule("User not found."));
         }
 
-        // Step A: Create the Organization (Workspace)
         var organization = new Organization(request.Name, request.Slug);
         _repository.AddOrganization(organization);
 
-        // Step B: Create TenantMembership linking the authenticated User to Organization with role ADMIN
         var membership = new TenantMembership(request.OwnerUserId, organization.Id, "ADMIN");
         _repository.AddTenantMembership(membership);
 
-        // Step C: Loop through ProvisionApps array and create TenantAppEntitlements
         foreach (var appId in request.ProvisionApps)
         {
             var cleanAppId = appId.Trim().ToUpperInvariant();
             var entitlement = new TenantAppEntitlement(organization.Id, cleanAppId);
             _repository.AddEntitlement(entitlement);
 
-            // Publish event so modules (like Community) know to run JIT template seeding
             await _eventBus.PublishAsync(new AppEntitlementGrantedIntegrationEvent(organization.Id, cleanAppId));
         }
 
-        // Save everything atomically
         await _repository.SaveChangesAsync(ct);
 
         return organization.Id;

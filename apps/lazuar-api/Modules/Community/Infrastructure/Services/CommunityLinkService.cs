@@ -14,11 +14,6 @@ public class CommunityLinkService : ICommunityLinkService
 
     public string GetCommunityBaseUrl()
     {
-        var apiBaseUrl = _configuration["App:ApiBaseUrl"] ?? "";
-
-        // FIX: Point local development to the Next.js Storefront (3021), not the Admin app (3020)
-        return apiBaseUrl.Contains("lazuar.com")
-            ? "https://community.lazuar.com"
-            : "http://localhost:3021";
+        return _configuration["App:CommunityUrl"]?.TrimEnd('/') ?? "http://localhost:3021";
     }
 }

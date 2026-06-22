@@ -25,9 +25,7 @@ public interface IOneRepository
     void AddWorkspaceInvitation(WorkspaceInvitation invitation);
     Task<WorkspaceInvitation?> GetInvitationByHashAsync(string hash, CancellationToken ct = default);
     Task<WorkspaceInvitation?> GetInvitationByIdAsync(Guid id, CancellationToken ct = default);
-
-    void AddAppAccessRequest(AppAccessRequest request);
-    Task<AppAccessRequest?> GetAppAccessRequestByIdAsync(Guid id, CancellationToken ct = default);
+    Task<bool> HasPendingInvitationAsync(string email, CancellationToken ct = default);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }

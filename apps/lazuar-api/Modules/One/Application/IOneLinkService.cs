@@ -2,5 +2,6 @@ namespace Modules.One.Application;
 
 public interface IOneLinkService
 {
-    string GetClientBaseUrl();
+    string GetAuthUrl();
+    string GetOpsUrl();
 }

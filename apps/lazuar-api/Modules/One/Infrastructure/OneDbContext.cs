@@ -14,7 +14,6 @@ public class OneDbContext : PlatformDbContext
     public DbSet<TenantMembership> TenantMemberships { get; set; } = null!;
     public DbSet<TenantAppEntitlement> TenantAppEntitlements { get; set; } = null!;
     public DbSet<WorkspaceInvitation> WorkspaceInvitations { get; set; } = null!;
-    public DbSet<AppAccessRequest> AppAccessRequests { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -69,21 +68,6 @@ public class OneDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.TokenHash).IsUnique();
             builder.HasIndex(x => new { x.OrganizationId, x.Email }).HasFilter("\"Status\" = 'PENDING'");
-        });
-
-        modelBuilder.Entity<AppAccessRequest>(builder =>
-        {
-            builder.ToTable("AppAccessRequests");
-            builder.HasKey(x => x.Id);
-            builder.HasIndex(x => x.Status).HasFilter("\"Status\" = 'PENDING'");
-
-            var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
-            builder.Property(x => x.RequestedApps)
-                   .HasConversion(
-                       v => JsonSerializer.Serialize(v, jsonOptions),
-                       v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
-                   )
-                   .HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

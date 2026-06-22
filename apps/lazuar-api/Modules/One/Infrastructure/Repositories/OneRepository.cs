@@ -79,11 +79,12 @@ public class OneRepository : IOneRepository
             .FirstOrDefaultAsync(i => i.Id == id, ct);
     }
 
-    public void AddAppAccessRequest(AppAccessRequest request) => _context.AppAccessRequests.Add(request);
-
-    public async Task<AppAccessRequest?> GetAppAccessRequestByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<bool> HasPendingInvitationAsync(string email, CancellationToken ct = default)
     {
-        return await _context.AppAccessRequests.FirstOrDefaultAsync(r => r.Id == id, ct);
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        return await _context.WorkspaceInvitations
+            .IgnoreQueryFilters()
+            .AnyAsync(i => i.Email == normalizedEmail && i.Status == "PENDING" && i.ExpiresAt > DateTime.UtcNow, ct);
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)

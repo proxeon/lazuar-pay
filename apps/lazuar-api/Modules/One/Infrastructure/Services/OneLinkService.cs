@@ -12,8 +12,13 @@ public class OneLinkService : IOneLinkService
         _configuration = configuration;
     }
 
-    public string GetClientBaseUrl()
+    public string GetAuthUrl()
     {
-        return _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3001";
+        return _configuration["App:AuthUrl"]?.TrimEnd('/') ?? "http://localhost:3001";
+    }
+
+    public string GetOpsUrl()
+    {
+        return _configuration["App:OpsUrl"]?.TrimEnd('/') ?? "http://localhost:3003";
     }
 }
