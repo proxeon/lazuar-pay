@@ -1,4 +1,3 @@
-// apps/ops-page/src/components/Sidebar.tsx
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -12,7 +11,7 @@ import {
   Users
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import type { AuthUser, EntitlementDto } from "../lib/api-client";
+import { AUTH_URL, type AuthUser, type EntitlementDto } from "../lib/api-client";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -202,7 +201,7 @@ export default function Sidebar({
         </div>
       )}
 
-      <div className="flex-1 py-4 flex flex-col gap-6">
+      <div className="flex-1 py-4 flex flex-col gap-6 overflow-y-auto">
         <nav className="space-y-0.5">
           <ModuleNav 
             title="Community" 
@@ -216,6 +215,14 @@ export default function Sidebar({
               { label: "Automations", href: "/community/automations" },
               { label: "Payment Settings", href: "/community/payment" },
               { label: "Email Templates", href: "/community/templates" }
+            ]} 
+          />
+          <ModuleNav 
+            title="Workspace" 
+            basePath="/workspace" 
+            icon={Building2}
+            links={[
+              { label: "Settings", href: "/workspace/settings" }
             ]} 
           />
         </nav>
@@ -237,13 +244,13 @@ export default function Sidebar({
             {isUserMenuOpen && (
               <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className={cn("absolute z-50 rounded-none border border-[#e5e5e5] bg-white p-1", expanded ? "bottom-[calc(100%+8px)] left-2 w-[calc(100%-16px)] min-w-[200px]" : "bottom-1 left-[calc(100%+8px)] min-w-[200px]")}>
                 <a 
-                  href="http://localhost:3001/profile" 
+                  href={`${AUTH_URL}/profile`} 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   onClick={() => setIsUserMenuOpen(false)} 
                   className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors focus:outline-none"
                 >
-                  <Settings size={14} /> View Identity Hub
+                  <Settings size={14} /> Global Identity Hub
                 </a>
                 
                 <div className="h-px w-full bg-[#f4f4f5] my-1" />

@@ -2,19 +2,16 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from "./components/Sidebar";
-import LoginPage from "./components/LoginPage";
-import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
+import { client, AUTH_URL, OPS_URL, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
-// Migrated Pages
 import DashboardPage from "./modules/community/pages/DashboardPage";
 import PaymentSettingsPage from "./modules/community/pages/PaymentSettingsPage";
 import TemplatesPage from "./modules/community/pages/TemplatesPage";
-
-// New Pages
 import SubscribersPage from "./modules/community/pages/SubscribersPage";
 import PlansPage from "./modules/community/pages/PlansPage";
 import CouponsPage from "./modules/community/pages/CouponsPage";
 import AutomationsPage from "./modules/community/pages/AutomationsPage";
+import WorkspaceSettingsPage from "./modules/workspace/pages/WorkspaceSettingsPage";
 
 function OpsLayout() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -42,18 +39,18 @@ function OpsLayout() {
       try {
         const { data, error } = await client.GET("/one/auth/me");
         if (error || !data) {
-          navigate(`/login?returnUrl=${encodeURIComponent(location.pathname)}`);
+          window.location.href = `${AUTH_URL}/login?returnUrl=${encodeURIComponent(OPS_URL + location.pathname)}`;
           return;
         }
         setUser(data);
       } catch {
-        navigate("/login");
+        window.location.href = `${AUTH_URL}/login?returnUrl=${encodeURIComponent(OPS_URL + location.pathname)}`;
       } finally {
         setIsAuthLoading(false);
       }
     }
     verifySession();
-  }, [navigate, location.pathname]);
+  }, [location.pathname]);
 
   const { data: entitlements, isLoading: isEntitlementsLoading } = useQuery({
     queryKey: ["entitlements"],
@@ -96,7 +93,7 @@ function OpsLayout() {
   const handleLogout = async () => {
     await client.POST("/one/auth/logout");
     localStorage.removeItem("ops_active_workspace_id");
-    navigate("/login");
+    window.location.href = `${AUTH_URL}/login`;
   };
 
   if (isAuthLoading || (user && isEntitlementsLoading)) {
@@ -136,7 +133,6 @@ function OpsLayout() {
       
       <main className="flex-1 flex flex-col overflow-hidden w-full relative bg-white">
         <Outlet context={{ activeWorkspaceId }} />
-        
         {isMobile && isSidebarOpen && (
           <div className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm" onClick={handleToggleSidebar} />
         )}
@@ -148,20 +144,18 @@ function OpsLayout() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
       <Route element={<OpsLayout />}>
         <Route path="/" element={<Navigate to="/community/dashboard" replace />} />
         
-        {/* Community Module Routes */}
         <Route path="/community/dashboard" element={<DashboardPage />} />
         <Route path="/community/subscribers" element={<SubscribersPage />} />
         <Route path="/community/plans" element={<PlansPage />} />
         <Route path="/community/coupons" element={<CouponsPage />} />
         <Route path="/community/automations" element={<AutomationsPage />} />
-        
-        {/* Flat Settings Routes */}
         <Route path="/community/payment" element={<PaymentSettingsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
+
+        <Route path="/workspace/settings" element={<WorkspaceSettingsPage />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/community/dashboard" replace />} />

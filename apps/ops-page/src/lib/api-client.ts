@@ -2,6 +2,8 @@ import createClient from "openapi-fetch";
 import type { paths, components } from "@repo/api-types-ts";
 
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
+export const AUTH_URL = import.meta.env.VITE_AUTH_URL || "http://localhost:3001";
+export const OPS_URL = import.meta.env.VITE_OPS_URL || "http://localhost:3003";
 
 export const client = createClient<paths>({ 
   baseUrl: API_URL,
@@ -12,8 +14,6 @@ client.use({
   onRequest({ request }) {
     const tenantId = localStorage.getItem("ops_active_workspace_id");
     
-    // Skip appending the Tenant ID on global identity routes.
-    // This ensures the backend security middleware does not block entitlement checks with 403s.
     if (tenantId && !request.url.includes("/one/")) {
       request.headers.set("X-Tenant-Id", tenantId);
     }
