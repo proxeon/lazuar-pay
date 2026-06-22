@@ -95,16 +95,26 @@ public class OneQueryService : IOneQueryService
 
     public async Task<IEnumerable<WorkspaceMemberSnapshotDto>> GetWorkspaceMembersAsync(Guid tenantId)
     {
-        return await _context.TenantMemberships
+        // Fix: Execute the join and ordering against EF anonymous types first to prevent translation crashes,
+        // then project into the strongly-typed DTO record in memory.
+        var query = await _context.TenantMemberships
             .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(m => m.OrganizationId == tenantId)
             .Join(_context.GlobalUsers.AsNoTracking(), 
                   m => m.GlobalUserId, 
                   u => u.Id, 
-                  (m, u) => new WorkspaceMemberSnapshotDto(m.Id, m.GlobalUserId, u.Name, u.Email, m.Role, m.CreatedAt))
-            .OrderBy(m => m.JoinedAt)
+                  (m, u) => new { m, u })
+            .OrderBy(x => x.m.CreatedAt)
             .ToListAsync();
+
+        return query.Select(x => new WorkspaceMemberSnapshotDto(
+            x.m.Id, 
+            x.m.GlobalUserId, 
+            x.u.Name, 
+            x.u.Email, 
+            x.m.Role, 
+            x.m.CreatedAt));
     }
 
     public async Task<IEnumerable<WorkspaceInvitationSnapshotDto>> GetWorkspaceInvitationsAsync(Guid tenantId)

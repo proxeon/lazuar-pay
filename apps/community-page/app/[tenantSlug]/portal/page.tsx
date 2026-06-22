@@ -7,6 +7,8 @@ import { ArrowLeft, Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { browserClient, type CommunitySubscription } from "@/lib/api-client";
 
+const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3001";
+
 function PortalContent({ tenantSlug }: { tenantSlug: string }) {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -18,19 +20,16 @@ function PortalContent({ tenantSlug }: { tenantSlug: string }) {
   useEffect(() => {
     async function checkAuthAndLoad() {
       try {
-        // 1. Check Global SSO Identity
         const { data: authData, error: authError } = await browserClient.GET("/one/auth/me");
         
         if (authError || !authData) {
-          // Unauthenticated -> Hard redirect to Lazuar One
           const returnUrl = encodeURIComponent(window.location.href);
-          window.location.href = `http://localhost:3001/login?returnUrl=${returnUrl}`;
+          window.location.href = `${AUTH_URL}/login?returnUrl=${returnUrl}`;
           return;
         }
 
         setUser(authData);
 
-        // 2. Fetch specific subscription if token is present
         if (token) {
           const { data: portalData } = await browserClient.GET("/public/community/{tenantSlug}/portal", {
             params: { path: { tenantSlug }, query: { token } }
@@ -51,7 +50,7 @@ function PortalContent({ tenantSlug }: { tenantSlug: string }) {
 
   const handleUpdateContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Note: Global identity updates must be done via Lazuar One.");
+    toast.success("Note: Global identity updates must be done via the Identity Hub.");
   };
 
   const handleCancel = async () => {
@@ -73,14 +72,14 @@ function PortalContent({ tenantSlug }: { tenantSlug: string }) {
 
   const handleLogout = async () => {
     await browserClient.POST("/one/auth/logout");
-    window.location.href = "http://localhost:3001/login";
+    const returnUrl = encodeURIComponent(window.location.href);
+    window.location.href = `${AUTH_URL}/login?returnUrl=${returnUrl}`;
   };
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-muted-foreground" /></div>;
   }
 
-  // Fallback UI if they navigated here logged in, but without a specific subscription token
   if (!sub) {
     return (
       <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
@@ -97,16 +96,15 @@ function PortalContent({ tenantSlug }: { tenantSlug: string }) {
         </header>
         <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-16 text-center">
           <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to the Ecosystem, {user?.name}</h1>
-          <p className="text-muted-foreground mb-8 text-sm">Please manage your master identity and active subscriptions from your global launchpad.</p>
-          <a href="http://localhost:3001/launchpad" className="h-12 px-8 inline-flex items-center bg-foreground text-background text-sm font-bold uppercase tracking-widest rounded-none hover:bg-foreground/90 transition-colors">
-            Go to Lazuar One
+          <p className="text-muted-foreground mb-8 text-sm">Please manage your master identity and active subscriptions from your global profile.</p>
+          <a href={`${AUTH_URL}/profile`} className="h-12 px-8 inline-flex items-center bg-foreground text-background text-sm font-bold uppercase tracking-widest rounded-none hover:bg-foreground/90 transition-colors">
+            Go to Identity Hub
           </a>
         </main>
       </div>
     );
   }
 
-  // ─── STANDARD DASHBOARD VIEW ───
   const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
   const isCancelled = sub.status === "CANCELLED" || sub.status === "CANCELED";
   const isPastDue = sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
@@ -141,9 +139,9 @@ function PortalContent({ tenantSlug }: { tenantSlug: string }) {
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Email (Global Identity)</label>
               <input type="email" readOnly value={user?.email || sub.customer_email} className="flex h-10 w-full rounded-none border border-border/60 bg-secondary/50 px-3 py-1 text-sm focus-visible:outline-none" />
             </div>
-            <button type="submit" className="w-full h-10 rounded-none border border-border/60 bg-background text-[10px] font-bold uppercase tracking-widest text-foreground hover:bg-secondary transition-colors">
-              Manage in One
-            </button>
+            <a href={`${AUTH_URL}/profile`} className="flex items-center justify-center h-10 rounded-none border border-border/60 bg-background text-[10px] font-bold uppercase tracking-widest text-foreground hover:bg-secondary transition-colors">
+              Manage Details
+            </a>
           </form>
         </div>
 

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { browserClient, type CommunityPlan, type EntitlementDto } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
+const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3001";
+
 export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug: string; planSlug: string }> }) {
     const resolvedParams = use(params);
     const { tenantSlug, planSlug } = resolvedParams;
@@ -195,6 +197,25 @@ export default function CheckoutPage({ params }: { params: Promise<{ tenantSlug:
                 <div className="flex flex-col-reverse lg:flex-row gap-6 items-start">
                     <div className="flex-1 w-full bg-card border border-border/60 shadow-sm p-6 sm:p-8 rounded-none">
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            
+                            {!globalUser && (
+                                <div className="mb-4 flex items-center justify-between p-3 bg-zinc-100 border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800">
+                                    <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
+                                        Returning customer?
+                                    </p>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            const returnUrl = encodeURIComponent(window.location.href);
+                                            window.location.href = `${AUTH_URL}/login?returnUrl=${returnUrl}`;
+                                        }} 
+                                        className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:underline dark:text-zinc-300"
+                                    >
+                                        Log in
+                                    </button>
+                                </div>
+                            )}
+
                             {globalUser && (
                                 <div className="mb-4">
                                     {isGuestMode ? (

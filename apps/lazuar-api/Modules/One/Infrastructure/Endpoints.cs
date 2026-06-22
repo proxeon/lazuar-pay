@@ -229,13 +229,21 @@ public static class Endpoints
             }
         }).RequireAuthorization();
 
-        group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        group.MapGet("/workspaces", async Task<Results<Ok<ICollection<WorkspaceDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, OneDbContext db) =>
         {
-            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
-            var workspaces = await queryService.GetWorkspacesAsync();
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            
+            // Fix: Filter to workspaces the user belongs to unless they are a System Admin
+            var query = db.Organizations.AsNoTracking();
+            if (!ctx.IsSystemAdmin) {
+                query = query.Where(o => db.TenantMemberships.Any(m => m.OrganizationId == o.Id && m.GlobalUserId == ctx.UserId));
+            }
+            
+            var workspaces = await query.OrderByDescending(o => o.CreatedAt).ToListAsync();
             var dtos = workspaces.Select(w => new WorkspaceDto { Id = w.Id.ToString(), Name = w.Name, Slug = w.Slug, Is_active = w.IsActive, Created_at = new DateTimeOffset(w.CreatedAt) }).ToList();
+            
             return TypedResults.Ok((ICollection<WorkspaceDto>)dtos);
-        }).RequireAuthorization("OrgAdmin");
+        }).RequireAuthorization();
 
         group.MapGet("/workspaces/{id:guid}/members", async Task<Results<Ok<ICollection<WorkspaceMemberDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
@@ -307,17 +315,31 @@ public static class Endpoints
 
         group.MapGet("/workspaces/{id:guid}/apps", async Task<Results<Ok<ICollection<WorkspaceAppDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
-            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            
+            // Fix: Check local role if not system admin
+            if (!ctx.IsSystemAdmin) {
+                var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
+                if (role != "ADMIN") return TypedResults.Unauthorized();
+            }
+            
             var apps = await queryService.GetWorkspaceAppsAsync(id);
             return TypedResults.Ok((ICollection<WorkspaceAppDto>)apps.Select(a => new WorkspaceAppDto { App_id = a }).ToList());
-        }).RequireAuthorization("OrgAdmin");
+        }).RequireAuthorization(); // Removed hard "OrgAdmin" policy requirement
 
-        group.MapPost("/workspaces/{id:guid}/apps/{appId}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, string appId, ToggleAppEntitlementRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        group.MapPost("/workspaces/{id:guid}/apps/{appId}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, string appId, ToggleAppEntitlementRequestDto req, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
         {
-            if (ctx.UserId == Guid.Empty || !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            
+            // Fix: Check local role if not system admin
+            if (!ctx.IsSystemAdmin) {
+                var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
+                if (role != "ADMIN") return TypedResults.Unauthorized();
+            }
+            
             await mediator.Send(new ToggleAppEntitlementCommand(id, appId, req.Is_active));
             return TypedResults.Ok(new StatusResponse { Status = req.Is_active ? "enabled" : "disabled" });
-        }).RequireAuthorization("OrgAdmin");
+        }).RequireAuthorization(); // Removed hard "OrgAdmin" policy requirement
 
         group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, OneDbContext db) =>
         {
