@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, UserPlus, X, Trash2, ShieldAlert } from "lucide-react";
+import { Loader2, UserPlus, X, Trash2, ShieldAlert, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useOutletContext } from "react-router-dom";
 import { client } from "../../../lib/api-client";
@@ -23,6 +23,7 @@ export default function WorkspaceSettingsPage() {
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  const [originalSlug, setOriginalSlug] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("ADMIN");
 
@@ -42,6 +43,7 @@ export default function WorkspaceSettingsPage() {
       if (current) {
         setName(current.name);
         setSlug(current.slug);
+        setOriginalSlug(current.slug);
       }
     }
   }, [workspaces, activeWorkspaceId]);
@@ -77,19 +79,20 @@ export default function WorkspaceSettingsPage() {
   });
 
   const updateWorkspaceMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ currentName, currentSlug }: { currentName: string, currentSlug: string }) => {
       const { error } = await client.PUT("/one/workspaces/{id}", {
         params: { path: { id: activeWorkspaceId! } },
-        body: { name, slug }
+        body: { name: currentName, slug: currentSlug }
       });
       if (error) throw new Error(error.detail);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success("Workspace updated successfully.");
+      setOriginalSlug(variables.currentSlug);
       queryClient.invalidateQueries({ queryKey: ["workspaces"] });
       queryClient.invalidateQueries({ queryKey: ["entitlements"] });
     },
-    onError: (err: any) => toast.error("Failed to update workspace", { description: err.message })
+    onError: (err: any) => toast.error(err.message)
   });
 
   const inviteMutation = useMutation({
@@ -151,6 +154,23 @@ export default function WorkspaceSettingsPage() {
     onError: (err: any) => toast.error("Failed to update entitlement", { description: err.message })
   });
 
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let sanitized = e.target.value
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-+/, ""); 
+    setSlug(sanitized);
+  };
+
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalSlug = slug.replace(/-+$/, "");
+    setSlug(finalSlug);
+    updateWorkspaceMutation.mutate({ currentName: name, currentSlug: finalSlug });
+  };
+
   if (!activeWorkspaceId) return null;
 
   return (
@@ -180,18 +200,30 @@ export default function WorkspaceSettingsPage() {
             {isWorkspaceLoading ? (
               <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
             ) : (
-              <form onSubmit={(e) => { e.preventDefault(); updateWorkspaceMutation.mutate(); }} className="max-w-md space-y-6">
+              <form onSubmit={handleUpdateSubmit} className="max-w-md space-y-6">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Organization Name *</label>
                   <input required value={name} onChange={e => setName(e.target.value)} disabled={updateWorkspaceMutation.isPending} className="flex h-10 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
                 </div>
+                
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Tenant Slug *</label>
-                  <input required value={slug} onChange={e => setSlug(e.target.value)} disabled={updateWorkspaceMutation.isPending} className="flex h-10 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
-                  <p className="text-[10px] text-[#a1a1aa] mt-1">Changing the slug will break existing public checkout and portal links.</p>
+                  <input required minLength={3} maxLength={63} value={slug} onChange={handleSlugChange} disabled={updateWorkspaceMutation.isPending} className="flex h-10 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+                  
+                  {slug !== originalSlug ? (
+                    <div className="mt-2 flex items-start gap-2 bg-rose-50 border border-rose-200 p-3 rounded-sm">
+                      <AlertTriangle size={14} className="text-rose-600 mt-0.5 shrink-0" />
+                      <p className="text-[11px] text-rose-700 leading-relaxed font-medium">
+                        Warning: Changing your workspace slug will instantly break all previously shared checkout links, public portal URLs, and API integrations.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-[#a1a1aa] mt-1">Used to generate public checkout and portal links. Minimum 3 characters.</p>
+                  )}
                 </div>
+
                 <div className="pt-2">
-                  <button type="submit" disabled={updateWorkspaceMutation.isPending} className="h-9 px-6 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center gap-2">
+                  <button type="submit" disabled={updateWorkspaceMutation.isPending || slug.trim().length < 3} className="h-9 px-6 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center gap-2">
                     {updateWorkspaceMutation.isPending && <Loader2 size={14} className="animate-spin" />} Save Changes
                   </button>
                 </div>

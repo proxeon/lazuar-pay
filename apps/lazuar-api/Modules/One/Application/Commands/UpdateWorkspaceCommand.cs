@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 
 namespace Modules.One.Application.Commands;
 
@@ -39,6 +40,16 @@ public class UpdateWorkspaceCommandHandler : ICommandHandler<UpdateWorkspaceComm
         if (organization == null || !organization.IsActive)
         {
             throw new InvalidOperationException("Workspace not found.");
+        }
+
+        var cleanSlug = request.Slug.Trim().ToLowerInvariant();
+        if (organization.Slug != cleanSlug)
+        {
+            var isUnique = await _repository.IsSlugUniqueAsync(cleanSlug, request.OrganizationId, ct);
+            if (!isUnique)
+            {
+                throw new BusinessRuleValidationException(new GenericBusinessRule("This workspace slug is already taken by another organization."));
+            }
         }
 
         organization.UpdateDetails(request.Name, request.Slug);
