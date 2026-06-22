@@ -11,12 +11,15 @@
   "dependencies": {
     "@repo/api-types-ts": "workspace:^",
     "@tailwindcss/vite": "^4.0.0",
+    "@tanstack/react-query": "^5.101.0",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
-    "openapi-fetch": "^0.13.0",
+    "openapi-fetch": "^0.13.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5",
-    "sonner": "^1.7.4"
+    "sonner": "^1.7.4",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.8",
