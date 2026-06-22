@@ -1,0 +1,88 @@
+import { useState } from "react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { client, OPS_URL } from "../lib/api-client";
+
+export default function RegisterPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const executeBouncerRouting = async () => {
+    const returnUrl = searchParams.get("returnUrl");
+    if (returnUrl) {
+      window.location.href = returnUrl;
+      return;
+    }
+
+    const { data: entitlements } = await client.GET("/one/me/entitlements");
+    if (entitlements && entitlements.length > 0) {
+      window.location.href = OPS_URL;
+    } else {
+      navigate("/profile");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const { error: registerError } = await client.POST("/one/public/register", {
+        body: { email, password }
+      });
+
+      if (registerError) throw new Error(registerError.detail || "Registration failed.");
+
+      await executeBouncerRouting();
+    } catch (err: any) {
+      setError(err.message);
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] font-sans">
+      <div className="w-full max-w-[380px] mx-4">
+        <div className="bg-white border border-[#e5e5e5] p-8 rounded-none">
+          <div className="text-center mb-8">
+            <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Create Account</h1>
+            <p className="text-[13px] text-[#71717a] mt-1.5">Register your Lazuar identity.</p>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-[10px] font-bold tracking-wide uppercase text-rose-600">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email Address</label>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm focus:outline-none focus:border-[#09090b]" />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Password</label>
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm focus:outline-none focus:border-[#09090b]" />
+            </div>
+
+            <button type="submit" disabled={isLoading} className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2">
+              {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Continue"}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center">
+            <p className="text-[12px] text-[#71717a]">
+              Already have an account? <Link to={`/login?${searchParams.toString()}`} className="text-[#09090b] font-semibold hover:underline">Sign in</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

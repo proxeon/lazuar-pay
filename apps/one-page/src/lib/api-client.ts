@@ -1,14 +1,10 @@
 import createClient from "openapi-fetch";
-import type { paths, components } from "@repo/api-types-ts";
+import type { paths } from "@repo/api-types-ts";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
+export const OPS_URL = import.meta.env.VITE_OPS_URL || "http://localhost:3003";
 
 export const client = createClient<paths>({ 
   baseUrl: API_URL,
-  // This ensures HttpOnly cookies are attached to all cross-origin requests automatically
-  fetch: (url, init) => fetch(url, { ...init, credentials: "include" })
+  fetch: (input, init) => fetch(input, { ...init, credentials: "include" })
 });
-
-// Type Aliases
-export type AuthUser = components["schemas"]["One.AuthUser"];
-export type Entitlement = components["schemas"]["One.EntitlementDto"];
