@@ -201,7 +201,7 @@ public static class Endpoints
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             try
             {
-                await mediator.Send(new UpdateWorkspaceCommand(id, ctx.UserId, req.Name, req.Slug));
+                await mediator.Send(new UpdateWorkspaceCommand(id, ctx.UserId, req.Name, req.Slug, ctx.IsSystemAdmin));
                 return TypedResults.Ok(new StatusResponse { Status = "updated" });
             }
             catch (InvalidOperationException ex)
@@ -220,7 +220,7 @@ public static class Endpoints
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             try
             {
-                await mediator.Send(new ArchiveWorkspaceCommand(id, ctx.UserId));
+                await mediator.Send(new ArchiveWorkspaceCommand(id, ctx.UserId, ctx.IsSystemAdmin));
                 return TypedResults.Ok(new StatusResponse { Status = "archived" });
             }
             catch (InvalidOperationException ex)
@@ -233,7 +233,6 @@ public static class Endpoints
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             
-            // Fix: Filter to workspaces the user belongs to unless they are a System Admin
             var query = db.Organizations.AsNoTracking();
             if (!ctx.IsSystemAdmin) {
                 query = query.Where(o => db.TenantMemberships.Any(m => m.OrganizationId == o.Id && m.GlobalUserId == ctx.UserId));
@@ -317,7 +316,6 @@ public static class Endpoints
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             
-            // Fix: Check local role if not system admin
             if (!ctx.IsSystemAdmin) {
                 var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
                 if (role != "ADMIN") return TypedResults.Unauthorized();
@@ -325,13 +323,12 @@ public static class Endpoints
             
             var apps = await queryService.GetWorkspaceAppsAsync(id);
             return TypedResults.Ok((ICollection<WorkspaceAppDto>)apps.Select(a => new WorkspaceAppDto { App_id = a }).ToList());
-        }).RequireAuthorization(); // Removed hard "OrgAdmin" policy requirement
+        }).RequireAuthorization(); 
 
         group.MapPost("/workspaces/{id:guid}/apps/{appId}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, string appId, ToggleAppEntitlementRequestDto req, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             
-            // Fix: Check local role if not system admin
             if (!ctx.IsSystemAdmin) {
                 var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
                 if (role != "ADMIN") return TypedResults.Unauthorized();
@@ -339,7 +336,7 @@ public static class Endpoints
             
             await mediator.Send(new ToggleAppEntitlementCommand(id, appId, req.Is_active));
             return TypedResults.Ok(new StatusResponse { Status = req.Is_active ? "enabled" : "disabled" });
-        }).RequireAuthorization(); // Removed hard "OrgAdmin" policy requirement
+        }).RequireAuthorization(); 
 
         group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, OneDbContext db) =>
         {
