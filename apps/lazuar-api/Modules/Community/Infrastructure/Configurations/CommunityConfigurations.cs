@@ -93,7 +93,8 @@ public class PaymentRecordConfiguration : IEntityTypeConfiguration<PaymentRecord
     {
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Amount).HasPrecision(10, 2);
-        builder.HasIndex(x => x.ExternalReference)
+        
+        builder.HasIndex(x => new { x.SubscriptionId, x.ExternalReference })
             .HasFilter("\"ExternalReference\" IS NOT NULL")
             .IsUnique();
     }
