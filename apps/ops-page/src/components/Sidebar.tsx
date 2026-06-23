@@ -240,7 +240,8 @@ export default function Sidebar({
           </div>
         )}
 
-        <div className="flex-1 py-4 flex flex-col gap-6 overflow-y-auto">
+        {/* REMOVED overflow-y-auto FROM THIS WRAPPER TO FIX THE FLYOUT CLIPPING BUG */}
+        <div className="flex-1 py-4 flex flex-col gap-6">
           <nav className="space-y-0.5">
             <ModuleNav 
               title="Community" 
