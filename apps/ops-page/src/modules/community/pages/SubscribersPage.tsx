@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy } from "lucide-react";
+import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { client, API_URL, type CommunitySubscriptionDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
@@ -8,6 +8,7 @@ import PageLayout from "../../core/components/PageLayout";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
+import CreateSubscriberModal from "../components/CreateSubscriberModal";
 
 export default function SubscribersPage() {
   const queryClient = useQueryClient();
@@ -19,6 +20,7 @@ export default function SubscribersPage() {
   const [selectedSub, setSelectedSub] = useState<CommunitySubscriptionDto | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -52,7 +54,6 @@ export default function SubscribersPage() {
     enabled: !!selectedSub
   });
 
-  // Replaced brittle client.fetch check with standard API_URL import
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -125,14 +126,22 @@ export default function SubscribersPage() {
       description="Manage active members, billing cycles, and access."
       breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Subscribers" }]}
       actionButton={
-        <button 
-          onClick={handleExport} 
-          disabled={isExporting}
-          className="h-9 px-4 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#f4f4f5] transition-colors disabled:opacity-50"
-        >
-          {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 
-          Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleExport} 
+            disabled={isExporting}
+            className="h-9 px-4 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#f4f4f5] transition-colors disabled:opacity-50"
+          >
+            {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 
+            Export CSV
+          </button>
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
+          >
+            <Plus size={14} /> Add Member
+          </button>
+        </div>
       }
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full">
@@ -316,7 +325,11 @@ export default function SubscribersPage() {
         )}
       </SidePanel>
 
-      {/* Record Payment Modal Overlay (Remains unchanged but layered above side-panel z-60) */}
+      {isCreateModalOpen && (
+        <CreateSubscriberModal onClose={() => setIsCreateModalOpen(false)} />
+      )}
+
+      {/* Record Payment Modal Overlay */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setIsPaymentModalOpen(false)} />
