@@ -50,6 +50,14 @@ export default function CreateWorkspaceModal({ onClose, onSuccess }: CreateWorks
         </div>
         <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
           <div className="p-5 space-y-4">
+            {createMutation.isError && (
+              <div className="p-3 bg-rose-50 border border-rose-200">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-rose-600">
+                  {createMutation.error?.message || "Failed to create workspace."}
+                </p>
+              </div>
+            )}
+            
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Workspace Name *</label>
               <input required type="text" value={name} onChange={handleNameChange} disabled={createMutation.isPending} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" placeholder="e.g. Acme Corp" />
