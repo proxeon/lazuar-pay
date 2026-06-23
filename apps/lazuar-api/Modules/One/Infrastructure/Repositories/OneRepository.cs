@@ -23,6 +23,11 @@ public class OneRepository : IOneRepository
         return await _context.Organizations.FirstOrDefaultAsync(o => o.Id == id, ct);
     }
 
+    public async Task<bool> IsSlugUniqueAsync(string slug, CancellationToken ct = default)
+    {
+        return !await _context.Organizations.AnyAsync(o => o.Slug == slug, ct);
+    }
+
     public void AddTenantMembership(TenantMembership membership) => _context.TenantMemberships.Add(membership);
 
     public void RemoveTenantMembership(TenantMembership membership) => _context.TenantMemberships.Remove(membership);

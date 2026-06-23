@@ -1,8 +1,5 @@
-using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.One.Domain;
@@ -16,7 +13,6 @@ public class OneDbContext : PlatformDbContext
     public DbSet<TenantMembership> TenantMemberships { get; set; } = null!;
     public DbSet<TenantAppEntitlement> TenantAppEntitlements { get; set; } = null!;
     public DbSet<WorkspaceInvitation> WorkspaceInvitations { get; set; } = null!;
-    public DbSet<AppAccessRequest> AppAccessRequests { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -71,30 +67,6 @@ public class OneDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.TokenHash).IsUnique();
             builder.HasIndex(x => new { x.OrganizationId, x.Email }).HasFilter("\"Status\" = 'PENDING'");
-        });
-
-        modelBuilder.Entity<AppAccessRequest>(builder =>
-        {
-            builder.ToTable("AppAccessRequests");
-            builder.HasKey(x => x.Id);
-            builder.HasIndex(x => x.Status).HasFilter("\"Status\" = 'PENDING'");
-
-            var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
-            
-            var appsConverter = new ValueConverter<List<string>, string>(
-                v => JsonSerializer.Serialize(v, jsonOptions),
-                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
-            );
-
-            var appsComparer = new ValueComparer<List<string>>(
-                (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
-                c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
-                c => c != null ? c.ToList() : new List<string>()
-            );
-
-            builder.Property(x => x.RequestedApps)
-                   .HasConversion(appsConverter, appsComparer)
-                   .HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

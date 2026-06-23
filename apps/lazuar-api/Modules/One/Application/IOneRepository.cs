@@ -9,6 +9,7 @@ public interface IOneRepository
 {
     void AddOrganization(Organization organization);
     Task<Organization?> GetOrganizationByIdAsync(Guid id, CancellationToken ct = default);
+    Task<bool> IsSlugUniqueAsync(string slug, CancellationToken ct = default);
 
     void AddTenantMembership(TenantMembership membership);
     void RemoveTenantMembership(TenantMembership membership);
