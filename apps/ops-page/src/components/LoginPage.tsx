@@ -15,10 +15,19 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [tenantSlug, setTenantSlug] = useState("");
 
   useEffect(() => {
     localStorage.removeItem("ops_active_workspace_id");
   }, []);
+
+  const handleWorkspaceNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setWorkspaceName(val);
+    const derivedSlug = val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    setTenantSlug(derivedSlug);
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,16 +67,16 @@ export default function LoginPage() {
 
     try {
       const { error: registerError } = await client.POST("/one/public/register", {
-        body: { email, password, name: email.split("@")[0] }
+        body: { 
+          email, 
+          password, 
+          name: email.split("@")[0],
+          workspace_name: workspaceName,
+          tenant_slug: tenantSlug
+        }
       });
 
       if (registerError) throw new Error(registerError.detail || "Registration failed.");
-
-      const { error: accessError } = await client.POST("/one/me/access-requests", {
-        body: { requested_apps: ["OPS"] }
-      });
-
-      if (accessError) throw new Error(accessError.detail || "Failed to request Ops access.");
 
       const returnUrl = searchParams.get("returnUrl");
       if (returnUrl) {
@@ -82,7 +91,6 @@ export default function LoginPage() {
     }
   };
 
-  // The rest of the JSX remains exactly the same
   return (
     <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] font-sans">
       <div className="w-full max-w-[380px] mx-4 animate-in fade-in zoom-in-95 duration-300">
@@ -132,10 +140,20 @@ export default function LoginPage() {
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="text-center mb-8">
                 <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Create Account</h1>
-                <p className="text-[13px] text-[#71717a] mt-1.5">Register a global identity.</p>
+                <p className="text-[13px] text-[#71717a] mt-1.5">Register a global identity and workspace.</p>
               </div>
 
               <form onSubmit={handleSignUpSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Workspace Name</label>
+                  <input type="text" required value={workspaceName} onChange={handleWorkspaceNameChange} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="e.g. Acme Corp" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Workspace Slug</label>
+                  <input type="text" required value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value.toLowerCase())} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-[#fafafa] px-3 py-1 font-mono text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="acme-corp" />
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email Address</label>
                   <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="flex h-11 w-full rounded-none border border-[#e5e5e5] bg-white px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#09090b]" placeholder="name@example.com" />
