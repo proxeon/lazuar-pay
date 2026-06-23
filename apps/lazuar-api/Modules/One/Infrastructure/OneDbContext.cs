@@ -1,6 +1,8 @@
 using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.One.Domain;
@@ -78,11 +80,20 @@ public class OneDbContext : PlatformDbContext
             builder.HasIndex(x => x.Status).HasFilter("\"Status\" = 'PENDING'");
 
             var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+            
+            var appsConverter = new ValueConverter<List<string>, string>(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
+            );
+
+            var appsComparer = new ValueComparer<List<string>>(
+                (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+                c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
+                c => c != null ? c.ToList() : new List<string>()
+            );
+
             builder.Property(x => x.RequestedApps)
-                   .HasConversion(
-                       v => JsonSerializer.Serialize(v, jsonOptions),
-                       v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
-                   )
+                   .HasConversion(appsConverter, appsComparer)
                    .HasColumnType("jsonb");
         });
 
