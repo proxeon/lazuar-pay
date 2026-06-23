@@ -5,16 +5,17 @@ import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
-// Migrated Pages
+// Community Module Pages
 import DashboardPage from "./modules/community/pages/DashboardPage";
 import PaymentSettingsPage from "./modules/community/pages/PaymentSettingsPage";
 import TemplatesPage from "./modules/community/pages/TemplatesPage";
-
-// New Pages
 import SubscribersPage from "./modules/community/pages/SubscribersPage";
 import PlansPage from "./modules/community/pages/PlansPage";
 import CouponsPage from "./modules/community/pages/CouponsPage";
 import AutomationsPage from "./modules/community/pages/AutomationsPage";
+
+// Workspace Module Pages
+import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 
 function OpsLayout() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -158,10 +159,11 @@ export default function App() {
         <Route path="/community/plans" element={<PlansPage />} />
         <Route path="/community/coupons" element={<CouponsPage />} />
         <Route path="/community/automations" element={<AutomationsPage />} />
-        
-        {/* Flat Settings Routes */}
         <Route path="/community/payment" element={<PaymentSettingsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
+
+        {/* Workspace Module Routes */}
+        <Route path="/workspace/general" element={<GeneralSettingsPage />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/community/dashboard" replace />} />
