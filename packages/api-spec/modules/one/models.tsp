@@ -9,6 +9,8 @@ model PublicRegisterRequestDto {
   email: string;
   password?: string;
   name?: string;
+  workspace_name: string;
+  tenant_slug: string;
 }
 
 model LoginResponse {
@@ -107,20 +109,6 @@ model ToggleAppEntitlementRequestDto {
 
 model WorkspaceAppDto {
   app_id: string;
-}
-
-model CreateAppAccessRequestDto {
-  requested_apps: string[];
-}
-
-model AppAccessRequestDto {
-  id: string; // GUID
-  global_user_id: string; // GUID
-  name: string;
-  email: string;
-  requested_apps: string[];
-  status: string;
-  created_at: utcDateTime;
 }
 
 alias EnvironmentType = "PROD" | "SANDBOX";

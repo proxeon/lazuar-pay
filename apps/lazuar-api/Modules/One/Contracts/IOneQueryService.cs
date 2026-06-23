@@ -20,5 +20,4 @@ public interface IOneQueryService
     Task<IEnumerable<WorkspaceEntitlementSnapshotDto>> GetWorkspaceEntitlementsAsync(Guid tenantId);
     Task<IEnumerable<WorkspaceMemberSnapshotDto>> GetWorkspaceMembersAsync(Guid tenantId);
     Task<IEnumerable<WorkspaceInvitationSnapshotDto>> GetWorkspaceInvitationsAsync(Guid tenantId);
-    Task<IEnumerable<AppAccessRequestDto>> GetAppAccessRequestsAsync();
 }
