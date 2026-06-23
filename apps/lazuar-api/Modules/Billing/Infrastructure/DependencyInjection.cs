@@ -69,7 +69,7 @@ public static class DependencyInjection
         eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedHandler>();
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedHandler>();
-        eventBus.Subscribe<ManualPaymentRecordedIntegrationEvent, ManualPaymentRecordedHandler>();
+        eventBus.Subscribe<CommunityManualPaymentRecordedIntegrationEvent, ManualPaymentRecordedHandler>();
         eventBus.Subscribe<CommissionAccruedIntegrationEvent, CommissionAccruedHandler>();
         eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();

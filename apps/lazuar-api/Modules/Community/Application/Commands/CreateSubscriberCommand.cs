@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using Modules.Community.Contracts;
 using Modules.Community.Domain.Aggregates;
 using Modules.CRM.Contracts;
 
@@ -35,15 +37,18 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
     private readonly ICommunityPlanRepository _planRepository;
     private readonly ICommunitySubscriptionRepository _subscriptionRepository;
     private readonly IMediator _mediator;
+    private readonly IEventBus _eventBus;
 
     public CreateSubscriberCommandHandler(
         ICommunityPlanRepository planRepository,
         ICommunitySubscriptionRepository subscriptionRepository,
-        IMediator mediator)
+        IMediator mediator,
+        [FromKeyedServices("CommunityEventBus")] IEventBus eventBus)
     {
         _planRepository = planRepository;
         _subscriptionRepository = subscriptionRepository;
         _mediator = mediator;
+        _eventBus = eventBus;
     }
 
     public async Task<Guid> Handle(CreateSubscriberCommand request, CancellationToken ct)
@@ -90,6 +95,18 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
                 request.RecordedBy,
                 null,
                 isSilent);
+
+            if (request.AmountPaid.Value > 0)
+            {
+                await _eventBus.PublishAsync(new CommunityManualPaymentRecordedIntegrationEvent(
+                    request.OrganizationId,
+                    subscription.Id,
+                    request.AmountPaid.Value,
+                    "MYR",
+                    request.PaymentMethod ?? "BANK_TRANSFER",
+                    request.ReferenceNumber
+                ));
+            }
         }
         else
         {
