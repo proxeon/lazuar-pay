@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/CreateSubscriberCommand.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +22,10 @@ public record CreateSubscriberCommand(
     string? PaymentMethod,
     string? ReferenceNumber,
     string? Notes,
-    string RecordedBy) : ICommand<Guid>
+    string RecordedBy,
+    DateTime? StartDate = null,
+    DateTime? NextBillingDate = null,
+    bool SendWelcomeEmail = true) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -72,8 +74,9 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
 
         _subscriptionRepository.Add(subscription);
 
-        var periodStart = DateTime.UtcNow;
-        var periodEnd = periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
+        var periodStart = request.StartDate ?? DateTime.UtcNow;
+        var periodEnd = request.NextBillingDate ?? periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
+        var isSilent = !request.SendWelcomeEmail;
 
         if (!request.IsReminderOnly && request.AmountPaid.HasValue)
         {
@@ -84,7 +87,9 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
                 "MYR",
                 request.PaymentMethod ?? "BANK_TRANSFER",
                 request.ReferenceNumber,
-                request.RecordedBy);
+                request.RecordedBy,
+                null,
+                isSilent);
         }
         else
         {
@@ -95,7 +100,9 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
                 "MYR",
                 "CASH",
                 "MANUAL_ACTIVATION",
-                request.RecordedBy);
+                request.RecordedBy,
+                null,
+                isSilent);
         }
 
         await _subscriptionRepository.SaveChangesAsync(ct);

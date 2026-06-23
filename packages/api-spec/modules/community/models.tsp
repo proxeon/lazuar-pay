@@ -189,6 +189,9 @@ model CreateSubscriberRequestDto {
   payment_method?: string;
   reference_number?: string;
   notes?: string;
+  start_date?: utcDateTime;
+  next_billing_date?: utcDateTime;
+  send_welcome_email?: boolean;
 }
 
 model UpdateSubscriberProfileRequestDto {

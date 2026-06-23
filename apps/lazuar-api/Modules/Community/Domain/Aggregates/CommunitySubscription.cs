@@ -102,7 +102,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
 
     public void Activate(
         DateTime periodStart, DateTime periodEnd, decimal amount,
-        string currency, string paymentMethod, string? externalReference, string recordedBy, string? receiptUrl = null)
+        string currency, string paymentMethod, string? externalReference, string recordedBy, string? receiptUrl = null, bool isSilent = false)
     {
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
         bool isFirstPayment = Status == "PENDING";
@@ -125,7 +125,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
             receiptUrl);
 
         _paymentRecords.Add(payment);
-        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, isFirstPayment));
+        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, isFirstPayment, isSilent));
     }
 
     public void Reactivate(string recordedBy)
@@ -144,12 +144,12 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
             recordedBy, now, periodEnd, "Manual account reactivation");
 
         _paymentRecords.Add(payment);
-        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, false));
+        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, false, false));
     }
 
     public void ReplayActivationEvent()
     {
-        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, true));
+        AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, OrganizationId, ClientProfileId, true, false));
     }
 
     public void MarkAsPastDue()

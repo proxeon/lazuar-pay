@@ -58,6 +58,8 @@ public class NotificationDispatchDomainEventHandlers :
 
     public async Task Handle(SubscriptionActivatedDomainEvent notification, CancellationToken ct)
     {
+        if (notification.IsSilent) return;
+
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
