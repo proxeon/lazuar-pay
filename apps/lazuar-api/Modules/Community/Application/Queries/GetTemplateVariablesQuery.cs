@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Queries/GetTemplateVariablesQuery.cs
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +33,8 @@ public class GetTemplateVariablesQueryHandler : IQueryHandler<GetTemplateVariabl
                     new TemplateVariableDto { Tag = "{{plan_price}}", Description = "The base cost formatted in MYR." },
                     new TemplateVariableDto { Tag = "{{total_price}}", Description = "Final charge total (factoring discounts and tax overlays)." },
                     new TemplateVariableDto { Tag = "{{renewal_link}}", Description = "Direct, secure checkout billing link." },
-                    new TemplateVariableDto { Tag = "{{current_period_end}}", Description = "The date the current billing cycle ends." }
+                    new TemplateVariableDto { Tag = "{{current_period_end}}", Description = "The date the current billing cycle ends." },
+                    new TemplateVariableDto { Tag = "{{portal_magic_link}}", Description = "Secure, 24-hour auto-login link to the subscriber portal." }
                 }
             },
             new TemplateVariableCategoryDto

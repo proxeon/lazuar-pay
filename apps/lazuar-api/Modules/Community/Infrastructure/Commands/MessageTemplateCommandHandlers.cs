@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Commands/MessageTemplateCommandHandlers.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -147,8 +146,8 @@ public class ResetMessageTemplateCommandHandler : ICommandHandler<ResetMessageTe
 
         var defaultTemplates = new List<Domain.Entities.MessageTemplate>
         {
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Welcome", "ALL", "Welcome to {{plan_name}}! 🎉", "Hi {{customer_name}},\n\nWelcome to {{plan_name}}!\n\nHere is your private group link:\n{{group_link}}\n\nWeekly session link:\n{{meeting_link}}\n\nSee you there! 🙏\n\n— {{business_name}}", true, new[] { "{{group_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{meeting_link}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Payment Success", "ALL", "Payment Received: {{plan_name}}", "Hi {{customer_name}},\n\nThank you! We have successfully received your payment of RM {{total_price}} for your {{plan_name}} membership.\n\n— {{business_name}}", true, new[] { "{{total_price}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Welcome", "ALL", "Welcome to {{plan_name}}! 🎉", "Hi {{customer_name}},\n\nWelcome to {{plan_name}}!\n\nHere is your private group link:\n{{group_link}}\n\nWeekly session link:\n{{meeting_link}}\n\nYou can manage your subscription via your secure portal:\n{{portal_magic_link}}\n\nSee you there! 🙏\n\n— {{business_name}}", true, new[] { "{{group_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{meeting_link}}", "{{portal_magic_link}}" }),
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Payment Success", "ALL", "Payment Received: {{plan_name}}", "Hi {{customer_name}},\n\nThank you! We have successfully received your payment of RM {{total_price}} for your {{plan_name}} membership.\n\nYou can manage your subscription at any time via your portal:\n{{portal_magic_link}}\n\n— {{business_name}}", true, new[] { "{{total_price}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{portal_magic_link}}" }),
             new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Payment Failed", "ALL", "Payment Failed: {{plan_name}}", "Hi {{customer_name}},\n\nWe were unable to process your renewal payment for {{plan_name}}.\n\nPlease complete your payment to avoid losing access to the community:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
             new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal (3 Days)", "ALL", "Your {{plan_name}} subscription renews in 3 days", "Hi {{customer_name}},\n\nYour {{plan_name}} membership is expiring in 3 days. To ensure you don't lose access to the community and weekly sessions, please renew your subscription here:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
             new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal Due Today", "ALL", "Action Required: {{plan_name}} renewal due today", "Hi {{customer_name}},\n\nThis is a reminder that your {{plan_name}} membership is due for renewal today. Please renew your subscription to maintain your access:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
@@ -198,7 +197,8 @@ public class SendTestReminderCommandHandler : ICommandHandler<SendTestReminderCo
             .Replace("{{group_link}}", "https://t.me/test", StringComparison.OrdinalIgnoreCase)
             .Replace("{{meeting_link}}", "https://zoom.us/test", StringComparison.OrdinalIgnoreCase)
             .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{renewal_link}}", "https://example.com/renew", StringComparison.OrdinalIgnoreCase);
+            .Replace("{{renewal_link}}", "https://example.com/renew", StringComparison.OrdinalIgnoreCase)
+            .Replace("{{portal_magic_link}}", "https://community.lazuar.com/workspace/portal?token=test_token", StringComparison.OrdinalIgnoreCase);
 
         var subject = template.Subject
             .Replace("{{customer_name}}", "Test User", StringComparison.OrdinalIgnoreCase)

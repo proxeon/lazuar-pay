@@ -10,6 +10,7 @@ using Modules.Community.Domain.Events;
 using Modules.Community.Application.Queries;
 using Modules.CRM.Contracts;
 using Modules.Messaging.Contracts;
+using Modules.One.Contracts;
 
 using ILocalMessageTemplateQueryService = Modules.Community.Application.Queries.IMessageTemplateQueryService;
 
@@ -28,6 +29,8 @@ public class NotificationDispatchDomainEventHandlers :
     private readonly ICommunityPlanRepository _planRepository;
     private readonly IEventBus _eventBus;
     private readonly ICommunityLinkService _linkService;
+    private readonly IMagicLinkTokenService _tokenService;
+    private readonly IOneQueryService _oneQueryService;
 
     public NotificationDispatchDomainEventHandlers(
         ICrmQueryService crmQueryService,
@@ -35,7 +38,9 @@ public class NotificationDispatchDomainEventHandlers :
         ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository,
         [FromKeyedServices("CommunityEventBus")] IEventBus eventBus,
-        ICommunityLinkService linkService)
+        ICommunityLinkService linkService,
+        IMagicLinkTokenService tokenService,
+        IOneQueryService oneQueryService)
     {
         _crmQueryService = crmQueryService;
         _templateService = templateService;
@@ -43,6 +48,8 @@ public class NotificationDispatchDomainEventHandlers :
         _planRepository = planRepository;
         _eventBus = eventBus;
         _linkService = linkService;
+        _tokenService = tokenService;
+        _oneQueryService = oneQueryService;
     }
 
     private string RenderTemplate(string template, Dictionary<string, string> variables)
@@ -69,8 +76,15 @@ public class NotificationDispatchDomainEventHandlers :
         var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
         if (plan == null) return;
 
+        var workspace = await _oneQueryService.GetWorkspaceByIdAsync(notification.OrganizationId);
+        var tenantSlug = workspace?.Slug ?? "workspace";
+
         var templateName = notification.IsFirstPayment ? "Community Welcome" : "Community Payment Success";
         var template = await _templateService.GetTemplateByNameAsync(notification.OrganizationId, templateName);
+
+        var baseUrl = _linkService.GetCommunityBaseUrl();
+        var magicToken = _tokenService.GenerateToken(sub.Id);
+        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/portal?token={Uri.EscapeDataString(magicToken)}";
 
         var variables = new Dictionary<string, string>
         {
@@ -79,11 +93,12 @@ public class NotificationDispatchDomainEventHandlers :
             ["plan_name"] = plan.Name,
             ["group_link"] = plan.TelegramInviteLink ?? "",
             ["meeting_link"] = plan.WeeklyMeetingLink ?? "",
-            ["total_price"] = plan.Price.ToString("F2")
+            ["total_price"] = plan.Price.ToString("F2"),
+            ["portal_magic_link"] = portalMagicLink
         };
 
         var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Active";
-        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active.";
+        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active. Access your portal here: {portalMagicLink}";
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, template?.Channel ?? "EMAIL"));
     }
@@ -126,19 +141,26 @@ public class NotificationDispatchDomainEventHandlers :
         var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
         if (plan == null) return;
 
+        var workspace = await _oneQueryService.GetWorkspaceByIdAsync(notification.OrganizationId);
+        var tenantSlug = workspace?.Slug ?? "workspace";
+
         var template = (await _templateService.GetTemplatesAsync(new[] { notification.TemplateId })).FirstOrDefault();
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
         var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
-            : $"{baseUrl}/{plan.Slug}/checkout";
+            : $"{baseUrl}/{tenantSlug}/{plan.Slug}/checkout";
+
+        var magicToken = _tokenService.GenerateToken(sub.Id);
+        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/portal?token={Uri.EscapeDataString(magicToken)}";
 
         var variables = new Dictionary<string, string>
         {
             ["customer_name"] = profile.Full_name,
             ["business_name"] = "Our Community",
             ["plan_name"] = plan.Name,
-            ["renewal_link"] = renewalLink
+            ["renewal_link"] = renewalLink,
+            ["portal_magic_link"] = portalMagicLink
         };
 
         var subject = template != null ? RenderTemplate(template.Subject, variables) : "Renewal Reminder";
@@ -168,10 +190,16 @@ public class NotificationDispatchDomainEventHandlers :
         var plan = await _planRepository.GetByIdAsync(sub.PlanId, ct);
         if (plan == null) return;
 
+        var workspace = await _oneQueryService.GetWorkspaceByIdAsync(notification.OrganizationId);
+        var tenantSlug = workspace?.Slug ?? "workspace";
+
         var baseUrl = _linkService.GetCommunityBaseUrl();
         var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
-            : $"{baseUrl}/{plan.Slug}/checkout";
+            : $"{baseUrl}/{tenantSlug}/{plan.Slug}/checkout";
+
+        var magicToken = _tokenService.GenerateToken(sub.Id);
+        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/portal?token={Uri.EscapeDataString(magicToken)}";
 
         string subject = "Important Update Regarding Your Subscription";
         string body = "";
@@ -189,7 +217,8 @@ public class NotificationDispatchDomainEventHandlers :
                 ["business_name"] = "Our Community",
                 ["plan_name"] = plan.Name,
                 ["total_price"] = plan.Price.ToString("F2"),
-                ["renewal_link"] = renewalLink
+                ["renewal_link"] = renewalLink,
+                ["portal_magic_link"] = portalMagicLink
             };
             subject = template != null ? RenderTemplate(template.Subject, variables) : subject;
             body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, notification regarding your subscription.";
