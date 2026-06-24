@@ -304,8 +304,12 @@ export default function SubscribersPage() {
                     const isRefunding = activeAction === `refund-${payment.id}`;
                     return (
                       <div key={payment.id} className="p-3 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between rounded-sm">
-                        <div>
+                        <div className="flex flex-col gap-1">
                           <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.payment_method}</span></p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono font-bold text-[#09090b]">{payment.system_reference}</span>
+                            {payment.reference_number && <span className="text-[10px] font-mono text-[#a1a1aa]">({payment.reference_number})</span>}
+                          </div>
                           <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
                         </div>
                         {payment.status === "CONFIRMED" && payment.amount > 0 && (

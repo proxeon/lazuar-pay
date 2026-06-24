@@ -1,26 +1,30 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, ArrowRight, ShieldCheck, User } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, ShieldCheck, User, Search } from "lucide-react";
 import { client } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import QuickCopy from "../../core/components/QuickCopy";
+import { useDebounce } from "../../../hooks/use-debounce";
 
 export default function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [methodFilter, setMethodFilter] = useState("ALL");
-
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const limit = 50;
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ["community-transactions", page, statusFilter, methodFilter],
+    queryKey: ["community-transactions", page, statusFilter, methodFilter, debouncedSearchTerm],
     queryFn: async () => {
       const { data, error } = await client.GET("/admin/community/transactions", {
         params: { 
           query: { 
             page, 
             limit,
+            search: debouncedSearchTerm || undefined,
             status: statusFilter === "ALL" ? undefined : statusFilter,
             payment_method: methodFilter === "ALL" ? undefined : methodFilter
           } 
@@ -52,6 +56,20 @@ export default function TransactionsPage() {
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full min-h-[600px]">
         <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
           <div className="flex items-center gap-3">
+            <div className="relative w-64">
+              <Search size={14} className="absolute left-3 top-2 text-[#a1a1aa]" />
+              <input 
+                type="text" 
+                placeholder="Search ref ID or customer..." 
+                value={searchTerm}
+                onChange={e => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full h-8 pl-9 pr-3 text-[12px] bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#09090b]" 
+              />
+            </div>
+
             <select 
               value={statusFilter} 
               onChange={(e) => handleFilterChange(setStatusFilter, e.target.value)}
@@ -133,16 +151,22 @@ export default function TransactionsPage() {
                         <p className="text-[10px] text-[#71717a] font-medium mt-1.5">{tx.payment_method}</p>
                       </td>
                       <td className="px-5 py-3.5">
-                        {tx.external_reference ? (
+                        <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-mono text-[#52525b] truncate max-w-[120px]" title={tx.external_reference}>
-                              {tx.external_reference}
+                            <span className="text-[12px] font-mono font-bold text-[#09090b]">
+                              {tx.system_reference}
                             </span>
-                            <QuickCopy text={tx.external_reference} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
+                            <QuickCopy text={tx.system_reference} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
                           </div>
-                        ) : (
-                          <span className="text-[11px] text-[#a1a1aa] italic">None</span>
-                        )}
+                          {tx.external_reference && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono text-[#71717a] truncate max-w-[120px]" title={tx.external_reference}>
+                                {tx.external_reference}
+                              </span>
+                              <QuickCopy text={tx.external_reference} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <div className="flex items-center gap-2">
