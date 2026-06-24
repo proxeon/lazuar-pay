@@ -1,15 +1,12 @@
+using System;
 using BuildingBlocks.Domain;
 
 namespace Modules.Community.Domain.Entities;
 
-/// <summary>
-/// Acts purely as an AccessGrantLog. Proves the user paid for this specific cycle 
-/// to grant Telegram/Zoom access. Financial summation and MRR calculations are 
-/// strictly handled by the centralized Billing module.
-/// </summary>
 public class PaymentRecord : Entity
 {
     public Guid Id { get; private set; }
+    public string SystemReference { get; private set; }
     public Guid SubscriptionId { get; private set; }
     public decimal Amount { get; private set; }
     public string Currency { get; private set; }
@@ -33,6 +30,14 @@ public class PaymentRecord : Entity
         DateTime periodStart, DateTime periodEnd, string? notes = null, string? receiptUrl = null)
     {
         Id = Guid.CreateVersion7();
+        
+        var prefix = amount < 0 ? "RFD" :
+                     amount == 0 ? "CMP" :
+                     paymentMethod == "ONLINE_GATEWAY" ? "ONL" : "MNL";
+                     
+        var suffix = Id.ToString("N").Substring(22, 10).ToUpperInvariant();
+        SystemReference = $"{prefix}-{suffix}";
+
         SubscriptionId = subscriptionId;
         Amount = amount;
         Currency = currency;

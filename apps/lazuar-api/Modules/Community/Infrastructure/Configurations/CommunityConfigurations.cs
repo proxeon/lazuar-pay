@@ -94,6 +94,9 @@ public class PaymentRecordConfiguration : IEntityTypeConfiguration<PaymentRecord
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Amount).HasPrecision(10, 2);
         
+        builder.Property(x => x.SystemReference).HasMaxLength(20).IsRequired();
+        builder.HasIndex(x => x.SystemReference).IsUnique();
+
         builder.HasIndex(x => new { x.SubscriptionId, x.ExternalReference })
             .HasFilter("\"ExternalReference\" IS NOT NULL")
             .IsUnique();
