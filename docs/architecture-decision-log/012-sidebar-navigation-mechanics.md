@@ -1,6 +1,3 @@
-Here is the documentation detailing the mechanics and architectural rules of the Sidebar. You can save this in your `docs/architecture-decision-log/` folder (e.g., as `012-sidebar-navigation-mechanics.md`) for future reference.
-
----
 
 # ADR 012: Sidebar Navigation Mechanics (The Super App Console)
 

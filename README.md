@@ -1,9 +1,10 @@
-
 # Lazuar Platform
 
-> **An API-first, deterministic AWS-style superapp and business engine for solo founders and creator businesses.**
+> **A sovereign operating system for solo founders and creator businesses. An API-first, deterministic AWS-style superapp.**
 
-Lazuar is a modular monolith platform designed to power a multi-product creator business (events, communities, courses, digital products) from a single, deterministic backend. It is built on the principle that business-critical operations require strict data integrity and a dense, functional UI.
+Lazuar is a modular monolith platform designed to power a multi-product creator business (events, communities, courses, digital products) from a single, deterministic backend. It is built on the principle that business-critical operations require strict data integrity, dense functional UI, and full ownership of the revenue engine.
+
+We build applications, not infrastructure. We buy our payment rails (Stripe) and compute (Hetzner), but we build our own creator workflows because we are the customer.
 
 ---
 
@@ -25,7 +26,7 @@ Lazuar is a modular monolith platform designed to power a multi-product creator 
 |  - Form     | (Typeform)        |  - Funnel   | (ClickFunnels)    | - Broadcast | (Mailchimp)
 |  - Event    | (Eventbrite)      |  - Academy  | (Kajabi)          | - Affiliate | (Rewardful)
 |  - Consult  | (Calendly)        |  - Invoice  |                   | - Sponsor   | (Passionfroot)
-|             |                   |  - Pipeline |                   | - Support   | 
+|  - Giveaway | (Kingsumo)        |  - Pipeline |                   | - Support   | 
 +-------------+                   +-------------+                   +-------------+
 ```
 
@@ -59,7 +60,7 @@ $$Distribution = Content \times Cadence \times Channel\ Fit$$
 ## Core Principles
 
 ### 1. Founder as Power User
-We build the API and Admin Console for ourselves first. We use our own 15 modules to run our education/media business. **We are Default Alive from Day 1.**
+We build the API and Admin Console for ourselves first. We use our own 15 modules to run our education/media business. **We are Default Alive from Day 1** because the business revenue funds the platform, not vice versa.
 
 ### 2. API-First, Frontend-Optional
 All domain logic lives in clean, decoupled APIs (defined via TypeSpec). The strict REST APIs orchestrate these systems deterministically. External frontends are built only when paying customers demand them, not before.
@@ -81,10 +82,12 @@ Every module must map to a stage of the customer journey. No orphan features.
 - **Step 4:** Expose APIs/MCP to developers.
 
 ### 7. Deterministic Core First (AI in Hibernation)
-All business-critical operations (billing, refunds, tax submissions) are executed through **deterministic UI** (buttons, forms, tables). While the platform possesses an architecture for an AI agent, it is currently in hibernation for Phase 2. The platform relies entirely on strict, data-dense admin interfaces to guarantee operational integrity.
+All business-critical operations (billing, refunds, tax submissions) are executed through **deterministic UI** (buttons, forms, tables). LLMs are probabilistic; they should not execute $1,000 mutations autonomously. 
 
-### 8. AWS-Style Superapp
-All admin functionality lives in a single `ops-page` application. Each app follows the same pattern: `Dashboard`, `List`, `Detail`, `Settings`. Frontend is simple, functional, and fast to build. **Beauty is in the backend, not the frontend.**
+While the platform possesses an architecture for an AI agent, it is currently in hibernation. The pattern is: LLM proposes action → `UiRequestCard` requests approval → Human clicks → Deterministic API executes.
+
+### 8. AWS-Style Superapp (For Applications)
+All admin functionality lives in a single `ops-page` application. Each app follows the same pattern: `Dashboard`, `List`, `Detail`, `Settings`. We build our Layer 4 applications; we buy our Layer 2 infrastructure (Stripe, Cloudflare, Resend). **Beauty is in the backend, not the frontend.**
 
 ---
 
@@ -139,6 +142,31 @@ ops-page/src/modules/{appName}/
 │   └── SettingsPage.tsx
 └── components/
 ```
+
+---
+
+## Module Roadmap & Priority
+
+Modules are built sequentially. A module must earn its keep before the next is built.
+
+| Priority | Module | Category | Status |
+|---|---|---|---|
+| 1 | `Event` | Acquisition | ✅ Validated |
+| 2 | `Giveaway` | Acquisition | 🔨 Next |
+| 3 | `Vault` | Fulfillment | 📋 Planned |
+| 4 | `Community` | Retention | 📋 Planned |
+| 4 | `Academy` | Fulfillment | 📋 Planned |
+| 5 | `Broadcast` | Retention | 📋 Planned |
+| 6 | `Funnel` | Fulfillment | 📋 Planned |
+| 7 | `Affiliate` | Retention | 📋 Planned |
+| 8 | `Consult` | Acquisition | 📋 Planned |
+| 9 | `CRM` | Core | ✅ Exists |
+| 10 | `Form` | Acquisition | 📋 Planned |
+| 11 | `Bio` | Acquisition | 📋 Planned |
+| 12 | `Invoice` | Fulfillment | 📋 Planned |
+| 13 | `Pipeline` | Fulfillment | 📋 Planned |
+| 14 | `Sponsor` | Retention | 📋 Planned |
+| 15 | `Support` | Retention | 📋 Planned |
 
 ---
 
@@ -198,7 +226,7 @@ task dev
 ```
 
 
-### Development
+### Development Context
 
 ```sh
 fd -t f --ignore-file ctx.ignore | ctx | hxn
@@ -207,4 +235,3 @@ fd -t f --ignore-file ctx.ignore | ctx | hxn
 ```sh
 cat ctx.include | ctx | hxn
 ```
-

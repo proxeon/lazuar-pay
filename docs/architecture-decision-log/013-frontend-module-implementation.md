@@ -1,6 +1,3 @@
-Here is the documentation detailing how to add a new module to the `ops-page` frontend. You can save this in your `docs/architecture-decision-log/` folder (e.g., as `013-frontend-module-implementation.md`).
-
----
 
 # ADR 013: Frontend Module Implementation (ops-page)
 
