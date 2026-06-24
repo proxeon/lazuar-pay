@@ -40,9 +40,9 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fafafa]">
       
-      {/* Slim Anchored Top Bar */}
-      <div className="px-6 py-2.5 md:px-8 border-b border-[#e5e5e5] bg-white shrink-0 z-20">
-        <div className="max-w-6xl mx-auto w-full flex items-center justify-between min-h-[28px]">
+      {/* Locked to h-14 to perfectly align with the Sidebar grid */}
+      <div className="flex h-14 items-center px-6 md:px-8 border-b border-[#e5e5e5] bg-white shrink-0 z-20">
+        <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
           
           <nav className="flex items-center gap-1.5 shrink-0 pr-4">
             {breadcrumbs && breadcrumbs.map((bc, idx) => (
@@ -85,7 +85,7 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
                   animate={{ opacity: 1, y: 0 }} 
                   exit={{ opacity: 0, y: 5 }} 
                   transition={{ duration: 0.15 }} 
-                  className="absolute z-50 top-full right-0 mt-1 w-64 bg-white border border-[#e5e5e5] shadow-lg py-1 max-h-[300px] overflow-y-auto"
+                  className="absolute z-50 top-full right-0 mt-3 w-64 bg-white border border-[#e5e5e5] shadow-lg py-1 max-h-[300px] overflow-y-auto"
                 >
                   {entitlements.map(e => (
                     <button 
