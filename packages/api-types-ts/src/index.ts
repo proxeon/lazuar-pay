@@ -532,6 +532,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/community/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminCommunityOperations_getTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/lhdn/api-keys": {
         parameters: {
             query?: never;
@@ -1500,6 +1516,11 @@ export interface components {
             payment_method?: string;
             reference_number?: string;
             notes?: string;
+            /** Format: date-time */
+            start_date?: string;
+            /** Format: date-time */
+            next_billing_date?: string;
+            send_welcome_email?: boolean;
         };
         "Community.CreateTemplateRequestDto": {
             name: string;
@@ -1660,6 +1681,20 @@ export interface components {
         "Community.TestReminderResponse": {
             success: boolean;
             sent_to: string;
+        };
+        "Community.TransactionLogDto": {
+            id: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            payment_method: string;
+            status: string;
+            /** Format: date-time */
+            created_at: string;
+            customer_name: string;
+            customer_email: string;
+            recorded_by_name: string;
+            external_reference?: string;
         };
         "Community.UpdateCouponRequestDto": {
             code?: string;
@@ -5049,6 +5084,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_getTransactions: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+                status?: string;
+                payment_method?: string;
+                from_date?: string;
+                to_date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Community.TransactionLogDto"][];
+                        /** Format: int32 */
+                        total_count: number;
+                        /** Format: int32 */
+                        current_page: number;
+                        /** Format: int32 */
+                        total_pages: number;
+                    };
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

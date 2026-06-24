@@ -67,6 +67,19 @@ model PaymentRecordDto {
   created_at: utcDateTime;
 }
 
+model TransactionLogDto {
+  id: string; // GUID
+  amount: float64;
+  currency: string;
+  payment_method: string;
+  status: string;
+  created_at: utcDateTime;
+  customer_name: string;
+  customer_email: string;
+  recorded_by_name: string;
+  external_reference?: string;
+}
+
 model DeliveryHistoryItemDto {
   id: string; // GUID
   channel: string;

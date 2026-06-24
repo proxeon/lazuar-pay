@@ -1,4 +1,3 @@
-// packages/api-spec/modules/community/admin-routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -145,6 +144,17 @@ interface AdminCommunityOperations {
   resendOnboarding(
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/transactions")
+  getTransactions(
+    @query page?: int32 = 1,
+    @query limit?: int32 = 50,
+    @query status?: string,
+    @query payment_method?: string,
+    @query from_date?: utcDateTime,
+    @query to_date?: utcDateTime,
+  ): LazuarApi.Core.PaginatedResponse<TransactionLogDto> | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/reminder-schedules")
