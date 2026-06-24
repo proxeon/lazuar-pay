@@ -12,6 +12,7 @@ import SubscribersPage from "./modules/community/pages/SubscribersPage";
 import PlansPage from "./modules/community/pages/PlansPage";
 import CouponsPage from "./modules/community/pages/CouponsPage";
 import AutomationsPage from "./modules/community/pages/AutomationsPage";
+import TransactionsPage from "./modules/community/pages/TransactionsPage";
 
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 
@@ -156,11 +157,11 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<OpsLayout />}>
-        {/* Ensures the root path routes strictly to the deterministic dashboard */}
         <Route path="/" element={<Navigate to="/community/dashboard" replace />} />
         
         <Route path="/community/dashboard" element={<DashboardPage />} />
         <Route path="/community/subscribers" element={<SubscribersPage />} />
+        <Route path="/community/transactions" element={<TransactionsPage />} />
         <Route path="/community/plans" element={<PlansPage />} />
         <Route path="/community/coupons" element={<CouponsPage />} />
         <Route path="/community/automations" element={<AutomationsPage />} />
@@ -170,7 +171,6 @@ export default function App() {
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
       </Route>
       
-      {/* Ensures any unrecognized or abandoned paths (like /chat) safely fallback to the dashboard */}
       <Route path="*" element={<Navigate to="/community/dashboard" replace />} />
     </Routes>
   );

@@ -190,6 +190,7 @@ export default function Sidebar({
             links={[
               { label: "Dashboard", href: "/community/dashboard" },
               { label: "Subscribers", href: "/community/subscribers" },
+              { label: "Transaction Logs", href: "/community/transactions" },
               { label: "Plans & Products", href: "/community/plans" },
               { label: "Promotions", href: "/community/coupons" },
               { label: "Automations", href: "/community/automations" },
