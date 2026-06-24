@@ -148,6 +148,7 @@ interface AdminCommunityOperations {
   @get
   @route("/transactions")
   getTransactions(
+    @query search?: string,
     @query page?: int32 = 1,
     @query limit?: int32 = 50,
     @query status?: string,

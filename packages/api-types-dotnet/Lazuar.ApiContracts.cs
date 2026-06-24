@@ -1053,6 +1053,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("id")]
         public string Id { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("system_reference")]
+        public string System_reference { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("amount")]
         public double Amount { get; set; } = default!;
 
@@ -1427,6 +1430,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
         public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("system_reference")]
+        public string System_reference { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("amount")]
         public double Amount { get; set; } = default!;

@@ -6,6 +6,7 @@ namespace Modules.Community.Contracts;
 public record CommunityManualPaymentRecordedIntegrationEvent(
     Guid OrganizationId,
     Guid SubscriptionId,
+    string SystemReference,
     decimal AmountPaid,
     string Currency,
     string PaymentMethod,

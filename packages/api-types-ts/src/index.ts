@@ -1592,6 +1592,7 @@ export interface components {
         };
         "Community.PaymentRecordDto": {
             id: string;
+            system_reference: string;
             /** Format: double */
             amount: number;
             currency: string;
@@ -1684,6 +1685,7 @@ export interface components {
         };
         "Community.TransactionLogDto": {
             id: string;
+            system_reference: string;
             /** Format: double */
             amount: number;
             currency: string;
@@ -5136,6 +5138,7 @@ export interface operations {
     AdminCommunityOperations_getTransactions: {
         parameters: {
             query?: {
+                search?: string;
                 page?: number;
                 limit?: number;
                 status?: string;

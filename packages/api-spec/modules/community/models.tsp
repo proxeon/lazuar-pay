@@ -54,6 +54,7 @@ model CommunitySubscriptionDto {
 
 model PaymentRecordDto {
   id: string; // GUID
+  system_reference: string;
   amount: float64;
   currency: string;
   payment_method: string;
@@ -69,6 +70,7 @@ model PaymentRecordDto {
 
 model TransactionLogDto {
   id: string; // GUID
+  system_reference: string;
   amount: float64;
   currency: string;
   payment_method: string;
