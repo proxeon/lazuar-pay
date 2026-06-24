@@ -13,9 +13,6 @@ using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
 
-// Explicitly alias ASP.NET Core's ProblemDetails to resolve collisions with TypeSpec-generated DTOs.
-using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
-
 namespace Modules.Community.Infrastructure;
 
 public static class SubscriberEndpoints
@@ -103,70 +100,42 @@ public static class SubscriberEndpoints
             return TypedResults.Ok(new StatusResponse { Status = "cancelled" });
         });
 
-        group.MapPost("/subscribers/{id:guid}/ban", async Task<Results<Ok<StatusResponse>, BadRequest<ProblemDetails>>> (
+        group.MapPost("/subscribers/{id:guid}/ban", async Task<Ok<StatusResponse>> (
             Guid id, 
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
-            try
-            {
-                await mediator.Send(new BanSubscriberCommand(ctx.TenantId, id));
-                return TypedResults.Ok(new StatusResponse { Status = "banned" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
-            }
+            await mediator.Send(new BanSubscriberCommand(ctx.TenantId, id));
+            return TypedResults.Ok(new StatusResponse { Status = "banned" });
         });
 
-        group.MapPost("/subscribers/{id:guid}/refund", async Task<Results<Ok<StatusResponse>, BadRequest<ProblemDetails>>> (
+        group.MapPost("/subscribers/{id:guid}/refund", async Task<Ok<StatusResponse>> (
             Guid id, 
             RefundRequestDto req, 
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
-            try
-            {
-                await mediator.Send(new RequestRefundCommand(ctx.TenantId, id, Guid.Parse(req.Payment_record_id), req.Reason));
-                return TypedResults.Ok(new StatusResponse { Status = "refund_requested" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
-            }
+            await mediator.Send(new RequestRefundCommand(ctx.TenantId, id, Guid.Parse(req.Payment_record_id), req.Reason));
+            return TypedResults.Ok(new StatusResponse { Status = "refund_requested" });
         });
 
-        group.MapPost("/subscribers/{id:guid}/change-plan", async Task<Results<Ok<StatusResponse>, BadRequest<ProblemDetails>>> (
+        group.MapPost("/subscribers/{id:guid}/change-plan", async Task<Ok<StatusResponse>> (
             Guid id, 
             ChangePlanRequestDto req, 
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
-            try
-            {
-                await mediator.Send(new ChangePlanCommand(ctx.TenantId, id, Guid.Parse(req.New_plan_id)));
-                return TypedResults.Ok(new StatusResponse { Status = "plan_change_scheduled" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
-            }
+            await mediator.Send(new ChangePlanCommand(ctx.TenantId, id, Guid.Parse(req.New_plan_id)));
+            return TypedResults.Ok(new StatusResponse { Status = "plan_change_scheduled" });
         });
 
-        group.MapPost("/subscribers/{id:guid}/resend-onboarding", async Task<Results<Ok<StatusResponse>, BadRequest<ProblemDetails>>> (
+        group.MapPost("/subscribers/{id:guid}/resend-onboarding", async Task<Ok<StatusResponse>> (
             Guid id, 
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
-            try
-            {
-                await mediator.Send(new ResendOnboardingCommand(ctx.TenantId, id));
-                return TypedResults.Ok(new StatusResponse { Status = "onboarding_resent" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
-            }
+            await mediator.Send(new ResendOnboardingCommand(ctx.TenantId, id));
+            return TypedResults.Ok(new StatusResponse { Status = "onboarding_resent" });
         });
 
         group.MapPut("/subscribers/{id:guid}", async Task<Ok<StatusResponse>> (

@@ -14,9 +14,6 @@ using Modules.Community.Application.Commands;
 using Modules.Community.Application.Queries;
 using Modules.One.Contracts;
 
-// Explicitly alias ASP.NET Core's ProblemDetails to resolve collisions with TypeSpec-generated DTOs.
-using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
-
 namespace Modules.Community.Infrastructure;
 
 public static class PublicEndpoints
@@ -47,7 +44,7 @@ public static class PublicEndpoints
             return plan != null ? TypedResults.Ok(plan) : TypedResults.NotFound();
         });
 
-        group.MapGet("/{tenantSlug}/validate-coupon", async Task<Results<Ok<ValidateCouponResponseDto>, BadRequest<ProblemDetails>, NotFound>> (
+        group.MapGet("/{tenantSlug}/validate-coupon", async Task<Results<Ok<ValidateCouponResponseDto>, NotFound>> (
             string tenantSlug,
             [FromQuery] string code,
             [FromQuery] string plan_slug,
@@ -76,7 +73,7 @@ public static class PublicEndpoints
             });
         });
 
-        group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<ProblemDetails>, NotFound>> (
+        group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, NotFound>> (
             PublicCheckoutRequestDto req,
             IOneQueryService oneQueryService,
             IExecutionContextAccessor ctx,
@@ -90,37 +87,25 @@ public static class PublicEndpoints
                 ? ctx.UserId
                 : (Guid?)null;
 
-            try
-            {
-                var command = new RegisterPublicSubscriberCommand(
-                    tenant.Id,
-                    req.Tenant_slug,
-                    req.Plan_slug,
-                    req.Name,
-                    req.Email,
-                    req.Phone,
-                    globalUserId,
-                    req.Coupon_code);
+            var command = new RegisterPublicSubscriberCommand(
+                tenant.Id,
+                req.Tenant_slug,
+                req.Plan_slug,
+                req.Name,
+                req.Email,
+                req.Phone,
+                globalUserId,
+                req.Coupon_code);
 
-                var checkoutUrl = await mediator.Send(command);
+            var checkoutUrl = await mediator.Send(command);
 
-                var isBypass = checkoutUrl.EndsWith("/success");
+            var isBypass = checkoutUrl.EndsWith("/success");
 
-                return TypedResults.Ok(new CheckoutResponse 
-                { 
-                    Url = checkoutUrl,
-                    Is_zero_amount_bypass = isBypass
-                });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return TypedResults.BadRequest(new ProblemDetails
-                {
-                    Status = 400,
-                    Title = "Checkout Generation Failed",
-                    Detail = ex.Message
-                });
-            }
+            return TypedResults.Ok(new CheckoutResponse 
+            { 
+                Url = checkoutUrl,
+                Is_zero_amount_bypass = isBypass
+            });
         });
 
         group.MapPost("/{tenantSlug}/portal/magic-link", async Task<Results<Ok<StatusResponse>, NotFound>> (
@@ -173,7 +158,7 @@ public static class PublicEndpoints
             return TypedResults.Ok(new StatusResponse { Status = "cancelled" });
         });
 
-        group.MapGet("/{tenantSlug}/portal/billing-link", async Task<Results<Ok<BillingLinkResponseDto>, BadRequest<ProblemDetails>, NotFound, UnauthorizedHttpResult>> (
+        group.MapGet("/{tenantSlug}/portal/billing-link", async Task<Results<Ok<BillingLinkResponseDto>, NotFound, UnauthorizedHttpResult>> (
             string tenantSlug,
             [FromQuery] string token,
             HttpRequest httpReq,
@@ -185,17 +170,11 @@ public static class PublicEndpoints
             if (!subId.HasValue) return TypedResults.Unauthorized();
             var tenant = await oneQueryService.GetWorkspaceBySlugAsync(tenantSlug);
             if (tenant == null || !tenant.IsActive) return TypedResults.NotFound();
-            try
-            {
-                var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}/{tenantSlug}/portal?token={token}";
-                var query = new GetPortalBillingLinkQuery(tenant.Id, subId.Value, baseUrl);
-                var url = await mediator.Send(query);
-                return TypedResults.Ok(new BillingLinkResponseDto { Url = url });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return TypedResults.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
-            }
+            
+            var baseUrl = $"{httpReq.Scheme}://{httpReq.Host}/{tenantSlug}/portal?token={token}";
+            var query = new GetPortalBillingLinkQuery(tenant.Id, subId.Value, baseUrl);
+            var url = await mediator.Send(query);
+            return TypedResults.Ok(new BillingLinkResponseDto { Url = url });
         });
 
         return group;
