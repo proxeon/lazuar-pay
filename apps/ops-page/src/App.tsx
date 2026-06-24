@@ -5,7 +5,6 @@ import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
-// Community Module Pages
 import DashboardPage from "./modules/community/pages/DashboardPage";
 import PaymentSettingsPage from "./modules/community/pages/PaymentSettingsPage";
 import TemplatesPage from "./modules/community/pages/TemplatesPage";
@@ -14,8 +13,13 @@ import PlansPage from "./modules/community/pages/PlansPage";
 import CouponsPage from "./modules/community/pages/CouponsPage";
 import AutomationsPage from "./modules/community/pages/AutomationsPage";
 
-// Workspace Module Pages
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
+
+export interface OpsOutletContext {
+  activeWorkspaceId: string | null;
+  entitlements: EntitlementDto[];
+  onWorkspaceSelect: (id: string) => void;
+}
 
 function OpsLayout() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -129,14 +133,15 @@ function OpsLayout() {
         setIsOpen={handleToggleSidebar}
         isMobile={isMobile}
         user={user}
-        entitlements={entitlements || []}
-        activeWorkspaceId={activeWorkspaceId}
-        onWorkspaceSelect={handleWorkspaceChange}
         onLogout={handleLogout}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden w-full relative bg-white">
-        <Outlet context={{ activeWorkspaceId }} />
+        <Outlet context={{ 
+          activeWorkspaceId,
+          entitlements: entitlements || [],
+          onWorkspaceSelect: handleWorkspaceChange
+        }} />
         
         {isMobile && isSidebarOpen && (
           <div className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm" onClick={handleToggleSidebar} />
@@ -153,7 +158,6 @@ export default function App() {
       <Route element={<OpsLayout />}>
         <Route path="/" element={<Navigate to="/community/dashboard" replace />} />
         
-        {/* Community Module Routes */}
         <Route path="/community/dashboard" element={<DashboardPage />} />
         <Route path="/community/subscribers" element={<SubscribersPage />} />
         <Route path="/community/plans" element={<PlansPage />} />
@@ -162,7 +166,6 @@ export default function App() {
         <Route path="/community/payment" element={<PaymentSettingsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
 
-        {/* Workspace Module Routes */}
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
       </Route>
       
