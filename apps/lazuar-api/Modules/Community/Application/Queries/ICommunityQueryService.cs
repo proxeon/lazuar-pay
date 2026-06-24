@@ -17,6 +17,6 @@ public interface ICommunityQueryService
     Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId);
     Task<IEnumerable<DeliveryHistoryItemDto>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId);
     Task<PaginatedResponse<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId, int page, int limit);
-    Task<PaginatedResponse<TransactionLogDto>> GetGlobalTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, DateTime? fromDate, DateTime? toDate);
+    Task<PaginatedResponse<TransactionLogDto>> GetGlobalTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, DateTime? fromDate, DateTime? toDate, string? searchTerm = null);
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
 }
