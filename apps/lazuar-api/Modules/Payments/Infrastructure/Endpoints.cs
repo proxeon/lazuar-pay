@@ -30,8 +30,7 @@ public static class Endpoints
 
             if (string.IsNullOrEmpty(rawBody))
             {
-                logger.LogWarning("Webhook rejected for tenant {TenantId}: Empty request body.", tenantId);
-                return Results.BadRequest(new { error = "Empty request body" });
+                throw new InvalidOperationException("Empty request body.");
             }
 
             var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -59,12 +58,7 @@ public static class Endpoints
 
                 return Results.Ok(new { received = true });
             }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning("Webhook validation failed for tenant {TenantId}. Gateway: {Gateway}. Error: {Error}", tenantId, gatewayType, ex.Message);
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not InvalidOperationException && ex is not BuildingBlocks.Domain.BusinessRuleValidationException)
             {
                 logger.LogError(ex, "Unexpected critical error processing webhook for tenant {TenantId}.", tenantId);
                 throw; 
