@@ -1,5 +1,9 @@
 using Dapper;
+using System;
 using System.Data;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 
@@ -73,15 +77,40 @@ public partial class CommunityQueryService
 
         int offset = (page - 1) * limit;
 
-        const string sql = @"
+        var whereBuilder = new StringBuilder(@"WHERE s.""OrganizationId"" = @OrgId");
+        var parameters = new DynamicParameters();
+        parameters.Add("OrgId", organizationId);
+        parameters.Add("Limit", limit);
+        parameters.Add("Offset", offset);
+
+        if (fromDate.HasValue)
+        {
+            whereBuilder.Append(@" AND pr.""CreatedAt"" >= @FromDate");
+            parameters.Add("FromDate", fromDate.Value);
+        }
+        if (toDate.HasValue)
+        {
+            whereBuilder.Append(@" AND pr.""CreatedAt"" <= @ToDate");
+            parameters.Add("ToDate", toDate.Value);
+        }
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            whereBuilder.Append(@" AND pr.""Status"" = @Status");
+            parameters.Add("Status", status);
+        }
+        if (!string.IsNullOrWhiteSpace(paymentMethod))
+        {
+            whereBuilder.Append(@" AND pr.""PaymentMethod"" = @PaymentMethod");
+            parameters.Add("PaymentMethod", paymentMethod);
+        }
+
+        var whereClause = whereBuilder.ToString();
+
+        var sql = $@"
             SELECT COUNT(*)::int 
             FROM community.""PaymentRecords"" pr
             JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
-            WHERE s.""OrganizationId"" = @OrgId
-            AND (@FromDate IS NULL OR pr.""CreatedAt"" >= @FromDate)
-            AND (@ToDate IS NULL OR pr.""CreatedAt"" <= @ToDate)
-            AND (@Status IS NULL OR pr.""Status"" = @Status)
-            AND (@PaymentMethod IS NULL OR pr.""PaymentMethod"" = @PaymentMethod);
+            {whereClause};
 
             SELECT 
                 pr.""Id"", 
@@ -95,25 +124,12 @@ public partial class CommunityQueryService
                 s.""ClientProfileId""
             FROM community.""PaymentRecords"" pr
             JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
-            WHERE s.""OrganizationId"" = @OrgId
-            AND (@FromDate IS NULL OR pr.""CreatedAt"" >= @FromDate)
-            AND (@ToDate IS NULL OR pr.""CreatedAt"" <= @ToDate)
-            AND (@Status IS NULL OR pr.""Status"" = @Status)
-            AND (@PaymentMethod IS NULL OR pr.""PaymentMethod"" = @PaymentMethod)
+            {whereClause}
             ORDER BY pr.""CreatedAt"" DESC
             LIMIT @Limit OFFSET @Offset;
         ";
 
-        using var multi = await connection.QueryMultipleAsync(sql, new 
-        { 
-            OrgId = organizationId,
-            Limit = limit,
-            Offset = offset,
-            FromDate = fromDate,
-            ToDate = toDate,
-            Status = status,
-            PaymentMethod = paymentMethod
-        });
+        using var multi = await connection.QueryMultipleAsync(sql, parameters);
 
         var totalCount = await multi.ReadFirstAsync<int>();
         var rawTx = (await multi.ReadAsync<RawGlobalTxDto>()).ToList();

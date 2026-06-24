@@ -102,8 +102,9 @@ public class OneQueryService : IOneQueryService
             .Join(_context.GlobalUsers.AsNoTracking(), 
                   m => m.GlobalUserId, 
                   u => u.Id, 
-                  (m, u) => new WorkspaceMemberSnapshotDto(m.Id, m.GlobalUserId, u.Name, u.Email, m.Role, m.CreatedAt))
-            .OrderBy(m => m.JoinedAt)
+                  (m, u) => new { m, u })
+            .OrderBy(x => x.m.CreatedAt)
+            .Select(x => new WorkspaceMemberSnapshotDto(x.m.Id, x.m.GlobalUserId, x.u.Name, x.u.Email, x.m.Role, x.m.CreatedAt))
             .ToListAsync();
     }
 
