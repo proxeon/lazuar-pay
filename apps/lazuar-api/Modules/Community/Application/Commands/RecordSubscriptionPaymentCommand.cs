@@ -1,7 +1,10 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Microsoft.Extensions.DependencyInjection;
+using Modules.Community.Contracts;
 using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Application.Commands;
@@ -25,15 +28,18 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
     private readonly ICommunitySubscriptionRepository _subscriptionRepository;
     private readonly ICommunityPlanRepository _planRepository;
     private readonly ICommunityCouponRepository _couponRepository;
+    private readonly IEventBus _eventBus;
 
     public RecordSubscriptionPaymentCommandHandler(
         ICommunitySubscriptionRepository subscriptionRepository,
         ICommunityPlanRepository planRepository,
-        ICommunityCouponRepository couponRepository)
+        ICommunityCouponRepository couponRepository,
+        [FromKeyedServices("CommunityEventBus")] IEventBus eventBus)
     {
         _subscriptionRepository = subscriptionRepository;
         _planRepository = planRepository;
         _couponRepository = couponRepository;
+        _eventBus = eventBus;
     }
 
     public async Task Handle(RecordSubscriptionPaymentCommand request, CancellationToken ct)
@@ -74,6 +80,21 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
                 _couponRepository.Update(coupon);
             }
             subscription.ClearPendingCoupon();
+        }
+
+        var latestRecord = subscription.PaymentRecords.Last();
+
+        if (request.Amount > 0)
+        {
+            await _eventBus.PublishAsync(new CommunityManualPaymentRecordedIntegrationEvent(
+                request.OrganizationId,
+                subscription.Id,
+                latestRecord.SystemReference,
+                request.Amount,
+                request.Currency,
+                request.PaymentMethod,
+                request.ExternalReference
+            ));
         }
 
         await _subscriptionRepository.SaveChangesAsync(ct);

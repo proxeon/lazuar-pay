@@ -2,13 +2,25 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from "./components/Sidebar";
-import OpsChatWorkspace from "./components/OpsChatWorkspace";
 import LoginPage from "./components/LoginPage";
-import PaymentSettingsPage from "./components/PaymentSettingsPage";
-import CommunityInsights from "./components/CommunityInsights";
-import ConversationsDirectory from "./components/ConversationsDirectory";
-import TemplatesPage from "./components/TemplatesPage"; // Import Templates
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
+
+import DashboardPage from "./modules/community/pages/DashboardPage";
+import PaymentSettingsPage from "./modules/community/pages/PaymentSettingsPage";
+import TemplatesPage from "./modules/community/pages/TemplatesPage";
+import SubscribersPage from "./modules/community/pages/SubscribersPage";
+import PlansPage from "./modules/community/pages/PlansPage";
+import CouponsPage from "./modules/community/pages/CouponsPage";
+import AutomationsPage from "./modules/community/pages/AutomationsPage";
+import TransactionsPage from "./modules/community/pages/TransactionsPage";
+
+import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
+
+export interface OpsOutletContext {
+  activeWorkspaceId: string | null;
+  entitlements: EntitlementDto[];
+  onWorkspaceSelect: (id: string) => void;
+}
 
 function OpsLayout() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -39,12 +51,6 @@ function OpsLayout() {
           navigate(`/login?returnUrl=${encodeURIComponent(location.pathname)}`);
           return;
         }
-
-        if (data.role === "SUPER_ADMIN") {
-          window.location.href = "http://localhost:3000/dashboard";
-          return;
-        }
-
         setUser(data);
       } catch {
         navigate("/login");
@@ -90,7 +96,7 @@ function OpsLayout() {
   const handleWorkspaceChange = (id: string) => {
     setActiveWorkspaceId(id);
     localStorage.setItem("ops_active_workspace_id", id);
-    navigate("/history");
+    navigate("/community/dashboard");
   };
 
   const handleLogout = async () => {
@@ -109,9 +115,6 @@ function OpsLayout() {
         <span className="text-[11px] font-bold uppercase tracking-widest text-rose-600">
           Access Denied: No active workspace entitlements found.
         </span>
-        <p className="text-[12px] text-[#71717a] max-w-sm text-center">
-          Your application is currently pending review by a system administrator. Check back later.
-        </p>
         <button 
           onClick={handleLogout} 
           className="h-9 px-6 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none hover:bg-[#27272a] transition-colors"
@@ -131,14 +134,15 @@ function OpsLayout() {
         setIsOpen={handleToggleSidebar}
         isMobile={isMobile}
         user={user}
-        entitlements={entitlements || []}
-        activeWorkspaceId={activeWorkspaceId}
-        onWorkspaceSelect={handleWorkspaceChange}
         onLogout={handleLogout}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden w-full relative bg-white">
-        <Outlet context={{ activeWorkspaceId }} />
+        <Outlet context={{ 
+          activeWorkspaceId,
+          entitlements: entitlements || [],
+          onWorkspaceSelect: handleWorkspaceChange
+        }} />
         
         {isMobile && isSidebarOpen && (
           <div className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm" onClick={handleToggleSidebar} />
@@ -153,15 +157,21 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<OpsLayout />}>
-        <Route path="/" element={<Navigate to="/chat" replace />} />
-        <Route path="/chat" element={<OpsChatWorkspace />} />
-        <Route path="/chat/:id" element={<OpsChatWorkspace />} />
-        <Route path="/history" element={<ConversationsDirectory />} />
-        <Route path="/insights" element={<CommunityInsights />} />
-        <Route path="/settings/payment" element={<PaymentSettingsPage />} />
-        <Route path="/settings/templates" element={<TemplatesPage />} />
+        <Route path="/" element={<Navigate to="/community/dashboard" replace />} />
+        
+        <Route path="/community/dashboard" element={<DashboardPage />} />
+        <Route path="/community/subscribers" element={<SubscribersPage />} />
+        <Route path="/community/transactions" element={<TransactionsPage />} />
+        <Route path="/community/plans" element={<PlansPage />} />
+        <Route path="/community/coupons" element={<CouponsPage />} />
+        <Route path="/community/automations" element={<AutomationsPage />} />
+        <Route path="/community/payment" element={<PaymentSettingsPage />} />
+        <Route path="/community/templates" element={<TemplatesPage />} />
+
+        <Route path="/workspace/general" element={<GeneralSettingsPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/chat" replace />} />
+      
+      <Route path="*" element={<Navigate to="/community/dashboard" replace />} />
     </Routes>
   );
 }

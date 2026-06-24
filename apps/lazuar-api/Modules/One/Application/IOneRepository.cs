@@ -9,6 +9,7 @@ public interface IOneRepository
 {
     void AddOrganization(Organization organization);
     Task<Organization?> GetOrganizationByIdAsync(Guid id, CancellationToken ct = default);
+    Task<bool> IsSlugUniqueAsync(string slug, CancellationToken ct = default);
 
     void AddTenantMembership(TenantMembership membership);
     void RemoveTenantMembership(TenantMembership membership);
@@ -25,9 +26,6 @@ public interface IOneRepository
     void AddWorkspaceInvitation(WorkspaceInvitation invitation);
     Task<WorkspaceInvitation?> GetInvitationByHashAsync(string hash, CancellationToken ct = default);
     Task<WorkspaceInvitation?> GetInvitationByIdAsync(Guid id, CancellationToken ct = default);
-
-    void AddAppAccessRequest(AppAccessRequest request);
-    Task<AppAccessRequest?> GetAppAccessRequestByIdAsync(Guid id, CancellationToken ct = default);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }

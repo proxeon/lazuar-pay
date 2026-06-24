@@ -47,7 +47,7 @@ public class ValidatePublicCouponQueryHandler : IQueryHandler<ValidatePublicCoup
 
         try
         {
-            coupon.Validate(plan.Price);
+            coupon.Validate(plan.Price, plan.Id);
             var discount = coupon.CalculateDiscount(plan.Price);
             var finalPrice = plan.Price - discount;
             if (finalPrice < 0) finalPrice = 0;

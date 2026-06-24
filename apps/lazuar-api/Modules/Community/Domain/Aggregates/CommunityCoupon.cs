@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using BuildingBlocks.Domain;
 using Modules.Community.Domain.Events;
 
@@ -16,13 +18,26 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
     public int ReservedCount { get; private set; }
     public decimal MinimumOriginalPrice { get; private set; }
     public DateTime? ExpiresAt { get; private set; }
+    public bool IsActive { get; private set; }
+    
+    private readonly List<Guid> _applicablePlanIds = new();
+    public IReadOnlyCollection<Guid> ApplicablePlanIds => _applicablePlanIds.AsReadOnly();
+    
     public DateTime CreatedAt { get; private set; }
 
 #pragma warning disable CS8618
     private CommunityCoupon() { }
 #pragma warning restore CS8618
 
-    public CommunityCoupon(Guid organizationId, string code, string discountType, decimal amount, int maxUses, DateTime? expiresAt, decimal minimumOriginalPrice = 0)
+    public CommunityCoupon(
+        Guid organizationId, 
+        string code, 
+        string discountType, 
+        decimal amount, 
+        int maxUses, 
+        DateTime? expiresAt, 
+        decimal minimumOriginalPrice = 0,
+        IEnumerable<Guid>? applicablePlanIds = null)
     {
         if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Code is required.");
         if (discountType != "PERCENTAGE" && discountType != "FIXED") throw new ArgumentException("Invalid discount type.");
@@ -38,6 +53,13 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
         ReservedCount = 0;
         MinimumOriginalPrice = minimumOriginalPrice;
         ExpiresAt = expiresAt;
+        IsActive = true;
+
+        if (applicablePlanIds != null && applicablePlanIds.Any())
+        {
+            _applicablePlanIds.AddRange(applicablePlanIds);
+        }
+
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -51,8 +73,13 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
         return Math.Min(Amount, originalPrice);
     }
 
-    public void Validate(decimal originalPrice)
+    public void Validate(decimal originalPrice, Guid targetPlanId)
     {
+        if (!IsActive)
+        {
+            CheckRule(new GenericBusinessRule("This coupon has been archived and is no longer valid."));
+        }
+
         if (ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow)
         {
             CheckRule(new GenericBusinessRule("This coupon has expired."));
@@ -66,6 +93,11 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
         if (MinimumOriginalPrice > 0 && originalPrice < MinimumOriginalPrice)
         {
             CheckRule(new GenericBusinessRule($"This coupon requires a minimum original price of {MinimumOriginalPrice:F2}."));
+        }
+
+        if (_applicablePlanIds.Any() && !_applicablePlanIds.Contains(targetPlanId))
+        {
+            CheckRule(new GenericBusinessRule("This coupon is not valid for the selected plan."));
         }
     }
 
@@ -94,5 +126,42 @@ public class CommunityCoupon : Entity, IAggregateRoot, IMustHaveTenant
             ReservedCount--;
             AddDomainEvent(new CouponReleasedDomainEvent(Id, OrganizationId, Code));
         }
+    }
+
+    public void UpdateDetails(string code, string discountType, decimal amount, int maxUses, decimal minimumOriginalPrice, DateTime? expiresAt, IEnumerable<Guid>? applicablePlanIds)
+    {
+        var codeChanged = !string.Equals(Code, code, StringComparison.OrdinalIgnoreCase);
+        var typeChanged = !string.Equals(DiscountType, discountType, StringComparison.OrdinalIgnoreCase);
+        var amountChanged = Amount != amount;
+
+        // Prevent modification of financial parameters if the coupon is already in use
+        if ((codeChanged || typeChanged || amountChanged) && UsedCount > 0)
+        {
+            CheckRule(new GenericBusinessRule("Core coupon details (Code, Type, Amount) cannot be modified after the coupon has been redeemed."));
+        }
+
+        if (codeChanged) Code = code.ToUpperInvariant().Trim();
+        if (typeChanged) DiscountType = discountType;
+        if (amountChanged) Amount = amount;
+
+        MaxUses = maxUses;
+        MinimumOriginalPrice = minimumOriginalPrice;
+        ExpiresAt = expiresAt;
+
+        _applicablePlanIds.Clear();
+        if (applicablePlanIds != null && applicablePlanIds.Any())
+        {
+            _applicablePlanIds.AddRange(applicablePlanIds);
+        }
+    }
+
+    public void Archive()
+    {
+        IsActive = false;
+    }
+
+    public void Restore()
+    {
+        IsActive = true;
     }
 }

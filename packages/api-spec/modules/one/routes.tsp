@@ -74,33 +74,6 @@ interface OneOperations {
   getMyEntitlements(): EntitlementDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
-  @post
-  @route("/me/access-requests")
-  requestAppAccess(
-    @body body: CreateAppAccessRequestDto,
-  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
-
-  @useAuth(BearerAuth)
-  @get
-  @route("/access-requests")
-  getAppAccessRequests(
-  ): AppAccessRequestDto[] | LazuarApi.Core.ProblemDetailsResponse;
-
-  @useAuth(BearerAuth)
-  @post
-  @route("/access-requests/{id}/approve")
-  approveAppAccessRequest(
-    @path id: string,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
-
-  @useAuth(BearerAuth)
-  @post
-  @route("/access-requests/{id}/reject")
-  rejectAppAccessRequest(
-    @path id: string,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
-
-  @useAuth(BearerAuth)
   @get
   @route("/workspaces")
   getWorkspaces(): WorkspaceDto[] | LazuarApi.Core.ProblemDetailsResponse;

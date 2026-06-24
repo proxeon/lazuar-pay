@@ -60,7 +60,8 @@ public class DomainEventHandlers :
                 plan.Name,
                 plan.TelegramInviteLink ?? "(link coming soon)",
                 plan.WeeklyMeetingLink ?? "(link coming soon)",
-                amountPaid
+                amountPaid,
+                notification.IsSilent
             )
         );
     }

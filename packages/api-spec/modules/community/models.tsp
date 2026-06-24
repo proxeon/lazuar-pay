@@ -54,6 +54,7 @@ model CommunitySubscriptionDto {
 
 model PaymentRecordDto {
   id: string; // GUID
+  system_reference: string;
   amount: float64;
   currency: string;
   payment_method: string;
@@ -65,6 +66,20 @@ model PaymentRecordDto {
   status: string;
   notes?: string;
   created_at: utcDateTime;
+}
+
+model TransactionLogDto {
+  id: string; // GUID
+  system_reference: string;
+  amount: float64;
+  currency: string;
+  payment_method: string;
+  status: string;
+  created_at: utcDateTime;
+  customer_name: string;
+  customer_email: string;
+  recorded_by_name: string;
+  external_reference?: string;
 }
 
 model DeliveryHistoryItemDto {
@@ -189,6 +204,9 @@ model CreateSubscriberRequestDto {
   payment_method?: string;
   reference_number?: string;
   notes?: string;
+  start_date?: utcDateTime;
+  next_billing_date?: utcDateTime;
+  send_welcome_email?: boolean;
 }
 
 model UpdateSubscriberProfileRequestDto {
@@ -291,6 +309,15 @@ model MessageTemplateDto {
   updated_at: utcDateTime;
 }
 
+model CreateTemplateRequestDto {
+  name: string;
+  subject: string;
+  body: string;
+  channel: string;
+  required_variables: string[];
+  optional_variables: string[];
+}
+
 model UpdateTemplateRequestDto {
   subject: string;
   body: string;
@@ -329,6 +356,8 @@ model CouponDto {
   reserved_count: int32;
   minimum_original_price: float64;
   expires_at?: utcDateTime;
+  applicable_plan_ids?: string[]; // GUID array
+  is_active: boolean;
 }
 
 model CreateCouponRequestDto {
@@ -338,4 +367,45 @@ model CreateCouponRequestDto {
   max_uses: int32;
   minimum_original_price?: float64;
   expires_at?: utcDateTime;
+  applicable_plan_ids?: string[]; // GUID array
+}
+
+model UpdateCouponRequestDto {
+  code?: string;
+  discount_type?: string;
+  amount?: float64;
+  max_uses?: int32;
+  minimum_original_price?: float64;
+  expires_at?: utcDateTime;
+  applicable_plan_ids?: string[]; // GUID array
+  is_active?: boolean;
+}
+
+model TemplateVariableDto {
+  tag: string;
+  description: string;
+}
+
+model TemplateVariableCategoryDto {
+  title: string;
+  items: TemplateVariableDto[];
+}
+
+model TemplatePreviewRequestDto {
+  subject: string;
+  body: string;
+}
+
+model TemplatePreviewResponseDto {
+  html_content: string;
+  subject_content: string;
+}
+
+model CreateBroadcastRequestDto {
+  subject: string;
+  body: string;
+  channel: string;
+  target_plan_id?: string; // GUID
+  target_status?: string;
+  target_is_reminder_only?: boolean;
 }

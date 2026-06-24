@@ -85,37 +85,6 @@ namespace Modules.One.Infrastructure.Migrations
                     b.ToTable("OutboxMessages", "one");
                 });
 
-            modelBuilder.Entity("Modules.One.Domain.AppAccessRequest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("GlobalUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RequestedApps")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Status")
-                        .HasFilter("\"Status\" = 'PENDING'");
-
-                    b.ToTable("AppAccessRequests", "one");
-                });
-
             modelBuilder.Entity("Modules.One.Domain.GlobalUser", b =>
                 {
                     b.Property<Guid>("Id")

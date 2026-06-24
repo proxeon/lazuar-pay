@@ -152,6 +152,10 @@ namespace Modules.Community.Infrastructure.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<string>("ApplicablePlanIds")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -167,6 +171,11 @@ namespace Modules.Community.Infrastructure.Migrations
 
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<int>("MaxUses")
                         .HasColumnType("integer");
@@ -492,13 +501,19 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.Property<Guid>("SubscriptionId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("SystemReference")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalReference")
+                    b.HasIndex("SystemReference")
+                        .IsUnique();
+
+                    b.HasIndex("SubscriptionId", "ExternalReference")
                         .IsUnique()
                         .HasFilter("\"ExternalReference\" IS NOT NULL");
-
-                    b.HasIndex("SubscriptionId");
 
                     b.ToTable("PaymentRecords", "community");
                 });

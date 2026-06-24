@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.One.Contracts;
 using Modules.Community.Domain.Entities;
+using Modules.Community.Domain.Aggregates;
 
 namespace Modules.Community.Infrastructure.EventHandlers;
 
@@ -21,7 +23,7 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
     {
         if (@event.AppId != "COMMUNITY") return;
 
-        bool hasTemplates = await _dbContext.MessageTemplates
+        var hasTemplates = await _dbContext.MessageTemplates
             .IgnoreQueryFilters()
             .AnyAsync(t => t.OrganizationId == @event.TenantId);
 
@@ -29,8 +31,8 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
         {
             var templates = new List<MessageTemplate>
             {
-                new MessageTemplate(@event.TenantId, "Community Welcome", "ALL", "Welcome to {{plan_name}}! 🎉", "Hi {{customer_name}},\n\nWelcome to {{plan_name}}!\n\nHere is your private group link:\n{{group_link}}\n\nWeekly session link:\n{{meeting_link}}\n\nSee you there! 🙏\n\n— {{business_name}}", true, new[] { "{{group_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{meeting_link}}" }),
-                new MessageTemplate(@event.TenantId, "Community Payment Success", "ALL", "Payment Received: {{plan_name}}", "Hi {{customer_name}},\n\nThank you! We have successfully received your payment of RM {{total_price}} for your {{plan_name}} membership.\n\n— {{business_name}}", true, new[] { "{{total_price}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
+                new MessageTemplate(@event.TenantId, "Community Welcome", "ALL", "Welcome to {{plan_name}}! 🎉", "Hi {{customer_name}},\n\nWelcome to {{plan_name}}!\n\nHere is your private group link:\n{{group_link}}\n\nWeekly session link:\n{{meeting_link}}\n\nYou can manage your subscription via your secure portal:\n{{portal_magic_link}}\n\nSee you there! 🙏\n\n— {{business_name}}", true, new[] { "{{group_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{meeting_link}}", "{{portal_magic_link}}" }),
+                new MessageTemplate(@event.TenantId, "Community Payment Success", "ALL", "Payment Received: {{plan_name}}", "Hi {{customer_name}},\n\nThank you! We have successfully received your payment of RM {{total_price}} for your {{plan_name}} membership.\n\nYou can manage your subscription at any time via your portal:\n{{portal_magic_link}}\n\n— {{business_name}}", true, new[] { "{{total_price}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{portal_magic_link}}" }),
                 new MessageTemplate(@event.TenantId, "Community Payment Failed", "ALL", "Payment Failed: {{plan_name}}", "Hi {{customer_name}},\n\nWe were unable to process your renewal payment for {{plan_name}}.\n\nPlease complete your payment to avoid losing access to the community:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
                 new MessageTemplate(@event.TenantId, "Community Renewal (3 Days)", "ALL", "Your {{plan_name}} subscription renews in 3 days", "Hi {{customer_name}},\n\nYour {{plan_name}} membership is expiring in 3 days. To ensure you don't lose access to the community and weekly sessions, please renew your subscription here:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
                 new MessageTemplate(@event.TenantId, "Community Renewal Due Today", "ALL", "Action Required: {{plan_name}} renewal due today", "Hi {{customer_name}},\n\nThis is a reminder that your {{plan_name}} membership is due for renewal today. Please renew your subscription to maintain your access:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
@@ -42,6 +44,38 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
 
             _dbContext.MessageTemplates.AddRange(templates);
             await _dbContext.SaveChangesAsync();
+        }
+
+        var hasSchedules = await _dbContext.ReminderSchedules
+            .IgnoreQueryFilters()
+            .AnyAsync(s => s.OrganizationId == @event.TenantId);
+
+        if (!hasSchedules)
+        {
+            var preDunningTemplate = await _dbContext.MessageTemplates
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.OrganizationId == @event.TenantId && t.Name == "Community Renewal (3 Days)");
+                
+            var dayOfDunningTemplate = await _dbContext.MessageTemplates
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.OrganizationId == @event.TenantId && t.Name == "Community Renewal Due Today");
+                
+            var postDunningTemplate = await _dbContext.MessageTemplates
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.OrganizationId == @event.TenantId && t.Name == "Community Renewal Overdue");
+
+            if (preDunningTemplate != null && dayOfDunningTemplate != null && postDunningTemplate != null)
+            {
+                var defaultSchedules = new List<CommunityReminderSchedule>
+                {
+                    new CommunityReminderSchedule(@event.TenantId, null, preDunningTemplate.Id, "ALL", -3, "08:00", true),
+                    new CommunityReminderSchedule(@event.TenantId, null, dayOfDunningTemplate.Id, "ALL", 0, "08:00", true),
+                    new CommunityReminderSchedule(@event.TenantId, null, postDunningTemplate.Id, "ALL", 3, "08:00", true)
+                };
+
+                _dbContext.ReminderSchedules.AddRange(defaultSchedules);
+                await _dbContext.SaveChangesAsync();
+            }
         }
     }
 }

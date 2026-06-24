@@ -31,8 +31,15 @@ public class CommunitySubscriptionRepository : ICommunitySubscriptionRepository
     private readonly CommunityDbContext _context;
     public CommunitySubscriptionRepository(CommunityDbContext context) => _context = context;
 
-    public async Task<CommunitySubscription?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
-        await _context.Subscriptions.Include(s => s.PaymentRecords).FirstOrDefaultAsync(s => s.Id == id, ct);
+    public async Task<CommunitySubscription?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        // Check EF Core's active memory tracker first to support pre-save Domain Events
+        var local = _context.Subscriptions.Local.FirstOrDefault(s => s.Id == id);
+        if (local != null) return local;
+
+        // Fallback to querying the actual database
+        return await _context.Subscriptions.Include(s => s.PaymentRecords).FirstOrDefaultAsync(s => s.Id == id, ct);
+    }
 
     public async Task<CommunitySubscription?> GetActiveByProfileIdAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default) =>
         await _context.Subscriptions

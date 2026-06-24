@@ -12,9 +12,7 @@ namespace Modules.One.Application.EventHandlers;
 public class NotificationDispatchDomainEventHandlers :
     INotificationHandler<PasswordResetRequestedDomainEvent>,
     INotificationHandler<EmailVerificationRequestedDomainEvent>,
-    INotificationHandler<WorkspaceInvitationCreatedDomainEvent>,
-    INotificationHandler<AppAccessRequestedDomainEvent>,
-    INotificationHandler<AppAccessApprovedDomainEvent>
+    INotificationHandler<WorkspaceInvitationCreatedDomainEvent>
 {
     private readonly IEventBus _eventBus;
     private readonly IOneLinkService _linkService;
@@ -56,24 +54,5 @@ public class NotificationDispatchDomainEventHandlers :
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
             notification.OrganizationId, notification.Email, null, subject, body, "EMAIL"));
-    }
-
-    public async Task Handle(AppAccessRequestedDomainEvent notification, CancellationToken ct)
-    {
-        var subject = "We've received your application";
-        var body = $"Hi,<br><br>Thank you for applying to the Lazuar Ecosystem. Your request for the following apps is under review:<br><br><b>{string.Join(", ", notification.RequestedApps)}</b><br><br>We will notify you once an administrator approves your workspace.";
-
-        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            _systemTenantId, "user-placeholder@will-be-fixed-by-repo.com", null, subject, body, "EMAIL"));
-    }
-
-    public async Task Handle(AppAccessApprovedDomainEvent notification, CancellationToken ct)
-    {
-        var loginLink = $"{_linkService.GetClientBaseUrl()}/login";
-        var subject = "Your workspace is ready!";
-        var body = $"Hi,<br><br>Great news! Your workspace has been provisioned and your requested applications are now active.<br><br><a href=\"{loginLink}\">Access your Launchpad</a>";
-
-        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            _systemTenantId, "user-placeholder@will-be-fixed-by-repo.com", null, subject, body, "EMAIL"));
     }
 }

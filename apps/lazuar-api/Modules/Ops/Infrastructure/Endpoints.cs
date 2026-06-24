@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Ops/Infrastructure/Endpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +29,7 @@ public static class Endpoints
         group.MapGet("/chat/conversations", async Task<IResult> ([FromQuery] int limit, [FromQuery] int offset, IOpsRepository repo, IExecutionContextAccessor ctx) =>
         {
             var tenantId = ctx.TenantId;
-            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            if (tenantId == Guid.Empty) throw new InvalidOperationException("Active workspace context required.");
 
             int safeLimit = limit > 0 ? limit : 20;
             int safeOffset = offset >= 0 ? offset : 0;
@@ -51,7 +50,7 @@ public static class Endpoints
         group.MapGet("/chat/conversations/{id:guid}/messages", async Task<IResult> (Guid id, IOpsRepository repo, IExecutionContextAccessor ctx) =>
         {
             var tenantId = ctx.TenantId;
-            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            if (tenantId == Guid.Empty) throw new InvalidOperationException("Active workspace context required.");
 
             var messages = await repo.GetMessagesAsync(tenantId, id);
 
@@ -103,7 +102,7 @@ public static class Endpoints
         group.MapPost("/chat/conversations/{id:guid}/system-message", async Task<IResult> (Guid id, [FromBody] ChatRequestDto request, IOpsRepository repo, IExecutionContextAccessor ctx) =>
         {
             var tenantId = ctx.TenantId;
-            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            if (tenantId == Guid.Empty) throw new InvalidOperationException("Active workspace context required.");
 
             var conv = await repo.GetConversationByIdAsync(tenantId, id);
             if (conv == null) return Results.NotFound();
@@ -117,39 +116,25 @@ public static class Endpoints
         group.MapPut("/chat/conversations/{id:guid}/title", async Task<IResult> (Guid id, [FromBody] RenameConversationRequestDto request, IMediator mediator, IExecutionContextAccessor ctx) =>
         {
             var tenantId = ctx.TenantId;
-            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            if (tenantId == Guid.Empty) throw new InvalidOperationException("Active workspace context required.");
 
-            try
-            {
-                await mediator.Send(new RenameConversationCommand(tenantId, id, request.Title));
-                return Results.Ok(new StatusResponse { Status = "updated" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
-            }
+            await mediator.Send(new RenameConversationCommand(tenantId, id, request.Title));
+            return Results.Ok(new StatusResponse { Status = "updated" });
         });
 
         group.MapDelete("/chat/conversations/{id:guid}", async Task<IResult> (Guid id, IMediator mediator, IExecutionContextAccessor ctx) =>
         {
             var tenantId = ctx.TenantId;
-            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            if (tenantId == Guid.Empty) throw new InvalidOperationException("Active workspace context required.");
 
-            try
-            {
-                await mediator.Send(new DeleteConversationCommand(tenantId, id));
-                return Results.Ok(new StatusResponse { Status = "deleted" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(new ProblemDetails { Status = 400, Detail = ex.Message });
-            }
+            await mediator.Send(new DeleteConversationCommand(tenantId, id));
+            return Results.Ok(new StatusResponse { Status = "deleted" });
         });
 
         group.MapPut("/chat/messages/{id:guid}/resolve", async Task<IResult> (Guid id, IOpsRepository repo, IExecutionContextAccessor ctx) =>
         {
             var tenantId = ctx.TenantId;
-            if (tenantId == Guid.Empty) return Results.BadRequest(new ProblemDetails { Status = 400, Detail = "Active workspace context required." });
+            if (tenantId == Guid.Empty) throw new InvalidOperationException("Active workspace context required.");
 
             var message = await repo.GetMessageByIdAsync(tenantId, id);
             if (message == null) return Results.NotFound();
