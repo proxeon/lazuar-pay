@@ -94,6 +94,17 @@ All admin functionality lives in a single `ops-page` application. Each app follo
 ## Project Structure
 
 ```md
+apps/
+├── lazuar-api/       # The Brain (.NET Modular Monolith) -> api.lazuar.com
+│
+├── ops-page/         # The Back-Office (Vite CSR)        -> ops.lazuar.com
+│
+├── portal-page/      # The Cash Register (Next.js SSR)   -> portal.lazuar.com
+│
+└── storefront-page/  # The Window Display (Astro SSG)    -> creator.com / *.lazuar.site
+```
+
+```md
 .
 ├── apps
 │   ├── community-page/          # Public Next.js app (checkout, portal)
