@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Queries/ICommunityQueryService.cs
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -6,16 +5,6 @@ using Lazuar.ApiTypes;
 using BuildingBlocks.Application;
 
 namespace Modules.Community.Application.Queries;
-
-public record GlobalTransactionDto(
-    Guid Id,
-    decimal Amount,
-    string Currency,
-    string PaymentMethod,
-    string Status,
-    DateTime CreatedAt,
-    Guid ClientProfileId
-);
 
 public interface ICommunityQueryService
 {
@@ -28,6 +17,6 @@ public interface ICommunityQueryService
     Task<CommunitySubscriberStatsDto> GetSubscriberStatsAsync(Guid organizationId);
     Task<IEnumerable<DeliveryHistoryItemDto>> GetReminderHistoryAsync(Guid organizationId, Guid subscriptionId);
     Task<PaginatedResponse<PaymentRecordDto>> GetPaymentHistoryAsync(Guid organizationId, Guid subscriptionId, int page, int limit);
-    Task<IEnumerable<GlobalTransactionDto>> GetGlobalTransactionsAsync(Guid organizationId, DateTime? fromDate, DateTime? toDate, string? status);
+    Task<PaginatedResponse<TransactionLogDto>> GetGlobalTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, DateTime? fromDate, DateTime? toDate);
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
 }

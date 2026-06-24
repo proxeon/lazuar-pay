@@ -83,43 +83,30 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
         var periodEnd = request.NextBillingDate ?? periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
         var isSilent = !request.SendWelcomeEmail;
 
-        if (!request.IsReminderOnly && request.AmountPaid.HasValue)
-        {
-            subscription.Activate(
-                periodStart,
-                periodEnd,
-                request.AmountPaid.Value,
-                "MYR",
-                request.PaymentMethod ?? "BANK_TRANSFER",
-                request.ReferenceNumber,
-                request.RecordedBy,
-                null,
-                isSilent);
+        var amountPaid = request.AmountPaid ?? 0m;
+        var actualPaymentMethod = request.PaymentMethod ?? (amountPaid > 0 ? "BANK_TRANSFER" : "CASH");
 
-            if (request.AmountPaid.Value > 0)
-            {
-                await _eventBus.PublishAsync(new CommunityManualPaymentRecordedIntegrationEvent(
-                    request.OrganizationId,
-                    subscription.Id,
-                    request.AmountPaid.Value,
-                    "MYR",
-                    request.PaymentMethod ?? "BANK_TRANSFER",
-                    request.ReferenceNumber
-                ));
-            }
-        }
-        else
+        subscription.Activate(
+            periodStart,
+            periodEnd,
+            amountPaid,
+            "MYR",
+            actualPaymentMethod,
+            request.ReferenceNumber,
+            request.RecordedBy,
+            null,
+            isSilent);
+
+        if (amountPaid > 0)
         {
-            subscription.Activate(
-                periodStart,
-                periodEnd,
-                0m,
+            await _eventBus.PublishAsync(new CommunityManualPaymentRecordedIntegrationEvent(
+                request.OrganizationId,
+                subscription.Id,
+                amountPaid,
                 "MYR",
-                "CASH",
-                "MANUAL_ACTIVATION",
-                request.RecordedBy,
-                null,
-                isSilent);
+                actualPaymentMethod,
+                request.ReferenceNumber
+            ));
         }
 
         await _subscriptionRepository.SaveChangesAsync(ct);

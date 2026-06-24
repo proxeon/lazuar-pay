@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Community.Application.Queries;
-using Modules.CRM.Contracts;
 
 namespace Modules.Community.Application.Queries.Agent;
 
@@ -29,47 +28,38 @@ public record AgentTransactionResult(
 public class ListGlobalTransactionsAgentQueryHandler : IQueryHandler<ListGlobalTransactionsAgentQuery, IEnumerable<AgentTransactionResult>>
 {
     private readonly ICommunityQueryService _queryService;
-    private readonly ICrmQueryService _crmQueryService;
 
-    public ListGlobalTransactionsAgentQueryHandler(
-        ICommunityQueryService queryService,
-        ICrmQueryService crmQueryService)
+    public ListGlobalTransactionsAgentQueryHandler(ICommunityQueryService queryService)
     {
         _queryService = queryService;
-        _crmQueryService = crmQueryService;
     }
 
     public async Task<IEnumerable<AgentTransactionResult>> Handle(ListGlobalTransactionsAgentQuery request, CancellationToken cancellationToken)
     {
-        var transactions = await _queryService.GetGlobalTransactionsAsync(
+        var response = await _queryService.GetGlobalTransactionsAsync(
             request.OrganizationId,
-            request.FromDate,
-            request.ToDate,
-            request.Status);
+            page: 1,
+            limit: 500,
+            status: request.Status,
+            paymentMethod: null,
+            fromDate: request.FromDate,
+            toDate: request.ToDate);
 
-        var transactionList = transactions.ToList();
-        if (!transactionList.Any())
+        var transactions = response.Data.ToList();
+        if (!transactions.Any())
         {
             return Enumerable.Empty<AgentTransactionResult>();
         }
 
-        var profileIds = transactionList.Select(t => t.ClientProfileId).Distinct();
-        var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
-        var profileDict = profiles.ToDictionary(p => Guid.Parse(p.Id));
-
-        return transactionList.Select(t =>
-        {
-            profileDict.TryGetValue(t.ClientProfileId, out var profile);
-            return new AgentTransactionResult(
-                t.Id.ToString(),
-                profile?.Full_name ?? "Unknown",
-                profile?.Email ?? "Unknown",
-                t.Amount,
-                t.Currency,
-                t.PaymentMethod,
-                t.Status,
-                t.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-            );
-        }).ToList();
+        return transactions.Select(t => new AgentTransactionResult(
+            t.Id,
+            t.Customer_name,
+            t.Customer_email,
+            (decimal)t.Amount,
+            t.Currency,
+            t.Payment_method,
+            t.Status,
+            t.Created_at.ToString("yyyy-MM-dd HH:mm:ss")
+        )).ToList();
     }
 }

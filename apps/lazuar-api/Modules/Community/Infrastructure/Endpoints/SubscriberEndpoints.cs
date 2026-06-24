@@ -74,7 +74,7 @@ public static class SubscriberEndpoints
             var command = new CreateSubscriberCommand(
                 ctx.TenantId, req.Name, req.Email, req.Phone, Guid.Parse(req.Plan_id),
                 req.Source ?? "MANUAL_ENTRY", req.Is_reminder_only ?? false, req.Preferred_channel,
-                req.Amount_paid.HasValue ? (decimal)req.Amount_paid.Value : null, req.Payment_method, req.Reference_number, req.Notes, "ADMIN");
+                req.Amount_paid.HasValue ? (decimal)req.Amount_paid.Value : null, req.Payment_method, req.Reference_number, req.Notes, ctx.AuditSignature);
             
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
@@ -88,7 +88,7 @@ public static class SubscriberEndpoints
         {
             var command = new RecordSubscriptionPaymentCommand(
                 ctx.TenantId, id, (decimal)req.Amount, "MYR", req.Payment_method,
-                req.Reference_number, "ADMIN", req.Receipt_file);
+                req.Reference_number, ctx.AuditSignature, req.Receipt_file);
             
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "paid" });
@@ -211,6 +211,22 @@ public static class SubscriberEndpoints
                 ctx.TenantId, id, templateId, req.Custom_message, req.Channel ?? "EMAIL"));
             
             return TypedResults.Ok(new StatusResponse { Status = "sent" });
+        });
+
+        group.MapGet("/transactions", async Task<Ok<PaginatedResponse<TransactionLogDto>>> (
+            [FromQuery] int page,
+            [FromQuery] int limit,
+            [FromQuery] string? status,
+            [FromQuery] string? payment_method,
+            [FromQuery] DateTime? from_date,
+            [FromQuery] DateTime? to_date,
+            IExecutionContextAccessor ctx,
+            ICommunityQueryService queryService) =>
+        {
+            var p = page < 1 ? 1 : page;
+            var l = limit < 1 || limit > 100 ? 50 : limit;
+            var response = await queryService.GetGlobalTransactionsAsync(ctx.TenantId, p, l, status, payment_method, from_date, to_date);
+            return TypedResults.Ok(response);
         });
 
         return group;
