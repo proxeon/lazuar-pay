@@ -18,7 +18,9 @@ public class ManualPaymentRecordedHandler : IIntegrationEventHandler<CommunityMa
     public async Task HandleAsync(CommunityManualPaymentRecordedIntegrationEvent @event)
     {
         var referenceType = "MANUAL_PAYMENT_RECORDED";
-        var referenceId = $"{@event.SubscriptionId}_{@event.ReferenceNumber ?? @event.Id.ToString()}";
+        
+        // Utilize the newly generated deterministic SystemReference instead of composite ID hacking
+        var referenceId = @event.SystemReference;
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
             return;

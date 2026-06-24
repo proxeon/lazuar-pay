@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -97,11 +98,14 @@ public class CreateSubscriberCommandHandler : ICommandHandler<CreateSubscriberCo
             null,
             isSilent);
 
+        var latestRecord = subscription.PaymentRecords.Last();
+
         if (amountPaid > 0)
         {
             await _eventBus.PublishAsync(new CommunityManualPaymentRecordedIntegrationEvent(
                 request.OrganizationId,
                 subscription.Id,
+                latestRecord.SystemReference,
                 amountPaid,
                 "MYR",
                 actualPaymentMethod,

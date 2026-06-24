@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -81,11 +82,14 @@ public class RecordSubscriptionPaymentCommandHandler : ICommandHandler<RecordSub
             subscription.ClearPendingCoupon();
         }
 
+        var latestRecord = subscription.PaymentRecords.Last();
+
         if (request.Amount > 0)
         {
             await _eventBus.PublishAsync(new CommunityManualPaymentRecordedIntegrationEvent(
                 request.OrganizationId,
                 subscription.Id,
+                latestRecord.SystemReference,
                 request.Amount,
                 request.Currency,
                 request.PaymentMethod,

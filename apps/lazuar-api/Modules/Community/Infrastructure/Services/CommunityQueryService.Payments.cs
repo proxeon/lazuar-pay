@@ -12,12 +12,12 @@ namespace Modules.Community.Infrastructure.Services;
 public partial class CommunityQueryService
 {
     private record RawPaymentRecordDto(
-        Guid Id, decimal Amount, string Currency, string PaymentMethod,
+        Guid Id, string SystemReference, decimal Amount, string Currency, string PaymentMethod,
         string? ReferenceNumber, string? ReceiptUrl, string RecordedBy,
         DateTime PeriodStart, DateTime PeriodEnd, string Status, string? Notes, DateTime CreatedAt);
 
     private record RawGlobalTxDto(
-        Guid Id, decimal Amount, string Currency, string PaymentMethod, 
+        Guid Id, string SystemReference, decimal Amount, string Currency, string PaymentMethod, 
         string Status, DateTime CreatedAt, string? RecordedBy, 
         string? ExternalReference, Guid ClientProfileId);
 
@@ -35,7 +35,7 @@ public partial class CommunityQueryService
             WHERE s.""OrganizationId"" = @OrgId AND pr.""SubscriptionId"" = @SubId;
 
             SELECT
-                pr.""Id"", pr.""Amount"", pr.""Currency"", pr.""PaymentMethod"",
+                pr.""Id"", pr.""SystemReference"", pr.""Amount"", pr.""Currency"", pr.""PaymentMethod"",
                 pr.""ExternalReference"" as ReferenceNumber, pr.""ReceiptUrl"",
                 pr.""RecordedBy"", pr.""PeriodStart"", pr.""PeriodEnd"",
                 pr.""Status"", pr.""Notes"", pr.""CreatedAt""
@@ -54,6 +54,7 @@ public partial class CommunityQueryService
         var dtos = rawLogs.Select(r => new PaymentRecordDto
         {
             Id = r.Id.ToString(),
+            System_reference = r.SystemReference,
             Amount = (double)r.Amount,
             Currency = r.Currency,
             Payment_method = r.PaymentMethod,
@@ -70,7 +71,7 @@ public partial class CommunityQueryService
         return new PaginatedResponse<PaymentRecordDto>(dtos, totalCount, page, limit);
     }
 
-    public async Task<PaginatedResponse<TransactionLogDto>> GetGlobalTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, DateTime? fromDate, DateTime? toDate)
+    public async Task<PaginatedResponse<TransactionLogDto>> GetGlobalTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, DateTime? fromDate, DateTime? toDate, string? searchTerm = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
@@ -103,6 +104,11 @@ public partial class CommunityQueryService
             whereBuilder.Append(@" AND pr.""PaymentMethod"" = @PaymentMethod");
             parameters.Add("PaymentMethod", paymentMethod);
         }
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            whereBuilder.Append(@" AND (pr.""SystemReference"" ILIKE @Search OR cp.""FullName"" ILIKE @Search OR cp.""Email"" ILIKE @Search)");
+            parameters.Add("Search", $"%{searchTerm}%");
+        }
 
         var whereClause = whereBuilder.ToString();
 
@@ -110,10 +116,12 @@ public partial class CommunityQueryService
             SELECT COUNT(*)::int 
             FROM community.""PaymentRecords"" pr
             JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
+            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
             {whereClause};
 
             SELECT 
                 pr.""Id"", 
+                pr.""SystemReference"",
                 pr.""Amount"", 
                 pr.""Currency"", 
                 pr.""PaymentMethod"", 
@@ -124,6 +132,7 @@ public partial class CommunityQueryService
                 s.""ClientProfileId""
             FROM community.""PaymentRecords"" pr
             JOIN community.""Subscriptions"" s ON pr.""SubscriptionId"" = s.""Id""
+            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
             {whereClause}
             ORDER BY pr.""CreatedAt"" DESC
             LIMIT @Limit OFFSET @Offset;
@@ -164,6 +173,7 @@ public partial class CommunityQueryService
             return new TransactionLogDto
             {
                 Id = t.Id.ToString(),
+                System_reference = t.SystemReference,
                 Amount = (double)t.Amount,
                 Currency = t.Currency,
                 Payment_method = t.PaymentMethod,

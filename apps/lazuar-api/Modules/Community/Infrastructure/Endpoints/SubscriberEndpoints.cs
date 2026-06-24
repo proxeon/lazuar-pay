@@ -214,6 +214,7 @@ public static class SubscriberEndpoints
         });
 
         group.MapGet("/transactions", async Task<Ok<PaginatedResponse<TransactionLogDto>>> (
+            [FromQuery] string? search,
             [FromQuery] int page,
             [FromQuery] int limit,
             [FromQuery] string? status,
@@ -225,7 +226,7 @@ public static class SubscriberEndpoints
         {
             var p = page < 1 ? 1 : page;
             var l = limit < 1 || limit > 100 ? 50 : limit;
-            var response = await queryService.GetGlobalTransactionsAsync(ctx.TenantId, p, l, status, payment_method, from_date, to_date);
+            var response = await queryService.GetGlobalTransactionsAsync(ctx.TenantId, p, l, status, payment_method, from_date, to_date, search);
             return TypedResults.Ok(response);
         });
 

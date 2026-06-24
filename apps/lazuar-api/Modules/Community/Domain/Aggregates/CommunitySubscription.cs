@@ -188,11 +188,11 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         AddDomainEvent(new RefundRequestedDomainEvent(Id, paymentRecordId));
     }
 
-    public void RecordRefund(decimal refundAmount, string currency, string originalReference)
+    public void RecordRefund(decimal refundAmount, string currency, string originalSystemReference)
     {
         var negativeAmount = refundAmount > 0 ? -refundAmount : refundAmount;
         var refundRecord = new PaymentRecord(
-            Id, negativeAmount, currency, "SYSTEM_REFUND", originalReference,
+            Id, negativeAmount, currency, "SYSTEM_REFUND", originalSystemReference,
             "SYSTEM", DateTime.UtcNow, DateTime.UtcNow, "Refund processed");
 
         _paymentRecords.Add(refundRecord);
