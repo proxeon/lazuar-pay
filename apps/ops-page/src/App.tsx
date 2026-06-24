@@ -156,6 +156,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<OpsLayout />}>
+        {/* Ensures the root path routes strictly to the deterministic dashboard */}
         <Route path="/" element={<Navigate to="/community/dashboard" replace />} />
         
         <Route path="/community/dashboard" element={<DashboardPage />} />
@@ -169,6 +170,7 @@ export default function App() {
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
       </Route>
       
+      {/* Ensures any unrecognized or abandoned paths (like /chat) safely fallback to the dashboard */}
       <Route path="*" element={<Navigate to="/community/dashboard" replace />} />
     </Routes>
   );

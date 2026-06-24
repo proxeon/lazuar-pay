@@ -1,9 +1,9 @@
 
 # Lazuar Platform
 
-> **An API-first, AI-agent native, AWS-style superapp for solo founders and creator businesses.**
+> **An API-first, deterministic AWS-style superapp and business engine for solo founders and creator businesses.**
 
-Lazuar is a modular monolith platform designed to power a multi-product creator business (events, communities, courses, digital products) from a single, deterministic backend. It is built on the principle that business-critical operations require deterministic UI, while the AI agent acts as a probabilistic assistant for insights, navigation, and content generation.
+Lazuar is a modular monolith platform designed to power a multi-product creator business (events, communities, courses, digital products) from a single, deterministic backend. It is built on the principle that business-critical operations require strict data integrity and a dense, functional UI.
 
 ---
 
@@ -12,7 +12,7 @@ Lazuar is a modular monolith platform designed to power a multi-product creator 
 ```txt
                      +---------------------------------------+
                      |          OPS-PAGE SUPERAPP            |
-                     |  (Deterministic UI + AI Assistant)    |
+                     |  (Deterministic UI + Data Tables)     |
                      +-------------------+-------------------+
                                          |
                                          | API Calls (TypeSpec)
@@ -22,10 +22,10 @@ Lazuar is a modular monolith platform designed to power a multi-product creator 
 +------v------+                   +------v------+                   +------v------+
 | ACQUISITION |                   | FULFILLMENT |                   |  RETENTION  |
 |  - Bio      | (Linktree)        |  - Vault    | (Gumroad)         | - Community | (Skool)
-|  - Form     | (Typeform)        |  - Editorial| (Substack)        | - Broadcast | (Mailchimp)
-|  - Funnel   | (ClickFunnels)    |  - Academy  | (Kajabi)          | - Affiliate | (Rewardful)
-|  - Event    | (Eventbrite)      |  - Invoice  |                   | - Sponsor   | (Passionfroot)
-|  - Consult  | (Calendly)        |  - Pipeline |                   | - Support   | 
+|  - Form     | (Typeform)        |  - Funnel   | (ClickFunnels)    | - Broadcast | (Mailchimp)
+|  - Event    | (Eventbrite)      |  - Academy  | (Kajabi)          | - Affiliate | (Rewardful)
+|  - Consult  | (Calendly)        |  - Invoice  |                   | - Sponsor   | (Passionfroot)
+|             |                   |  - Pipeline |                   | - Support   | 
 +-------------+                   +-------------+                   +-------------+
 ```
 
@@ -40,17 +40,17 @@ Lazuar is a modular monolith platform designed to power a multi-product creator 
 ```txt
 True Wealth =
 ((Value × Ψ) / Friction × Distribution)
-× (Code × Math × AI Leverage)
+× (Code × Math × Automations)
 × (Timing × Focus × Retention)
 
 Where:
 - (Value × Ψ) / Friction × Distribution = The Conversion Engine
-- (Code × Math × AI Leverage) = The Sovereign Infrastructure (Solo Founder Scale)
+- (Code × Math × Automations) = The Sovereign Infrastructure (Solo Founder Scale)
 - (Timing × Focus × Retention) = The Asymmetric Compounders
 ```
 
 **Formulas:**
-$$True\ Wealth = \left( \frac{Value \times \Psi}{Friction \times Distribution} \right) \times (Code \times Math \times AI\ Leverage) \times (Timing \times Focus \times Retention)$$
+$$True\ Wealth = \left( \frac{Value \times \Psi}{Friction \times Distribution} \right) \times (Code \times Math \times Automations) \times (Timing \times Focus \times Retention)$$
 
 $$Distribution = Content \times Cadence \times Channel\ Fit$$
 
@@ -59,10 +59,10 @@ $$Distribution = Content \times Cadence \times Channel\ Fit$$
 ## Core Principles
 
 ### 1. Founder as Power User
-We build the API and AI-agent (Cognitive Core) for ourselves first. We use our own 15 modules to run our education/media business. **We are Default Alive from Day 1.**
+We build the API and Admin Console for ourselves first. We use our own 15 modules to run our education/media business. **We are Default Alive from Day 1.**
 
 ### 2. API-First, Frontend-Optional
-All domain logic lives in clean, decoupled APIs (defined via TypeSpec). The AI agent orchestrates these APIs for us. External frontends are built only when paying customers demand them, not before.
+All domain logic lives in clean, decoupled APIs (defined via TypeSpec). The strict REST APIs orchestrate these systems deterministically. External frontends are built only when paying customers demand them, not before.
 
 ### 3. The Barbell Strategy
 - **Safe Bet (Now):** Use our own modules to generate revenue (Docker bootcamps, communities, digital products).
@@ -76,12 +76,12 @@ Every module must map to a stage of the customer journey. No orphan features.
 
 ### 6. The Elon Musk Master Plan (Adapted)
 - **Step 1:** Use our own platform to generate revenue (Default Alive).
-- **Step 2:** Use revenue to refine the API/AI-agent architecture.
+- **Step 2:** Use revenue to refine the API architecture and data-dense dashboards.
 - **Step 3:** Sell frontends to external users who want to replicate our success.
 - **Step 4:** Expose APIs/MCP to developers.
 
-### 7. Deterministic Core, Probabilistic Assistant
-All business-critical operations (billing, refunds, tax submissions) are executed through **deterministic UI** (buttons, forms, tables). The AI agent suggests, summarizes, and navigates — but **never executes high-stakes actions without user confirmation.**
+### 7. Deterministic Core First (AI in Hibernation)
+All business-critical operations (billing, refunds, tax submissions) are executed through **deterministic UI** (buttons, forms, tables). While the platform possesses an architecture for an AI agent, it is currently in hibernation for Phase 2. The platform relies entirely on strict, data-dense admin interfaces to guarantee operational integrity.
 
 ### 8. AWS-Style Superapp
 All admin functionality lives in a single `ops-page` application. Each app follows the same pattern: `Dashboard`, `List`, `Detail`, `Settings`. Frontend is simple, functional, and fast to build. **Beauty is in the backend, not the frontend.**
@@ -101,9 +101,9 @@ All admin functionality lives in a single `ops-page` application. Each app follo
 │   │   │   ├── CRM/             # Client profiles
 │   │   │   ├── Community/       # Subscriptions, plans, coupons
 │   │   │   ├── Lhdn/            # Malaysia e-Invoice gateway
-│   │   │   ├── Messaging/      # Notifications
+│   │   │   ├── Messaging/       # Notifications
 │   │   │   ├── One/             # CIAM, workspaces
-│   │   │   ├── Ops/             # AI agent orchestration
+│   │   │   ├── Ops/             # AI agent orchestration (Hibernating)
 │   │   │   └── Payments/        # Gateway adapters
 │   │   └── src/Lazuar.Api/      # API entry point
 │   └── ops-page/                # Admin superapp (React/Vite)
@@ -124,8 +124,8 @@ Every backend module follows the same structure:
 Modules/{ModuleName}/
 ├── Application/         # Commands, queries, handlers, DTOs
 ├── Contracts/           # Public interfaces, integration events
-├── Domain/             # Aggregates, entities, value objects, rules
-└── Infrastructure/     # EF Core, endpoints, workers, gateways
+├── Domain/              # Aggregates, entities, value objects, rules
+└── Infrastructure/      # EF Core, endpoints, workers, gateways
 ```
 
 Every frontend app in `ops-page` follows the same structure:
@@ -176,20 +176,9 @@ vault.lazuar.com {
 
 ---
 
-## The AI Agent Architecture
+## The AI Agent Architecture (Hibernating)
 
-The `ops-page` includes an AI agent that acts as a probabilistic assistant over the deterministic API backend.
-
-**Interaction Pattern:**
-
-```txt
-1. User asks agent a question (natural language)
-2. Agent queries the API (probabilistic interpretation)
-3. Agent presents answer + suggested action (AI suggestion)
-4. User clicks button in UI (deterministic execution)
-5. API processes the action (guaranteed outcome)
-6. Agent confirms result (natural language summary)
-```
+The `ops-page` includes an AI agent architecture designed to act as a probabilistic assistant over the deterministic API backend. This system is currently decoupled and hibernating to prioritize the deterministic console.
 
 **Key Components:**
 - `OpsChatWorkspace.tsx` — Chat interface
