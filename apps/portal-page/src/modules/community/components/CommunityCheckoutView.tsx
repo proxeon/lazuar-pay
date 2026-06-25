@@ -1,4 +1,3 @@
-// apps/portal-page/src/modules/community/components/CommunityCheckoutView.tsx
 "use client";
 
 import { useState } from "react";
@@ -76,12 +75,7 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-8 md:py-16">
-      <div className="mb-8">
-        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 1 of 2</span>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground mt-2">Your Details</h1>
-      </div>
-
+    <div className="w-full max-w-5xl mx-auto px-4 py-8 md:py-12">
       {isCancelled && (
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
           Payment was cancelled or failed. Please try again or use a different payment method.
