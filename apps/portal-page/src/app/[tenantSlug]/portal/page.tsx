@@ -1,4 +1,3 @@
-// apps/portal-page/src/app/[tenantSlug]/portal/page.tsx
 import { redirect } from "next/navigation";
 import { serverClient } from "../../../modules/core/lib/server-client";
 
@@ -13,25 +12,21 @@ export default async function RootPortalPage({
   const resolvedSearchParams = await searchParams;
   const token = resolvedSearchParams.token as string | undefined;
 
+  if (token) {
+    redirect(`/${tenantSlug}/community/portal?token=${encodeURIComponent(token)}`);
+  }
+
   const { data: authData } = await serverClient.GET("/one/auth/me");
 
   if (!authData) {
-    if (token) {
-      redirect(`/${tenantSlug}/community/portal?token=${encodeURIComponent(token)}`);
-    } else {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
-          <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
-          <p className="text-muted-foreground text-sm max-w-md">
-            Please log in using a secure magic link sent to your email to manage your subscriptions and downloads.
-          </p>
-        </div>
-      );
-    }
-  }
-
-  if (token) {
-    redirect(`/${tenantSlug}/community/portal?token=${encodeURIComponent(token)}`);
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
+        <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
+        <p className="text-muted-foreground text-sm max-w-md">
+          Please log in using a secure magic link sent to your email to manage your subscriptions and downloads.
+        </p>
+      </div>
+    );
   }
 
   return (

@@ -1,4 +1,3 @@
-// apps/portal-page/src/app/[tenantSlug]/portal/layout.tsx
 import { ReactNode } from "react";
 import Link from "next/link";
 import { serverClient } from "../../../modules/core/lib/server-client";
@@ -13,7 +12,7 @@ export default async function PortalLayout({
   const { tenantSlug } = await params;
 
   const { data: authData } = await serverClient.GET("/one/auth/me");
-  const userName = authData?.name || "Guest";
+  const userName = authData?.name || "Member";
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
@@ -30,18 +29,22 @@ export default async function PortalLayout({
             <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground hidden sm:inline">
               {userName}
             </span>
-            <div className="h-4 w-px bg-border hidden sm:block"></div>
-            <form action={async () => {
-              "use server";
-              await serverClient.POST("/one/auth/logout");
-            }}>
-              <button 
-                type="submit"
-                className="text-xs font-bold uppercase tracking-widest text-foreground hover:text-red-600 transition-colors flex items-center gap-1.5"
-              >
-                Logout
-              </button>
-            </form>
+            {authData && (
+              <>
+                <div className="h-4 w-px bg-border hidden sm:block"></div>
+                <form action={async () => {
+                  "use server";
+                  await serverClient.POST("/one/auth/logout");
+                }}>
+                  <button 
+                    type="submit"
+                    className="text-xs font-bold uppercase tracking-widest text-foreground hover:text-red-600 transition-colors flex items-center gap-1.5"
+                  >
+                    Logout
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </header>
