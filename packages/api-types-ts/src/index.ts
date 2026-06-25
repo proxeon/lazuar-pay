@@ -1156,6 +1156,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/community/checkout/{subId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PublicCommunityOperations_getCheckoutStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/community/{tenantSlug}/plans": {
         parameters: {
             query?: never;
@@ -1340,6 +1356,10 @@ export interface components {
         "Community.CheckoutResponse": {
             url: string;
             is_zero_amount_bypass?: boolean;
+        };
+        "Community.CheckoutStatusResponse": {
+            status: string;
+            token?: string;
         };
         "Community.CommunityPlanDto": {
             id: string;
@@ -8162,6 +8182,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Community.CheckoutResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicCommunityOperations_getCheckoutStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Community.CheckoutStatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

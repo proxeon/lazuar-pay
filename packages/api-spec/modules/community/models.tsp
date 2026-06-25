@@ -1,4 +1,3 @@
-// packages/api-spec/modules/community/models.tsp
 namespace LazuarApi.Community;
 
 model CommunityPlanDto {
@@ -391,4 +390,9 @@ model CreateBroadcastRequestDto {
   target_plan_id?: string; // GUID
   target_status?: string;
   target_is_reminder_only?: boolean;
+}
+
+model CheckoutStatusResponse {
+  status: string;
+  token?: string;
 }
