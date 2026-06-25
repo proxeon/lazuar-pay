@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/EventHandlers/NotificationDispatchDomainEventHandlers.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,7 +85,9 @@ public class NotificationDispatchDomainEventHandlers :
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
         var magicToken = _tokenService.GenerateToken(sub.Id);
-        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/portal?token={Uri.EscapeDataString(magicToken)}";
+        
+        // Aligned to module-specific portal route
+        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/portal?token={Uri.EscapeDataString(magicToken)}";
 
         var variables = new Dictionary<string, string>
         {
@@ -147,12 +150,16 @@ public class NotificationDispatchDomainEventHandlers :
         var template = (await _templateService.GetTemplatesAsync(new[] { notification.TemplateId })).FirstOrDefault();
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
+        
+        // Aligned to module-specific checkout route
         var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
-            : $"{baseUrl}/{tenantSlug}/{plan.Slug}/checkout";
+            : $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/{plan.Slug}/checkout";
 
         var magicToken = _tokenService.GenerateToken(sub.Id);
-        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/portal?token={Uri.EscapeDataString(magicToken)}";
+        
+        // Aligned to module-specific portal route
+        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/portal?token={Uri.EscapeDataString(magicToken)}";
 
         var variables = new Dictionary<string, string>
         {
@@ -194,12 +201,16 @@ public class NotificationDispatchDomainEventHandlers :
         var tenantSlug = workspace?.Slug ?? "workspace";
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
+        
+        // Aligned to module-specific checkout route
         var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
-            : $"{baseUrl}/{tenantSlug}/{plan.Slug}/checkout";
+            : $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/{plan.Slug}/checkout";
 
         var magicToken = _tokenService.GenerateToken(sub.Id);
-        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/portal?token={Uri.EscapeDataString(magicToken)}";
+        
+        // Aligned to module-specific portal route
+        var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/portal?token={Uri.EscapeDataString(magicToken)}";
 
         string subject = "Important Update Regarding Your Subscription";
         string body = "";

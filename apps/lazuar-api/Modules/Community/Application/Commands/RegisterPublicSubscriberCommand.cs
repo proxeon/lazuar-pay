@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/RegisterPublicSubscriberCommand.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -97,8 +98,10 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         }
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
-        var successUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/success";
-        var cancelUrl = $"{baseUrl}/{request.TenantSlug}/{plan.Slug}/checkout?cancelled=true";
+        
+        // Target routes updated to align with ADR-016 Three-Tier Domain Strategy
+        var successUrl = $"{baseUrl}/{request.TenantSlug}/community/{plan.Slug}/success";
+        var cancelUrl = $"{baseUrl}/{request.TenantSlug}/community/{plan.Slug}/checkout?cancelled=true";
 
         if (finalPrice <= 0 && appliedCoupon != null)
         {

@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/RequestMagicLinkCommand.cs
 using BuildingBlocks.Application;
 using Modules.CRM.Contracts;
 
@@ -37,7 +38,8 @@ public class RequestMagicLinkCommandHandler : ICommandHandler<RequestMagicLinkCo
         if (subscription == null) return; 
 
         var token = _tokenService.GenerateToken(subscription.Id);
-        var magicLinkUrl = $"{request.BaseUrl.TrimEnd('/')}/{request.TenantSlug}/portal?token={Uri.EscapeDataString(token)}";
+        
+        var magicLinkUrl = $"{request.BaseUrl.TrimEnd('/')}/{request.TenantSlug}/community/portal?token={Uri.EscapeDataString(token)}";
 
         subscription.RequestMagicLink(magicLinkUrl);
 
