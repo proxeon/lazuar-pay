@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Services/CommunityLinkService.cs
 using Microsoft.Extensions.Configuration;
 using Modules.Community.Application;
 
@@ -15,7 +14,6 @@ public class CommunityLinkService : ICommunityLinkService
 
     public string GetCommunityBaseUrl()
     {
-        // Read directly from the configuration, falling back to the new portal port if missing
         return _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
     }
 }

@@ -14,6 +14,6 @@ public class OneLinkService : IOneLinkService
 
     public string GetClientBaseUrl()
     {
-        return _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3001";
+        return _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
     }
 }
