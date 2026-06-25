@@ -99,12 +99,40 @@ public static class PublicEndpoints
 
             var checkoutUrl = await mediator.Send(command);
 
-            var isBypass = checkoutUrl.EndsWith("/success");
+            var isBypass = checkoutUrl.Contains("/success");
 
             return TypedResults.Ok(new CheckoutResponse 
             { 
                 Url = checkoutUrl,
                 Is_zero_amount_bypass = isBypass
+            });
+        });
+
+        group.MapGet("/checkout/{subId:guid}/status", async Task<Results<Ok<CheckoutStatusResponse>, NotFound>> (
+            Guid subId,
+            ICommunitySubscriptionRepository repository,
+            IMagicLinkTokenService tokenService) =>
+        {
+            var subscription = await repository.GetByIdAsync(subId);
+            
+            if (subscription == null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            if (subscription.Status == "ACTIVE")
+            {
+                var token = tokenService.GenerateToken(subscription.Id);
+                return TypedResults.Ok(new CheckoutStatusResponse 
+                { 
+                    Status = subscription.Status,
+                    Token = token 
+                });
+            }
+
+            return TypedResults.Ok(new CheckoutStatusResponse 
+            { 
+                Status = subscription.Status 
             });
         });
 

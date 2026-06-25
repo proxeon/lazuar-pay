@@ -74,6 +74,9 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
 
         await _repository.SaveChangesAsync(ct);
 
+        var successUrlWithContext = AppendQueryParameter(request.SuccessUrl, "sub_id", subscription.Id.ToString());
+        var cancelUrlWithContext = AppendQueryParameter(request.CancelUrl, "sub_id", subscription.Id.ToString());
+
         if (finalPrice <= 0 && appliedCoupon != null)
         {
             var periodStart = DateTime.UtcNow;
@@ -93,7 +96,7 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             subscription.ClearPendingCoupon();
 
             await _repository.SaveChangesAsync(ct);
-            return request.SuccessUrl;
+            return successUrlWithContext;
         }
 
         var customerProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
@@ -112,12 +115,21 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             "MYR",
             plan.Name,
             customerProfile?.Email ?? "",
-            request.SuccessUrl,
-            request.CancelUrl,
+            successUrlWithContext,
+            cancelUrlWithContext,
             metadata,
             SetupFutureUsage: true);
 
         var checkoutUrl = await _mediator.Send(query, ct);
         return checkoutUrl;
+    }
+
+    private static string AppendQueryParameter(string url, string key, string value)
+    {
+        var uriBuilder = new UriBuilder(url);
+        var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+        query[key] = value;
+        uriBuilder.Query = query.ToString();
+        return uriBuilder.ToString();
     }
 }
