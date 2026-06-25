@@ -1,4 +1,3 @@
-// apps/portal-page/src/modules/community/lib/api.ts
 import createClient from "openapi-fetch";
 import type { paths, components } from "@repo/api-types-ts";
 
@@ -39,6 +38,20 @@ export async function submitCheckout(payload: PublicCheckoutRequestDto) {
 
   if (error || !data) {
     throw new Error(error?.detail || "Checkout submission failed.");
+  }
+
+  return data;
+}
+
+export async function getCheckoutStatus(subId: string) {
+  const { data, error } = await browserClient.GET("/public/community/checkout/{subId}/status", {
+    params: {
+      path: { subId }
+    }
+  });
+
+  if (error || !data) {
+    throw new Error("Status check failed.");
   }
 
   return data;

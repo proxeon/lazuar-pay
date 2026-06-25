@@ -3,52 +3,38 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { browserClient, type CommunityPlanDto } from "../lib/api";
+import { getCheckoutStatus, type CommunityPlanDto } from "../lib/api";
 
 interface CommunitySuccessViewProps {
   tenantSlug: string;
   plan: CommunityPlanDto;
 }
 
-function parseBracketParams(searchParams: URLSearchParams): Record<string, string> {
-  const result: Record<string, string> = {};
-  searchParams.forEach((value, key) => {
-    const match = key.match(/^([^\[]+)\[([^\]]+)\]$/);
-    if (match) {
-      result[match[2]] = value;
-    } else {
-      result[key] = value;
-    }
-  });
-  return result;
-}
-
 export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewProps) {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
+  const subId = searchParams.get("sub_id");
   
-  const parsedParams = parseBracketParams(searchParams);
-  const transactionId = parsedParams.id || parsedParams.transaction_id || null;
-
-  const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT">("VERIFYING");
+  const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT" | "ERROR">("VERIFYING");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!subId) {
+      setStatus("ERROR");
+      return;
+    }
+
     let attempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 10;
     let timeoutId: NodeJS.Timeout;
 
     const verifyPayment = async () => {
       attempts++;
 
       try {
-        const { data, error } = await browserClient.GET("/public/community/{tenantSlug}/portal", {
-          params: { 
-            path: { tenantSlug },
-            query: { token }
-          }
-        });
+        const response = await getCheckoutStatus(subId);
 
-        if (!error && data?.subscription?.status === "ACTIVE") {
+        if (response.status === "ACTIVE" && response.token) {
+          setAccessToken(response.token);
           setStatus("SUCCESS");
           return;
         }
@@ -58,14 +44,32 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
       if (attempts >= maxAttempts) {
         setStatus("TIMEOUT");
       } else {
-        timeoutId = setTimeout(verifyPayment, 2000);
+        timeoutId = setTimeout(verifyPayment, 2500);
       }
     };
 
     verifyPayment();
 
     return () => clearTimeout(timeoutId);
-  }, [tenantSlug, token]);
+  }, [subId]);
+
+  if (status === "ERROR") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full text-center">
+          <svg className="h-8 w-8 text-rose-500 mx-auto mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <h1 className="text-xl font-semibold text-foreground mb-3">Invalid Session</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            We could not verify your session. Please check your email for access links or contact support if you completed a payment.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (status === "VERIFYING") {
     return (
@@ -96,7 +100,7 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
             We are still processing your payment for <strong className="text-foreground">{plan.name}</strong>. Please check your email in a few minutes for your access links.
           </p>
-          <Link href={`/${tenantSlug}/community/portal`} className="block w-full">
+          <Link href={`/${tenantSlug}/portal`} className="block w-full">
             <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
               Go to Member Portal
             </button>
@@ -121,22 +125,17 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
           </svg>
         </div>
         <h1 className="text-2xl font-semibold text-foreground mb-3">Payment Successful!</h1>
-        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+        <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
           You are now subscribed to <strong className="text-foreground">{plan.name}</strong>. Please check your email and WhatsApp for your private community links and instructions.
         </p>
-        
-        {transactionId && (
-          <div className="mb-8 p-3 bg-secondary/30 border border-border rounded-sm">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Transaction Ref</p>
-            <p className="text-xs font-mono text-foreground">{transactionId}</p>
-          </div>
-        )}
 
-        <Link href={`/${tenantSlug}/community/portal`} className="block w-full">
-          <button className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
-            Go to Member Portal
-          </button>
-        </Link>
+        {accessToken && (
+          <Link href={`/${tenantSlug}/community/portal?token=${encodeURIComponent(accessToken)}`} className="block w-full">
+            <button className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
+              Go to Member Portal
+            </button>
+          </Link>
+        )}
       </div>
     </div>
   );
