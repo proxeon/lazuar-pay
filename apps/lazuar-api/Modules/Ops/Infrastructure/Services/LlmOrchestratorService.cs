@@ -144,6 +144,7 @@ public partial class LlmOrchestratorService : ILlmOrchestratorService
         List<string> executedTools = new();
         string? finalProposedActionJson = null;
         string? finalUiRequestJson = null;
+        var toolFailureCounts = new Dictionary<string, int>();
 
         try
         {
@@ -261,7 +262,6 @@ public partial class LlmOrchestratorService : ILlmOrchestratorService
                             UiRequestDto? pendingUiRequest = null;
                             bool parseFailed = false;
 
-                            // Safely parse the JSON outside of any yield blocks to satisfy the compiler
                             try
                             {
                                 var args = JsonSerializer.Deserialize<RequestFormInputCommand>(
@@ -338,6 +338,24 @@ public partial class LlmOrchestratorService : ILlmOrchestratorService
                         yield return new ChatStreamChunkDto { Type = "tool_status", Tool_name = definition.Name, Executed_tools = executedTools };
 
                         var resultJson = await ExecuteReadToolAsync(definition, toolCall.FunctionArguments.ToString(), tenantId, ct);
+
+                        if (resultJson.StartsWith("System Error: Tool"))
+                        {
+                            toolFailureCounts.TryGetValue(definition.Name, out var failCount);
+                            failCount++;
+                            toolFailureCounts[definition.Name] = failCount;
+
+                            if (failCount >= 3)
+                            {
+                                yield return new ChatStreamChunkDto { Type = "text", Content = $"\n\n⚠️ **System Halt:** The AI agent repeatedly failed to generate a valid JSON payload for `{definition.Name}`. Execution aborted to prevent token waste." };
+                                yield break;
+                            }
+                        }
+                        else
+                        {
+                            toolFailureCounts[definition.Name] = 0;
+                        }
+
                         messages.Add(new ToolChatMessage(toolCall.Id, resultJson));
                     }
 

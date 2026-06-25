@@ -10,10 +10,26 @@ interface CommunitySuccessViewProps {
   plan: CommunityPlanDto;
 }
 
+function parseBracketParams(searchParams: URLSearchParams): Record<string, string> {
+  const result: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    const match = key.match(/^([^\[]+)\[([^\]]+)\]$/);
+    if (match) {
+      result[match[2]] = value;
+    } else {
+      result[key] = value;
+    }
+  });
+  return result;
+}
+
 export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewProps) {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
   
+  const parsedParams = parseBracketParams(searchParams);
+  const transactionId = parsedParams.id || parsedParams.transaction_id || null;
+
   const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT">("VERIFYING");
 
   useEffect(() => {
@@ -37,7 +53,6 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
           return;
         }
       } catch (err) {
-        // Silently handle network or auth errors during the polling phase
       }
 
       if (attempts >= maxAttempts) {
@@ -106,9 +121,17 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
           </svg>
         </div>
         <h1 className="text-2xl font-semibold text-foreground mb-3">Payment Successful!</h1>
-        <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
+        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
           You are now subscribed to <strong className="text-foreground">{plan.name}</strong>. Please check your email and WhatsApp for your private community links and instructions.
         </p>
+        
+        {transactionId && (
+          <div className="mb-8 p-3 bg-secondary/30 border border-border rounded-sm">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Transaction Ref</p>
+            <p className="text-xs font-mono text-foreground">{transactionId}</p>
+          </div>
+        )}
+
         <Link href={`/${tenantSlug}/community/portal`} className="block w-full">
           <button className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
             Go to Member Portal
