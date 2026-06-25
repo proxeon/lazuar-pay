@@ -41,11 +41,10 @@ public static class PlanEndpoints
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
-            // Note: Safely maps without dropped marketing fields, even if the TypeSpec DTO isn't regenerated yet.
             var command = new CreatePlanCommand(
                 ctx.TenantId, req.Slug, req.Name, req.Audience,
                 (decimal)req.Price, req.Interval, req.Grace_period_days,
-                req.Max_capacity, req.Display_order, null,
+                req.Max_capacity, req.Display_order, req.Admin_notes,
                 req.Telegram_invite_link, req.Weekly_meeting_link);
             
             var id = await mediator.Send(command);
@@ -61,7 +60,7 @@ public static class PlanEndpoints
             var command = new UpdatePlanCommand(
                 ctx.TenantId, id, req.Slug, req.Name, req.Audience, 
                 req.Price.HasValue ? (decimal)req.Price.Value : null, 
-                req.Interval, null,
+                req.Interval, req.Admin_notes,
                 req.Is_active, req.Display_order, req.Max_capacity, req.Grace_period_days,
                 req.Telegram_invite_link, req.Weekly_meeting_link);
             
