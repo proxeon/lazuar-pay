@@ -1,22 +1,18 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/UpdatePlanCommand.cs
 using BuildingBlocks.Application;
-using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Application.Commands;
 
-[AgentTool("Modify pricing, descriptions, or capacity limits of an existing plan.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Modify pricing, capacities, or internal notes of an existing plan.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
 public record UpdatePlanCommand(
     Guid OrganizationId,
     Guid PlanId,
     string? Slug,
     string? Name,
     string? Audience,
-    string? ShortDescription,
-    string? LongDescription,
     decimal? Price,
     string? Interval,
-    List<string>? Features,
-    string? Methodology,
-    List<FaqItemInput>? Faq,
+    string? AdminNotes,
     bool? IsActive,
     int? DisplayOrder,
     int? MaxCapacity,
@@ -54,27 +50,14 @@ public class UpdatePlanCommandHandler : ICommandHandler<UpdatePlanCommand>
         plan.UpdateDetails(
             request.Name ?? plan.Name,
             request.Audience ?? plan.Audience,
-            request.ShortDescription ?? plan.ShortDescription,
-            request.LongDescription ?? plan.LongDescription,
             request.Price ?? plan.Price,
             request.Interval ?? plan.Interval,
             request.GracePeriodDays ?? plan.GracePeriodDays,
             request.MaxCapacity,
             request.DisplayOrder ?? plan.DisplayOrder,
             request.IsActive ?? plan.IsActive,
-            request.Methodology ?? plan.Methodology
+            request.AdminNotes ?? plan.AdminNotes
         );
-
-        if (request.Features != null)
-        {
-            plan.UpdateFeatures(request.Features);
-        }
-
-        if (request.Faq != null)
-        {
-            var faqs = request.Faq.Select(f => new FaqItem(f.Id, f.Question, f.Answer)).ToList();
-            plan.UpdateFaq(faqs);
-        }
 
         if (request.TelegramInviteLink != null || request.WeeklyMeetingLink != null)
         {

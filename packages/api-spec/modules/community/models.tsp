@@ -1,23 +1,14 @@
+// packages/api-spec/modules/community/models.tsp
 namespace LazuarApi.Community;
-
-model FaqItemDto {
-  id: string; // GUID
-  question: string;
-  answer: string;
-}
 
 model CommunityPlanDto {
   id: string; // GUID
   slug: string;
   name: string;
   audience: string;
-  short_description: string;
-  long_description: string;
   price: float64;
   interval: string;
-  features: string[];
-  methodology: string;
-  faq: FaqItemDto[];
+  admin_notes?: string;
   is_active: boolean;
   display_order: int32;
   max_capacity?: int32;
@@ -159,13 +150,9 @@ model CreatePlanRequestDto {
   slug: string;
   name: string;
   audience: string;
-  short_description: string;
-  long_description: string;
   price: float64;
   interval: string;
-  features: string[];
-  methodology: string;
-  faq: FaqItemDto[];
+  admin_notes?: string;
   display_order: int32;
   max_capacity?: int32;
   grace_period_days: int32;
@@ -177,13 +164,9 @@ model UpdatePlanRequestDto {
   slug?: string;
   name?: string;
   audience?: string;
-  short_description?: string;
-  long_description?: string;
   price?: float64;
   interval?: string;
-  features?: string[];
-  methodology?: string;
-  faq?: FaqItemDto[];
+  admin_notes?: string;
   is_active?: boolean;
   display_order?: int32;
   max_capacity?: int32;

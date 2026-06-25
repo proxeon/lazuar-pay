@@ -1,7 +1,7 @@
-﻿using System;
+﻿// apps/lazuar-api/Modules/Community/Infrastructure/Migrations/20260603153854_InitialCommunitySchema.cs
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Modules.Community.Domain.ValueObjects;
 
 #nullable disable
 
@@ -66,7 +66,7 @@ namespace Modules.Community.Infrastructure.Migrations
                     Interval = table.Column<string>(type: "text", nullable: false),
                     Features = table.Column<IReadOnlyCollection<string>>(type: "jsonb", nullable: false),
                     Methodology = table.Column<string>(type: "text", nullable: false),
-                    Faq = table.Column<IReadOnlyCollection<FaqItem>>(type: "jsonb", nullable: false),
+                    Faq = table.Column<string>(type: "jsonb", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     DisplayOrder = table.Column<int>(type: "integer", nullable: false),
                     MaxCapacity = table.Column<int>(type: "integer", nullable: true),

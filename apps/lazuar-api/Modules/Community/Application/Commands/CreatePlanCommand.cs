@@ -1,6 +1,6 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/CreatePlanCommand.cs
 using BuildingBlocks.Application;
 using Modules.Community.Domain.Aggregates;
-using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Application.Commands;
 
@@ -10,23 +10,17 @@ public record CreatePlanCommand(
     string Slug,
     string Name,
     string Audience,
-    string ShortDescription,
-    string LongDescription,
     decimal Price,
     string Interval,
     int GracePeriodDays,
     int? MaxCapacity,
     int DisplayOrder,
-    List<string> Features,
-    string Methodology,
-    List<FaqItemInput> Faq,
+    string? AdminNotes,
     string? TelegramInviteLink,
     string? WeeklyMeetingLink) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
-
-public record FaqItemInput(string Id, string Question, string Answer);
 
 public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
 {
@@ -54,23 +48,12 @@ public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
             request.Slug,
             request.Name,
             request.Audience,
-            request.ShortDescription,
-            request.LongDescription,
             request.Price,
             request.Interval,
             request.GracePeriodDays,
             request.MaxCapacity,
             request.DisplayOrder,
-            request.Methodology);
-
-        if (request.Features != null && request.Features.Any())
-            plan.UpdateFeatures(request.Features);
-
-        if (request.Faq != null && request.Faq.Any())
-        {
-            var faqs = request.Faq.Select(f => new FaqItem(f.Id, f.Question, f.Answer)).ToList();
-            plan.UpdateFaq(faqs);
-        }
+            request.AdminNotes);
 
         plan.SetFulfillmentLinks(request.TelegramInviteLink, request.WeeklyMeetingLink);
 

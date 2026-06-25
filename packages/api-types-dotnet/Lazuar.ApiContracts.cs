@@ -294,26 +294,14 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("audience")]
         public string Audience { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("short_description")]
-        public string Short_description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("long_description")]
-        public string Long_description { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double Price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string Interval { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("features")]
-        public System.Collections.Generic.List<string> Features { get; set; } = new System.Collections.Generic.List<string>();
-
-        [System.Text.Json.Serialization.JsonPropertyName("methodology")]
-        public string Methodology { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("faq")]
-        public System.Collections.Generic.List<FaqItemDto> Faq { get; set; } = new System.Collections.Generic.List<FaqItemDto>();
+        [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
+        public string? Admin_notes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
@@ -651,26 +639,14 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("audience")]
         public string Audience { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("short_description")]
-        public string Short_description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("long_description")]
-        public string Long_description { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double Price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string Interval { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("features")]
-        public System.Collections.Generic.List<string> Features { get; set; } = new System.Collections.Generic.List<string>();
-
-        [System.Text.Json.Serialization.JsonPropertyName("methodology")]
-        public string Methodology { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("faq")]
-        public System.Collections.Generic.List<FaqItemDto> Faq { get; set; } = new System.Collections.Generic.List<FaqItemDto>();
+        [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
+        public string? Admin_notes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("display_order")]
         public int Display_order { get; set; } = default!;
@@ -866,30 +842,6 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("days")]
         public int Days { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FaqItemDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public string Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("question")]
-        public string Question { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("answer")]
-        public string Answer { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1524,26 +1476,14 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("audience")]
         public string? Audience { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("short_description")]
-        public string? Short_description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("long_description")]
-        public string? Long_description { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double? Price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string? Interval { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("features")]
-        public System.Collections.Generic.List<string>? Features { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("methodology")]
-        public string? Methodology { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("faq")]
-        public System.Collections.Generic.List<FaqItemDto>? Faq { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
+        public string? Admin_notes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool? Is_active { get; set; } = default!;

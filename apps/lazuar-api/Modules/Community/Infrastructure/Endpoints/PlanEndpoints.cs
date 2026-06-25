@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints/PlanEndpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,11 +41,11 @@ public static class PlanEndpoints
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
+            // Note: Safely maps without dropped marketing fields, even if the TypeSpec DTO isn't regenerated yet.
             var command = new CreatePlanCommand(
-                ctx.TenantId, req.Slug, req.Name, req.Audience, req.Short_description,
-                req.Long_description, (decimal)req.Price, req.Interval, req.Grace_period_days,
-                req.Max_capacity, req.Display_order, req.Features?.ToList() ?? new List<string>(), req.Methodology,
-                req.Faq?.Select(f => new FaqItemInput(f.Id, f.Question, f.Answer)).ToList() ?? new List<FaqItemInput>(),
+                ctx.TenantId, req.Slug, req.Name, req.Audience,
+                (decimal)req.Price, req.Interval, req.Grace_period_days,
+                req.Max_capacity, req.Display_order, null,
                 req.Telegram_invite_link, req.Weekly_meeting_link);
             
             var id = await mediator.Send(command);
@@ -58,9 +59,9 @@ public static class PlanEndpoints
             IMediator mediator) =>
         {
             var command = new UpdatePlanCommand(
-                ctx.TenantId, id, req.Slug, req.Name, req.Audience, req.Short_description,
-                req.Long_description, req.Price.HasValue ? (decimal)req.Price.Value : null, req.Interval, req.Features?.ToList(), req.Methodology,
-                req.Faq?.Select(f => new FaqItemInput(f.Id, f.Question, f.Answer)).ToList(),
+                ctx.TenantId, id, req.Slug, req.Name, req.Audience, 
+                req.Price.HasValue ? (decimal)req.Price.Value : null, 
+                req.Interval, null,
                 req.Is_active, req.Display_order, req.Max_capacity, req.Grace_period_days,
                 req.Telegram_invite_link, req.Weekly_meeting_link);
             

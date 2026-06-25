@@ -1346,14 +1346,10 @@ export interface components {
             slug: string;
             name: string;
             audience: string;
-            short_description: string;
-            long_description: string;
             /** Format: double */
             price: number;
             interval: string;
-            features: string[];
-            methodology: string;
-            faq: components["schemas"]["Community.FaqItemDto"][];
+            admin_notes?: string;
             is_active: boolean;
             /** Format: int32 */
             display_order: number;
@@ -1477,14 +1473,10 @@ export interface components {
             slug: string;
             name: string;
             audience: string;
-            short_description: string;
-            long_description: string;
             /** Format: double */
             price: number;
             interval: string;
-            features: string[];
-            methodology: string;
-            faq: components["schemas"]["Community.FaqItemDto"][];
+            admin_notes?: string;
             /** Format: int32 */
             display_order: number;
             /** Format: int32 */
@@ -1544,11 +1536,6 @@ export interface components {
         "Community.ExtendGraceRequestDto": {
             /** Format: int32 */
             days: number;
-        };
-        "Community.FaqItemDto": {
-            id: string;
-            question: string;
-            answer: string;
         };
         "Community.MagicLinkRequestDto": {
             email: string;
@@ -1716,14 +1703,10 @@ export interface components {
             slug?: string;
             name?: string;
             audience?: string;
-            short_description?: string;
-            long_description?: string;
             /** Format: double */
             price?: number;
             interval?: string;
-            features?: string[];
-            methodology?: string;
-            faq?: components["schemas"]["Community.FaqItemDto"][];
+            admin_notes?: string;
             is_active?: boolean;
             /** Format: int32 */
             display_order?: number;
