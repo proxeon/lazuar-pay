@@ -1,6 +1,5 @@
 // apps/portal-page/src/app/[tenantSlug]/community/[resourceSlug]/checkout/page.tsx
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { serverClient } from "../../../../../modules/core/lib/server-client";
 import { CommunityCheckoutView } from "../../../../../modules/community/components/CommunityCheckoutView";
 import { CheckoutAuthContext } from "../../../../../modules/checkout/types";
@@ -8,10 +7,13 @@ import { CommunityPlanDto } from "../../../../../modules/community/lib/api";
 
 export default async function CommunityCheckoutPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tenantSlug: string; resourceSlug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { tenantSlug, resourceSlug } = await params;
+  const isCancelled = (await searchParams).cancelled === "true";
 
   const { data: plan, error: planError } = await serverClient.GET("/public/community/{tenantSlug}/plans/{slug}", {
     params: { path: { tenantSlug, slug: resourceSlug } },
@@ -31,11 +33,6 @@ export default async function CommunityCheckoutPage({
           </svg>
           <h1 className="text-xl font-semibold mb-2 text-foreground">Program is Full</h1>
           <p className="text-sm text-muted-foreground mb-8">This program is currently not accepting new enrollments.</p>
-          <Link href={`/${tenantSlug}/community/${resourceSlug}`} className="block w-full">
-            <button className="w-full h-12 border border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-none text-sm font-bold uppercase tracking-widest transition-colors">
-              Back to Program
-            </button>
-          </Link>
         </div>
       </div>
     );
@@ -62,16 +59,15 @@ export default async function CommunityCheckoutPage({
 
   const slimPlan: CommunityPlanDto = {
     ...plan,
-    long_description: "",
-    features: [],
-    faq: []
+    admin_notes: ""
   };
 
   return (
     <CommunityCheckoutView 
       tenantSlug={tenantSlug} 
       plan={slimPlan} 
-      initialAuthContext={authContext} 
+      initialAuthContext={authContext}
+      isCancelled={isCancelled}
     />
   );
 }

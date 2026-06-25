@@ -14,9 +14,10 @@ interface CommunityCheckoutViewProps {
   tenantSlug: string;
   plan: CommunityPlanDto;
   initialAuthContext: CheckoutAuthContext;
+  isCancelled?: boolean;
 }
 
-export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext }: CommunityCheckoutViewProps) {
+export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, isCancelled }: CommunityCheckoutViewProps) {
   const router = useRouter();
 
   const [authContext, setAuthContext] = useState<CheckoutAuthContext>(initialAuthContext);
@@ -80,6 +81,12 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext }: 
         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 1 of 2</span>
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground mt-2">Your Details</h1>
       </div>
+
+      {isCancelled && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
+          Payment was cancelled or failed. Please try again or use a different payment method.
+        </div>
+      )}
 
       <CheckoutLayout
         formSlot={

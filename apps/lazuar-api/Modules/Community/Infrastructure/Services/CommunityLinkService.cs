@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Services/CommunityLinkService.cs
 using Microsoft.Extensions.Configuration;
 using Modules.Community.Application;
 
@@ -14,11 +15,7 @@ public class CommunityLinkService : ICommunityLinkService
 
     public string GetCommunityBaseUrl()
     {
-        var apiBaseUrl = _configuration["App:ApiBaseUrl"] ?? "";
-
-        // FIX: Point local development to the Next.js Storefront (3021), not the Admin app (3020)
-        return apiBaseUrl.Contains("lazuar.com")
-            ? "https://community.lazuar.com"
-            : "http://localhost:3021";
+        // Read directly from the configuration, falling back to the new portal port if missing
+        return _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
     }
 }
