@@ -1,0 +1,58 @@
+// apps/portal-page/src/modules/checkout/components/OrderSummaryCard.tsx
+import { ReactNode } from "react";
+import { CheckoutContext } from "../types";
+
+export function cn(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(" ");
+}
+
+interface OrderSummaryCardProps {
+  context: CheckoutContext;
+  promoCodeSlot?: ReactNode;
+}
+
+export function OrderSummaryCard({ context, promoCodeSlot }: OrderSummaryCardProps) {
+  const finalPriceToDisplay = context.finalPrice !== null ? context.finalPrice : context.price;
+
+  return (
+    <div className="border border-border/60 bg-card p-6 shadow-sm rounded-none space-y-4">
+      <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Order Summary</h3>
+      
+      <div className="pb-4 border-b border-border/40">
+        <h4 className="text-lg font-semibold text-foreground leading-tight mb-1">{context.itemName}</h4>
+        {context.audience && <p className="text-sm text-muted-foreground">{context.audience}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Subtotal</span>
+          <span className={cn("text-sm font-medium", context.isCouponApplied ? "line-through text-muted-foreground" : "text-foreground")}>
+            {context.currency} {context.price.toFixed(2)}
+          </span>
+        </div>
+        
+        {context.isCouponApplied && context.discountAmount !== null && (
+          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
+            <span className="text-sm font-medium">Discount</span>
+            <span className="text-sm font-bold">- {context.currency} {context.discountAmount.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+
+      {promoCodeSlot && (
+        <div className="pt-4 border-t border-border/40">
+          {promoCodeSlot}
+        </div>
+      )}
+
+      <div className="bg-secondary/40 border border-border/60 p-4 rounded-none mt-4">
+        <div className="flex items-center justify-between">
+          <span className="text-base font-semibold text-foreground">Total Due Today</span>
+          <span className="text-xl font-bold tracking-tighter text-foreground">
+            {context.currency} {finalPriceToDisplay.toFixed(2)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
