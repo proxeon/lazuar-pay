@@ -1,4 +1,7 @@
+using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -40,7 +43,6 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
 
                 await using var transaction = await db.Database.BeginTransactionAsync(stoppingToken);
 
-                // UPGRADE: Added "OccurredOn" <= NOW() to enable future-scheduled job queue capabilities!
                 var sql = $"""
                     SELECT * FROM "{schema}"."{tableName}"
                     WHERE "ProcessedAt" IS NULL AND "OccurredOn" <= NOW()
@@ -91,7 +93,7 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                 _logger.LogError(ex, "Error occurred executing outbox background worker.");
             }
 
-            if (messagesProcessed == 20)
+            if (messagesProcessed > 0)
             {
                 await Task.Yield();
                 continue;
