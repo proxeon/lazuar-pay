@@ -1,6 +1,10 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Services/CommunityQueryService.Plans.cs
 using Dapper;
+using System;
+using System.Collections.Generic;
 using System.Data;
-using BuildingBlocks.Application;
+using System.Linq;
+using System.Threading.Tasks;
 using Lazuar.ApiTypes;
 
 namespace Modules.Community.Infrastructure.Services;
@@ -8,8 +12,8 @@ namespace Modules.Community.Infrastructure.Services;
 public partial class CommunityQueryService
 {
     private record RawPlanDto(
-        Guid Id, string Slug, string Name, string Audience, string ShortDescription, string LongDescription,
-        decimal Price, string Interval, string Features, string Methodology, string Faq,
+        Guid Id, string Slug, string Name, string Audience,
+        decimal Price, string Interval, string? AdminNotes,
         bool IsActive, int DisplayOrder, int? MaxCapacity, int GracePeriodDays,
         string? TelegramInviteLink, string? WeeklyMeetingLink);
 
@@ -22,8 +26,8 @@ public partial class CommunityQueryService
 
         const string sql = @"
             SELECT
-                ""Id"", ""Slug"", ""Name"", ""Audience"", ""ShortDescription"", ""LongDescription"",
-                ""Price"", ""Interval"", ""Features""::text, ""Methodology"", ""Faq""::text,
+                ""Id"", ""Slug"", ""Name"", ""Audience"",
+                ""Price"", ""Interval"", ""AdminNotes"",
                 ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
                 ""TelegramInviteLink"", ""WeeklyMeetingLink""
             FROM community.""Plans""
@@ -51,8 +55,8 @@ public partial class CommunityQueryService
 
         const string sql = @"
             SELECT
-                ""Id"", ""Slug"", ""Name"", ""Audience"", ""ShortDescription"", ""LongDescription"",
-                ""Price"", ""Interval"", ""Features""::text, ""Methodology"", ""Faq""::text,
+                ""Id"", ""Slug"", ""Name"", ""Audience"",
+                ""Price"", ""Interval"", ""AdminNotes"",
                 ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
                 ""TelegramInviteLink"", ""WeeklyMeetingLink""
             FROM community.""Plans""
@@ -78,8 +82,8 @@ public partial class CommunityQueryService
 
         const string sql = @"
             SELECT
-                ""Id"", ""Slug"", ""Name"", ""Audience"", ""ShortDescription"", ""LongDescription"",
-                ""Price"", ""Interval"", ""Features""::text, ""Methodology"", ""Faq""::text,
+                ""Id"", ""Slug"", ""Name"", ""Audience"",
+                ""Price"", ""Interval"", ""AdminNotes"",
                 ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
                 ""TelegramInviteLink"", ""WeeklyMeetingLink""
             FROM community.""Plans""

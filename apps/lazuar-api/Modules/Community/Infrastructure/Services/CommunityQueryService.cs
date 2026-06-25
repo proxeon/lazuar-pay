@@ -1,6 +1,8 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Services/CommunityQueryService.cs
 using Dapper;
+using System;
+using System.Collections.Generic;
 using System.Data;
-using System.Text.Json;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Application.Queries;
@@ -31,9 +33,6 @@ public partial class CommunityQueryService : ICommunityQueryService
 
     private static CommunityPlanDto MapToPlanDto(RawPlanDto raw, int enrolledCount)
     {
-        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, PropertyNameCaseInsensitive = true };
-        var features = string.IsNullOrEmpty(raw.Features) ? new List<string>() : JsonSerializer.Deserialize<List<string>>(raw.Features, options) ?? new List<string>();
-        var faqList = string.IsNullOrEmpty(raw.Faq) ? new List<Lazuar.ApiTypes.FaqItemDto>() : JsonSerializer.Deserialize<List<Lazuar.ApiTypes.FaqItemDto>>(raw.Faq, options) ?? new List<Lazuar.ApiTypes.FaqItemDto>();
         var spotsRemaining = raw.MaxCapacity.HasValue ? Math.Max(0, raw.MaxCapacity.Value - enrolledCount) : (int?)null;
         var isFull = raw.MaxCapacity.HasValue && enrolledCount >= raw.MaxCapacity.Value;
 
@@ -43,13 +42,9 @@ public partial class CommunityQueryService : ICommunityQueryService
             Slug = raw.Slug,
             Name = raw.Name,
             Audience = raw.Audience,
-            Short_description = raw.ShortDescription,
-            Long_description = raw.LongDescription ?? "",
             Price = (double)raw.Price,
             Interval = raw.Interval,
-            Features = features,
-            Methodology = raw.Methodology ?? "",
-            Faq = faqList,
+            Admin_notes = raw.AdminNotes,
             Is_active = raw.IsActive,
             Display_order = raw.DisplayOrder,
             Max_capacity = raw.MaxCapacity,
