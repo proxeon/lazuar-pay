@@ -181,6 +181,12 @@ interface AdminCommunityOperations {
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/vault/presigned-url")
+  getPresignedUrl(
+    @body body: GetPresignedUrlRequestDto,
+  ): GetPresignedUrlResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
   @get
   @route("/stats")
   getStats(

@@ -4,9 +4,11 @@ using System.IO;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using Lazuar.ApiTypes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 
@@ -16,36 +18,33 @@ public static class VaultEndpoints
 {
     public static RouteGroupBuilder MapVaultEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/vault/upload", async Task<Results<Ok<object>, BadRequest<string>>> (
-            IFormFile file,
+        group.MapPost("/vault/presigned-url", Task<Results<Ok<GetPresignedUrlResponseDto>, BadRequest<string>>> (
+            [FromBody] GetPresignedUrlRequestDto req,
             IExecutionContextAccessor ctx,
             IR2StorageService r2Service,
             IConfiguration config) =>
         {
-            if (file == null || file.Length == 0)
+            if (string.IsNullOrWhiteSpace(req.File_name))
             {
-                return TypedResults.BadRequest("No file uploaded.");
+                return Task.FromResult<Results<Ok<GetPresignedUrlResponseDto>, BadRequest<string>>>(TypedResults.BadRequest("File name is required."));
             }
 
             var tenantId = ctx.TenantId;
             var bucket = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
             var publicUrlBase = config["R2_PUBLIC_DEV_URL"]?.TrimEnd('/');
 
-            var extension = Path.GetExtension(file.FileName);
+            var extension = Path.GetExtension(req.File_name);
             var key = $"vault/{tenantId}/{Guid.CreateVersion7()}{extension}";
 
-            using var stream = file.OpenReadStream();
-            var resultKey = await r2Service.UploadAsync(stream, bucket, key, file.ContentType);
+            var uploadUrl = r2Service.GetPresignedUploadUrl(bucket, key, req.Content_type);
+            var finalUrl = $"{publicUrlBase}/{key}";
 
-            if (resultKey == null)
-            {
-                return TypedResults.BadRequest("Failed to upload file to storage.");
-            }
-
-            var url = $"{publicUrlBase}/{resultKey}";
-
-            return TypedResults.Ok<object>(new { url });
-        }).DisableAntiforgery();
+            return Task.FromResult<Results<Ok<GetPresignedUrlResponseDto>, BadRequest<string>>>(TypedResults.Ok(new GetPresignedUrlResponseDto 
+            { 
+                Upload_url = uploadUrl, 
+                Final_url = finalUrl 
+            }));
+        });
 
         return group;
     }

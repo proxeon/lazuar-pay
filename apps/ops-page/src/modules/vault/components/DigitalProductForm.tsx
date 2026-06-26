@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Loader2, UploadCloud, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useOutletContext } from "react-router-dom";
-import { API_URL, type components } from "../../../lib/api-client";
+import { client, type components } from "../../../lib/api-client";
 
 type CommunityPlanDto = components["schemas"]["Community.CommunityPlanDto"];
 
@@ -22,8 +22,6 @@ export default function DigitalProductForm({
   isPending,
   submitLabel
 }: DigitalProductFormProps) {
-  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
@@ -52,24 +50,34 @@ export default function DigitalProductForm({
     if (!file) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const response = await fetch(`${API_URL}/admin/community/vault/upload`, {
-        method: "POST",
-        body: formData,
-        credentials: "include", // Required to send the auth cookie
-        headers: {
-          "X-Tenant-Id": activeWorkspaceId || ""
+      // 1. Get the pre-signed URL from the .NET backend
+      const { data, error } = await client.POST("/admin/community/vault/presigned-url", {
+        body: {
+          file_name: file.name,
+          content_type: file.type || "application/octet-stream"
         }
       });
 
-      if (!response.ok) throw new Error("File upload failed.");
+      if (error || !data) throw new Error(error?.detail || "Failed to generate secure upload link.");
+
+      // 2. Upload the file DIRECTLY to Cloudflare R2 (Bypassing .NET)
+      const uploadResponse = await fetch(data.upload_url, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type || "application/octet-stream"
+        }
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file to storage bucket. Check CORS configuration.");
+      }
       
-      const result = await response.json();
-      setUploadedUrl(result.url);
-      toast.success("File uploaded successfully to Cloudflare R2.");
+      // 3. Save the final public URL for checkout fulfillment
+      setUploadedUrl(data.final_url);
+      toast.success("File securely uploaded to Vault.");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -116,12 +124,12 @@ export default function DigitalProductForm({
             {isUploading ? (
               <>
                 <Loader2 className="animate-spin text-[#a1a1aa] mb-2" size={28} />
-                <span className="text-[11px] font-medium text-[#71717a]">Uploading to secure storage...</span>
+                <span className="text-[11px] font-medium text-[#71717a]">Uploading directly to Cloudflare R2...</span>
               </>
             ) : uploadedUrl ? (
               <>
                 <FileText className="text-emerald-600 mb-2" size={28} />
-                <span className="text-[11px] font-medium text-emerald-700">File uploaded successfully. Click to replace.</span>
+                <span className="text-[11px] font-medium text-emerald-700">File uploaded securely. Click to replace.</span>
               </>
             ) : (
               <>
