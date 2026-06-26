@@ -1,7 +1,6 @@
 // apps/lazuar-api/Modules/Community/Infrastructure/Endpoints.cs
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-// using Modules.Community.Infrastructure.Endpoints;
 
 namespace Modules.Community.Infrastructure;
 
@@ -20,6 +19,7 @@ public static class Endpoints
         adminGroup.MapBroadcastEndpoints();
         adminGroup.MapStatsEndpoints();
         adminGroup.MapPaymentConfigEndpoints();
+        adminGroup.MapVaultEndpoints();
 
         publicGroup.MapPublicEndpoints();
 

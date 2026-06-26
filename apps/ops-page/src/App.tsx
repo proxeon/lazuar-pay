@@ -16,6 +16,8 @@ import DunningSchedulesPage from "./modules/community/pages/DunningSchedulesPage
 import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
 import TransactionsPage from "./modules/community/pages/TransactionsPage";
 
+import DigitalProductsPage from "./modules/vault/pages/DigitalProductsPage";
+
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 
 export interface OpsOutletContext {
@@ -173,6 +175,8 @@ export default function App() {
 
         {/* Fallback for deprecated automations route */}
         <Route path="/community/automations" element={<Navigate to="/community/dashboard" replace />} />
+
+        <Route path="/vault/products" element={<DigitalProductsPage />} />
 
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
       </Route>

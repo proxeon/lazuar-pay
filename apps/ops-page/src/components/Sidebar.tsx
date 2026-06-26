@@ -8,7 +8,8 @@ import {
   PanelLeftOpen, 
   Settings,
   ChevronDown,
-  Users
+  Users,
+  Box
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
@@ -182,7 +183,7 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className="flex-1 py-4 flex flex-col gap-6">
+      <div className="flex-1 py-4 flex flex-col gap-6 overflow-y-auto">
         <nav className="space-y-0.5">
           <ModuleNav 
             title="Community" 
@@ -192,12 +193,20 @@ export default function Sidebar({
               { label: "Dashboard", href: "/community/dashboard" },
               { label: "Subscribers", href: "/community/subscribers" },
               { label: "Transaction Logs", href: "/community/transactions" },
-              { label: "Plans & Products", href: "/community/plans" },
+              { label: "Plans & Tiers", href: "/community/plans" },
               { label: "Promotions", href: "/community/coupons" },
               { label: "Dunning Schedules", href: "/community/dunning-schedules" },
               { label: "Bulk Broadcast", href: "/community/broadcasts" },
               { label: "Payment Settings", href: "/community/payment" },
               { label: "Message Templates", href: "/community/templates" }
+            ]} 
+          />
+          <ModuleNav 
+            title="Vault" 
+            basePath="/vault" 
+            icon={Box}
+            links={[
+              { label: "Digital Products", href: "/vault/products" }
             ]} 
           />
           <ModuleNav 

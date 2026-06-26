@@ -1,3 +1,4 @@
+// apps/lazuar-api/src/Lazuar.Api/Program.cs
 using Serilog;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,8 @@ using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Azure.Identity;
+using Amazon.S3;
+using Amazon.Runtime;
 
 var envPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "../../../../.env"));
 if (File.Exists(envPath))
@@ -109,6 +112,19 @@ builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
+
+// Setup R2/S3 Client Integration
+var r2Config = new AmazonS3Config
+{
+    ServiceURL = builder.Configuration["R2:ServiceUrl"],
+    ForcePathStyle = true
+};
+var s3Credentials = new BasicAWSCredentials(
+    builder.Configuration["R2:AccessKey"] ?? "",
+    builder.Configuration["R2:SecretKey"] ?? "");
+
+builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(s3Credentials, r2Config));
+builder.Services.AddSingleton<IR2StorageService, R2StorageService>();
 
 // API Key Cache Eviction Handler
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
