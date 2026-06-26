@@ -1,3 +1,4 @@
+// apps/ops-page/src/App.tsx
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +12,8 @@ import TemplatesPage from "./modules/community/pages/TemplatesPage";
 import SubscribersPage from "./modules/community/pages/SubscribersPage";
 import PlansPage from "./modules/community/pages/PlansPage";
 import CouponsPage from "./modules/community/pages/CouponsPage";
-import AutomationsPage from "./modules/community/pages/AutomationsPage";
+import DunningSchedulesPage from "./modules/community/pages/DunningSchedulesPage";
+import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
 import TransactionsPage from "./modules/community/pages/TransactionsPage";
 
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
@@ -164,9 +166,13 @@ export default function App() {
         <Route path="/community/transactions" element={<TransactionsPage />} />
         <Route path="/community/plans" element={<PlansPage />} />
         <Route path="/community/coupons" element={<CouponsPage />} />
-        <Route path="/community/automations" element={<AutomationsPage />} />
+        <Route path="/community/dunning-schedules" element={<DunningSchedulesPage />} />
+        <Route path="/community/broadcasts" element={<BroadcastsPage />} />
         <Route path="/community/payment" element={<PaymentSettingsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
+
+        {/* Fallback for deprecated automations route */}
+        <Route path="/community/automations" element={<Navigate to="/community/dashboard" replace />} />
 
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
       </Route>
