@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Billing/Infrastructure/DependencyInjection.cs
 using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
 using BuildingBlocks.Infrastructure;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddTransient<LhdnDocumentValidatedIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentSubmittedIntegrationEventHandler>();
+        services.AddTransient<ApiCreditPurchasedHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -74,6 +76,7 @@ public static class DependencyInjection
         eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentSubmittedIntegrationEvent, LhdnDocumentSubmittedIntegrationEventHandler>();
+        eventBus.Subscribe<ApiCreditPurchasedIntegrationEvent, ApiCreditPurchasedHandler>();
 
         return app;
     }
