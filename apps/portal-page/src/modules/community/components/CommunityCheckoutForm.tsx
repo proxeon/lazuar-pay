@@ -1,7 +1,7 @@
-// apps/portal-page/src/modules/community/components/CommunityCheckoutForm.tsx
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CheckoutAuthContext } from "../../checkout/types";
 import { IdentityBanner } from "../../checkout/components/IdentityBanner";
 import { submitCheckout, PublicCheckoutRequestDto } from "../lib/api";
@@ -132,6 +132,9 @@ export function CommunityCheckoutForm({
       </div>
 
       <div className="pt-4">
+        <p className="text-[11px] text-muted-foreground leading-relaxed mb-4">
+          By proceeding, you agree to Lazuar's <Link href="/legal/terms" target="_blank" className="underline hover:text-foreground transition-colors">Terms of Service</Link> and <Link href="/legal/privacy" target="_blank" className="underline hover:text-foreground transition-colors">Privacy Policy</Link>, and acknowledge that your purchase is a direct transaction with the Creator.
+        </p>
         <button 
           type="submit" 
           disabled={isSubmitting} 
