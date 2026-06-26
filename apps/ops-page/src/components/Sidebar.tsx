@@ -195,7 +195,7 @@ export default function Sidebar({
               { label: "Promotions", href: "/community/coupons" },
               { label: "Automations", href: "/community/automations" },
               { label: "Payment Settings", href: "/community/payment" },
-              { label: "Email Templates", href: "/community/templates" }
+              { label: "Message Templates", href: "/community/templates" }
             ]} 
           />
           <ModuleNav 
