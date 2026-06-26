@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Queries/RenderTemplatePreviewQuery.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -8,7 +7,7 @@ using Lazuar.ApiTypes;
 
 namespace Modules.Community.Application.Queries;
 
-public record RenderTemplatePreviewQuery(string Subject, string Body) : IQuery<TemplatePreviewResponseDto>;
+public record RenderTemplatePreviewQuery(string Subject, string EmailBody, string WhatsAppBody) : IQuery<TemplatePreviewResponseDto>;
 
 public class RenderTemplatePreviewQueryHandler : IQueryHandler<RenderTemplatePreviewQuery, TemplatePreviewResponseDto>
 {
@@ -33,14 +32,17 @@ public class RenderTemplatePreviewQueryHandler : IQueryHandler<RenderTemplatePre
     {
         var subjectContent = RenderWithMockData(request.Subject);
         
-        // Match the exact Markdown-to-HTML formatting utilized by the backend dispatcher
-        var htmlContent = RenderWithMockData(request.Body)
+        var htmlEmailContent = RenderWithMockData(request.EmailBody)
             .Replace("\\n", "<br>")
             .Replace("\n", "<br>");
 
+        var textWhatsappContent = RenderWithMockData(request.WhatsAppBody)
+            .Replace("\\n", "\n");
+
         var response = new TemplatePreviewResponseDto
         {
-            Html_content = htmlContent,
+            Html_email_preview = htmlEmailContent,
+            Text_whatsapp_preview = textWhatsappContent,
             Subject_content = subjectContent
         };
 
