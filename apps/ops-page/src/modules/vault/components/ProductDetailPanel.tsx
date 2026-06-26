@@ -199,7 +199,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
             </div>
           </div>
           
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden bg-white min-h-0">
             <DigitalProductForm 
               initialData={product}
               onSubmit={(data) => editMutation.mutate({ id: product.id, ...data })} 

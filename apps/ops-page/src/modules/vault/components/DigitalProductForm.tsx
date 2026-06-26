@@ -108,7 +108,8 @@ export default function DigitalProductForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+    // Added min-h-0 to the form tag so it can shrink and respect parent bounds
+    <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         <div className="space-y-4">
           <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">File Upload *</label>

@@ -39,7 +39,8 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
           </button>
         </div>
         
-        <div className="overflow-hidden flex-1 bg-white flex flex-col">
+        {/* Added min-h-0 here to force the flex container to constrain its height */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-white min-h-0">
           <DigitalProductForm 
             onSubmit={(data) => createMutation.mutate(data)} 
             onCancel={onClose} 
