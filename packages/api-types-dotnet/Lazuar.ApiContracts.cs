@@ -27,11 +27,59 @@ namespace Lazuar.ApiTypes
     
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateTopUpRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount_myr")]
+        public double Amount_myr { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("return_url")]
+        public string Return_url { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreditBalanceDto
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("available_credits")]
         public int Available_credits { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recent_transactions")]
+        public System.Collections.Generic.List<CreditTransactionDto> Recent_transactions { get; set; } = new System.Collections.Generic.List<CreditTransactionDto>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreditTransactionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public int Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reference")]
+        public string Reference { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -170,6 +218,24 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("currency")]
         public string Currency { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TopUpResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkout_url")]
+        public string Checkout_url { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

@@ -1,5 +1,7 @@
+// apps/lazuar-api/Modules/Billing/Infrastructure/Services/BillingQueryService.cs
 using System;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
@@ -64,5 +66,43 @@ public class BillingQueryService : IBillingQueryService
         var credits = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { OrgId = organizationId });
         
         return credits.HasValue && credits.Value > 0;
+    }
+
+    public async Task<CreditBalanceDto> GetCreditBalanceWithHistoryAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string balanceSql = @"
+            SELECT ""Id"", ""AvailableCredits"" 
+            FROM billing.""TenantCreditBalances"" 
+            WHERE ""OrganizationId"" = @OrgId 
+            LIMIT 1";
+
+        var balanceRow = await connection.QuerySingleOrDefaultAsync<dynamic>(balanceSql, new { OrgId = organizationId });
+
+        if (balanceRow == null)
+        {
+            return new CreditBalanceDto
+            {
+                Available_credits = 0,
+                Recent_transactions = new List<CreditTransactionDto>()
+            };
+        }
+
+        const string historySql = @"
+            SELECT ""Amount"", ""Reference"", ""CreatedAt"" as Created_at
+            FROM billing.""CreditLedgers""
+            WHERE ""TenantCreditBalanceId"" = @BalanceId
+            ORDER BY ""CreatedAt"" DESC
+            LIMIT 50";
+
+        var history = await connection.QueryAsync<CreditTransactionDto>(historySql, new { BalanceId = (Guid)balanceRow.Id });
+
+        return new CreditBalanceDto
+        {
+            Available_credits = (int)balanceRow.AvailableCredits,
+            Recent_transactions = history.ToList()
+        };
     }
 }

@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/billing/credits/top-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminBillingOperations_createTopUpSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/billing/ledger": {
         parameters: {
             query?: never;
@@ -1320,9 +1336,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        "Billing.CreateTopUpRequestDto": {
+            /** Format: double */
+            amount_myr: number;
+            return_url: string;
+        };
         "Billing.CreditBalanceDto": {
             /** Format: int32 */
             available_credits: number;
+            recent_transactions: components["schemas"]["Billing.CreditTransactionDto"][];
+        };
+        "Billing.CreditTransactionDto": {
+            /** Format: int32 */
+            amount: number;
+            reference: string;
+            /** Format: date-time */
+            created_at: string;
         };
         "Billing.FinancialSummaryDto": {
             /** Format: double */
@@ -1370,6 +1399,9 @@ export interface components {
             /** Format: double */
             net_profit: number;
             currency: string;
+        };
+        "Billing.TopUpResponseDto": {
+            checkout_url: string;
         };
         "Community.BillingLinkResponseDto": {
             url: string;
@@ -2202,6 +2234,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Billing.CreditBalanceDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminBillingOperations_createTopUpSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Billing.CreateTopUpRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Billing.TopUpResponseDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

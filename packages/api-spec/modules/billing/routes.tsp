@@ -1,3 +1,4 @@
+// packages/api-spec/modules/billing/routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -35,4 +36,10 @@ interface AdminBillingOperations {
   @route("/credits")
   getApiCreditBalance(
   ): CreditBalanceDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/credits/top-up")
+  createTopUpSession(
+    @body body: CreateTopUpRequestDto,
+  ): TopUpResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 }
