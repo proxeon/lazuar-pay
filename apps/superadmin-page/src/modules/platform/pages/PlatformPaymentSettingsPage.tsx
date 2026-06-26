@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, Loader2, CreditCard } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { client } from "../lib/api-client";
-import { cn } from "../lib/utils";
+import { client } from "../../../lib/api-client";
+import PageLayout from "../../core/components/PageLayout";
 
-interface PaymentSettingsModalProps {
-  onClose: () => void;
-}
-
-export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalProps) {
+export default function PlatformPaymentSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -16,18 +12,14 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   const [isActive, setIsActive] = useState(true);
   
   const [apiKey, setApiKey] = useState("");
-  const [webhookSecret, setWebhookSecret] = useState(""); 
-  const [secretKey, setSecretKey] = useState(""); 
-  const [collectionId, setCollectionId] = useState(""); 
-  
-  const [estimatedFeePct, setEstimatedFeePct] = useState("0");
-  const [fixedFee, setFixedFee] = useState("0");
-  const [taxRate, setTaxRate] = useState("0");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [secretKey, setSecretKey] = useState("");
+  const [collectionId, setCollectionId] = useState("");
 
   useEffect(() => {
     async function loadConfig() {
       try {
-        const { data, error } = await client.GET("/admin/community/payment-config");
+        const { data, error } = await client.GET("/platform/payment-config");
         if (!error && data) {
           setGatewayType(data.gateway_type as any || "BILLPLZ");
           setIsActive(data.is_active ?? true);
@@ -35,12 +27,9 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
           setWebhookSecret(data.webhook_secret || "");
           setSecretKey(data.secret_key || "");
           setCollectionId(data.merchant_id || "");
-          setEstimatedFeePct((data.estimated_fee_percentage || 0).toString());
-          setFixedFee((data.fixed_fee || 0).toString());
-          setTaxRate((data.tax_rate || 0).toString());
         }
       } catch (err) {
-        toast.error("Failed to load payment configuration.");
+        toast.error("Failed to load platform payment configuration.");
       } finally {
         setIsLoading(false);
       }
@@ -72,7 +61,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
 
     setIsSaving(true);
     try {
-      const { error } = await client.PUT("/admin/community/payment-config", {
+      const { error } = await client.PUT("/platform/payment-config", {
         body: {
           gateway_type: gatewayType,
           is_active: isActive,
@@ -80,16 +69,14 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
           secret_key: secretKey.trim(),
           webhook_secret: webhookSecret.trim(),
           collection_id: collectionId.trim(),
-          estimated_fee_percentage: parseFloat(estimatedFeePct) || 0,
-          fixed_fee: parseFloat(fixedFee) || 0,
-          tax_rate: parseFloat(taxRate) || 0
+          estimated_fee_percentage: 0,
+          fixed_fee: 0,
+          tax_rate: 0
         }
       });
 
       if (error) throw new Error(error.detail || "Failed to save configuration");
-      
-      toast.success("Payment configuration saved securely.");
-      onClose();
+      toast.success("Platform payment configuration saved securely.");
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -98,32 +85,21 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      
-      <div className="relative bg-white border border-[#e5e5e5] rounded-none shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] w-full max-w-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] shrink-0 bg-[#fafafa]/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white border border-[#e5e5e5] text-[#09090b]">
-              <CreditCard size={16} />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-semibold tracking-tight text-[#09090b]">Payment Configuration</h3>
-              <p className="text-[11px] text-[#71717a] mt-0.5">Securely manage your active payment gateway.</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1"><X size={16} /></button>
-        </div>
-
+    <PageLayout
+      title="Platform Gateway"
+      description="Configure the root payment processor for utility credit top-ups across the ecosystem."
+      breadcrumbs={[{ label: "Infrastructure" }, { label: "Payment Gateways" }]}
+    >
+      <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col">
         {isLoading ? (
           <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col">
-            <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto">
+            <div className="p-6 md:p-8 space-y-8">
               
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Provider Settings</label>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Provider Routing</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#09090b]">Gateway Type</label>
                     <select value={gatewayType} onChange={e => setGatewayType(e.target.value as any)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
@@ -144,7 +120,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Secure Credentials</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Secure Credentials</label>
                 
                 {gatewayType === "CHIP" && (
                   <>
@@ -173,7 +149,6 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">X-Signature Key (Webhook Secret)</label>
                       <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} required placeholder="128-character hex string" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
-                      <p className="text-[10px] text-[#a1a1aa] mt-1">Must be exactly 128 characters long for signature verification.</p>
                     </div>
                   </>
                 )}
@@ -206,35 +181,16 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                 )}
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Accounting Overrides</label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-[#09090b]">Est. Fee (%)</label>
-                    <input type="number" step="0.01" value={estimatedFeePct} onChange={e => setEstimatedFeePct(e.target.value)} className="w-full h-10 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-[#09090b]">Fixed Fee (MYR)</label>
-                    <input type="number" step="0.01" value={fixedFee} onChange={e => setFixedFee(e.target.value)} className="w-full h-10 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-[#09090b]">Tax Rate (%)</label>
-                    <input type="number" step="0.01" value={taxRate} onChange={e => setTaxRate(e.target.value)} className="w-full h-10 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
-                  </div>
-                </div>
-              </div>
-
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50 mt-auto">
-              <button type="button" onClick={onClose} className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] transition-colors">Cancel</button>
-              <button type="submit" disabled={isSaving} className="h-10 px-6 bg-[#09090b] text-white text-[11px] font-bold tracking-widest uppercase rounded-none hover:bg-[#27272a] disabled:opacity-50 transition-colors flex items-center gap-2">
+            <div className="flex items-center justify-end p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50 mt-auto">
+              <button type="submit" disabled={isSaving} className="h-10 px-8 bg-[#09090b] text-white text-[11px] font-bold tracking-widest uppercase rounded-none hover:bg-[#27272a] disabled:opacity-50 transition-colors flex items-center gap-2">
                 {isSaving && <Loader2 size={13} className="animate-spin" />} Save Configuration
               </button>
             </div>
           </form>
         )}
       </div>
-    </div>
+    </PageLayout>
   );
 }
