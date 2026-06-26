@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -29,12 +30,10 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* Accordion animation utilities — consumed by AccordionContent */
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up:   accordion-up   0.2s ease-out;
 }
 
-/* ─── Light theme ─────────────────────────────────────────── */
 @layer base {
   :root {
     --background:            oklch(1 0 0);
@@ -65,12 +64,10 @@
     --input:                 oklch(0.92 0.004 286.32);
     --ring:                  oklch(0.749 0.015 286.067);
 
-    /* Sharp edges everywhere — matches rounded-none throughout codebase */
     --radius: 0rem;
   }
 }
 
-/* ─── Dark theme ──────────────────────────────────────────── */
 @layer base {
   .dark {
     --background:            oklch(0.141 0.004 285.823);
@@ -103,7 +100,6 @@
   }
 }
 
-/* ─── Base resets ─────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -113,8 +109,6 @@
   }
 }
 
-/* ─── Accordion keyframes ─────────────────────────────────── */
-/* --panel-height is injected at runtime by @base-ui/react Panel */
 @keyframes accordion-down {
   from { height: 0; }
   to   { height: var(--panel-height); }
