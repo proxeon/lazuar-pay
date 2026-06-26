@@ -271,7 +271,8 @@ var platformGroup = app.MapGroup("/api/v1/platform")
    .RequireCors()
    .RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
 
-platformGroup.MapPlatformPaymentEndpoints();
+// Re-map to the updated extension method
+platformGroup.MapPlatformEndpoints();
 
 app.Run();
 
