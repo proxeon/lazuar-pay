@@ -1156,6 +1156,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/community/checkout/{subId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PublicCommunityOperations_getCheckoutStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/community/{tenantSlug}/plans": {
         parameters: {
             query?: never;
@@ -1341,19 +1357,19 @@ export interface components {
             url: string;
             is_zero_amount_bypass?: boolean;
         };
+        "Community.CheckoutStatusResponse": {
+            status: string;
+            token?: string;
+        };
         "Community.CommunityPlanDto": {
             id: string;
             slug: string;
             name: string;
             audience: string;
-            short_description: string;
-            long_description: string;
             /** Format: double */
             price: number;
             interval: string;
-            features: string[];
-            methodology: string;
-            faq: components["schemas"]["Community.FaqItemDto"][];
+            admin_notes?: string;
             is_active: boolean;
             /** Format: int32 */
             display_order: number;
@@ -1454,7 +1470,8 @@ export interface components {
         };
         "Community.CreateBroadcastRequestDto": {
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
             channel: string;
             target_plan_id?: string;
             target_status?: string;
@@ -1477,14 +1494,10 @@ export interface components {
             slug: string;
             name: string;
             audience: string;
-            short_description: string;
-            long_description: string;
             /** Format: double */
             price: number;
             interval: string;
-            features: string[];
-            methodology: string;
-            faq: components["schemas"]["Community.FaqItemDto"][];
+            admin_notes?: string;
             /** Format: int32 */
             display_order: number;
             /** Format: int32 */
@@ -1525,7 +1538,8 @@ export interface components {
         "Community.CreateTemplateRequestDto": {
             name: string;
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
             channel: string;
             required_variables: string[];
             optional_variables: string[];
@@ -1545,11 +1559,6 @@ export interface components {
             /** Format: int32 */
             days: number;
         };
-        "Community.FaqItemDto": {
-            id: string;
-            question: string;
-            answer: string;
-        };
         "Community.MagicLinkRequestDto": {
             email: string;
         };
@@ -1558,7 +1567,8 @@ export interface components {
             name: string;
             channel: string;
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
             is_default: boolean;
             required_variables: string[];
             optional_variables: string[];
@@ -1661,10 +1671,12 @@ export interface components {
         };
         "Community.TemplatePreviewRequestDto": {
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
         };
         "Community.TemplatePreviewResponseDto": {
-            html_content: string;
+            html_email_preview: string;
+            text_whatsapp_preview: string;
             subject_content: string;
         };
         "Community.TemplateVariableCategoryDto": {
@@ -1716,14 +1728,10 @@ export interface components {
             slug?: string;
             name?: string;
             audience?: string;
-            short_description?: string;
-            long_description?: string;
             /** Format: double */
             price?: number;
             interval?: string;
-            features?: string[];
-            methodology?: string;
-            faq?: components["schemas"]["Community.FaqItemDto"][];
+            admin_notes?: string;
             is_active?: boolean;
             /** Format: int32 */
             display_order?: number;
@@ -1752,7 +1760,8 @@ export interface components {
         };
         "Community.UpdateTemplateRequestDto": {
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
         };
         "Community.ValidateCouponResponseDto": {
             is_valid: boolean;
@@ -8179,6 +8188,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Community.CheckoutResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicCommunityOperations_getCheckoutStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Community.CheckoutStatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

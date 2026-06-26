@@ -91,10 +91,6 @@ namespace Modules.Community.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Channel")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -102,6 +98,10 @@ namespace Modules.Community.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailBody")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("ErrorMessage")
                         .HasColumnType("text");
@@ -134,6 +134,10 @@ namespace Modules.Community.Infrastructure.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WhatsAppBody")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -207,6 +211,10 @@ namespace Modules.Community.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AdminNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("Audience")
                         .IsRequired()
                         .HasColumnType("text");
@@ -216,14 +224,6 @@ namespace Modules.Community.Infrastructure.Migrations
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Faq")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("Features")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
 
                     b.Property<int>("GracePeriodDays")
                         .HasColumnType("integer");
@@ -235,16 +235,8 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("LongDescription")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<int?>("MaxCapacity")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Methodology")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -256,10 +248,6 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
-
-                    b.Property<string>("ShortDescription")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -411,16 +399,16 @@ namespace Modules.Community.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Channel")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailBody")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsDefault")
                         .HasColumnType("boolean");
@@ -446,6 +434,10 @@ namespace Modules.Community.Infrastructure.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WhatsAppBody")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

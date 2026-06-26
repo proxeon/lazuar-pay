@@ -1,4 +1,7 @@
+using System;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -86,8 +89,7 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                 _logger.LogError(ex, "Error occurred executing inbox background worker.");
             }
 
-            // Phase 2 Optimization:
-            if (messagesProcessed == 20)
+            if (messagesProcessed > 0)
             {
                 await Task.Yield();
                 continue;

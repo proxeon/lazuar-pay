@@ -1,18 +1,13 @@
+# mprocs-dev.yaml
 procs:
-  one-admin:
-    shell: cd apps/one-admin && pnpm dev
-    autostart: true
-  one-page:
-    shell: cd apps/one-page && pnpm dev
-    autostart: true
   developers-page:
     shell: cd apps/developers-page && pnpm dev
     autostart: true
   ops-page:
     shell: cd apps/ops-page && pnpm dev
     autostart: true
-  community-page:
-    shell: cd apps/community-page && pnpm dev
+  portal-page:
+    shell: cd apps/portal-page && pnpm dev
     autostart: true
   ngrok-api-tunnel:
     shell: task tunnel:api

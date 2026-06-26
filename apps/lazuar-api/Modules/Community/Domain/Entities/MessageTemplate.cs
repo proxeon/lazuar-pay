@@ -11,7 +11,8 @@ public class MessageTemplate : Entity, IMustHaveTenant
     public string Name { get; private set; } = "";
     public string Channel { get; private set; } = "ALL";
     public string Subject { get; private set; } = "";
-    public string Body { get; private set; } = "";
+    public string EmailBody { get; private set; } = "";
+    public string WhatsAppBody { get; private set; } = "";
     public bool IsDefault { get; private set; }
 
     private readonly List<string> _requiredVariables = new();
@@ -29,7 +30,7 @@ public class MessageTemplate : Entity, IMustHaveTenant
 
     public MessageTemplate(
         Guid organizationId, string name, string channel,
-        string subject, string body, bool isDefault,
+        string subject, string emailBody, string whatsappBody, bool isDefault,
         IEnumerable<string>? requiredVariables = null, IEnumerable<string>? optionalVariables = null)
     {
         Id = Guid.CreateVersion7();
@@ -37,7 +38,8 @@ public class MessageTemplate : Entity, IMustHaveTenant
         Name = name;
         Channel = channel;
         Subject = subject;
-        Body = body;
+        EmailBody = emailBody;
+        WhatsAppBody = whatsappBody;
         IsDefault = isDefault;
 
         if (requiredVariables != null) _requiredVariables.AddRange(requiredVariables);
@@ -47,18 +49,20 @@ public class MessageTemplate : Entity, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateContent(string subject, string body)
+    public void UpdateContent(string subject, string emailBody, string whatsappBody)
     {
         Subject = subject;
-        Body = body;
+        EmailBody = emailBody;
+        WhatsAppBody = whatsappBody;
         IsDefault = false;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void ResetToDefault(string subject, string body, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables)
+    public void ResetToDefault(string subject, string emailBody, string whatsappBody, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables)
     {
         Subject = subject;
-        Body = body;
+        EmailBody = emailBody;
+        WhatsAppBody = whatsappBody;
         IsDefault = true;
 
         _requiredVariables.Clear();

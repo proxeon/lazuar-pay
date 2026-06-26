@@ -1,9 +1,8 @@
+// apps/lazuar-api/Modules/Community/Domain/Aggregates/CommunityPlan.cs
 using System;
-using System.Collections.Generic;
 using BuildingBlocks.Domain;
 using Modules.Community.Domain.Events;
 using Modules.Community.Domain.Rules;
-using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Domain.Aggregates;
 
@@ -15,18 +14,9 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public string Slug { get; private set; }
     public string Name { get; private set; }
     public string Audience { get; private set; }
-    public string ShortDescription { get; private set; }
-    public string LongDescription { get; private set; }
     public decimal Price { get; private set; }
     public string Interval { get; private set; }
-
-    private readonly List<string> _features = new();
-    public IReadOnlyCollection<string> Features => _features.AsReadOnly();
-
-    public string Methodology { get; private set; }
-
-    private readonly List<FaqItem> _faq = new();
-    public IReadOnlyCollection<FaqItem> Faq => _faq.AsReadOnly();
+    public string? AdminNotes { get; private set; }
 
     public bool IsActive { get; private set; }
     public int DisplayOrder { get; private set; }
@@ -45,9 +35,8 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
 
     public CommunityPlan(
         Guid organizationId, string slug, string name, string audience,
-        string shortDescription, string longDescription, decimal price,
-        string interval, int gracePeriodDays, int? maxCapacity, int displayOrder,
-        string methodology)
+        decimal price, string interval, int gracePeriodDays, int? maxCapacity, 
+        int displayOrder, string? adminNotes = null)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
 
@@ -56,40 +45,35 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
         Slug = slug;
         Name = name;
         Audience = audience;
-        ShortDescription = shortDescription;
-        LongDescription = longDescription;
         Price = price;
         Interval = interval;
         GracePeriodDays = gracePeriodDays;
         MaxCapacity = maxCapacity;
         DisplayOrder = displayOrder;
-        Methodology = methodology;
+        AdminNotes = adminNotes;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void UpdateDetails(
-        string name, string audience, string shortDesc, string longDesc,
-        decimal price, string interval, int gracePeriodDays, int? maxCapacity,
-        int displayOrder, bool isActive, string methodology)
+        string name, string audience, decimal price, string interval, 
+        int gracePeriodDays, int? maxCapacity, int displayOrder, 
+        bool isActive, string? adminNotes = null)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
 
         Name = name;
         Audience = audience;
-        ShortDescription = shortDesc;
-        LongDescription = longDesc;
         Price = price;
         Interval = interval;
         GracePeriodDays = gracePeriodDays;
         MaxCapacity = maxCapacity;
         DisplayOrder = displayOrder;
         IsActive = isActive;
-        Methodology = methodology;
+        AdminNotes = adminNotes;
         UpdatedAt = DateTime.UtcNow;
 
-        // Trigger decoupled audit log
         AddDomainEvent(new PlanUpdatedDomainEvent(Id, OrganizationId, Slug, Name, Price));
     }
 
@@ -97,20 +81,6 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     {
         TelegramInviteLink = telegramLink;
         WeeklyMeetingLink = meetingLink;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void UpdateFeatures(IEnumerable<string> features)
-    {
-        _features.Clear();
-        _features.AddRange(features);
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void UpdateFaq(IEnumerable<FaqItem> faqs)
-    {
-        _faq.Clear();
-        _faq.AddRange(faqs);
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -125,7 +95,6 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
         IsActive = false;
         UpdatedAt = DateTime.UtcNow;
 
-        // Trigger decoupled audit log
         AddDomainEvent(new PlanArchivedDomainEvent(Id, OrganizationId, Slug));
     }
 }

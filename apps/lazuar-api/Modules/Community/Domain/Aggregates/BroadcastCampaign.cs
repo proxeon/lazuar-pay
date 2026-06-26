@@ -8,7 +8,8 @@ public class BroadcastCampaign : Entity, IAggregateRoot, IMustHaveTenant
     public Guid Id { get; private set; }
     public Guid OrganizationId { get; set; }
     public string Subject { get; private set; }
-    public string Body { get; private set; }
+    public string EmailBody { get; private set; }
+    public string WhatsAppBody { get; private set; }
     public string Channel { get; private set; }
     public Guid? TargetPlanId { get; private set; }
     public string? TargetStatus { get; private set; }
@@ -26,7 +27,8 @@ public class BroadcastCampaign : Entity, IAggregateRoot, IMustHaveTenant
     public BroadcastCampaign(
         Guid organizationId, 
         string subject, 
-        string body, 
+        string emailBody, 
+        string whatsappBody, 
         string channel,
         Guid? targetPlanId = null,
         string? targetStatus = null,
@@ -35,7 +37,8 @@ public class BroadcastCampaign : Entity, IAggregateRoot, IMustHaveTenant
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
         Subject = subject;
-        Body = body;
+        EmailBody = emailBody;
+        WhatsAppBody = whatsappBody;
         Channel = string.IsNullOrWhiteSpace(channel) ? "ALL" : channel.ToUpperInvariant();
         TargetPlanId = targetPlanId;
         TargetStatus = targetStatus?.ToUpperInvariant();

@@ -63,4 +63,10 @@ interface PublicCommunityOperations {
     @path tenantSlug: string,
     @query token: string,
   ): BillingLinkResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/checkout/{subId}/status")
+  getCheckoutStatus(
+    @path subId: string,
+  ): CheckoutStatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

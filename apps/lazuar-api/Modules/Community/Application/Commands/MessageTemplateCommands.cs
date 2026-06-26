@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/MessageTemplateCommands.cs
 using System;
 using System.Collections.Generic;
 using BuildingBlocks.Application;
@@ -9,7 +8,8 @@ public record CreateMessageTemplateCommand(
     Guid OrganizationId, 
     string Name, 
     string Subject, 
-    string Body, 
+    string EmailBody, 
+    string WhatsAppBody, 
     string Channel, 
     IEnumerable<string> RequiredVariables, 
     IEnumerable<string> OptionalVariables) : ICommand<Guid>
@@ -18,7 +18,12 @@ public record CreateMessageTemplateCommand(
 }
 
 [AgentTool("Rewrite the copy for automated emails and WhatsApp messages.", "COMMUNITY", "medium", "SUPER_ADMIN", "ADMIN")]
-public record UpdateMessageTemplateCommand(Guid OrganizationId, Guid TemplateId, string Subject, string Body) : ICommand
+public record UpdateMessageTemplateCommand(
+    Guid OrganizationId, 
+    Guid TemplateId, 
+    string Subject, 
+    string EmailBody, 
+    string WhatsAppBody) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

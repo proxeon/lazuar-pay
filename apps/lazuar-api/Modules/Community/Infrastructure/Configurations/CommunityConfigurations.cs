@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Configurations/CommunityConfigurations.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Modules.Community.Domain.Aggregates;
 using Modules.Community.Domain.Entities;
-using Modules.Community.Domain.ValueObjects;
 
 namespace Modules.Community.Infrastructure.Configurations;
 
@@ -19,42 +19,7 @@ public class CommunityPlanConfiguration : IEntityTypeConfiguration<CommunityPlan
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => new { x.OrganizationId, x.Slug }).IsUnique();
         builder.Property(x => x.Price).HasPrecision(10, 2);
-
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        };
-
-        var featuresConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
-            v => JsonSerializer.Serialize(v, jsonOptions),
-            v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
-        );
-
-        var faqConverter = new ValueConverter<IReadOnlyCollection<FaqItem>, string>(
-            v => JsonSerializer.Serialize(v, jsonOptions),
-            v => JsonSerializer.Deserialize<List<FaqItem>>(v, jsonOptions) ?? new List<FaqItem>()
-        );
-
-        var featuresComparer = new ValueComparer<IReadOnlyCollection<string>>(
-            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
-            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-            c => c.ToList()
-        );
-
-        var faqComparer = new ValueComparer<IReadOnlyCollection<FaqItem>>(
-            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
-            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-            c => c.ToList()
-        );
-
-        builder.Property(x => x.Features)
-            .HasConversion(featuresConverter, featuresComparer)
-            .HasColumnType("jsonb");
-
-        builder.Property(x => x.Faq)
-            .HasConversion(faqConverter, faqComparer)
-            .HasColumnType("jsonb");
+        builder.Property(x => x.AdminNotes).HasMaxLength(2000);
     }
 }
 

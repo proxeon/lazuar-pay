@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Microsoft.Extensions.DependencyInjection;
+using Modules.One.Contracts;
 using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
@@ -15,13 +17,18 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
 {
     private readonly IOneRepository _repository;
     private readonly IPasswordService _passwordService;
+    private readonly IEventBus _eventBus;
     
     private static readonly string[] CoreModules = { "COMMUNITY", "OPS", "BILLING", "PAYMENTS", "CRM", "LHDN" };
 
-    public RegisterPublicUserCommandHandler(IOneRepository repository, IPasswordService passwordService)
+    public RegisterPublicUserCommandHandler(
+        IOneRepository repository, 
+        IPasswordService passwordService,
+        [FromKeyedServices("OneEventBus")] IEventBus eventBus)
     {
         _repository = repository;
         _passwordService = passwordService;
+        _eventBus = eventBus;
     }
 
     public async Task<Guid> Handle(RegisterPublicUserCommand request, CancellationToken ct)
@@ -57,6 +64,9 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
         {
             var entitlement = new TenantAppEntitlement(organization.Id, module);
             _repository.AddEntitlement(entitlement);
+            
+            // Publish the event so the target module can run its seeders!
+            await _eventBus.PublishAsync(new AppEntitlementGrantedIntegrationEvent(organization.Id, module));
         }
 
         // Commits everything atomically in one database transaction

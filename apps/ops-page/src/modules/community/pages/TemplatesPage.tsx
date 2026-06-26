@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/community/pages/TemplatesPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit2, Loader2, Mail, Plus, BookOpen, X, Copy } from "lucide-react";
@@ -18,7 +17,8 @@ export default function TemplatesPage() {
 
   const [newName, setNewName] = useState("");
   const [newSubject, setNewSubject] = useState("");
-  const [newBody, setNewBody] = useState("");
+  const [newEmailBody, setNewEmailBody] = useState("");
+  const [newWhatsappBody, setNewWhatsappBody] = useState("");
 
   const { data: rawTemplates, isLoading } = useQuery<MessageTemplateDto[]>({
     queryKey: ["message-templates"],
@@ -39,18 +39,17 @@ export default function TemplatesPage() {
     enabled: isWikiOpen
   });
 
-  // Fixed Issue 1: Include templates where channel is 'ALL' to display default lifecycle emails
   const templates = rawTemplates?.filter(t => t.channel === "EMAIL" || t.channel === "ALL") || [];
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Fixed Issue 2: Removed "as any" hack now that the POST endpoint is natively typed in TypeSpec
       const { error } = await client.POST("/admin/community/templates", {
         body: {
           name: newName,
           subject: newSubject,
-          body: newBody,
-          channel: "EMAIL",
+          email_body: newEmailBody,
+          whatsapp_body: newWhatsappBody,
+          channel: "ALL",
           required_variables: ["{{customer_name}}"],
           optional_variables: ["{{plan_name}}", "{{renewal_link}}"]
         }
@@ -58,7 +57,7 @@ export default function TemplatesPage() {
       if (error) throw new Error(error.detail);
     },
     onSuccess: () => {
-      toast.success("Email template created successfully");
+      toast.success("Template created successfully");
       queryClient.invalidateQueries({ queryKey: ["message-templates"] });
       setIsCreateModalOpen(false);
       resetCreateForm();
@@ -67,10 +66,10 @@ export default function TemplatesPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, subject, body }: { id: string, subject: string, body: string }) => {
+    mutationFn: async ({ id, subject, email_body, whatsapp_body }: { id: string, subject: string, email_body: string, whatsapp_body: string }) => {
       const { error } = await client.PUT("/admin/community/templates/{id}", {
         params: { path: { id } },
-        body: { subject, body }
+        body: { subject, email_body, whatsapp_body }
       });
       if (error) throw new Error(error.detail);
     },
@@ -100,7 +99,8 @@ export default function TemplatesPage() {
   const resetCreateForm = () => {
     setNewName("");
     setNewSubject("");
-    setNewBody("");
+    setNewEmailBody("");
+    setNewWhatsappBody("");
   };
 
   const copyVariable = (tag: string) => {
@@ -113,7 +113,7 @@ export default function TemplatesPage() {
       <div className="fixed inset-0 z-50 bg-white flex flex-col animate-in fade-in zoom-in-95 duration-200">
         <MessageTemplateEditor 
           template={selectedTemplate}
-          onSave={(subject, body) => updateMutation.mutate({ id: selectedTemplate.id, subject, body })}
+          onSave={(subject, emailBody, whatsappBody) => updateMutation.mutate({ id: selectedTemplate.id, subject, email_body: emailBody, whatsapp_body: whatsappBody })}
           onReset={() => resetMutation.mutate(selectedTemplate.id)}
           onCancel={() => setSelectedTemplate(null)}
           isSaving={updateMutation.isPending}
@@ -125,9 +125,9 @@ export default function TemplatesPage() {
 
   return (
     <PageLayout 
-      title="Email Templates" 
-      description="Manage the content and wording of your automated notifications."
-      breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Email Templates" }]}
+      title="Communication Templates" 
+      description="Manage the content and wording of your automated multi-channel notifications."
+      breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Templates" }]}
       actionButton={
         <div className="flex gap-2">
           <button onClick={() => setIsWikiOpen(true)} className="h-9 px-4 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#fafafa] transition-colors"><BookOpen size={13} /> Variable Wiki</button>
@@ -138,7 +138,7 @@ export default function TemplatesPage() {
       <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
         <div className="px-5 py-4 border-b border-[#f4f4f5] bg-[#fafafa]/50 flex items-center gap-2">
           <Mail size={15} className="text-[#a1a1aa]" />
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Email Notifications Index</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Template Index</h2>
         </div>
 
         <div className="w-full overflow-x-auto min-h-[300px]">
@@ -191,7 +191,7 @@ export default function TemplatesPage() {
             <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
               <div>
                 <h3 className="text-[14px] font-bold uppercase tracking-widest text-[#09090b]">Variable Directory</h3>
-                <p className="text-[11px] text-[#71717a] mt-0.5">Click tags below to copy into your email editor.</p>
+                <p className="text-[11px] text-[#71717a] mt-0.5">Click tags below to copy into your editor.</p>
               </div>
               <button onClick={() => setIsWikiOpen(false)} className="p-1 text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors rounded-sm"><X size={16} /></button>
             </div>
@@ -199,11 +199,11 @@ export default function TemplatesPage() {
               {!dictionaryGroups ? (
                 <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
               ) : (
-                dictionaryGroups.map((group) => (
+                dictionaryGroups.map((group: any) => (
                   <div key={group.title} className="space-y-3">
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">{group.title}</h4>
                     <div className="space-y-2">
-                      {group.items.map((item) => (
+                      {group.items.map((item: any) => (
                         <div key={item.tag} className="flex flex-col gap-1 p-2 bg-[#fafafa] border border-[#e5e5e5]">
                           <div className="flex items-center justify-between">
                             <span className="font-mono text-[11px] font-bold text-[#09090b] bg-white border border-zinc-200 px-1.5 py-0.5">{item.tag}</span>
@@ -226,28 +226,32 @@ export default function TemplatesPage() {
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-xl w-full max-w-lg flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
-              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Email Template</h3>
+              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Template</h3>
               <button onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] p-1"><X size={16} /></button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
-              <div className="p-5 space-y-4">
+              <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Template Title *</label>
-                  <input required value={newName} onChange={e => setNewName(e.target.value)} disabled={createMutation.isPending} placeholder="e.g. Signup Receipt" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
+                  <input required value={newName} onChange={e => setNewName(e.target.value)} disabled={createMutation.isPending} placeholder="e.g. Custom Event Receipt" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Subject Line *</label>
-                  <input required value={newSubject} onChange={e => setNewSubject(e.target.value)} disabled={createMutation.isPending} placeholder="e.g. Welcome onboard {{customer_name}}!" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
+                  <input required value={newSubject} onChange={e => setNewSubject(e.target.value)} disabled={createMutation.isPending} placeholder="e.g. Welcome onboard!" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b]" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Message Body *</label>
-                  <textarea required value={newBody} onChange={e => setNewBody(e.target.value)} rows={6} disabled={createMutation.isPending} placeholder="Write copy... (Markdown supported)" className="w-full p-3 border border-[#e5e5e5] bg-white text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] resize-y font-mono" />
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email Body *</label>
+                  <textarea required value={newEmailBody} onChange={e => setNewEmailBody(e.target.value)} rows={4} disabled={createMutation.isPending} placeholder="Write HTML/Markdown..." className="w-full p-3 border border-[#e5e5e5] bg-white text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] resize-y font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">WhatsApp Body *</label>
+                  <textarea required value={newWhatsappBody} onChange={e => setNewWhatsappBody(e.target.value)} rows={3} disabled={createMutation.isPending} placeholder="Write plain text..." className="w-full p-3 border border-[#e5e5e5] bg-white text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] resize-y font-sans" />
                 </div>
               </div>
               <div className="px-5 py-3 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={createMutation.isPending} className="h-8 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="h-8 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
-                  {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Save & Continue
+                  {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Save
                 </button>
               </div>
             </form>

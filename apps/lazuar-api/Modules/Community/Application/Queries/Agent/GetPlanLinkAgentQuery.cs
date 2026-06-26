@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Queries/Agent/GetPlanLinkAgentQuery.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,24 +28,20 @@ public class GetPlanLinkAgentQueryHandler : IQueryHandler<GetPlanLinkAgentQuery,
 
     public async Task<string> Handle(GetPlanLinkAgentQuery request, CancellationToken cancellationToken)
     {
-        // 1. Validate the Plan belongs to this tenant and get its Slug
         var plan = await _planRepository.GetByIdAsync(request.PlanId, cancellationToken);
         if (plan == null || plan.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Plan not found in the current workspace.");
         }
 
-        // 2. Fetch the Tenant Slug via cross-module query to the One module
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(request.OrganizationId);
         if (workspace == null)
         {
             throw new InvalidOperationException("Workspace context invalid.");
         }
 
-        // 3. Resolve environment-aware base URL (localhost:3021 vs community.lazuar.com)
         var baseUrl = _linkService.GetCommunityBaseUrl().TrimEnd('/');
 
-        // 4. Construct final public URL
-        return $"{baseUrl}/{workspace.Slug}/{plan.Slug}";
+        return $"{baseUrl}/{workspace.Slug}/community/{plan.Slug}";
     }
 }

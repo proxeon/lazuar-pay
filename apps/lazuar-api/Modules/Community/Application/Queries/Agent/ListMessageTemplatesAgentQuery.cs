@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Queries/Agent/ListMessageTemplatesAgentQuery.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +10,7 @@ namespace Modules.Community.Application.Queries.Agent;
 [AgentTool("List all message templates to find a Template ID.", "COMMUNITY", "low", "SUPER_ADMIN", "ADMIN")]
 public record ListMessageTemplatesAgentQuery(Guid OrganizationId) : IQuery<IEnumerable<AgentTemplateResult>>;
 
-public record AgentTemplateResult(string TemplateId, string Name, string Channel, string Subject, string Body);
+public record AgentTemplateResult(string TemplateId, string Name, string Channel, string Subject, string EmailBody, string WhatsAppBody);
 
 public class ListMessageTemplatesAgentQueryHandler : IQueryHandler<ListMessageTemplatesAgentQuery, IEnumerable<AgentTemplateResult>>
 {
@@ -31,6 +30,7 @@ public class ListMessageTemplatesAgentQueryHandler : IQueryHandler<ListMessageTe
             t.Name,
             t.Channel,
             t.Subject,
-            t.Body)).ToList();
+            t.Email_body,
+            t.Whatsapp_body)).ToList();
     }
 }

@@ -30,29 +30,52 @@ public class NotificationDispatchDomainEventHandlers :
     {
         var resetLink = $"{_linkService.GetClientBaseUrl()}/reset-password?email={Uri.EscapeDataString(notification.Email)}&token={notification.PlainToken}";
         var subject = "Password Reset Request";
-        var body = $"Hi,<br><br>You requested a password reset. Click here to set a new password: <a href=\"{resetLink}\">Reset Password</a><br><br>If you did not request this, please ignore this email.";
+        
+        var rawMarkdown = $@"Hi,
+
+You requested a password reset. Click the link below to set a new password:
+
+[Reset Password]({resetLink})
+
+If you did not request this, please ignore this email.";
+
+        var htmlBody = MarkdownParser.ToHtml(rawMarkdown);
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            _systemTenantId, notification.Email, null, subject, body, "EMAIL"));
+            _systemTenantId, notification.Email, null, subject, htmlBody, null, "EMAIL"));
     }
 
     public async Task Handle(EmailVerificationRequestedDomainEvent notification, CancellationToken ct)
     {
         var verifyLink = $"{_linkService.GetClientBaseUrl()}/verify-email?email={Uri.EscapeDataString(notification.Email)}&token={notification.PlainToken}";
         var subject = "Verify your email address";
-        var body = $"Hi {notification.Name},<br><br>Welcome to Lazuar! Please verify your email address by clicking the link below:<br><br><a href=\"{verifyLink}\">Verify Email</a>";
+
+        var rawMarkdown = $@"Hi {notification.Name},
+
+Welcome to Lazuar! Please verify your email address by clicking the link below:
+
+[Verify Email]({verifyLink})";
+
+        var htmlBody = MarkdownParser.ToHtml(rawMarkdown);
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            _systemTenantId, notification.Email, null, subject, body, "EMAIL"));
+            _systemTenantId, notification.Email, null, subject, htmlBody, null, "EMAIL"));
     }
 
     public async Task Handle(WorkspaceInvitationCreatedDomainEvent notification, CancellationToken ct)
     {
         var acceptLink = $"{_linkService.GetClientBaseUrl()}/accept-invite?token={notification.PlainToken}";
         var subject = "You've been invited to join a workspace";
-        var body = $"Hi,<br><br>You have been invited to join a workspace as {notification.Role}.<br><br><a href=\"{acceptLink}\">Accept Invitation</a>";
+
+        var rawMarkdown = $@"Hi,
+
+You have been invited to join a workspace as a **{notification.Role}**.
+
+[Accept Invitation]({acceptLink})";
+
+        var htmlBody = MarkdownParser.ToHtml(rawMarkdown);
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            notification.OrganizationId, notification.Email, null, subject, body, "EMAIL"));
+            notification.OrganizationId, notification.Email, null, subject, htmlBody, null, "EMAIL"));
     }
 }

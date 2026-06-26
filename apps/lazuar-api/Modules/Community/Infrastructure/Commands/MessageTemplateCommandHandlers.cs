@@ -25,14 +25,15 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
 
     public async Task<Guid> Handle(CreateMessageTemplateCommand request, CancellationToken cancellationToken)
     {
-        ValidateTemplateVariables(request.Subject, request.Body, request.RequiredVariables, request.OptionalVariables);
+        ValidateTemplateVariables(request.Channel, request.Subject, request.EmailBody, request.WhatsAppBody, request.RequiredVariables, request.OptionalVariables);
 
         var template = new Domain.Entities.MessageTemplate(
             request.OrganizationId,
             request.Name,
             request.Channel,
             request.Subject,
-            request.Body,
+            request.EmailBody,
+            request.WhatsAppBody,
             isDefault: false,
             request.RequiredVariables,
             request.OptionalVariables);
@@ -44,14 +45,27 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
     }
 
     private void ValidateTemplateVariables(
+        string channel,
         string subject, 
-        string body, 
+        string emailBody, 
+        string whatsappBody,
         IEnumerable<string> requiredVariables, 
         IEnumerable<string> optionalVariables)
     {
-        var combinedText = $"{subject} {body}";
+        if (channel is "EMAIL" or "ALL")
+        {
+            CheckVariables($"{subject} {emailBody}", requiredVariables, optionalVariables, "Email");
+        }
 
-        var extractedTags = Regex.Matches(combinedText, @"\{\{([a-zA-Z0-9_]+)\}\}")
+        if (channel is "WHATSAPP" or "ALL")
+        {
+            CheckVariables(whatsappBody, requiredVariables, optionalVariables, "WhatsApp");
+        }
+    }
+
+    private void CheckVariables(string content, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables, string contextName)
+    {
+        var extractedTags = Regex.Matches(content, @"\{\{([a-zA-Z0-9_]+)\}\}")
             .Select(m => m.Value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -61,14 +75,14 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
         if (unsupportedTags.Any())
         {
             var joined = string.Join(", ", unsupportedTags);
-            throw new BusinessRuleValidationException(new GenericBusinessRule($"Unsupported variables detected: {joined}. Please use only the allowed tags for this template."));
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Unsupported variables detected in {contextName}: {joined}. Please use only the allowed tags."));
         }
 
         var missingTags = requiredVariables.Except(extractedTags, StringComparer.OrdinalIgnoreCase).ToList();
         if (missingTags.Any())
         {
             var joined = string.Join(", ", missingTags);
-            throw new BusinessRuleValidationException(new GenericBusinessRule($"Missing required variables: {joined}. You must include these tags in either the subject or body to ensure the message functions correctly."));
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Missing required variables in {contextName}: {joined}. You must include these tags to ensure the message functions correctly."));
         }
     }
 }
@@ -90,22 +104,35 @@ public class UpdateMessageTemplateCommandHandler : ICommandHandler<UpdateMessage
 
         if (template == null) throw new InvalidOperationException("Template not found.");
 
-        ValidateTemplateVariables(request.Subject, request.Body, template.RequiredVariables, template.OptionalVariables);
+        ValidateTemplateVariables(template.Channel, request.Subject, request.EmailBody, request.WhatsAppBody, template.RequiredVariables, template.OptionalVariables);
 
-        template.UpdateContent(request.Subject, request.Body);
+        template.UpdateContent(request.Subject, request.EmailBody, request.WhatsAppBody);
 
         await _context.SaveChangesAsync(cancellationToken);
     }
 
     private void ValidateTemplateVariables(
+        string channel,
         string subject, 
-        string body, 
+        string emailBody, 
+        string whatsappBody,
         IEnumerable<string> requiredVariables, 
         IEnumerable<string> optionalVariables)
     {
-        var combinedText = $"{subject} {body}";
+        if (channel is "EMAIL" or "ALL")
+        {
+            CheckVariables($"{subject} {emailBody}", requiredVariables, optionalVariables, "Email");
+        }
 
-        var extractedTags = Regex.Matches(combinedText, @"\{\{([a-zA-Z0-9_]+)\}\}")
+        if (channel is "WHATSAPP" or "ALL")
+        {
+            CheckVariables(whatsappBody, requiredVariables, optionalVariables, "WhatsApp");
+        }
+    }
+
+    private void CheckVariables(string content, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables, string contextName)
+    {
+        var extractedTags = Regex.Matches(content, @"\{\{([a-zA-Z0-9_]+)\}\}")
             .Select(m => m.Value)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -115,14 +142,14 @@ public class UpdateMessageTemplateCommandHandler : ICommandHandler<UpdateMessage
         if (unsupportedTags.Any())
         {
             var joined = string.Join(", ", unsupportedTags);
-            throw new BusinessRuleValidationException(new GenericBusinessRule($"Unsupported variables detected: {joined}. Please use only the allowed tags for this template."));
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Unsupported variables detected in {contextName}: {joined}. Please use only the allowed tags."));
         }
 
         var missingTags = requiredVariables.Except(extractedTags, StringComparer.OrdinalIgnoreCase).ToList();
         if (missingTags.Any())
         {
             var joined = string.Join(", ", missingTags);
-            throw new BusinessRuleValidationException(new GenericBusinessRule($"Missing required variables: {joined}. You must include these tags in either the subject or body to ensure the message functions correctly."));
+            throw new BusinessRuleValidationException(new GenericBusinessRule($"Missing required variables in {contextName}: {joined}. You must include these tags to ensure the message functions correctly."));
         }
     }
 }
@@ -146,26 +173,70 @@ public class ResetMessageTemplateCommandHandler : ICommandHandler<ResetMessageTe
 
         var defaultTemplates = new List<Domain.Entities.MessageTemplate>
         {
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Welcome", "ALL", "Welcome to {{plan_name}}! 🎉", "Hi {{customer_name}},\n\nWelcome to {{plan_name}}!\n\nHere is your private group link:\n{{group_link}}\n\nWeekly session link:\n{{meeting_link}}\n\nYou can manage your subscription via your secure portal:\n{{portal_magic_link}}\n\nSee you there! 🙏\n\n— {{business_name}}", true, new[] { "{{group_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{meeting_link}}", "{{portal_magic_link}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Payment Success", "ALL", "Payment Received: {{plan_name}}", "Hi {{customer_name}},\n\nThank you! We have successfully received your payment of RM {{total_price}} for your {{plan_name}} membership.\n\nYou can manage your subscription at any time via your portal:\n{{portal_magic_link}}\n\n— {{business_name}}", true, new[] { "{{total_price}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{portal_magic_link}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Payment Failed", "ALL", "Payment Failed: {{plan_name}}", "Hi {{customer_name}},\n\nWe were unable to process your renewal payment for {{plan_name}}.\n\nPlease complete your payment to avoid losing access to the community:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal (3 Days)", "ALL", "Your {{plan_name}} subscription renews in 3 days", "Hi {{customer_name}},\n\nYour {{plan_name}} membership is expiring in 3 days. To ensure you don't lose access to the community and weekly sessions, please renew your subscription here:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal Due Today", "ALL", "Action Required: {{plan_name}} renewal due today", "Hi {{customer_name}},\n\nThis is a reminder that your {{plan_name}} membership is due for renewal today. Please renew your subscription to maintain your access:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal Overdue", "ALL", "Final Notice: {{plan_name}} is overdue", "Hi {{customer_name}},\n\nYour {{plan_name}} membership is currently past due. If not resolved, your access to the community will be suspended soon. Please renew your subscription immediately:\n{{renewal_link}}\n\n— {{business_name}}", true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Subscription Cancelled", "ALL", "Your {{plan_name}} membership has ended", "Hi {{customer_name}},\n\nYour {{plan_name}} membership has been cancelled.\n\nYou will retain access to your resources until {{current_period_end}}. After this date, you will no longer receive weekly session links.\n\nWe hope to see you again! 🙏\n\n— {{business_name}}", true, Array.Empty<string>(), new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{current_period_end}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Abandoned Cart (12h)", "WHATSAPP", "Complete your purchase for {{item_name}}", "Hi {{customer_name}},\n\nWe noticed you didn't complete your purchase for {{item_name}}. Did you have trouble with the payment page?\n\nHere is a fresh link to complete your transaction:\n{{checkout_url}}\n\n— {{business_name}}", true, new[] { "{{checkout_url}}" }, new[] { "{{customer_name}}", "{{item_name}}", "{{business_name}}" }),
-            new Domain.Entities.MessageTemplate(request.OrganizationId, "Abandoned Cart (24h)", "EMAIL", "Don't miss out on {{item_name}}", "Hi {{customer_name}},\n\nSpots are filling up fast! Grab yours here before it's gone:\n{{checkout_url}}\n\n— {{business_name}}", true, new[] { "{{checkout_url}}" }, new[] { "{{customer_name}}", "{{item_name}}", "{{business_name}}" })
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Welcome", "ALL", 
+                "You're in! Welcome to {{plan_name}} 🎉", 
+                "Hi {{customer_name}},\n\nYour payment of RM {{total_price}} was successful, and your access is officially active. We are thrilled to have you here.\n\nHere is everything you need to get started:\n\n1. **Join the Community:** Meet everyone and say hi!\n[Join the Telegram Group]({{group_link}})\n\n2. **Weekly Sessions:** Bookmark our live room.\n[Save the Zoom Link]({{meeting_link}})\n\nYou can access your resources anytime via your private dashboard:\n[Go to my Dashboard]({{portal_magic_link}})\n\nSee you inside,\n— {{business_name}}", 
+                "Hey {{customer_name}}! 🎉 Welcome to {{plan_name}}! Your payment is confirmed. Click here to join the private group right now: {{group_link}}. See you inside! 🚀", 
+                true, new[] { "{{group_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{meeting_link}}", "{{portal_magic_link}}", "{{total_price}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Payment Success", "ALL", 
+                "Payment Received: {{plan_name}}", 
+                "Hi {{customer_name}},\n\nThank you! We have successfully received your payment of RM {{total_price}} for your {{plan_name}} membership.\n\nYou can manage your subscription at any time via your portal:\n[Access Portal]({{portal_magic_link}})\n\n— {{business_name}}", 
+                "Hi {{customer_name}}, your payment of RM {{total_price}} for {{plan_name}} is confirmed! ✅ Manage your access here: {{portal_magic_link}}", 
+                true, new[] { "{{total_price}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{portal_magic_link}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Payment Failed", "ALL", 
+                "Action Needed: Payment issue for {{plan_name}}", 
+                "Hi {{customer_name}},\n\nWe tried to process your renewal for {{plan_name}}, but the payment didn't go through. This usually just means your bank blocked the transaction or the card expired.\n\nTo ensure you don't lose access to the community and upcoming sessions, please update your payment details here:\n\n[Securely Update Payment]({{renewal_link}})\n\nIf you need any help, just reply to this email.\n\n— {{business_name}}", 
+                "Hi {{customer_name}} 👋 Quick heads up: your recent card payment for {{plan_name}} was declined by the bank. To keep your access active, you can quickly update your details here: {{renewal_link}}. Let us know if you need help!", 
+                true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal (3 Days)", "ALL", 
+                "Upcoming renewal for {{plan_name}}", 
+                "Hi {{customer_name}},\n\nWe hope you're getting great value out of the community! This is just a quick reminder that your {{plan_name}} subscription will automatically renew in a few days.\n\nIf you need to update your card, download invoices, or manage your account, you can access your dashboard below:\n\n[Manage Account]({{renewal_link}})\n\n— {{business_name}}", 
+                "Hey {{customer_name}}, hope you're doing great! 🌟 Just a quick reminder that your {{plan_name}} cycle renews in 3 days. No action needed if you're staying with us, but you can manage your account anytime here: {{renewal_link}}", 
+                true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal Due Today", "ALL", 
+                "Action Required: {{plan_name}} renewal due today", 
+                "Hi {{customer_name}},\n\nThis is a reminder that your {{plan_name}} membership is due for renewal today. Please renew your subscription to maintain your access:\n\n[Renew Subscription]({{renewal_link}})\n\n— {{business_name}}", 
+                "Hi {{customer_name}}! ⏳ Your {{plan_name}} membership is due for renewal today. Secure your access here: {{renewal_link}}", 
+                true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Renewal Overdue", "ALL", 
+                "Final Notice: {{plan_name}} is overdue", 
+                "Hi {{customer_name}},\n\nYour {{plan_name}} membership is currently past due. If not resolved, your access to the community will be suspended soon. Please renew your subscription immediately:\n\n[Renew Now]({{renewal_link}})\n\n— {{business_name}}", 
+                "Hey {{customer_name}}, your {{plan_name}} membership is past due and access will be suspended soon. ⚠️ You can resolve this quickly here: {{renewal_link}}", 
+                true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Community Subscription Cancelled", "ALL", 
+                "Your {{plan_name}} membership has ended", 
+                "Hi {{customer_name}},\n\nYour {{plan_name}} membership has been cancelled.\n\nYou will retain access to your resources until {{current_period_end}}. After this date, you will no longer receive weekly session links.\n\nWe hope to see you again! 🙏\n\n— {{business_name}}", 
+                "Hi {{customer_name}}, your {{plan_name}} membership has been cancelled. You have access until {{current_period_end}}. We hope to see you back soon! 🙏", 
+                true, Array.Empty<string>(), new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{current_period_end}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Abandoned Cart (12h)", "WHATSAPP", 
+                "Complete your purchase for {{item_name}}", 
+                "", 
+                "Hey {{customer_name}}! We noticed you left {{item_name}} in your cart. Did you have any trouble with the payment page? You can finish your checkout securely here: {{checkout_url}} ⚡️", 
+                true, new[] { "{{checkout_url}}" }, new[] { "{{customer_name}}", "{{item_name}}", "{{business_name}}" }),
+                
+            new Domain.Entities.MessageTemplate(request.OrganizationId, "Abandoned Cart (24h)", "EMAIL", 
+                "Did you run into an issue?", 
+                "Hi {{customer_name}},\n\nWe noticed you started checking out for {{item_name}} but didn't finish.\n\nIf you had any technical issues, just reply to this email and we'll help you out. Otherwise, your spot is still reserved! You can complete your registration right here:\n\n[Complete my registration]({{checkout_url}})\n\nHope to see you inside.\n\n— {{business_name}}", 
+                "", 
+                true, new[] { "{{checkout_url}}" }, new[] { "{{customer_name}}", "{{item_name}}", "{{business_name}}" })
         };
 
         var defaultTemplate = defaultTemplates.FirstOrDefault(t => t.Name == template.Name);
 
         if (defaultTemplate != null)
         {
-            template.ResetToDefault(defaultTemplate.Subject, defaultTemplate.Body, defaultTemplate.RequiredVariables, defaultTemplate.OptionalVariables);
+            template.ResetToDefault(defaultTemplate.Subject, defaultTemplate.EmailBody, defaultTemplate.WhatsAppBody, defaultTemplate.RequiredVariables, defaultTemplate.OptionalVariables);
         }
         else
         {
-            template.ResetToDefault("", "", Array.Empty<string>(), Array.Empty<string>());
+            template.ResetToDefault("", "", "", Array.Empty<string>(), Array.Empty<string>());
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -190,30 +261,34 @@ public class SendTestReminderCommandHandler : ICommandHandler<SendTestReminderCo
         var template = await _templateService.GetTemplateByNameAsync(request.OrganizationId, request.TemplateName);
         if (template == null) throw new InvalidOperationException("Template not found.");
 
-        var body = template.Body
-            .Replace("{{customer_name}}", "Test User", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{business_name}}", "Test Business", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{plan_name}}", "Test Plan", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{group_link}}", "https://t.me/test", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{meeting_link}}", "https://zoom.us/test", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{renewal_link}}", "https://example.com/renew", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{portal_magic_link}}", "https://community.lazuar.com/workspace/portal?token=test_token", StringComparison.OrdinalIgnoreCase);
+        string PopulateMocks(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            return text
+                .Replace("{{customer_name}}", "Test User", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{business_name}}", "Test Business", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{plan_name}}", "Test Plan", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{group_link}}", "https://t.me/test", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{meeting_link}}", "https://zoom.us/test", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{renewal_link}}", "https://example.com/renew", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{portal_magic_link}}", "https://portal.lazuar.com/workspace/portal?token=test_token", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{item_name}}", "Digital Course Bundle", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{checkout_url}}", "https://portal.lazuar.com/checkout", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{current_period_end}}", "31 Dec 2026", StringComparison.OrdinalIgnoreCase);
+        }
 
-        var subject = template.Subject
-            .Replace("{{customer_name}}", "Test User", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{business_name}}", "Test Business", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{plan_name}}", "Test Plan", StringComparison.OrdinalIgnoreCase)
-            .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase);
-
-        var htmlBody = body.Replace("\\n", "<br>").Replace("\n", "<br>");
+        var subject = MarkdownParser.ToPlainText(PopulateMocks(template.Subject));
+        var emailBody = MarkdownParser.ToHtml(PopulateMocks(template.Email_body));
+        var whatsappBody = MarkdownParser.ToPlainText(PopulateMocks(template.Whatsapp_body));
 
         var dispatchEvent = new DispatchMessageIntegrationEvent(
             OrganizationId: request.OrganizationId,
             ToEmail: "admin@lazuars.io",
             ToPhone: "+60123456789",
             Subject: subject,
-            HtmlBody: htmlBody,
+            HtmlEmailBody: emailBody,
+            PlainTextPhoneBody: whatsappBody,
             Channel: request.Channel ?? template.Channel
         );
 

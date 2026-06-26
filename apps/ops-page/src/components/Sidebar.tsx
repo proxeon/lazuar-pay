@@ -1,3 +1,4 @@
+// apps/ops-page/src/components/Sidebar.tsx
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -193,9 +194,10 @@ export default function Sidebar({
               { label: "Transaction Logs", href: "/community/transactions" },
               { label: "Plans & Products", href: "/community/plans" },
               { label: "Promotions", href: "/community/coupons" },
-              { label: "Automations", href: "/community/automations" },
+              { label: "Dunning Schedules", href: "/community/dunning-schedules" },
+              { label: "Bulk Broadcast", href: "/community/broadcasts" },
               { label: "Payment Settings", href: "/community/payment" },
-              { label: "Email Templates", href: "/community/templates" }
+              { label: "Message Templates", href: "/community/templates" }
             ]} 
           />
           <ModuleNav 

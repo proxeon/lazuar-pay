@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+// apps/ops-page/src/modules/community/pages/PlansPage.tsx
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, AlertTriangle, Link as LinkIcon, Edit2, Archive, RotateCcw, MessagesSquare, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Link as LinkIcon, Edit2, Archive, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { client, type EntitlementDto, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
@@ -106,11 +107,10 @@ export default function PlansPage() {
     onError: (err: any) => toast.error("Failed to archive plan", { description: err.message })
   });
 
-  // Replaced brittle client.fetch check with standard DOM window check
   const generateCheckoutUrl = (planSlug: string) => {
     if (!activeWorkspaceSlug) return "";
-    const baseUrl = window.location.hostname === "localhost" ? "http://localhost:3021" : "https://community.lazuar.com";
-    return `${baseUrl}/${activeWorkspaceSlug}/${planSlug}/checkout`;
+    const baseUrl = import.meta.env.VITE_PORTAL_URL || "https://portal.lazuar.com";
+    return `${baseUrl}/${activeWorkspaceSlug}/community/${planSlug}/checkout`;
   };
 
   const copyCheckoutLink = (planSlug: string) => {
@@ -190,9 +190,11 @@ export default function PlansPage() {
                             {plan.audience}
                           </span>
                         </div>
-                        <p className="text-[12px] text-[#71717a] line-clamp-1 max-w-sm">
-                          {plan.short_description || "No description provided."}
-                        </p>
+                        {plan.admin_notes && (
+                          <p className="text-[12px] text-[#71717a] line-clamp-1 max-w-sm">
+                            {plan.admin_notes}
+                          </p>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5">
@@ -303,34 +305,12 @@ export default function PlansPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Marketing Content</h4>
-              <div className="space-y-4 text-[13px]">
-                <div>
-                  <span className="text-[11px] text-[#a1a1aa] block mb-1">Description</span>
-                  <p className="text-[#09090b] leading-relaxed whitespace-pre-wrap">{selectedPlan.long_description}</p>
-                </div>
-                {selectedPlan.features && selectedPlan.features.length > 0 && (
-                  <div>
-                    <span className="text-[11px] text-[#a1a1aa] block mb-1.5">Included Features</span>
-                    <ul className="space-y-1.5">
-                      {selectedPlan.features.map((f, i) => (
-                        <li key={i} className="flex items-start gap-2 text-[#09090b]">
-                          <CheckCircle2 size={14} className="text-emerald-500 mt-0.5 shrink-0" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {selectedPlan.faq && selectedPlan.faq.length > 0 && (
-                  <div className="flex items-center gap-2 p-3 bg-[#fafafa] border border-[#e5e5e5] rounded-sm">
-                    <MessagesSquare size={16} className="text-[#71717a]" />
-                    <span className="font-medium text-[#09090b]">{selectedPlan.faq.length} FAQs attached to this plan.</span>
-                  </div>
-                )}
+            {selectedPlan.admin_notes && (
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Internal Notes</h4>
+                <p className="text-[13px] text-[#09090b] leading-relaxed whitespace-pre-wrap">{selectedPlan.admin_notes}</p>
               </div>
-            </div>
+            )}
 
             <div className="space-y-4">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h4>

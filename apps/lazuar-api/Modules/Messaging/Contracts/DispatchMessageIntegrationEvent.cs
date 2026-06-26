@@ -12,7 +12,8 @@ public record DispatchMessageIntegrationEvent(
     string ToEmail,
     string? ToPhone,
     string Subject,
-    string HtmlBody,
+    string? HtmlEmailBody,
+    string? PlainTextPhoneBody,
     string Channel = "EMAIL" // EMAIL, WHATSAPP, or ALL
 ) : IIntegrationEvent
 {

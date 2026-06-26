@@ -17,16 +17,15 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
 
     public async Task HandleAsync(DispatchMessageIntegrationEvent @event)
     {
-        if (@event.Channel is "EMAIL" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToEmail))
+        if (@event.Channel is "EMAIL" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToEmail) && !string.IsNullOrWhiteSpace(@event.HtmlEmailBody))
         {
-            var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlBody);
+            var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlEmailBody);
             await _emailService.SendEmailAsync(@event.ToEmail, @event.Subject, htmlPayload);
         }
 
-        if (@event.Channel is "WHATSAPP" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToPhone))
+        if (@event.Channel is "WHATSAPP" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToPhone) && !string.IsNullOrWhiteSpace(@event.PlainTextPhoneBody))
         {
-            var plainText = @event.HtmlBody.Replace("<br>", "\n").Replace("<br/>", "\n");
-            await _messagingService.SendMessageAsync(@event.ToPhone, $"*{@event.Subject}*\n\n{plainText}");
+            await _messagingService.SendMessageAsync(@event.ToPhone, @event.PlainTextPhoneBody);
         }
     }
 }

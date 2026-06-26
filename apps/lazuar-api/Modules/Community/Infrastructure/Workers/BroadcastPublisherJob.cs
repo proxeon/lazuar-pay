@@ -93,7 +93,8 @@ public class BroadcastPublisherJob : BackgroundService
                                     recipient.Email ?? "",
                                     recipient.Phone,
                                     campaign.Subject,
-                                    campaign.Body,
+                                    campaign.EmailBody,
+                                    campaign.WhatsAppBody,
                                     campaign.Channel
                                 );
                                 await eventBus.PublishAsync(evt);

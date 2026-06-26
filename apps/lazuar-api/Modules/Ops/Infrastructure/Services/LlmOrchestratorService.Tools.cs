@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Ops/Infrastructure/Services/LlmOrchestratorService.Tools.cs
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -20,9 +19,9 @@ public partial class LlmOrchestratorService
             var cleanArgs = string.IsNullOrWhiteSpace(arguments) ? "{}" : arguments;
             payload = JsonSerializer.Deserialize<object>(cleanArgs) ?? new object();
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            payload = new { _error = "The AI generated invalid parameters.", _raw_output = arguments };
+            payload = new { _error = $"System Error: Tool {definition.Name} rejected your payload. The JSON structure was invalid. Missing/Malformed field: {ex.Message}. Please output correct JSON and try again.", _raw_output = arguments };
         }
 
         var name = definition.Name.Replace("Command", "");
@@ -51,21 +50,30 @@ public partial class LlmOrchestratorService
             try
             {
                 var jsonObject = JsonSerializer.Deserialize<JsonElement>(cleanArgs);
-                jsonNode = JsonNode.Parse(jsonObject.GetRawText()) as JsonObject ?? new JsonObject();
+                jsonNode = JsonNode.Parse(jsonObject.GetRawText()) ?? new JsonObject();
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
-                jsonNode = new JsonObject();
+                return $"System Error: Tool {definition.Name} rejected your payload. The JSON structure was invalid. Error detail: {ex.Message}. Please output correct JSON and try again.";
             }
 
             jsonNode["OrganizationId"] = tenantId.ToString();
 
             var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
+            
+            object? args = null;
+            try
+            {
+                args = jsonNode.Deserialize(definition.RequestType, deserializeOptions);
+            }
+            catch (JsonException ex)
+            {
+                return $"System Error: Tool {definition.Name} rejected your payload. The JSON structure was invalid. Error detail: {ex.Message}. Please output correct JSON and try again.";
+            }
 
             if (args == null)
             {
-                return "Error: Failed to deserialize arguments into command.";
+                return $"System Error: Tool {definition.Name} failed to deserialize arguments.";
             }
 
             var result = await _mediator.Send(args, ct);

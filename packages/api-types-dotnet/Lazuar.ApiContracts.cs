@@ -279,6 +279,27 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CheckoutStatusResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("token")]
+        public string? Token { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CommunityPlanDto
     {
 
@@ -294,26 +315,14 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("audience")]
         public string Audience { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("short_description")]
-        public string Short_description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("long_description")]
-        public string Long_description { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double Price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string Interval { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("features")]
-        public System.Collections.Generic.List<string> Features { get; set; } = new System.Collections.Generic.List<string>();
-
-        [System.Text.Json.Serialization.JsonPropertyName("methodology")]
-        public string Methodology { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("faq")]
-        public System.Collections.Generic.List<FaqItemDto> Faq { get; set; } = new System.Collections.Generic.List<FaqItemDto>();
+        [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
+        public string? Admin_notes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
@@ -576,8 +585,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("channel")]
         public string Channel { get; set; } = default!;
@@ -651,26 +663,14 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("audience")]
         public string Audience { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("short_description")]
-        public string Short_description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("long_description")]
-        public string Long_description { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double Price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string Interval { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("features")]
-        public System.Collections.Generic.List<string> Features { get; set; } = new System.Collections.Generic.List<string>();
-
-        [System.Text.Json.Serialization.JsonPropertyName("methodology")]
-        public string Methodology { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("faq")]
-        public System.Collections.Generic.List<FaqItemDto> Faq { get; set; } = new System.Collections.Generic.List<FaqItemDto>();
+        [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
+        public string? Admin_notes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("display_order")]
         public int Display_order { get; set; } = default!;
@@ -798,8 +798,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("channel")]
         public string Channel { get; set; } = default!;
@@ -879,30 +882,6 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FaqItemDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public string Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("question")]
-        public string Question { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("answer")]
-        public string Answer { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class MagicLinkRequestDto
     {
 
@@ -936,8 +915,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_default")]
         public bool Is_default { get; set; } = default!;
@@ -1305,8 +1287,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1323,8 +1308,11 @@ namespace Lazuar.ApiTypes
     public partial class TemplatePreviewResponseDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("html_content")]
-        public string Html_content { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("html_email_preview")]
+        public string Html_email_preview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("text_whatsapp_preview")]
+        public string Text_whatsapp_preview { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("subject_content")]
         public string Subject_content { get; set; } = default!;
@@ -1524,26 +1512,14 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("audience")]
         public string? Audience { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("short_description")]
-        public string? Short_description { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("long_description")]
-        public string? Long_description { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double? Price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string? Interval { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("features")]
-        public System.Collections.Generic.List<string>? Features { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("methodology")]
-        public string? Methodology { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("faq")]
-        public System.Collections.Generic.List<FaqItemDto>? Faq { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
+        public string? Admin_notes { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool? Is_active { get; set; } = default!;
@@ -1641,8 +1617,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
