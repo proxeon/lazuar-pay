@@ -6,6 +6,7 @@
     <ProjectReference Include="..\Domain\BuildingBlocks.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Markdig" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="OpenAI" />
   </ItemGroup>
