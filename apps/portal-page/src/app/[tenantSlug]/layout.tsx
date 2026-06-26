@@ -1,4 +1,3 @@
-// apps/portal-page/src/app/[tenantSlug]/layout.tsx
 import { ReactNode } from "react";
 
 export default async function TenantLayout({
@@ -11,7 +10,7 @@ export default async function TenantLayout({
   await params;
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-zinc-50 dark:bg-black font-sans text-foreground selection:bg-foreground selection:text-background antialiased">
+    <div className="flex flex-col flex-1 w-full font-sans selection:bg-foreground selection:text-background">
       {children}
     </div>
   );
