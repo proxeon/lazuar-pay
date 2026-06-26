@@ -28,15 +28,9 @@ function SuperadminLayout() {
   useEffect(() => {
     async function verifySession() {
       try {
-        const { data, error } = await client.GET("/one/auth/me");
+        const { data, error } = await client.GET("/platform/auth/me");
         if (error || !data) {
           navigate(`/login?returnUrl=${encodeURIComponent(location.pathname)}`);
-          return;
-        }
-
-        if (data.role !== "SUPER_ADMIN") {
-          await client.POST("/one/auth/logout");
-          navigate("/login");
           return;
         }
 
@@ -58,7 +52,7 @@ function SuperadminLayout() {
   };
 
   const handleLogout = async () => {
-    await client.POST("/one/auth/logout");
+    await client.POST("/platform/auth/logout");
     navigate("/login");
   };
 

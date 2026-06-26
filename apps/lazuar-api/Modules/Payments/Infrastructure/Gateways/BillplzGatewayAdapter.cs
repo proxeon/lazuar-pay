@@ -67,7 +67,11 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var endpoint = isProd ? ProductionApiUrl : SandboxApiUrl;
 
         metadata.TryGetValue("type", out var type);
-        var ref1 = metadata.TryGetValue("subscription_id", out var subId) ? subId : tenantId.ToString();
+        metadata.TryGetValue("subscription_id", out var subId);
+        metadata.TryGetValue("tenant_id", out var metaTenantId); // Crucial for utility credits
+        
+        // Map data into Billplz's limited reference fields
+        var ref1 = subId ?? metaTenantId ?? tenantId.ToString();
         var typeValue = type ?? "payment";
         
         var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}";
@@ -77,7 +81,8 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             webhookUrl = webhookUrl.Replace("localhost", "lazuar-local-dev.com");
         }
 
-        webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&subscription_id={Uri.EscapeDataString(ref1)}";
+        // Pass references through the callback URL query string to ensure stateless persistence
+        webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&reference_1={Uri.EscapeDataString(ref1)}";
 
         var totalAmountCents = (int)(amount * quantity * 100);
         var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : (string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName);
@@ -168,10 +173,15 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             var isPaid = paid.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                          state.Equals("paid", StringComparison.OrdinalIgnoreCase);
 
+            // Reconstruct Metadata from Fallback Query Strings and Billplz References
             var reference1 = formData.GetValueOrDefault("reference_1", "");
+            if (string.IsNullOrEmpty(reference1) && headers.TryGetValue("Query-reference_1", out var qsRef1))
+            {
+                reference1 = qsRef1;
+            }
             if (string.IsNullOrEmpty(reference1) && headers.TryGetValue("Query-subscription_id", out var qsSubId))
             {
-                reference1 = qsSubId;
+                reference1 = qsSubId; // Fallback for legacy webhooks
             }
 
             var reference2 = formData.GetValueOrDefault("reference_2", "");
@@ -181,8 +191,19 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             }
 
             var metadata = new Dictionary<string, string>();
-            if (!string.IsNullOrEmpty(reference2)) metadata["type"] = reference2;
-            if (!string.IsNullOrEmpty(reference1)) metadata["subscription_id"] = reference1;
+            if (!string.IsNullOrEmpty(reference2)) 
+            {
+                metadata["type"] = reference2;
+            }
+            
+            if (!string.IsNullOrEmpty(reference1)) 
+            {
+                // If it's a platform credit purchase, ref1 holds the buyer's tenant_id, not a sub_id.
+                if (reference2 == "utility_credit_topup")
+                    metadata["tenant_id"] = reference1;
+                else
+                    metadata["subscription_id"] = reference1;
+            }
 
             decimal gatewayFee = (paidAmountMyr * (estimatedFeePercentage / 100m)) + fixedFee;
             if (gatewayFee < 0) gatewayFee = 0;

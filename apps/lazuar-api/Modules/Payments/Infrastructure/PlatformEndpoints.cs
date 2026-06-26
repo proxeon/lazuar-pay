@@ -23,11 +23,20 @@ namespace Modules.Payments.Infrastructure;
 
 public static class PlatformEndpoints
 {
-    private record GlobalUserDto(Guid Id, string Email, string Name, string PasswordHash, Guid SecurityStamp, bool IsSystemAdmin, bool IsEmailVerified, bool IsActive);
+    private class GlobalUserDto
+    {
+        public Guid Id { get; set; }
+        public string Email { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string PasswordHash { get; set; } = "";
+        public Guid SecurityStamp { get; set; }
+        public bool IsSystemAdmin { get; set; }
+        public bool IsEmailVerified { get; set; }
+        public bool IsActive { get; set; }
+    }
 
     public static RouteGroupBuilder MapPlatformEndpoints(this RouteGroupBuilder group)
     {
-        // Platform Login - Bypasses group authorization
         group.MapPost("/auth/login", async Task<Results<Ok<LoginResponse>, UnauthorizedHttpResult>> (
             [FromBody] LoginRequest req,
             [FromKeyedServices("OneSqlConnectionFactory")] ISqlConnectionFactory sqlFactory,
@@ -44,7 +53,6 @@ public static class PlatformEndpoints
             var query = @"SELECT ""Id"", ""Email"", ""Name"", ""PasswordHash"", ""SecurityStamp"", ""IsSystemAdmin"", ""IsEmailVerified"", ""IsActive"" FROM one.""GlobalUsers"" WHERE ""Email"" = @Email LIMIT 1";
             var user = await conn.QuerySingleOrDefaultAsync<GlobalUserDto>(query, new { Email = email });
 
-            // Critical Guard: Must be a System Admin
             if (user == null || !user.IsActive || !user.IsSystemAdmin || !passwordService.Verify(req.Password, user.PasswordHash))
             {
                 return TypedResults.Unauthorized();
@@ -58,14 +66,12 @@ public static class PlatformEndpoints
             });
         }).AllowAnonymous();
 
-        // Platform Logout - Bypasses group authorization
         group.MapPost("/auth/logout", (HttpContext ctx) =>
         {
             ctx.Response.Cookies.Delete("lazuar_admin_auth", new CookieOptions { Path = "/api/v1/platform" });
             return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
         }).AllowAnonymous();
 
-        // Platform GetMe - Requires SUPER_ADMIN
         group.MapGet("/auth/me", async Task<Results<Ok<AuthUser>, UnauthorizedHttpResult>> (
             ClaimsPrincipal principal, 
             [FromKeyedServices("OneSqlConnectionFactory")] ISqlConnectionFactory sqlFactory,
@@ -104,7 +110,6 @@ public static class PlatformEndpoints
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
-            // Middleware implicitly sets TenantId to SystemTenantId (0000...001)
             var query = new GetPaymentConfigQuery(ctx.TenantId);
             var config = await mediator.Send(query);
             return config != null ? TypedResults.Ok(config) : TypedResults.NotFound();
@@ -115,7 +120,6 @@ public static class PlatformEndpoints
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>
         {
-            // Middleware implicitly sets TenantId to SystemTenantId (0000...001)
             var command = new UpdatePaymentConfigCommand(
                 ctx.TenantId, req.Gateway_type, req.Api_key, req.Collection_id, req.Webhook_secret, req.Secret_key, req.Is_active);
             
@@ -146,7 +150,6 @@ public static class PlatformEndpoints
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
         var isDev = env.IsDevelopment();
 
-        // Scope the cookie strictly to the platform routes to prevent collision with tenant cookies
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,

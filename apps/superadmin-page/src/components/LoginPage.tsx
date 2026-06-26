@@ -17,11 +17,11 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const { error: apiError } = await client.POST("/one/auth/login", {
+      const { error: apiError } = await client.POST("/platform/auth/login", {
         body: { email, password }
       });
 
-      if (apiError) throw new Error(apiError.detail || "Invalid credentials.");
+      if (apiError) throw new Error(apiError.detail || "Invalid credentials or unauthorized access.");
 
       const returnUrl = searchParams.get("returnUrl");
       if (returnUrl) {

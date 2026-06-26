@@ -17,6 +17,7 @@ public class TenantPaymentConfigRepository : ITenantPaymentConfigRepository
     public async Task<TenantPaymentConfiguration?> GetActiveByTenantIdAsync(Guid tenantId, CancellationToken ct = default)
     {
         return await _context.TenantPaymentConfigurations
+            .IgnoreQueryFilters() // CRITICAL FIX: Bypass tenant isolation so the creator can read the system's public keys
             .FirstOrDefaultAsync(c => c.OrganizationId == tenantId && c.IsActive, ct);
     }
 }
@@ -33,6 +34,7 @@ public class PaymentWebhookLogRepository : IPaymentWebhookLogRepository
     public async Task<bool> HasBeenProcessedAsync(string eventId, string provider, CancellationToken ct = default)
     {
         return await _context.PaymentWebhookLogs
+            .IgnoreQueryFilters() // CRITICAL FIX: Webhooks hit without a logged-in user context
             .AnyAsync(l => l.EventId == eventId && l.Provider == provider, ct);
     }
 
