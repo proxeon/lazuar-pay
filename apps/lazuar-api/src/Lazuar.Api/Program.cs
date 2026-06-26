@@ -264,10 +264,11 @@ apiGroup.MapOpsEndpoints();
 apiGroup.MapBillingEndpoints();
 apiGroup.MapLhdnEndpoints();
 
-// Expose Platform API endpoints decoupled from regular tenant routing 
-app.MapGroup("/api/v1/platform")
+var platformGroup = app.MapGroup("/api/v1/platform")
    .RequireCors()
    .RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
+
+platformGroup.MapPlatformPaymentEndpoints();
 
 app.Run();
 
