@@ -7,7 +7,6 @@ using BuildingBlocks.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 
@@ -29,8 +28,8 @@ public static class VaultEndpoints
             }
 
             var tenantId = ctx.TenantId;
-            var bucket = config["R2:BucketName"] ?? "lazuar-media";
-            var publicUrlBase = config["R2:PublicUrl"]?.TrimEnd('/');
+            var bucket = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
+            var publicUrlBase = config["R2_PUBLIC_DEV_URL"]?.TrimEnd('/');
 
             var extension = Path.GetExtension(file.FileName);
             var key = $"vault/{tenantId}/{Guid.CreateVersion7()}{extension}";
@@ -46,7 +45,7 @@ public static class VaultEndpoints
             var url = $"{publicUrlBase}/{resultKey}";
 
             return TypedResults.Ok<object>(new { url });
-        }).DisableAntiforgery(); // Bypasses anti-forgery to support multipart/form-data from React clients seamlessly
+        }).DisableAntiforgery();
 
         return group;
     }

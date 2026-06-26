@@ -113,15 +113,15 @@ builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
-// Setup R2/S3 Client Integration
+// Setup R2/S3 Client Integration using the standardized Cloudflare configuration
 var r2Config = new AmazonS3Config
 {
-    ServiceURL = builder.Configuration["R2:ServiceUrl"],
+    ServiceURL = builder.Configuration["R2_ENDPOINT"],
     ForcePathStyle = true
 };
 var s3Credentials = new BasicAWSCredentials(
-    builder.Configuration["R2:AccessKey"] ?? "",
-    builder.Configuration["R2:SecretKey"] ?? "");
+    builder.Configuration["R2_ACCESS_KEY"] ?? "",
+    builder.Configuration["R2_SECRET_KEY"] ?? "");
 
 builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(s3Credentials, r2Config));
 builder.Services.AddSingleton<IR2StorageService, R2StorageService>();

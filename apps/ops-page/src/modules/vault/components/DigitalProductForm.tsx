@@ -59,6 +59,7 @@ export default function DigitalProductForm({
       const response = await fetch(`${API_URL}/admin/community/vault/upload`, {
         method: "POST",
         body: formData,
+        credentials: "include", // Required to send the auth cookie
         headers: {
           "X-Tenant-Id": activeWorkspaceId || ""
         }
