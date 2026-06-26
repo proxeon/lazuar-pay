@@ -154,7 +154,10 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = context =>
         {
-            if (context.Request.Cookies.TryGetValue("lazuar_auth", out var token))
+            var isPlatformRoute = context.Request.Path.StartsWithSegments("/api/v1/platform");
+            var cookieName = isPlatformRoute ? "lazuar_admin_auth" : "lazuar_auth";
+
+            if (context.Request.Cookies.TryGetValue(cookieName, out var token))
             {
                 context.Token = token;
             }
