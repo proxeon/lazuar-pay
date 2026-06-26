@@ -585,8 +585,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("channel")]
         public string Channel { get; set; } = default!;
@@ -795,8 +798,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("channel")]
         public string Channel { get; set; } = default!;
@@ -909,8 +915,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_default")]
         public bool Is_default { get; set; } = default!;
@@ -1278,8 +1287,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1296,8 +1308,11 @@ namespace Lazuar.ApiTypes
     public partial class TemplatePreviewResponseDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("html_content")]
-        public string Html_content { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("html_email_preview")]
+        public string Html_email_preview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("text_whatsapp_preview")]
+        public string Text_whatsapp_preview { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("subject_content")]
         public string Subject_content { get; set; } = default!;
@@ -1602,8 +1617,11 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
         public string Subject { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("body")]
-        public string Body { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

@@ -1470,7 +1470,8 @@ export interface components {
         };
         "Community.CreateBroadcastRequestDto": {
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
             channel: string;
             target_plan_id?: string;
             target_status?: string;
@@ -1537,7 +1538,8 @@ export interface components {
         "Community.CreateTemplateRequestDto": {
             name: string;
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
             channel: string;
             required_variables: string[];
             optional_variables: string[];
@@ -1565,7 +1567,8 @@ export interface components {
             name: string;
             channel: string;
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
             is_default: boolean;
             required_variables: string[];
             optional_variables: string[];
@@ -1668,10 +1671,12 @@ export interface components {
         };
         "Community.TemplatePreviewRequestDto": {
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
         };
         "Community.TemplatePreviewResponseDto": {
-            html_content: string;
+            html_email_preview: string;
+            text_whatsapp_preview: string;
             subject_content: string;
         };
         "Community.TemplateVariableCategoryDto": {
@@ -1755,7 +1760,8 @@ export interface components {
         };
         "Community.UpdateTemplateRequestDto": {
             subject: string;
-            body: string;
+            email_body: string;
+            whatsapp_body: string;
         };
         "Community.ValidateCouponResponseDto": {
             is_valid: boolean;
