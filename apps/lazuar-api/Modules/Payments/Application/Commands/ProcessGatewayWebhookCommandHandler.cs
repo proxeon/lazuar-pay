@@ -1,4 +1,7 @@
-// apps/lazuar-api/Modules/Payments/Application/Commands/ProcessGatewayWebhookCommandHandler.cs
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Payments.Application.Ports;
@@ -28,52 +31,6 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
 
     public async Task Handle(ProcessGatewayWebhookCommand request, CancellationToken cancellationToken)
     {
-        // 1. Process Platform Utility Credit Top-Ups First
-        // System webhooks bypass tenant DB lookups because they route through the Lazuar Platform Stripe Account
-        if (request.GatewayType == "SYSTEM_STRIPE")
-        {
-            var systemAdapter = _gatewayFactory.GetAdapter("STRIPE");
-            var systemResult = await systemAdapter.ParseWebhookAsync(
-                "", // API Key not needed for verification
-                Environment.GetEnvironmentVariable("LAZUAR_SYSTEM_STRIPE_WEBHOOK_SECRET") ?? "", 
-                request.RawBody, 
-                request.Headers);
-
-            if (!systemResult.Verified) throw new InvalidOperationException($"System webhook verification failed: {systemResult.Error}");
-            if (systemResult.EventType != "PAYMENT_COMPLETED") return;
-
-            var systemProcessed = await _logRepository.HasBeenProcessedAsync(systemResult.EventId, "SYSTEM_STRIPE", cancellationToken);
-            if (systemProcessed) return;
-
-            _logRepository.Add(new PaymentWebhookLog(systemResult.EventId, "SYSTEM_STRIPE"));
-
-            if (systemResult.Metadata.TryGetValue("type", out var type) && type == "utility_credit_topup")
-            {
-                if (systemResult.Metadata.TryGetValue("tenant_id", out var tenantIdStr) && Guid.TryParse(tenantIdStr, out var tenantId))
-                {
-                    var credits = 0;
-                    if (systemResult.AmountPaid >= 50) credits = 500;
-                    if (systemResult.AmountPaid >= 100) credits = 1100;
-                    if (systemResult.AmountPaid >= 200) credits = 2500;
-
-                    if (credits > 0)
-                    {
-                        await _eventBus.PublishAsync(new ApiCreditPurchasedIntegrationEvent(
-                            tenantId,
-                            credits,
-                            systemResult.AmountPaid,
-                            systemResult.Currency,
-                            systemResult.GatewayTransactionId ?? systemResult.EventId
-                        ));
-                    }
-                }
-            }
-
-            await _logRepository.SaveChangesAsync(cancellationToken);
-            return;
-        }
-
-        // 2. Process Standard Tenant Webhooks
         var config = await _configRepository.GetActiveByTenantIdAsync(request.TenantId, cancellationToken);
         if (config == null || string.IsNullOrEmpty(config.WebhookSecret))
         {

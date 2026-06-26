@@ -1,9 +1,7 @@
-// apps/lazuar-api/Modules/Payments/Application/Queries/GenerateSystemCheckoutSessionQueryHandler.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Microsoft.Extensions.Configuration;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Queries;
 
@@ -12,29 +10,37 @@ namespace Modules.Payments.Application.Queries;
 public class GenerateSystemCheckoutSessionQueryHandler : IQueryHandler<GenerateSystemCheckoutSessionQuery, string>
 {
     private readonly IPaymentGatewayFactory _gatewayFactory;
-    private readonly IConfiguration _configuration;
+    private readonly ITenantPaymentConfigRepository _configRepository;
 
     public GenerateSystemCheckoutSessionQueryHandler(
         IPaymentGatewayFactory gatewayFactory,
-        IConfiguration configuration)
+        ITenantPaymentConfigRepository configRepository)
     {
         _gatewayFactory = gatewayFactory;
-        _configuration = configuration;
+        _configRepository = configRepository;
     }
 
     public async Task<string> Handle(GenerateSystemCheckoutSessionQuery request, CancellationToken cancellationToken)
     {
-        var systemStripeKey = _configuration["LAZUAR_SYSTEM_STRIPE_SECRET_KEY"];
-        if (string.IsNullOrEmpty(systemStripeKey))
+        var systemId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var config = await _configRepository.GetActiveByTenantIdAsync(systemId, cancellationToken);
+
+        if (config == null || !config.IsActive)
         {
-            throw new InvalidOperationException("System billing is not configured.");
+            throw new InvalidOperationException("Platform payment gateway is not configured.");
         }
 
-        var adapter = _gatewayFactory.GetAdapter("STRIPE");
+        var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
+
+        if (!request.Metadata.ContainsKey("tenant_id")) 
+            request.Metadata.Add("tenant_id", request.TenantId.ToString());
+            
+        if (!request.Metadata.ContainsKey("type")) 
+            request.Metadata.Add("type", "utility_credit_topup");
 
         var result = await adapter.GenerateCheckoutAsync(
-            systemStripeKey,
-            request.TenantId,
+            config.ApiKey ?? "",
+            systemId,
             request.Amount,
             request.Currency,
             request.ProductName,
@@ -42,13 +48,13 @@ public class GenerateSystemCheckoutSessionQueryHandler : IQueryHandler<GenerateS
             request.SuccessUrl,
             request.CancelUrl,
             request.Metadata,
-            null,
+            config.MerchantId,
             false,
             1);
 
         if (!result.Success || string.IsNullOrEmpty(result.CheckoutUrl))
         {
-            throw new InvalidOperationException($"Failed to generate system checkout session: {result.Error}");
+            throw new InvalidOperationException($"Failed to generate platform checkout session: {result.Error}");
         }
 
         return result.CheckoutUrl;

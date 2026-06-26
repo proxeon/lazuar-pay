@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Billing/Infrastructure/DependencyInjection.cs
 using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
 using BuildingBlocks.Infrastructure;
@@ -44,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IBillingQueryService, BillingQueryService>();
 
         services.AddTransient<GatewayPaymentCompletedHandler>();
+        services.AddTransient<PlatformTopUpEventHandler>();
         services.AddTransient<ZeroAmountCheckoutHandler>();
         services.AddTransient<GatewayRefundCompletedHandler>();
         services.AddTransient<InvoiceIssuedHandler>();
@@ -52,7 +52,6 @@ public static class DependencyInjection
         services.AddTransient<LhdnDocumentValidatedIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentSubmittedIntegrationEventHandler>();
-        services.AddTransient<ApiCreditPurchasedHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -69,6 +68,7 @@ public static class DependencyInjection
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedHandler>();
+        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, PlatformTopUpEventHandler>();
         eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedHandler>();
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedHandler>();
@@ -77,7 +77,6 @@ public static class DependencyInjection
         eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentSubmittedIntegrationEvent, LhdnDocumentSubmittedIntegrationEventHandler>();
-        eventBus.Subscribe<ApiCreditPurchasedIntegrationEvent, ApiCreditPurchasedHandler>();
 
         return app;
     }
