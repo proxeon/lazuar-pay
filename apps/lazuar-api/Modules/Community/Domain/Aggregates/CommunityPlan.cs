@@ -17,6 +17,10 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public decimal Price { get; private set; }
     public string Interval { get; private set; }
     public string PricingModel { get; private set; }
+    
+    public string ProductType { get; private set; }
+    public string? FulfillmentFileUrl { get; private set; }
+    
     public string? AdminNotes { get; private set; }
 
     public bool IsActive { get; private set; }
@@ -37,7 +41,8 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public CommunityPlan(
         Guid organizationId, string slug, string name, string audience,
         decimal price, string interval, int gracePeriodDays, int? maxCapacity, 
-        int displayOrder, string? adminNotes = null, string pricingModel = "FLAT_RATE")
+        int displayOrder, string? adminNotes = null, string pricingModel = "FLAT_RATE", 
+        string productType = "COMMUNITY", string? fulfillmentFileUrl = null)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
 
@@ -49,6 +54,8 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
         Price = price;
         Interval = interval;
         PricingModel = string.IsNullOrWhiteSpace(pricingModel) ? "FLAT_RATE" : pricingModel.ToUpperInvariant();
+        ProductType = string.IsNullOrWhiteSpace(productType) ? "COMMUNITY" : productType.ToUpperInvariant();
+        FulfillmentFileUrl = fulfillmentFileUrl;
         GracePeriodDays = gracePeriodDays;
         MaxCapacity = maxCapacity;
         DisplayOrder = displayOrder;
@@ -61,7 +68,8 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
     public void UpdateDetails(
         string name, string audience, decimal price, string interval, 
         int gracePeriodDays, int? maxCapacity, int displayOrder, 
-        bool isActive, string? adminNotes = null, string? pricingModel = null)
+        bool isActive, string? adminNotes = null, string? pricingModel = null, 
+        string? productType = null, string? fulfillmentFileUrl = null)
     {
         CheckRule(new GracePeriodMustBePositiveRule(gracePeriodDays));
 
@@ -69,10 +77,10 @@ public class CommunityPlan : Entity, IAggregateRoot, IMustHaveTenant
         Audience = audience;
         Price = price;
         Interval = interval;
-        if (!string.IsNullOrWhiteSpace(pricingModel)) 
-        {
-            PricingModel = pricingModel.ToUpperInvariant();
-        }
+        if (!string.IsNullOrWhiteSpace(pricingModel)) PricingModel = pricingModel.ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(productType)) ProductType = productType.ToUpperInvariant();
+        if (fulfillmentFileUrl != null) FulfillmentFileUrl = fulfillmentFileUrl;
+        
         GracePeriodDays = gracePeriodDays;
         MaxCapacity = maxCapacity;
         DisplayOrder = displayOrder;

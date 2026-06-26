@@ -45,7 +45,8 @@ public static class PlanEndpoints
                 ctx.TenantId, req.Slug, req.Name, req.Audience,
                 (decimal)req.Price, req.Interval, req.Grace_period_days,
                 req.Max_capacity, req.Display_order, req.Admin_notes,
-                req.Telegram_invite_link, req.Weekly_meeting_link, req.Pricing_model);
+                req.Telegram_invite_link, req.Weekly_meeting_link, req.Pricing_model,
+                req.Product_type, req.Fulfillment_file_url);
             
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
@@ -62,7 +63,8 @@ public static class PlanEndpoints
                 req.Price.HasValue ? (decimal)req.Price.Value : null, 
                 req.Interval, req.Admin_notes,
                 req.Is_active, req.Display_order, req.Max_capacity, req.Grace_period_days,
-                req.Telegram_invite_link, req.Weekly_meeting_link, req.Pricing_model);
+                req.Telegram_invite_link, req.Weekly_meeting_link, req.Pricing_model,
+                req.Product_type, req.Fulfillment_file_url);
             
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "updated" });

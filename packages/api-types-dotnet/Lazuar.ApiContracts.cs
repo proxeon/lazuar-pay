@@ -324,6 +324,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
         public string Pricing_model { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("product_type")]
+        public string Product_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fulfillment_file_url")]
+        public string? Fulfillment_file_url { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
         public string? Admin_notes { get; set; } = default!;
 
@@ -677,6 +683,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
         public string Pricing_model { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_type")]
+        public string Product_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fulfillment_file_url")]
+        public string? Fulfillment_file_url { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
         public string? Admin_notes { get; set; } = default!;
@@ -1535,6 +1547,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
         public string? Pricing_model { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_type")]
+        public string? Product_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("fulfillment_file_url")]
+        public string? Fulfillment_file_url { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
         public string? Admin_notes { get; set; } = default!;

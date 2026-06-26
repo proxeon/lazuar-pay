@@ -19,7 +19,9 @@ public record UpdatePlanCommand(
     int? GracePeriodDays,
     string? TelegramInviteLink,
     string? WeeklyMeetingLink,
-    string? PricingModel) : ICommand
+    string? PricingModel,
+    string? ProductType,
+    string? FulfillmentFileUrl) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -58,7 +60,9 @@ public class UpdatePlanCommandHandler : ICommandHandler<UpdatePlanCommand>
             request.DisplayOrder ?? plan.DisplayOrder,
             request.IsActive ?? plan.IsActive,
             request.AdminNotes ?? plan.AdminNotes,
-            request.PricingModel ?? plan.PricingModel
+            request.PricingModel ?? plan.PricingModel,
+            request.ProductType ?? plan.ProductType,
+            request.FulfillmentFileUrl ?? plan.FulfillmentFileUrl
         );
 
         if (request.TelegramInviteLink != null || request.WeeklyMeetingLink != null)

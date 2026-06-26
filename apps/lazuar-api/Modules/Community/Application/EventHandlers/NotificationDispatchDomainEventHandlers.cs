@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/EventHandlers/NotificationDispatchDomainEventHandlers.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -90,7 +91,20 @@ public class NotificationDispatchDomainEventHandlers :
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(notification.OrganizationId);
         var tenantSlug = workspace?.Slug ?? "workspace";
 
-        var templateName = notification.IsFirstPayment ? "Community Welcome" : "Community Payment Success";
+        string templateName;
+        if (plan.ProductType == "VAULT") 
+        {
+            templateName = "Digital Product Delivery";
+        } 
+        else if (plan.ProductType == "EVENT") 
+        {
+            templateName = "Event Ticket Confirmation";
+        } 
+        else 
+        {
+            templateName = notification.IsFirstPayment ? "Community Welcome" : "Community Payment Success";
+        }
+
         var template = await _templateService.GetTemplateByNameAsync(notification.OrganizationId, templateName);
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
@@ -105,13 +119,31 @@ public class NotificationDispatchDomainEventHandlers :
             ["plan_name"] = plan.Name,
             ["group_link"] = plan.TelegramInviteLink ?? "",
             ["meeting_link"] = plan.WeeklyMeetingLink ?? "",
-            ["total_price"] = plan.Price.ToString("F2"),
-            ["portal_magic_link"] = portalMagicLink
+            ["total_price"] = (plan.Price * sub.Quantity).ToString("F2"),
+            ["portal_magic_link"] = portalMagicLink,
+            ["fulfillment_url"] = plan.FulfillmentFileUrl ?? ""
         };
 
-        var subject = template != null ? RenderWhatsAppTemplate(template.Subject, variables) : "Subscription Active";
-        var fallbackEmail = $"Hi {profile.Full_name},\n\nYour subscription to {plan.Name} is now active. Access your portal here:\n[Dashboard]({portalMagicLink})";
-        var fallbackWhatsapp = $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active. Access your portal here: {portalMagicLink}";
+        var subject = template != null ? RenderWhatsAppTemplate(template.Subject, variables) : "Purchase Complete";
+        
+        string fallbackEmail = "";
+        string fallbackWhatsapp = "";
+
+        if (plan.ProductType == "VAULT") 
+        {
+            fallbackEmail = $"Hi {profile.Full_name},\n\nThank you for your purchase of {plan.Name}. You can download your file here:\n[Download Now]({plan.FulfillmentFileUrl})\n\nYou can also access this anytime via your portal:\n[Dashboard]({portalMagicLink})";
+            fallbackWhatsapp = $"Hi {profile.Full_name}, your purchase of {plan.Name} is confirmed! Download your file here: {plan.FulfillmentFileUrl} or access your portal: {portalMagicLink}";
+        } 
+        else if (plan.ProductType == "EVENT") 
+        {
+            fallbackEmail = $"Hi {profile.Full_name},\n\nYour ticket for {plan.Name} is confirmed. Save this link to join the event:\n[Join Event]({plan.WeeklyMeetingLink})\n\nManage your ticket via your portal:\n[Dashboard]({portalMagicLink})";
+            fallbackWhatsapp = $"Hi {profile.Full_name}, your ticket for {plan.Name} is confirmed! Event link: {plan.WeeklyMeetingLink} Portal: {portalMagicLink}";
+        } 
+        else 
+        {
+            fallbackEmail = $"Hi {profile.Full_name},\n\nYour subscription to {plan.Name} is now active. Access your portal here:\n[Dashboard]({portalMagicLink})";
+            fallbackWhatsapp = $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active. Access your portal here: {portalMagicLink}";
+        }
 
         var emailBody = template != null ? RenderEmailTemplate(template.Email_body, variables) : MarkdownParser.ToHtml(fallbackEmail);
         var whatsappBody = template != null ? RenderWhatsAppTemplate(template.Whatsapp_body, variables) : MarkdownParser.ToPlainText(fallbackWhatsapp);
@@ -247,9 +279,10 @@ public class NotificationDispatchDomainEventHandlers :
                 ["customer_name"] = profile.Full_name,
                 ["business_name"] = "Our Community",
                 ["plan_name"] = plan.Name,
-                ["total_price"] = plan.Price.ToString("F2"),
+                ["total_price"] = (plan.Price * sub.Quantity).ToString("F2"),
                 ["renewal_link"] = renewalLink,
-                ["portal_magic_link"] = portalMagicLink
+                ["portal_magic_link"] = portalMagicLink,
+                ["fulfillment_url"] = plan.FulfillmentFileUrl ?? ""
             };
             
             subject = template != null ? RenderWhatsAppTemplate(template.Subject, variables) : subject;

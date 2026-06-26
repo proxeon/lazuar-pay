@@ -9,6 +9,8 @@ model CommunityPlanDto {
   price: float64;
   interval: string;
   pricing_model: string;
+  product_type: string;
+  fulfillment_file_url?: string;
   admin_notes?: string;
   is_active: boolean;
   display_order: int32;
@@ -155,6 +157,8 @@ model CreatePlanRequestDto {
   price: float64;
   interval: string;
   pricing_model: string;
+  product_type: string;
+  fulfillment_file_url?: string;
   admin_notes?: string;
   display_order: int32;
   max_capacity?: int32;
@@ -170,6 +174,8 @@ model UpdatePlanRequestDto {
   price?: float64;
   interval?: string;
   pricing_model?: string;
+  product_type?: string;
+  fulfillment_file_url?: string;
   admin_notes?: string;
   is_active?: boolean;
   display_order?: int32;

@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/EventHandlers/AppEntitlementGrantedIntegrationEventHandler.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,6 +43,18 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
                     "Hi {{customer_name}},\n\nThank you! We have successfully received your payment of RM {{total_price}} for your {{plan_name}} membership.\n\nYou can manage your subscription at any time via your portal:\n[Access Portal]({{portal_magic_link}})\n\n— {{business_name}}", 
                     "Hi {{customer_name}}, your payment of RM {{total_price}} for {{plan_name}} is confirmed! ✅ Manage your access here: {{portal_magic_link}}", 
                     true, new[] { "{{total_price}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{portal_magic_link}}" }),
+
+                new MessageTemplate(@event.TenantId, "Digital Product Delivery", "ALL", 
+                    "Your download is ready: {{plan_name}}", 
+                    "Hi {{customer_name}},\n\nThank you for your purchase! You can access your file securely using the link below:\n\n[Download File]({{fulfillment_url}})\n\nYou can also find your purchases in your dashboard:\n[Access Portal]({{portal_magic_link}})\n\n— {{business_name}}", 
+                    "Hi {{customer_name}}, thank you for purchasing {{plan_name}}! You can download your file here: {{fulfillment_url}}", 
+                    true, new[] { "{{fulfillment_url}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{portal_magic_link}}" }),
+
+                new MessageTemplate(@event.TenantId, "Event Ticket Confirmation", "ALL", 
+                    "Ticket Confirmed: {{plan_name}}", 
+                    "Hi {{customer_name}},\n\nYour spot is reserved for {{plan_name}}. Please bookmark the event link below:\n\n[Join Event]({{meeting_link}})\n\nManage your ticket via your portal:\n[Access Portal]({{portal_magic_link}})\n\n— {{business_name}}", 
+                    "Hi {{customer_name}}, your ticket for {{plan_name}} is confirmed! Please save this link for the event: {{meeting_link}}", 
+                    true, new[] { "{{meeting_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{portal_magic_link}}" }),
                     
                 new MessageTemplate(@event.TenantId, "Community Payment Failed", "ALL", 
                     "Action Needed: Payment issue for {{plan_name}}", 

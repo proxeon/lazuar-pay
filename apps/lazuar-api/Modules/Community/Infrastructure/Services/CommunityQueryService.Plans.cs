@@ -13,7 +13,8 @@ public partial class CommunityQueryService
 {
     private record RawPlanDto(
         Guid Id, string Slug, string Name, string Audience,
-        decimal Price, string Interval, string? AdminNotes,
+        decimal Price, string Interval, string PricingModel, 
+        string ProductType, string? FulfillmentFileUrl, string? AdminNotes,
         bool IsActive, int DisplayOrder, int? MaxCapacity, int GracePeriodDays,
         string? TelegramInviteLink, string? WeeklyMeetingLink);
 
@@ -27,7 +28,7 @@ public partial class CommunityQueryService
         const string sql = @"
             SELECT
                 ""Id"", ""Slug"", ""Name"", ""Audience"",
-                ""Price"", ""Interval"", ""AdminNotes"",
+                ""Price"", ""Interval"", ""PricingModel"", ""ProductType"", ""FulfillmentFileUrl"", ""AdminNotes"",
                 ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
                 ""TelegramInviteLink"", ""WeeklyMeetingLink""
             FROM community.""Plans""
@@ -56,7 +57,7 @@ public partial class CommunityQueryService
         const string sql = @"
             SELECT
                 ""Id"", ""Slug"", ""Name"", ""Audience"",
-                ""Price"", ""Interval"", ""AdminNotes"",
+                ""Price"", ""Interval"", ""PricingModel"", ""ProductType"", ""FulfillmentFileUrl"", ""AdminNotes"",
                 ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
                 ""TelegramInviteLink"", ""WeeklyMeetingLink""
             FROM community.""Plans""
@@ -83,7 +84,7 @@ public partial class CommunityQueryService
         const string sql = @"
             SELECT
                 ""Id"", ""Slug"", ""Name"", ""Audience"",
-                ""Price"", ""Interval"", ""AdminNotes"",
+                ""Price"", ""Interval"", ""PricingModel"", ""ProductType"", ""FulfillmentFileUrl"", ""AdminNotes"",
                 ""IsActive"", ""DisplayOrder"", ""MaxCapacity"", ""GracePeriodDays"",
                 ""TelegramInviteLink"", ""WeeklyMeetingLink""
             FROM community.""Plans""

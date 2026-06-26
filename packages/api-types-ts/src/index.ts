@@ -1370,6 +1370,8 @@ export interface components {
             price: number;
             interval: string;
             pricing_model: string;
+            product_type: string;
+            fulfillment_file_url?: string;
             admin_notes?: string;
             is_active: boolean;
             /** Format: int32 */
@@ -1501,6 +1503,8 @@ export interface components {
             price: number;
             interval: string;
             pricing_model: string;
+            product_type: string;
+            fulfillment_file_url?: string;
             admin_notes?: string;
             /** Format: int32 */
             display_order: number;
@@ -1740,6 +1744,8 @@ export interface components {
             price?: number;
             interval?: string;
             pricing_model?: string;
+            product_type?: string;
+            fulfillment_file_url?: string;
             admin_notes?: string;
             is_active?: boolean;
             /** Format: int32 */

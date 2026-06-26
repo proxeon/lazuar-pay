@@ -18,7 +18,9 @@ public record CreatePlanCommand(
     string? AdminNotes,
     string? TelegramInviteLink,
     string? WeeklyMeetingLink,
-    string PricingModel = "FLAT_RATE") : ICommand<Guid>
+    string PricingModel = "FLAT_RATE",
+    string ProductType = "COMMUNITY",
+    string? FulfillmentFileUrl = null) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -55,7 +57,9 @@ public class CreatePlanCommandHandler : ICommandHandler<CreatePlanCommand, Guid>
             request.MaxCapacity,
             request.DisplayOrder,
             request.AdminNotes,
-            request.PricingModel);
+            request.PricingModel,
+            request.ProductType,
+            request.FulfillmentFileUrl);
 
         plan.SetFulfillmentLinks(request.TelegramInviteLink, request.WeeklyMeetingLink);
 
