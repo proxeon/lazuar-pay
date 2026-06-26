@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Application/IOneRepository.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,9 @@ public interface IOneRepository
     void AddWorkspaceInvitation(WorkspaceInvitation invitation);
     Task<WorkspaceInvitation?> GetInvitationByHashAsync(string hash, CancellationToken ct = default);
     Task<WorkspaceInvitation?> GetInvitationByIdAsync(Guid id, CancellationToken ct = default);
+
+    Task<TenantWebhookEndpoint?> GetWebhookEndpointAsync(Guid organizationId, CancellationToken ct = default);
+    void AddWebhookEndpoint(TenantWebhookEndpoint endpoint);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }

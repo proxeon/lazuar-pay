@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Infrastructure/Services/OneQueryService.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -116,6 +117,28 @@ public class OneQueryService : IOneQueryService
             .Where(i => i.OrganizationId == tenantId)
             .OrderByDescending(i => i.CreatedAt)
             .Select(i => new WorkspaceInvitationSnapshotDto(i.Id, i.Email, i.Role, i.Status, i.ExpiresAt))
+            .ToListAsync();
+    }
+
+    public async Task<WebhookEndpointSnapshotDto?> GetWorkspaceWebhookAsync(Guid tenantId)
+    {
+        return await _context.TenantWebhookEndpoints
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(e => e.OrganizationId == tenantId)
+            .Select(e => new WebhookEndpointSnapshotDto(e.Id, e.Url, e.SecretKey, e.IsActive, e.CreatedAt))
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<IEnumerable<WebhookDeliveryLogSnapshotDto>> GetWorkspaceWebhookLogsAsync(Guid tenantId)
+    {
+        return await _context.WebhookDeliveryOutboxes
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(o => o.OrganizationId == tenantId)
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(50)
+            .Select(o => new WebhookDeliveryLogSnapshotDto(o.Id, o.EventType, o.Status, o.AttemptCount, o.LastError, o.CreatedAt))
             .ToListAsync();
     }
 }

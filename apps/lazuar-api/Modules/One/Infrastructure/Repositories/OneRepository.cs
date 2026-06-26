@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Infrastructure/Repositories/OneRepository.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -83,6 +84,15 @@ public class OneRepository : IOneRepository
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(i => i.Id == id, ct);
     }
+
+    public async Task<TenantWebhookEndpoint?> GetWebhookEndpointAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.TenantWebhookEndpoints
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.OrganizationId == organizationId, ct);
+    }
+
+    public void AddWebhookEndpoint(TenantWebhookEndpoint endpoint) => _context.TenantWebhookEndpoints.Add(endpoint);
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {

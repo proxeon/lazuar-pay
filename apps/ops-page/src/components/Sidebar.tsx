@@ -214,7 +214,8 @@ export default function Sidebar({
             basePath="/workspace" 
             icon={Settings}
             links={[
-              { label: "General Settings", href: "/workspace/general" }
+              { label: "General Settings", href: "/workspace/general" },
+              { label: "Developer API", href: "/workspace/developer" }
             ]} 
           />
         </nav>

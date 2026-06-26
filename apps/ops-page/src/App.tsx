@@ -19,6 +19,7 @@ import TransactionsPage from "./modules/community/pages/TransactionsPage";
 import DigitalProductsPage from "./modules/vault/pages/DigitalProductsPage";
 
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
+import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
 
 export interface OpsOutletContext {
   activeWorkspaceId: string | null;
@@ -179,6 +180,7 @@ export default function App() {
         <Route path="/vault/products" element={<DigitalProductsPage />} />
 
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
+        <Route path="/workspace/developer" element={<DeveloperSettingsPage />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/community/dashboard" replace />} />

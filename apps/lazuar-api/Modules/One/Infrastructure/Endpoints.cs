@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Infrastructure/Endpoints.cs
 using System.Security.Claims;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
@@ -248,6 +249,53 @@ public static class Endpoints
             var entitlements = await db.TenantMemberships.IgnoreQueryFilters().Where(m => m.GlobalUserId == ctx.UserId)
                 .Join(db.Organizations.IgnoreQueryFilters(), m => m.OrganizationId, o => o.Id, (m, o) => new EntitlementDto { Workspace_id = o.Id.ToString(), Workspace_name = o.Name, Workspace_slug = o.Slug, Role = m.Role }).ToListAsync();
             return TypedResults.Ok((ICollection<EntitlementDto>)entitlements);
+        }).RequireAuthorization();
+
+        group.MapGet("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<WebhookEndpointDto>, UnauthorizedHttpResult, NotFound>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            var endpoint = await queryService.GetWorkspaceWebhookAsync(id);
+            if (endpoint == null) return TypedResults.NotFound();
+
+            return TypedResults.Ok(new WebhookEndpointDto {
+                Id = endpoint.Id.ToString(),
+                Url = endpoint.Url,
+                Secret_key = endpoint.SecretKey,
+                Is_active = endpoint.IsActive,
+                Created_at = new DateTimeOffset(endpoint.CreatedAt)
+            });
+        }).RequireAuthorization();
+
+        group.MapPut("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, SaveWebhookEndpointRequestDto req, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
+            if (role != "ADMIN" && role != "SUPER_ADMIN" && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            await mediator.Send(new SaveWebhookCommand(id, req.Url, req.Is_active));
+            return TypedResults.Ok(new StatusResponse { Status = "saved" });
+        }).RequireAuthorization();
+
+        group.MapGet("/workspaces/{id:guid}/webhooks/logs", async Task<Results<Ok<ICollection<WebhookDeliveryLogDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            var logs = await queryService.GetWorkspaceWebhookLogsAsync(id);
+            var dtos = logs.Select(l => new WebhookDeliveryLogDto {
+                Id = l.Id.ToString(),
+                Event_type = l.EventType,
+                Status = l.Status,
+                Attempt_count = l.AttemptCount,
+                Last_error = l.LastError,
+                Created_at = new DateTimeOffset(l.CreatedAt)
+            }).ToList();
+
+            return TypedResults.Ok((ICollection<WebhookDeliveryLogDto>)dtos);
         }).RequireAuthorization();
 
         return endpoints;
