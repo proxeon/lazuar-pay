@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Infrastructure/DependencyInjection.cs
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,9 +9,12 @@ using Modules.One.Contracts;
 using Modules.One.Infrastructure.Services;
 using Modules.One.Infrastructure.Repositories;
 using Modules.One.Infrastructure.Workers;
+using Modules.One.Infrastructure.EventHandlers;
 using Modules.One.Application.IntegrationEvents;
 using Modules.Community.Contracts;
+using Modules.Payments.Contracts.Events;
 using Microsoft.AspNetCore.Builder;
+using System;
 
 namespace Modules.One.Infrastructure;
 
@@ -36,13 +40,19 @@ public static class DependencyInjection
         services.AddSingleton<ITokenGeneratorService, TokenGeneratorService>();
         services.AddSingleton<IOneLinkService, OneLinkService>();
 
+        services.AddHttpClient("DeveloperWebhooks", client => {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
+
         services.AddKeyedScoped<IEventBus, OutboxEventBus<OneDbContext>>("OneEventBus");
 
         services.AddHostedService<SystemGenesisBootstrapperJob>();
         services.AddHostedService<OneInboxConsumerJob>();
         services.AddHostedService<OneOutboxPublisherJob>();
+        services.AddHostedService<OutboundWebhookDispatcherJob>();
 
         services.AddTransient<CommunitySubscriptionActivatedIntegrationEventHandler>();
+        services.AddTransient<OutboundWebhookEventHandlers>();
 
         return services;
     }
@@ -51,6 +61,8 @@ public static class DependencyInjection
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         eventBus.Subscribe<CommunitySubscriptionActivatedIntegrationEvent, CommunitySubscriptionActivatedIntegrationEventHandler>();
+        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, OutboundWebhookEventHandlers>();
+        eventBus.Subscribe<CommunitySubscriptionCancelledIntegrationEvent, OutboundWebhookEventHandlers>();
 
         return app;
     }
