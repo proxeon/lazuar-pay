@@ -1,4 +1,3 @@
-// apps/lazuar-api/src/Lazuar.Api/Program.cs
 using Serilog;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -114,10 +113,8 @@ builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
-// Force AWS SDK to use Signature Version 4 globally
 AWSConfigsS3.UseSignatureVersion4 = true;
 
-// Setup R2/S3 Client Integration
 var r2Config = new AmazonS3Config
 {
     ServiceURL = builder.Configuration["R2_ENDPOINT"],
@@ -133,7 +130,6 @@ var s3Credentials = new BasicAWSCredentials(
 builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(s3Credentials, r2Config));
 builder.Services.AddSingleton<IR2StorageService, R2StorageService>();
 
-// API Key Cache Eviction Handler
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 
 builder.Services.AddAuthentication(options =>
@@ -255,7 +251,6 @@ app.UseOpsSubscriptions();
 app.UseBillingSubscriptions();
 app.UseLhdnSubscriptions();
 
-// API Key Cache Eviction Subscription
 var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
 eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 
@@ -268,6 +263,11 @@ apiGroup.MapPaymentsEndpoints();
 apiGroup.MapOpsEndpoints();
 apiGroup.MapBillingEndpoints();
 apiGroup.MapLhdnEndpoints();
+
+// Expose Platform API endpoints decoupled from regular tenant routing 
+app.MapGroup("/api/v1/platform")
+   .RequireCors()
+   .RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
 
 app.Run();
 
