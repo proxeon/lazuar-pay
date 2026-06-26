@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
-import CreateScheduleModal from "../components/automations/CreateScheduleModal";
-import ScheduleDetailPanel from "../components/automations/ScheduleDetailPanel";
+import CreateScheduleModal from "../components/dunning/CreateScheduleModal";
+import ScheduleDetailPanel from "../components/dunning/ScheduleDetailPanel";
 
 type CommunityReminderScheduleDto = components["schemas"]["Community.CommunityReminderScheduleDto"];
 
