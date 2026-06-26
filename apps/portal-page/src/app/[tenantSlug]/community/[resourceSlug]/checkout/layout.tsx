@@ -28,7 +28,7 @@ export default async function BlindCheckoutLayout({
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
             <span className="text-xs font-semibold uppercase tracking-widest">
-              Secure Checkout
+              Powered by Lazuar
             </span>
           </div>
         </div>
