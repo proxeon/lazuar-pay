@@ -16,7 +16,7 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
 
-    private record RawMessageTemplate(Guid Id, string Name, string Channel, string Subject, string Body, bool IsDefault, string? RequiredVariables, string? OptionalVariables, DateTime UpdatedAt);
+    private record RawMessageTemplate(Guid Id, string Name, string Channel, string Subject, string EmailBody, string WhatsAppBody, bool IsDefault, string? RequiredVariables, string? OptionalVariables, DateTime UpdatedAt);
 
     public MessageTemplateQueryService([FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
@@ -31,7 +31,7 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = "SELECT \"Id\", \"Name\", \"Channel\", \"Subject\", \"Body\", \"IsDefault\", \"RequiredVariables\"::text, \"OptionalVariables\"::text, \"UpdatedAt\" FROM community.\"MessageTemplates\" WHERE \"Id\" = ANY(@Ids)";
+        const string sql = "SELECT \"Id\", \"Name\", \"Channel\", \"Subject\", \"EmailBody\", \"WhatsAppBody\", \"IsDefault\", \"RequiredVariables\"::text, \"OptionalVariables\"::text, \"UpdatedAt\" FROM community.\"MessageTemplates\" WHERE \"Id\" = ANY(@Ids)";
         var rawTemplates = await connection.QueryAsync<RawMessageTemplate>(sql, new { Ids = ids });
         return rawTemplates.Select(MapToDto);
     }
@@ -41,7 +41,7 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = "SELECT \"Id\", \"Name\", \"Channel\", \"Subject\", \"Body\", \"IsDefault\", \"RequiredVariables\"::text, \"OptionalVariables\"::text, \"UpdatedAt\" FROM community.\"MessageTemplates\" WHERE \"OrganizationId\" = @OrgId AND \"Name\" = @Name LIMIT 1";
+        const string sql = "SELECT \"Id\", \"Name\", \"Channel\", \"Subject\", \"EmailBody\", \"WhatsAppBody\", \"IsDefault\", \"RequiredVariables\"::text, \"OptionalVariables\"::text, \"UpdatedAt\" FROM community.\"MessageTemplates\" WHERE \"OrganizationId\" = @OrgId AND \"Name\" = @Name LIMIT 1";
         var rawTemplate = await connection.QuerySingleOrDefaultAsync<RawMessageTemplate>(sql, new { OrgId = organizationId, Name = name });
         return rawTemplate != null ? MapToDto(rawTemplate) : null;
     }
@@ -51,7 +51,7 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string sql = "SELECT \"Id\", \"Name\", \"Channel\", \"Subject\", \"Body\", \"IsDefault\", \"RequiredVariables\"::text, \"OptionalVariables\"::text, \"UpdatedAt\" FROM community.\"MessageTemplates\" WHERE \"OrganizationId\" = @OrgId ORDER BY \"Name\"";
+        const string sql = "SELECT \"Id\", \"Name\", \"Channel\", \"Subject\", \"EmailBody\", \"WhatsAppBody\", \"IsDefault\", \"RequiredVariables\"::text, \"OptionalVariables\"::text, \"UpdatedAt\" FROM community.\"MessageTemplates\" WHERE \"OrganizationId\" = @OrgId ORDER BY \"Name\"";
         var rawTemplates = await connection.QueryAsync<RawMessageTemplate>(sql, new { OrgId = organizationId });
         return rawTemplates.Select(MapToDto);
     }
@@ -68,7 +68,8 @@ public class MessageTemplateQueryService : IMessageTemplateQueryService
             Name = raw.Name,
             Channel = raw.Channel,
             Subject = raw.Subject,
-            Body = raw.Body,
+            Email_body = raw.EmailBody,
+            Whatsapp_body = raw.WhatsAppBody,
             Is_default = raw.IsDefault,
             Required_variables = reqVars,
             Optional_variables = optVars,

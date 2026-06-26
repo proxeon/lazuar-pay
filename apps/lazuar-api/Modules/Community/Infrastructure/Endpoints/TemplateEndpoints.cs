@@ -35,7 +35,8 @@ public static class TemplateEndpoints
                 ctx.TenantId, 
                 req.Name, 
                 req.Subject, 
-                req.Body, 
+                req.Email_body,
+                req.Whatsapp_body,
                 req.Channel,
                 req.Required_variables ?? new List<string>(), 
                 req.Optional_variables ?? new List<string>());
@@ -55,7 +56,7 @@ public static class TemplateEndpoints
             TemplatePreviewRequestDto req,
             IMediator mediator) =>
         {
-            var response = await mediator.Send(new RenderTemplatePreviewQuery(req.Subject, req.Body));
+            var response = await mediator.Send(new RenderTemplatePreviewQuery(req.Subject, req.Email_body, req.Whatsapp_body));
             return TypedResults.Ok(response);
         });
 
@@ -65,7 +66,7 @@ public static class TemplateEndpoints
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
-            await mediator.Send(new UpdateMessageTemplateCommand(ctx.TenantId, id, req.Subject, req.Body));
+            await mediator.Send(new UpdateMessageTemplateCommand(ctx.TenantId, id, req.Subject, req.Email_body, req.Whatsapp_body));
             return TypedResults.Ok(new StatusResponse { Status = "updated" });
         });
 

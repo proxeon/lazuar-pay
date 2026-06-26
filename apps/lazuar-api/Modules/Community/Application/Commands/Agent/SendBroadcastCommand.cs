@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/Commands/Agent/SendBroadcastCommand.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +10,8 @@ namespace Modules.Community.Application.Commands.Agent;
 public record SendBroadcastCommand(
     Guid OrganizationId,
     string Subject,
-    string Body,
+    string EmailBody,
+    string WhatsAppBody,
     string Channel,
     Guid? TargetPlanId = null,
     string? TargetStatus = null,
@@ -34,13 +34,14 @@ public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand,
         if (string.IsNullOrWhiteSpace(request.Subject))
             throw new InvalidOperationException("Subject cannot be empty.");
 
-        if (string.IsNullOrWhiteSpace(request.Body))
-            throw new InvalidOperationException("Body cannot be empty.");
+        if (string.IsNullOrWhiteSpace(request.EmailBody) && string.IsNullOrWhiteSpace(request.WhatsAppBody))
+            throw new InvalidOperationException("Message body cannot be empty.");
 
         var campaign = new BroadcastCampaign(
             request.OrganizationId,
             request.Subject,
-            request.Body,
+            request.EmailBody,
+            request.WhatsAppBody,
             request.Channel,
             request.TargetPlanId,
             request.TargetStatus,

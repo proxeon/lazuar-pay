@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints/BroadcastEndpoints.cs
 using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -26,7 +25,8 @@ public static class BroadcastEndpoints
             var command = new SendBroadcastCommand(
                 ctx.TenantId,
                 req.Subject,
-                req.Body,
+                req.Email_body,
+                req.Whatsapp_body,
                 req.Channel,
                 targetPlanId,
                 req.Target_status,
