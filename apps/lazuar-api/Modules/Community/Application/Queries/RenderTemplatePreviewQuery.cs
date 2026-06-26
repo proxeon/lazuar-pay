@@ -30,14 +30,9 @@ public class RenderTemplatePreviewQueryHandler : IQueryHandler<RenderTemplatePre
 
     public Task<TemplatePreviewResponseDto> Handle(RenderTemplatePreviewQuery request, CancellationToken ct)
     {
-        var subjectContent = RenderWithMockData(request.Subject);
-        
-        var htmlEmailContent = RenderWithMockData(request.EmailBody)
-            .Replace("\\n", "<br>")
-            .Replace("\n", "<br>");
-
-        var textWhatsappContent = RenderWithMockData(request.WhatsAppBody)
-            .Replace("\\n", "\n");
+        var subjectContent = MarkdownParser.ToPlainText(RenderWithMockData(request.Subject));
+        var htmlEmailContent = MarkdownParser.ToHtml(RenderWithMockData(request.EmailBody));
+        var textWhatsappContent = MarkdownParser.ToPlainText(RenderWithMockData(request.WhatsAppBody));
 
         var response = new TemplatePreviewResponseDto
         {
