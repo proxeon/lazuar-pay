@@ -1,17 +1,12 @@
-// apps/lazuar-api/Modules/Billing/Application/Commands/DeductTenantCreditCommand.cs
+// apps/lazuar-api/Modules/Billing/Infrastructure/Commands/DeductTenantCreditCommandHandler.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
-using Modules.Billing.Infrastructure;
+using Modules.Billing.Contracts.Commands;
 
-namespace Modules.Billing.Application.Commands;
-
-public record DeductTenantCreditCommand(Guid OrganizationId, int Amount, string Reference) : ICommand
-{
-    public Guid Id { get; init; } = Guid.CreateVersion7();
-}
+namespace Modules.Billing.Infrastructure.Commands;
 
 public class DeductTenantCreditCommandHandler : ICommandHandler<DeductTenantCreditCommand>
 {

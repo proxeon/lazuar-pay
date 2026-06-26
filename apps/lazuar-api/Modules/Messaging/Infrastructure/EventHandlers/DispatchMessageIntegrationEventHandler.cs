@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Modules.Billing.Application.Commands;
+using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Contracts;
 using Modules.Messaging.Contracts;
 

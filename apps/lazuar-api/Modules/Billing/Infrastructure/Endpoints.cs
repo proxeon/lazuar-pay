@@ -8,8 +8,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using BuildingBlocks.Application;
+using MediatR;
 using Modules.Billing.Contracts;
-using Modules.Payments.Application.Ports;
+using Modules.Payments.Contracts.Queries;
 using Lazuar.ApiTypes;
 
 namespace Modules.Billing.Infrastructure;
@@ -39,26 +40,17 @@ public static class Endpoints
         admin.MapPost("/credits/top-up", async Task<Results<Ok<TopUpResponseDto>, BadRequest<string>>> (
             CreateTopUpRequestDto req,
             IExecutionContextAccessor ctx,
-            IConfiguration config,
-            IPaymentGatewayFactory gatewayFactory) =>
+            IMediator mediator) =>
         {
             if (req.Amount_myr < 50) return TypedResults.BadRequest("Minimum top-up amount is RM 50.");
 
-            var systemStripeKey = config["LAZUAR_SYSTEM_STRIPE_SECRET_KEY"];
-            if (string.IsNullOrEmpty(systemStripeKey))
-            {
-                return TypedResults.BadRequest("System billing is not configured.");
-            }
-
-            var adapter = gatewayFactory.GetAdapter("STRIPE");
             var metadata = new Dictionary<string, string>
             {
                 { "type", "utility_credit_topup" },
                 { "tenant_id", ctx.TenantId.ToString() }
             };
 
-            var result = await adapter.GenerateCheckoutAsync(
-                systemStripeKey,
+            var query = new GenerateSystemCheckoutSessionQuery(
                 ctx.TenantId,
                 (decimal)req.Amount_myr,
                 "MYR",
@@ -66,16 +58,18 @@ public static class Endpoints
                 "",
                 req.Return_url,
                 req.Return_url,
-                metadata,
-                null
+                metadata
             );
 
-            if (!result.Success || string.IsNullOrEmpty(result.CheckoutUrl))
+            try
             {
-                return TypedResults.BadRequest("Failed to generate top-up checkout session.");
+                var checkoutUrl = await mediator.Send(query);
+                return TypedResults.Ok(new TopUpResponseDto { Checkout_url = checkoutUrl });
             }
-
-            return TypedResults.Ok(new TopUpResponseDto { Checkout_url = result.CheckoutUrl });
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest(ex.Message);
+            }
         });
 
         return endpoints;

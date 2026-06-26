@@ -11,6 +11,7 @@ using Modules.Billing.Application.Llm;
 using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Events;
 using Modules.Billing.Infrastructure.EventHandlers;
+using Modules.Billing.Infrastructure.Commands;
 using Modules.Billing.Infrastructure.Repositories;
 using Modules.Billing.Infrastructure.Services;
 using Modules.Billing.Infrastructure.Workers;
