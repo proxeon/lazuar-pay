@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Application/EventHandlers/NotificationDispatchDomainEventHandlers.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +52,7 @@ public class NotificationDispatchDomainEventHandlers :
         _oneQueryService = oneQueryService;
     }
 
-    private string RenderTemplate(string template, Dictionary<string, string> variables)
+    private string RenderEmailTemplate(string template, Dictionary<string, string> variables)
     {
         if (string.IsNullOrEmpty(template)) return "";
         var result = template;
@@ -62,6 +61,17 @@ public class NotificationDispatchDomainEventHandlers :
             result = result.Replace($"{{{{{key}}}}}", value ?? "", StringComparison.OrdinalIgnoreCase);
         }
         return result.Replace("\\n", "<br>").Replace("\n", "<br>");
+    }
+
+    private string RenderWhatsAppTemplate(string template, Dictionary<string, string> variables)
+    {
+        if (string.IsNullOrEmpty(template)) return "";
+        var result = template;
+        foreach (var (key, value) in variables)
+        {
+            result = result.Replace($"{{{{{key}}}}}", value ?? "", StringComparison.OrdinalIgnoreCase);
+        }
+        return result.Replace("\\n", "\n");
     }
 
     public async Task Handle(SubscriptionActivatedDomainEvent notification, CancellationToken ct)
@@ -86,7 +96,6 @@ public class NotificationDispatchDomainEventHandlers :
         var baseUrl = _linkService.GetCommunityBaseUrl();
         var magicToken = _tokenService.GenerateToken(sub.Id);
         
-        // Aligned to module-specific portal route
         var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/portal?token={Uri.EscapeDataString(magicToken)}";
 
         var variables = new Dictionary<string, string>
@@ -100,10 +109,11 @@ public class NotificationDispatchDomainEventHandlers :
             ["portal_magic_link"] = portalMagicLink
         };
 
-        var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Active";
-        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active. Access your portal here: {portalMagicLink}";
+        var subject = template != null ? RenderWhatsAppTemplate(template.Subject, variables) : "Subscription Active";
+        var emailBody = template != null ? RenderEmailTemplate(template.Email_body, variables) : $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active. Access your portal here: <a href=\"{portalMagicLink}\">Dashboard</a>";
+        var whatsappBody = template != null ? RenderWhatsAppTemplate(template.Whatsapp_body, variables) : $"Hi {profile.Full_name}, your subscription to {plan.Name} is now active. Access your portal here: {portalMagicLink}";
 
-        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, template?.Channel ?? "EMAIL"));
+        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, emailBody, whatsappBody, template?.Channel ?? "EMAIL"));
     }
 
     public async Task Handle(SubscriptionCancelledDomainEvent notification, CancellationToken ct)
@@ -127,10 +137,11 @@ public class NotificationDispatchDomainEventHandlers :
             ["current_period_end"] = sub.CurrentPeriodEnd?.ToString("dd MMM yyyy") ?? "the end of your billing cycle"
         };
 
-        var subject = template != null ? RenderTemplate(template.Subject, variables) : "Subscription Cancelled";
-        var body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, your subscription has been cancelled.";
+        var subject = template != null ? RenderWhatsAppTemplate(template.Subject, variables) : "Subscription Cancelled";
+        var emailBody = template != null ? RenderEmailTemplate(template.Email_body, variables) : $"Hi {profile.Full_name}, your subscription has been cancelled.";
+        var whatsappBody = template != null ? RenderWhatsAppTemplate(template.Whatsapp_body, variables) : $"Hi {profile.Full_name}, your subscription has been cancelled.";
 
-        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, template?.Channel ?? "EMAIL"));
+        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, emailBody, whatsappBody, template?.Channel ?? "EMAIL"));
     }
 
     public async Task Handle(SubscriptionRenewalDueDomainEvent notification, CancellationToken ct)
@@ -151,14 +162,11 @@ public class NotificationDispatchDomainEventHandlers :
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
         
-        // Aligned to module-specific checkout route
         var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
             : $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/{plan.Slug}/checkout";
 
         var magicToken = _tokenService.GenerateToken(sub.Id);
-        
-        // Aligned to module-specific portal route
         var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/portal?token={Uri.EscapeDataString(magicToken)}";
 
         var variables = new Dictionary<string, string>
@@ -170,10 +178,11 @@ public class NotificationDispatchDomainEventHandlers :
             ["portal_magic_link"] = portalMagicLink
         };
 
-        var subject = template != null ? RenderTemplate(template.Subject, variables) : "Renewal Reminder";
-        var body = template != null ? RenderTemplate(template.Body, variables) : $"Renew here: {renewalLink}";
+        var subject = template != null ? RenderWhatsAppTemplate(template.Subject, variables) : "Renewal Reminder";
+        var emailBody = template != null ? RenderEmailTemplate(template.Email_body, variables) : $"Renew here: <a href=\"{renewalLink}\">Renew</a>";
+        var whatsappBody = template != null ? RenderWhatsAppTemplate(template.Whatsapp_body, variables) : $"Renew here: {renewalLink}";
 
-        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, notification.Channel));
+        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, emailBody, whatsappBody, notification.Channel));
     }
 
     public async Task Handle(MagicLinkRequestedDomainEvent notification, CancellationToken ct)
@@ -181,9 +190,10 @@ public class NotificationDispatchDomainEventHandlers :
         var profile = await _crmQueryService.GetClientProfileAsync(notification.ClientProfileId);
         if (profile == null || string.IsNullOrEmpty(profile.Email)) return;
 
-        var body = $"Hi {profile.Full_name},<br><br>Click the link below to access your subscriber portal to manage or cancel your subscription. This link expires in 24 hours.<br><br><a href=\"{notification.MagicLinkUrl}\">Access Portal</a><br><br>— Lazuar Support";
+        var emailBody = $"Hi {profile.Full_name},<br><br>Click the link below to access your subscriber portal to manage or cancel your subscription. This link expires in 24 hours.<br><br><a href=\"{notification.MagicLinkUrl}\">Access Portal</a><br><br>— Lazuar Support";
+        var whatsappBody = $"Hi {profile.Full_name} 🔐 Here is your secure dashboard link (expires in 24h): {notification.MagicLinkUrl}";
 
-        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, "Your Subscriber Portal Access", body, "EMAIL"));
+        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, "Your Subscriber Portal Access", emailBody, whatsappBody, "EMAIL"));
     }
 
     public async Task Handle(OneOffReminderRequestedDomainEvent notification, CancellationToken ct)
@@ -202,22 +212,21 @@ public class NotificationDispatchDomainEventHandlers :
 
         var baseUrl = _linkService.GetCommunityBaseUrl();
         
-        // Aligned to module-specific checkout route
         var renewalLink = sub.IsReminderOnly
             ? $"Please remit payment directly. Notes: {sub.AdminNotes ?? "Contact us for payment details"}"
             : $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/{plan.Slug}/checkout";
 
         var magicToken = _tokenService.GenerateToken(sub.Id);
-        
-        // Aligned to module-specific portal route
         var portalMagicLink = $"{baseUrl.TrimEnd('/')}/{tenantSlug}/community/portal?token={Uri.EscapeDataString(magicToken)}";
 
         string subject = "Important Update Regarding Your Subscription";
-        string body = "";
+        string emailBody = "";
+        string whatsappBody = "";
 
         if (!string.IsNullOrWhiteSpace(notification.CustomMessage))
         {
-            body = $"Hi {profile.Full_name},<br><br>{notification.CustomMessage.Replace("\n", "<br>")}";
+            emailBody = $"Hi {profile.Full_name},<br><br>{notification.CustomMessage.Replace("\n", "<br>")}";
+            whatsappBody = $"Hi {profile.Full_name},\n\n{notification.CustomMessage}";
         }
         else if (notification.TemplateId.HasValue)
         {
@@ -231,11 +240,12 @@ public class NotificationDispatchDomainEventHandlers :
                 ["renewal_link"] = renewalLink,
                 ["portal_magic_link"] = portalMagicLink
             };
-            subject = template != null ? RenderTemplate(template.Subject, variables) : subject;
-            body = template != null ? RenderTemplate(template.Body, variables) : $"Hi {profile.Full_name}, notification regarding your subscription.";
+            subject = template != null ? RenderWhatsAppTemplate(template.Subject, variables) : subject;
+            emailBody = template != null ? RenderEmailTemplate(template.Email_body, variables) : $"Hi {profile.Full_name}, notification regarding your subscription.";
+            whatsappBody = template != null ? RenderWhatsAppTemplate(template.Whatsapp_body, variables) : $"Hi {profile.Full_name}, notification regarding your subscription.";
         }
         else return;
 
-        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, body, notification.Channel));
+        await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(notification.OrganizationId, profile.Email, profile.Phone, subject, emailBody, whatsappBody, notification.Channel));
     }
 }

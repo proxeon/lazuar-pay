@@ -33,7 +33,7 @@ public class NotificationDispatchDomainEventHandlers :
         var body = $"Hi,<br><br>You requested a password reset. Click here to set a new password: <a href=\"{resetLink}\">Reset Password</a><br><br>If you did not request this, please ignore this email.";
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            _systemTenantId, notification.Email, null, subject, body, "EMAIL"));
+            _systemTenantId, notification.Email, null, subject, body, null, "EMAIL"));
     }
 
     public async Task Handle(EmailVerificationRequestedDomainEvent notification, CancellationToken ct)
@@ -43,7 +43,7 @@ public class NotificationDispatchDomainEventHandlers :
         var body = $"Hi {notification.Name},<br><br>Welcome to Lazuar! Please verify your email address by clicking the link below:<br><br><a href=\"{verifyLink}\">Verify Email</a>";
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            _systemTenantId, notification.Email, null, subject, body, "EMAIL"));
+            _systemTenantId, notification.Email, null, subject, body, null, "EMAIL"));
     }
 
     public async Task Handle(WorkspaceInvitationCreatedDomainEvent notification, CancellationToken ct)
@@ -53,6 +53,6 @@ public class NotificationDispatchDomainEventHandlers :
         var body = $"Hi,<br><br>You have been invited to join a workspace as {notification.Role}.<br><br><a href=\"{acceptLink}\">Accept Invitation</a>";
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            notification.OrganizationId, notification.Email, null, subject, body, "EMAIL"));
+            notification.OrganizationId, notification.Email, null, subject, body, null, "EMAIL"));
     }
 }
