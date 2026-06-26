@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Zap, Megaphone } from "lucide-react";
+import { Zap, Megaphone, Plus } from "lucide-react";
 import { client } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
@@ -9,6 +9,7 @@ import BulkBroadcastTab from "../components/automations/BulkBroadcastTab";
 
 export default function AutomationsPage() {
   const [activeTab, setActiveTab] = useState<"reminders" | "broadcast">("reminders");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: plans } = useQuery({
     queryKey: ["community-plans-lookup"],
@@ -23,6 +24,16 @@ export default function AutomationsPage() {
       title="Automations & Broadcasts" 
       description="Manage scheduled reminders and manual mass announcements."
       breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Automations" }]}
+      actionButton={
+        activeTab === "reminders" ? (
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
+          >
+            <Plus size={14} /> Create Rule
+          </button>
+        ) : null
+      }
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col min-h-[600px] relative">
         <div className="flex border-b border-[#e5e5e5] bg-[#fafafa]">
@@ -40,7 +51,14 @@ export default function AutomationsPage() {
           </button>
         </div>
 
-        {activeTab === "reminders" && <DunningSchedulesTab plans={plans} />}
+        {activeTab === "reminders" && (
+          <DunningSchedulesTab 
+            plans={plans} 
+            isCreateModalOpen={isCreateModalOpen}
+            onOpenCreateModal={() => setIsCreateModalOpen(true)}
+            onCloseCreateModal={() => setIsCreateModalOpen(false)}
+          />
+        )}
         {activeTab === "broadcast" && <BulkBroadcastTab plans={plans} />}
       </div>
     </PageLayout>

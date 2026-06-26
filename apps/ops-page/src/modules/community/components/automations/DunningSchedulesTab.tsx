@@ -11,6 +11,9 @@ type CommunityReminderScheduleDto = components["schemas"]["Community.CommunityRe
 
 interface DunningSchedulesTabProps {
   plans?: any[];
+  isCreateModalOpen: boolean;
+  onOpenCreateModal: () => void;
+  onCloseCreateModal: () => void;
 }
 
 export const formatTiming = (days: number) => {
@@ -19,10 +22,9 @@ export const formatTiming = (days: number) => {
   return `${days} Days After Due`;
 };
 
-export default function DunningSchedulesTab({ plans }: DunningSchedulesTabProps) {
+export default function DunningSchedulesTab({ plans, isCreateModalOpen, onOpenCreateModal, onCloseCreateModal }: DunningSchedulesTabProps) {
   const queryClient = useQueryClient();
   const [selectedSchedule, setSelectedSchedule] = useState<CommunityReminderScheduleDto | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: schedules, isLoading: isSchedulesLoading } = useQuery({
     queryKey: ["community-reminder-schedules"],
@@ -60,15 +62,6 @@ export default function DunningSchedulesTab({ plans }: DunningSchedulesTabProps)
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="flex items-center justify-end p-4 border-b border-[#f4f4f5]">
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="h-8 px-3 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#fafafa] transition-colors"
-        >
-          <Plus size={14} /> Create Rule
-        </button>
-      </div>
-
       {isSchedulesLoading ? (
         <div className="flex items-center justify-center flex-1 py-12">
           <Loader2 className="animate-spin text-[#a1a1aa]" />
@@ -83,7 +76,7 @@ export default function DunningSchedulesTab({ plans }: DunningSchedulesTabProps)
             Automate your revenue collection by scheduling reminders before and after a subscription's due date.
           </p>
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={onOpenCreateModal}
             className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
           >
             <Plus size={14} /> Create your first rule
@@ -146,7 +139,7 @@ export default function DunningSchedulesTab({ plans }: DunningSchedulesTabProps)
         <CreateScheduleModal 
           plans={plans} 
           templates={templates} 
-          onClose={() => setIsCreateModalOpen(false)} 
+          onClose={onCloseCreateModal} 
         />
       )}
 
