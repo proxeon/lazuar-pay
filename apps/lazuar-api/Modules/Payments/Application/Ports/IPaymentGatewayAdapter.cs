@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Payments/Application/Ports/IPaymentGatewayAdapter.cs
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -38,7 +39,8 @@ public interface IPaymentGatewayAdapter
         string cancelUrl,
         Dictionary<string, string> metadata,
         string? merchantId,
-        bool setupFutureUsage = false);
+        bool setupFutureUsage = false,
+        int quantity = 1);
         
     Task<GatewayWebhookParsedResult> ParseWebhookAsync(
         string apiKey,

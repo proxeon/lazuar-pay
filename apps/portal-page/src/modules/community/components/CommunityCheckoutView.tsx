@@ -1,3 +1,4 @@
+// apps/portal-page/src/modules/community/components/CommunityCheckoutView.tsx
 "use client";
 
 import { useState } from "react";
@@ -23,9 +24,13 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
   const [couponCode, setCouponCode] = useState("");
   const [isCouponValidating, setIsCouponValidating] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+  
+  const [quantity, setQuantity] = useState(1);
   const [discountAmount, setDiscountAmount] = useState<number | null>(null);
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
+
+  const basePriceForQuantity = plan.price * quantity;
 
   const handleApplyCoupon = async (code: string) => {
     setIsCouponValidating(true);
@@ -33,8 +38,11 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
 
     try {
       const data = await validateCouponCode(tenantSlug, plan.slug, code);
-      setDiscountAmount(data.discount_amount);
-      setFinalPrice(data.final_price);
+      const discountRatio = data.discount_amount / plan.price;
+      const totalDiscount = basePriceForQuantity * discountRatio;
+      
+      setDiscountAmount(totalDiscount);
+      setFinalPrice(Math.max(0, basePriceForQuantity - totalDiscount));
       setIsCouponApplied(true);
       setCouponCode(code);
     } catch (err: any) {
@@ -55,6 +63,13 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
     setCouponError(null);
   };
 
+  const handleQuantityChange = (newQty: number) => {
+    setQuantity(newQty);
+    if (isCouponApplied) {
+      handleRemoveCoupon();
+    }
+  };
+
   const handleSetGuestMode = (isGuest: boolean) => {
     setAuthContext((prev) => ({ ...prev, isGuestMode: isGuest }));
   };
@@ -66,7 +81,7 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
   const checkoutContext: CheckoutContext = {
     itemName: plan.name,
     audience: plan.audience,
-    price: plan.price,
+    price: basePriceForQuantity,
     interval: plan.interval,
     currency: "MYR",
     discountAmount: discountAmount,
@@ -87,9 +102,12 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
           <CommunityCheckoutForm
             tenantSlug={tenantSlug}
             planSlug={plan.slug}
+            isPerUnit={plan.pricing_model === "PER_UNIT"}
             authContext={authContext}
             isCouponApplied={isCouponApplied}
             couponCode={couponCode}
+            quantity={quantity}
+            onQuantityChange={handleQuantityChange}
             onSetGuestMode={handleSetGuestMode}
             onSuccessZeroAmount={handleSuccessZeroAmount}
           />

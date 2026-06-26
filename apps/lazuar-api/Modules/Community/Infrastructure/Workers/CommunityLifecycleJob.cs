@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Infrastructure/Workers/CommunityLifecycleJob.cs
 using System;
 using System.Linq;
 using System.Threading;
@@ -72,6 +73,9 @@ public class CommunityLifecycleJob : BackgroundService
                 var sub = item.Sub;
                 var plan = item.Plan;
 
+                // Explicitly skip "one_time" plans, though NextRenewalDate should be null anyway. Just defensive coding.
+                if (plan.Interval == "one_time") continue;
+
                 // Branch A: Vaulted Tokens (Auto-Debit)
                 if (!string.IsNullOrEmpty(sub.VaultedTokenId) && !string.IsNullOrEmpty(sub.VaultedCustomerId))
                 {
@@ -111,6 +115,8 @@ public class CommunityLifecycleJob : BackgroundService
 
         foreach (var item in pastDue)
         {
+            if (item.Plan.Interval == "one_time") continue;
+
             if (item.Sub.NextRenewalDate!.Value.AddDays(item.Plan.GracePeriodDays) < now)
             {
                 item.Sub.Expire();
@@ -173,7 +179,12 @@ public class CommunityLifecycleJob : BackgroundService
                 query = query.Where(s => s.PlanId == schedule.PlanId.Value);
             }
 
-            var subscriptionsToRemind = await query.ToListAsync(ct);
+            // Exclude one_time plans from dunning entirely.
+            var subscriptionsToRemind = await query
+                .Join(db.Plans.IgnoreQueryFilters(), s => s.PlanId, p => p.Id, (s, p) => new { Sub = s, Plan = p })
+                .Where(x => x.Plan.Interval != "one_time")
+                .Select(x => x.Sub)
+                .ToListAsync(ct);
 
             foreach (var sub in subscriptionsToRemind)
             {

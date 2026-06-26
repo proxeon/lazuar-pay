@@ -1,3 +1,4 @@
+// apps/portal-page/src/modules/community/components/CommunityCheckoutForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,9 +10,12 @@ import { submitCheckout, PublicCheckoutRequestDto } from "../lib/api";
 interface CommunityCheckoutFormProps {
   tenantSlug: string;
   planSlug: string;
+  isPerUnit: boolean;
   authContext: CheckoutAuthContext;
   isCouponApplied: boolean;
   couponCode: string;
+  quantity: number;
+  onQuantityChange: (qty: number) => void;
   onSetGuestMode: (isGuest: boolean) => void;
   onSuccessZeroAmount: () => void;
 }
@@ -19,9 +23,12 @@ interface CommunityCheckoutFormProps {
 export function CommunityCheckoutForm({
   tenantSlug,
   planSlug,
+  isPerUnit,
   authContext,
   isCouponApplied,
   couponCode,
+  quantity,
+  onQuantityChange,
   onSetGuestMode,
   onSuccessZeroAmount
 }: CommunityCheckoutFormProps) {
@@ -55,6 +62,7 @@ export function CommunityCheckoutForm({
       name: name,
       email: email,
       phone: phone,
+      quantity: quantity,
       is_guest_checkout: authContext.isGuestMode,
       coupon_code: isCouponApplied ? couponCode : undefined
     };
@@ -88,6 +96,24 @@ export function CommunityCheckoutForm({
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
           {error}
+        </div>
+      )}
+
+      {isPerUnit && (
+        <div className="space-y-2 p-4 bg-secondary/20 border border-border/60">
+          <label htmlFor="quantity" className="text-sm font-semibold text-foreground">Quantity (Seats)</label>
+          <div className="flex items-center gap-4">
+            <input
+              id="quantity" 
+              type="number" 
+              min="1"
+              required
+              value={quantity} 
+              onChange={e => onQuantityChange(parseInt(e.target.value) || 1)}
+              className="flex h-12 w-24 rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground text-center"
+            />
+            <span className="text-xs text-muted-foreground">Adjust the number of seats/units required.</span>
+          </div>
         </div>
       )}
 

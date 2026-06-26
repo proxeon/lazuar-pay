@@ -1369,6 +1369,7 @@ export interface components {
             /** Format: double */
             price: number;
             interval: string;
+            pricing_model: string;
             admin_notes?: string;
             is_active: boolean;
             /** Format: int32 */
@@ -1431,6 +1432,8 @@ export interface components {
             plan_name: string;
             /** Format: double */
             plan_price: number;
+            /** Format: int32 */
+            quantity: number;
             status: string;
             source: string;
             is_reminder_only: boolean;
@@ -1497,6 +1500,7 @@ export interface components {
             /** Format: double */
             price: number;
             interval: string;
+            pricing_model: string;
             admin_notes?: string;
             /** Format: int32 */
             display_order: number;
@@ -1521,6 +1525,8 @@ export interface components {
             email: string;
             phone: string;
             plan_id: string;
+            /** Format: int32 */
+            quantity?: number;
             source?: string;
             is_reminder_only?: boolean;
             preferred_channel?: string;
@@ -1628,6 +1634,8 @@ export interface components {
             name: string;
             email: string;
             phone: string;
+            /** Format: int32 */
+            quantity?: number;
             is_guest_checkout?: boolean;
             coupon_code?: string;
         };
@@ -1731,6 +1739,7 @@ export interface components {
             /** Format: double */
             price?: number;
             interval?: string;
+            pricing_model?: string;
             admin_notes?: string;
             is_active?: boolean;
             /** Format: int32 */

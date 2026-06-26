@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/InitiateSubscriptionCheckoutCommand.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -80,8 +81,9 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
         if (finalPrice <= 0 && appliedCoupon != null)
         {
             var periodStart = DateTime.UtcNow;
-            var intervalDays = plan.Interval == "yr" ? 365 : 30;
-            var periodEnd = periodStart.AddDays(intervalDays);
+            DateTime? periodEnd = plan.Interval == "one_time" 
+                ? null 
+                : periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
 
             subscription.Activate(
                 periodStart,
@@ -106,19 +108,21 @@ public class InitiateSubscriptionCheckoutCommandHandler : ICommandHandler<Initia
             ["type"] = "community_subscription",
             ["subscription_id"] = subscription.Id.ToString(),
             ["customer_name"] = customerProfile?.Full_name ?? "",
-            ["customer_phone"] = customerProfile?.Phone ?? ""
+            ["customer_phone"] = customerProfile?.Phone ?? "",
+            ["quantity"] = subscription.Quantity.ToString()
         };
 
         var query = new GenerateCheckoutSessionQuery(
             request.OrganizationId,
             finalPrice,
             "MYR",
-            plan.Name,
+            plan.Interval == "one_time" ? plan.Name : $"{plan.Name} ({plan.Interval}ly Subscription)",
             customerProfile?.Email ?? "",
             successUrlWithContext,
             cancelUrlWithContext,
             metadata,
-            SetupFutureUsage: true);
+            SetupFutureUsage: plan.Interval != "one_time",
+            Quantity: subscription.Quantity);
 
         var checkoutUrl = await _mediator.Send(query, ct);
         return checkoutUrl;

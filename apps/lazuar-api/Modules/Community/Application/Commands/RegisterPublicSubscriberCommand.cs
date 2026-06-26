@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Application/Commands/RegisterPublicSubscriberCommand.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -18,7 +19,8 @@ public record RegisterPublicSubscriberCommand(
     string Email,
     string Phone,
     Guid? GlobalUserId,
-    string? CouponCode = null) : ICommand<string>
+    string? CouponCode = null,
+    int Quantity = 1) : ICommand<string>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -53,6 +55,8 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             throw new InvalidOperationException("The requested subscription program is unavailable.");
         }
 
+        int finalQuantity = plan.PricingModel == "PER_UNIT" ? Math.Max(1, request.Quantity) : 1;
+
         var profileCommand = new CreateClientProfileCommand(
             request.OrganizationId,
             request.Name,
@@ -72,7 +76,9 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             plan.Id,
             "ONLINE_CHECKOUT",
             isReminderOnly: false,
-            preferredChannel: null);
+            preferredChannel: null,
+            adminNotes: null,
+            quantity: finalQuantity);
 
         subscription.InitiateCheckout();
         _subscriptionRepository.Add(subscription);
@@ -104,7 +110,9 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
         if (finalPrice <= 0 && appliedCoupon != null)
         {
             var periodStart = DateTime.UtcNow;
-            var periodEnd = periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
+            DateTime? periodEnd = plan.Interval == "one_time" 
+                ? null 
+                : periodStart.AddDays(plan.Interval == "yr" ? 365 : 30);
 
             subscription.Activate(
                 periodStart,
@@ -127,19 +135,21 @@ public class RegisterPublicSubscriberCommandHandler : ICommandHandler<RegisterPu
             ["type"] = "community_subscription",
             ["subscription_id"] = subscription.Id.ToString(),
             ["customer_name"] = request.Name,
-            ["customer_phone"] = request.Phone
+            ["customer_phone"] = request.Phone,
+            ["quantity"] = finalQuantity.ToString()
         };
 
         var checkoutQuery = new GenerateCheckoutSessionQuery(
             request.OrganizationId,
             finalPrice,
             "MYR",
-            $"{plan.Name} (Monthly Subscription)",
+            plan.Interval == "one_time" ? plan.Name : $"{plan.Name} ({plan.Interval}ly Subscription)",
             request.Email,
             successUrl,
             cancelUrl,
             metadata,
-            SetupFutureUsage: true);
+            SetupFutureUsage: plan.Interval != "one_time",
+            Quantity: finalQuantity);
 
         var checkoutUrl = await _mediator.Send(checkoutQuery, ct);
 

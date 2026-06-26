@@ -8,6 +8,7 @@ export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: Cust
   const [slug, setSlug] = useState(prefillData?.slug || "");
   const [price, setPrice] = useState(prefillData?.price ?? 0);
   const [interval, setInterval] = useState(prefillData?.interval || "mo");
+  const [pricingModel, setPricingModel] = useState(prefillData?.pricing_model || "FLAT_RATE");
   const [audience, setAudience] = useState(prefillData?.audience || "General");
 
   const [telegramLink, setTelegramLink] = useState(prefillData?.telegram_invite_link || "");
@@ -26,6 +27,7 @@ export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: Cust
       slug: slug.trim(),
       price: Number(price),
       interval,
+      pricing_model: pricingModel,
       audience: audience.trim(),
       grace_period_days: Number(gracePeriod),
       display_order: Number(displayOrder),
@@ -52,17 +54,25 @@ export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: Cust
               <input required value={slug} onChange={e => setSlug(e.target.value)} placeholder="e.g. basic-tier" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] font-mono" />
             </div>
             <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Pricing Model *</label>
+              <select value={pricingModel} onChange={e => setPricingModel(e.target.value)} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
+                <option value="FLAT_RATE">Flat Rate (Quantity fixed at 1)</option>
+                <option value="PER_UNIT">Per Unit / Seat-based</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Price (MYR) *</label>
               <input type="number" step="0.01" required value={price} onChange={e => setPrice(e.target.value)} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
             </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Billing Interval</label>
               <select value={interval} onChange={e => setInterval(e.target.value)} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
+                <option value="one_time">One-Time Payment</option>
                 <option value="mo">Monthly</option>
                 <option value="yr">Yearly</option>
               </select>
             </div>
-            <div className="space-y-1.5 sm:col-span-2">
+            <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Audience *</label>
               <input required value={audience} onChange={e => setAudience(e.target.value)} placeholder="e.g. Beginners, Founders" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
             </div>
@@ -80,11 +90,13 @@ export default function CreatePlanForm({ prefillData, onSubmit, onCancel }: Cust
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Weekly Meeting Link</label>
               <input type="url" value={meetingLink} onChange={e => setMeetingLink(e.target.value)} placeholder="https://zoom.us/..." className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
             </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Grace Period (Days) *</label>
-              <input type="number" required min="0" value={gracePeriod} onChange={e => setGracePeriod(Number(e.target.value))} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
-              <p className="text-[10px] text-[#a1a1aa] mt-1">Days a user retains access while their payment is past due.</p>
-            </div>
+            {interval !== "one_time" && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Grace Period (Days) *</label>
+                <input type="number" required min="0" value={gracePeriod} onChange={e => setGracePeriod(Number(e.target.value))} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
+                <p className="text-[10px] text-[#a1a1aa] mt-1">Days a user retains access while their payment is past due.</p>
+              </div>
+            )}
           </div>
         </div>
 

@@ -321,6 +321,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string Interval { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
+        public string Pricing_model { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
         public string? Admin_notes { get; set; } = default!;
 
@@ -482,6 +485,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("plan_price")]
         public double Plan_price { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
+        public int Quantity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("status")]
         public string Status { get; set; } = default!;
@@ -669,6 +675,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string Interval { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
+        public string Pricing_model { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
         public string? Admin_notes { get; set; } = default!;
 
@@ -746,6 +755,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("plan_id")]
         public string Plan_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
+        public int? Quantity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("source")]
         public string? Source { get; set; } = default!;
@@ -1118,6 +1130,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("phone")]
         public string Phone { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
+        public int? Quantity { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_guest_checkout")]
         public bool? Is_guest_checkout { get; set; } = default!;
@@ -1517,6 +1532,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string? Interval { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
+        public string? Pricing_model { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("admin_notes")]
         public string? Admin_notes { get; set; } = default!;

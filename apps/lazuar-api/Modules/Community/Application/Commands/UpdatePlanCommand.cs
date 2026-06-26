@@ -18,7 +18,8 @@ public record UpdatePlanCommand(
     int? MaxCapacity,
     int? GracePeriodDays,
     string? TelegramInviteLink,
-    string? WeeklyMeetingLink) : ICommand
+    string? WeeklyMeetingLink,
+    string? PricingModel) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -56,7 +57,8 @@ public class UpdatePlanCommandHandler : ICommandHandler<UpdatePlanCommand>
             request.MaxCapacity,
             request.DisplayOrder ?? plan.DisplayOrder,
             request.IsActive ?? plan.IsActive,
-            request.AdminNotes ?? plan.AdminNotes
+            request.AdminNotes ?? plan.AdminNotes,
+            request.PricingModel ?? plan.PricingModel
         );
 
         if (request.TelegramInviteLink != null || request.WeeklyMeetingLink != null)

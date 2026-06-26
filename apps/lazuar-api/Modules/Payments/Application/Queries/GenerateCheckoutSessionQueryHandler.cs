@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Payments/Application/Queries/GenerateCheckoutSessionQueryHandler.cs
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Queries;
@@ -39,7 +40,8 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
             request.CancelUrl,
             request.Metadata,
             config.MerchantId,
-            request.SetupFutureUsage);
+            request.SetupFutureUsage,
+            request.Quantity);
 
         if (!result.Success || string.IsNullOrEmpty(result.CheckoutUrl))
         {

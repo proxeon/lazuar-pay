@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Payments/Infrastructure/Gateways/BillplzGatewayAdapter.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,7 +50,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
     public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
-        string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false)
+        string successUrl, string cancelUrl, Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false, int quantity = 1)
     {
         if (string.IsNullOrEmpty(merchantId))
         {
@@ -78,14 +79,16 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
         webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&subscription_id={Uri.EscapeDataString(ref1)}";
 
-        var amountCents = (int)(amount * 100);
+        var totalAmountCents = (int)(amount * quantity * 100);
+        var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : (string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName);
+
         var payload = new Dictionary<string, object>
         {
             ["collection_id"] = merchantId,
             ["email"] = string.IsNullOrWhiteSpace(customerEmail) ? "customer@example.com" : customerEmail,
             ["name"] = ExtractName(customerEmail),
-            ["amount"] = amountCents,
-            ["description"] = string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName,
+            ["amount"] = totalAmountCents,
+            ["description"] = finalDescription,
             ["callback_url"] = webhookUrl,
             ["redirect_url"] = successUrl,
             ["reference_1_label"] = "Reference",

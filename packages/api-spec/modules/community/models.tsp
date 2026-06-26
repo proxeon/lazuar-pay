@@ -1,3 +1,4 @@
+// packages/api-spec/modules/community/models.tsp
 namespace LazuarApi.Community;
 
 model CommunityPlanDto {
@@ -7,6 +8,7 @@ model CommunityPlanDto {
   audience: string;
   price: float64;
   interval: string;
+  pricing_model: string;
   admin_notes?: string;
   is_active: boolean;
   display_order: int32;
@@ -28,6 +30,7 @@ model CommunitySubscriptionDto {
   plan_id: string; // GUID
   plan_name: string;
   plan_price: float64;
+  quantity: int32;
   status: string;
   source: string;
   is_reminder_only: boolean;
@@ -151,6 +154,7 @@ model CreatePlanRequestDto {
   audience: string;
   price: float64;
   interval: string;
+  pricing_model: string;
   admin_notes?: string;
   display_order: int32;
   max_capacity?: int32;
@@ -165,6 +169,7 @@ model UpdatePlanRequestDto {
   audience?: string;
   price?: float64;
   interval?: string;
+  pricing_model?: string;
   admin_notes?: string;
   is_active?: boolean;
   display_order?: int32;
@@ -179,6 +184,7 @@ model CreateSubscriberRequestDto {
   email: string;
   phone: string;
   plan_id: string; // GUID
+  quantity?: int32;
   source?: string;
   is_reminder_only?: boolean;
   preferred_channel?: string;
@@ -251,6 +257,7 @@ model PublicCheckoutRequestDto {
   name: string;
   email: string;
   phone: string;
+  quantity?: int32;
   is_guest_checkout?: boolean;
   coupon_code?: string;
 }

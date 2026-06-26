@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Community/Domain/Aggregates/CommunitySubscription.cs
 using System;
 using System.Collections.Generic;
 using BuildingBlocks.Domain;
@@ -14,6 +15,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     public Guid ClientProfileId { get; private set; }
     public Guid PlanId { get; private set; }
     public Guid? PendingPlanId { get; private set; }
+    public int Quantity { get; private set; }
     public string Status { get; private set; }
     public DateTime? CurrentPeriodEnd { get; private set; }
     public DateTime? NextRenewalDate { get; private set; }
@@ -42,12 +44,13 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
 
     public CommunitySubscription(
         Guid organizationId, Guid clientProfileId, Guid planId,
-        string source, bool isReminderOnly, string? preferredChannel, string? adminNotes = null)
+        string source, bool isReminderOnly, string? preferredChannel, string? adminNotes = null, int quantity = 1)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
         ClientProfileId = clientProfileId;
         PlanId = planId;
+        Quantity = quantity < 1 ? 1 : quantity;
         Status = "PENDING";
         Source = source;
         IsReminderOnly = isReminderOnly;
@@ -101,7 +104,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
     }
 
     public void Activate(
-        DateTime periodStart, DateTime periodEnd, decimal amount,
+        DateTime periodStart, DateTime? periodEnd, decimal amount,
         string currency, string paymentMethod, string? externalReference, string recordedBy, string? receiptUrl = null, bool isSilent = false)
     {
         CheckRule(new InvalidSubscriptionStateTransitionRule(Status, "ACTIVE", IsReminderOnly));
@@ -120,7 +123,7 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
 
         var payment = new PaymentRecord(
             Id, amount, currency, paymentMethod, externalReference,
-            recordedBy, periodStart, periodEnd,
+            recordedBy, periodStart, periodEnd ?? DateTime.UtcNow,
             isFirstPayment ? "Initial subscription payment" : "Renewal payment",
             receiptUrl);
 
@@ -224,12 +227,13 @@ public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
         AddDomainEvent(new SubscriptionRemindersPausedDomainEvent(Id, OrganizationId, ClientProfileId, pauseUntil));
     }
 
-    public void UpdateProfile(bool isReminderOnly, string? preferredChannel, string? adminNotes, DateTime? nextRenewalDate)
+    public void UpdateProfile(bool isReminderOnly, string? preferredChannel, string? adminNotes, DateTime? nextRenewalDate, int? quantity = null)
     {
         IsReminderOnly = isReminderOnly;
         PreferredChannel = preferredChannel;
         AdminNotes = adminNotes;
         if (nextRenewalDate.HasValue) NextRenewalDate = nextRenewalDate.Value;
+        if (quantity.HasValue && quantity.Value > 0) Quantity = quantity.Value;
         UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new SubscriptionProfileUpdatedDomainEvent(Id, OrganizationId, ClientProfileId, isReminderOnly, preferredChannel, nextRenewalDate));
     }
