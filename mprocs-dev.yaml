@@ -6,6 +6,9 @@ procs:
   ops-page:
     shell: cd apps/ops-page && pnpm dev
     autostart: true
+  superadmin-page:
+    shell: cd apps/superadmin-page && pnpm dev
+    autostart: true
   portal-page:
     shell: cd apps/portal-page && pnpm dev
     autostart: true
