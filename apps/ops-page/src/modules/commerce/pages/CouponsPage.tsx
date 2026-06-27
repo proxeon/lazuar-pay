@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Tag, Edit2, Archive, RotateCcw, Infinity } from "lucide-react";
+import { Loader2, Plus, Tag, Edit2, Archive, RotateCcw, Infinity, X } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import PageLayout from "../../core/components/PageLayout";
