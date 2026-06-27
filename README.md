@@ -1,97 +1,78 @@
-# Lazuar Platform
 
-> **A sovereign operating system for solo founders and creator businesses. An API-first, deterministic AWS-style superapp.**
+# Lazuar Platform (Checkout-as-a-Service)
 
-Lazuar is a modular monolith platform designed to power a multi-product creator business (events, communities, courses, digital products) from a single, deterministic backend. It is built on the principle that business-critical operations require strict data integrity, dense functional UI, and full ownership of the revenue engine.
+> **A Sovereign Checkout, Billing, and Fulfillment Engine for Creators and SaaS Founders.**
 
-We build applications, not infrastructure. We buy our payment rails (Stripe) and compute (Hetzner), but we build our own creator workflows because we are the customer.
+Lazuar is an API-first, Headless Commerce platform built on a strict .NET 10 Modular Monolith. We provide the financial infrastructure—multi-gateway orchestration, double-entry ledgers, automated WhatsApp dunning, and LHDN tax e-Invoicing—so you don't have to.
+
+We actively avoid the "CMS Trap" (ADR-015). We don't build website builders, and we don't force you to migrate your domains. You build your beautiful landing pages on Framer, Webflow, WordPress, or custom Next.js apps. We simply power the "Buy Now" button.
 
 ---
 
-## Architecture Overview
+## 🏗 Headless Architecture
 
 ```txt
-                     +---------------------------------------+
-                     |          OPS-PAGE SUPERAPP            |
-                     |  (Deterministic UI + Data Tables)     |
-                     +-------------------+-------------------+
-                                         |
-                                         | API Calls (TypeSpec)
-                                         v
-       +---------------------------------+---------------------------------+
-       |                                 |                                 |
-+------v------+                   +------v------+                   +------v------+
-| ACQUISITION |                   | FULFILLMENT |                   |  RETENTION  |
-|  - Bio      | (Linktree)        |  - Vault    | (Gumroad)         | - Community | (Skool)
-|  - Form     | (Typeform)        |  - Funnel   | (ClickFunnels)    | - Broadcast | (Mailchimp)
-|  - Event    | (Eventbrite)      |  - Academy  | (Kajabi)          | - Affiliate | (Rewardful)
-|  - Consult  | (Calendly)        |  - Invoice  |                   | - Sponsor   | (Passionfroot)
-|  - Giveaway | (Kingsumo)        |  - Pipeline |                   | - Support   | 
-+-------------+                   +-------------+                   +-------------+
+[ YOUR FRONTEND ]              [ LAZUAR CAAS ENGINE ]               [ THIN FULFILLMENT ]
+(Framer, WP, SaaS)             (portal.lazuar.com)                  (Post-Purchase Hooks)
+
+  ┌─────────────┐                ┌───────────────────┐                ┌───────────────────┐
+  │ Landing Page│                │ 1. Multi-Gateway  │                │ 📦 Vault          │
+  │ UI / Sales  │── Buy Link ───▶│    (Stripe/FPX)   │── Success ───▶ │    (Secure R2 PDF)│
+  │ Copy        │                │                   │                │                   │
+  └─────────────┘                │ 2. Universal      │                │ 👥 Community      │
+                                 │    Ledger         │                │    (Telegram/Zoom)│
+  ┌─────────────┐                │                   │                │                   │
+  │ Linktree /  │── Buy Link ───▶│ 3. LHDN Tax       │── Success ───▶ │ ⚡ SaaS Webhooks  │
+  │ Social Bio  │                │    e-Invoicing    │                │    (App Unlock)   │
+  └─────────────┘                │                   │                │                   │
+                                 │ 4. WhatsApp       │                │ 🎟️ Event          │
+  ┌─────────────┐                │    Dunning & CRM  │                │    (Live Booking) │
+  │ Custom      │── API Call ───▶└───────────────────┘                └───────────────────┘
+  │ Next.js App │
+  └─────────────┘
 ```
 
 **Key Separation:**
-- **`ops-page` (Admin):** The AWS-style superapp. Internal staff use this to manage all 15 modules. Simple, functional, fast.
-- **Public Pages (`community-page`, `vault-page`, etc.):** Customer-facing checkout and portal pages. Kept separate for clean UX.
+- **`ops-page` (Admin):** The AWS-style superapp. Internal staff and creators use this to configure products, view the financial ledger, and manage Dunning schedules. 
+- **`portal-page` (Checkout):** The headless cash register. Highly optimized, distraction-free SSR Next.js app that processes transactions and grants access.
 
 ---
 
-## Playbook
+## 📜 The Playbook
 
 ```txt
 True Wealth =
 ((Value × Ψ) / Friction × Distribution)
 × (Code × Math × Automations)
 × (Timing × Focus × Retention)
-
-Where:
-- (Value × Ψ) / Friction × Distribution = The Conversion Engine
-- (Code × Math × Automations) = The Sovereign Infrastructure (Solo Founder Scale)
-- (Timing × Focus × Retention) = The Asymmetric Compounders
 ```
 
-**Formulas:**
-$$True\ Wealth = \left( \frac{Value \times \Psi}{Friction \times Distribution} \right) \times (Code \times Math \times Automations) \times (Timing \times Focus \times Retention)$$
-
-$$Distribution = Content \times Cadence \times Channel\ Fit$$
-
----
-
-## Core Principles
-
-### 1. Founder as Power User
-We build the API and Admin Console for ourselves first. We use our own 15 modules to run our education/media business. **We are Default Alive from Day 1** because the business revenue funds the platform, not vice versa.
-
-### 2. API-First, Frontend-Optional
-All domain logic lives in clean, decoupled APIs (defined via TypeSpec). The strict REST APIs orchestrate these systems deterministically. External frontends are built only when paying customers demand them, not before.
-
-### 3. The Barbell Strategy
-- **Safe Bet (Now):** Use our own modules to generate revenue (Docker bootcamps, communities, digital products).
-- **High Upside (Later):** Productize the platform and sell access to external creators and developers.
-
-### 4. Zero-Friction Principles
-Avoid VCs, external funding, and grants. Let revenue from our own usage fund the infrastructure.
-
-### 5. Acquisition, Fulfillment, and Retention as First-Class Citizens
-Every module must map to a stage of the customer journey. No orphan features.
-
-### 6. The Elon Musk Master Plan (Adapted)
-- **Step 1:** Use our own platform to generate revenue (Default Alive).
-- **Step 2:** Use revenue to refine the API architecture and data-dense dashboards.
-- **Step 3:** Sell frontends to external users who want to replicate our success.
-- **Step 4:** Expose APIs/MCP to developers.
-
-### 7. Deterministic Core First (AI in Hibernation)
-All business-critical operations (billing, refunds, tax submissions) are executed through **deterministic UI** (buttons, forms, tables). LLMs are probabilistic; they should not execute $1,000 mutations autonomously. 
-
-While the platform possesses an architecture for an AI agent, it is currently in hibernation. The pattern is: LLM proposes action → `UiRequestCard` requests approval → Human clicks → Deterministic API executes.
-
-### 8. AWS-Style Superapp (For Applications)
-All admin functionality lives in a single `ops-page` application. Each app follows the same pattern: `Dashboard`, `List`, `Detail`, `Settings`. We build our Layer 4 applications; we buy our Layer 2 infrastructure (Stripe, Cloudflare, Resend). **Beauty is in the backend, not the frontend.**
+**Where:**
+- **Decreasing Friction:** Offloading UI to best-in-class tools (Framer) while we provide blazing-fast, 1-click checkout execution.
+- **Code × Math × Automations:** The sovereign CaaS infrastructure (BYOK Payments + Double-Entry Ledger + WhatsApp Dunning).
 
 ---
 
-## Project Structure
+## ⚡ Core Principles
+
+### 1. Headless Commerce (Avoiding the CMS Trap)
+We refuse to build WYSIWYG editors or page builders. All marketing copy and imagery live on external static edge networks (Astro, Webflow). Lazuar exclusively handles the deterministic financial transaction and fulfillment. 
+
+### 2. Bring Your Own Key (BYOK)
+Unlike Merchants of Record (MoRs) like Lemon Squeezy or Paddle, we do not take a 5–8% cut of your revenue, and we don't hold your funds. You plug in your own Stripe, Billplz, or CHIP API keys. Money flows instantly to you.
+
+### 3. Prepaid Utility Wallet
+Instead of penalizing your growth with transaction fees, we charge a flat SaaS fee for the checkout core. High-leverage automations (like auto-submitting LHDN XML e-Invoices or sending WhatsApp recovery messages) deduct micro-credits from a prepaid `TenantCreditBalance`.
+
+### 4. Thin Fulfillment Wrappers (The 15 Apps)
+Our "15 Apps" are not massive standalone software suites. They are lightweight metadata wrappers that execute *after* the Checkout Engine takes money. A "Vault App" is simply `CaaS + an R2 Download Link`. A "Community App" is `CaaS + a Telegram Redirect`. 
+
+### 5. Developer-First Extensibility
+SaaS founders shouldn't spend 3 weeks parsing Stripe and Billplz webhooks. Drop a Lazuar link into your app, and we will send a clean, HMAC-SHA256 signed `Payment_Success` outbound webhook to your server to unlock the user's account.
+
+---
+
+## 📂 Project Structure
 
 ```md
 apps/
@@ -99,145 +80,67 @@ apps/
 │
 ├── ops-page/         # The Back-Office (Vite CSR)        -> ops.lazuar.com
 │
-├── portal-page/      # The Cash Register (Next.js SSR)   -> portal.lazuar.com
-│
-└── storefront-page/  # The Window Display (Astro SSG)    -> creator.com / *.lazuar.site
+└── portal-page/      # The Cash Register (Next.js SSR)   -> portal.lazuar.com
 ```
 
-```md
-.
-├── apps
-│   ├── community-page/          # Public Next.js app (checkout, portal)
-│   ├── lazuar-api/              # .NET 10 Modular Monolith
-│   │   ├── BuildingBlocks/      # Shared kernel (CQRS, Outbox, Domain)
-│   │   ├── Modules/             # Bounded contexts
-│   │   │   ├── Billing/         # Double-entry ledger
-│   │   │   ├── CRM/             # Client profiles
-│   │   │   ├── Community/       # Subscriptions, plans, coupons
-│   │   │   ├── Lhdn/            # Malaysia e-Invoice gateway
-│   │   │   ├── Messaging/       # Notifications
-│   │   │   ├── One/             # CIAM, workspaces
-│   │   │   ├── Ops/             # AI agent orchestration (Hibernating)
-│   │   │   └── Payments/        # Gateway adapters
-│   │   └── src/Lazuar.Api/      # API entry point
-│   └── ops-page/                # Admin superapp (React/Vite)
-│       └── src/modules/
-│           ├── community/       # Community app pages
-│           └── core/            # Shared layout components
-├── docs/
-│   └── architecture-decision-log/
-└── packages/
-    └── api-spec/                # TypeSpec API contracts
-```
+### Module Pattern (Backend)
 
-### Module Pattern
-
-Every backend module follows the same structure:
+Every backend module is strictly decoupled:
 
 ```txt
 Modules/{ModuleName}/
 ├── Application/         # Commands, queries, handlers, DTOs
-├── Contracts/           # Public interfaces, integration events
+├── Contracts/           # Public interfaces, integration events (The Boundary)
 ├── Domain/              # Aggregates, entities, value objects, rules
-└── Infrastructure/      # EF Core, endpoints, workers, gateways
-```
-
-Every frontend app in `ops-page` follows the same structure:
-
-```txt
-ops-page/src/modules/{appName}/
-├── pages/
-│   ├── DashboardPage.tsx
-│   ├── ListPage.tsx
-│   ├── DetailPage.tsx
-│   └── SettingsPage.tsx
-└── components/
+└── Infrastructure/      # EF Core, endpoints, background workers, gateways
 ```
 
 ---
 
-## Module Roadmap & Priority
+## 🚀 Ecosystem Roadmap (Fulfillment Hooks)
 
-Modules are built sequentially. A module must earn its keep before the next is built.
+Modules are built sequentially. We build the central CaaS Engine, then attach "Hooks" for different business verticals.
 
-| Priority | Module | Category | Status |
+| Priority | Fulfillment Hook | Category | Core Function |
 |---|---|---|---|
-| 1 | `Event` | Acquisition | ✅ Validated |
-| 2 | `Giveaway` | Acquisition | 🔨 Next |
-| 3 | `Vault` | Fulfillment | 📋 Planned |
-| 4 | `Community` | Retention | 📋 Planned |
-| 4 | `Academy` | Fulfillment | 📋 Planned |
-| 5 | `Broadcast` | Retention | 📋 Planned |
-| 6 | `Funnel` | Fulfillment | 📋 Planned |
-| 7 | `Affiliate` | Retention | 📋 Planned |
-| 8 | `Consult` | Acquisition | 📋 Planned |
-| 9 | `CRM` | Core | ✅ Exists |
-| 10 | `Form` | Acquisition | 📋 Planned |
-| 11 | `Bio` | Acquisition | 📋 Planned |
-| 12 | `Invoice` | Fulfillment | 📋 Planned |
-| 13 | `Pipeline` | Fulfillment | 📋 Planned |
-| 14 | `Sponsor` | Retention | 📋 Planned |
-| 15 | `Support` | Retention | 📋 Planned |
+| 1 | **Core CaaS** | Infrastructure | Payments, Ledger, Taxes, Automations |
+| 2 | **Webhooks** | Developers | B2B SaaS Account Unlocking |
+| 3 | **Community** | Retention | Recurring Dunning, Telegram/Zoom routing |
+| 4 | **Vault** | Fulfillment | Secure R2 Digital File Delivery |
+| 5 | **Event** | Acquisition | Live Workshop Ticketing & Reminders |
+| 6 | **Giveaway** | Acquisition | Viral Lead Generation Engine |
+| 7 | **Broadcast** | Retention | Email/WhatsApp Nurture Sequences |
+| 8 | **Affiliate** | Distribution | Partner Commission Ledgers |
+| 9 | **Consult** | Acquisition | Calendar Booking Integration |
 
 ---
 
-## Standardized Port Mapping
+## 💻 Getting Started
 
-### Behind Caddy Gateway (`:8000`)
-
-1. **`one-admin`** (Vite) → **`3000`**
-2. **`one-page`** (Vite) → **`3001`**
-3. **`community-admin`** (Vite) → **`3010`**
-4. **`community-page`** (Next.js) → **`3011`**
-
-### Standalone Frontend Apps
-
-Some Next.js apps use domain-level routing (no `basePath`) and must be accessed directly on their dev port.
-
-| App | Port | Access URL | Reason |
-|-----|------|------------|--------|
-| `vault-page` | 3012 | `http://localhost:3012` | Routes are `/{slug}`, no path prefix |
-| `event-page` | 3008 | `http://localhost:3008` | Routes are `/{slug}` |
-| `funnel-page` | 3015 | `http://localhost:3015` | Routes are `/{slug}` |
-| `community-page` | 3020 | `http://localhost:3020` | Routes are `/{slug}`, `/checkout` |
-| `consult-page` | 3022 | `http://localhost:3022` | Routes are `/{slug}`, `/checkout` |
-
-In production, each app gets its own Caddyfile on the server:
-
-```text
-vault.lazuar.com {
-    reverse_proxy vault-page:3000
-    handle /api* {
-        reverse_proxy api:8080
-    }
-}
-```
-
----
-
-## The AI Agent Architecture (Hibernating)
-
-The `ops-page` includes an AI agent architecture designed to act as a probabilistic assistant over the deterministic API backend. This system is currently decoupled and hibernating to prioritize the deterministic console.
-
-**Key Components:**
-- `OpsChatWorkspace.tsx` — Chat interface
-- `ToolRegistry.cs` — Backend tool definitions
-- `UiRequestCard.tsx` — Bridge between agent suggestion and deterministic UI
-- `FormRegistry.ts` — Dynamic form rendering triggered by agent
-
----
-
-## Getting Started
-
-Open `http://localhost:8000` after running the dev environment.
+Our monorepo utilizes `Taskfile`, `pnpm`, and `docker-compose`.
 
 ```bash
-# Start the development environment
+# 1. Start local Docker dependencies (PostgreSQL)
+task infra:up
+
+# 2. Run database migrations and start the .NET hot-reload API watcher
 task dev
+
+# 3. In a new terminal, launch the frontends via mprocs
+task fe
 ```
 
+### Standardized Port Mapping
+
+| App | Port | Access URL | Description |
+|-----|------|------------|-------------|
+| `lazuar-api` | 8080 | `http://localhost:8080` | .NET 10 Modular Monolith |
+| `ops-page` | 3003 | `http://localhost:3003` | Superapp Console (Admin) |
+| `portal-page`| 3004 | `http://localhost:3004` | Universal Checkout & Dashboard |
+| `superadmin` | 3005 | `http://localhost:3005` | Platform Infrastructure Admin |
 
 ### Development Context
+For AI context passing or searching codebase structures:
 
 ```sh
 fd -t f --ignore-file ctx.ignore | ctx | hxn
