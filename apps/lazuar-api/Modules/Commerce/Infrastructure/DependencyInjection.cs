@@ -14,6 +14,7 @@ using Modules.Commerce.Infrastructure.Services;
 using Modules.Commerce.Infrastructure.Workers;
 using Modules.Commerce.Infrastructure.EventHandlers;
 using Modules.Payments.Contracts.Events;
+using Modules.One.Contracts;
 
 namespace Modules.Commerce.Infrastructure;
 
@@ -45,6 +46,7 @@ public static class DependencyInjection
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<OrderCompletedIntegrationEventHandler>();
         services.AddTransient<SubscriptionLifecycleIntegrationEventHandlers>();
+        services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
 
         return services;
     }
@@ -57,6 +59,7 @@ public static class DependencyInjection
         eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
+        eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>();
         return app;
     }
 }
