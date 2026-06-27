@@ -9,6 +9,7 @@ export interface CheckoutContext {
   discountAmount: number | null;
   finalPrice: number | null;
   isCouponApplied: boolean;
+  fulfillmentTargets: string[];
 }
 
 export interface CheckoutAuthContext {

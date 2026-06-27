@@ -84,7 +84,8 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     currency: product.currency,
     discountAmount: discountAmount,
     finalPrice: finalPrice,
-    isCouponApplied: isCouponApplied
+    isCouponApplied: isCouponApplied,
+    fulfillmentTargets: product.fulfillment_targets || []
   };
 
   return (
