@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
@@ -11,8 +13,7 @@ using Modules.Community.Application.Commands;
 
 namespace Modules.Community.Infrastructure;
 
-// Local DTO definition to ensure immediate compilation before TypeSpec generator builds out the types
-public record CreateCommunitySpaceRequest(string Product_id, string Name, string? Telegram_link, string? Zoom_link);
+public record CreateCommunitySpaceRequest(List<string> Product_ids, string Name, string? Telegram_link, string? Zoom_link);
 
 public static class SpaceEndpoints
 {
@@ -23,9 +24,13 @@ public static class SpaceEndpoints
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
+            var productIds = req.Product_ids?.Select(id => Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty)
+                                            .Where(id => id != Guid.Empty)
+                                            .ToList() ?? new List<Guid>();
+
             var createSpaceCmd = new CreateCommunitySpaceCommand(
                 ctx.TenantId,
-                Guid.Parse(req.Product_id),
+                productIds,
                 req.Name,
                 req.Telegram_link,
                 req.Zoom_link

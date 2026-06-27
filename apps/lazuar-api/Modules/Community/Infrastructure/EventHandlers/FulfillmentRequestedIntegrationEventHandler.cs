@@ -33,20 +33,26 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
             return;
 
         var productId = Guid.Parse(@event.Payload.GetProperty("product_id").GetString()!);
-        var clientProfileId = Guid.Parse(@event.Payload.GetProperty("client_profile_id").GetString()!);
         var status = @event.Payload.GetProperty("status").GetString()!;
 
-        var space = await _dbContext.CommunitySpaces
+        if (status != "COMPLETED" && status != "ACTIVE")
+            return;
+
+        var spaces = await _dbContext.CommunitySpaces
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.ProductId == productId);
+            .Where(s => s.OrganizationId == @event.OrganizationId)
+            .ToListAsync();
+
+        var space = spaces.FirstOrDefault(s => s.ProductIds.Contains(productId));
 
         if (space == null) return;
 
         var member = await _dbContext.CommunityMembers
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(m => m.CommunitySpaceId == space.Id && m.ClientProfileId == clientProfileId);
+            .FirstOrDefaultAsync(m => m.CommunitySpaceId == space.Id && m.ClientProfileId == Guid.Parse(@event.Payload.GetProperty("client_profile_id").GetString()!));
 
         var isActiveStatus = status == "ACTIVE" || status == "COMPLETED";
+        var clientProfileId = Guid.Parse(@event.Payload.GetProperty("client_profile_id").GetString()!);
 
         if (member == null)
         {

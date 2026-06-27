@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -8,7 +9,7 @@ namespace Modules.Community.Application.Commands;
 
 public record CreateCommunitySpaceCommand(
     Guid OrganizationId,
-    Guid ProductId,
+    List<Guid> ProductIds,
     string Name,
     string? TelegramLink,
     string? ZoomLink) : ICommand<Guid>
@@ -29,7 +30,7 @@ public class CreateCommunitySpaceCommandHandler : ICommandHandler<CreateCommunit
     {
         var space = new CommunitySpace(
             request.OrganizationId,
-            request.ProductId,
+            request.ProductIds,
             request.Name,
             request.TelegramLink,
             request.ZoomLink

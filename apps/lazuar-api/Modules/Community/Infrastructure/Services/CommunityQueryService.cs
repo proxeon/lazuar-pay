@@ -1,7 +1,7 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Services/CommunityQueryService.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +17,8 @@ public partial class CommunityQueryService : ICommunityQueryService
     private readonly ISqlConnectionFactory _connectionFactory;
     private readonly ICrmQueryService _crmQueryService;
     private readonly IOneQueryService _oneQueryService;
+
+    private record RawCommunitySpaceDto(string ProductIdsJson, string Name, string? TelegramLink, string? ZoomLink);
 
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
@@ -37,10 +39,38 @@ public partial class CommunityQueryService : ICommunityQueryService
         if (ids.Length == 0) return Array.Empty<PortalCommunitySpaceDto>();
 
         const string sql = @"
-            SELECT ""ProductId"" as product_id, ""Name"" as name, ""TelegramLink"" as telegram_link, ""ZoomLink"" as zoom_link
+            SELECT ""ProductIds""::text as ProductIdsJson, ""Name"" as name, ""TelegramLink"" as telegram_link, ""ZoomLink"" as zoom_link
             FROM community.""CommunitySpaces""
-            WHERE ""OrganizationId"" = @OrgId AND ""ProductId"" = ANY(@Ids)";
+            WHERE ""OrganizationId"" = @OrgId";
 
-        return await Dapper.SqlMapper.QueryAsync<PortalCommunitySpaceDto>(connection, sql, new { OrgId = organizationId, Ids = ids });
+        var rawSpaces = await Dapper.SqlMapper.QueryAsync<RawCommunitySpaceDto>(connection, sql, new { OrgId = organizationId });
+
+        var results = new List<PortalCommunitySpaceDto>();
+
+        foreach (var space in rawSpaces)
+        {
+            List<Guid> parsedIds = new();
+            if (!string.IsNullOrWhiteSpace(space.ProductIdsJson))
+            {
+                try
+                {
+                    parsedIds = JsonSerializer.Deserialize<List<Guid>>(space.ProductIdsJson) ?? new List<Guid>();
+                }
+                catch { }
+            }
+
+            if (parsedIds.Any(id => ids.Contains(id)))
+            {
+                results.Add(new PortalCommunitySpaceDto
+                {
+                    Product_ids = parsedIds.Select(id => id.ToString()).ToList(),
+                    Name = space.Name,
+                    Telegram_link = space.TelegramLink,
+                    Zoom_link = space.ZoomLink
+                });
+            }
+        }
+
+        return results;
     }
 }

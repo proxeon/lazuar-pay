@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BuildingBlocks.Domain;
 
 namespace Modules.Community.Domain.Aggregates;
@@ -7,7 +8,10 @@ public class CommunitySpace : Entity, IAggregateRoot, IMustHaveTenant
 {
     public Guid Id { get; private set; }
     public Guid OrganizationId { get; set; }
-    public Guid ProductId { get; private set; }
+    
+    private readonly List<Guid> _productIds = new();
+    public IReadOnlyCollection<Guid> ProductIds => _productIds.AsReadOnly();
+
     public string Name { get; private set; }
     public string? TelegramLink { get; private set; }
     public string? ZoomLink { get; private set; }
@@ -16,14 +20,18 @@ public class CommunitySpace : Entity, IAggregateRoot, IMustHaveTenant
     private CommunitySpace() { }
 #pragma warning restore CS8618
 
-    public CommunitySpace(Guid organizationId, Guid productId, string name, string? telegramLink, string? zoomLink)
+    public CommunitySpace(Guid organizationId, IEnumerable<Guid> productIds, string name, string? telegramLink, string? zoomLink)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
-        ProductId = productId;
         Name = name;
         TelegramLink = telegramLink;
         ZoomLink = zoomLink;
+
+        if (productIds != null)
+        {
+            _productIds.AddRange(productIds);
+        }
     }
 
     public void UpdateLinks(string? telegramLink, string? zoomLink)
