@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/vault/components/CreateProductModal.tsx
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { toast } from "sonner";
@@ -15,7 +14,8 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
 
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const { error } = await client.POST("/admin/community/plans", { body: payload });
+      // Routed to the new Phase 6 Vault Orchestrator endpoint
+      const { error } = await client.POST("/admin/vault/assets", { body: payload });
       if (error) throw new Error(error.detail);
     },
     onSuccess: () => {
@@ -39,7 +39,6 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
           </button>
         </div>
         
-        {/* Added min-h-0 here to force the flex container to constrain its height */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white min-h-0">
           <DigitalProductForm 
             onSubmit={(data) => createMutation.mutate(data)} 

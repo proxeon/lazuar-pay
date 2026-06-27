@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/vault/pages/DigitalProductsPage.tsx
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, FileText } from "lucide-react";
@@ -15,12 +14,18 @@ export default function DigitalProductsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
+  // Note: For Phase 8, the frontend is hitting the legacy query. The backend is stubbed.
+  // It will render an empty table until the read-models are rewritten.
   const { data: plans, isLoading } = useQuery({
     queryKey: ["community-plans"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/plans");
-      if (error) throw new Error(error.detail);
-      return data;
+      try {
+        const { data, error } = await client.GET("/admin/community/plans");
+        if (error) throw new Error(error.detail);
+        return data || [];
+      } catch {
+        return [];
+      }
     }
   });
 

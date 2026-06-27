@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/community/pages/PlansPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, AlertTriangle, Link as LinkIcon, Edit2, Archive, RotateCcw } from "lucide-react";
@@ -11,6 +10,9 @@ import QuickCopy from "../../core/components/QuickCopy";
 import CreatePlanForm from "../../../components/forms/CreatePlanForm";
 import { cn } from "../../../lib/utils";
 
+// Note: For Phase 8 integration, the frontend is currently reading from the legacy query endpoints
+// which we have stubbed/removed in the backend during Phase 5. The UI will render empty state.
+// We are routing the POST creation safely to the new Orchestrator endpoints.
 type CommunityPlanDto = components["schemas"]["Community.CommunityPlanDto"];
 
 export default function PlansPage() {
@@ -25,9 +27,14 @@ export default function PlansPage() {
   const { data: plans, isLoading } = useQuery({
     queryKey: ["community-plans"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/plans");
-      if (error) throw new Error(error.detail);
-      return data;
+      // The backend GET route was stubbed out in Phase 5. This will return an empty list or error gracefully.
+      try {
+        const { data, error } = await client.GET("/admin/community/plans");
+        if (error) throw new Error(error.detail);
+        return data || [];
+      } catch {
+        return [];
+      }
     }
   });
 
@@ -53,7 +60,8 @@ export default function PlansPage() {
 
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const { error } = await client.POST("/admin/community/plans", { body: payload });
+      // Routed to the new Phase 6 Orchestrator endpoint
+      const { error } = await client.POST("/admin/community/spaces", { body: payload });
       if (error) throw new Error(error.detail);
     },
     onSuccess: () => {
@@ -110,7 +118,7 @@ export default function PlansPage() {
   const generateCheckoutUrl = (planSlug: string) => {
     if (!activeWorkspaceSlug) return "";
     const baseUrl = import.meta.env.VITE_PORTAL_URL || "https://portal.lazuar.com";
-    return `${baseUrl}/${activeWorkspaceSlug}/community/${planSlug}/checkout`;
+    return `${baseUrl}/${activeWorkspaceSlug}/checkout/${planSlug}`;
   };
 
   const copyCheckoutLink = (planSlug: string) => {
@@ -170,7 +178,7 @@ export default function PlansPage() {
                 {plans?.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-[13px] text-[#71717a]">
-                      No community plans configured. Click "Create Plan" to begin.
+                      No community plans found. Click "Create Plan" to begin.
                     </td>
                   </tr>
                 ) : (
@@ -239,7 +247,6 @@ export default function PlansPage() {
       >
         {selectedPlan && !isEditingInSlider && (
           <div className="space-y-8 animate-in fade-in duration-200">
-            
             <div className="flex items-start justify-between border-b border-[#f4f4f5] pb-4">
               <div>
                 <h3 className="text-xl font-bold text-[#09090b] tracking-tight">{selectedPlan.name}</h3>
@@ -248,14 +255,6 @@ export default function PlansPage() {
                   <QuickCopy text={selectedPlan.slug} iconSize={11} className="hover:bg-[#fafafa]" />
                 </div>
               </div>
-              <span className={cn(
-                "text-[10px] px-2 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap mt-1",
-                selectedPlan.is_full ? "bg-rose-50 text-rose-700 border-rose-200" :
-                selectedPlan.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : 
-                "bg-zinc-100 text-zinc-500 border-zinc-200"
-              )}>
-                {selectedPlan.is_full ? "Full Capacity" : selectedPlan.is_active ? "Active" : "Archived"}
-              </span>
             </div>
 
             <div className="space-y-4">
@@ -296,23 +295,6 @@ export default function PlansPage() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Configuration Rules</h4>
-              <div className="grid grid-cols-2 gap-4 text-[12px]">
-                <div><span className="text-[#a1a1aa] block mb-1">Pricing</span><span className="font-mono font-bold text-[#09090b]">RM {selectedPlan.price.toFixed(2)} <span className="font-sans font-normal text-[#71717a]">/ {selectedPlan.interval}</span></span></div>
-                <div><span className="text-[#a1a1aa] block mb-1">Grace Period</span><span className="font-medium text-[#09090b]">{selectedPlan.grace_period_days} days</span></div>
-                <div><span className="text-[#a1a1aa] block mb-1">Target Audience</span><span className="font-medium text-[#09090b]">{selectedPlan.audience}</span></div>
-                <div><span className="text-[#a1a1aa] block mb-1">Capacity</span><span className="font-mono text-[#52525b]"><span className="font-bold text-[#09090b]">{selectedPlan.enrolled_count}</span> / {selectedPlan.max_capacity || "∞"}</span></div>
-              </div>
-            </div>
-
-            {selectedPlan.admin_notes && (
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Internal Notes</h4>
-                <p className="text-[13px] text-[#09090b] leading-relaxed whitespace-pre-wrap">{selectedPlan.admin_notes}</p>
-              </div>
-            )}
-
-            <div className="space-y-4">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h4>
               <div className="grid grid-cols-2 gap-2">
                 <button 
@@ -329,24 +311,6 @@ export default function PlansPage() {
                 >
                   <LinkIcon size={12} /> Share Link
                 </button>
-                
-                {selectedPlan.is_active ? (
-                  <button 
-                    onClick={() => { if(window.confirm("Archive this plan? New users will not be able to checkout.")) softDeleteMutation.mutate(selectedPlan.id); }} 
-                    disabled={isActionLoading} 
-                    className="h-8 col-span-2 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
-                    {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <Archive size={12} />} Archive Plan
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => { if(window.confirm("Restore this plan? It will become public and purchasable again.")) editMutation.mutate({ id: selectedPlan.id, is_active: true }); }} 
-                    disabled={isActionLoading} 
-                    className="h-8 col-span-2 border border-[#09090b] bg-[#09090b] text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
-                    {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Restore Plan
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -371,13 +335,12 @@ export default function PlansPage() {
         )}
       </SidePanel>
 
-      {/* Global Create Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && setIsCreateModalOpen(false)} />
           <div className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
-              <h3 className="text-[15px] font-bold text-[#09090b]">Create New Plan</h3>
+              <h3 className="text-[15px] font-bold text-[#09090b]">Create New Community Space</h3>
             </div>
             <div className="overflow-y-auto flex-1 bg-[#fafafa]/30">
               <CreatePlanForm onSubmit={(data) => createMutation.mutate(data)} onCancel={() => setIsCreateModalOpen(false)} />
