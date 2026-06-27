@@ -23,11 +23,13 @@ public class CommerceQueryServiceTests
     public async Task OneTimeSetUp()
     {
         // 1. Spin up an ephemeral PostgreSQL database specifically for this test run
+#pragma warning disable CS0618
         _dbContainer = new PostgreSqlBuilder()
             .WithDatabase("lazuar_test")
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
+#pragma warning restore CS0618
 
         await _dbContainer.StartAsync();
 
