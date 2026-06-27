@@ -6,7 +6,8 @@ import "./common/models.tsp";
 import "./modules/commerce/models.tsp";
 import "./modules/commerce/admin-routes.tsp";
 import "./modules/commerce/public-routes.tsp";
-import "./modules/community/models.tsp";
+import "./modules/communications/models.tsp";
+import "./modules/communications/admin-routes.tsp";
 
 using TypeSpec.Http;
 

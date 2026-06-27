@@ -284,6 +284,7 @@ apiGroup.MapBillingEndpoints();
 apiGroup.MapLhdnEndpoints();
 apiGroup.MapCommerceEndpoints();
 apiGroup.MapVaultEndpoints();
+apiGroup.MapCommunicationsEndpoints();
 
 var platformGroup = app.MapGroup("/api/v1/platform")
    .RequireCors()

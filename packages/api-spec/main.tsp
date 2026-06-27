@@ -20,6 +20,9 @@ import "./modules/commerce/models.tsp";
 import "./modules/commerce/admin-routes.tsp";
 import "./modules/commerce/public-routes.tsp";
 
+import "./modules/communications/models.tsp";
+import "./modules/communications/admin-routes.tsp";
+
 import "./modules/billing/models.tsp";
 import "./modules/billing/routes.tsp";
 

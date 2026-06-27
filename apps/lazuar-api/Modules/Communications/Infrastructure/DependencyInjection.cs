@@ -7,6 +7,8 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Commerce.Contracts.Events;
 using Modules.One.Contracts;
+using Modules.Communications.Application.Queries;
+using Modules.Communications.Infrastructure.Services;
 using Modules.Communications.Infrastructure.EventHandlers;
 using Modules.Communications.Infrastructure.Workers;
 
@@ -24,6 +26,11 @@ public static class DependencyInjection
             {
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "communications");
             }));
+
+        services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("CommunicationsSqlConnectionFactory", (sp, key) =>
+            new NpgsqlConnectionFactory(connectionString));
+
+        services.AddScoped<ICommunicationsQueryService, CommunicationsQueryService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunicationsDbContext>>("CommunicationsEventBus");
 
