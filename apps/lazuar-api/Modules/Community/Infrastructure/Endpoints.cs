@@ -11,17 +11,10 @@ public static class Endpoints
         var adminGroup = endpoints.MapGroup("/admin/community").RequireAuthorization("OrgAdmin");
         var publicGroup = endpoints.MapGroup("/public/community");
 
-        adminGroup.MapPlanEndpoints();
-        adminGroup.MapSubscriberEndpoints();
-        adminGroup.MapReminderScheduleEndpoints();
         adminGroup.MapTemplateEndpoints();
-        adminGroup.MapCouponEndpoints();
         adminGroup.MapBroadcastEndpoints();
-        adminGroup.MapStatsEndpoints();
         adminGroup.MapPaymentConfigEndpoints();
         adminGroup.MapVaultEndpoints();
-
-        publicGroup.MapPublicEndpoints();
 
         return endpoints;
     }

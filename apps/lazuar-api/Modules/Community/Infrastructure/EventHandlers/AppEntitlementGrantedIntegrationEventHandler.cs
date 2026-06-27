@@ -102,37 +102,5 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
             _dbContext.MessageTemplates.AddRange(templates);
             await _dbContext.SaveChangesAsync();
         }
-
-        var hasSchedules = await _dbContext.ReminderSchedules
-            .IgnoreQueryFilters()
-            .AnyAsync(s => s.OrganizationId == @event.TenantId);
-
-        if (!hasSchedules)
-        {
-            var preDunningTemplate = await _dbContext.MessageTemplates
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(t => t.OrganizationId == @event.TenantId && t.Name == "Community Renewal (3 Days)");
-                
-            var dayOfDunningTemplate = await _dbContext.MessageTemplates
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(t => t.OrganizationId == @event.TenantId && t.Name == "Community Renewal Due Today");
-                
-            var postDunningTemplate = await _dbContext.MessageTemplates
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(t => t.OrganizationId == @event.TenantId && t.Name == "Community Renewal Overdue");
-
-            if (preDunningTemplate != null && dayOfDunningTemplate != null && postDunningTemplate != null)
-            {
-                var defaultSchedules = new List<CommunityReminderSchedule>
-                {
-                    new CommunityReminderSchedule(@event.TenantId, null, preDunningTemplate.Id, "ALL", -3, "08:00", true),
-                    new CommunityReminderSchedule(@event.TenantId, null, dayOfDunningTemplate.Id, "ALL", 0, "08:00", true),
-                    new CommunityReminderSchedule(@event.TenantId, null, postDunningTemplate.Id, "ALL", 3, "08:00", true)
-                };
-
-                _dbContext.ReminderSchedules.AddRange(defaultSchedules);
-                await _dbContext.SaveChangesAsync();
-            }
-        }
     }
 }

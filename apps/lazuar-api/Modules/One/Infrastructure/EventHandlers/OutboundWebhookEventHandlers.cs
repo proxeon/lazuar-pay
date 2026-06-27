@@ -4,15 +4,13 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
-using Modules.Community.Contracts;
 using Modules.Payments.Contracts.Events;
 using Modules.One.Domain;
 
 namespace Modules.One.Infrastructure.EventHandlers;
 
 public class OutboundWebhookEventHandlers : 
-    IIntegrationEventHandler<GatewayPaymentCompletedIntegrationEvent>,
-    IIntegrationEventHandler<CommunitySubscriptionCancelledIntegrationEvent>
+    IIntegrationEventHandler<GatewayPaymentCompletedIntegrationEvent>
 {
     private readonly OneDbContext _dbContext;
 
@@ -24,11 +22,6 @@ public class OutboundWebhookEventHandlers :
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
     {
         await ProcessEventAsync(@event.OrganizationId, "payment.completed", @event);
-    }
-
-    public async Task HandleAsync(CommunitySubscriptionCancelledIntegrationEvent @event)
-    {
-        await ProcessEventAsync(@event.OrganizationId, "subscription.cancelled", @event);
     }
 
     private async Task ProcessEventAsync(Guid organizationId, string eventType, object payload)

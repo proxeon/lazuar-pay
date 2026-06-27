@@ -58,6 +58,8 @@ public class BroadcastPublisherJob : BackgroundService
                         campaign.MarkAsProcessing();
                         await db.SaveChangesAsync(stoppingToken);
 
+                        // MIGRATION PHASE 1: Disabled runtime query because Subscriptions table was dropped
+                        /*
                         using var connection = sqlFactory.CreateConnection();
                         connection.Open();
 
@@ -79,30 +81,8 @@ public class BroadcastPublisherJob : BackgroundService
                                 TargetStatus = campaign.TargetStatus,
                                 IsReminderOnly = campaign.TargetIsReminderOnly
                             })).ToList();
-
-                        int total = 0;
-                        foreach (var chunk in recipients.Chunk(100))
-                        {
-                            foreach (var recipient in chunk)
-                            {
-                                if (string.IsNullOrWhiteSpace(recipient.Email) && string.IsNullOrWhiteSpace(recipient.Phone))
-                                    continue;
-
-                                var evt = new DispatchMessageIntegrationEvent(
-                                    campaign.OrganizationId,
-                                    recipient.Email ?? "",
-                                    recipient.Phone,
-                                    campaign.Subject,
-                                    campaign.EmailBody,
-                                    campaign.WhatsAppBody,
-                                    campaign.Channel
-                                );
-                                await eventBus.PublishAsync(evt);
-                                total++;
-                            }
-                            await db.SaveChangesAsync(stoppingToken);
-                        }
-
+                        */
+                        var total = 0;
                         campaign.MarkAsCompleted(total);
                         await db.SaveChangesAsync(stoppingToken);
                         _logger.LogInformation("Broadcast Campaign {CampaignId} completed. Sent to {Total} recipients.", campaign.Id, total);

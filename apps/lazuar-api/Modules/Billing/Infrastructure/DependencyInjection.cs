@@ -14,7 +14,6 @@ using Modules.Billing.Infrastructure.Commands;
 using Modules.Billing.Infrastructure.Repositories;
 using Modules.Billing.Infrastructure.Services;
 using Modules.Billing.Infrastructure.Workers;
-using Modules.Community.Contracts;
 using Modules.Payments.Contracts.Events;
 using Modules.Lhdn.Contracts.Events;
 using System;
@@ -44,10 +43,8 @@ public static class DependencyInjection
 
         services.AddTransient<GatewayPaymentCompletedHandler>();
         services.AddTransient<PlatformTopUpEventHandler>();
-        services.AddTransient<ZeroAmountCheckoutHandler>();
         services.AddTransient<GatewayRefundCompletedHandler>();
         services.AddTransient<InvoiceIssuedHandler>();
-        services.AddTransient<ManualPaymentRecordedHandler>();
         services.AddTransient<CommissionAccruedHandler>();
         services.AddTransient<LhdnDocumentValidatedIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
@@ -69,10 +66,8 @@ public static class DependencyInjection
         
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedHandler>();
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, PlatformTopUpEventHandler>();
-        eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedHandler>();
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedHandler>();
-        eventBus.Subscribe<CommunityManualPaymentRecordedIntegrationEvent, ManualPaymentRecordedHandler>();
         eventBus.Subscribe<CommissionAccruedIntegrationEvent, CommissionAccruedHandler>();
         eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();

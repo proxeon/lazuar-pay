@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/One/Infrastructure/DependencyInjection.cs
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,8 +9,6 @@ using Modules.One.Infrastructure.Services;
 using Modules.One.Infrastructure.Repositories;
 using Modules.One.Infrastructure.Workers;
 using Modules.One.Infrastructure.EventHandlers;
-using Modules.One.Application.IntegrationEvents;
-using Modules.Community.Contracts;
 using Modules.Payments.Contracts.Events;
 using Microsoft.AspNetCore.Builder;
 using System;
@@ -51,7 +48,6 @@ public static class DependencyInjection
         services.AddHostedService<OneOutboxPublisherJob>();
         services.AddHostedService<OutboundWebhookDispatcherJob>();
 
-        services.AddTransient<CommunitySubscriptionActivatedIntegrationEventHandler>();
         services.AddTransient<OutboundWebhookEventHandlers>();
 
         return services;
@@ -60,9 +56,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UseOneSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        eventBus.Subscribe<CommunitySubscriptionActivatedIntegrationEvent, CommunitySubscriptionActivatedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, OutboundWebhookEventHandlers>();
-        eventBus.Subscribe<CommunitySubscriptionCancelledIntegrationEvent, OutboundWebhookEventHandlers>();
 
         return app;
     }

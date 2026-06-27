@@ -6,16 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Community.Application;
-using Modules.Community.Application.IntegrationEvents;
 using Modules.Community.Application.Llm;
 using Modules.Community.Application.Queries;
 using Modules.Community.Infrastructure.EventHandlers;
 using Modules.Community.Infrastructure.Repositories;
 using Modules.Community.Infrastructure.Services;
 using Modules.Community.Infrastructure.Workers;
-using Modules.Payments.Contracts.Events;
 using Modules.One.Contracts;
-using Modules.CRM.Contracts;
 
 namespace Modules.Community.Infrastructure;
 
@@ -35,10 +32,6 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("CommunitySqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
-        services.AddScoped<ICommunityPlanRepository, CommunityPlanRepository>();
-        services.AddScoped<ICommunitySubscriptionRepository, CommunitySubscriptionRepository>();
-        services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
-        services.AddScoped<ICommunityCouponRepository, CommunityCouponRepository>();
         services.AddScoped<IBroadcastCampaignRepository, CommunityBroadcastRepository>();
 
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
@@ -50,12 +43,9 @@ public static class DependencyInjection
 
         services.AddHostedService<CommunityInboxConsumerJob>();
         services.AddHostedService<CommunityOutboxPublisherJob>();
-        services.AddHostedService<CommunityLifecycleJob>();
         services.AddHostedService<BroadcastPublisherJob>();
 
-        services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
-        services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
 
         services.AddSingleton<IAgentPromptProvider, CommunityPromptProvider>();
 
@@ -65,9 +55,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UseCommunitySubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
         eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>();
-        eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
         return app;
     }
 }
