@@ -7,16 +7,16 @@ using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Domain.Aggregates;
-using Modules.One.Contracts;
+using Modules.Communications.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
 
-public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHandler<AppEntitlementGrantedIntegrationEvent>
+public class DefaultTemplatesSeededIntegrationEventHandler : IIntegrationEventHandler<DefaultTemplatesSeededIntegrationEvent>
 {
     private readonly CommerceDbContext _dbContext;
     private readonly ISqlConnectionFactory _sqlConnectionFactory;
 
-    public AppEntitlementGrantedIntegrationEventHandler(
+    public DefaultTemplatesSeededIntegrationEventHandler(
         CommerceDbContext dbContext,
         [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory sqlConnectionFactory)
     {
@@ -24,22 +24,16 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
         _sqlConnectionFactory = sqlConnectionFactory;
     }
 
-    public async Task HandleAsync(AppEntitlementGrantedIntegrationEvent @event)
+    public async Task HandleAsync(DefaultTemplatesSeededIntegrationEvent @event)
     {
-        // Commerce relies on the core billing/payments infrastructure, but specifically needs to seed its 
-        // own dunning lifecycle rules when a tenant provisions the platform.
-        if (@event.AppId != "COMMUNITY" && @event.AppId != "COMMERCE" && @event.AppId != "BILLING") 
-            return;
-
         var hasSchedules = await _dbContext.ReminderSchedules
             .IgnoreQueryFilters()
             .AnyAsync(s => s.OrganizationId == @event.TenantId);
 
         if (hasSchedules) return;
 
-        // Since templates are managed by the Communications module (in a different schema),
-        // we use a direct Dapper query to securely resolve the seeded Template IDs without
-        // violating EF Core boundaries or cross-schema constraints.
+        // The templates are now guaranteed to be committed in the Communications schema
+        // because we are reacting to the handshake event.
         using var connection = _sqlConnectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
