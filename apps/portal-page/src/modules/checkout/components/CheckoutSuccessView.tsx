@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getCheckoutStatus, type CommunityPlanDto } from "../lib/api";
+import { getCheckoutStatus, type ProductDto } from "../lib/api";
 
-interface CommunitySuccessViewProps {
+interface CheckoutSuccessViewProps {
   tenantSlug: string;
-  plan: CommunityPlanDto;
+  product: ProductDto;
 }
 
-export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewProps) {
+export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessViewProps) {
   const searchParams = useSearchParams();
   const subId = searchParams.get("sub_id");
   
@@ -33,8 +33,8 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
       try {
         const response = await getCheckoutStatus(subId);
 
-        if (response.status === "ACTIVE" && response.token) {
-          setAccessToken(response.token);
+        if (response.status === "ACTIVE" || response.status === "COMPLETED") {
+          if (response.token) setAccessToken(response.token);
           setStatus("SUCCESS");
           return;
         }
@@ -78,9 +78,9 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
           <svg className="animate-spin h-8 w-8 text-muted-foreground mx-auto mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
-          <h1 className="text-xl font-semibold text-foreground mb-3">Verifying Payment...</h1>
+          <h1 className="text-xl font-semibold text-foreground mb-3">Verifying Transaction...</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Please wait while we confirm your transaction with the payment provider.
+            Please wait while we securely verify your transaction with the payment provider.
           </p>
         </div>
       </div>
@@ -98,11 +98,11 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
           </div>
           <h1 className="text-xl font-semibold text-foreground mb-3">Processing Payment</h1>
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-            We are still processing your payment for <strong className="text-foreground">{plan.name}</strong>. Please check your email in a few minutes for your access links.
+            We are still processing your payment for <strong className="text-foreground">{product.name}</strong>. Please check your email in a few minutes for your receipt and access links.
           </p>
           <Link href={`/${tenantSlug}/portal`} className="block w-full">
             <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
-              Go to Member Portal
+              Go to Dashboard
             </button>
           </Link>
         </div>
@@ -124,18 +124,16 @@ export function CommunitySuccessView({ tenantSlug, plan }: CommunitySuccessViewP
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold text-foreground mb-3">Payment Successful!</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-3">Order Complete!</h1>
         <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-          You are now subscribed to <strong className="text-foreground">{plan.name}</strong>. Please check your email and WhatsApp for your private community links and instructions.
+          Your order for <strong className="text-foreground">{product.name}</strong> is confirmed. Please check your email for your receipt, digital downloads, and community access links.
         </p>
 
-        {accessToken && (
-          <Link href={`/${tenantSlug}/community/portal?token=${encodeURIComponent(accessToken)}`} className="block w-full">
-            <button className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
-              Go to Member Portal
-            </button>
-          </Link>
-        )}
+        <Link href={accessToken ? `/${tenantSlug}/portal?token=${encodeURIComponent(accessToken)}` : `/${tenantSlug}/portal`} className="block w-full">
+          <button className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
+            Go to Dashboard
+          </button>
+        </Link>
       </div>
     </div>
   );

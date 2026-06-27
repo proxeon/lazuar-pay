@@ -58,6 +58,13 @@ interface PublicCommunityOperations {
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
+  @route("/{tenantSlug}/portal/spaces")
+  getPortalSpaces(
+    @path tenantSlug: string,
+    @query product_ids: string[], // Array of GUID strings
+  ): PortalCommunitySpaceDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
   @route("/{tenantSlug}/portal/billing-link")
   getBillingLink(
     @path tenantSlug: string,

@@ -1,23 +1,22 @@
-// apps/portal-page/src/modules/community/components/CommunityCheckoutView.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckoutLayout } from "../../checkout/components/CheckoutLayout";
-import { OrderSummaryCard } from "../../checkout/components/OrderSummaryCard";
-import { PromoCodeInput } from "../../checkout/components/PromoCodeInput";
-import { CommunityCheckoutForm } from "./CommunityCheckoutForm";
-import { validateCouponCode, type CommunityPlanDto } from "../lib/api";
-import { CheckoutContext, CheckoutAuthContext } from "../../checkout/types";
+import { CheckoutLayout } from "./CheckoutLayout";
+import { OrderSummaryCard } from "./OrderSummaryCard";
+import { PromoCodeInput } from "./PromoCodeInput";
+import { CheckoutForm } from "./CheckoutForm";
+import { validateCouponCode, type ProductDto } from "../lib/api";
+import { CheckoutContext, CheckoutAuthContext } from "../types";
 
-interface CommunityCheckoutViewProps {
+interface CheckoutViewProps {
   tenantSlug: string;
-  plan: CommunityPlanDto;
+  product: ProductDto;
   initialAuthContext: CheckoutAuthContext;
   isCancelled?: boolean;
 }
 
-export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, isCancelled }: CommunityCheckoutViewProps) {
+export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancelled }: CheckoutViewProps) {
   const router = useRouter();
 
   const [authContext, setAuthContext] = useState<CheckoutAuthContext>(initialAuthContext);
@@ -30,15 +29,15 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
 
-  const basePriceForQuantity = plan.price * quantity;
+  const basePriceForQuantity = product.price * quantity;
 
   const handleApplyCoupon = async (code: string) => {
     setIsCouponValidating(true);
     setCouponError(null);
 
     try {
-      const data = await validateCouponCode(tenantSlug, plan.slug, code);
-      const discountRatio = data.discount_amount / plan.price;
+      const data = await validateCouponCode(tenantSlug, product.slug, code);
+      const discountRatio = data.discount_amount / product.price;
       const totalDiscount = basePriceForQuantity * discountRatio;
       
       setDiscountAmount(totalDiscount);
@@ -75,15 +74,14 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
   };
 
   const handleSuccessZeroAmount = () => {
-    router.push(`/${tenantSlug}/community/${plan.slug}/success`);
+    router.push(`/${tenantSlug}/checkout/${product.slug}/success`);
   };
 
   const checkoutContext: CheckoutContext = {
-    itemName: plan.name,
-    audience: plan.audience,
+    itemName: product.name,
     price: basePriceForQuantity,
-    interval: plan.interval,
-    currency: "MYR",
+    interval: product.interval,
+    currency: product.currency,
     discountAmount: discountAmount,
     finalPrice: finalPrice,
     isCouponApplied: isCouponApplied
@@ -99,10 +97,9 @@ export function CommunityCheckoutView({ tenantSlug, plan, initialAuthContext, is
 
       <CheckoutLayout
         formSlot={
-          <CommunityCheckoutForm
+          <CheckoutForm
             tenantSlug={tenantSlug}
-            planSlug={plan.slug}
-            isPerUnit={plan.pricing_model === "PER_UNIT"}
+            product={product}
             authContext={authContext}
             isCouponApplied={isCouponApplied}
             couponCode={couponCode}

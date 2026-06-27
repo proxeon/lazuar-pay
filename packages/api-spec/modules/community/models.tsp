@@ -297,6 +297,13 @@ model PortalDataResponse {
   subscription: CommunitySubscriptionDto;
 }
 
+model PortalCommunitySpaceDto {
+  product_id: string; // GUID
+  name: string;
+  telegram_link?: string;
+  zoom_link?: string;
+}
+
 model CancelPortalRequest {
   subscription_id: string; // GUID
 }
