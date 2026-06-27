@@ -347,7 +347,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AdminCommunityOperations_getSpaces"];
         put?: never;
         post: operations["AdminCommunityOperations_createSpace"];
         delete?: never;
@@ -1671,6 +1671,13 @@ export interface components {
             subject: string;
             email_body: string;
             whatsapp_body: string;
+        };
+        "Community.AdminCommunitySpaceDto": {
+            id: string;
+            name: string;
+            telegram_link?: string;
+            zoom_link?: string;
+            product_ids: string[];
         };
         "Community.CreateCommunitySpaceRequestDto": {
             product_ids: string[];
@@ -4156,6 +4163,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunityOperations_getSpaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Community.AdminCommunitySpaceDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

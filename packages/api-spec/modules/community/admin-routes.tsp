@@ -14,4 +14,8 @@ interface AdminCommunityOperations {
   createSpace(
     @body body: CreateCommunitySpaceRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/spaces")
+  getSpaces(): AdminCommunitySpaceDto[] | LazuarApi.Core.ProblemDetailsResponse;
 }
