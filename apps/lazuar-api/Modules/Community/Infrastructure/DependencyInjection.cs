@@ -1,18 +1,16 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Application.Llm;
-using BuildingBlocks.Infrastructure;
+using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
 using Modules.Community.Application;
-using Modules.Community.Application.Llm;
 using Modules.Community.Application.Queries;
 using Modules.Community.Infrastructure.EventHandlers;
-using Modules.Community.Infrastructure.Repositories;
 using Modules.Community.Infrastructure.Services;
 using Modules.Community.Infrastructure.Workers;
-using Modules.One.Contracts;
+using Modules.Commerce.Contracts.Events;
 
 namespace Modules.Community.Infrastructure;
 
@@ -32,22 +30,16 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("CommunitySqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
-        services.AddScoped<IBroadcastCampaignRepository, CommunityBroadcastRepository>();
-
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
-        services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunityDbContext>>("CommunityEventBus");
 
         services.AddHostedService<CommunityInboxConsumerJob>();
         services.AddHostedService<CommunityOutboxPublisherJob>();
-        services.AddHostedService<BroadcastPublisherJob>();
 
-        services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
-
-        services.AddSingleton<IAgentPromptProvider, CommunityPromptProvider>();
+        services.AddTransient<FulfillmentRequestedIntegrationEventHandler>();
 
         return services;
     }
@@ -55,7 +47,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UseCommunitySubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>();
+        eventBus.Subscribe<FulfillmentRequestedIntegrationEvent, FulfillmentRequestedIntegrationEventHandler>();
         return app;
     }
 }

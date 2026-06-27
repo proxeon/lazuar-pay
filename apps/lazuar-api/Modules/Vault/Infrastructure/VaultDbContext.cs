@@ -2,21 +2,19 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Modules.Community.Domain.Aggregates;
-using Modules.Community.Domain.Entities;
+using Modules.Vault.Domain.Aggregates;
 
-namespace Modules.Community.Infrastructure;
+namespace Modules.Vault.Infrastructure;
 
-public class CommunityDbContext : PlatformDbContext
+public class VaultDbContext : PlatformDbContext
 {
-    public DbSet<CommunitySpace> CommunitySpaces { get; set; } = null!;
-    public DbSet<CommunityMember> CommunityMembers { get; set; } = null!;
-
+    public DbSet<VaultAsset> VaultAssets { get; set; } = null!;
+    
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
 
-    public CommunityDbContext(
-        DbContextOptions<CommunityDbContext> options,
+    public VaultDbContext(
+        DbContextOptions<VaultDbContext> options,
         IExecutionContextAccessor executionContext,
         IMediator mediator,
         DatabaseJobTrigger jobTrigger)
@@ -27,20 +25,13 @@ public class CommunityDbContext : PlatformDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.HasDefaultSchema("community");
+        modelBuilder.HasDefaultSchema("vault");
 
-        modelBuilder.Entity<CommunitySpace>(builder =>
+        modelBuilder.Entity<VaultAsset>(builder =>
         {
-            builder.ToTable("CommunitySpaces");
+            builder.ToTable("VaultAssets");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.ProductId).IsUnique();
-        });
-
-        modelBuilder.Entity<CommunityMember>(builder =>
-        {
-            builder.ToTable("CommunityMembers");
-            builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.CommunitySpaceId, x.ClientProfileId }).IsUnique();
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

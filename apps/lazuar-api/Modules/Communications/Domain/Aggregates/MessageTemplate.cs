@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using BuildingBlocks.Domain;
 
-namespace Modules.Community.Domain.Entities;
+namespace Modules.Communications.Domain.Aggregates;
 
-public class MessageTemplate : Entity, IMustHaveTenant
+public class MessageTemplate : Entity, IAggregateRoot, IMustHaveTenant
 {
     public Guid Id { get; private set; }
     public Guid OrganizationId { get; set; }
@@ -46,31 +46,6 @@ public class MessageTemplate : Entity, IMustHaveTenant
         if (optionalVariables != null) _optionalVariables.AddRange(optionalVariables);
 
         CreatedAt = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void UpdateContent(string subject, string emailBody, string whatsappBody)
-    {
-        Subject = subject;
-        EmailBody = emailBody;
-        WhatsAppBody = whatsappBody;
-        IsDefault = false;
-        UpdatedAt = DateTime.UtcNow;
-    }
-
-    public void ResetToDefault(string subject, string emailBody, string whatsappBody, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables)
-    {
-        Subject = subject;
-        EmailBody = emailBody;
-        WhatsAppBody = whatsappBody;
-        IsDefault = true;
-
-        _requiredVariables.Clear();
-        if (requiredVariables != null) _requiredVariables.AddRange(requiredVariables);
-
-        _optionalVariables.Clear();
-        if (optionalVariables != null) _optionalVariables.AddRange(optionalVariables);
-
         UpdatedAt = DateTime.UtcNow;
     }
 }

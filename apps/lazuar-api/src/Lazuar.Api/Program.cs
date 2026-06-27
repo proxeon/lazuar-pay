@@ -26,6 +26,8 @@ using Modules.Ops.Infrastructure;
 using Modules.Billing.Infrastructure;
 using Modules.Lhdn.Infrastructure;
 using Modules.Commerce.Infrastructure;
+using Modules.Vault.Infrastructure;
+using Modules.Communications.Infrastructure;
 using Lazuar.Api;
 using Lazuar.Api.Middleware;
 using Lazuar.ApiTypes;
@@ -218,6 +220,8 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Lhdn.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Commerce.Application.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Vault.Application.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Communications.Application.DependencyInjection).Assembly);
     
     cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
@@ -228,6 +232,8 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Lhdn.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Commerce.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Vault.Infrastructure.DependencyInjection).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Modules.Communications.Infrastructure.DependencyInjection).Assembly);
 });
 
 builder.Services.AddOneModule(builder.Configuration);
@@ -239,6 +245,8 @@ builder.Services.AddOpsModule(builder.Configuration);
 builder.Services.AddBillingModule(builder.Configuration);
 builder.Services.AddLhdnModule(builder.Configuration);
 builder.Services.AddCommerceModule(builder.Configuration);
+builder.Services.AddVaultModule(builder.Configuration);
+builder.Services.AddCommunicationsModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -258,6 +266,8 @@ app.UseOpsSubscriptions();
 app.UseBillingSubscriptions();
 app.UseLhdnSubscriptions();
 app.UseCommerceSubscriptions();
+app.UseVaultSubscriptions();
+app.UseCommunicationsSubscriptions();
 
 var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
 eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
@@ -277,7 +287,6 @@ var platformGroup = app.MapGroup("/api/v1/platform")
    .RequireCors()
    .RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
 
-// Re-map to the updated extension method
 platformGroup.MapPlatformEndpoints();
 
 app.Run();

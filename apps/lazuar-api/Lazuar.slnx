@@ -41,6 +41,12 @@
     <Project Path="Modules/Commerce/Domain/Modules.Commerce.Domain.csproj" />
     <Project Path="Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/Modules/Communications/">
+    <Project Path="Modules/Communications/Application/Modules.Communications.Application.csproj" />
+    <Project Path="Modules/Communications/Contracts/Modules.Communications.Contracts.csproj" />
+    <Project Path="Modules/Communications/Domain/Modules.Communications.Domain.csproj" />
+    <Project Path="Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/Modules/Community/">
     <Project Path="Modules\Community\Contracts\Modules.Community.Contracts.csproj" />
     <Project Path="Modules\Community\Domain\Modules.Community.Domain.csproj" />
@@ -70,6 +76,12 @@
     <Project Path="Modules\Billing\Domain\Modules.Billing.Domain.csproj" />
     <Project Path="Modules\Billing\Application\Modules.Billing.Application.csproj" />
     <Project Path="Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/Vault/">
+    <Project Path="Modules/Vault/Application/Modules.Vault.Application.csproj" />
+    <Project Path="Modules/Vault/Contracts/Modules.Vault.Contracts.csproj" />
+    <Project Path="Modules/Vault/Domain/Modules.Vault.Domain.csproj" />
+    <Project Path="Modules/Vault/Infrastructure/Modules.Vault.Infrastructure.csproj" />
   </Folder>
   
   <Folder Name="/Packages/">
