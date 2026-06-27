@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Loader2, UploadCloud, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { useOutletContext } from "react-router-dom";
-import { client, type components } from "../../../lib/api-client";
+import { client } from "../../../lib/api-client";
 
-// Note: Using any to bypass legacy CommunityPlanDto type mapping temporarily
 interface DigitalProductFormProps {
   initialData?: any | null;
   onSubmit: (data: any) => void;
@@ -44,7 +42,7 @@ export default function DigitalProductForm({
     setIsUploading(true);
 
     try {
-      const { data, error } = await client.POST("/admin/community/vault/presigned-url", {
+      const { data, error } = await client.POST("/admin/vault/presigned-url", {
         body: {
           file_name: file.name,
           content_type: file.type || "application/octet-stream"

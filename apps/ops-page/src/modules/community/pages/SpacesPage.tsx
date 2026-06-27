@@ -13,8 +13,11 @@ export default function SpacesPage() {
   const { data: spaces, isLoading } = useQuery({
     queryKey: ["community-spaces-list"],
     queryFn: async () => {
-      return [];
-    }
+      const { data, error } = await client.GET("/admin/community/spaces");
+      if (error) throw new Error(error.detail);
+      return data;
+    },
+    enabled: !!activeWorkspaceId
   });
 
   return (
@@ -56,7 +59,7 @@ export default function SpacesPage() {
                   </td>
                 </tr>
               ) : (
-                spaces?.map((space: any) => (
+                spaces?.map((space) => (
                   <tr key={space.id} className="hover:bg-[#fafafa] transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2 mb-1">
