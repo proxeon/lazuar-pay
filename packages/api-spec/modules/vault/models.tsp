@@ -1,9 +1,8 @@
 namespace LazuarApi.Vault;
 
 model CreateVaultAssetRequestDto {
+  product_id: string; // GUID
   name: string;
-  slug: string;
-  price: float64;
   cloudflare_r2_url: string;
 }
 

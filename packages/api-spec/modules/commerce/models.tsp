@@ -16,6 +16,18 @@ model ProductDto {
   checkout_configuration: CheckoutConfigurationDto;
 }
 
+model CreateProductRequestDto {
+  name: string;
+  slug: string;
+  price: float64;
+  currency: string;
+  interval: string;
+  requires_address: boolean;
+  requires_tax_id: boolean;
+  requires_phone: boolean;
+  fulfillment_targets: string[];
+}
+
 model PublicCheckoutRequestDto {
   tenant_slug: string;
   product_slug: string;

@@ -168,10 +168,8 @@ model CreatePlanRequestDto {
 }
 
 model CreateCommunitySpaceRequestDto {
+  product_id: string; // GUID
   name: string;
-  slug: string;
-  price: float64;
-  interval: string;
   telegram_link?: string;
   zoom_link?: string;
 }
