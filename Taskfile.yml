@@ -25,7 +25,7 @@ tasks:
     desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
     deps: [infra:up]
     cmds:
-      - task: api:db:migrate
+      # - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
   fe:
