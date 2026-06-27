@@ -12,6 +12,7 @@ public static class Endpoints
 
         adminGroup.MapProductEndpoints();
         adminGroup.MapReminderScheduleEndpoints();
+        adminGroup.MapPaymentConfigEndpoints();
         
         publicGroup.MapPublicCommerceEndpoints();
 

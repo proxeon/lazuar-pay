@@ -61,4 +61,14 @@ interface AdminCommerceOperations {
   deleteReminderSchedule(
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/payment-config")
+  getPaymentConfig(): PaymentConfigDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/payment-config")
+  savePaymentConfig(
+    @body body: SavePaymentConfigRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

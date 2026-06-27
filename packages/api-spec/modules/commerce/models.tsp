@@ -112,3 +112,27 @@ model UpdateReminderScheduleRequestDto {
   time_of_day?: string;
   is_enabled?: boolean;
 }
+
+model PaymentConfigDto {
+  gateway_type: string;
+  api_key?: string;
+  merchant_id?: string;
+  webhook_secret?: string;
+  secret_key?: string;
+  is_active: boolean;
+  estimated_fee_percentage: float64;
+  fixed_fee: float64;
+  tax_rate: float64;
+}
+
+model SavePaymentConfigRequestDto {
+  gateway_type: string;
+  api_key?: string;
+  collection_id?: string;
+  webhook_secret?: string;
+  secret_key?: string;
+  is_active: boolean;
+  estimated_fee_percentage?: float64;
+  fixed_fee?: float64;
+  tax_rate?: float64;
+}

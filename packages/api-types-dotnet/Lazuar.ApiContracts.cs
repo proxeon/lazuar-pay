@@ -336,6 +336,39 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateReminderScheduleRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
+        public string? Product_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
+        public string Template_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string Channel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("days_relative_to_due")]
+        public int Days_relative_to_due { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("time_of_day")]
+        public string Time_of_day { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_enabled")]
+        public bool Is_enabled { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PortalOrderDto
     {
 
@@ -498,6 +531,51 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReminderScheduleDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
+        public string? Product_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_name")]
+        public string? Product_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
+        public string Template_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("template_name")]
+        public string Template_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string Channel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("days_relative_to_due")]
+        public int Days_relative_to_due { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("time_of_day")]
+        public string Time_of_day { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_enabled")]
+        public bool Is_enabled { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UpdateProductRequestDto
     {
 
@@ -530,6 +608,312 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateReminderScheduleRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
+        public string? Product_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
+        public string? Template_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string? Channel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("days_relative_to_due")]
+        public int? Days_relative_to_due { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("time_of_day")]
+        public string? Time_of_day { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_enabled")]
+        public bool? Is_enabled { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateBroadcastRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("subject")]
+        public string Subject { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string Channel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_plan_id")]
+        public string? Target_plan_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_status")]
+        public string? Target_status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_is_reminder_only")]
+        public bool? Target_is_reminder_only { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateTemplateRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("subject")]
+        public string Subject { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string Channel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("required_variables")]
+        public System.Collections.Generic.List<string> Required_variables { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("optional_variables")]
+        public System.Collections.Generic.List<string> Optional_variables { get; set; } = new System.Collections.Generic.List<string>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class MessageTemplateDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string Channel { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("subject")]
+        public string Subject { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_default")]
+        public bool Is_default { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("required_variables")]
+        public System.Collections.Generic.List<string> Required_variables { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("optional_variables")]
+        public System.Collections.Generic.List<string> Optional_variables { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("updated_at")]
+        public System.DateTimeOffset Updated_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TemplatePreviewRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("subject")]
+        public string Subject { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TemplatePreviewResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("html_email_preview")]
+        public string Html_email_preview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("text_whatsapp_preview")]
+        public string Text_whatsapp_preview { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("subject_content")]
+        public string Subject_content { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TemplateVariableCategoryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
+        public System.Collections.Generic.List<TemplateVariableDto> Items { get; set; } = new System.Collections.Generic.List<TemplateVariableDto>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TemplateVariableDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("tag")]
+        public string Tag { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string Description { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TestReminderRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("template_name")]
+        public string Template_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string? Channel { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TestReminderResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("success")]
+        public bool Success { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sent_to")]
+        public string Sent_to { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateTemplateRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("subject")]
+        public string Subject { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string Whatsapp_body { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -951,7 +1335,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateBroadcastRequestDto
+    public partial class CreateBroadcastRequestDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
@@ -1107,7 +1491,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateReminderScheduleRequestDto
+    public partial class CreateReminderScheduleRequestDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("plan_id")]
@@ -1200,7 +1584,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateTemplateRequestDto
+    public partial class CreateTemplateRequestDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
@@ -1353,7 +1737,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class MessageTemplateDto
+    public partial class MessageTemplateDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("id")]
@@ -1764,7 +2148,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TemplatePreviewRequestDto
+    public partial class TemplatePreviewRequestDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
@@ -1788,7 +2172,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TemplatePreviewResponseDto
+    public partial class TemplatePreviewResponseDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("html_email_preview")]
@@ -1812,14 +2196,14 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TemplateVariableCategoryDto
+    public partial class TemplateVariableCategoryDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("title")]
         public string Title { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("items")]
-        public System.Collections.Generic.List<TemplateVariableDto> Items { get; set; } = new System.Collections.Generic.List<TemplateVariableDto>();
+        public System.Collections.Generic.List<TemplateVariableDto2> Items { get; set; } = new System.Collections.Generic.List<TemplateVariableDto2>();
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1833,7 +2217,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TemplateVariableDto
+    public partial class TemplateVariableDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("tag")]
@@ -1854,7 +2238,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TestReminderRequestDto
+    public partial class TestReminderRequestDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("template_name")]
@@ -1875,7 +2259,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TestReminderResponse
+    public partial class TestReminderResponse2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("success")]
@@ -2043,7 +2427,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateReminderScheduleRequestDto
+    public partial class UpdateReminderScheduleRequestDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("plan_id")]
@@ -2103,7 +2487,7 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateTemplateRequestDto
+    public partial class UpdateTemplateRequestDto2
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("subject")]
