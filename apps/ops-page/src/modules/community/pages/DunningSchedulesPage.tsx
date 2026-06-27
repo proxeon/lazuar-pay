@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/community/pages/DunningSchedulesPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Zap } from "lucide-react";
@@ -9,7 +8,7 @@ import PageLayout from "../../core/components/PageLayout";
 import CreateScheduleModal from "../components/dunning/CreateScheduleModal";
 import ScheduleDetailPanel from "../components/dunning/ScheduleDetailPanel";
 
-type CommunityReminderScheduleDto = components["schemas"]["Community.CommunityReminderScheduleDto"];
+type ReminderScheduleDto = components["schemas"]["Commerce.ReminderScheduleDto"];
 
 export const formatTiming = (days: number) => {
   if (days < 0) return `${Math.abs(days)} Days Before Due`;
@@ -20,36 +19,36 @@ export const formatTiming = (days: number) => {
 export default function DunningSchedulesPage() {
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedSchedule, setSelectedSchedule] = useState<CommunityReminderScheduleDto | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<ReminderScheduleDto | null>(null);
 
-  const { data: plans } = useQuery({
-    queryKey: ["community-plans-lookup"],
+  const { data: products } = useQuery({
+    queryKey: ["commerce-products"],
     queryFn: async () => {
-      const { data } = await client.GET("/admin/community/plans");
+      const { data } = await client.GET("/admin/commerce/products");
       return data || [];
     }
   });
 
   const { data: schedules, isLoading: isSchedulesLoading } = useQuery({
-    queryKey: ["community-reminder-schedules"],
+    queryKey: ["commerce-reminder-schedules"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/reminder-schedules");
+      const { data, error } = await client.GET("/admin/commerce/reminder-schedules");
       if (error) throw new Error(error.detail);
       return data;
     }
   });
 
   const { data: templates } = useQuery({
-    queryKey: ["community-templates"],
+    queryKey: ["communications-templates"],
     queryFn: async () => {
-      const { data } = await client.GET("/admin/community/templates");
+      const { data } = await client.GET("/admin/communications/templates");
       return data || [];
     }
   });
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, is_enabled }: { id: string, is_enabled: boolean }) => {
-      const { error } = await client.PUT("/admin/community/reminder-schedules/{id}", {
+      const { error } = await client.PUT("/admin/commerce/reminder-schedules/{id}", {
         params: { path: { id } },
         body: { is_enabled }
       });
@@ -57,7 +56,7 @@ export default function DunningSchedulesPage() {
       return { id, is_enabled };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["community-reminder-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-reminder-schedules"] });
       setSelectedSchedule(prev => prev && prev.id === data.id ? { ...prev, is_enabled: data.is_enabled } : prev);
       toast.success(`Rule ${data.is_enabled ? "enabled" : "paused"} successfully.`);
     },
@@ -106,7 +105,7 @@ export default function DunningSchedulesPage() {
                 <tr>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Timing Rule</th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Template Content</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Target Plan</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Target Product</th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Status</th>
                 </tr>
               </thead>
@@ -128,7 +127,7 @@ export default function DunningSchedulesPage() {
                       <p className="text-[10px] text-[#71717a] uppercase">{schedule.channel}</p>
                     </td>
                     <td className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-[#52525b]">
-                      {schedule.plan_name || "All Plans"}
+                      {schedule.product_name || "All Products"}
                     </td>
                     <td className="px-5 py-3.5">
                       <button 
@@ -154,7 +153,7 @@ export default function DunningSchedulesPage() {
 
         {isCreateModalOpen && (
           <CreateScheduleModal 
-            plans={plans} 
+            products={products} 
             templates={templates} 
             onClose={() => setIsCreateModalOpen(false)} 
           />
@@ -162,7 +161,7 @@ export default function DunningSchedulesPage() {
 
         <ScheduleDetailPanel 
           schedule={selectedSchedule} 
-          plans={plans} 
+          products={products} 
           templates={templates} 
           onClose={() => setSelectedSchedule(null)} 
           formatTiming={formatTiming}
