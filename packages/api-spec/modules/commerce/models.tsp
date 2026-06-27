@@ -11,6 +11,8 @@ model ProductDto {
   slug: string;
   name: string;
   price: float64;
+  pricing_model: string;
+  minimum_price: float64;
   currency: string;
   interval: string;
   is_active: boolean;
@@ -22,6 +24,8 @@ model CreateProductRequestDto {
   name: string;
   slug: string;
   price: float64;
+  pricing_model: string;
+  minimum_price: float64;
   currency: string;
   interval: string;
   requires_address: boolean;
@@ -34,6 +38,8 @@ model UpdateProductRequestDto {
   name: string;
   slug: string;
   price: float64;
+  pricing_model: string;
+  minimum_price: float64;
   currency: string;
   interval: string;
   is_active: boolean;
@@ -236,7 +242,6 @@ model CommerceStatsDto {
   payment_methods: PaymentMethodDto[];
 }
 
-// Previously in Community models, now moved to Commerce
 model MagicLinkRequestDto {
   email: string;
 }

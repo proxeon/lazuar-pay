@@ -1419,6 +1419,9 @@ export interface components {
             slug: string;
             /** Format: double */
             price: number;
+            pricing_model: string;
+            /** Format: double */
+            minimum_price: number;
             currency: string;
             interval: string;
             requires_address: boolean;
@@ -1491,6 +1494,9 @@ export interface components {
             name: string;
             /** Format: double */
             price: number;
+            pricing_model: string;
+            /** Format: double */
+            minimum_price: number;
             currency: string;
             interval: string;
             is_active: boolean;
@@ -1576,6 +1582,9 @@ export interface components {
             slug: string;
             /** Format: double */
             price: number;
+            pricing_model: string;
+            /** Format: double */
+            minimum_price: number;
             currency: string;
             interval: string;
             is_active: boolean;
@@ -1664,13 +1673,13 @@ export interface components {
             whatsapp_body: string;
         };
         "Community.CreateCommunitySpaceRequestDto": {
-            product_id: string;
+            product_ids: string[];
             name: string;
             telegram_link?: string;
             zoom_link?: string;
         };
         "Community.PortalCommunitySpaceDto": {
-            product_id: string;
+            product_ids: string[];
             name: string;
             telegram_link?: string;
             zoom_link?: string;
@@ -2035,7 +2044,7 @@ export interface components {
             is_resolved: boolean;
         };
         "Vault.CreateVaultAssetRequestDto": {
-            product_id: string;
+            product_ids: string[];
             name: string;
             cloudflare_r2_url: string;
         };
@@ -2048,13 +2057,13 @@ export interface components {
             final_url: string;
         };
         "Vault.PortalVaultAssetDto": {
-            product_id: string;
+            product_ids: string[];
             name: string;
             cloudflare_r2_url: string;
         };
         "Vault.VaultAssetDto": {
             id: string;
-            product_id: string;
+            product_ids: string[];
             name: string;
             cloudflare_r2_url: string;
         };

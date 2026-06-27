@@ -594,6 +594,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double Price { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
+        public string Pricing_model { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("minimum_price")]
+        public double Minimum_price { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("currency")]
         public string Currency { get; set; } = default!;
 
@@ -848,6 +854,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double Price { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
+        public string Pricing_model { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("minimum_price")]
+        public double Minimum_price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("currency")]
         public string Currency { get; set; } = default!;
@@ -1118,6 +1130,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public double Price { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pricing_model")]
+        public string Pricing_model { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("minimum_price")]
+        public double Minimum_price { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("currency")]
         public string Currency { get; set; } = default!;
@@ -1488,8 +1506,8 @@ namespace Lazuar.ApiTypes
     public partial class CreateCommunitySpaceRequestDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string Product_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("product_ids")]
+        public System.Collections.Generic.List<string> Product_ids { get; set; } = new System.Collections.Generic.List<string>();
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
@@ -1515,8 +1533,8 @@ namespace Lazuar.ApiTypes
     public partial class PortalCommunitySpaceDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string Product_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("product_ids")]
+        public System.Collections.Generic.List<string> Product_ids { get; set; } = new System.Collections.Generic.List<string>();
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
@@ -2998,8 +3016,8 @@ namespace Lazuar.ApiTypes
     public partial class CreateVaultAssetRequestDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string Product_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("product_ids")]
+        public System.Collections.Generic.List<string> Product_ids { get; set; } = new System.Collections.Generic.List<string>();
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
@@ -3064,8 +3082,8 @@ namespace Lazuar.ApiTypes
     public partial class PortalVaultAssetDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string Product_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("product_ids")]
+        public System.Collections.Generic.List<string> Product_ids { get; set; } = new System.Collections.Generic.List<string>();
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
@@ -3091,8 +3109,8 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("id")]
         public string Id { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string Product_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("product_ids")]
+        public System.Collections.Generic.List<string> Product_ids { get; set; } = new System.Collections.Generic.List<string>();
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
