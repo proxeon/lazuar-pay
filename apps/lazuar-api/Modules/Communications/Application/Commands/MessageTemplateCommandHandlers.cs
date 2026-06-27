@@ -6,22 +6,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Communications.Contracts.Commands;
 using Modules.Communications.Domain.Aggregates;
-using Modules.Communications.Infrastructure;
 using Modules.Messaging.Contracts;
 
 namespace Modules.Communications.Application.Commands;
 
 public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessageTemplateCommand, Guid>
 {
-    private readonly CommunicationsDbContext _context;
+    private readonly ICommunicationsRepository _repository;
 
-    public CreateMessageTemplateCommandHandler(CommunicationsDbContext context)
+    public CreateMessageTemplateCommandHandler(ICommunicationsRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task<Guid> Handle(CreateMessageTemplateCommand request, CancellationToken cancellationToken)
@@ -39,8 +37,8 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
             request.RequiredVariables,
             request.OptionalVariables);
 
-        _context.MessageTemplates.Add(template);
-        await _context.SaveChangesAsync(cancellationToken);
+        _repository.AddTemplate(template);
+        await _repository.SaveChangesAsync(cancellationToken);
 
         return template.Id;
     }
@@ -90,70 +88,62 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
 
 public class UpdateMessageTemplateCommandHandler : ICommandHandler<UpdateMessageTemplateCommand>
 {
-    private readonly CommunicationsDbContext _context;
+    private readonly ICommunicationsRepository _repository;
 
-    public UpdateMessageTemplateCommandHandler(CommunicationsDbContext context)
+    public UpdateMessageTemplateCommandHandler(ICommunicationsRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task Handle(UpdateMessageTemplateCommand request, CancellationToken cancellationToken)
     {
-        var template = await _context.MessageTemplates
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(t => t.Id == request.TemplateId && t.OrganizationId == request.OrganizationId, cancellationToken);
+        var template = await _repository.GetTemplateByIdAsync(request.OrganizationId, request.TemplateId, cancellationToken);
 
         if (template == null) throw new InvalidOperationException("Template not found.");
 
         template.UpdateContent(request.Subject, request.EmailBody, request.WhatsAppBody);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _repository.SaveChangesAsync(cancellationToken);
     }
 }
 
 public class ResetMessageTemplateCommandHandler : ICommandHandler<ResetMessageTemplateCommand>
 {
-    private readonly CommunicationsDbContext _context;
+    private readonly ICommunicationsRepository _repository;
 
-    public ResetMessageTemplateCommandHandler(CommunicationsDbContext context)
+    public ResetMessageTemplateCommandHandler(ICommunicationsRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task Handle(ResetMessageTemplateCommand request, CancellationToken cancellationToken)
     {
-        var template = await _context.MessageTemplates
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(t => t.Id == request.TemplateId && t.OrganizationId == request.OrganizationId, cancellationToken);
+        var template = await _repository.GetTemplateByIdAsync(request.OrganizationId, request.TemplateId, cancellationToken);
 
         if (template == null) throw new InvalidOperationException("Template not found.");
 
-        // Safe fallback logic - if the frontend needs exact system defaults, we'd pull them here.
-        // For now, clear it cleanly.
         template.UpdateContent("", "", "");
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _repository.SaveChangesAsync(cancellationToken);
     }
 }
 
 public class SendTestReminderCommandHandler : ICommandHandler<SendTestReminderCommand>
 {
-    private readonly CommunicationsDbContext _context;
+    private readonly ICommunicationsRepository _repository;
     private readonly IEventBus _eventBus;
 
     public SendTestReminderCommandHandler(
-        CommunicationsDbContext context,
+        ICommunicationsRepository repository,
         [FromKeyedServices("CommunicationsEventBus")] IEventBus eventBus)
     {
-        _context = context;
+        _repository = repository;
         _eventBus = eventBus;
     }
 
     public async Task Handle(SendTestReminderCommand request, CancellationToken cancellationToken)
     {
-        var template = await _context.MessageTemplates
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(t => t.OrganizationId == request.OrganizationId && t.Name == request.TemplateName, cancellationToken);
+        var template = await _repository.GetTemplateByNameAsync(request.OrganizationId, request.TemplateName, cancellationToken);
 
         if (template == null) throw new InvalidOperationException("Template not found.");
 
@@ -169,8 +159,7 @@ public class SendTestReminderCommandHandler : ICommandHandler<SendTestReminderCo
                 .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase)
                 .Replace("{{renewal_link}}", "https://example.com/renew", StringComparison.OrdinalIgnoreCase)
                 .Replace("{{portal_magic_link}}", "https://portal.lazuar.com/workspace/portal?token=test_token", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{item_name}}", "Digital Course Bundle", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{checkout_url}}", "https://portal.lazuar.com/checkout", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{fulfillment_url}}", "https://cloudflare.r2/download.pdf", StringComparison.OrdinalIgnoreCase)
                 .Replace("{{current_period_end}}", "31 Dec 2026", StringComparison.OrdinalIgnoreCase);
         }
 

@@ -48,4 +48,13 @@ public class MessageTemplate : Entity, IAggregateRoot, IMustHaveTenant
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateContent(string subject, string emailBody, string whatsappBody)
+    {
+        Subject = subject;
+        EmailBody = emailBody;
+        WhatsAppBody = whatsappBody;
+        IsDefault = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

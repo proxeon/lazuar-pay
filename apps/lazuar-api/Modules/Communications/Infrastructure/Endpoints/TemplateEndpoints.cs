@@ -9,8 +9,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
-using Modules.Communications.Application.Commands;
 using Modules.Communications.Application.Queries;
+using Modules.Communications.Contracts.Commands;
 
 namespace Modules.Communications.Infrastructure;
 
