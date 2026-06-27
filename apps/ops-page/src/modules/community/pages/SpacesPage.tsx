@@ -1,27 +1,35 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Users, ExternalLink, Video } from "lucide-react";
+import { Loader2, Plus, Users, ExternalLink, Video } from "lucide-react";
 import { client } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
+import CreateSpaceModal from "../components/CreateSpaceModal";
 
 export default function SpacesPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Note: Since we are in development and focusing on UI structure, we will use a dummy query here 
-  // until the new /admin/community/spaces GET endpoint is fully built in the backend in future phases.
   const { data: spaces, isLoading } = useQuery({
     queryKey: ["community-spaces-list"],
     queryFn: async () => {
-      // Stub returning an empty array to gracefully show the empty state design
       return [];
     }
   });
 
   return (
     <PageLayout 
-      title="Spaces & Access" 
+      title="Community Spaces" 
       description="Manage the private Telegram and Zoom links associated with your community products."
       breadcrumbs={[{ label: "Community" }, { label: "Spaces" }]}
+      actionButton={
+        <button 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
+        >
+          <Plus size={14} /> Create Space
+        </button>
+      }
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
         <div className="w-full overflow-x-auto min-h-[320px]">
@@ -30,7 +38,7 @@ export default function SpacesPage() {
               <tr>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Space Name</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Access Links</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Linked Product ID</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Linked Products</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
@@ -44,7 +52,7 @@ export default function SpacesPage() {
                 <tr>
                   <td colSpan={3} className="py-12 text-center text-[13px] text-[#71717a] leading-relaxed">
                     No community spaces configured yet.<br /> 
-                    Go to <strong>Commerce → Products</strong> and enable the Community toggle when building a product.
+                    Click "Create Space" to link Telegram and Zoom details to your Commerce products.
                   </td>
                 </tr>
               ) : (
@@ -69,7 +77,7 @@ export default function SpacesPage() {
                       )}
                     </td>
                     <td className="px-5 py-4 font-mono text-[11px] text-[#71717a]">
-                      {space.product_id}
+                      {space.product_ids?.length || 0} product(s)
                     </td>
                   </tr>
                 ))
@@ -78,6 +86,11 @@ export default function SpacesPage() {
           </table>
         </div>
       </div>
+
+      <CreateSpaceModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </PageLayout>
   );
 }

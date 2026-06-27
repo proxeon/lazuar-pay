@@ -10,7 +10,8 @@ import {
   Users,
   Box,
   ShoppingCart,
-  Zap
+  Zap,
+  Mail
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
@@ -41,8 +42,9 @@ export default function Sidebar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const ModuleNav = ({ title, basePath, icon: Icon, links }: { title: string, basePath: string, icon: any, links: { label: string, href: string }[] }) => {
-    const isActiveModule = location.pathname.startsWith(basePath);
+  const ModuleNav = ({ title, basePath, icon: Icon, links }: { title: string, basePath: string | string[], icon: any, links: { label: string, href: string }[] }) => {
+    const basePaths = Array.isArray(basePath) ? basePath : [basePath];
+    const isActiveModule = basePaths.some(path => location.pathname.startsWith(path));
     const [isAccordionOpen, setIsAccordionOpen] = useState(isActiveModule);
     const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
     const navRef = useRef<HTMLDivElement>(null);
@@ -184,11 +186,11 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className="flex-1 py-4 flex flex-col gap-6">
+      <div className="flex-1 py-4 flex flex-col gap-6 overflow-y-auto overflow-x-hidden">
         <nav className="space-y-0.5">
           <ModuleNav 
             title="Commerce" 
-            basePath="/commerce" 
+            basePath={["/commerce", "/community/dunning-schedules"]} 
             icon={ShoppingCart}
             links={[
               { label: "Dashboard", href: "/commerce/dashboard" },
@@ -196,18 +198,25 @@ export default function Sidebar({
               { label: "Subscribers", href: "/commerce/subscribers" },
               { label: "Transaction Logs", href: "/commerce/transactions" },
               { label: "Promotions", href: "/commerce/coupons" },
+              { label: "Dunning Schedules", href: "/community/dunning-schedules" },
               { label: "Gateway Settings", href: "/commerce/payment" }
             ]} 
           />
           <ModuleNav 
-            title="Community" 
-            basePath="/community" 
-            icon={Users}
+            title="Communications" 
+            basePath={["/community/broadcasts", "/community/templates"]} 
+            icon={Mail}
             links={[
-              { label: "Spaces & Access", href: "/community/spaces" },
-              { label: "Dunning Schedules", href: "/community/dunning-schedules" },
               { label: "Bulk Broadcast", href: "/community/broadcasts" },
               { label: "Message Templates", href: "/community/templates" }
+            ]} 
+          />
+          <ModuleNav 
+            title="Community" 
+            basePath="/community/spaces" 
+            icon={Users}
+            links={[
+              { label: "Community Spaces", href: "/community/spaces" }
             ]} 
           />
           <ModuleNav 

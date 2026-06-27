@@ -14,40 +14,8 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
 
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
-      // 1. Send the core product payload to the Commerce module
       const { data, error } = await client.POST("/admin/commerce/products", { body: payload });
       if (error || !data) throw new Error(error?.detail || "Failed to create product");
-
-      const productId = data.id;
-      let fulfillmentFailed = false;
-
-      // 2. Client-Side Saga: Orchestrate Fulfillment Attachments Sequentially
-      if (payload._vault_url) {
-        try {
-          const { error: vaultError } = await client.POST("/admin/vault/assets", {
-            body: { product_id: productId, name: payload.name, cloudflare_r2_url: payload._vault_url }
-          });
-          if (vaultError) fulfillmentFailed = true;
-        } catch {
-          fulfillmentFailed = true;
-        }
-      }
-
-      if (payload._community_telegram || payload._community_zoom) {
-        try {
-          const { error: communityError } = await client.POST("/admin/community/spaces", {
-            body: { product_id: productId, name: payload.name, telegram_link: payload._community_telegram, zoom_link: payload._community_zoom }
-          });
-          if (communityError) fulfillmentFailed = true;
-        } catch {
-          fulfillmentFailed = true;
-        }
-      }
-
-      if (fulfillmentFailed) {
-        // We throw a specific string that the onError handler can catch to trigger graceful degradation.
-        throw new Error("PARTIAL_FAILURE");
-      }
     },
     onSuccess: () => {
       toast.success("Product created successfully");
@@ -55,13 +23,7 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
       onClose();
     },
     onError: (err: any) => {
-      if (err.message === "PARTIAL_FAILURE") {
-        toast.warning("Product created, but fulfillment attachment failed. You can add the file manually later.");
-        queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
-        onClose();
-      } else {
-        toast.error("Failed to create product", { description: err.message });
-      }
+      toast.error("Failed to create product", { description: err.message });
     }
   });
 
