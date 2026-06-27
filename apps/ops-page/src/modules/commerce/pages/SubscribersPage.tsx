@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import CreateSubscriberModal from "../components/CreateSubscriberModal";
 type CommerceSubscriptionDto = components["schemas"]["Commerce.CommerceSubscriptionDto"];
 
 export default function SubscribersPage() {
+  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -40,29 +42,27 @@ export default function SubscribersPage() {
       });
       if (error) throw new Error(error.detail);
       return data;
-    }
+    },
+    enabled: !!activeWorkspaceId
   });
 
   const { data: paymentsData, isLoading: isPaymentsLoading } = useQuery({
     queryKey: ["commerce-payments", selectedSub?.id],
     queryFn: async () => {
       if (!selectedSub) return null;
-      // Note: Payment History is part of the legacy Community/Commerce overlap.
-      // We will keep hitting the commerce route if it exists, or fall back to global transactions.
-      // For now, mapping this to the generic global transactions filtered by subscriber is safest.
       const { data, error } = await client.GET("/admin/commerce/transactions", {
         params: { query: { page: 1, limit: 20, search: selectedSub.customer_email } }
       });
       if (error) throw new Error(error.detail);
       return data;
     },
-    enabled: !!selectedSub
+    enabled: !!selectedSub && !!activeWorkspaceId
   });
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch(`${API_URL}/admin/community/subscribers/export`, { // Note: Export kept on community in Phase 1, but we should probably migrate it. Leaving as is if not explicitly requested to move.
+      const response = await fetch(`${API_URL}/admin/community/subscribers/export`, {
         headers: { "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "" },
       });
       const blob = await response.blob();
@@ -83,7 +83,7 @@ export default function SubscribersPage() {
   const actionMutation = useMutation({
     mutationFn: async ({ action, payload }: { action: string, payload?: any }) => {
       if (!selectedSub) throw new Error("No subscriber selected.");
-      const endpoint = `/admin/community/subscribers/{id}/${action}` as any; // Note: Mutations still pointing to legacy endpoints per instructions, only GETs were moved in Phase 1 task list. I will assume we should hit community for now until mutations are fully migrated to Commerce. Wait, the prompt says "Update `client.GET("/admin/community/subscribers")` to `/admin/commerce/subscribers`". It doesn't explicitly say to update mutations, but keeping it functional is key.
+      const endpoint = `/admin/community/subscribers/{id}/${action}` as any; 
       const { error } = await client.POST(endpoint, {
         params: { path: { id: selectedSub.id } },
         body: payload

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Tag, Edit2, Archive, RotateCcw, Infinity } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ type CouponDto = components["schemas"]["Commerce.CouponDto"];
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
 
 export default function CouponsPage() {
+  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
@@ -32,7 +34,8 @@ export default function CouponsPage() {
     queryFn: async () => {
       const { data } = await client.GET("/admin/commerce/products");
       return data || [];
-    }
+    },
+    enabled: !!activeWorkspaceId
   });
 
   const { data: coupons, isLoading } = useQuery({
@@ -41,7 +44,8 @@ export default function CouponsPage() {
       const { data, error } = await client.GET("/admin/commerce/coupons");
       if (error) throw new Error(error.detail);
       return data;
-    }
+    },
+    enabled: !!activeWorkspaceId
   });
 
   const createMutation = useMutation({

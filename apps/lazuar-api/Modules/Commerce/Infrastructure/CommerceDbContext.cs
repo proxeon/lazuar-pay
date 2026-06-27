@@ -41,29 +41,40 @@ public class CommerceDbContext : PlatformDbContext
         base.OnModelCreating(modelBuilder);
         modelBuilder.HasDefaultSchema("commerce");
 
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        };
+
+        var stringListConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
+        );
+
+        var stringListComparer = new ValueComparer<IReadOnlyCollection<string>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
+        var guidListConverter = new ValueConverter<IReadOnlyCollection<Guid>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<Guid>>(v, jsonOptions) ?? new List<Guid>()
+        );
+
+        var guidListComparer = new ValueComparer<IReadOnlyCollection<Guid>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
         modelBuilder.Entity<Product>(builder =>
         {
             builder.ToTable("Products");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.Slug }).IsUnique();
             builder.Property(x => x.Price).HasPrecision(18, 4);
-
-            var jsonOptions = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-            };
-
-            var stringListConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
-                v => JsonSerializer.Serialize(v, jsonOptions),
-                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
-            );
-
-            var stringListComparer = new ValueComparer<IReadOnlyCollection<string>>(
-                (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
-                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                c => c.ToList()
-            );
 
             builder.Property(x => x.FulfillmentTargets)
                 .HasField("_fulfillmentTargets")
@@ -86,6 +97,12 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => new { x.OrganizationId, x.Code }).IsUnique();
             builder.Property(x => x.Amount).HasPrecision(18, 4);
             builder.Property(x => x.MinimumOriginalPrice).HasPrecision(18, 4);
+
+            builder.Property(x => x.ApplicableProductIds)
+                .HasField("_applicableProductIds")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasConversion(guidListConverter, guidListComparer)
+                .HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<Subscription>(builder =>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ArrowLeft, ArrowRight, ShieldCheck, User, Search } from "lucide-react";
 import { client, type components } from "../../../lib/api-client";
@@ -8,6 +9,7 @@ import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
 
 export default function TransactionsPage() {
+  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [methodFilter, setMethodFilter] = useState("ALL");
@@ -32,7 +34,8 @@ export default function TransactionsPage() {
       });
       if (error) throw new Error(error.detail);
       return data;
-    }
+    },
+    enabled: !!activeWorkspaceId
   });
 
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
