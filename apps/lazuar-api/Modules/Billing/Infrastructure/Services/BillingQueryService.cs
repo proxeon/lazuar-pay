@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Billing/Infrastructure/Services/BillingQueryService.cs
 using System;
 using System.Data;
 using System.Linq;
@@ -25,12 +24,21 @@ public class BillingQueryService : IBillingQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
+        // Isolates dashboard Net Revenue strictly to customer sales activity by 
+        // subtracting gateway fees, taxes, and refunds from gross revenue, 
+        // completely ignoring unrelated operational expenses like utility credit top-ups.
         const string sql = @"
             SELECT 
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Gross_revenue"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Total_gateway_fees"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Total_tax_liabilities"",
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'ASSET_CASH' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Net_revenue"",
+                (
+                    COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'CONTRA_REVENUE_REFUNDS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_DISCOUNT' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                ) as ""Net_revenue"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_DEFERRED_REVENUE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Deferred_revenue"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_RECOGNIZED' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Recognized_revenue"",
                 'MYR' as ""Currency""
