@@ -26,7 +26,7 @@ public class CommerceQueryService : ICommerceQueryService
     }
 
     private record RawProductDto(
-        Guid Id, string Slug, string Name, decimal Price, string Currency, string Interval,
+        Guid Id, string Slug, string Name, decimal Price, string PricingModel, decimal MinimumPrice, string Currency, string Interval,
         bool RequiresAddress, bool RequiresTaxId, bool RequiresPhone,
         string? FulfillmentTargets, bool IsActive);
 
@@ -39,7 +39,7 @@ public class CommerceQueryService : ICommerceQueryService
 
         const string sql = @"
             SELECT 
-                ""Id"", ""Slug"", ""Name"", ""Price"", ""Currency"", ""Interval"",
+                ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
                 ""FulfillmentTargets""::text, ""IsActive""
             FROM commerce.""Products""
@@ -58,7 +58,7 @@ public class CommerceQueryService : ICommerceQueryService
 
         const string sql = @"
             SELECT 
-                ""Id"", ""Slug"", ""Name"", ""Price"", ""Currency"", ""Interval"",
+                ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
                 ""FulfillmentTargets""::text, ""IsActive""
             FROM commerce.""Products""
@@ -100,6 +100,8 @@ public class CommerceQueryService : ICommerceQueryService
             Slug = raw.Slug,
             Name = raw.Name,
             Price = (double)raw.Price,
+            Pricing_model = raw.PricingModel,
+            Minimum_price = (double)raw.MinimumPrice,
             Currency = raw.Currency,
             Interval = raw.Interval,
             Is_active = raw.IsActive,

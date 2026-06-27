@@ -12,6 +12,8 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
     public string Name { get; private set; }
     public string Slug { get; private set; }
     public decimal Price { get; private set; }
+    public string PricingModel { get; private set; }
+    public decimal MinimumPrice { get; private set; }
     public string Currency { get; private set; }
     public string Interval { get; private set; }
     public bool IsActive { get; private set; }
@@ -32,6 +34,8 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         string name, 
         string slug, 
         decimal price, 
+        string pricingModel,
+        decimal minimumPrice,
         string currency, 
         string interval,
         CheckoutConfiguration checkoutConfiguration,
@@ -42,6 +46,8 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         Name = name.Trim();
         Slug = slug.Trim().ToLowerInvariant();
         Price = price;
+        PricingModel = string.IsNullOrWhiteSpace(pricingModel) ? "FIXED" : pricingModel.Trim().ToUpperInvariant();
+        MinimumPrice = minimumPrice;
         Currency = currency.ToUpperInvariant();
         Interval = interval.ToLowerInvariant();
         CheckoutConfiguration = checkoutConfiguration;
@@ -56,11 +62,13 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateDetails(string name, string slug, decimal price, string interval, bool isActive, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
+    public void UpdateDetails(string name, string slug, decimal price, string pricingModel, decimal minimumPrice, string interval, bool isActive, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
     {
         Name = name.Trim();
         Slug = slug.Trim().ToLowerInvariant();
         Price = price;
+        PricingModel = string.IsNullOrWhiteSpace(pricingModel) ? "FIXED" : pricingModel.Trim().ToUpperInvariant();
+        MinimumPrice = minimumPrice;
         Interval = interval.ToLowerInvariant();
         IsActive = isActive;
         CheckoutConfiguration = checkoutConfiguration;

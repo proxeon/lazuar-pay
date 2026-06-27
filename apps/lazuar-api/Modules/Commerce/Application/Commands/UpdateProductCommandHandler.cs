@@ -31,6 +31,8 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand>
             request.Name,
             request.Slug,
             request.Price,
+            request.PricingModel,
+            request.MinimumPrice,
             request.Interval,
             request.IsActive,
             config,

@@ -75,6 +75,9 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.Slug }).IsUnique();
             builder.Property(x => x.Price).HasPrecision(18, 4);
+            
+            builder.Property(x => x.PricingModel).HasMaxLength(50).HasDefaultValue("FIXED");
+            builder.Property(x => x.MinimumPrice).HasPrecision(18, 4).HasDefaultValue(0m);
 
             builder.Property(x => x.FulfillmentTargets)
                 .HasField("_fulfillmentTargets")

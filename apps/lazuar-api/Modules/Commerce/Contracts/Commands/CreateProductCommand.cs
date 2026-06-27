@@ -9,6 +9,8 @@ public record CreateProductCommand(
     string Name,
     string Slug,
     decimal Price,
+    string PricingModel,
+    decimal MinimumPrice,
     string Currency,
     string Interval,
     bool RequiresAddress,
