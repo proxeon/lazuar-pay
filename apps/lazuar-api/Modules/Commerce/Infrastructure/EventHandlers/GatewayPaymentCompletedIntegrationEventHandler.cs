@@ -5,6 +5,7 @@ using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain.Aggregates;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
@@ -26,58 +27,76 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
     {
         var type = @event.Metadata.GetValueOrDefault("type");
 
-        if (type == "commerce_subscription" && @event.Metadata.TryGetValue("subscription_id", out var subIdStr) && Guid.TryParse(subIdStr, out var subId))
+        if (type == "commerce_subscription" && @event.Metadata.TryGetValue("subscription_id", out var sessionIdStr) && Guid.TryParse(sessionIdStr, out var sessionId))
         {
-            var subscription = await _repository.GetSubscriptionByIdAsync(subId);
-            if (subscription != null && subscription.Status != "ACTIVE")
+            // Retrieve the active checkout session representing the purchase intent
+            var session = await _repository.GetCheckoutSessionByIdAsync(sessionId);
+            if (session == null || session.Status == "COMPLETED")
             {
-                var product = await _repository.GetProductByIdAsync(subscription.ProductId);
-                if (product != null)
-                {
-                    var nextBilling = product.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
-                    var isFirstPayment = subscription.Status == "PENDING";
-                    
-                    subscription.Activate(DateTime.UtcNow, nextBilling);
-
-                    if (!string.IsNullOrEmpty(@event.GatewayCustomerId) && !string.IsNullOrEmpty(@event.GatewayTokenId))
-                    {
-                        subscription.StoreVaultedToken(@event.GatewayCustomerId, @event.GatewayTokenId);
-                    }
-
-                    await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
-                        subscription.OrganizationId,
-                        subscription.Id,
-                        subscription.ClientProfileId,
-                        subscription.ProductId,
-                        product.FulfillmentTargets.ToList(),
-                        isFirstPayment
-                    ));
-
-                    await _repository.SaveChangesAsync();
-                }
+                return;
             }
-        }
-        else if (type == "commerce_order" && @event.Metadata.TryGetValue("order_id", out var orderIdStr) && Guid.TryParse(orderIdStr, out var orderId))
-        {
-            var order = await _repository.GetOrderByIdAsync(orderId);
-            if (order != null && order.Status != "COMPLETED")
+
+            var product = await _repository.GetProductByIdAsync(session.ProductId);
+            if (product == null)
             {
+                throw new InvalidOperationException($"Product with ID {session.ProductId} associated with session {sessionId} not found.");
+            }
+
+            // Complete the checkout session to resolve polling status API
+            session.Complete();
+
+            if (product.Interval != "one_time")
+            {
+                // Provision a brand-new recurring subscription on successful payment
+                var subscription = new Subscription(
+                    session.OrganizationId,
+                    session.ClientProfileId,
+                    product.Id
+                );
+
+                var nextBilling = product.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
+                subscription.Activate(DateTime.UtcNow, nextBilling);
+
+                if (!string.IsNullOrEmpty(@event.GatewayCustomerId) && !string.IsNullOrEmpty(@event.GatewayTokenId))
+                {
+                    subscription.StoreVaultedToken(@event.GatewayCustomerId, @event.GatewayTokenId);
+                }
+
+                _repository.AddSubscription(subscription);
+
+                await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
+                    subscription.OrganizationId,
+                    subscription.Id,
+                    subscription.ClientProfileId,
+                    subscription.ProductId,
+                    product.FulfillmentTargets.ToList(),
+                    true
+                ));
+            }
+            else
+            {
+                // Provision a brand-new one-time purchase order
+                var order = new Order(
+                    session.OrganizationId,
+                    session.ClientProfileId,
+                    product.Id,
+                    @event.AmountPaid,
+                    product.Currency
+                );
+
                 order.Complete();
+                _repository.AddOrder(order);
 
-                var product = await _repository.GetProductByIdAsync(order.ProductId);
-                if (product != null)
-                {
-                    await _eventBus.PublishAsync(new OrderCompletedIntegrationEvent(
-                        order.OrganizationId,
-                        order.Id,
-                        order.ClientProfileId,
-                        order.ProductId,
-                        product.FulfillmentTargets.ToList()
-                    ));
-
-                    await _repository.SaveChangesAsync();
-                }
+                await _eventBus.PublishAsync(new OrderCompletedIntegrationEvent(
+                    order.OrganizationId,
+                    order.Id,
+                    order.ClientProfileId,
+                    order.ProductId,
+                    product.FulfillmentTargets.ToList()
+                ));
             }
+
+            await _repository.SaveChangesAsync();
         }
     }
 }
