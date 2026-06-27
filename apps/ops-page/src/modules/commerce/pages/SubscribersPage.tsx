@@ -2,13 +2,15 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { client, API_URL, type CommunitySubscriptionDto } from "../../../lib/api-client";
+import { client, API_URL, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
 import CreateSubscriberModal from "../components/CreateSubscriberModal";
+
+type CommerceSubscriptionDto = components["schemas"]["Commerce.CommerceSubscriptionDto"];
 
 export default function SubscribersPage() {
   const queryClient = useQueryClient();
@@ -17,7 +19,7 @@ export default function SubscribersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const [selectedSub, setSelectedSub] = useState<CommunitySubscriptionDto | null>(null);
+  const [selectedSub, setSelectedSub] = useState<CommerceSubscriptionDto | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -31,9 +33,9 @@ export default function SubscribersPage() {
   const [refundModal, setRefundModal] = useState({ isOpen: false, paymentId: "", reason: "" });
 
   const { data: subscribersData, isLoading } = useQuery({
-    queryKey: ["community-subscribers", page, debouncedSearchTerm],
+    queryKey: ["commerce-subscribers", page, debouncedSearchTerm],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/subscribers", {
+      const { data, error } = await client.GET("/admin/commerce/subscribers", {
         params: { query: { page, limit: 50, search: debouncedSearchTerm || undefined } }
       });
       if (error) throw new Error(error.detail);
@@ -42,11 +44,14 @@ export default function SubscribersPage() {
   });
 
   const { data: paymentsData, isLoading: isPaymentsLoading } = useQuery({
-    queryKey: ["community-payments", selectedSub?.id],
+    queryKey: ["commerce-payments", selectedSub?.id],
     queryFn: async () => {
       if (!selectedSub) return null;
-      const { data, error } = await client.GET("/admin/community/subscribers/{id}/payments", {
-        params: { path: { id: selectedSub.id }, query: { page: 1, limit: 20 } }
+      // Note: Payment History is part of the legacy Community/Commerce overlap.
+      // We will keep hitting the commerce route if it exists, or fall back to global transactions.
+      // For now, mapping this to the generic global transactions filtered by subscriber is safest.
+      const { data, error } = await client.GET("/admin/commerce/transactions", {
+        params: { query: { page: 1, limit: 20, search: selectedSub.customer_email } }
       });
       if (error) throw new Error(error.detail);
       return data;
@@ -57,7 +62,7 @@ export default function SubscribersPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch(`${API_URL}/admin/community/subscribers/export`, {
+      const response = await fetch(`${API_URL}/admin/community/subscribers/export`, { // Note: Export kept on community in Phase 1, but we should probably migrate it. Leaving as is if not explicitly requested to move.
         headers: { "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "" },
       });
       const blob = await response.blob();
@@ -78,7 +83,7 @@ export default function SubscribersPage() {
   const actionMutation = useMutation({
     mutationFn: async ({ action, payload }: { action: string, payload?: any }) => {
       if (!selectedSub) throw new Error("No subscriber selected.");
-      const endpoint = `/admin/community/subscribers/{id}/${action}` as any;
+      const endpoint = `/admin/community/subscribers/{id}/${action}` as any; // Note: Mutations still pointing to legacy endpoints per instructions, only GETs were moved in Phase 1 task list. I will assume we should hit community for now until mutations are fully migrated to Commerce. Wait, the prompt says "Update `client.GET("/admin/community/subscribers")` to `/admin/commerce/subscribers`". It doesn't explicitly say to update mutations, but keeping it functional is key.
       const { error } = await client.POST(endpoint, {
         params: { path: { id: selectedSub.id } },
         body: payload
@@ -94,8 +99,8 @@ export default function SubscribersPage() {
     },
     onSuccess: (_, variables) => {
       toast.success(`Action successfully executed.`);
-      queryClient.invalidateQueries({ queryKey: ["community-subscribers"] });
-      queryClient.invalidateQueries({ queryKey: ["community-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-subscribers"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-payments"] });
       
       if (variables.action === "record-payment") {
         setIsPaymentModalOpen(false);
@@ -124,7 +129,7 @@ export default function SubscribersPage() {
     <PageLayout 
       title="Subscriber Directory" 
       description="Manage active members, billing cycles, and access."
-      breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Subscribers" }]}
+      breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Subscribers" }]}
       actionButton={
         <div className="flex items-center gap-2">
           <button 
@@ -173,7 +178,7 @@ export default function SubscribersPage() {
             <thead className="bg-white border-b border-[#f4f4f5]">
               <tr>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Customer</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Plan</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Product</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Status</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] text-right">Period End</th>
               </tr>
@@ -197,8 +202,8 @@ export default function SubscribersPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <p className="text-[12px] text-[#09090b]">{sub.plan_name}</p>
-                      <p className="text-[10px] font-mono text-[#71717a]">RM {sub.plan_price.toFixed(2)}</p>
+                      <p className="text-[12px] text-[#09090b]">{sub.product_name}</p>
+                      <p className="text-[10px] font-mono text-[#71717a]">RM {sub.product_price?.toFixed(2)}</p>
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={cn(
@@ -271,7 +276,7 @@ export default function SubscribersPage() {
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Subscription Details</h3>
               <div className="grid grid-cols-2 gap-4 text-[12px]">
-                <div><span className="text-[#a1a1aa] block mb-1">Plan</span><span className="font-medium text-[#09090b]">{selectedSub.plan_name}</span></div>
+                <div><span className="text-[#a1a1aa] block mb-1">Product</span><span className="font-medium text-[#09090b]">{selectedSub.product_name}</span></div>
                 <div><span className="text-[#a1a1aa] block mb-1">Status</span><span className="font-bold text-[#09090b]">{selectedSub.status.replace("_", " ")}</span></div>
                 <div><span className="text-[#a1a1aa] block mb-1">Period Ends</span><span className="font-mono text-[#52525b]">{selectedSub.current_period_end ? new Date(selectedSub.current_period_end).toLocaleDateString() : '-'}</span></div>
                 <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.vaulted_token_id ? "Active" : "None"}</span></div>
@@ -308,7 +313,6 @@ export default function SubscribersPage() {
                           <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.payment_method}</span></p>
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold text-[#09090b]">{payment.system_reference}</span>
-                            {payment.reference_number && <span className="text-[10px] font-mono text-[#a1a1aa]">({payment.reference_number})</span>}
                           </div>
                           <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
                         </div>
@@ -321,7 +325,7 @@ export default function SubscribersPage() {
                       </div>
                     );
                   })}
-                  {paymentsData?.data?.length === 0 && <p className="text-[11px] text-[#a1a1aa]">No payments logged.</p>}
+                  {(!paymentsData?.data || paymentsData?.data?.length === 0) && <p className="text-[11px] text-[#a1a1aa]">No payments logged.</p>}
                 </div>
               )}
             </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ArrowLeft, ArrowRight, ShieldCheck, User, Search } from "lucide-react";
-import { client } from "../../../lib/api-client";
+import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import QuickCopy from "../../core/components/QuickCopy";
@@ -17,9 +17,9 @@ export default function TransactionsPage() {
   const limit = 50;
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ["community-transactions", page, statusFilter, methodFilter, debouncedSearchTerm],
+    queryKey: ["commerce-transactions", page, statusFilter, methodFilter, debouncedSearchTerm],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/transactions", {
+      const { data, error } = await client.GET("/admin/commerce/transactions", {
         params: { 
           query: { 
             page, 
@@ -51,7 +51,7 @@ export default function TransactionsPage() {
     <PageLayout 
       title="Transaction Logs" 
       description="Audit global financial movements, manual payments, and automated system charges."
-      breadcrumbs={[{ label: "Community", href: "/community/dashboard" }, { label: "Transactions" }]}
+      breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Transactions" }]}
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full min-h-[600px]">
         <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
@@ -117,7 +117,7 @@ export default function TransactionsPage() {
                 <tr><td colSpan={6} className="py-12 text-center text-[12px] text-[#71717a]">No transactions found for the given criteria.</td></tr>
               ) : (
                 response?.data.map((tx) => {
-                  const isSystem = tx.recorded_by_name.includes("System") || tx.recorded_by_name.includes("AI Agent");
+                  const isSystem = tx.recorded_by_name?.includes("System") || tx.recorded_by_name?.includes("AI Agent");
                   
                   return (
                     <tr key={tx.id} className="hover:bg-[#fafafa] transition-colors group">
@@ -163,7 +163,7 @@ export default function TransactionsPage() {
                               <span className="text-[10px] font-mono text-[#71717a] truncate max-w-[120px]" title={tx.external_reference}>
                                 {tx.external_reference}
                               </span>
-                              <QuickCopy text={tx.external_reference} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
+                              <QuickCopy text={tx.external_reference || ""} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
                             </div>
                           )}
                         </div>

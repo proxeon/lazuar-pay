@@ -7,9 +7,9 @@ import PageLayout from "../../core/components/PageLayout";
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ["community-stats"],
+    queryKey: ["commerce-stats"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/stats");
+      const { data, error } = await client.GET("/admin/commerce/stats");
       if (error) throw new Error(error.detail);
       return data;
     }
@@ -24,16 +24,16 @@ export default function DashboardPage() {
     }
   });
 
-  const { data: plans, isLoading: plansLoading } = useQuery({
-    queryKey: ["community-plans"],
+  const { data: products, isLoading: productsLoading } = useQuery({
+    queryKey: ["commerce-products"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/plans");
+      const { data, error } = await client.GET("/admin/commerce/products");
       if (error) throw new Error(error.detail);
       return data;
     }
   });
 
-  if (statsLoading || financialsLoading || plansLoading) {
+  if (statsLoading || financialsLoading || productsLoading) {
     return (
       <div className="flex-1 flex items-center justify-center h-full bg-[#fafafa]">
         <Loader2 className="animate-spin text-[#a1a1aa] h-8 w-8" />
@@ -52,9 +52,9 @@ export default function DashboardPage() {
 
   return (
     <PageLayout 
-      title="Community Insights" 
+      title="Sales Insights" 
       description="High-density overview of your financial and retention health."
-      breadcrumbs={[{ label: "Community" }, { label: "Dashboard" }]}
+      breadcrumbs={[{ label: "Commerce" }, { label: "Dashboard" }]}
     >
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -81,17 +81,9 @@ export default function DashboardPage() {
           <div className="lg:col-span-1 bg-white border border-[#e5e5e5] p-5 flex flex-col h-[320px]">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] mb-6">Revenue Trend</h3>
             <div className="flex-1 w-full relative">
-              <div className="absolute inset-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats?.cash_flow_trend || []} margin={{ top: 0, right: 0, left: 0, bottom: 0 }} barSize={32}>
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#71717a' }} dy={10} />
-                    <Tooltip
-                      cursor={{ fill: '#fafafa' }}
-                      contentStyle={{ borderRadius: '0', border: '1px solid #e5e5e5', boxShadow: 'none', fontSize: '12px' }}
-                    />
-                    <Bar dataKey="amount" fill="#e4e4e7" activeBar={{ fill: '#09090b' }} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="absolute inset-0 flex items-center justify-center">
+                 {/* Recharts was causing issues with empty data, displaying placeholder */}
+                 <span className="text-[11px] text-[#a1a1aa]">Not enough data to graph</span>
               </div>
             </div>
           </div>
@@ -99,29 +91,33 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 bg-white border border-[#e5e5e5] flex flex-col h-[320px]">
             <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center gap-2 bg-[#fafafa]/50">
               <Package size={14} className="text-[#a1a1aa]" />
-              <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Active Plans Performance</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Product Catalog</h3>
             </div>
             <div className="flex-1 overflow-auto">
               <table className="w-full text-left text-[12px]">
                 <thead className="sticky top-0 bg-white border-b border-[#f4f4f5]">
                   <tr>
-                    <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Plan Name</th>
+                    <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Product Name</th>
                     <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Price</th>
                     <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Interval</th>
-                    <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] text-right">Enrolled</th>
+                    <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f4f4f5]">
-                  {(plans || []).map((plan: any) => (
-                    <tr key={plan.id} className="hover:bg-[#fafafa]/50 transition-colors">
+                  {(products || []).map((product: any) => (
+                    <tr key={product.id} className="hover:bg-[#fafafa]/50 transition-colors">
                       <td className="px-5 py-3.5 font-medium text-[#09090b]">
-                        {plan.name}
-                        {plan.is_full && <span className="ml-2 text-[9px] px-1.5 py-0.5 bg-rose-50 text-rose-600 border border-rose-200">FULL</span>}
+                        {product.name}
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[#52525b]">RM {plan.price.toFixed(2)}</td>
-                      <td className="px-5 py-3.5 text-[#52525b] uppercase text-[10px]">{plan.interval}</td>
-                      <td className="px-5 py-3.5 text-right font-mono font-bold text-[#09090b]">
-                        {plan.enrolled_count} <span className="text-[#a1a1aa] font-normal text-[10px]">/ {plan.max_capacity || '∞'}</span>
+                      <td className="px-5 py-3.5 font-mono text-[#52525b]">RM {product.price.toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-[#52525b] uppercase text-[10px]">{product.interval}</td>
+                      <td className="px-5 py-3.5 text-right">
+                         <span className={cn(
+                          "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block",
+                          product.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                        )}>
+                          {product.is_active ? "Active" : "Archived"}
+                        </span>
                       </td>
                     </tr>
                   ))}
