@@ -14,4 +14,10 @@ interface AdminVaultOperations {
   createAsset(
     @body body: CreateVaultAssetRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/presigned-url")
+  getPresignedUrl(
+    @body body: GetPresignedUrlRequestDto,
+  ): GetPresignedUrlResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 }

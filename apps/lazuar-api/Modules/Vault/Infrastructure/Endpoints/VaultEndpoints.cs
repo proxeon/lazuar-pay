@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Community/Infrastructure/Endpoints/VaultEndpoints.cs
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -12,13 +11,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 
-namespace Modules.Community.Infrastructure;
+namespace Modules.Vault.Infrastructure;
 
 public static class VaultEndpoints
 {
     public static RouteGroupBuilder MapVaultEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/vault/presigned-url", Task<Results<Ok<GetPresignedUrlResponseDto>, BadRequest<string>>> (
+        group.MapPost("/presigned-url", Task<Results<Ok<GetPresignedUrlResponseDto>, BadRequest<string>>> (
             [FromBody] GetPresignedUrlRequestDto req,
             IExecutionContextAccessor ctx,
             IR2StorageService r2Service,

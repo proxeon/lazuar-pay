@@ -11,6 +11,8 @@ public static class Endpoints
         var publicGroup = endpoints.MapGroup("/public/vault");
         
         adminGroup.MapAssetEndpoints();
+        adminGroup.MapVaultEndpoints(); // Registered the presigned URL endpoint here
+        
         publicGroup.MapPublicVaultEndpoints();
 
         return endpoints;
