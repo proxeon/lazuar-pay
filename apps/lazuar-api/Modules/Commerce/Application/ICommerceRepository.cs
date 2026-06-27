@@ -9,7 +9,9 @@ namespace Modules.Commerce.Application;
 public interface ICommerceRepository
 {
     Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default);
     Task<Coupon?> GetCouponByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default);
     Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default);
     Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default);
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
@@ -22,6 +24,7 @@ public interface ICommerceRepository
     void AddChargeAttempt(ChargeAttemptLog log);
     void AddReminderSchedule(ReminderSchedule schedule);
     void RemoveReminderSchedule(ReminderSchedule schedule);
+    void AddCheckoutSession(CheckoutSession session);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }

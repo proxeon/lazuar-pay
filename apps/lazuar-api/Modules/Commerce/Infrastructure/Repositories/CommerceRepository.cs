@@ -22,9 +22,24 @@ public class CommerceRepository : ICommerceRepository
         return await _context.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
+    public async Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default)
+    {
+        return await _context.Products
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Slug == slug && p.IsActive, ct);
+    }
+
     public async Task<Coupon?> GetCouponByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Coupons.FirstOrDefaultAsync(c => c.Id == id, ct);
+    }
+
+    public async Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default)
+    {
+        var normalizedCode = code.Trim().ToUpperInvariant();
+        return await _context.Coupons
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.OrganizationId == organizationId && c.Code == normalizedCode && c.IsActive, ct);
     }
 
     public async Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default)
@@ -34,7 +49,6 @@ public class CommerceRepository : ICommerceRepository
 
     public async Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default)
     {
-        // Check EF Core's active memory tracker first to support pre-save Domain Events
         var local = _context.Subscriptions.Local.FirstOrDefault(s => s.Id == id);
         if (local != null) return local;
 
@@ -70,6 +84,8 @@ public class CommerceRepository : ICommerceRepository
     public void AddReminderSchedule(ReminderSchedule schedule) => _context.ReminderSchedules.Add(schedule);
 
     public void RemoveReminderSchedule(ReminderSchedule schedule) => _context.ReminderSchedules.Remove(schedule);
+
+    public void AddCheckoutSession(CheckoutSession session) => _context.CheckoutSessions.Add(session);
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
