@@ -55,7 +55,9 @@ public class CommerceQueryServiceTests
         await _dbContext.Database.MigrateAsync();
 
         var connectionFactory = new NpgsqlConnectionFactory(connectionString);
-        _queryService = new CommerceQueryService(connectionFactory);
+        var tokenService = Substitute.For<IMagicLinkTokenService>();
+
+        _queryService = new CommerceQueryService(connectionFactory, tokenService);
     }
 
     [OneTimeTearDown]

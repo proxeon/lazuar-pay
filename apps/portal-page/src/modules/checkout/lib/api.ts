@@ -44,7 +44,7 @@ export async function submitCheckout(payload: PublicCheckoutRequestDto) {
 }
 
 export async function getCheckoutStatus(subId: string) {
-  const { data, error } = await browserClient.GET("/public/community/checkout/{subId}/status", {
+  const { data, error } = await browserClient.GET("/public/commerce/checkout/{subId}/status", {
     params: {
       path: { subId }
     }
