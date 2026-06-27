@@ -175,7 +175,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("OrgAdmin", policy =>
     {
         policy.RequireAuthenticatedUser();
-        policy.RequireRole("SUPER_ADMIN", "ADMIN");
+        policy.RequireRole("SUPER_ADMIN", "ADMIN", "API_CLIENT");
     });
 });
 

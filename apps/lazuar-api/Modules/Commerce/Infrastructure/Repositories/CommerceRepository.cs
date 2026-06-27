@@ -87,6 +87,8 @@ public class CommerceRepository : ICommerceRepository
 
     public void AddCheckoutSession(CheckoutSession session) => _context.CheckoutSessions.Add(session);
 
+    public void AddCoupon(Coupon coupon) => _context.Coupons.Add(coupon);
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await _context.SaveChangesAsync(ct);

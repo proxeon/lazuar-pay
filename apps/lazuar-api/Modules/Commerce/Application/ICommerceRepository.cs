@@ -25,6 +25,7 @@ public interface ICommerceRepository
     void AddReminderSchedule(ReminderSchedule schedule);
     void RemoveReminderSchedule(ReminderSchedule schedule);
     void AddCheckoutSession(CheckoutSession session);
+    void AddCoupon(Coupon coupon);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }
