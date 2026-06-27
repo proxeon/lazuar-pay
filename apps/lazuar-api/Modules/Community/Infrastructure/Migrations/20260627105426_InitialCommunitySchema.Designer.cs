@@ -4,23 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Modules.Ops.Infrastructure;
+using Modules.Community.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Modules.Ops.Infrastructure.Migrations
+namespace Modules.Community.Infrastructure.Migrations
 {
-    [DbContext(typeof(OpsDbContext))]
-    [Migration("20260627093733_InitialOpsSchema")]
-    partial class InitialOpsSchema
+    [DbContext(typeof(CommunityDbContext))]
+    [Migration("20260627105426_InitialCommunitySchema")]
+    partial class InitialCommunitySchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("ops")
+                .HasDefaultSchema("community")
                 .HasAnnotation("ProductVersion", "10.0.0-preview.1.25081.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -54,7 +54,7 @@ namespace Modules.Ops.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("InboxMessages", "ops");
+                    b.ToTable("InboxMessages", "community");
                 });
 
             modelBuilder.Entity("BuildingBlocks.Infrastructure.OutboxMessage", b =>
@@ -85,81 +85,67 @@ namespace Modules.Ops.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages", "ops");
+                    b.ToTable("OutboxMessages", "community");
                 });
 
-            modelBuilder.Entity("Modules.Ops.Domain.OpsConversation", b =>
+            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunitySpace", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Title")
-                        .IsRequired()
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TelegramLink")
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("ZoomLink")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("ProductId")
+                        .IsUnique();
 
-                    b.ToTable("Conversations", "ops");
+                    b.ToTable("CommunitySpaces", "community");
                 });
 
-            modelBuilder.Entity("Modules.Ops.Domain.OpsMessage", b =>
+            modelBuilder.Entity("Modules.Community.Domain.Entities.CommunityMember", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ConversationId")
+                    b.Property<Guid>("ClientProfileId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<Guid>("CommunitySpaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ExecutedToolsJson")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsResolved")
-                        .HasColumnType("boolean");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ProposedActionJson")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Role")
+                    b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UiRequestJson")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "ConversationId");
+                    b.HasIndex("CommunitySpaceId", "ClientProfileId")
+                        .IsUnique();
 
-                    b.ToTable("Messages", "ops");
+                    b.ToTable("CommunityMembers", "community");
                 });
 #pragma warning restore 612, 618
         }

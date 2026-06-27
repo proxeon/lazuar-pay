@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Modules.Commerce.Infrastructure.Migrations
 {
     [DbContext(typeof(CommerceDbContext))]
-    [Migration("20260627093748_InitialCommerceSchema")]
+    [Migration("20260627105452_InitialCommerceSchema")]
     partial class InitialCommerceSchema
     {
         /// <inheritdoc />
@@ -228,9 +228,16 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("FulfillmentTargets")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Interval")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()

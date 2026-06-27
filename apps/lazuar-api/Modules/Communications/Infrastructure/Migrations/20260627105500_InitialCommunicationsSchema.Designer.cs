@@ -4,23 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Modules.Payments.Infrastructure;
+using Modules.Communications.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Modules.Payments.Infrastructure.Migrations
+namespace Modules.Communications.Infrastructure.Migrations
 {
-    [DbContext(typeof(PaymentsDbContext))]
-    [Migration("20260627093726_InitialPaymentsSchema")]
-    partial class InitialPaymentsSchema
+    [DbContext(typeof(CommunicationsDbContext))]
+    [Migration("20260627105500_InitialCommunicationsSchema")]
+    partial class InitialCommunicationsSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("payments")
+                .HasDefaultSchema("communications")
                 .HasAnnotation("ProductVersion", "10.0.0-preview.1.25081.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -54,7 +54,7 @@ namespace Modules.Payments.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("InboxMessages", "payments");
+                    b.ToTable("InboxMessages", "communications");
                 });
 
             modelBuilder.Entity("BuildingBlocks.Infrastructure.OutboxMessage", b =>
@@ -85,81 +85,60 @@ namespace Modules.Payments.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages", "payments");
+                    b.ToTable("OutboxMessages", "communications");
                 });
 
-            modelBuilder.Entity("Modules.Payments.Domain.Aggregates.TenantPaymentConfiguration", b =>
+            modelBuilder.Entity("Modules.Communications.Domain.Aggregates.MessageTemplate", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ApiKey")
+                    b.Property<string>("Channel")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("EstimatedFeePercentage")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("FixedFee")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("GatewayType")
+                    b.Property<string>("EmailBody")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("IsDefault")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("MerchantId")
+                    b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("OptionalVariables")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("TaxRate")
-                        .HasColumnType("numeric");
+                    b.Property<string>("RequiredVariables")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("WebhookSecret")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId", "GatewayType")
-                        .IsUnique();
-
-                    b.ToTable("TenantPaymentConfigurations", "payments");
-                });
-
-            modelBuilder.Entity("Modules.Payments.Domain.Entities.PaymentWebhookLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("EventId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Provider")
+                    b.Property<string>("WhatsAppBody")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Provider", "EventId")
-                        .IsUnique();
+                    b.HasIndex("OrganizationId");
 
-                    b.ToTable("PaymentWebhookLogs", "payments");
+                    b.ToTable("MessageTemplates", "communications");
                 });
 #pragma warning restore 612, 618
         }

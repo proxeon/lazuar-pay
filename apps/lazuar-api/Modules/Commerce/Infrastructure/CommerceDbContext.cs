@@ -64,6 +64,8 @@ public class CommerceDbContext : PlatformDbContext
             );
 
             builder.Property(x => x.FulfillmentTargets)
+                .HasField("_fulfillmentTargets")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
                 .HasConversion(stringListConverter, stringListComparer)
                 .HasColumnType("jsonb");
 

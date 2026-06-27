@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Modules.CRM.Infrastructure.Migrations
 {
     [DbContext(typeof(CrmDbContext))]
-    [Migration("20260627093729_InitialCrmSchema")]
+    [Migration("20260627105434_InitialCrmSchema")]
     partial class InitialCrmSchema
     {
         /// <inheritdoc />

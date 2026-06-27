@@ -138,9 +138,11 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     Price = table.Column<decimal>(type: "numeric(18,4)", precision: 18, scale: 4, nullable: false),
                     Currency = table.Column<string>(type: "text", nullable: false),
                     Interval = table.Column<string>(type: "text", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     RequiresAddress = table.Column<bool>(type: "boolean", nullable: false),
                     RequiresTaxId = table.Column<bool>(type: "boolean", nullable: false),
                     RequiresPhone = table.Column<bool>(type: "boolean", nullable: false),
+                    FulfillmentTargets = table.Column<string>(type: "jsonb", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

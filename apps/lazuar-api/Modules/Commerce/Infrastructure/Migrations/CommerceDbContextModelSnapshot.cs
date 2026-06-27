@@ -225,9 +225,16 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("FulfillmentTargets")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Interval")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()

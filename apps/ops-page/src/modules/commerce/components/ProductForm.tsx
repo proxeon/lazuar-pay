@@ -218,8 +218,8 @@ export default function ProductForm({
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target URL</label>
                   <input type="url" required value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} disabled={isPending} className="w-full h-9 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" placeholder="https://your-saas.com/api/lazuar" />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 

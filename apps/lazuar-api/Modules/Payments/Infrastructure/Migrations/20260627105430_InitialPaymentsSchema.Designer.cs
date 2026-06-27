@@ -4,23 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Modules.Vault.Infrastructure;
+using Modules.Payments.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Modules.Vault.Infrastructure.Migrations
+namespace Modules.Payments.Infrastructure.Migrations
 {
-    [DbContext(typeof(VaultDbContext))]
-    [Migration("20260627093752_InitialVaultSchema")]
-    partial class InitialVaultSchema
+    [DbContext(typeof(PaymentsDbContext))]
+    [Migration("20260627105430_InitialPaymentsSchema")]
+    partial class InitialPaymentsSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("vault")
+                .HasDefaultSchema("payments")
                 .HasAnnotation("ProductVersion", "10.0.0-preview.1.25081.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -54,7 +54,7 @@ namespace Modules.Vault.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("InboxMessages", "vault");
+                    b.ToTable("InboxMessages", "payments");
                 });
 
             modelBuilder.Entity("BuildingBlocks.Infrastructure.OutboxMessage", b =>
@@ -85,35 +85,81 @@ namespace Modules.Vault.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages", "vault");
+                    b.ToTable("OutboxMessages", "payments");
                 });
 
-            modelBuilder.Entity("Modules.Vault.Domain.Aggregates.VaultAsset", b =>
+            modelBuilder.Entity("Modules.Payments.Domain.Aggregates.TenantPaymentConfiguration", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CloudflareR2Url")
-                        .IsRequired()
+                    b.Property<string>("ApiKey")
                         .HasColumnType("text");
 
-                    b.Property<string>("Name")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("EstimatedFeePercentage")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("FixedFee")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("GatewayType")
                         .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MerchantId")
                         .HasColumnType("text");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WebhookSecret")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId")
+                    b.HasIndex("OrganizationId", "GatewayType")
                         .IsUnique();
 
-                    b.ToTable("VaultAssets", "vault");
+                    b.ToTable("TenantPaymentConfigurations", "payments");
+                });
+
+            modelBuilder.Entity("Modules.Payments.Domain.Entities.PaymentWebhookLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "EventId")
+                        .IsUnique();
+
+                    b.ToTable("PaymentWebhookLogs", "payments");
                 });
 #pragma warning restore 612, 618
         }

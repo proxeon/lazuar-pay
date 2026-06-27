@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Modules.Lhdn.Infrastructure.Migrations
 {
     [DbContext(typeof(LhdnDbContext))]
-    [Migration("20260627093744_InitialLhdnSchema")]
+    [Migration("20260627105448_InitialLhdnSchema")]
     partial class InitialLhdnSchema
     {
         /// <inheritdoc />
