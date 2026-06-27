@@ -32,8 +32,6 @@ public class DefaultTemplatesSeededIntegrationEventHandler : IIntegrationEventHa
 
         if (hasSchedules) return;
 
-        // The templates are now guaranteed to be committed in the Communications schema
-        // because we are reacting to the handshake event.
         using var connection = _sqlConnectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
@@ -41,7 +39,7 @@ public class DefaultTemplatesSeededIntegrationEventHandler : IIntegrationEventHa
             SELECT ""Id"", ""Name"" 
             FROM communications.""MessageTemplates"" 
             WHERE ""OrganizationId"" = @TenantId 
-              AND ""Name"" IN ('Community Renewal (3 Days)', 'Community Renewal Due Today', 'Community Renewal Overdue')";
+              AND ""Name"" IN ('Subscription Renewal (3 Days)', 'Subscription Renewal Due Today', 'Subscription Renewal Overdue')";
 
         var templates = await connection.QueryAsync<(Guid Id, string Name)>(query, new { TenantId = @event.TenantId });
         var templateDict = new Dictionary<string, Guid>();
@@ -51,9 +49,9 @@ public class DefaultTemplatesSeededIntegrationEventHandler : IIntegrationEventHa
             templateDict[t.Name] = t.Id;
         }
 
-        if (templateDict.TryGetValue("Community Renewal (3 Days)", out var preTemplateId) &&
-            templateDict.TryGetValue("Community Renewal Due Today", out var dueTemplateId) &&
-            templateDict.TryGetValue("Community Renewal Overdue", out var postTemplateId))
+        if (templateDict.TryGetValue("Subscription Renewal (3 Days)", out var preTemplateId) &&
+            templateDict.TryGetValue("Subscription Renewal Due Today", out var dueTemplateId) &&
+            templateDict.TryGetValue("Subscription Renewal Overdue", out var postTemplateId))
         {
             var defaultSchedules = new List<ReminderSchedule>
             {

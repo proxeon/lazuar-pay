@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Modules.Community.Application.Commands;
+using Modules.Community.Application.Queries;
 
 namespace Modules.Community.Infrastructure;
 
@@ -19,6 +20,14 @@ public static class SpaceEndpoints
 {
     public static RouteGroupBuilder MapSpaceEndpoints(this RouteGroupBuilder group)
     {
+        group.MapGet("/spaces", async Task<Ok<ICollection<AdminCommunitySpaceDto>>> (
+            IExecutionContextAccessor ctx,
+            ICommunityQueryService queryService) =>
+        {
+            var spaces = await queryService.GetAdminSpacesAsync(ctx.TenantId);
+            return TypedResults.Ok((ICollection<AdminCommunitySpaceDto>)spaces.ToList());
+        });
+
         group.MapPost("/spaces", async Task<Ok<IdResponse>> (
             CreateCommunitySpaceRequest req,
             IExecutionContextAccessor ctx,

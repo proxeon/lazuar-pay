@@ -19,6 +19,7 @@ public partial class CommunityQueryService : ICommunityQueryService
     private readonly IOneQueryService _oneQueryService;
 
     private record RawCommunitySpaceDto(string ProductIdsJson, string Name, string? TelegramLink, string? ZoomLink);
+    private record RawAdminCommunitySpaceDto(Guid Id, string ProductIdsJson, string Name, string? TelegramLink, string? ZoomLink);
 
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
@@ -72,5 +73,41 @@ public partial class CommunityQueryService : ICommunityQueryService
         }
 
         return results;
+    }
+
+    public async Task<IEnumerable<AdminCommunitySpaceDto>> GetAdminSpacesAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != System.Data.ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""Id"", ""ProductIds""::text as ProductIdsJson, ""Name"" as name, ""TelegramLink"" as telegram_link, ""ZoomLink"" as zoom_link
+            FROM community.""CommunitySpaces""
+            WHERE ""OrganizationId"" = @OrgId
+            ORDER BY ""Name""";
+
+        var rawSpaces = await Dapper.SqlMapper.QueryAsync<RawAdminCommunitySpaceDto>(connection, sql, new { OrgId = organizationId });
+
+        return rawSpaces.Select(space => 
+        {
+            List<Guid> parsedIds = new();
+            if (!string.IsNullOrWhiteSpace(space.ProductIdsJson))
+            {
+                try
+                {
+                    parsedIds = JsonSerializer.Deserialize<List<Guid>>(space.ProductIdsJson) ?? new List<Guid>();
+                }
+                catch { }
+            }
+
+            return new AdminCommunitySpaceDto
+            {
+                Id = space.Id.ToString(),
+                Name = space.Name,
+                Telegram_link = space.TelegramLink,
+                Zoom_link = space.ZoomLink,
+                Product_ids = parsedIds.Select(id => id.ToString()).ToList()
+            };
+        }).ToList();
     }
 }

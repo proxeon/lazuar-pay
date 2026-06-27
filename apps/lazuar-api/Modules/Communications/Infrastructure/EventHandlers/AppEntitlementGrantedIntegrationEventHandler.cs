@@ -64,22 +64,22 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
                     "Hi {{customer_name}} 👋 Quick heads up: your recent card payment for {{plan_name}} was declined by the bank. To keep your access active, you can quickly update your details here: {{renewal_link}}. Let us know if you need help!", 
                     true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
                     
-                new MessageTemplate(@event.TenantId, "Community Renewal (3 Days)", "ALL", 
+                new MessageTemplate(@event.TenantId, "Subscription Renewal (3 Days)", "ALL", 
                     "Upcoming renewal for {{plan_name}}", 
-                    "Hi {{customer_name}},\n\nWe hope you're getting great value out of the community! This is just a quick reminder that your {{plan_name}} subscription will automatically renew in a few days.\n\nIf you need to update your card, download invoices, or manage your account, you can access your dashboard below:\n\n[Manage Account]({{renewal_link}})\n\n— {{business_name}}", 
+                    "Hi {{customer_name}},\n\nWe hope you're getting great value out of your subscription! This is just a quick reminder that your {{plan_name}} subscription will automatically renew in a few days.\n\nIf you need to update your card, download invoices, or manage your account, you can access your dashboard below:\n\n[Manage Account]({{renewal_link}})\n\n— {{business_name}}", 
                     "Hey {{customer_name}}, hope you're doing great! 🌟 Just a quick reminder that your {{plan_name}} cycle renews in 3 days. No action needed if you're staying with us, but you can manage your account anytime here: {{renewal_link}}", 
                     true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
                     
-                new MessageTemplate(@event.TenantId, "Community Renewal Due Today", "ALL", 
+                new MessageTemplate(@event.TenantId, "Subscription Renewal Due Today", "ALL", 
                     "Action Required: {{plan_name}} renewal due today", 
-                    "Hi {{customer_name}},\n\nThis is a reminder that your {{plan_name}} membership is due for renewal today. Please renew your subscription to maintain your access:\n\n[Renew Subscription]({{renewal_link}})\n\n— {{business_name}}", 
-                    "Hi {{customer_name}}! ⏳ Your {{plan_name}} membership is due for renewal today. Secure your access here: {{renewal_link}}", 
+                    "Hi {{customer_name}},\n\nThis is a reminder that your {{plan_name}} subscription is due for renewal today. Please renew your subscription to maintain your access:\n\n[Renew Subscription]({{renewal_link}})\n\n— {{business_name}}", 
+                    "Hi {{customer_name}}! ⏳ Your {{plan_name}} subscription is due for renewal today. Secure your access here: {{renewal_link}}", 
                     true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
                     
-                new MessageTemplate(@event.TenantId, "Community Renewal Overdue", "ALL", 
+                new MessageTemplate(@event.TenantId, "Subscription Renewal Overdue", "ALL", 
                     "Final Notice: {{plan_name}} is overdue", 
-                    "Hi {{customer_name}},\n\nYour {{plan_name}} membership is currently past due. If not resolved, your access to the community will be suspended soon. Please renew your subscription immediately:\n\n[Renew Now]({{renewal_link}})\n\n— {{business_name}}", 
-                    "Hey {{customer_name}}, your {{plan_name}} membership is past due and access will be suspended soon. ⚠️ You can resolve this quickly here: {{renewal_link}}", 
+                    "Hi {{customer_name}},\n\nYour {{plan_name}} subscription is currently past due. If not resolved, your access will be suspended soon. Please renew your subscription immediately:\n\n[Renew Now]({{renewal_link}})\n\n— {{business_name}}", 
+                    "Hey {{customer_name}}, your {{plan_name}} subscription is past due and access will be suspended soon. ⚠️ You can resolve this quickly here: {{renewal_link}}", 
                     true, new[] { "{{renewal_link}}" }, new[] { "{{customer_name}}", "{{business_name}}", "{{plan_name}}" }),
                     
                 new MessageTemplate(@event.TenantId, "Subscription Cancelled", "ALL", 
@@ -110,7 +110,6 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
             _dbContext.MessageTemplates.AddRange(templates);
             await _dbContext.SaveChangesAsync();
 
-            // Broadcast handshake to Commerce to safely seed Dunning Rules now that templates exist
             await _eventBus.PublishAsync(new DefaultTemplatesSeededIntegrationEvent(@event.TenantId));
         }
     }
