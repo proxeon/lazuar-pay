@@ -13,6 +13,8 @@ model ProductDto {
   price: float64;
   currency: string;
   interval: string;
+  is_active: boolean;
+  fulfillment_targets: string[];
   checkout_configuration: CheckoutConfigurationDto;
 }
 
@@ -22,6 +24,19 @@ model CreateProductRequestDto {
   price: float64;
   currency: string;
   interval: string;
+  requires_address: boolean;
+  requires_tax_id: boolean;
+  requires_phone: boolean;
+  fulfillment_targets: string[];
+}
+
+model UpdateProductRequestDto {
+  name: string;
+  slug: string;
+  price: float64;
+  currency: string;
+  interval: string;
+  is_active: boolean;
   requires_address: boolean;
   requires_tax_id: boolean;
   requires_phone: boolean;

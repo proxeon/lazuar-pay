@@ -7,8 +7,10 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Commerce.Application;
 using Modules.Commerce.Application.EventHandlers;
+using Modules.Commerce.Application.Queries;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Infrastructure.Repositories;
+using Modules.Commerce.Infrastructure.Services;
 using Modules.Commerce.Infrastructure.Workers;
 using Modules.Commerce.Infrastructure.EventHandlers;
 using Modules.Payments.Contracts.Events;
@@ -32,6 +34,7 @@ public static class DependencyInjection
             new NpgsqlConnectionFactory(connectionString));
 
         services.AddScoped<ICommerceRepository, CommerceRepository>();
+        services.AddScoped<ICommerceQueryService, CommerceQueryService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommerceDbContext>>("CommerceEventBus");
 

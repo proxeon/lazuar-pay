@@ -84,6 +84,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/commerce/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminCommerceOperations_createProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/community/broadcasts": {
         parameters: {
             query?: never;
@@ -1625,6 +1641,18 @@ export interface components {
             requires_tax_id: boolean;
             requires_phone: boolean;
         };
+        "Commerce.CreateProductRequestDto": {
+            name: string;
+            slug: string;
+            /** Format: double */
+            price: number;
+            currency: string;
+            interval: string;
+            requires_address: boolean;
+            requires_tax_id: boolean;
+            requires_phone: boolean;
+            fulfillment_targets: string[];
+        };
         "Commerce.PortalOrderDto": {
             id: string;
             product_id: string;
@@ -1813,11 +1841,8 @@ export interface components {
             target_is_reminder_only?: boolean;
         };
         "Community.CreateCommunitySpaceRequestDto": {
+            product_id: string;
             name: string;
-            slug: string;
-            /** Format: double */
-            price: number;
-            interval: string;
             telegram_link?: string;
             zoom_link?: string;
         };
@@ -2499,10 +2524,8 @@ export interface components {
             is_resolved: boolean;
         };
         "Vault.CreateVaultAssetRequestDto": {
+            product_id: string;
             name: string;
-            slug: string;
-            /** Format: double */
-            price: number;
             cloudflare_r2_url: string;
         };
         "Vault.PortalVaultAssetDto": {
@@ -2823,6 +2846,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Billing.FinancialSummaryDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommerceOperations_createProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Commerce.CreateProductRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.IdResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

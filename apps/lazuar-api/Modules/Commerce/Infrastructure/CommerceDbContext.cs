@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 
@@ -39,6 +45,27 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.Slug }).IsUnique();
             builder.Property(x => x.Price).HasPrecision(18, 4);
+
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            };
+
+            var stringListConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
+            );
+
+            var stringListComparer = new ValueComparer<IReadOnlyCollection<string>>(
+                (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList()
+            );
+
+            builder.Property(x => x.FulfillmentTargets)
+                .HasConversion(stringListConverter, stringListComparer)
+                .HasColumnType("jsonb");
 
             builder.OwnsOne(x => x.CheckoutConfiguration, c =>
             {

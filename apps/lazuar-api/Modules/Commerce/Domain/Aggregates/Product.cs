@@ -14,6 +14,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
     public decimal Price { get; private set; }
     public string Currency { get; private set; }
     public string Interval { get; private set; }
+    public bool IsActive { get; private set; }
     public CheckoutConfiguration CheckoutConfiguration { get; private set; }
 
     private readonly List<string> _fulfillmentTargets = new();
@@ -44,6 +45,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         Currency = currency.ToUpperInvariant();
         Interval = interval.ToLowerInvariant();
         CheckoutConfiguration = checkoutConfiguration;
+        IsActive = true;
         
         if (fulfillmentTargets != null)
         {
@@ -54,12 +56,13 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateDetails(string name, string slug, decimal price, string interval, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
+    public void UpdateDetails(string name, string slug, decimal price, string interval, bool isActive, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
     {
         Name = name.Trim();
         Slug = slug.Trim().ToLowerInvariant();
         Price = price;
         Interval = interval.ToLowerInvariant();
+        IsActive = isActive;
         CheckoutConfiguration = checkoutConfiguration;
 
         _fulfillmentTargets.Clear();
@@ -68,6 +71,12 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
             _fulfillmentTargets.AddRange(fulfillmentTargets);
         }
 
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Archive()
+    {
+        IsActive = false;
         UpdatedAt = DateTime.UtcNow;
     }
 }
