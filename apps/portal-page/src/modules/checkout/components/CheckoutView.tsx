@@ -25,11 +25,12 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   const [couponError, setCouponError] = useState<string | null>(null);
   
   const [quantity, setQuantity] = useState(1);
+  const [customPrice, setCustomPrice] = useState<number>(product.price);
   const [discountAmount, setDiscountAmount] = useState<number | null>(null);
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
 
-  const basePriceForQuantity = product.price * quantity;
+  const basePriceForQuantity = (product.pricing_model === "PWYW" ? customPrice : product.price) * quantity;
 
   const handleApplyCoupon = async (code: string) => {
     setIsCouponValidating(true);
@@ -69,6 +70,13 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     }
   };
 
+  const handleCustomPriceChange = (newPrice: number) => {
+    setCustomPrice(newPrice);
+    if (isCouponApplied) {
+      handleRemoveCoupon();
+    }
+  };
+
   const handleSetGuestMode = (isGuest: boolean) => {
     setAuthContext((prev) => ({ ...prev, isGuestMode: isGuest }));
   };
@@ -79,7 +87,10 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
 
   const checkoutContext: CheckoutContext = {
     itemName: product.name,
-    price: basePriceForQuantity,
+    pricingModel: product.pricing_model,
+    basePrice: product.price,
+    minimumPrice: product.minimum_price,
+    currentPrice: basePriceForQuantity,
     interval: product.interval,
     currency: product.currency,
     discountAmount: discountAmount,
@@ -113,6 +124,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
         summarySlot={
           <OrderSummaryCard
             context={checkoutContext}
+            onCustomPriceChange={handleCustomPriceChange}
             promoCodeSlot={
               <PromoCodeInput
                 isApplied={isCouponApplied}

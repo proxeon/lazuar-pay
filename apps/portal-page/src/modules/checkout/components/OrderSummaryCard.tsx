@@ -1,4 +1,3 @@
-// apps/portal-page/src/modules/checkout/components/OrderSummaryCard.tsx
 import { ReactNode } from "react";
 import { CheckoutContext } from "../types";
 
@@ -8,13 +7,28 @@ export function cn(...classes: (string | undefined | null | false)[]) {
 
 interface OrderSummaryCardProps {
   context: CheckoutContext;
+  onCustomPriceChange: (price: number) => void;
   promoCodeSlot?: ReactNode;
 }
 
-export function OrderSummaryCard({ context, promoCodeSlot }: OrderSummaryCardProps) {
-  const finalPriceToDisplay = context.finalPrice !== null ? context.finalPrice : context.price;
+export function OrderSummaryCard({ context, onCustomPriceChange, promoCodeSlot }: OrderSummaryCardProps) {
+  const finalPriceToDisplay = context.finalPrice !== null ? context.finalPrice : context.currentPrice;
   const hasVault = context.fulfillmentTargets.includes("internal:vault");
   const hasCommunity = context.fulfillmentTargets.includes("internal:community");
+
+  const handlePriceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) {
+      onCustomPriceChange(val);
+    }
+  };
+
+  const handlePriceBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    if (isNaN(val) || val < context.minimumPrice) {
+      onCustomPriceChange(context.minimumPrice);
+    }
+  };
 
   return (
     <div className="border border-border/60 bg-card p-6 shadow-sm rounded-none space-y-4">
@@ -28,9 +42,24 @@ export function OrderSummaryCard({ context, promoCodeSlot }: OrderSummaryCardPro
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Subtotal</span>
-          <span className={cn("text-sm font-medium", context.isCouponApplied ? "line-through text-muted-foreground" : "text-foreground")}>
-            {context.currency} {context.price.toFixed(2)}
-          </span>
+          {context.pricingModel === "PWYW" && !context.isCouponApplied ? (
+             <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">{context.currency}</span>
+                <input 
+                  type="number" 
+                  min={context.minimumPrice}
+                  step="1"
+                  value={context.currentPrice.toString()}
+                  onChange={handlePriceInput}
+                  onBlur={handlePriceBlur}
+                  className="w-20 h-8 border border-border/60 bg-background px-2 text-sm text-right focus:outline-none focus:border-foreground"
+                />
+             </div>
+          ) : (
+            <span className={cn("text-sm font-medium", context.isCouponApplied ? "line-through text-muted-foreground" : "text-foreground")}>
+              {context.currency} {context.currentPrice.toFixed(2)}
+            </span>
+          )}
         </div>
         
         {context.isCouponApplied && context.discountAmount !== null && (

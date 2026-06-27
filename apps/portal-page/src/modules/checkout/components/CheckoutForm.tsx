@@ -35,6 +35,7 @@ export function CheckoutForm({
   const [email, setEmail] = useState(authContext.userEmail || "");
   const [phone, setPhone] = useState("");
   
+  const [isCompany, setIsCompany] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [taxId, setTaxId] = useState("");
 
@@ -70,8 +71,8 @@ export function CheckoutForm({
       name: name,
       email: email,
       phone: config.requires_phone ? phone : undefined,
-      company_name: config.requires_tax_id ? companyName : undefined,
-      tax_id: config.requires_tax_id ? taxId : undefined,
+      company_name: config.requires_tax_id && isCompany ? companyName : undefined,
+      tax_id: config.requires_tax_id && isCompany ? taxId : undefined,
       address_line1: config.requires_address ? addressLine1 : undefined,
       city: config.requires_address ? city : undefined,
       postal_code: config.requires_address ? postalCode : undefined,
@@ -165,22 +166,36 @@ export function CheckoutForm({
           <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Billing Details</h3>
           
           {config.requires_tax_id && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Company Name</label>
-                <input required type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Tax Identification Number (TIN)</label>
-                <input required type="text" value={taxId} onChange={e => setTaxId(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" />
-              </div>
+            <div className="space-y-4">
+              <label className="flex items-center gap-2 cursor-pointer w-fit group">
+                <input 
+                  type="checkbox" 
+                  checked={isCompany} 
+                  onChange={e => setIsCompany(e.target.checked)} 
+                  className="rounded-sm border-border/60 bg-background text-foreground focus:ring-foreground" 
+                />
+                <span className="text-sm font-medium text-foreground group-hover:text-foreground/80 transition-colors">I am buying on behalf of a company</span>
+              </label>
+
+              {isCompany && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Company Name *</label>
+                    <input required type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Tax Identification Number (TIN) *</label>
+                    <input required type="text" value={taxId} onChange={e => setTaxId(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="e.g. C12345678" />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {config.requires_address && (
-            <div className="space-y-4">
+            <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Billing Address</label>
+                <label className="text-sm font-semibold text-foreground">{isCompany ? "Company Address *" : "Billing Address *"}</label>
                 <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="Street Address" />
               </div>
               <div className="grid grid-cols-2 gap-4">

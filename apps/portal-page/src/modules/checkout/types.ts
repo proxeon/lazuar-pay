@@ -1,9 +1,10 @@
-// apps/portal-page/src/modules/checkout/types.ts
-
 export interface CheckoutContext {
   itemName: string;
   audience?: string;
-  price: number;
+  pricingModel: string;
+  basePrice: number;
+  minimumPrice: number;
+  currentPrice: number;
   interval?: string;
   currency: string;
   discountAmount: number | null;

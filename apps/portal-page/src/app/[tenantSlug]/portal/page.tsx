@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { serverClient } from "../../../modules/core/lib/server-client";
-import { ShieldCheck, Download, ExternalLink, Video } from "lucide-react";
+import { ShieldCheck, Download, ExternalLink, Video, FileText } from "lucide-react";
 
 export default async function AggregatedPortalPage({
   params,
@@ -19,7 +19,7 @@ export default async function AggregatedPortalPage({
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
           <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
-          <p className="text-muted-foreground text-sm max-w-md">
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Please log in using a secure magic link sent to your email to manage your subscriptions and downloads.
           </p>
         </div>
@@ -27,7 +27,6 @@ export default async function AggregatedPortalPage({
     }
   }
 
-  // 1. Fetch the user's active financial contracts (Commerce Module)
   const { data: commerceData, error: commerceError } = await serverClient.GET("/public/commerce/{tenantSlug}/portal", {
     params: { path: { tenantSlug }, query: { token: token ?? "" } },
     next: { revalidate: 0 }
@@ -40,7 +39,6 @@ export default async function AggregatedPortalPage({
   const subProductIds = commerceData.subscriptions.map(s => s.product_id);
   const orderProductIds = commerceData.orders.map(o => o.product_id);
 
-  // 2. Fetch the actual fulfillment details in parallel (Community & Vault Modules)
   const [spacesRes, assetsRes] = await Promise.all([
     subProductIds.length > 0 ? serverClient.GET("/public/community/{tenantSlug}/portal/spaces", {
       params: { path: { tenantSlug }, query: { product_ids: subProductIds } }
@@ -50,8 +48,15 @@ export default async function AggregatedPortalPage({
     }) : Promise.resolve({ data: [] })
   ]);
 
-  const spacesMap = new Map(spacesRes.data?.map(s => [s.product_id, s]));
-  const assetsMap = new Map(assetsRes.data?.map(a => [a.product_id, a]));
+  const spacesMap = new Map();
+  spacesRes.data?.forEach(space => {
+    space.product_ids?.forEach(id => spacesMap.set(id, space));
+  });
+
+  const assetsMap = new Map();
+  assetsRes.data?.forEach(asset => {
+    asset.product_ids?.forEach(id => assetsMap.set(id, asset));
+  });
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -105,11 +110,14 @@ export default async function AggregatedPortalPage({
                     )}
                   </div>
                   
-                  <div className="shrink-0 flex items-center">
+                  <div className="shrink-0 flex flex-col gap-2 items-end justify-center">
+                    <a href={`/api/billing/invoice?subscription=${sub.id}`} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-2">
+                      <FileText size={12} /> Download Tax Invoice
+                    </a>
                     {isActive && (
                       <form action={async () => {
                         "use server";
-                        await serverClient.POST("/public/community/{tenantSlug}/portal/cancel", {
+                        await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
                           params: { path: { tenantSlug }, query: { token: token ?? "" } },
                           body: { subscription_id: sub.id }
                         });
@@ -137,7 +145,12 @@ export default async function AggregatedPortalPage({
               return (
                 <div key={order.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col justify-between h-full">
                   <div>
-                    <h3 className="text-base font-semibold text-foreground mb-1">{order.product_name}</h3>
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-base font-semibold text-foreground mb-1 pr-2">{order.product_name}</h3>
+                      <a href={`/api/billing/invoice?order=${order.id}`} className="text-muted-foreground hover:text-foreground transition-colors p-1" title="Download Tax Invoice">
+                        <FileText size={14} />
+                      </a>
+                    </div>
                     <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-6">
                       Purchased: {new Date(order.created_at).toLocaleDateString()}
                     </p>
