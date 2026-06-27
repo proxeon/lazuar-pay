@@ -54,6 +54,7 @@ tasks:
     dir: apps/lazuar-api
     cmds:
       - dotnet test tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj
+      - dotnet test tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj
 
   api:db:migrate:
     desc: Apply all pending migrations for all modular contexts sequentially

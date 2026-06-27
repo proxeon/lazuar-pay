@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/" />
   <Folder Name="/tests/">
+    <Project Path="tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj" />
     <Project Path="tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj" />
     <Project Path="tests/Lazuar.ModuleTests/Lazuar.ModuleTests.csproj" />
   </Folder>
