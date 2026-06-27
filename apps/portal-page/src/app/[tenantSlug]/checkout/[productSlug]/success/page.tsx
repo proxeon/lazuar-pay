@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { serverClient } from "../../../../../../modules/core/lib/server-client";
-import { CheckoutSuccessView } from "../../../../../../modules/checkout/components/CheckoutSuccessView";
+import { serverClient } from "../../../../../modules/core/lib/server-client";
+import { CheckoutSuccessView } from "../../../../../modules/checkout/components/CheckoutSuccessView";
 
 export default async function UniversalSuccessPage({
   params,
