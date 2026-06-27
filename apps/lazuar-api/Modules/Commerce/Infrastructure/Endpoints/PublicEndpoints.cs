@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Application.Queries;
+using Modules.Commerce.Contracts.Commands;
 using Modules.One.Contracts;
 
 namespace Modules.Commerce.Infrastructure;
@@ -56,6 +58,46 @@ public static class PublicEndpoints
             if (portalData == null) return TypedResults.NotFound();
 
             return TypedResults.Ok(portalData);
+        });
+
+        group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
+            [FromBody] PublicCheckoutRequestDto req,
+            IMediator mediator) =>
+        {
+            var command = new InitiateCheckoutCommand(
+                req.Tenant_slug,
+                req.Product_slug,
+                req.Name,
+                req.Email,
+                req.Phone,
+                req.Tax_id,
+                req.Company_name,
+                req.Address_line1,
+                req.City,
+                req.Postal_code,
+                req.State_code,
+                req.Country_code,
+                req.Quantity ?? 1,
+                req.Is_guest_checkout ?? false,
+                req.Coupon_code
+            );
+
+            try
+            {
+                var result = await mediator.Send(command);
+
+                var response = new CheckoutResponse
+                {
+                    Url = result.Url,
+                    Is_zero_amount_bypass = result.IsZeroAmountBypass
+                };
+
+                return TypedResults.Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
         });
 
         return group;
