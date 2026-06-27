@@ -1,16 +1,15 @@
-// apps/lazuar-api/Modules/One/Infrastructure/EventHandlers/OutboundWebhookEventHandlers.cs
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
-using Modules.Payments.Contracts.Events;
 using Modules.One.Domain;
+using Modules.Commerce.Contracts.Events;
 
 namespace Modules.One.Infrastructure.EventHandlers;
 
 public class OutboundWebhookEventHandlers : 
-    IIntegrationEventHandler<GatewayPaymentCompletedIntegrationEvent>
+    IIntegrationEventHandler<OutboundWebhookRequestedIntegrationEvent>
 {
     private readonly OneDbContext _dbContext;
 
@@ -19,28 +18,23 @@ public class OutboundWebhookEventHandlers :
         _dbContext = dbContext;
     }
 
-    public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
-    {
-        await ProcessEventAsync(@event.OrganizationId, "payment.completed", @event);
-    }
-
-    private async Task ProcessEventAsync(Guid organizationId, string eventType, object payload)
+    public async Task HandleAsync(OutboundWebhookRequestedIntegrationEvent @event)
     {
         var endpoint = await _dbContext.TenantWebhookEndpoints
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(e => e.OrganizationId == organizationId && e.IsActive);
+            .FirstOrDefaultAsync(e => e.OrganizationId == @event.OrganizationId && e.Url == @event.TargetUrl && e.IsActive);
 
         if (endpoint == null) return;
 
         var jsonPayload = JsonSerializer.Serialize(new
         {
             id = Guid.CreateVersion7().ToString(),
-            event_type = eventType,
+            event_type = @event.EventType,
             created_at = DateTime.UtcNow,
-            data = payload
+            data = @event.Payload
         }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
-        var outbox = new WebhookDeliveryOutbox(organizationId, endpoint.Id, eventType, jsonPayload);
+        var outbox = new WebhookDeliveryOutbox(@event.OrganizationId, endpoint.Id, @event.EventType, jsonPayload);
         _dbContext.WebhookDeliveryOutboxes.Add(outbox);
         await _dbContext.SaveChangesAsync();
     }

@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Commerce.Application;
+using Modules.Commerce.Application.EventHandlers;
+using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Infrastructure.Repositories;
 using Modules.Commerce.Infrastructure.Workers;
 using Modules.Commerce.Infrastructure.EventHandlers;
@@ -38,6 +40,8 @@ public static class DependencyInjection
         services.AddHostedService<CommerceLifecycleJob>();
 
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
+        services.AddTransient<OrderCompletedIntegrationEventHandler>();
+        services.AddTransient<SubscriptionLifecycleIntegrationEventHandlers>();
 
         return services;
     }
@@ -46,6 +50,10 @@ public static class DependencyInjection
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
+        eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
+        eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         return app;
     }
 }

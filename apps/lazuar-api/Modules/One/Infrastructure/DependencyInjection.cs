@@ -9,7 +9,7 @@ using Modules.One.Infrastructure.Services;
 using Modules.One.Infrastructure.Repositories;
 using Modules.One.Infrastructure.Workers;
 using Modules.One.Infrastructure.EventHandlers;
-using Modules.Payments.Contracts.Events;
+using Modules.Commerce.Contracts.Events;
 using Microsoft.AspNetCore.Builder;
 using System;
 
@@ -56,7 +56,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UseOneSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, OutboundWebhookEventHandlers>();
+        eventBus.Subscribe<OutboundWebhookRequestedIntegrationEvent, OutboundWebhookEventHandlers>();
 
         return app;
     }
