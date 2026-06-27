@@ -16,6 +16,7 @@ using Modules.Billing.Infrastructure.Services;
 using Modules.Billing.Infrastructure.Workers;
 using Modules.Payments.Contracts.Events;
 using Modules.Lhdn.Contracts.Events;
+using Modules.Commerce.Contracts.Events;
 using System;
 
 namespace Modules.Billing.Infrastructure;
@@ -49,6 +50,7 @@ public static class DependencyInjection
         services.AddTransient<LhdnDocumentValidatedIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentSubmittedIntegrationEventHandler>();
+        services.AddTransient<ZeroAmountCheckoutHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -72,6 +74,7 @@ public static class DependencyInjection
         eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentSubmittedIntegrationEvent, LhdnDocumentSubmittedIntegrationEventHandler>();
+        eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
 
         return app;
     }

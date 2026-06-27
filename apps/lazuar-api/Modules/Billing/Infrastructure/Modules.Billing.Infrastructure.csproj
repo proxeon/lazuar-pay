@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\Payments\Contracts\Modules.Payments.Contracts.csproj" />
     <ProjectReference Include="..\..\Community\Contracts\Modules.Community.Contracts.csproj" />
     <ProjectReference Include="..\..\Lhdn\Contracts\Modules.Lhdn.Contracts.csproj" />
+    <ProjectReference Include="..\..\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />

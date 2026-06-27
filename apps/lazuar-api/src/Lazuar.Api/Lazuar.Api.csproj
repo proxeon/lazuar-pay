@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\Modules\Ops\Infrastructure\Modules.Ops.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Lhdn\Infrastructure\Modules.Lhdn.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Commerce\Infrastructure\Modules.Commerce.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />

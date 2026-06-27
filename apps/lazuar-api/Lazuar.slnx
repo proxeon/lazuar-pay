@@ -35,6 +35,12 @@
     <Project Path="Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
     <Project Path="Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/Modules/Commerce/">
+    <Project Path="Modules/Commerce/Application/Modules.Commerce.Application.csproj" />
+    <Project Path="Modules/Commerce/Contracts/Modules.Commerce.Contracts.csproj" />
+    <Project Path="Modules/Commerce/Domain/Modules.Commerce.Domain.csproj" />
+    <Project Path="Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/Modules/Community/">
     <Project Path="Modules\Community\Contracts\Modules.Community.Contracts.csproj" />
     <Project Path="Modules\Community\Domain\Modules.Community.Domain.csproj" />
