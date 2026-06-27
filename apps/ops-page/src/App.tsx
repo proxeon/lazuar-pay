@@ -5,7 +5,6 @@ import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
-// Commerce Routes
 import DashboardPage from "./modules/commerce/pages/DashboardPage";
 import ProductsPage from "./modules/commerce/pages/ProductsPage";
 import SubscribersPage from "./modules/commerce/pages/SubscribersPage";
@@ -13,16 +12,13 @@ import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
 import CouponsPage from "./modules/commerce/pages/CouponsPage";
 import PaymentSettingsPage from "./modules/commerce/pages/PaymentSettingsPage";
 
-// Community Routes
 import SpacesPage from "./modules/community/pages/SpacesPage";
 import DunningSchedulesPage from "./modules/community/pages/DunningSchedulesPage";
 import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
 import TemplatesPage from "./modules/community/pages/TemplatesPage";
 
-// Vault Routes
 import DigitalProductsPage from "./modules/vault/pages/DigitalProductsPage";
 
-// Workspace & Developer Routes
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
@@ -83,17 +79,15 @@ function OpsLayout() {
   });
 
   useEffect(() => {
-    if (entitlements) {
-      if (entitlements.length > 0) {
-        const isValid = entitlements.some(e => e.workspace_id === activeWorkspaceId);
-        if (!isValid) {
-          setActiveWorkspaceId(entitlements[0].workspace_id);
-          localStorage.setItem("ops_active_workspace_id", entitlements[0].workspace_id);
-        }
-      } else {
-        setActiveWorkspaceId(null);
-        localStorage.removeItem("ops_active_workspace_id");
+    if (entitlements && entitlements.length > 0) {
+      const isValid = entitlements.some(e => e.workspace_id === activeWorkspaceId);
+      if (!isValid) {
+        localStorage.setItem("ops_active_workspace_id", entitlements[0].workspace_id);
+        setActiveWorkspaceId(entitlements[0].workspace_id);
       }
+    } else if (entitlements?.length === 0) {
+      localStorage.removeItem("ops_active_workspace_id");
+      setActiveWorkspaceId(null);
     }
   }, [entitlements, activeWorkspaceId]);
 
@@ -105,8 +99,8 @@ function OpsLayout() {
   };
 
   const handleWorkspaceChange = (id: string) => {
-    setActiveWorkspaceId(id);
     localStorage.setItem("ops_active_workspace_id", id);
+    setActiveWorkspaceId(id);
     navigate("/commerce/dashboard");
   };
 
@@ -134,6 +128,10 @@ function OpsLayout() {
         </button>
       </div>
     );
+  }
+
+  if (user && entitlements && entitlements.length > 0 && !activeWorkspaceId) {
+    return <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Initializing Workspace Context...</div>;
   }
 
   if (!user) return null;

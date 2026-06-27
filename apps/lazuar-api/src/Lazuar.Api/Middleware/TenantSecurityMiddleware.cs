@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Lazuar.Api.Middleware;
 
@@ -44,6 +45,22 @@ public class TenantSecurityMiddleware
         else if (context.Request.RouteValues.TryGetValue("tenantSlug", out var routeSlug))
         {
             resolvedTenantId = await oneQueryService.GetTenantIdBySlugAsync(routeSlug!.ToString()!);
+        }
+
+        if (context.Request.Path.StartsWithSegments("/api/v1/admin/") && (!resolvedTenantId.HasValue || resolvedTenantId.Value == Guid.Empty))
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            context.Response.ContentType = "application/problem+json";
+
+            var problemDetails = new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Missing Tenant Context",
+                Detail = "Missing Tenant Context Header. X-Tenant-Id is required for this route."
+            };
+
+            await context.Response.WriteAsJsonAsync(problemDetails);
+            return;
         }
 
         if (resolvedTenantId.HasValue)
