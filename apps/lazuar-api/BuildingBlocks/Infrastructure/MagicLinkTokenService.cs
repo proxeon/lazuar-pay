@@ -1,9 +1,10 @@
+using System;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using Modules.Community.Application;
+using BuildingBlocks.Application;
 
-namespace Modules.Community.Infrastructure.Services;
+namespace BuildingBlocks.Infrastructure;
 
 public class MagicLinkTokenService : IMagicLinkTokenService
 {

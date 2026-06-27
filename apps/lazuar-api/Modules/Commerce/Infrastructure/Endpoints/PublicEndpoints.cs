@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Application.Queries;
 using Modules.One.Contracts;
 
@@ -19,13 +20,14 @@ public static class PublicEndpoints
         group.MapGet("/{tenantSlug}/products/{slug}", async Task<Results<Ok<ProductDto>, NotFound>> (
             string tenantSlug,
             string slug,
+            [FromServices] IServiceProvider serviceProvider,
             IOneQueryService oneQueryService,
             ICommerceQueryService queryService) =>
         {
             var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
             if (!tenantId.HasValue) return TypedResults.NotFound();
 
-            using var connectionFactory = group.ServiceProvider.GetRequiredKeyedService<ISqlConnectionFactory>("CommerceSqlConnectionFactory");
+            var connectionFactory = serviceProvider.GetRequiredKeyedService<ISqlConnectionFactory>("CommerceSqlConnectionFactory");
             using var connection = connectionFactory.CreateConnection();
             
             var productQuery = "SELECT \"Id\" FROM commerce.\"Products\" WHERE \"OrganizationId\" = @OrgId AND \"Slug\" = @Slug AND \"IsActive\" = true LIMIT 1";

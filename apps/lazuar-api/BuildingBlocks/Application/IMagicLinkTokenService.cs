@@ -1,4 +1,6 @@
-namespace Modules.Community.Application;
+using System;
+
+namespace BuildingBlocks.Application;
 
 /// <summary>
 /// Domain-agnostic abstraction for cryptographic token generation.

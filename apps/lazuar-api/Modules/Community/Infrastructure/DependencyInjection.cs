@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Community.Application;
+using Modules.Community.Application.Queries;
 using Modules.Community.Infrastructure.EventHandlers;
 using Modules.Community.Infrastructure.Services;
 using Modules.Community.Infrastructure.Workers;
@@ -31,7 +32,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICommunitySpaceRepository, Repositories.CommunitySpaceRepository>();
 
-        services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
+        services.AddScoped<ICommunityQueryService, CommunityQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunityDbContext>>("CommunityEventBus");

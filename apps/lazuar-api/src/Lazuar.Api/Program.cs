@@ -112,6 +112,7 @@ builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
+builder.Services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
 builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
@@ -282,6 +283,7 @@ apiGroup.MapOpsEndpoints();
 apiGroup.MapBillingEndpoints();
 apiGroup.MapLhdnEndpoints();
 apiGroup.MapCommerceEndpoints();
+apiGroup.MapVaultEndpoints();
 
 var platformGroup = app.MapGroup("/api/v1/platform")
    .RequireCors()
