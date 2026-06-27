@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -8,7 +9,7 @@ namespace Modules.Vault.Application.Commands;
 
 public record CreateVaultAssetCommand(
     Guid OrganizationId,
-    Guid ProductId,
+    List<Guid> ProductIds,
     string Name,
     string CloudflareR2Url) : ICommand<Guid>
 {
@@ -28,7 +29,7 @@ public class CreateVaultAssetCommandHandler : ICommandHandler<CreateVaultAssetCo
     {
         var asset = new VaultAsset(
             request.OrganizationId,
-            request.ProductId,
+            request.ProductIds,
             request.Name,
             request.CloudflareR2Url
         );

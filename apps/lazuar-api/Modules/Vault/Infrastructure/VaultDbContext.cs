@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Modules.Vault.Domain.Aggregates;
 
 namespace Modules.Vault.Infrastructure;
@@ -27,11 +33,33 @@ public class VaultDbContext : PlatformDbContext
         base.OnModelCreating(modelBuilder);
         modelBuilder.HasDefaultSchema("vault");
 
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        };
+
+        var guidListConverter = new ValueConverter<IReadOnlyCollection<Guid>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<Guid>>(v, jsonOptions) ?? new List<Guid>()
+        );
+
+        var guidListComparer = new ValueComparer<IReadOnlyCollection<Guid>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
         modelBuilder.Entity<VaultAsset>(builder =>
         {
             builder.ToTable("VaultAssets");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => x.ProductId).IsUnique();
+
+            builder.Property(x => x.ProductIds)
+                .HasField("_productIds")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasConversion(guidListConverter, guidListComparer)
+                .HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
@@ -36,9 +37,12 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         if (status != "COMPLETED" && status != "ACTIVE")
             return;
 
-        var asset = await _dbContext.VaultAssets
+        var assets = await _dbContext.VaultAssets
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(a => a.ProductId == productId);
+            .Where(a => a.OrganizationId == @event.OrganizationId)
+            .ToListAsync();
+
+        var asset = assets.FirstOrDefault(a => a.ProductIds.Contains(productId));
 
         if (asset == null) return;
 
