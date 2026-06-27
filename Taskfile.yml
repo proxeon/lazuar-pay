@@ -71,6 +71,21 @@ tasks:
       - dotnet ef database update --context VaultDbContext --project ../../Modules/Vault/Infrastructure/Modules.Vault.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
+  api:migrations:purge:
+    desc: Forcefully deletes all Migrations folders across all modules to prepare for a clean init.
+    cmds:
+      - rm -rf apps/lazuar-api/Modules/One/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Messaging/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Community/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Payments/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/CRM/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Ops/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Billing/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Lhdn/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Commerce/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Vault/Infrastructure/Migrations
+      - rm -rf apps/lazuar-api/Modules/Communications/Infrastructure/Migrations
+
   api:migrations:init:
     desc: Generate the initial EF Core migrations for all core modules
     dir: apps/lazuar-api/src/Lazuar.Api
