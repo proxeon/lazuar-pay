@@ -15,6 +15,7 @@ public interface ICommerceRepository
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
     Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default);
 
+    void AddProduct(Product product);
     void AddSubscription(Subscription subscription);
     void AddOrder(Order order);
     void AddChargeAttempt(ChargeAttemptLog log);

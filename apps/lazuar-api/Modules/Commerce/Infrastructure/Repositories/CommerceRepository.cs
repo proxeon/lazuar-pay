@@ -48,6 +48,8 @@ public class CommerceRepository : ICommerceRepository
             .AnyAsync(l => l.SubscriptionId == subscriptionId && l.TargetBillingDate.Date == targetDate.Date, ct);
     }
 
+    public void AddProduct(Product product) => _context.Products.Add(product);
+
     public void AddSubscription(Subscription subscription) => _context.Subscriptions.Add(subscription);
 
     public void AddOrder(Order order) => _context.Orders.Add(order);

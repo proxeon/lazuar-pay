@@ -30,6 +30,9 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("CommunitySqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
+        services.AddScoped<Modules.Community.Application.ICommunitySpaceRepository, Modules.Community.Infrastructure.Repositories.CommunitySpaceRepository>();
+        services.AddScoped<IBroadcastCampaignRepository, CommunityBroadcastRepository>();
+
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();

@@ -24,6 +24,12 @@ interface AdminCommunityOperations {
     @body body: CreatePlanRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/spaces")
+  createSpace(
+    @body body: CreateCommunitySpaceRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @put
   @route("/plans/{id}")
   updatePlan(

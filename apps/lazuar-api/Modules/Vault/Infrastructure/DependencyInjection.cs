@@ -26,6 +26,8 @@ public static class DependencyInjection
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<VaultDbContext>>("VaultEventBus");
 
+        services.AddScoped<Modules.Vault.Application.IVaultRepository, Modules.Vault.Infrastructure.Repositories.VaultRepository>();
+
         services.AddHostedService<VaultInboxConsumerJob>();
         services.AddHostedService<VaultOutboxPublisherJob>();
 

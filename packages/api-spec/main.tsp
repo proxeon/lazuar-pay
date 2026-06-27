@@ -24,6 +24,9 @@ import "./modules/lhdn/routes.tsp";
 
 import "./modules/crm/models.tsp";
 
+import "./modules/vault/models.tsp";
+import "./modules/vault/admin-routes.tsp";
+
 import "./modules/platform/routes.tsp";
 
 using TypeSpec.Http;

@@ -167,6 +167,15 @@ model CreatePlanRequestDto {
   weekly_meeting_link?: string;
 }
 
+model CreateCommunitySpaceRequestDto {
+  name: string;
+  slug: string;
+  price: float64;
+  interval: string;
+  telegram_link?: string;
+  zoom_link?: string;
+}
+
 model UpdatePlanRequestDto {
   slug?: string;
   name?: string;

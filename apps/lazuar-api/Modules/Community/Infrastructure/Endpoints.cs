@@ -11,6 +11,7 @@ public static class Endpoints
         var adminGroup = endpoints.MapGroup("/admin/community").RequireAuthorization("OrgAdmin");
         var publicGroup = endpoints.MapGroup("/public/community");
 
+        adminGroup.MapSpaceEndpoints();
         adminGroup.MapTemplateEndpoints();
         adminGroup.MapBroadcastEndpoints();
         adminGroup.MapPaymentConfigEndpoints();
