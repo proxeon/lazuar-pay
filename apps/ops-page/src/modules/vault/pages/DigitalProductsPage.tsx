@@ -14,13 +14,11 @@ export default function DigitalProductsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
-  // Note: For Phase 8, the frontend is hitting the legacy query. The backend is stubbed.
-  // It will render an empty table until the read-models are rewritten.
-  const { data: plans, isLoading } = useQuery({
-    queryKey: ["community-plans"],
+  const { data: products, isLoading } = useQuery({
+    queryKey: ["commerce-products"],
     queryFn: async () => {
       try {
-        const { data, error } = await client.GET("/admin/community/plans");
+        const { data, error } = await client.GET("/admin/commerce/products");
         if (error) throw new Error(error.detail);
         return data || [];
       } catch {
@@ -37,7 +35,7 @@ export default function DigitalProductsPage() {
     }
   });
 
-  const digitalProducts = plans?.filter(p => p.product_type === "VAULT") || [];
+  const digitalProducts = products?.filter(p => p.fulfillment_targets?.includes("internal:vault")) || [];
   const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
 
   return (
@@ -45,14 +43,6 @@ export default function DigitalProductsPage() {
       title="Digital Products" 
       description="Upload and sell PDFs, templates, and zip files."
       breadcrumbs={[{ label: "Vault", href: "/vault/products" }, { label: "Digital Products" }]}
-      actionButton={
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
-        >
-          <Plus size={14} /> New Product
-        </button>
-      }
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
         <div className="w-full overflow-x-auto min-h-[320px]">
@@ -61,17 +51,17 @@ export default function DigitalProductsPage() {
               <tr>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Product Details</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Price (MYR)</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Purchases</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLoading ? (
-                <tr><td colSpan={4} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={3} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
               ) : digitalProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-[13px] text-[#71717a]">
-                    No digital products found. Click "New Product" to upload a file.
+                  <td colSpan={3} className="py-12 text-center text-[13px] text-[#71717a] leading-relaxed">
+                    No digital products found.<br/>
+                    Go to <strong>Commerce → Products</strong> and enable the Digital File toggle to attach files.
                   </td>
                 </tr>
               ) : (
@@ -94,9 +84,6 @@ export default function DigitalProductsPage() {
                     <td className="px-5 py-3.5 font-mono text-[#09090b]">
                       RM {product.price.toFixed(2)}
                     </td>
-                    <td className="px-5 py-3.5 font-mono font-bold text-[#09090b]">
-                      {product.enrolled_count}
-                    </td>
                     <td className="px-5 py-3.5">
                       <span className={cn(
                         "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
@@ -118,11 +105,6 @@ export default function DigitalProductsPage() {
         activeWorkspaceSlug={activeWorkspaceSlug}
         onClose={() => setSelectedProduct(null)} 
         onUpdate={setSelectedProduct}
-      />
-
-      <CreateProductModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
       />
 
     </PageLayout>

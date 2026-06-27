@@ -12,6 +12,7 @@ export default function SpacesPage() {
   const { data: spaces, isLoading } = useQuery({
     queryKey: ["community-spaces-list"],
     queryFn: async () => {
+      // Stub returning an empty array to gracefully show the empty state design
       return [];
     }
   });

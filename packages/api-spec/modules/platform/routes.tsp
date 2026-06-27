@@ -1,6 +1,6 @@
 import "@typespec/http";
 import "../../common/models.tsp";
-import "../community/models.tsp";
+import "../commerce/models.tsp";
 import "../one/models.tsp";
 
 using TypeSpec.Http;
@@ -33,13 +33,13 @@ interface PlatformOperations {
   @get
   @route("/payment-config")
   getPaymentConfig(
-  ): LazuarApi.Community.PaymentConfigDto | LazuarApi.Core.ProblemDetailsResponse;
+  ): LazuarApi.Commerce.PaymentConfigDto | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
   @summary("Save the system payment gateway configuration. Requires SUPER_ADMIN role.")
   @put
   @route("/payment-config")
   savePaymentConfig(
-    @body body: LazuarApi.Community.SavePaymentConfigRequestDto,
+    @body body: LazuarApi.Commerce.SavePaymentConfigRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

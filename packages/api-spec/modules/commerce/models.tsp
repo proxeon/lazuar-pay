@@ -173,6 +173,8 @@ model TransactionLogDto {
   created_at: utcDateTime;
   customer_name: string;
   customer_email: string;
+  recorded_by_name: string;
+  external_reference?: string;
 }
 
 model CouponDto {
@@ -232,4 +234,34 @@ model CommerceStatsDto {
   total_revenue_collected: float64;
   cash_flow_trend: CashFlowTrendDto[];
   payment_methods: PaymentMethodDto[];
+}
+
+// Previously in Community models, now moved to Commerce
+model MagicLinkRequestDto {
+  email: string;
+}
+
+model CheckoutResponse {
+  url: string;
+  is_zero_amount_bypass?: boolean;
+}
+
+model ValidateCouponResponseDto {
+  is_valid: boolean;
+  discount_amount: float64;
+  final_price: float64;
+  error_message?: string;
+}
+
+model CancelPortalRequest {
+  subscription_id: string; // GUID
+}
+
+model BillingLinkResponseDto {
+  url: string;
+}
+
+model CheckoutStatusResponse {
+  status: string;
+  token?: string;
 }

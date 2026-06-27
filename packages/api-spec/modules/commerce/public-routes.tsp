@@ -1,7 +1,6 @@
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
-import "../community/models.tsp";
 
 using TypeSpec.Http;
 
@@ -22,13 +21,13 @@ interface PublicCommerceOperations {
     @path tenantSlug: string,
     @query code: string,
     @query product_slug: string,
-  ): LazuarApi.Community.ValidateCouponResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+  ): ValidateCouponResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/checkout")
   initiateCheckout(
     @body body: PublicCheckoutRequestDto,
-  ): LazuarApi.Community.CheckoutResponse | LazuarApi.Core.ProblemDetailsResponse;
+  ): CheckoutResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/{tenantSlug}/portal")
@@ -36,4 +35,32 @@ interface PublicCommerceOperations {
     @path tenantSlug: string,
     @query token: string,
   ): AggregatedPortalDataResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/{tenantSlug}/portal/magic-link")
+  requestMagicLink(
+    @path tenantSlug: string,
+    @body body: MagicLinkRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/{tenantSlug}/portal/cancel")
+  cancelPortalSubscription(
+    @path tenantSlug: string,
+    @query token: string,
+    @body body: CancelPortalRequest,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/{tenantSlug}/portal/billing-link")
+  getBillingLink(
+    @path tenantSlug: string,
+    @query token: string,
+  ): BillingLinkResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/checkout/{subId}/status")
+  getCheckoutStatus(
+    @path subId: string,
+  ): CheckoutStatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }
