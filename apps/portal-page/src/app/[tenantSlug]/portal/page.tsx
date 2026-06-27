@@ -41,6 +41,7 @@ export default async function AggregatedPortalPage({
   const orderProductIds = commerceData.orders.map(o => o.product_id);
 
   // 2. Fetch the actual fulfillment details in parallel (Community & Vault Modules)
+  // Ensure we pass query params securely and conditionally based on array length
   const [spacesRes, assetsRes] = await Promise.all([
     subProductIds.length > 0 ? serverClient.GET("/public/community/{tenantSlug}/portal/spaces", {
       params: { path: { tenantSlug }, query: { product_ids: subProductIds } }

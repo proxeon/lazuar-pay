@@ -8,4 +8,5 @@ namespace Modules.Community.Application.Queries;
 
 public interface ICommunityQueryService
 {
+    Task<IEnumerable<PortalCommunitySpaceDto>> GetPortalSpacesAsync(Guid organizationId, IEnumerable<Guid> productIds);
 }

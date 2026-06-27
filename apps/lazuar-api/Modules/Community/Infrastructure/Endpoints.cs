@@ -11,6 +11,7 @@ public static class Endpoints
         var publicGroup = endpoints.MapGroup("/public/community");
 
         adminGroup.MapSpaceEndpoints();
+        publicGroup.MapPublicCommunityEndpoints();
 
         return endpoints;
     }

@@ -1,7 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Modules.Vault.Application;
 using Modules.Vault.Domain.Aggregates;
+using Lazuar.ApiTypes;
 
 namespace Modules.Vault.Infrastructure.Repositories;
 
@@ -17,4 +22,19 @@ public class VaultRepository : IVaultRepository
     public void Add(VaultAsset asset) => _context.VaultAssets.Add(asset);
 
     public async Task SaveChangesAsync(CancellationToken ct = default) => await _context.SaveChangesAsync(ct);
+
+    public async Task<IEnumerable<PortalVaultAssetDto>> GetPortalAssetsAsync(Guid organizationId, IEnumerable<Guid> productIds, CancellationToken ct = default)
+    {
+        var assets = await _context.VaultAssets
+            .AsNoTracking()
+            .Where(a => a.OrganizationId == organizationId && productIds.Contains(a.ProductId))
+            .ToListAsync(ct);
+
+        return assets.Select(a => new PortalVaultAssetDto
+        {
+            Product_id = a.ProductId.ToString(),
+            Name = a.Name,
+            Cloudflare_r2_url = a.CloudflareR2Url
+        });
+    }
 }
