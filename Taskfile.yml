@@ -25,6 +25,7 @@ tasks:
     desc: Start Hybrid Development Mode (launches Docker dependencies, runs migrations, then runs C# Hot-Reload Watcher)
     deps: [infra:up]
     cmds:
+      - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
   fe:
@@ -66,6 +67,9 @@ tasks:
       - dotnet ef database update --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context CommerceDbContext --project ../../Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context VaultDbContext --project ../../Modules/Vault/Infrastructure/Modules.Vault.Infrastructure.csproj --startup-project Lazuar.Api.csproj
+      - dotnet ef database update --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:init:
     desc: Generate the initial EF Core migrations for all core modules
@@ -79,6 +83,9 @@ tasks:
       - dotnet ef migrations add InitialOpsSchema --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialBillingSchema --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialLhdnSchema --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialCommerceSchema --context CommerceDbContext --project ../../Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialVaultSchema --context VaultDbContext --project ../../Modules/Vault/Infrastructure/Modules.Vault.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
+      - dotnet ef migrations add InitialCommunicationsSchema --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:
     desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"
