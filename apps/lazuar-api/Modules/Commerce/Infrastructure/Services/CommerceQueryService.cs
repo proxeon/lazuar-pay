@@ -15,16 +15,22 @@ namespace Modules.Commerce.Infrastructure.Services;
 public class CommerceQueryService : ICommerceQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly IMagicLinkTokenService _tokenService;
 
-    public CommerceQueryService([FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
+    public CommerceQueryService(
+        [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
+        IMagicLinkTokenService tokenService)
     {
         _connectionFactory = connectionFactory;
+        _tokenService = tokenService;
     }
 
     private record RawProductDto(
         Guid Id, string Slug, string Name, decimal Price, string Currency, string Interval,
         bool RequiresAddress, bool RequiresTaxId, bool RequiresPhone,
         string? FulfillmentTargets, bool IsActive);
+
+    private record RawCheckoutSession(string Status, Guid ClientProfileId, Guid ProductId);
 
     public async Task<IEnumerable<ProductDto>> GetProductsAsync(Guid organizationId)
     {
@@ -84,7 +90,6 @@ public class CommerceQueryService : ICommerceQueryService
             }
             catch
             {
-                // Graceful fallback for invalid JSON strings
                 fulfillmentTargets = new List<string>();
             }
         }
@@ -116,7 +121,6 @@ public class CommerceQueryService : ICommerceQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        // 1. Resolve the ClientProfileId securely from the reference subscription (decoded from Magic Link)
         const string clientProfileSql = @"
             SELECT ""ClientProfileId"" FROM commerce.""Subscriptions"" 
             WHERE ""Id"" = @SubId AND ""OrganizationId"" = @OrgId LIMIT 1";
@@ -125,7 +129,6 @@ public class CommerceQueryService : ICommerceQueryService
 
         if (clientProfileId == null) return null;
 
-        // 2. Fetch all Subscriptions for this client profile
         const string subsSql = @"
             SELECT s.""Id"", s.""ProductId"", p.""Name"" as ProductName, s.""Status"", s.""CurrentPeriodEnd""
             FROM commerce.""Subscriptions"" s
@@ -135,7 +138,6 @@ public class CommerceQueryService : ICommerceQueryService
 
         var subs = await connection.QueryAsync<RawPortalSubDto>(subsSql, new { ProfileId = clientProfileId.Value, OrgId = organizationId });
 
-        // 3. Fetch all Orders for this client profile
         const string ordersSql = @"
             SELECT o.""Id"", o.""ProductId"", p.""Name"" as ProductName, o.""Status"", o.""CreatedAt""
             FROM commerce.""Orders"" o
@@ -186,16 +188,13 @@ public class CommerceQueryService : ICommerceQueryService
 
         var rawSchedules = await connection.QueryAsync<RawReminderScheduleDto>(sql, new { OrgId = organizationId });
 
-        // Phase 1 Dunning: We retrieve the template name manually or via a separate cross-module query. 
-        // For simplicity in the generic catalog, we will return "Assigned Template" unless we hydrate it via the Communications module.
-        // The frontend uses the ID to manage it.
         return rawSchedules.Select(r => new ReminderScheduleDto
         {
             Id = r.Id.ToString(),
             Product_id = r.ProductId?.ToString(),
             Product_name = r.ProductName,
             Template_id = r.TemplateId.ToString(),
-            Template_name = "Assigned Template", // Decoupled from Communications schema
+            Template_name = "Assigned Template",
             Channel = r.Channel,
             Days_relative_to_due = r.DaysRelativeToDue,
             Time_of_day = r.TimeOfDay,
@@ -425,5 +424,43 @@ public class CommerceQueryService : ICommerceQueryService
             Cash_flow_trend = new List<CashFlowTrendDto>(),
             Payment_methods = new List<PaymentMethodDto>()
         };
+    }
+
+    public async Task<CheckoutStatusDto?> GetCheckoutStatusAsync(Guid sessionId, CancellationToken ct = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sessionSql = @"
+            SELECT ""Status"", ""ClientProfileId"", ""ProductId""
+            FROM commerce.""CheckoutSessions""
+            WHERE ""Id"" = @SessionId
+            LIMIT 1";
+
+        var session = await connection.QuerySingleOrDefaultAsync<RawCheckoutSession>(sessionSql, new { SessionId = sessionId });
+        if (session == null) return null;
+
+        if (session.Status == "COMPLETED")
+        {
+            const string subSql = @"
+                SELECT ""Id""
+                FROM commerce.""Subscriptions""
+                WHERE ""ClientProfileId"" = @ProfileId 
+                  AND ""ProductId"" = @ProductId 
+                  AND ""Status"" = 'ACTIVE'
+                LIMIT 1";
+
+            var subId = await connection.QuerySingleOrDefaultAsync<Guid?>(subSql, new { ProfileId = session.ClientProfileId, ProductId = session.ProductId });
+            
+            string? token = null;
+            if (subId.HasValue)
+            {
+                token = _tokenService.GenerateToken(subId.Value);
+            }
+
+            return new CheckoutStatusDto("COMPLETED", token);
+        }
+
+        return new CheckoutStatusDto("PENDING", null);
     }
 }

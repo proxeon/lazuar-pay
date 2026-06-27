@@ -100,6 +100,30 @@ public static class PublicEndpoints
             }
         });
 
+        group.MapGet("/checkout/{subId}/status", async Task<Results<Ok<CheckoutStatusResponse>, NotFound>> (
+            string subId,
+            ICommerceQueryService queryService) =>
+        {
+            if (!Guid.TryParse(subId, out var parsedSessionId))
+            {
+                return TypedResults.NotFound();
+            }
+
+            var result = await queryService.GetCheckoutStatusAsync(parsedSessionId);
+            if (result == null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            var response = new CheckoutStatusResponse
+            {
+                Status = result.Status,
+                Token = result.Token
+            };
+
+            return TypedResults.Ok(response);
+        });
+
         return group;
     }
 }

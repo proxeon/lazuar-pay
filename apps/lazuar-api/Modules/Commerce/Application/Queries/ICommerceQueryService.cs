@@ -6,6 +6,8 @@ using Lazuar.ApiTypes;
 
 namespace Modules.Commerce.Application.Queries;
 
+public record CheckoutStatusDto(string Status, string? Token);
+
 public interface ICommerceQueryService
 {
     Task<IEnumerable<ProductDto>> GetProductsAsync(Guid organizationId);
@@ -17,4 +19,5 @@ public interface ICommerceQueryService
     Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, string? searchTerm = null);
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
     Task<CommerceStatsDto> GetStatsAsync(Guid organizationId);
+    Task<CheckoutStatusDto?> GetCheckoutStatusAsync(Guid sessionId, CancellationToken ct = default);
 }
