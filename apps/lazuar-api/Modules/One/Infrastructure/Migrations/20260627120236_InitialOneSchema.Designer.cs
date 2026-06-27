@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Modules.One.Infrastructure.Migrations
 {
     [DbContext(typeof(OneDbContext))]
-    [Migration("20260627105418_InitialOneSchema")]
+    [Migration("20260627120236_InitialOneSchema")]
     partial class InitialOneSchema
     {
         /// <inheritdoc />

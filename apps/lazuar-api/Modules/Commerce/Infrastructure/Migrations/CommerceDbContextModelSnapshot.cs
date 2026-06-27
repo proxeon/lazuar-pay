@@ -262,6 +262,48 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.ToTable("Products", "commerce");
                 });
 
+            modelBuilder.Entity("Modules.Commerce.Domain.Aggregates.ReminderSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DaysRelativeToDue")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TimeOfDay")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "DaysRelativeToDue");
+
+                    b.ToTable("ReminderSchedules", "commerce");
+                });
+
             modelBuilder.Entity("Modules.Commerce.Domain.Aggregates.Subscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -333,6 +375,32 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.ToTable("ChargeAttemptLogs", "commerce");
                 });
 
+            modelBuilder.Entity("Modules.Commerce.Domain.Entities.ReminderDispatchLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("DispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("TargetBillingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubscriptionId", "ScheduleId", "TargetBillingDate")
+                        .IsUnique();
+
+                    b.ToTable("ReminderDispatchLogs", "commerce");
+                });
+
             modelBuilder.Entity("Modules.Commerce.Domain.Aggregates.Product", b =>
                 {
                     b.OwnsOne("Modules.Commerce.Domain.ValueObjects.CheckoutConfiguration", "CheckoutConfiguration", b1 =>
@@ -362,6 +430,20 @@ namespace Modules.Commerce.Infrastructure.Migrations
 
                     b.Navigation("CheckoutConfiguration")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Modules.Commerce.Domain.Entities.ReminderDispatchLog", b =>
+                {
+                    b.HasOne("Modules.Commerce.Domain.Aggregates.Subscription", null)
+                        .WithMany("ReminderLogs")
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Modules.Commerce.Domain.Aggregates.Subscription", b =>
+                {
+                    b.Navigation("ReminderLogs");
                 });
 #pragma warning restore 612, 618
         }

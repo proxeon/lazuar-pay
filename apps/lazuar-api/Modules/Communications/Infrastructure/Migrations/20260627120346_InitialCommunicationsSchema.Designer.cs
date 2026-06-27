@@ -4,23 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Modules.Vault.Infrastructure;
+using Modules.Communications.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Modules.Vault.Infrastructure.Migrations
+namespace Modules.Communications.Infrastructure.Migrations
 {
-    [DbContext(typeof(VaultDbContext))]
-    [Migration("20260627105456_InitialVaultSchema")]
-    partial class InitialVaultSchema
+    [DbContext(typeof(CommunicationsDbContext))]
+    [Migration("20260627120346_InitialCommunicationsSchema")]
+    partial class InitialCommunicationsSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("vault")
+                .HasDefaultSchema("communications")
                 .HasAnnotation("ProductVersion", "10.0.0-preview.1.25081.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -54,7 +54,7 @@ namespace Modules.Vault.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("InboxMessages", "vault");
+                    b.ToTable("InboxMessages", "communications");
                 });
 
             modelBuilder.Entity("BuildingBlocks.Infrastructure.OutboxMessage", b =>
@@ -85,35 +85,60 @@ namespace Modules.Vault.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages", "vault");
+                    b.ToTable("OutboxMessages", "communications");
                 });
 
-            modelBuilder.Entity("Modules.Vault.Domain.Aggregates.VaultAsset", b =>
+            modelBuilder.Entity("Modules.Communications.Domain.Aggregates.MessageTemplate", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CloudflareR2Url")
+                    b.Property<string>("Channel")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailBody")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OptionalVariables")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("RequiredVariables")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WhatsAppBody")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId")
-                        .IsUnique();
+                    b.HasIndex("OrganizationId");
 
-                    b.ToTable("VaultAssets", "vault");
+                    b.ToTable("MessageTemplates", "communications");
                 });
 #pragma warning restore 612, 618
         }

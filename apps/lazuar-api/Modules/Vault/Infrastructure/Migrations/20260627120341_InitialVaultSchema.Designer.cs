@@ -4,23 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Modules.Community.Infrastructure;
+using Modules.Vault.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Modules.Community.Infrastructure.Migrations
+namespace Modules.Vault.Infrastructure.Migrations
 {
-    [DbContext(typeof(CommunityDbContext))]
-    [Migration("20260627105426_InitialCommunitySchema")]
-    partial class InitialCommunitySchema
+    [DbContext(typeof(VaultDbContext))]
+    [Migration("20260627120341_InitialVaultSchema")]
+    partial class InitialVaultSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("community")
+                .HasDefaultSchema("vault")
                 .HasAnnotation("ProductVersion", "10.0.0-preview.1.25081.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -54,7 +54,7 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("InboxMessages", "community");
+                    b.ToTable("InboxMessages", "vault");
                 });
 
             modelBuilder.Entity("BuildingBlocks.Infrastructure.OutboxMessage", b =>
@@ -85,14 +85,18 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages", "community");
+                    b.ToTable("OutboxMessages", "vault");
                 });
 
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunitySpace", b =>
+            modelBuilder.Entity("Modules.Vault.Domain.Aggregates.VaultAsset", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("CloudflareR2Url")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -104,48 +108,12 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("TelegramLink")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ZoomLink")
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId")
                         .IsUnique();
 
-                    b.ToTable("CommunitySpaces", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Entities.CommunityMember", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ClientProfileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CommunitySpaceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("JoinedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommunitySpaceId", "ClientProfileId")
-                        .IsUnique();
-
-                    b.ToTable("CommunityMembers", "community");
+                    b.ToTable("VaultAssets", "vault");
                 });
 #pragma warning restore 612, 618
         }

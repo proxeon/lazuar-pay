@@ -4,23 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Modules.Ops.Infrastructure;
+using Modules.Payments.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Modules.Ops.Infrastructure.Migrations
+namespace Modules.Payments.Infrastructure.Migrations
 {
-    [DbContext(typeof(OpsDbContext))]
-    [Migration("20260627105439_InitialOpsSchema")]
-    partial class InitialOpsSchema
+    [DbContext(typeof(PaymentsDbContext))]
+    [Migration("20260627120307_InitialPaymentsSchema")]
+    partial class InitialPaymentsSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("ops")
+                .HasDefaultSchema("payments")
                 .HasAnnotation("ProductVersion", "10.0.0-preview.1.25081.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -54,7 +54,7 @@ namespace Modules.Ops.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("InboxMessages", "ops");
+                    b.ToTable("InboxMessages", "payments");
                 });
 
             modelBuilder.Entity("BuildingBlocks.Infrastructure.OutboxMessage", b =>
@@ -85,81 +85,81 @@ namespace Modules.Ops.Infrastructure.Migrations
                     b.HasIndex("ProcessedAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages", "ops");
+                    b.ToTable("OutboxMessages", "payments");
                 });
 
-            modelBuilder.Entity("Modules.Ops.Domain.OpsConversation", b =>
+            modelBuilder.Entity("Modules.Payments.Domain.Aggregates.TenantPaymentConfiguration", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ApiKey")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<decimal>("EstimatedFeePercentage")
+                        .HasColumnType("numeric");
 
-                    b.Property<bool>("IsDeleted")
+                    b.Property<decimal>("FixedFee")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("GatewayType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("MerchantId")
+                        .HasColumnType("text");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("numeric");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("WebhookSecret")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId", "GatewayType")
+                        .IsUnique();
 
-                    b.ToTable("Conversations", "ops");
+                    b.ToTable("TenantPaymentConfigurations", "payments");
                 });
 
-            modelBuilder.Entity("Modules.Ops.Domain.OpsMessage", b =>
+            modelBuilder.Entity("Modules.Payments.Domain.Entities.PaymentWebhookLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Content")
+                    b.Property<string>("EventId")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("ConversationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("ExecutedToolsJson")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsResolved")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ProposedActionJson")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Role")
+                    b.Property<string>("Provider")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UiRequestJson")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "ConversationId");
+                    b.HasIndex("Provider", "EventId")
+                        .IsUnique();
 
-                    b.ToTable("Messages", "ops");
+                    b.ToTable("PaymentWebhookLogs", "payments");
                 });
 #pragma warning restore 612, 618
         }

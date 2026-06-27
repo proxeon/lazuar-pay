@@ -152,6 +152,27 @@ namespace Modules.Commerce.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ReminderSchedules",
+                schema: "commerce",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    OrganizationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProductId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TemplateId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Channel = table.Column<string>(type: "text", nullable: false),
+                    DaysRelativeToDue = table.Column<int>(type: "integer", nullable: false),
+                    TimeOfDay = table.Column<string>(type: "text", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ReminderSchedules", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Subscriptions",
                 schema: "commerce",
                 columns: table => new
@@ -171,6 +192,29 @@ namespace Modules.Commerce.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Subscriptions", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReminderDispatchLogs",
+                schema: "commerce",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SubscriptionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ScheduleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TargetBillingDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DispatchedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ReminderDispatchLogs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ReminderDispatchLogs_Subscriptions_SubscriptionId",
+                        column: x => x.SubscriptionId,
+                        principalSchema: "commerce",
+                        principalTable: "Subscriptions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -213,6 +257,19 @@ namespace Modules.Commerce.Infrastructure.Migrations
                 table: "Products",
                 columns: new[] { "OrganizationId", "Slug" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReminderDispatchLogs_SubscriptionId_ScheduleId_TargetBillin~",
+                schema: "commerce",
+                table: "ReminderDispatchLogs",
+                columns: new[] { "SubscriptionId", "ScheduleId", "TargetBillingDate" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReminderSchedules_OrganizationId_DaysRelativeToDue",
+                schema: "commerce",
+                table: "ReminderSchedules",
+                columns: new[] { "OrganizationId", "DaysRelativeToDue" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Subscriptions_NextBillingDate",
@@ -262,6 +319,14 @@ namespace Modules.Commerce.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Products",
+                schema: "commerce");
+
+            migrationBuilder.DropTable(
+                name: "ReminderDispatchLogs",
+                schema: "commerce");
+
+            migrationBuilder.DropTable(
+                name: "ReminderSchedules",
                 schema: "commerce");
 
             migrationBuilder.DropTable(
