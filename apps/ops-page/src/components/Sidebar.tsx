@@ -1,4 +1,3 @@
-// apps/ops-page/src/components/Sidebar.tsx
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -9,7 +8,9 @@ import {
   Settings,
   ChevronDown,
   Users,
-  Box
+  Box,
+  ShoppingCart,
+  Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
@@ -183,23 +184,29 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* FIXED: Removed overflow-y-auto here to comply with ADR-012. 
-          Overflow clips absolute positioned flyout menus in collapsed mode. */}
       <div className="flex-1 py-4 flex flex-col gap-6">
         <nav className="space-y-0.5">
+          <ModuleNav 
+            title="Commerce" 
+            basePath="/commerce" 
+            icon={ShoppingCart}
+            links={[
+              { label: "Dashboard", href: "/commerce/dashboard" },
+              { label: "Universal Products", href: "/commerce/products" },
+              { label: "Subscribers", href: "/commerce/subscribers" },
+              { label: "Transaction Logs", href: "/commerce/transactions" },
+              { label: "Promotions", href: "/commerce/coupons" },
+              { label: "Gateway Settings", href: "/commerce/payment" }
+            ]} 
+          />
           <ModuleNav 
             title="Community" 
             basePath="/community" 
             icon={Users}
             links={[
-              { label: "Dashboard", href: "/community/dashboard" },
-              { label: "Subscribers", href: "/community/subscribers" },
-              { label: "Transaction Logs", href: "/community/transactions" },
-              { label: "Plans & Tiers", href: "/community/plans" },
-              { label: "Promotions", href: "/community/coupons" },
+              { label: "Spaces & Access", href: "/community/spaces" },
               { label: "Dunning Schedules", href: "/community/dunning-schedules" },
               { label: "Bulk Broadcast", href: "/community/broadcasts" },
-              { label: "Payment Settings", href: "/community/payment" },
               { label: "Message Templates", href: "/community/templates" }
             ]} 
           />
@@ -208,7 +215,15 @@ export default function Sidebar({
             basePath="/vault" 
             icon={Box}
             links={[
-              { label: "Digital Products", href: "/vault/products" }
+              { label: "Digital Files", href: "/vault/products" }
+            ]} 
+          />
+          <ModuleNav 
+            title="Developer" 
+            basePath="/developer" 
+            icon={Zap}
+            links={[
+              { label: "Outbound Webhooks", href: "/developer/webhooks" }
             ]} 
           />
           <ModuleNav 
@@ -217,7 +232,6 @@ export default function Sidebar({
             icon={Settings}
             links={[
               { label: "General Settings", href: "/workspace/general" },
-              { label: "Developer API", href: "/workspace/developer" },
               { label: "Platform Billing", href: "/workspace/billing" }
             ]} 
           />

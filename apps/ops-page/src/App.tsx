@@ -1,4 +1,3 @@
-// apps/ops-page/src/App.tsx
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -6,18 +5,24 @@ import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
-import DashboardPage from "./modules/community/pages/DashboardPage";
-import PaymentSettingsPage from "./modules/community/pages/PaymentSettingsPage";
-import TemplatesPage from "./modules/community/pages/TemplatesPage";
-import SubscribersPage from "./modules/community/pages/SubscribersPage";
-import PlansPage from "./modules/community/pages/PlansPage";
-import CouponsPage from "./modules/community/pages/CouponsPage";
+// Commerce Routes
+import DashboardPage from "./modules/commerce/pages/DashboardPage";
+import ProductsPage from "./modules/commerce/pages/ProductsPage";
+import SubscribersPage from "./modules/commerce/pages/SubscribersPage";
+import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
+import CouponsPage from "./modules/commerce/pages/CouponsPage";
+import PaymentSettingsPage from "./modules/commerce/pages/PaymentSettingsPage";
+
+// Community Routes
+import SpacesPage from "./modules/community/pages/SpacesPage";
 import DunningSchedulesPage from "./modules/community/pages/DunningSchedulesPage";
 import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
-import TransactionsPage from "./modules/community/pages/TransactionsPage";
+import TemplatesPage from "./modules/community/pages/TemplatesPage";
 
+// Vault Routes
 import DigitalProductsPage from "./modules/vault/pages/DigitalProductsPage";
 
+// Workspace & Developer Routes
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
@@ -102,7 +107,7 @@ function OpsLayout() {
   const handleWorkspaceChange = (id: string) => {
     setActiveWorkspaceId(id);
     localStorage.setItem("ops_active_workspace_id", id);
-    navigate("/community/dashboard");
+    navigate("/commerce/dashboard");
   };
 
   const handleLogout = async () => {
@@ -163,29 +168,29 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<OpsLayout />}>
-        <Route path="/" element={<Navigate to="/community/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/commerce/dashboard" replace />} />
         
-        <Route path="/community/dashboard" element={<DashboardPage />} />
-        <Route path="/community/subscribers" element={<SubscribersPage />} />
-        <Route path="/community/transactions" element={<TransactionsPage />} />
-        <Route path="/community/plans" element={<PlansPage />} />
-        <Route path="/community/coupons" element={<CouponsPage />} />
+        <Route path="/commerce/dashboard" element={<DashboardPage />} />
+        <Route path="/commerce/products" element={<ProductsPage />} />
+        <Route path="/commerce/subscribers" element={<SubscribersPage />} />
+        <Route path="/commerce/transactions" element={<TransactionsPage />} />
+        <Route path="/commerce/coupons" element={<CouponsPage />} />
+        <Route path="/commerce/payment" element={<PaymentSettingsPage />} />
+
+        <Route path="/community/spaces" element={<SpacesPage />} />
         <Route path="/community/dunning-schedules" element={<DunningSchedulesPage />} />
         <Route path="/community/broadcasts" element={<BroadcastsPage />} />
-        <Route path="/community/payment" element={<PaymentSettingsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
-
-        {/* Fallback for deprecated automations route */}
-        <Route path="/community/automations" element={<Navigate to="/community/dashboard" replace />} />
 
         <Route path="/vault/products" element={<DigitalProductsPage />} />
 
+        <Route path="/developer/webhooks" element={<DeveloperSettingsPage />} />
+        
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
-        <Route path="/workspace/developer" element={<DeveloperSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
       </Route>
       
-      <Route path="*" element={<Navigate to="/community/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/commerce/dashboard" replace />} />
     </Routes>
   );
 }
