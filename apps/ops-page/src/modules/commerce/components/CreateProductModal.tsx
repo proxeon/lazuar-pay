@@ -19,30 +19,34 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
       if (error || !data) throw new Error(error?.detail || "Failed to create product");
 
       const productId = data.id;
+      let fulfillmentFailed = false;
 
-      // 2. Client-Side Saga: Orchestrate Fulfillment Attachments
-      const promises: Promise<any>[] = [];
-
+      // 2. Client-Side Saga: Orchestrate Fulfillment Attachments Sequentially
       if (payload._vault_url) {
-        promises.push(
-          client.POST("/admin/vault/assets", {
+        try {
+          const { error: vaultError } = await client.POST("/admin/vault/assets", {
             body: { product_id: productId, name: payload.name, cloudflare_r2_url: payload._vault_url }
-          })
-        );
+          });
+          if (vaultError) fulfillmentFailed = true;
+        } catch {
+          fulfillmentFailed = true;
+        }
       }
 
       if (payload._community_telegram || payload._community_zoom) {
-        promises.push(
-          client.POST("/admin/community/spaces", {
+        try {
+          const { error: communityError } = await client.POST("/admin/community/spaces", {
             body: { product_id: productId, name: payload.name, telegram_link: payload._community_telegram, zoom_link: payload._community_zoom }
-          })
-        );
+          });
+          if (communityError) fulfillmentFailed = true;
+        } catch {
+          fulfillmentFailed = true;
+        }
       }
 
-      const results = await Promise.allSettled(promises);
-      const failures = results.filter(r => r.status === "rejected");
-      if (failures.length > 0) {
-        throw new Error("Product created, but some fulfillment hooks failed to attach.");
+      if (fulfillmentFailed) {
+        // We throw a specific string that the onError handler can catch to trigger graceful degradation.
+        throw new Error("PARTIAL_FAILURE");
       }
     },
     onSuccess: () => {
@@ -50,7 +54,15 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
       queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
       onClose();
     },
-    onError: (err: any) => toast.error("Partial Failure", { description: err.message })
+    onError: (err: any) => {
+      if (err.message === "PARTIAL_FAILURE") {
+        toast.warning("Product created, but fulfillment attachment failed. You can add the file manually later.");
+        queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
+        onClose();
+      } else {
+        toast.error("Failed to create product", { description: err.message });
+      }
+    }
   });
 
   if (!isOpen) return null;
