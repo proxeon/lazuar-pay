@@ -71,4 +71,49 @@ interface AdminCommerceOperations {
   savePaymentConfig(
     @body body: SavePaymentConfigRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/subscribers")
+  getSubscribers(
+    @query page?: int32 = 1,
+    @query limit?: int32 = 50,
+    @query search?: string,
+  ): LazuarApi.Core.PaginatedResponse<CommerceSubscriptionDto> | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/transactions")
+  getTransactions(
+    @query search?: string,
+    @query page?: int32 = 1,
+    @query limit?: int32 = 50,
+    @query status?: string,
+    @query payment_method?: string,
+  ): LazuarApi.Core.PaginatedResponse<TransactionLogDto> | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/coupons")
+  getCoupons(): CouponDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/coupons")
+  createCoupon(
+    @body body: CreateCouponRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/coupons/{id}")
+  updateCoupon(
+    @path id: string,
+    @body body: UpdateCouponRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @delete
+  @route("/coupons/{id}")
+  deleteCoupon(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/stats")
+  getStats(): CommerceStatsDto | LazuarApi.Core.ProblemDetailsResponse;
 }

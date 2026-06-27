@@ -14,6 +14,11 @@ public static class Endpoints
         adminGroup.MapReminderScheduleEndpoints();
         adminGroup.MapPaymentConfigEndpoints();
         
+        adminGroup.MapSubscriberEndpoints();
+        adminGroup.MapTransactionEndpoints();
+        adminGroup.MapCouponEndpoints();
+        adminGroup.MapStatsEndpoints();
+        
         publicGroup.MapPublicCommerceEndpoints();
 
         return endpoints;

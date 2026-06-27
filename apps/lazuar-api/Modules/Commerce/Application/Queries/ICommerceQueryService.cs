@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 
 namespace Modules.Commerce.Application.Queries;
@@ -11,4 +12,9 @@ public interface ICommerceQueryService
     Task<ProductDto?> GetProductByIdAsync(Guid organizationId, Guid productId);
     Task<AggregatedPortalDataResponse?> GetPortalDataAsync(Guid organizationId, Guid subscriptionId);
     Task<IEnumerable<ReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId);
+    
+    Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null);
+    Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, string? searchTerm = null);
+    Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
+    Task<CommerceStatsDto> GetStatsAsync(Guid organizationId);
 }

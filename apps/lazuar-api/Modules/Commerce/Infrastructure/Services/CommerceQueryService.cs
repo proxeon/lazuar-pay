@@ -203,4 +203,227 @@ public class CommerceQueryService : ICommerceQueryService
             Created_at = new DateTimeOffset(r.CreatedAt)
         }).ToList();
     }
+
+    private record RawSubDto(
+        Guid Id, Guid ClientProfileId, Guid ProductId, string ProductName, decimal ProductPrice,
+        string Status, DateTime? CurrentPeriodEnd, DateTime? NextBillingDate, DateTime CreatedAt,
+        string? VaultedCustomerId, string? VaultedTokenId, string CustomerName, string CustomerEmail, string CustomerPhone);
+
+    public async Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        int offset = (page - 1) * limit;
+        var searchPattern = string.IsNullOrWhiteSpace(searchTerm) ? null : $"%{searchTerm}%";
+
+        const string sql = @"
+            SELECT COUNT(*)::int
+            FROM commerce.""Subscriptions"" s
+            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
+            WHERE s.""OrganizationId"" = @OrgId 
+            AND s.""Status"" != 'PENDING'
+            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm);
+
+            SELECT
+                s.""Id"", s.""ClientProfileId"", s.""ProductId"",
+                p.""Name"" as ProductName, p.""Price"" as ProductPrice,
+                s.""Status"", s.""CurrentPeriodEnd"", s.""NextBillingDate"", s.""CreatedAt"",
+                s.""VaultedCustomerId"", s.""VaultedTokenId"",
+                cp.""FullName"" as CustomerName, cp.""Email"" as CustomerEmail, cp.""Phone"" as CustomerPhone
+            FROM commerce.""Subscriptions"" s
+            JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
+            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
+            WHERE s.""OrganizationId"" = @OrgId 
+            AND s.""Status"" != 'PENDING'
+            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm)
+            ORDER BY s.""CreatedAt"" DESC
+            LIMIT @Limit OFFSET @Offset;";
+
+        using var multi = await connection.QueryMultipleAsync(sql, new { OrgId = organizationId, Limit = limit, Offset = offset, SearchTerm = searchPattern });
+        var totalCount = await multi.ReadFirstAsync<int>();
+        var rawSubs = (await multi.ReadAsync<RawSubDto>()).ToList();
+
+        if (totalCount == 0) return new PaginatedResponse<CommerceSubscriptionDto>(Enumerable.Empty<CommerceSubscriptionDto>(), 0, page, limit);
+
+        var now = DateTime.UtcNow;
+        var dtos = rawSubs.Select(s =>
+        {
+            var daysOverdue = (s.Status is "PAST_DUE" or "CANCELED") && s.NextBillingDate.HasValue
+                ? Math.Max(0, (int)(now - s.NextBillingDate.Value).TotalDays)
+                : (int?)null;
+
+            return new CommerceSubscriptionDto
+            {
+                Id = s.Id.ToString(),
+                Client_profile_id = s.ClientProfileId.ToString(),
+                Customer_name = s.CustomerName ?? "Unknown",
+                Customer_email = s.CustomerEmail ?? "",
+                Customer_phone = s.CustomerPhone ?? "",
+                Product_id = s.ProductId.ToString(),
+                Product_name = s.ProductName,
+                Product_price = (double)s.ProductPrice,
+                Status = s.Status,
+                Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
+                Next_billing_date = s.NextBillingDate.HasValue ? new DateTimeOffset(s.NextBillingDate.Value) : null,
+                Days_overdue = daysOverdue,
+                Vaulted_customer_id = s.VaultedCustomerId,
+                Vaulted_token_id = s.VaultedTokenId,
+                Created_at = new DateTimeOffset(s.CreatedAt)
+            };
+        });
+
+        return new PaginatedResponse<CommerceSubscriptionDto>(dtos, totalCount, page, limit);
+    }
+
+    private record RawGlobalTxDto(
+        Guid Id, decimal Amount, string Currency, string Status, DateTime CreatedAt, 
+        string CustomerName, string CustomerEmail, string PaymentMethod);
+
+    public async Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, string? searchTerm = null)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        int offset = (page - 1) * limit;
+        var searchPattern = string.IsNullOrWhiteSpace(searchTerm) ? null : $"%{searchTerm}%";
+
+        var sql = @"
+            SELECT COUNT(*)::int 
+            FROM billing.""LedgerEntries"" le
+            JOIN billing.""LedgerLines"" ll ON le.""Id"" = ll.""LedgerEntryId""
+            LEFT JOIN crm.""ClientProfiles"" cp ON le.""ReferenceId"" = cp.""Id""::text
+            WHERE le.""OrganizationId"" = @OrgId AND ll.""AccountType"" = 'ASSET_CASH'
+            AND (@Status IS NULL OR (@Status = 'CONFIRMED' AND ll.""Amount"" > 0) OR (@Status = 'REFUNDED' AND ll.""Amount"" < 0))
+            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm);
+
+            SELECT 
+                le.""Id"", 
+                ABS(ll.""Amount"") as Amount, 
+                ll.""Currency"", 
+                CASE WHEN ll.""Amount"" > 0 THEN 'CONFIRMED' ELSE 'REFUNDED' END as Status, 
+                le.""Timestamp"" as CreatedAt, 
+                COALESCE(cp.""FullName"", 'Unknown') as CustomerName, 
+                COALESCE(cp.""Email"", 'Unknown') as CustomerEmail,
+                'GATEWAY' as PaymentMethod
+            FROM billing.""LedgerEntries"" le
+            JOIN billing.""LedgerLines"" ll ON le.""Id"" = ll.""LedgerEntryId""
+            LEFT JOIN crm.""ClientProfiles"" cp ON le.""ReferenceId"" = cp.""Id""::text
+            WHERE le.""OrganizationId"" = @OrgId AND ll.""AccountType"" = 'ASSET_CASH'
+            AND (@Status IS NULL OR (@Status = 'CONFIRMED' AND ll.""Amount"" > 0) OR (@Status = 'REFUNDED' AND ll.""Amount"" < 0))
+            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm)
+            ORDER BY le.""Timestamp"" DESC
+            LIMIT @Limit OFFSET @Offset;";
+
+        using var multi = await connection.QueryMultipleAsync(sql, new { OrgId = organizationId, Limit = limit, Offset = offset, SearchTerm = searchPattern, Status = status });
+
+        var totalCount = await multi.ReadFirstAsync<int>();
+        var rawTx = (await multi.ReadAsync<RawGlobalTxDto>()).ToList();
+
+        if (totalCount == 0) return new PaginatedResponse<TransactionLogDto>(Enumerable.Empty<TransactionLogDto>(), 0, page, limit);
+
+        var dtos = rawTx.Select(t => new TransactionLogDto
+        {
+            Id = t.Id.ToString(),
+            Amount = (double)t.Amount,
+            Currency = t.Currency,
+            Status = t.Status,
+            Created_at = new DateTimeOffset(t.CreatedAt),
+            Customer_name = t.CustomerName,
+            Customer_email = t.CustomerEmail,
+            Payment_method = t.PaymentMethod
+        });
+
+        return new PaginatedResponse<TransactionLogDto>(dtos, totalCount, page, limit);
+    }
+
+    private record RawCouponDto(
+        Guid Id, string Code, string DiscountType, decimal Amount,
+        int MaxUses, int UsedCount, int ReservedCount, decimal MinimumOriginalPrice, DateTime? ExpiresAt,
+        string? ApplicableProductIds, bool IsActive);
+
+    public async Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""Id"", ""Code"", ""DiscountType"", ""Amount"", ""MaxUses"", ""UsedCount"", ""ReservedCount"", ""MinimumOriginalPrice"", ""ExpiresAt"", ""ApplicableProductIds""::text, ""IsActive""
+            FROM commerce.""Coupons""
+            WHERE ""OrganizationId"" = @OrgId
+            ORDER BY ""CreatedAt"" DESC";
+
+        var rawCoupons = await connection.QueryAsync<RawCouponDto>(sql, new { OrgId = organizationId });
+
+        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, PropertyNameCaseInsensitive = true };
+
+        return rawCoupons.Select(c => 
+        {
+            var productIds = new List<string>();
+            if (!string.IsNullOrWhiteSpace(c.ApplicableProductIds))
+            {
+                try { productIds = JsonSerializer.Deserialize<List<string>>(c.ApplicableProductIds, jsonOptions) ?? new List<string>(); }
+                catch { productIds = new List<string>(); }
+            }
+
+            return new CouponDto
+            {
+                Id = c.Id.ToString(),
+                Code = c.Code,
+                Discount_type = c.DiscountType,
+                Amount = (double)c.Amount,
+                Max_uses = c.MaxUses,
+                Used_count = c.UsedCount,
+                Reserved_count = c.ReservedCount,
+                Minimum_original_price = (double)c.MinimumOriginalPrice,
+                Expires_at = c.ExpiresAt.HasValue ? new DateTimeOffset(c.ExpiresAt.Value) : null,
+                Applicable_product_ids = productIds,
+                Is_active = c.IsActive
+            };
+        }).ToList();
+    }
+
+    private record SubStatsDto(string Status, DateTime CreatedAt, DateTime UpdatedAt, decimal Price, string Interval);
+
+    public async Task<CommerceStatsDto> GetStatsAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string subSql = @"
+            SELECT 
+                s.""Status"" as Status, s.""CreatedAt"" as CreatedAt, s.""UpdatedAt"" as UpdatedAt, 
+                p.""Price"" as Price, p.""Interval"" as Interval
+            FROM commerce.""Subscriptions"" s
+            JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
+            WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'";
+
+        var subs = (await connection.QueryAsync<SubStatsDto>(subSql, new { OrgId = organizationId })).ToList();
+
+        var activeSubs = subs.Where(s => s.Status == "ACTIVE" || s.Status == "PAST_DUE").ToList();
+        var mrr = activeSubs.Sum(s => s.Interval == "yr" ? s.Price / 12m : s.Price);
+
+        var now = DateTime.UtcNow;
+        var thirtyDaysAgo = now.AddDays(-30);
+        var cancelledLast30 = subs.Count(s => s.Status == "CANCELED" && s.UpdatedAt >= thirtyDaysAgo);
+        var newActiveLast30 = activeSubs.Count(s => s.CreatedAt >= thirtyDaysAgo);
+        var active30DaysAgo = activeSubs.Count + cancelledLast30 - newActiveLast30;
+        
+        double churnRate = active30DaysAgo > 0 ? Math.Round((double)cancelledLast30 / active30DaysAgo * 100, 2) : 0;
+        double arpu = activeSubs.Count > 0 ? (double)(mrr / activeSubs.Count) : 0;
+
+        return new CommerceStatsDto
+        {
+            Mrr = (double)mrr,
+            Active_subscribers = activeSubs.Count,
+            Past_due_subscribers = subs.Count(s => s.Status == "PAST_DUE"),
+            Cancelled_subscribers = subs.Count(s => s.Status == "CANCELED"),
+            Net_new_last_30_days = newActiveLast30 - cancelledLast30,
+            Churn_rate_percentage = churnRate,
+            Average_revenue_per_user = arpu,
+            Total_revenue_collected = 0, 
+            Cash_flow_trend = new List<CashFlowTrendDto>(),
+            Payment_methods = new List<PaymentMethodDto>()
+        };
+    }
 }
