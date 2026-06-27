@@ -81,3 +81,34 @@ model AggregatedPortalDataResponse {
   subscriptions: PortalSubscriptionDto[];
   orders: PortalOrderDto[];
 }
+
+model ReminderScheduleDto {
+  id: string; // GUID
+  product_id?: string; // GUID
+  product_name?: string;
+  template_id: string; // GUID
+  template_name: string;
+  channel: string;
+  days_relative_to_due: int32;
+  time_of_day: string;
+  is_enabled: boolean;
+  created_at: utcDateTime;
+}
+
+model CreateReminderScheduleRequestDto {
+  product_id?: string; // GUID
+  template_id: string; // GUID
+  channel: string;
+  days_relative_to_due: int32;
+  time_of_day: string;
+  is_enabled: boolean;
+}
+
+model UpdateReminderScheduleRequestDto {
+  product_id?: string; // GUID
+  template_id?: string; // GUID
+  channel?: string;
+  days_relative_to_due?: int32;
+  time_of_day?: string;
+  is_enabled?: boolean;
+}

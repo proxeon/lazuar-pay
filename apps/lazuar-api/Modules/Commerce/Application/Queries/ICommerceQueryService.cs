@@ -10,4 +10,5 @@ public interface ICommerceQueryService
     Task<IEnumerable<ProductDto>> GetProductsAsync(Guid organizationId);
     Task<ProductDto?> GetProductByIdAsync(Guid organizationId, Guid productId);
     Task<AggregatedPortalDataResponse?> GetPortalDataAsync(Guid organizationId, Guid subscriptionId);
+    Task<IEnumerable<ReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId);
 }

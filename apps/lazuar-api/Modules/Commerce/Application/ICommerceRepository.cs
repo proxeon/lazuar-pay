@@ -14,11 +14,14 @@ public interface ICommerceRepository
     Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default);
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
     Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default);
+    Task<ReminderSchedule?> GetReminderScheduleByIdAsync(Guid id, CancellationToken ct = default);
 
     void AddProduct(Product product);
     void AddSubscription(Subscription subscription);
     void AddOrder(Order order);
     void AddChargeAttempt(ChargeAttemptLog log);
+    void AddReminderSchedule(ReminderSchedule schedule);
+    void RemoveReminderSchedule(ReminderSchedule schedule);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }

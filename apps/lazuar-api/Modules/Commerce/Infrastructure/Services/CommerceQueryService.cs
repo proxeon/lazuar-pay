@@ -165,4 +165,42 @@ public class CommerceQueryService : ICommerceQueryService
             }).ToList()
         };
     }
+
+    private record RawReminderScheduleDto(
+        Guid Id, Guid? ProductId, string? ProductName, Guid TemplateId,
+        string Channel, int DaysRelativeToDue, string TimeOfDay, bool IsEnabled, DateTime CreatedAt);
+
+    public async Task<IEnumerable<ReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT
+                r.""Id"", r.""ProductId"", p.""Name"" as ProductName, r.""TemplateId"",
+                r.""Channel"", r.""DaysRelativeToDue"", r.""TimeOfDay"", r.""IsEnabled"", r.""CreatedAt""
+            FROM commerce.""ReminderSchedules"" r
+            LEFT JOIN commerce.""Products"" p ON r.""ProductId"" = p.""Id""
+            WHERE r.""OrganizationId"" = @OrgId
+            ORDER BY r.""DaysRelativeToDue"", r.""TimeOfDay""";
+
+        var rawSchedules = await connection.QueryAsync<RawReminderScheduleDto>(sql, new { OrgId = organizationId });
+
+        // Phase 1 Dunning: We retrieve the template name manually or via a separate cross-module query. 
+        // For simplicity in the generic catalog, we will return "Assigned Template" unless we hydrate it via the Communications module.
+        // The frontend uses the ID to manage it.
+        return rawSchedules.Select(r => new ReminderScheduleDto
+        {
+            Id = r.Id.ToString(),
+            Product_id = r.ProductId?.ToString(),
+            Product_name = r.ProductName,
+            Template_id = r.TemplateId.ToString(),
+            Template_name = "Assigned Template", // Decoupled from Communications schema
+            Channel = r.Channel,
+            Days_relative_to_due = r.DaysRelativeToDue,
+            Time_of_day = r.TimeOfDay,
+            Is_enabled = r.IsEnabled,
+            Created_at = new DateTimeOffset(r.CreatedAt)
+        }).ToList();
+    }
 }

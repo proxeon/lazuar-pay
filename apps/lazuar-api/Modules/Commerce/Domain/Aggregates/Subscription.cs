@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using BuildingBlocks.Domain;
+using Modules.Commerce.Domain.Entities;
 
 namespace Modules.Commerce.Domain.Aggregates;
 
@@ -16,6 +18,9 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public string? VaultedTokenId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+
+    private readonly List<ReminderDispatchLog> _reminderLogs = new();
+    public IReadOnlyCollection<ReminderDispatchLog> ReminderLogs => _reminderLogs.AsReadOnly();
 
 #pragma warning disable CS8618
     private Subscription() { }
@@ -57,5 +62,10 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         Status = "CANCELED";
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RecordReminderDispatched(Guid scheduleId, DateTime targetBillingDate)
+    {
+        _reminderLogs.Add(new ReminderDispatchLog(Id, scheduleId, targetBillingDate));
     }
 }

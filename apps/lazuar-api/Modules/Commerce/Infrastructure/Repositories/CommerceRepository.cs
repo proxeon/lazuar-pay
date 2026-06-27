@@ -34,7 +34,13 @@ public class CommerceRepository : ICommerceRepository
 
     public async Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Subscriptions.FirstOrDefaultAsync(s => s.Id == id, ct);
+        // Check EF Core's active memory tracker first to support pre-save Domain Events
+        var local = _context.Subscriptions.Local.FirstOrDefault(s => s.Id == id);
+        if (local != null) return local;
+
+        return await _context.Subscriptions
+            .Include(s => s.ReminderLogs)
+            .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
     public async Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default)
@@ -48,6 +54,11 @@ public class CommerceRepository : ICommerceRepository
             .AnyAsync(l => l.SubscriptionId == subscriptionId && l.TargetBillingDate.Date == targetDate.Date, ct);
     }
 
+    public async Task<ReminderSchedule?> GetReminderScheduleByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.ReminderSchedules.FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
     public void AddProduct(Product product) => _context.Products.Add(product);
 
     public void AddSubscription(Subscription subscription) => _context.Subscriptions.Add(subscription);
@@ -55,6 +66,10 @@ public class CommerceRepository : ICommerceRepository
     public void AddOrder(Order order) => _context.Orders.Add(order);
 
     public void AddChargeAttempt(ChargeAttemptLog log) => _context.ChargeAttemptLogs.Add(log);
+
+    public void AddReminderSchedule(ReminderSchedule schedule) => _context.ReminderSchedules.Add(schedule);
+
+    public void RemoveReminderSchedule(ReminderSchedule schedule) => _context.ReminderSchedules.Remove(schedule);
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {

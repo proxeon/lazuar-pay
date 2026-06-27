@@ -37,4 +37,28 @@ interface AdminCommerceOperations {
   archiveProduct(
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/reminder-schedules")
+  getReminderSchedules(
+  ): ReminderScheduleDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/reminder-schedules")
+  createReminderSchedule(
+    @body body: CreateReminderScheduleRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/reminder-schedules/{id}")
+  updateReminderSchedule(
+    @path id: string,
+    @body body: UpdateReminderScheduleRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @delete
+  @route("/reminder-schedules/{id}")
+  deleteReminderSchedule(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

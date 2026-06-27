@@ -21,6 +21,8 @@ public class CommerceDbContext : PlatformDbContext
     public DbSet<Order> Orders { get; set; } = null!;
     public DbSet<CheckoutSession> CheckoutSessions { get; set; } = null!;
     public DbSet<ChargeAttemptLog> ChargeAttemptLogs { get; set; } = null!;
+    public DbSet<ReminderSchedule> ReminderSchedules { get; set; } = null!;
+    public DbSet<ReminderDispatchLog> ReminderDispatchLogs { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -93,6 +95,13 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => x.OrganizationId);
             builder.HasIndex(x => x.Status);
             builder.HasIndex(x => x.NextBillingDate);
+
+            builder.HasMany(x => x.ReminderLogs)
+                .WithOne()
+                .HasForeignKey(x => x.SubscriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Metadata.FindNavigation("ReminderLogs")?.SetPropertyAccessMode(PropertyAccessMode.Field);
         });
 
         modelBuilder.Entity<Order>(builder =>
@@ -114,6 +123,20 @@ public class CommerceDbContext : PlatformDbContext
             builder.ToTable("ChargeAttemptLogs");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.SubscriptionId, x.TargetBillingDate }).IsUnique();
+        });
+
+        modelBuilder.Entity<ReminderSchedule>(builder =>
+        {
+            builder.ToTable("ReminderSchedules");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.DaysRelativeToDue });
+        });
+
+        modelBuilder.Entity<ReminderDispatchLog>(builder =>
+        {
+            builder.ToTable("ReminderDispatchLogs");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.SubscriptionId, x.ScheduleId, x.TargetBillingDate }).IsUnique();
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>
