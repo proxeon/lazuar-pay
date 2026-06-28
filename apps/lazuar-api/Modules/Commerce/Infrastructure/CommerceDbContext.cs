@@ -23,6 +23,7 @@ public class CommerceDbContext : PlatformDbContext
     public DbSet<ChargeAttemptLog> ChargeAttemptLogs { get; set; } = null!;
     public DbSet<ReminderSchedule> ReminderSchedules { get; set; } = null!;
     public DbSet<ReminderDispatchLog> ReminderDispatchLogs { get; set; } = null!;
+    public DbSet<CommerceTransactionLog> TransactionLogs { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -157,6 +158,24 @@ public class CommerceDbContext : PlatformDbContext
             builder.ToTable("ReminderDispatchLogs");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.SubscriptionId, x.ScheduleId, x.TargetBillingDate }).IsUnique();
+        });
+
+        modelBuilder.Entity<CommerceTransactionLog>(builder =>
+        {
+            builder.ToTable("TransactionLogs");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId);
+            builder.HasIndex(x => x.CreatedAt);
+            builder.Property(x => x.Amount).HasPrecision(18, 4);
+            builder.Property(x => x.FeeAmount).HasPrecision(18, 4);
+            builder.Property(x => x.NetAmount).HasPrecision(18, 4);
+            builder.Property(x => x.Currency).HasMaxLength(10);
+            builder.Property(x => x.Status).HasMaxLength(50);
+            builder.Property(x => x.CustomerName).HasMaxLength(255);
+            builder.Property(x => x.CustomerEmail).HasMaxLength(255);
+            builder.Property(x => x.ProductName).HasMaxLength(255);
+            builder.Property(x => x.RecordedByName).HasMaxLength(255);
+            builder.Property(x => x.ExternalReference).HasMaxLength(255);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

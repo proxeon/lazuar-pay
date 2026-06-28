@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Aggregates;
+using Modules.Commerce.Domain.Entities;
+using Modules.CRM.Contracts;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
@@ -14,13 +16,19 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
 {
     private readonly ICommerceRepository _repository;
     private readonly IEventBus _eventBus;
+    private readonly ICrmQueryService _crmQueryService;
+    private readonly CommerceDbContext _dbContext;
 
     public GatewayPaymentCompletedIntegrationEventHandler(
         ICommerceRepository repository,
-        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus)
+        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
+        ICrmQueryService crmQueryService,
+        CommerceDbContext dbContext)
     {
         _repository = repository;
         _eventBus = eventBus;
+        _crmQueryService = crmQueryService;
+        _dbContext = dbContext;
     }
 
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
@@ -29,7 +37,6 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
 
         if (type == "commerce_subscription" && @event.Metadata.TryGetValue("subscription_id", out var sessionIdStr) && Guid.TryParse(sessionIdStr, out var sessionId))
         {
-            // Retrieve the active checkout session representing the purchase intent
             var session = await _repository.GetCheckoutSessionByIdAsync(sessionId);
             if (session == null || session.Status == "COMPLETED")
             {
@@ -42,12 +49,10 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
                 throw new InvalidOperationException($"Product with ID {session.ProductId} associated with session {sessionId} not found.");
             }
 
-            // Complete the checkout session to resolve polling status API
             session.Complete();
 
             if (product.Interval != "one_time")
             {
-                // Provision a brand-new recurring subscription on successful payment
                 var subscription = new Subscription(
                     session.OrganizationId,
                     session.ClientProfileId,
@@ -75,7 +80,6 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
             }
             else
             {
-                // Provision a brand-new one-time purchase order
                 var order = new Order(
                     session.OrganizationId,
                     session.ClientProfileId,
@@ -95,6 +99,27 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
                     product.FulfillmentTargets.ToList()
                 ));
             }
+
+            // Resolve customer credentials via cross-module query contract
+            var clientProfile = await _crmQueryService.GetClientProfileAsync(session.ClientProfileId);
+            var customerName = clientProfile?.Full_name ?? "Unknown Customer";
+            var customerEmail = clientProfile?.Email ?? string.Empty;
+
+            // Project flat record to local read model for reporting
+            var transactionLog = new CommerceTransactionLog(
+                @event.OrganizationId,
+                @event.AmountPaid,
+                @event.GatewayFee,
+                @event.Currency,
+                "CONFIRMED",
+                customerName,
+                customerEmail,
+                product.Name,
+                "SYSTEM",
+                @event.GatewayTransactionId
+            );
+
+            _dbContext.TransactionLogs.Add(transactionLog);
 
             await _repository.SaveChangesAsync();
         }

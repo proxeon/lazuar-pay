@@ -41,59 +41,27 @@ public partial class CommerceQueryService
         var searchPattern = string.IsNullOrWhiteSpace(searchTerm) ? null : $"%{searchTerm}%";
 
         var sql = @"
-            WITH TransactionData AS (
-                SELECT 
-                    le.""Id"",
-                    le.""ReferenceId"",
-                    le.""Timestamp"" as CreatedAt,
-                    le.""Description"",
-                    ABS(SUM(CASE WHEN ll.""AccountType"" = 'ASSET_CASH' THEN ll.""Amount"" ELSE 0 END)) as Amount,
-                    ABS(SUM(CASE WHEN ll.""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ll.""Amount"" ELSE 0 END)) as FeeAmount,
-                    SUM(CASE WHEN ll.""AccountType"" = 'ASSET_CASH' THEN ll.""Amount"" ELSE 0 END) as RawAssetCash,
-                    MAX(ll.""Currency"") as Currency,
-                    'GATEWAY' as PaymentMethod,
-                    le.""ReferenceType""
-                FROM billing.""LedgerEntries"" le
-                JOIN billing.""LedgerLines"" ll ON le.""Id"" = ll.""LedgerEntryId""
-                WHERE le.""OrganizationId"" = @OrgId 
-                  AND le.""ReferenceType"" IN ('GATEWAY_PAYMENT', 'GATEWAY_REFUND')
-                GROUP BY le.""Id"", le.""ReferenceId"", le.""Timestamp"", le.""Description"", le.""ReferenceType""
-                HAVING SUM(CASE WHEN ll.""AccountType"" = 'ASSET_CASH' THEN ll.""Amount"" ELSE 0 END) != 0
-            ),
-            ResolvedCustomers AS (
-                SELECT 
-                    td.*,
-                    CASE WHEN td.RawAssetCash > 0 THEN 'CONFIRMED' ELSE 'REFUNDED' END as Status,
-                    COALESCE(cp.""FullName"", 'Unknown') as CustomerName,
-                    COALESCE(cp.""Email"", 'Unknown') as CustomerEmail,
-                    p.""Name"" as ProductName
-                FROM TransactionData td
-                LEFT JOIN commerce.""Subscriptions"" s ON s.""Id""::text = split_part(td.""Description"", 'subscription ', 2)
-                LEFT JOIN commerce.""Orders"" o ON o.""Id""::text = split_part(td.""Description"", 'order ', 2)
-                LEFT JOIN crm.""ClientProfiles"" cp ON cp.""Id"" = COALESCE(s.""ClientProfileId"", o.""ClientProfileId"")
-                LEFT JOIN commerce.""Products"" p ON p.""Id"" = COALESCE(s.""ProductId"", o.""ProductId"")
-            )
             SELECT 
-                rc.""Id"", 
-                rc.Amount,
-                rc.FeeAmount,
-                (rc.Amount - rc.FeeAmount) as NetAmount,
-                rc.Currency,
-                rc.Status,
-                rc.CreatedAt,
-                rc.CustomerName,
-                rc.CustomerEmail,
-                rc.ProductName,
-                rc.PaymentMethod,
-                rc.""ReferenceId"" as ExternalReference,
+                t.""Id"", 
+                t.""Amount"",
+                t.""FeeAmount"",
+                t.""NetAmount"",
+                t.""Currency"",
+                t.""Status"",
+                t.""CreatedAt"",
+                t.""CustomerName"",
+                t.""CustomerEmail"",
+                t.""ProductName"",
+                'GATEWAY' as PaymentMethod,
+                t.""ExternalReference"",
                 COUNT(*) OVER() AS TotalCount
-            FROM ResolvedCustomers rc
-            WHERE (@Status IS NULL OR rc.Status = @Status)
-            AND (@SearchTerm IS NULL OR rc.CustomerName ILIKE @SearchTerm OR rc.CustomerEmail ILIKE @SearchTerm)
-            ORDER BY rc.CreatedAt DESC
+            FROM commerce.""TransactionLogs"" t
+            WHERE t.""OrganizationId"" = @OrgId
+            AND (@Status IS NULL OR t.""Status"" = @Status)
+            AND (@SearchTerm IS NULL OR t.""CustomerName"" ILIKE @SearchTerm OR t.""CustomerEmail"" ILIKE @SearchTerm)
+            ORDER BY t.""CreatedAt"" DESC
             LIMIT @Limit OFFSET @Offset;";
 
-        // Query database using a single round-trip mapping to capture matching records and counts
         var rawTx = (await connection.QueryAsync<RawGlobalTxDto>(sql, new { 
             OrgId = organizationId, 
             Limit = limit, 

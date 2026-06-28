@@ -1,10 +1,10 @@
-using System;
+using BuildingBlocks.Application;
+using BuildingBlocks.Application.Llm;
+using BuildingBlocks.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using BuildingBlocks.Application;
-using BuildingBlocks.Infrastructure;
 using Modules.Commerce.Application;
 using Modules.Commerce.Application.EventHandlers;
 using Modules.Commerce.Application.Queries;
@@ -15,6 +15,7 @@ using Modules.Commerce.Infrastructure.Workers;
 using Modules.Commerce.Infrastructure.EventHandlers;
 using Modules.Payments.Contracts.Events;
 using Modules.Communications.Contracts.Events;
+using System;
 
 namespace Modules.Commerce.Infrastructure;
 
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddHostedService<CommerceLifecycleJob>();
 
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
+        services.AddTransient<GatewayRefundCompletedIntegrationEventHandler>();
         services.AddTransient<OrderCompletedIntegrationEventHandler>();
         services.AddTransient<SubscriptionLifecycleIntegrationEventHandlers>();
         services.AddTransient<DefaultTemplatesSeededIntegrationEventHandler>();
@@ -55,6 +57,7 @@ public static class DependencyInjection
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedIntegrationEventHandler>();
         eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedIntegrationEventHandler>();
         eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
