@@ -28,13 +28,7 @@ public class OrderCompletedIntegrationEventHandler : IIntegrationEventHandler<Or
 
         foreach (var target in @event.FulfillmentTargets)
         {
-            if (target.StartsWith("internal:", System.StringComparison.OrdinalIgnoreCase))
-            {
-                var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                await _eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                    @event.OrganizationId, internalApp, "order.completed", payloadElement));
-            }
-            else if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
+            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
             {
                 await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                     @event.OrganizationId, target, "order.completed", payloadElement));

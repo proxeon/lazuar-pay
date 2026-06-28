@@ -40,7 +40,8 @@ public static class DependencyInjection
         services.AddHostedService<CommunityInboxConsumerJob>();
         services.AddHostedService<CommunityOutboxPublisherJob>();
 
-        services.AddTransient<FulfillmentRequestedIntegrationEventHandler>();
+        services.AddTransient<OrderCompletedIntegrationEventHandler>();
+        services.AddTransient<SubscriptionActivatedIntegrationEventHandler>();
 
         return services;
     }
@@ -48,7 +49,8 @@ public static class DependencyInjection
     public static IApplicationBuilder UseCommunitySubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        eventBus.Subscribe<FulfillmentRequestedIntegrationEvent, FulfillmentRequestedIntegrationEventHandler>();
+        eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionActivatedIntegrationEventHandler>();
         return app;
     }
 }

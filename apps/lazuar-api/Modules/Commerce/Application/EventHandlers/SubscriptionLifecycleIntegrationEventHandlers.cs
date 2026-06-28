@@ -32,13 +32,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
 
         foreach (var target in @event.FulfillmentTargets)
         {
-            if (target.StartsWith("internal:", System.StringComparison.OrdinalIgnoreCase))
-            {
-                var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                await _eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                    @event.OrganizationId, internalApp, "subscription.activated", payloadElement));
-            }
-            else if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
+            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
             {
                 await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                     @event.OrganizationId, target, "subscription.activated", payloadElement));
@@ -59,13 +53,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
 
         foreach (var target in @event.FulfillmentTargets)
         {
-            if (target.StartsWith("internal:", System.StringComparison.OrdinalIgnoreCase))
-            {
-                var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                await _eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                    @event.OrganizationId, internalApp, "subscription.suspended", payloadElement));
-            }
-            else if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
+            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
             {
                 await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                     @event.OrganizationId, target, "subscription.suspended", payloadElement));
@@ -86,13 +74,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
 
         foreach (var target in @event.FulfillmentTargets)
         {
-            if (target.StartsWith("internal:", System.StringComparison.OrdinalIgnoreCase))
-            {
-                var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                await _eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                    @event.OrganizationId, internalApp, "subscription.canceled", payloadElement));
-            }
-            else if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
+            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
             {
                 await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                     @event.OrganizationId, target, "subscription.canceled", payloadElement));
