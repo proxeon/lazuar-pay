@@ -98,7 +98,7 @@ public partial class CommerceQueryService
             Customer_name = t.CustomerName,
             Customer_email = t.CustomerEmail,
             Product_name = t.ProductName,
-            Payment_method = t.PaymentMethod,
+            // Removed mapping for Payment_method as it does not exist in the generated TypeSpec DTO
             Recorded_by_name = "SYSTEM",
             External_reference = t.ExternalReference
         });
