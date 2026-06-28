@@ -30,8 +30,17 @@ export default function ProductForm({
   const [reqTaxId, setReqTaxId] = useState(initialData?.checkout_configuration?.requires_tax_id ?? false);
   const [reqPhone, setReqPhone] = useState(initialData?.checkout_configuration?.requires_phone ?? false);
 
+  const [webhooksText, setWebhooksText] = useState(() => 
+    initialData?.fulfillment_targets?.join("\n") || ""
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const targets = webhooksText
+      .split("\n")
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
 
     onSubmit({
       name: name.trim(),
@@ -45,7 +54,7 @@ export default function ProductForm({
       requires_address: reqAddress,
       requires_tax_id: reqTaxId,
       requires_phone: reqPhone,
-      fulfillment_targets: initialData?.fulfillment_targets || [], 
+      fulfillment_targets: targets, 
     });
   };
 
@@ -107,6 +116,22 @@ export default function ProductForm({
               <input type="checkbox" checked={reqPhone} onChange={e => setReqPhone(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require WhatsApp Number</span>
             </label>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">3. Post-Purchase Webhooks (Optional)</label>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">External SaaS Integrations</label>
+            <textarea 
+              value={webhooksText} 
+              onChange={e => setWebhooksText(e.target.value)} 
+              disabled={isPending} 
+              rows={3}
+              placeholder="https://hooks.zapier.com/..." 
+              className="flex w-full rounded-sm border border-[#e5e5e5] bg-white p-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 font-mono resize-y" 
+            />
+            <p className="text-[10px] text-[#71717a]">Enter one URL per line. We will send an HTTP POST request to these URLs when this specific product is purchased.</p>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Archive, RotateCcw, Edit2, Link as LinkIcon, Lock } from "lucide-react";
+import { Loader2, Archive, RotateCcw, Edit2, Link as LinkIcon, Lock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
@@ -179,6 +179,24 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
                 <span className={cn(product.checkout_configuration.requires_phone ? "text-[#09090b]" : "text-[#a1a1aa]")}>Requires WhatsApp Number</span>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Configured Webhooks</h4>
+            {product.fulfillment_targets && product.fulfillment_targets.length > 0 ? (
+              <ul className="space-y-2">
+                {product.fulfillment_targets.map((url, idx) => (
+                  <li key={idx} className="flex items-center gap-2 p-2.5 bg-[#fafafa] border border-[#e5e5e5] rounded-sm text-[11px] font-mono text-[#52525b]">
+                    <Zap size={12} className="text-amber-500 shrink-0" />
+                    <span className="truncate">{url}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="p-3 bg-[#fafafa] border border-[#e5e5e5] rounded-sm text-[11px] text-[#a1a1aa] text-center">
+                No external webhooks configured.
+              </div>
+            )}
           </div>
 
           <div className="space-y-4 pt-4">
