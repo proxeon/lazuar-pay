@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, Trash2, Edit2, Link as LinkIcon, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { client, type components } from "../../../lib/api-client";
+import { useOutletContext } from "react-router-dom";
+import { client, type components, type EntitlementDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
@@ -18,8 +19,25 @@ interface AssetDetailPanelProps {
 
 export default function AssetDetailPanel({ asset, onClose, onUpdate }: AssetDetailPanelProps) {
   const queryClient = useQueryClient();
+  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [isEditing, setIsEditing] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const { data: entitlements } = useQuery({
+    queryKey: ["entitlements"],
+    queryFn: async () => {
+      const { data } = await client.GET("/one/me/entitlements");
+      return data as EntitlementDto[];
+    }
+  });
+
+  const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
+
+  const generateCheckoutUrl = (productSlug: string) => {
+    if (!activeWorkspaceSlug) return "";
+    const baseUrl = import.meta.env.VITE_PORTAL_URL || "http://localhost:3004";
+    return `${baseUrl}/${activeWorkspaceSlug}/checkout/${productSlug}`;
+  };
 
   const editMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -36,7 +54,10 @@ export default function AssetDetailPanel({ asset, onClose, onUpdate }: AssetDeta
     onSuccess: (variables) => {
       toast.success("Asset saved successfully");
       queryClient.invalidateQueries({ queryKey: ["vault-assets"] });
-      onUpdate({ ...asset!, ...variables });
+      
+      const newLinkedCheckouts = asset?.linked_checkouts?.filter(lc => variables.product_ids.includes(lc.id)) || [];
+      
+      onUpdate({ ...asset!, ...variables, linked_checkouts: newLinkedCheckouts });
       setIsEditing(false);
     },
     onError: (err: any) => toast.error("Failed to update asset", { description: err.message })
@@ -99,10 +120,30 @@ export default function AssetDetailPanel({ asset, onClose, onUpdate }: AssetDeta
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Linked Products</h4>
-            <div className="bg-[#fafafa] border border-[#e5e5e5] p-3 text-[12px] text-[#52525b]">
-               {asset.product_ids?.length || 0} product(s) linked.
-            </div>
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Shareable Checkout Links</h4>
+            {asset.linked_checkouts && asset.linked_checkouts.length > 0 ? (
+              <ul className="space-y-2">
+                {asset.linked_checkouts.map(checkout => {
+                  const url = generateCheckoutUrl(checkout.slug);
+                  return (
+                    <li key={checkout.id} className="p-3 bg-white border border-[#e5e5e5] rounded-sm space-y-2">
+                      <span className="text-[12px] font-semibold text-[#09090b] block">{checkout.name}</span>
+                      <div className="flex items-center gap-2">
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-blue-600 hover:opacity-80 underline underline-offset-2 truncate max-w-[280px]">
+                          {url}
+                        </a>
+                        <QuickCopy text={url} iconSize={11} className="hover:bg-[#fafafa]" />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-sm text-center">
+                <span className="text-[12px] font-semibold text-amber-800">No checkout links attached.</span>
+                <span className="text-[11px] text-amber-700">Customers cannot purchase this asset until you attach it to a Commerce Link.</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4 pt-4">

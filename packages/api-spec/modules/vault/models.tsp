@@ -15,6 +15,7 @@ model UpdateVaultAssetRequestDto {
 model VaultAssetDto {
   id: string; // GUID
   product_ids: string[]; // GUID array
+  linked_checkouts: LazuarApi.Core.LinkedCheckoutDto[];
   name: string;
   cloudflare_r2_url: string;
 }

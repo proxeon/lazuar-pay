@@ -33,6 +33,7 @@ public partial class CommunityQueryService : ICommunityQueryService
         public string Name { get; set; } = "";
         public string? TelegramLink { get; set; }
         public string? ZoomLink { get; set; }
+        public string LinkedCheckoutsJson { get; set; } = "[]";
     }
 
     public CommunityQueryService(
@@ -95,12 +96,44 @@ public partial class CommunityQueryService : ICommunityQueryService
         if (connection.State != System.Data.ConnectionState.Open) connection.Open();
 
         const string sql = @"
-            SELECT ""Id"", ""ProductIds""::text as ProductIdsJson, ""Name"" as Name, ""TelegramLink"" as TelegramLink, ""ZoomLink"" as ZoomLink
-            FROM community.""CommunitySpaces""
-            WHERE ""OrganizationId"" = @OrgId
-            ORDER BY ""Name""";
+            WITH SpaceProducts AS (
+                SELECT s.""Id"", jsonb_array_elements_text(s.""ProductIds"")::uuid AS ""ProductId""
+                FROM community.""CommunitySpaces"" s
+                WHERE s.""OrganizationId"" = @OrgId
+            ),
+            LinkedData AS (
+                SELECT 
+                    sp.""Id"",
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'id', p.""Id"",
+                            'name', p.""Name"",
+                            'slug', p.""Slug""
+                        )
+                    ) as LinkedCheckouts
+                FROM SpaceProducts sp
+                JOIN commerce.""Products"" p ON sp.""ProductId"" = p.""Id""
+                GROUP BY sp.""Id""
+            )
+            SELECT 
+                s.""Id"", 
+                s.""ProductIds""::text as ProductIdsJson, 
+                s.""Name"" as Name, 
+                s.""TelegramLink"" as TelegramLink, 
+                s.""ZoomLink"" as ZoomLink,
+                COALESCE(ld.LinkedCheckouts::text, '[]') as LinkedCheckoutsJson
+            FROM community.""CommunitySpaces"" s
+            LEFT JOIN LinkedData ld ON s.""Id"" = ld.""Id""
+            WHERE s.""OrganizationId"" = @OrgId
+            ORDER BY s.""Name""";
 
         var rawSpaces = await Dapper.SqlMapper.QueryAsync<RawAdminCommunitySpaceDto>(connection, sql, new { OrgId = organizationId });
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        };
 
         return rawSpaces.Select(space => 
         {
@@ -109,7 +142,17 @@ public partial class CommunityQueryService : ICommunityQueryService
             {
                 try
                 {
-                    parsedIds = JsonSerializer.Deserialize<List<Guid>>(space.ProductIdsJson) ?? new List<Guid>();
+                    parsedIds = JsonSerializer.Deserialize<List<Guid>>(space.ProductIdsJson, jsonOptions) ?? new List<Guid>();
+                }
+                catch { }
+            }
+
+            List<LinkedCheckoutDto> linkedCheckouts = new();
+            if (!string.IsNullOrWhiteSpace(space.LinkedCheckoutsJson))
+            {
+                try
+                {
+                    linkedCheckouts = JsonSerializer.Deserialize<List<LinkedCheckoutDto>>(space.LinkedCheckoutsJson, jsonOptions) ?? new List<LinkedCheckoutDto>();
                 }
                 catch { }
             }
@@ -120,7 +163,8 @@ public partial class CommunityQueryService : ICommunityQueryService
                 Name = space.Name,
                 Telegram_link = space.TelegramLink,
                 Zoom_link = space.ZoomLink,
-                Product_ids = parsedIds.Select(id => id.ToString()).ToList()
+                Product_ids = parsedIds.Select(id => id.ToString()).ToList(),
+                Linked_checkouts = linkedCheckouts
             };
         }).ToList();
     }

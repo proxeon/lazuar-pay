@@ -33,6 +33,12 @@ model PaginatedResponse<T> {
   total_pages: int32;
 }
 
+model LinkedCheckoutDto {
+  id: string; // GUID
+  name: string;
+  slug: string;
+}
+
 @error
 model ProblemDetailsResponse {
   @statusCode statusCode: 400 | 401 | 403 | 404 | 500;

@@ -1726,6 +1726,7 @@ export interface components {
             telegram_link?: string;
             zoom_link?: string;
             product_ids: string[];
+            linked_checkouts: components["schemas"]["Core.LinkedCheckoutDto"][];
         };
         "Community.CreateCommunitySpaceRequestDto": {
             product_ids: string[];
@@ -1747,6 +1748,11 @@ export interface components {
         };
         "Core.IdResponse": {
             id: string;
+        };
+        "Core.LinkedCheckoutDto": {
+            id: string;
+            name: string;
+            slug: string;
         };
         /** RFC 7807 Standardized Error Response */
         "Core.ProblemDetails": {
@@ -2130,6 +2136,7 @@ export interface components {
         "Vault.VaultAssetDto": {
             id: string;
             product_ids: string[];
+            linked_checkouts: components["schemas"]["Core.LinkedCheckoutDto"][];
             name: string;
             cloudflare_r2_url: string;
         };

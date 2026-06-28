@@ -20,6 +20,7 @@ model AdminCommunitySpaceDto {
   telegram_link?: string;
   zoom_link?: string;
   product_ids: string[]; // GUID array
+  linked_checkouts: LazuarApi.Core.LinkedCheckoutDto[];
 }
 
 model PortalCommunitySpaceDto {
