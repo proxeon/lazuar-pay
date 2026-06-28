@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,50 +12,57 @@ namespace Modules.Commerce.Infrastructure.Services;
 public partial class CommerceQueryService
 {
     private record RawSubDto(
-        Guid Id, Guid ClientProfileId, Guid ProductId, string ProductName, decimal ProductPrice,
-        string Status, DateTime? CurrentPeriodEnd, DateTime? NextBillingDate, DateTime CreatedAt,
-        string? VaultedCustomerId, string? VaultedTokenId, string CustomerName, string CustomerEmail, string CustomerPhone);
+        Guid Id, 
+        Guid ClientProfileId, 
+        Guid ProductId, 
+        string ProductName, 
+        decimal ProductPrice,
+        string Status, 
+        DateTime? CurrentPeriodEnd, 
+        DateTime? NextBillingDate, 
+        DateTime CreatedAt,
+        string? VaultedCustomerId, 
+        string? VaultedTokenId
+    );
 
-    public async Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null)
+    public async Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(
+        Guid organizationId, 
+        int page, 
+        int limit, 
+        string? searchTerm = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        int offset = (page - 1) * limit;
-        var searchPattern = string.IsNullOrWhiteSpace(searchTerm) ? null : $"%{searchTerm}%";
-
+        // Query only from local commerce tables to preserve schema boundaries
         const string sql = @"
-            SELECT COUNT(*)::int
-            FROM commerce.""Subscriptions"" s
-            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
-            WHERE s.""OrganizationId"" = @OrgId 
-            AND s.""Status"" != 'PENDING'
-            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm);
-
             SELECT
                 s.""Id"", s.""ClientProfileId"", s.""ProductId"",
                 p.""Name"" as ProductName, p.""Price"" as ProductPrice,
                 s.""Status"", s.""CurrentPeriodEnd"", s.""NextBillingDate"", s.""CreatedAt"",
-                s.""VaultedCustomerId"", s.""VaultedTokenId"",
-                cp.""FullName"" as CustomerName, cp.""Email"" as CustomerEmail, cp.""Phone"" as CustomerPhone
+                s.""VaultedCustomerId"", s.""VaultedTokenId""
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
-            JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
             WHERE s.""OrganizationId"" = @OrgId 
             AND s.""Status"" != 'PENDING'
-            AND (@SearchTerm IS NULL OR cp.""FullName"" ILIKE @SearchTerm OR cp.""Email"" ILIKE @SearchTerm)
-            ORDER BY s.""CreatedAt"" DESC
-            LIMIT @Limit OFFSET @Offset;";
+            ORDER BY s.""CreatedAt"" DESC;";
 
-        using var multi = await connection.QueryMultipleAsync(sql, new { OrgId = organizationId, Limit = limit, Offset = offset, SearchTerm = searchPattern });
-        var totalCount = await multi.ReadFirstAsync<int>();
-        var rawSubs = (await multi.ReadAsync<RawSubDto>()).ToList();
+        var rawSubs = (await connection.QueryAsync<RawSubDto>(sql, new { OrgId = organizationId })).ToList();
+        if (!rawSubs.Any())
+        {
+            return new PaginatedResponse<CommerceSubscriptionDto>(Enumerable.Empty<CommerceSubscriptionDto>(), 0, page, limit);
+        }
 
-        if (totalCount == 0) return new PaginatedResponse<CommerceSubscriptionDto>(Enumerable.Empty<CommerceSubscriptionDto>(), 0, page, limit);
+        // Batch resolve client details asynchronously from the CRM module
+        var profileIds = rawSubs.Select(s => s.ClientProfileId).Distinct().ToList();
+        var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
+        var profileMap = profiles.ToDictionary(p => Guid.Parse(p.Id), p => p);
 
         var now = DateTime.UtcNow;
         var dtos = rawSubs.Select(s =>
         {
+            profileMap.TryGetValue(s.ClientProfileId, out var profile);
+            
             var daysOverdue = (s.Status is "PAST_DUE" or "CANCELED") && s.NextBillingDate.HasValue
                 ? Math.Max(0, (int)(now - s.NextBillingDate.Value).TotalDays)
                 : (int?)null;
@@ -63,9 +71,9 @@ public partial class CommerceQueryService
             {
                 Id = s.Id.ToString(),
                 Client_profile_id = s.ClientProfileId.ToString(),
-                Customer_name = s.CustomerName ?? "Unknown",
-                Customer_email = s.CustomerEmail ?? "",
-                Customer_phone = s.CustomerPhone ?? "",
+                Customer_name = profile?.Full_name ?? "Unknown",
+                Customer_email = profile?.Email ?? string.Empty,
+                Customer_phone = profile?.Phone ?? string.Empty,
                 Product_id = s.ProductId.ToString(),
                 Product_name = s.ProductName,
                 Product_price = (double)s.ProductPrice,
@@ -79,6 +87,19 @@ public partial class CommerceQueryService
             };
         });
 
-        return new PaginatedResponse<CommerceSubscriptionDto>(dtos, totalCount, page, limit);
+        // Apply search filtering in-memory
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            dtos = dtos.Where(d => 
+                d.Customer_name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || 
+                d.Customer_email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        var filteredList = dtos.ToList();
+        var totalCount = filteredList.Count;
+        var paginatedData = filteredList.Skip((page - 1) * limit).Take(limit);
+
+        return new PaginatedResponse<CommerceSubscriptionDto>(paginatedData, totalCount, page, limit);
     }
 }

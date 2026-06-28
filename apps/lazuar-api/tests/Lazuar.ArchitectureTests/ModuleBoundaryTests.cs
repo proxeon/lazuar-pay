@@ -1,10 +1,12 @@
-using NetArchTest.Rules;
-using NUnit.Framework;
 using System;
 using System.Linq;
+using System.Reflection;
+using NetArchTest.Rules;
+using NUnit.Framework;
 
 namespace Lazuar.ArchitectureTests;
 
+[TestFixture]
 public class ModuleBoundaryTests
 {
     private readonly string[] _moduleNamespaces = new[]
@@ -15,25 +17,33 @@ public class ModuleBoundaryTests
         "Modules.CRM",
         "Modules.Payments",
         "Modules.Ops",
-        "Modules.Billing"
+        "Modules.Billing",
+        "Modules.Lhdn",
+        "Modules.Commerce",
+        "Modules.Vault",
+        "Modules.Communications"
     };
 
     [Test]
-    public void Domain_Should_Not_Reference_Infrastructure_Or_Application()
+    public void Domain_Should_Remain_Completely_Isolated()
     {
         foreach (var module in _moduleNamespaces)
         {
-            var domainAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Domain") == true);
-
+            var domainAssembly = GetAssembly($"{module}.Domain");
             if (domainAssembly == null) continue;
+
+            // Domain must not reference its own outer layers or any part of other modules
+            var forbiddenDependencies = _moduleNamespaces
+                .Where(m => m != module)
+                .Concat(new[] { $"{module}.Infrastructure", $"{module}.Application" })
+                .ToArray();
 
             var result = Types.InAssembly(domainAssembly)
                 .ShouldNot()
-                .HaveDependencyOnAny($"{module}.Infrastructure", $"{module}.Application")
+                .HaveDependencyOnAny(forbiddenDependencies)
                 .GetResult();
 
-            Assert.That(result.IsSuccessful, Is.True, $"Domain layer in {module} violates boundaries.");
+            Assert.That(result.IsSuccessful, Is.True, $"Domain layer in {module} has invalid outer or cross-module dependencies.");
         }
     }
 
@@ -42,9 +52,7 @@ public class ModuleBoundaryTests
     {
         foreach (var module in _moduleNamespaces)
         {
-            var appAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Application") == true);
-
+            var appAssembly = GetAssembly($"{module}.Application");
             if (appAssembly == null) continue;
 
             var result = Types.InAssembly(appAssembly)
@@ -52,32 +60,49 @@ public class ModuleBoundaryTests
                 .HaveDependencyOn($"{module}.Infrastructure")
                 .GetResult();
 
-            Assert.That(result.IsSuccessful, Is.True, $"Application layer in {module} violates boundaries.");
+            Assert.That(result.IsSuccessful, Is.True, $"Application layer in {module} incorrectly references its own Infrastructure.");
         }
     }
 
     [Test]
-    public void Modules_Should_Not_Reference_Other_Modules_Directly()
+    public void Outer_Layers_Should_Only_Reference_Other_Modules_Through_Contracts()
     {
         foreach (var module in _moduleNamespaces)
         {
-            var domainAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Domain") == true);
-            
-            var appAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => a.FullName?.Contains($"{module}.Application") == true);
+            var appAssembly = GetAssembly($"{module}.Application");
+            var infraAssembly = GetAssembly($"{module}.Infrastructure");
 
-            var otherModules = _moduleNamespaces.Where(m => m != module).ToArray();
+            // Exclude public .Contracts namespaces from the forbidden list
+            var forbiddenNamespaces = _moduleNamespaces
+                .Where(m => m != module)
+                .SelectMany(m => new[] { $"{m}.Domain", $"{m}.Application", $"{m}.Infrastructure" })
+                .ToArray();
 
-            if (domainAssembly != null)
+            if (appAssembly != null)
             {
-                var domainResult = Types.InAssembly(domainAssembly)
+                var appResult = Types.InAssembly(appAssembly)
                     .ShouldNot()
-                    .HaveDependencyOnAny(otherModules)
+                    .HaveDependencyOnAny(forbiddenNamespaces)
                     .GetResult();
-                    
-                Assert.That(domainResult.IsSuccessful, Is.True, $"Domain in {module} references another module.");
+
+                Assert.That(appResult.IsSuccessful, Is.True, $"Application layer in {module} bypasses Contracts to reference other modules directly.");
+            }
+
+            if (infraAssembly != null)
+            {
+                var infraResult = Types.InAssembly(infraAssembly)
+                    .ShouldNot()
+                    .HaveDependencyOnAny(forbiddenNamespaces)
+                    .GetResult();
+
+                Assert.That(infraResult.IsSuccessful, Is.True, $"Infrastructure layer in {module} (including DbContext) bypasses Contracts to reference other modules directly.");
             }
         }
+    }
+
+    private static Assembly? GetAssembly(string assemblyName)
+    {
+        return AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == assemblyName);
     }
 }

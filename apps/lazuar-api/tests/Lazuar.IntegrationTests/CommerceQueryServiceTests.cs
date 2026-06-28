@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.Services;
+using Modules.CRM.Contracts;
 using NSubstitute;
 using NUnit.Framework;
 using Testcontainers.PostgreSql;
@@ -56,8 +57,9 @@ public class CommerceQueryServiceTests
 
         var connectionFactory = new NpgsqlConnectionFactory(connectionString);
         var tokenService = Substitute.For<IMagicLinkTokenService>();
+        var crmQueryService = Substitute.For<ICrmQueryService>();
 
-        _queryService = new CommerceQueryService(connectionFactory, tokenService);
+        _queryService = new CommerceQueryService(connectionFactory, tokenService, crmQueryService);
     }
 
     [OneTimeTearDown]
