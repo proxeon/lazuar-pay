@@ -1,7 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
+using Dapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Application;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
@@ -11,10 +16,14 @@ namespace Modules.Commerce.Infrastructure.Repositories;
 public class CommerceRepository : ICommerceRepository
 {
     private readonly CommerceDbContext _context;
+    private readonly ISqlConnectionFactory _connectionFactory;
 
-    public CommerceRepository(CommerceDbContext context)
+    public CommerceRepository(
+        CommerceDbContext context,
+        [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
         _context = context;
+        _connectionFactory = connectionFactory;
     }
 
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default)
@@ -71,6 +80,29 @@ public class CommerceRepository : ICommerceRepository
     public async Task<ReminderSchedule?> GetReminderScheduleByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.ReminderSchedules.FirstOrDefaultAsync(r => r.Id == id, ct);
+    }
+
+    public async Task<Dictionary<string, Guid>> GetDefaultTemplateIdsAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string query = @"
+            SELECT ""Id"", ""Name"" 
+            FROM communications.""MessageTemplates"" 
+            WHERE ""OrganizationId"" = @TenantId 
+              AND ""Name"" IN ('Subscription Renewal (3 Days)', 'Subscription Renewal Due Today', 'Subscription Renewal Overdue')";
+
+        var templates = await connection.QueryAsync<(Guid Id, string Name)>(
+            new CommandDefinition(query, new { TenantId = organizationId }, cancellationToken: ct));
+        
+        var templateDict = new Dictionary<string, Guid>();
+        foreach (var t in templates)
+        {
+            templateDict[t.Name] = t.Id;
+        }
+
+        return templateDict;
     }
 
     public void AddProduct(Product product) => _context.Products.Add(product);
