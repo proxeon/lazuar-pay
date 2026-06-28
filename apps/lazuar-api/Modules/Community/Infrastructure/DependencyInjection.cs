@@ -42,6 +42,8 @@ public static class DependencyInjection
 
         services.AddTransient<OrderCompletedIntegrationEventHandler>();
         services.AddTransient<SubscriptionActivatedIntegrationEventHandler>();
+        services.AddTransient<SubscriptionSuspendedIntegrationEventHandler>();
+        services.AddTransient<SubscriptionCanceledIntegrationEventHandler>();
 
         return services;
     }
@@ -51,6 +53,8 @@ public static class DependencyInjection
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedIntegrationEventHandler>();
         eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionActivatedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, SubscriptionSuspendedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, SubscriptionCanceledIntegrationEventHandler>();
         return app;
     }
 }

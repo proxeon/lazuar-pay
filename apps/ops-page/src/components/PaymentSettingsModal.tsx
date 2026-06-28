@@ -27,7 +27,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   useEffect(() => {
     async function loadConfig() {
       try {
-        const { data, error } = await client.GET("/admin/community/payment-config");
+        const { data, error } = await client.GET("/admin/commerce/payment-config");
         if (!error && data) {
           setGatewayType(data.gateway_type as any || "BILLPLZ");
           setIsActive(data.is_active ?? true);
@@ -72,7 +72,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
 
     setIsSaving(true);
     try {
-      const { error } = await client.PUT("/admin/community/payment-config", {
+      const { error } = await client.PUT("/admin/commerce/payment-config", {
         body: {
           gateway_type: gatewayType,
           is_active: isActive,
@@ -122,7 +122,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
             <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto">
               
               <div className="space-y-3">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Provider Settings</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Provider Settings</label>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#09090b]">Gateway Type</label>
@@ -144,7 +144,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Secure Credentials</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Secure Credentials</label>
                 
                 {gatewayType === "CHIP" && (
                   <>

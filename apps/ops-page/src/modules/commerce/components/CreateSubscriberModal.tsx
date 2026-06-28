@@ -45,9 +45,7 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
         throw new Error("Amount paid must be greater than RM 0 unless Comped is selected.");
       }
 
-      // Note: Endpoint expects "plan_id" under the hood due to backwards compatibility in the DTO
-      // but we bind it logically to "productId" in the frontend.
-      const { error } = await client.POST("/admin/community/subscribers", {
+      const { error } = await client.POST("/admin/commerce/subscribers" as any, {
         body: {
           name: name.trim(),
           email: email.trim().toLowerCase(),
@@ -61,7 +59,7 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
           send_welcome_email: sendWelcomeEmail,
           start_date: startDate ? new Date(startDate).toISOString() : undefined,
           next_billing_date: nextBillingDate ? new Date(nextBillingDate).toISOString() : undefined
-        } as any // Bypassing Strict typing temporarily as this endpoint will be fully migrated to commerce soon
+        } as any
       });
 
       if (error) throw new Error(error.detail || "Failed to create subscriber.");

@@ -12,8 +12,6 @@ client.use({
   onRequest({ request }) {
     const tenantId = localStorage.getItem("ops_active_workspace_id");
     
-    // Skip appending the Tenant ID on global identity routes.
-    // This ensures the backend security middleware does not block entitlement checks with 403s.
     if (tenantId && !request.url.includes("/one/")) {
       request.headers.set("X-Tenant-Id", tenantId);
     }
@@ -28,4 +26,4 @@ export type OpsConversationDto = components["schemas"]["Ops.OpsConversationDto"]
 export type OpsMessageDto = components["schemas"]["Ops.OpsMessageDto"];
 export type AuthUser = components["schemas"]["One.AuthUser"];
 export type EntitlementDto = components["schemas"]["One.EntitlementDto"];
-export type CommunitySubscriptionDto = components["schemas"]["Community.CommunitySubscriptionDto"];
+export type CommerceSubscriptionDto = components["schemas"]["Commerce.CommerceSubscriptionDto"];

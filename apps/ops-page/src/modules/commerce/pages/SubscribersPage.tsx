@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Copy, Plus } from "lucide-react";
+import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { client, API_URL, type components } from "../../../lib/api-client";
+import { client, API_URL, type CommerceSubscriptionDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
 import CreateSubscriberModal from "../components/CreateSubscriberModal";
-
-type CommerceSubscriptionDto = components["schemas"]["Commerce.CommerceSubscriptionDto"];
 
 export default function SubscribersPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
@@ -62,7 +60,7 @@ export default function SubscribersPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const response = await fetch(`${API_URL}/admin/community/subscribers/export`, {
+      const response = await fetch(`${API_URL}/admin/commerce/subscribers/export`, {
         headers: { "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "" },
       });
       const blob = await response.blob();
@@ -73,7 +71,7 @@ export default function SubscribersPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (err) {
+    } catch {
       toast.error("Failed to export data.");
     } finally {
       setIsExporting(false);
@@ -83,7 +81,7 @@ export default function SubscribersPage() {
   const actionMutation = useMutation({
     mutationFn: async ({ action, payload }: { action: string, payload?: any }) => {
       if (!selectedSub) throw new Error("No subscriber selected.");
-      const endpoint = `/admin/community/subscribers/{id}/${action}` as any; 
+      const endpoint = `/admin/commerce/subscribers/{id}/${action}` as any; 
       const { error } = await client.POST(endpoint, {
         params: { path: { id: selectedSub.id } },
         body: payload
@@ -337,7 +335,6 @@ export default function SubscribersPage() {
         <CreateSubscriberModal onClose={() => setIsCreateModalOpen(false)} />
       )}
 
-      {/* Record Payment Modal Overlay */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setIsPaymentModalOpen(false)} />
@@ -353,7 +350,7 @@ export default function SubscribersPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Method *</label>
-                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
+                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
                   <option value="BANK_TRANSFER">Bank Transfer (Manual)</option>
                   <option value="CASH">Cash</option>
                   <option value="COMPED">Complimentary (RM 0)</option>
@@ -361,7 +358,7 @@ export default function SubscribersPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Reference ID (Optional)</label>
-                <input value={paymentRef} onChange={e => setPaymentRef(e.target.value)} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+                <input value={paymentRef} onChange={e => setPaymentRef(e.target.value)} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
               </div>
             </div>
             <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
@@ -374,7 +371,6 @@ export default function SubscribersPage() {
         </div>
       )}
 
-      {/* Extend Grace Modal */}
       {extendGraceModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setExtendGraceModal({ isOpen: false, days: "7" })} />
@@ -399,7 +395,6 @@ export default function SubscribersPage() {
         </div>
       )}
 
-      {/* Refund Modal */}
       {refundModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setRefundModal({ isOpen: false, paymentId: "", reason: "" })} />

@@ -102,8 +102,8 @@ model ReminderScheduleDto {
 }
 
 model CreateReminderScheduleRequestDto {
-  product_id?: string; // GUID
-  template_id: string; // GUID
+  product_id?: string;
+  template_id: string;
   channel: string;
   days_relative_to_due: int32;
   time_of_day: string;
@@ -111,8 +111,8 @@ model CreateReminderScheduleRequestDto {
 }
 
 model UpdateReminderScheduleRequestDto {
-  product_id?: string; // GUID
-  template_id?: string; // GUID
+  product_id?: string;
+  template_id?: string;
   channel?: string;
   days_relative_to_due?: int32;
   time_of_day?: string;
@@ -248,6 +248,14 @@ model MagicLinkRequestDto {
   email: string;
 }
 
+model CancelPortalRequest {
+  subscription_id: string; // GUID
+}
+
+model BillingLinkResponseDto {
+  url: string;
+}
+
 model CheckoutResponse {
   url: string;
   is_zero_amount_bypass?: boolean;
@@ -258,14 +266,6 @@ model ValidateCouponResponseDto {
   discount_amount: float64;
   final_price: float64;
   error_message?: string;
-}
-
-model CancelPortalRequest {
-  subscription_id: string; // GUID
-}
-
-model BillingLinkResponseDto {
-  url: string;
 }
 
 model CheckoutStatusResponse {

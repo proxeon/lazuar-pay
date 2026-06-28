@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
+import { cn } from "../../../lib/utils";
 
 interface PaymentSettingsModalProps {
   onClose: () => void;
