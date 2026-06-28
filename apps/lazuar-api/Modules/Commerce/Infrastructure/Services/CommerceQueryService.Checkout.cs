@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using Lazuar.ApiTypes;
+using Modules.Commerce.Application.Queries;
 
 namespace Modules.Commerce.Infrastructure.Services;
 

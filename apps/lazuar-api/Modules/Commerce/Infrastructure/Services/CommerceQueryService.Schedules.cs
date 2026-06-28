@@ -33,15 +33,15 @@ public partial class CommerceQueryService
         return rawSchedules.Select(r => new ReminderScheduleDto
         {
             Id = r.Id.ToString(),
-            ProductId = r.ProductId?.ToString(),
-            ProductName = r.ProductName,
-            TemplateId = r.TemplateId.ToString(),
-            TemplateName = "Assigned Template",
+            Product_id = r.ProductId?.ToString(),
+            Product_name = r.ProductName,
+            Template_id = r.TemplateId.ToString(),
+            Template_name = "Assigned Template",
             Channel = r.Channel,
-            DaysRelativeToDue = r.DaysRelativeToDue,
-            TimeOfDay = r.TimeOfDay,
-            IsEnabled = r.IsEnabled,
-            CreatedAt = new DateTimeOffset(r.CreatedAt)
+            Days_relative_to_due = r.DaysRelativeToDue,
+            Time_of_day = r.TimeOfDay,
+            Is_enabled = r.IsEnabled,
+            Created_at = new DateTimeOffset(r.CreatedAt)
         }).ToList();
     }
 }

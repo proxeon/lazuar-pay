@@ -62,20 +62,20 @@ public partial class CommerceQueryService
             return new CommerceSubscriptionDto
             {
                 Id = s.Id.ToString(),
-                ClientProfileId = s.ClientProfileId.ToString(),
-                CustomerName = s.CustomerName ?? "Unknown",
-                CustomerEmail = s.CustomerEmail ?? "",
-                CustomerPhone = s.CustomerPhone ?? "",
-                ProductId = s.ProductId.ToString(),
-                ProductName = s.ProductName,
-                ProductPrice = (double)s.ProductPrice,
+                Client_profile_id = s.ClientProfileId.ToString(),
+                Customer_name = s.CustomerName ?? "Unknown",
+                Customer_email = s.CustomerEmail ?? "",
+                Customer_phone = s.CustomerPhone ?? "",
+                Product_id = s.ProductId.ToString(),
+                Product_name = s.ProductName,
+                Product_price = (double)s.ProductPrice,
                 Status = s.Status,
-                CurrentPeriodEnd = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
-                NextBillingDate = s.NextBillingDate.HasValue ? new DateTimeOffset(s.NextBillingDate.Value) : null,
-                DaysOverdue = daysOverdue,
-                VaultedCustomerId = s.VaultedCustomerId,
-                VaultedTokenId = s.VaultedTokenId,
-                CreatedAt = new DateTimeOffset(s.CreatedAt)
+                Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
+                Next_billing_date = s.NextBillingDate.HasValue ? new DateTimeOffset(s.NextBillingDate.Value) : null,
+                Days_overdue = daysOverdue,
+                Vaulted_customer_id = s.VaultedCustomerId,
+                Vaulted_token_id = s.VaultedTokenId,
+                Created_at = new DateTimeOffset(s.CreatedAt)
             };
         });
 

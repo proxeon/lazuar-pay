@@ -48,18 +48,18 @@ public partial class CommerceQueryService
             Subscriptions = subs.Select(s => new PortalSubscriptionDto
             {
                 Id = s.Id.ToString(),
-                ProductId = s.ProductId.ToString(),
-                ProductName = s.ProductName,
+                Product_id = s.ProductId.ToString(),
+                Product_name = s.ProductName,
                 Status = s.Status,
-                CurrentPeriodEnd = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null
+                Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null
             }).ToList(),
             Orders = orders.Select(o => new PortalOrderDto
             {
                 Id = o.Id.ToString(),
-                ProductId = o.ProductId.ToString(),
-                ProductName = o.ProductName,
+                Product_id = o.ProductId.ToString(),
+                Product_name = o.ProductName,
                 Status = o.Status,
-                CreatedAt = new DateTimeOffset(o.CreatedAt)
+                Created_at = new DateTimeOffset(o.CreatedAt)
             }).ToList()
         };
     }

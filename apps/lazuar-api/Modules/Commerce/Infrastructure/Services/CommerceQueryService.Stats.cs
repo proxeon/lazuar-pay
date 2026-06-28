@@ -42,15 +42,15 @@ public partial class CommerceQueryService
         return new CommerceStatsDto
         {
             Mrr = (double)mrr,
-            ActiveSubscribers = activeSubs.Count,
-            PastDueSubscribers = subs.Count(s => s.Status == "PAST_DUE"),
-            CancelledSubscribers = subs.Count(s => s.Status == "CANCELED"),
-            NetNewLast30Days = newActiveLast30 - cancelledLast30,
-            ChurnRatePercentage = churnRate,
-            AverageRevenuePerUser = arpu,
-            TotalRevenueCollected = 0, 
-            CashFlowTrend = new List<CashFlowTrendDto>(),
-            PaymentMethods = new List<PaymentMethodDto>()
+            Active_subscribers = activeSubs.Count,
+            Past_due_subscribers = subs.Count(s => s.Status == "PAST_DUE"),
+            Cancelled_subscribers = subs.Count(s => s.Status == "CANCELED"),
+            Net_new_last_30_days = newActiveLast30 - cancelledLast30,
+            Churn_rate_percentage = churnRate,
+            Average_revenue_per_user = arpu,
+            Total_revenue_collected = 0, 
+            Cash_flow_trend = new List<CashFlowTrendDto>(),
+            Payment_methods = new List<PaymentMethodDto>()
         };
     }
 }

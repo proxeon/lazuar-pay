@@ -84,18 +84,18 @@ public partial class CommerceQueryService
             Slug = raw.Slug,
             Name = raw.Name,
             Price = (double)raw.Price,
-            PricingModel = raw.PricingModel,
-            MinimumPrice = (double)raw.MinimumPrice,
+            Pricing_model = raw.PricingModel,
+            Minimum_price = (double)raw.MinimumPrice,
             Currency = raw.Currency,
             Interval = raw.Interval,
-            IsActive = raw.IsActive,
-            CheckoutConfiguration = new CheckoutConfigurationDto
+            Is_active = raw.IsActive,
+            Checkout_configuration = new CheckoutConfigurationDto
             {
-                RequiresAddress = raw.RequiresAddress,
-                RequiresPhone = raw.RequiresPhone,
-                RequiresTaxId = raw.RequiresTaxId
+                Requires_address = raw.RequiresAddress,
+                Requires_phone = raw.RequiresPhone,
+                Requires_tax_id = raw.RequiresTaxId
             },
-            FulfillmentTargets = fulfillmentTargets
+            Fulfillment_targets = fulfillmentTargets
         };
     }
 }

@@ -44,15 +44,15 @@ public partial class CommerceQueryService
             {
                 Id = c.Id.ToString(),
                 Code = c.Code,
-                DiscountType = c.DiscountType,
+                Discount_type = c.DiscountType,
                 Amount = (double)c.Amount,
-                MaxUses = c.MaxUses,
-                UsedCount = c.UsedCount,
-                ReservedCount = c.ReservedCount,
-                MinimumOriginalPrice = (double)c.MinimumOriginalPrice,
-                ExpiresAt = c.ExpiresAt.HasValue ? new DateTimeOffset(c.ExpiresAt.Value) : null,
-                ApplicableProductIds = productIds,
-                IsActive = c.IsActive
+                Max_uses = c.MaxUses,
+                Used_count = c.UsedCount,
+                Reserved_count = c.ReservedCount,
+                Minimum_original_price = (double)c.MinimumOriginalPrice,
+                Expires_at = c.ExpiresAt.HasValue ? new DateTimeOffset(c.ExpiresAt.Value) : null,
+                Applicable_product_ids = productIds,
+                Is_active = c.IsActive
             };
         }).ToList();
     }

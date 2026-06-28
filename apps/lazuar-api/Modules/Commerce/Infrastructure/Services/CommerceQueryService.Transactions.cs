@@ -90,17 +90,17 @@ public partial class CommerceQueryService
         {
             Id = t.Id.ToString(),
             Amount = (double)t.Amount,
-            FeeAmount = (double)t.FeeAmount,
-            NetAmount = (double)t.NetAmount,
+            Fee_amount = (double)t.FeeAmount,
+            Net_amount = (double)t.NetAmount,
             Currency = t.Currency,
             Status = t.Status,
-            CreatedAt = new DateTimeOffset(t.CreatedAt),
-            CustomerName = t.CustomerName,
-            CustomerEmail = t.CustomerEmail,
-            ProductName = t.ProductName,
-            PaymentMethod = t.PaymentMethod,
-            RecordedByName = "SYSTEM",
-            ExternalReference = t.ExternalReference
+            Created_at = new DateTimeOffset(t.CreatedAt),
+            Customer_name = t.CustomerName,
+            Customer_email = t.CustomerEmail,
+            Product_name = t.ProductName,
+            Payment_method = t.PaymentMethod,
+            Recorded_by_name = "SYSTEM",
+            External_reference = t.ExternalReference
         });
 
         return new PaginatedResponse<TransactionLogDto>(dtos, totalCount, page, limit);
