@@ -55,6 +55,11 @@ interface AdminCommerceOperations {
     @body body: CreateReminderScheduleRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/reminder-schedules/defaults")
+  generateDefaultSchedules(
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @put
   @route("/reminder-schedules/{id}")
   updateReminderSchedule(

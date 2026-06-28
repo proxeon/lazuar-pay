@@ -40,6 +40,14 @@ public static class ReminderScheduleEndpoints
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         });
 
+        group.MapPost("/reminder-schedules/defaults", async Task<Ok<StatusResponse>> (
+            IExecutionContextAccessor ctx, 
+            IMediator mediator) =>
+        {
+            await mediator.Send(new GenerateDefaultSchedulesCommand(ctx.TenantId));
+            return TypedResults.Ok(new StatusResponse { Status = "generated" });
+        });
+
         group.MapPut("/reminder-schedules/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id, 
             UpdateReminderScheduleRequestDto req, 

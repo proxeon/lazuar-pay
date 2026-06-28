@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Zap } from "lucide-react";
+import { Loader2, Plus, Zap, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
@@ -63,6 +63,18 @@ export default function DunningSchedulesPage() {
     onError: (err: any) => toast.error(err.message)
   });
 
+  const deployDefaultsMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await client.POST("/admin/commerce/reminder-schedules/defaults");
+      if (error) throw new Error(error.detail);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commerce-reminder-schedules"] });
+      toast.success("Industry-standard dunning strategy deployed.");
+    },
+    onError: (err: any) => toast.error("Failed to deploy strategy", { description: err.message })
+  });
+
   return (
     <PageLayout 
       title="Dunning Schedules" 
@@ -84,19 +96,30 @@ export default function DunningSchedulesPage() {
           </div>
         ) : schedules?.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 py-20 px-4 text-center">
-            <div className="h-12 w-12 rounded-full bg-[#f4f4f5] flex items-center justify-center mb-4">
-              <Zap size={24} className="text-[#a1a1aa]" />
+            <div className="h-16 w-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-6 shadow-sm">
+              <ShieldCheck size={28} className="text-emerald-600" />
             </div>
-            <h3 className="text-[14px] font-bold text-[#09090b] mb-2">No Dunning Rules Configured</h3>
-            <p className="text-[13px] text-[#71717a] max-w-sm mb-6 leading-relaxed">
-              Automate your revenue collection by scheduling reminders before and after a subscription's due date.
+            <h3 className="text-[16px] font-bold text-[#09090b] mb-2">Automated Revenue Recovery</h3>
+            <p className="text-[13px] text-[#71717a] max-w-md mb-8 leading-relaxed">
+              Dunning Rules tell Lazuar exactly when to chase failing payments. We recommend deploying the standard 3-step recovery strategy to maximize revenue retention.
             </p>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
-            >
-              <Plus size={14} /> Create your first rule
-            </button>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <button
+                onClick={() => deployDefaultsMutation.mutate()}
+                disabled={deployDefaultsMutation.isPending}
+                className="h-10 px-6 bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {deployDefaultsMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />} 
+                Deploy Recommended Strategy
+              </button>
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                disabled={deployDefaultsMutation.isPending}
+                className="h-10 px-6 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest hover:bg-[#fafafa] transition-colors disabled:opacity-50"
+              >
+                Build Custom Rule
+              </button>
+            </div>
           </div>
         ) : (
           <div className="p-0 overflow-x-auto flex-1">
