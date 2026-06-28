@@ -15,7 +15,7 @@ namespace Modules.Vault.Infrastructure;
 
 public static class VaultEndpoints
 {
-    public static RouteGroupBuilder MapVaultEndpoints(this RouteGroupBuilder group)
+    public static RouteGroupBuilder MapPresignedUrlEndpoints(this RouteGroupBuilder group)
     {
         group.MapPost("/presigned-url", Task<Results<Ok<GetPresignedUrlResponseDto>, BadRequest<string>>> (
             [FromBody] GetPresignedUrlRequestDto req,

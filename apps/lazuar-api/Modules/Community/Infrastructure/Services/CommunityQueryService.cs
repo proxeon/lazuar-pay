@@ -18,8 +18,22 @@ public partial class CommunityQueryService : ICommunityQueryService
     private readonly ICrmQueryService _crmQueryService;
     private readonly IOneQueryService _oneQueryService;
 
-    private record RawCommunitySpaceDto(string ProductIdsJson, string Name, string? TelegramLink, string? ZoomLink);
-    private record RawAdminCommunitySpaceDto(Guid Id, string ProductIdsJson, string Name, string? TelegramLink, string? ZoomLink);
+    private class RawCommunitySpaceDto
+    {
+        public string ProductIdsJson { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string? TelegramLink { get; set; }
+        public string? ZoomLink { get; set; }
+    }
+
+    private class RawAdminCommunitySpaceDto
+    {
+        public Guid Id { get; set; }
+        public string ProductIdsJson { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string? TelegramLink { get; set; }
+        public string? ZoomLink { get; set; }
+    }
 
     public CommunityQueryService(
         [FromKeyedServices("CommunitySqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
@@ -40,7 +54,7 @@ public partial class CommunityQueryService : ICommunityQueryService
         if (ids.Length == 0) return Array.Empty<PortalCommunitySpaceDto>();
 
         const string sql = @"
-            SELECT ""ProductIds""::text as ProductIdsJson, ""Name"" as name, ""TelegramLink"" as telegram_link, ""ZoomLink"" as zoom_link
+            SELECT ""ProductIds""::text as ProductIdsJson, ""Name"" as Name, ""TelegramLink"" as TelegramLink, ""ZoomLink"" as ZoomLink
             FROM community.""CommunitySpaces""
             WHERE ""OrganizationId"" = @OrgId";
 
@@ -81,7 +95,7 @@ public partial class CommunityQueryService : ICommunityQueryService
         if (connection.State != System.Data.ConnectionState.Open) connection.Open();
 
         const string sql = @"
-            SELECT ""Id"", ""ProductIds""::text as ProductIdsJson, ""Name"" as name, ""TelegramLink"" as telegram_link, ""ZoomLink"" as zoom_link
+            SELECT ""Id"", ""ProductIds""::text as ProductIdsJson, ""Name"" as Name, ""TelegramLink"" as TelegramLink, ""ZoomLink"" as ZoomLink
             FROM community.""CommunitySpaces""
             WHERE ""OrganizationId"" = @OrgId
             ORDER BY ""Name""";
