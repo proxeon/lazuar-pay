@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Modules.Commerce.Domain.Aggregates;
@@ -17,6 +18,7 @@ public interface ICommerceRepository
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
     Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default);
     Task<ReminderSchedule?> GetReminderScheduleByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Dictionary<string, Guid>> GetDefaultTemplateIdsAsync(Guid organizationId, CancellationToken ct = default);
 
     void AddProduct(Product product);
     void AddSubscription(Subscription subscription);

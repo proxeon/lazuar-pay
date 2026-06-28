@@ -1044,11 +1044,14 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("amount")]
         public double Amount { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("fee_amount")]
+        public double Fee_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("net_amount")]
+        public double Net_amount { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("currency")]
         public string Currency { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("payment_method")]
-        public string Payment_method { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("status")]
         public string Status { get; set; } = default!;
@@ -1061,6 +1064,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("customer_email")]
         public string Customer_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_name")]
+        public string? Product_name { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("recorded_by_name")]
         public string Recorded_by_name { get; set; } = default!;
