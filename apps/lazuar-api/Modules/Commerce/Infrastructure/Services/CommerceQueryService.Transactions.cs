@@ -20,9 +20,9 @@ public partial class CommerceQueryService
         DateTime CreatedAt, 
         string CustomerName, 
         string CustomerEmail, 
-        string ProductName, 
+        string? ProductName, 
         string PaymentMethod, 
-        string ExternalReference,
+        string? ExternalReference,
         int TotalCount
     );
 
@@ -52,9 +52,9 @@ public partial class CommerceQueryService
                 t.""CustomerName"",
                 t.""CustomerEmail"",
                 t.""ProductName"",
-                'GATEWAY' as PaymentMethod,
+                'GATEWAY' as ""PaymentMethod"",
                 t.""ExternalReference"",
-                COUNT(*) OVER() AS TotalCount
+                (COUNT(*) OVER())::int AS ""TotalCount""
             FROM commerce.""TransactionLogs"" t
             WHERE t.""OrganizationId"" = @OrgId
             AND (@Status IS NULL OR t.""Status"" = @Status)
