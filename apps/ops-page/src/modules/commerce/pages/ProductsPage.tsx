@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, CreditCard } from "lucide-react";
+import { Link } from "react-router-dom";
 import { client, type EntitlementDto, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
@@ -26,6 +27,17 @@ export default function ProductsPage() {
     enabled: !!activeWorkspaceId
   });
 
+  const { data: paymentConfig, error: paymentConfigError } = useQuery({
+    queryKey: ["payment-config-status"],
+    queryFn: async () => {
+      const { data, error, response } = await client.GET("/admin/commerce/payment-config");
+      if (response.status === 404) return null;
+      if (error) throw new Error(error.detail);
+      return data;
+    },
+    enabled: !!activeWorkspaceId
+  });
+
   const { data: entitlements } = useQuery({
     queryKey: ["entitlements"],
     queryFn: async () => {
@@ -35,6 +47,7 @@ export default function ProductsPage() {
   });
 
   const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
+  const showGatewayWarning = paymentConfigError || !paymentConfig || !paymentConfig.is_active;
 
   return (
     <PageLayout 
@@ -50,66 +63,84 @@ export default function ProductsPage() {
         </button>
       }
     >
-      <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
-        <div className="w-full overflow-x-auto min-h-[320px]">
-          <table className="w-full text-left text-[13px] min-w-[700px]">
-            <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
-              <tr>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Link Details</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Pricing Model</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[25%]">Price (MYR)</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#f4f4f5]">
-              {isLoading ? (
-                <tr><td colSpan={4} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
-              ) : products?.length === 0 ? (
+      <div className="flex flex-col gap-6">
+        
+        {showGatewayWarning && (
+          <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-200">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={18} className="text-rose-600" />
+              <div>
+                <p className="text-[13px] font-bold text-rose-800">Action Required: Payment Gateway Not Configured</p>
+                <p className="text-[12px] text-rose-700 mt-0.5">Your checkout links cannot accept payments. Customers will be unable to purchase your products.</p>
+              </div>
+            </div>
+            <Link to="/commerce/payment" className="h-8 px-4 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+              <CreditCard size={14} /> Configure Now
+            </Link>
+          </div>
+        )}
+
+        <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
+          <div className="w-full overflow-x-auto min-h-[320px]">
+            <table className="w-full text-left text-[13px] min-w-[700px]">
+              <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-[13px] text-[#71717a]">
-                    No checkout links found. Click "Create Link" to build one.
-                  </td>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Link Details</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Pricing Model</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[25%]">Price (MYR)</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Status</th>
                 </tr>
-              ) : (
-                products?.map((product: ProductDto) => (
-                  <tr 
-                    key={product.id} 
-                    onClick={() => setSelectedProduct(product)}
-                    className={cn(
-                      "hover:bg-[#fafafa] transition-colors cursor-pointer group",
-                      !product.is_active && "opacity-60 bg-[#fafafa]/30"
-                    )}
-                  >
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{product.name}</span>
-                      </div>
-                      <p className="text-[11px] font-mono text-[#71717a]">{product.slug}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="text-[11px] font-medium text-[#52525b]">
-                        {product.pricing_model === "PWYW" ? "Pay What You Want" : "Fixed Price"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="font-mono text-[#09090b]">
-                        <span className="font-bold">RM {product.price.toFixed(2)}</span>
-                        <span className="text-[11px] text-[#71717a] ml-1 uppercase">{product.interval}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={cn(
-                        "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block",
-                        product.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-zinc-100 text-zinc-500 border-zinc-200"
-                      )}>
-                        {product.is_active ? "Active" : "Archived"}
-                      </span>
+              </thead>
+              <tbody className="divide-y divide-[#f4f4f5]">
+                {isLoading ? (
+                  <tr><td colSpan={4} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
+                ) : products?.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-12 text-center text-[13px] text-[#71717a]">
+                      No checkout links found. Click "Create Link" to build one.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  products?.map((product: ProductDto) => (
+                    <tr 
+                      key={product.id} 
+                      onClick={() => setSelectedProduct(product)}
+                      className={cn(
+                        "hover:bg-[#fafafa] transition-colors cursor-pointer group",
+                        !product.is_active && "opacity-60 bg-[#fafafa]/30"
+                      )}
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{product.name}</span>
+                        </div>
+                        <p className="text-[11px] font-mono text-[#71717a]">{product.slug}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-[11px] font-medium text-[#52525b]">
+                          {product.pricing_model === "PWYW" ? "Pay What You Want" : "Fixed Price"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="font-mono text-[#09090b]">
+                          <span className="font-bold">RM {product.price.toFixed(2)}</span>
+                          <span className="text-[11px] text-[#71717a] ml-1 uppercase">{product.interval}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={cn(
+                          "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block",
+                          product.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                        )}>
+                          {product.is_active ? "Active" : "Archived"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

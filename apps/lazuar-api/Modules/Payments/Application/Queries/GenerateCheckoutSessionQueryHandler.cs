@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Payments/Application/Queries/GenerateCheckoutSessionQueryHandler.cs
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Queries;
@@ -24,7 +23,7 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
 
         if (config == null || !config.IsActive || string.IsNullOrEmpty(config.ApiKey))
         {
-            throw new InvalidOperationException("Payment gateway is not configured or active for this tenant.");
+            throw new InvalidOperationException("Payment gateway is not configured or active for this workspace.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);

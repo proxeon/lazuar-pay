@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2 } from "lucide-react";
+import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, CreditCard } from "lucide-react";
+import { Link } from "react-router-dom";
 import { client } from "../../../lib/api-client";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "../../../lib/utils";
@@ -33,7 +34,17 @@ export default function DashboardPage() {
     }
   });
 
-  if (statsLoading || financialsLoading || productsLoading) {
+  const { data: paymentConfig, error: paymentConfigError, isLoading: paymentConfigLoading } = useQuery({
+    queryKey: ["payment-config-status"],
+    queryFn: async () => {
+      const { data, error, response } = await client.GET("/admin/commerce/payment-config");
+      if (response.status === 404) return null;
+      if (error) throw new Error(error.detail);
+      return data;
+    }
+  });
+
+  if (statsLoading || financialsLoading || productsLoading || paymentConfigLoading) {
     return (
       <div className="flex-1 flex items-center justify-center h-full bg-[#fafafa]">
         <Loader2 className="animate-spin text-[#a1a1aa] h-8 w-8" />
@@ -50,6 +61,8 @@ export default function DashboardPage() {
     { label: "Cancellation Rate", value: `${stats?.churn_rate_percentage || 0}%`, icon: Activity },
   ];
 
+  const showGatewayWarning = paymentConfigError || !paymentConfig || !paymentConfig.is_active;
+
   return (
     <PageLayout 
       title="Sales Insights" 
@@ -57,6 +70,22 @@ export default function DashboardPage() {
       breadcrumbs={[{ label: "Commerce" }, { label: "Dashboard" }]}
     >
       <div className="space-y-6">
+        
+        {showGatewayWarning && (
+          <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-200">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={18} className="text-rose-600" />
+              <div>
+                <p className="text-[13px] font-bold text-rose-800">Action Required: Payment Gateway Not Configured</p>
+                <p className="text-[12px] text-rose-700 mt-0.5">Your checkout links cannot accept payments. Customers will be unable to purchase your products.</p>
+              </div>
+            </div>
+            <Link to="/commerce/payment" className="h-8 px-4 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+              <CreditCard size={14} /> Configure Now
+            </Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {topMetrics.map((kpi, i) => (
             <div key={i} className={cn(
@@ -82,7 +111,6 @@ export default function DashboardPage() {
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] mb-6">Revenue Trend</h3>
             <div className="flex-1 w-full relative">
               <div className="absolute inset-0 flex items-center justify-center">
-                 {/* Recharts was causing issues with empty data, displaying placeholder */}
                  <span className="text-[11px] text-[#a1a1aa]">Not enough data to graph</span>
               </div>
             </div>

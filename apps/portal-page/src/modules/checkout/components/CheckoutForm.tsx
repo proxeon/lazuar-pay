@@ -16,6 +16,7 @@ interface CheckoutFormProps {
   onQuantityChange: (qty: number) => void;
   onSetGuestMode: (isGuest: boolean) => void;
   onSuccessZeroAmount: () => void;
+  onError: (errorMsg: string) => void;
 }
 
 export function CheckoutForm({
@@ -27,7 +28,8 @@ export function CheckoutForm({
   quantity,
   onQuantityChange,
   onSetGuestMode,
-  onSuccessZeroAmount
+  onSuccessZeroAmount,
+  onError
 }: CheckoutFormProps) {
   const config = product.checkout_configuration;
 
@@ -46,7 +48,6 @@ export function CheckoutForm({
   const [countryCode, setCountryCode] = useState("MY");
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleEnableGuestMode = () => {
     onSetGuestMode(true);
@@ -63,7 +64,6 @@ export function CheckoutForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError(null);
 
     const payload: PublicCheckoutRequestDto = {
       tenant_slug: tenantSlug,
@@ -92,7 +92,7 @@ export function CheckoutForm({
         window.location.href = result.url;
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred during checkout.");
+      onError(err.message || "An error occurred during checkout.");
       setIsSubmitting(false);
     }
   };
@@ -108,12 +108,6 @@ export function CheckoutForm({
         onEnableGuestMode={handleEnableGuestMode}
         onDisableGuestMode={handleDisableGuestMode}
       />
-
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
-          {error}
-        </div>
-      )}
 
       <div className="space-y-4 border-b border-border/60 pb-6">
         <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Account Details</h3>

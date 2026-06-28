@@ -23,6 +23,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   const [couponCode, setCouponCode] = useState("");
   const [isCouponValidating, setIsCouponValidating] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   
   const [quantity, setQuantity] = useState(1);
   const [customPrice, setCustomPrice] = useState<number>(product.price);
@@ -35,6 +36,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   const handleApplyCoupon = async (code: string) => {
     setIsCouponValidating(true);
     setCouponError(null);
+    setGlobalError(null);
 
     try {
       const data = await validateCouponCode(tenantSlug, product.slug, code);
@@ -61,6 +63,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     setFinalPrice(null);
     setIsCouponApplied(false);
     setCouponError(null);
+    setGlobalError(null);
   };
 
   const handleQuantityChange = (newQty: number) => {
@@ -85,6 +88,14 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     router.push(`/${tenantSlug}/checkout/${product.slug}/success`);
   };
 
+  const handleError = (errorMsg: string) => {
+    if (errorMsg.includes("Payment gateway is not configured or active for this workspace")) {
+      setGlobalError("This creator is currently updating their payment settings. Please try again later.");
+    } else {
+      setGlobalError(errorMsg);
+    }
+  };
+
   const checkoutContext: CheckoutContext = {
     itemName: product.name,
     pricingModel: product.pricing_model,
@@ -101,9 +112,15 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-8 md:py-12">
-      {isCancelled && (
+      {isCancelled && !globalError && (
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
           Payment was cancelled or failed. Please try again or use a different payment method.
+        </div>
+      )}
+
+      {globalError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
+          {globalError}
         </div>
       )}
 
@@ -119,6 +136,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
             onQuantityChange={handleQuantityChange}
             onSetGuestMode={handleSetGuestMode}
             onSuccessZeroAmount={handleSuccessZeroAmount}
+            onError={handleError}
           />
         }
         summarySlot={
