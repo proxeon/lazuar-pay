@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, ShoppingCart, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { client } from "../../../lib/api-client";
 
 interface CreateSpaceModalProps {
@@ -11,13 +12,14 @@ interface CreateSpaceModalProps {
 
 export default function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [telegramLink, setTelegramLink] = useState("");
   const [zoomLink, setZoomLink] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
-  const { data: products } = useQuery({
+  const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["commerce-products"],
     queryFn: async () => {
       const { data } = await client.GET("/admin/commerce/products");
@@ -54,7 +56,14 @@ export default function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalPr
     );
   };
 
+  const navigateToCommerce = () => {
+    onClose();
+    navigate("/commerce/products");
+  };
+
   if (!isOpen) return null;
+
+  const showEmptyState = !isProductsLoading && products?.length === 0;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -67,59 +76,77 @@ export default function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalPr
           </button>
         </div>
         
-        <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="flex flex-col flex-1 min-h-0">
-          <div className="p-6 space-y-6 flex-1 overflow-y-auto bg-[#fafafa]/30">
-            
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Space Identity</label>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Space Name *</label>
-                <input required value={name} onChange={e => setName(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
-              </div>
+        {showEmptyState ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center bg-[#fafafa]/50">
+            <div className="h-16 w-16 bg-white border border-[#e5e5e5] rounded-full flex items-center justify-center mb-6 shadow-sm">
+              <ShoppingCart size={24} className="text-[#09090b]" />
             </div>
-
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Access Links (Provided after purchase)</label>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Telegram/Group Link</label>
-                <input type="url" value={telegramLink} onChange={e => setTelegramLink(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" placeholder="https://t.me/..." />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Weekly Zoom Link</label>
-                <input type="url" value={zoomLink} onChange={e => setZoomLink(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" placeholder="https://zoom.us/..." />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Unlocked By Commerce Products *</label>
-              <div className="border border-[#e5e5e5] rounded-sm bg-white overflow-hidden">
-                <div className="max-h-[160px] overflow-y-auto p-2 space-y-1">
-                  {products?.map((product: any) => (
-                    <label key={product.id} className="flex items-center gap-2 p-1.5 hover:bg-[#fafafa] cursor-pointer rounded-sm">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedProductIds.includes(product.id)}
-                        onChange={() => handleProductToggle(product.id)}
-                        disabled={createMutation.isPending}
-                        className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]"
-                      />
-                      <span className="text-[12px] text-[#09090b] font-medium">{product.name}</span>
-                    </label>
-                  ))}
-                  {products?.length === 0 && <span className="text-[11px] text-[#a1a1aa] p-2">No Commerce Products found.</span>}
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="px-5 py-4 border-t border-[#e5e5e5] bg-[#fafafa]/50 flex justify-end gap-2 shrink-0">
-            <button type="button" onClick={onClose} disabled={createMutation.isPending} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
-            <button type="submit" disabled={createMutation.isPending || selectedProductIds.length === 0} className="px-6 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
-              {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Create Space
+            <h3 className="text-[15px] font-bold text-[#09090b] mb-2">Commerce Product Required</h3>
+            <p className="text-[13px] text-[#71717a] leading-relaxed max-w-sm mb-8">
+              To grant access to a community, you must first create a Commerce Product to act as the pricing tier and checkout link.
+            </p>
+            <button 
+              onClick={navigateToCommerce}
+              className="h-10 px-6 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
+            >
+              Go to Commerce Products <ArrowRight size={14} />
             </button>
           </div>
-        </form>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }} className="flex flex-col flex-1 min-h-0">
+            <div className="p-6 space-y-6 flex-1 overflow-y-auto bg-[#fafafa]/30">
+              
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Space Identity</label>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Space Name *</label>
+                  <input required value={name} onChange={e => setName(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Access Links (Provided after purchase)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Telegram/Group Link</label>
+                  <input type="url" value={telegramLink} onChange={e => setTelegramLink(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" placeholder="https://t.me/..." />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Weekly Zoom Link</label>
+                  <input type="url" value={zoomLink} onChange={e => setZoomLink(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" placeholder="https://zoom.us/..." />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Unlocked By Commerce Products *</label>
+                <div className="border border-[#e5e5e5] rounded-sm bg-white overflow-hidden">
+                  <div className="max-h-[160px] overflow-y-auto p-2 space-y-1">
+                    {products?.map((product: any) => (
+                      <label key={product.id} className="flex items-center gap-2 p-1.5 hover:bg-[#fafafa] cursor-pointer rounded-sm">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedProductIds.includes(product.id)}
+                          onChange={() => handleProductToggle(product.id)}
+                          disabled={createMutation.isPending}
+                          className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]"
+                        />
+                        <span className="text-[12px] text-[#09090b] font-medium">{product.name}</span>
+                      </label>
+                    ))}
+                    {isProductsLoading && <div className="flex justify-center p-4"><Loader2 className="animate-spin text-[#a1a1aa]" size={16} /></div>}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="px-5 py-4 border-t border-[#e5e5e5] bg-[#fafafa]/50 flex justify-end gap-2 shrink-0">
+              <button type="button" onClick={onClose} disabled={createMutation.isPending} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
+              <button type="submit" disabled={createMutation.isPending || selectedProductIds.length === 0} className="px-6 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
+                {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Create Space
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

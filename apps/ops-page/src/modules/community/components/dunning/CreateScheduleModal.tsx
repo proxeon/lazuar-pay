@@ -58,6 +58,9 @@ export default function CreateScheduleModal({ products, templates, onClose }: Cr
                   <option value="">All Products (Global)</option>
                   {products?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+                {products?.length === 0 && (
+                  <p className="text-[10px] text-amber-600 mt-1">You have no Commerce Products yet. This rule will automatically apply globally to future products.</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Message Template *</label>
