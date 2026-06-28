@@ -38,15 +38,15 @@ export default function ProductsPage() {
 
   return (
     <PageLayout 
-      title="Universal Products" 
+      title="Checkout Links" 
       description="Manage all your checkouts and pricing rules across the ecosystem."
-      breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Products" }]}
+      breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Checkout Links" }]}
       actionButton={
         <button 
           onClick={() => setIsCreateModalOpen(true)}
           className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
         >
-          <Plus size={14} /> New Product
+          <Plus size={14} /> Create Link
         </button>
       }
     >
@@ -55,7 +55,7 @@ export default function ProductsPage() {
           <table className="w-full text-left text-[13px] min-w-[700px]">
             <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
               <tr>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Product Details</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Link Details</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Pricing Model</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[25%]">Price (MYR)</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Status</th>
@@ -67,7 +67,7 @@ export default function ProductsPage() {
               ) : products?.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-12 text-center text-[13px] text-[#71717a]">
-                    No products found. Click "New Product" to build a checkout link.
+                    No checkout links found. Click "Create Link" to build one.
                   </td>
                 </tr>
               ) : (

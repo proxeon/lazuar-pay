@@ -36,12 +36,12 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
     onMutate: () => setIsActionLoading(true),
     onSettled: () => setIsActionLoading(false),
     onSuccess: (variables) => {
-      toast.success("Product saved successfully");
+      toast.success("Checkout link saved successfully");
       queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
       onUpdate({ ...product!, ...variables, is_active: variables.is_active ?? product!.is_active });
       setIsEditing(false);
     },
-    onError: (err: any) => toast.error("Failed to update product", { description: err.message })
+    onError: (err: any) => toast.error("Failed to update checkout link", { description: err.message })
   });
 
   const softDeleteMutation = useMutation({
@@ -54,11 +54,11 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
     onMutate: () => setIsActionLoading(true),
     onSettled: () => setIsActionLoading(false),
     onSuccess: () => {
-      toast.success("Product archived successfully");
+      toast.success("Checkout link archived successfully");
       queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
       onUpdate(product ? { ...product, is_active: false } : null);
     },
-    onError: (err: any) => toast.error("Failed to archive product", { description: err.message })
+    onError: (err: any) => toast.error("Failed to archive checkout link", { description: err.message })
   });
 
   const restoreMutation = useMutation({
@@ -71,11 +71,11 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
     onMutate: () => setIsActionLoading(true),
     onSettled: () => setIsActionLoading(false),
     onSuccess: () => {
-      toast.success("Product restored successfully");
+      toast.success("Checkout link restored successfully");
       queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
       onUpdate(product ? { ...product, is_active: true } : null);
     },
-    onError: (err: any) => toast.error("Failed to restore product", { description: err.message })
+    onError: (err: any) => toast.error("Failed to restore checkout link", { description: err.message })
   });
 
   const generateCheckoutUrl = (productSlug: string) => {
@@ -103,7 +103,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
     <SidePanel
       isOpen={!!product}
       onClose={handleClose}
-      title="Product Console"
+      title="Checkout Link Console"
       disableOutsideClick={isActionLoading || isEditing}
     >
       {product && !isEditing && (
@@ -201,19 +201,19 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
               
               {product.is_active ? (
                 <button 
-                  onClick={() => { if(window.confirm("Archive this product? Checkout links will instantly break and become unavailable for new buyers.")) softDeleteMutation.mutate(product.id); }} 
+                  onClick={() => { if(window.confirm("Archive this checkout link? It will instantly break and become unavailable for new buyers.")) softDeleteMutation.mutate(product.id); }} 
                   disabled={isActionLoading} 
                   className="h-8 col-span-2 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <Archive size={12} />} Archive Product
+                  {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <Archive size={12} />} Archive Link
                 </button>
               ) : (
                 <button 
-                  onClick={() => { if(window.confirm("Restore this product? It will become purchasable again.")) restoreMutation.mutate(product.id); }} 
+                  onClick={() => { if(window.confirm("Restore this checkout link? It will become purchasable again.")) restoreMutation.mutate(product.id); }} 
                   disabled={isActionLoading} 
                   className="h-8 col-span-2 border border-[#09090b] bg-[#09090b] text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Restore Product
+                  {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Restore Link
                 </button>
               )}
             </div>
@@ -225,7 +225,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
         <div className="absolute inset-0 bg-white z-10 flex flex-col animate-in slide-in-from-right duration-200">
           <div className="flex items-center justify-between p-5 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
             <div>
-              <h3 className="text-[15px] font-bold text-[#09090b]">Edit Product</h3>
+              <h3 className="text-[15px] font-bold text-[#09090b]">Edit Checkout Link</h3>
               <p className="text-[11px] font-mono text-[#71717a] mt-0.5">{product.name}</p>
             </div>
           </div>

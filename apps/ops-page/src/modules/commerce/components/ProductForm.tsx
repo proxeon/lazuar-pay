@@ -54,7 +54,7 @@ export default function ProductForm({
       <div className="p-6 space-y-8 flex-1 overflow-y-auto bg-[#fafafa]/30">
         
         <div className="space-y-4">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">1. Product Definition</label>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">1. Checkout Configuration</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Name *</label>
@@ -93,7 +93,7 @@ export default function ProductForm({
         </div>
 
         <div className="space-y-4">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">2. Checkout UX Toggles</label>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">2. Checkout UX Constraints</label>
           <div className="flex flex-col gap-3">
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={reqAddress} onChange={e => setReqAddress(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />

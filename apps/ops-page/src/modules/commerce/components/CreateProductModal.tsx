@@ -17,15 +17,15 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
   const createMutation = useMutation({
     mutationFn: async (payload: CreateProductRequestDto) => {
       const { data, error } = await client.POST("/admin/commerce/products", { body: payload });
-      if (error || !data) throw new Error(error?.detail || "Failed to create product");
+      if (error || !data) throw new Error(error?.detail || "Failed to create link");
     },
     onSuccess: () => {
-      toast.success("Product created successfully");
+      toast.success("Checkout link created successfully");
       queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
       onClose();
     },
     onError: (err: any) => {
-      toast.error("Failed to create product", { description: err.message });
+      toast.error("Failed to create link", { description: err.message });
     }
   });
 
@@ -36,7 +36,7 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => !createMutation.isPending && onClose()} />
       <div className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
         <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa] shrink-0">
-          <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create New Product</h3>
+          <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Checkout Link</h3>
           <button onClick={() => !createMutation.isPending && onClose()} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50">
             <X size={16} />
           </button>
@@ -47,7 +47,7 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
             onSubmit={(data: CreateProductRequestDto) => createMutation.mutate(data)} 
             onCancel={onClose} 
             isPending={createMutation.isPending}
-            submitLabel="Create Product"
+            submitLabel="Create Link"
           />
         </div>
       </div>

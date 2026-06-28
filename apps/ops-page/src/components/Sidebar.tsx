@@ -186,8 +186,8 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* FIXED: Removed overflow-y-auto here to comply with ADR-012. 
-          Overflow clips absolute positioned flyout menus in collapsed mode. */}
+     {/* FIXED: Removed overflow-y-auto here to comply with ADR-012.
+     Overflow clips absolute positioned flyout menus in collapsed mode. */}
       <div className="flex-1 py-4 flex flex-col gap-6">
         <nav className="space-y-0.5">
           <ModuleNav 
@@ -196,7 +196,7 @@ export default function Sidebar({
             icon={ShoppingCart}
             links={[
               { label: "Dashboard", href: "/commerce/dashboard" },
-              { label: "Universal Products", href: "/commerce/products" },
+              { label: "Checkout Links", href: "/commerce/products" },
               { label: "Subscribers", href: "/commerce/subscribers" },
               { label: "Transaction Logs", href: "/commerce/transactions" },
               { label: "Promotions", href: "/commerce/coupons" },
