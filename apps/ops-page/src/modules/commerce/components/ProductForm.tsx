@@ -41,6 +41,7 @@ export default function ProductForm({
       minimum_price: Number(minimumPrice),
       currency: "MYR",
       interval,
+      is_active: initialData?.is_active ?? true,
       requires_address: reqAddress,
       requires_tax_id: reqTaxId,
       requires_phone: reqPhone,

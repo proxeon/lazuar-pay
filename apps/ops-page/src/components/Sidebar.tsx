@@ -186,7 +186,9 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className="flex-1 py-4 flex flex-col gap-6 overflow-y-auto overflow-x-hidden">
+      {/* FIXED: Removed overflow-y-auto here to comply with ADR-012. 
+          Overflow clips absolute positioned flyout menus in collapsed mode. */}
+      <div className="flex-1 py-4 flex flex-col gap-6">
         <nav className="space-y-0.5">
           <ModuleNav 
             title="Commerce" 

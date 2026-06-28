@@ -73,9 +73,9 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         IsActive = isActive;
         CheckoutConfiguration = checkoutConfiguration;
 
-        _fulfillmentTargets.Clear();
         if (fulfillmentTargets != null)
         {
+            _fulfillmentTargets.Clear();
             _fulfillmentTargets.AddRange(fulfillmentTargets);
         }
 
