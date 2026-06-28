@@ -21,11 +21,29 @@ public class VaultAsset : Entity, IAggregateRoot, IMustHaveTenant
 
     public VaultAsset(Guid organizationId, IEnumerable<Guid> productIds, string name, string cloudflareR2Url)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(cloudflareR2Url, nameof(cloudflareR2Url));
+
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
-        Name = name;
-        CloudflareR2Url = cloudflareR2Url;
+        Name = name.Trim();
+        CloudflareR2Url = cloudflareR2Url.Trim();
 
+        if (productIds != null)
+        {
+            _productIds.AddRange(productIds);
+        }
+    }
+
+    public void UpdateDetails(string name, string cloudflareR2Url, IEnumerable<Guid> productIds)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(cloudflareR2Url, nameof(cloudflareR2Url));
+
+        Name = name.Trim();
+        CloudflareR2Url = cloudflareR2Url.Trim();
+
+        _productIds.Clear();
         if (productIds != null)
         {
             _productIds.AddRange(productIds);

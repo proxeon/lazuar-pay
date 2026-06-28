@@ -19,7 +19,15 @@ public class VaultRepository : IVaultRepository
         _context = context;
     }
 
+    public async Task<VaultAsset?> GetByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
+    {
+        return await _context.VaultAssets
+            .FirstOrDefaultAsync(a => a.Id == id && a.OrganizationId == organizationId, ct);
+    }
+
     public void Add(VaultAsset asset) => _context.VaultAssets.Add(asset);
+
+    public void Remove(VaultAsset asset) => _context.VaultAssets.Remove(asset);
 
     public async Task SaveChangesAsync(CancellationToken ct = default) => await _context.SaveChangesAsync(ct);
 

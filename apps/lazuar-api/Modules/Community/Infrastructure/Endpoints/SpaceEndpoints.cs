@@ -15,6 +15,7 @@ using Modules.Community.Application.Queries;
 namespace Modules.Community.Infrastructure;
 
 public record CreateCommunitySpaceRequest(List<string> Product_ids, string Name, string? Telegram_link, string? Zoom_link);
+public record UpdateCommunitySpaceRequest(List<string> Product_ids, string Name, string? Telegram_link, string? Zoom_link);
 
 public static class SpaceEndpoints
 {
@@ -48,6 +49,40 @@ public static class SpaceEndpoints
             var spaceId = await mediator.Send(createSpaceCmd);
 
             return TypedResults.Ok(new IdResponse { Id = spaceId.ToString() });
+        });
+
+        group.MapPut("/spaces/{id:guid}", async Task<Ok<StatusResponse>> (
+            Guid id,
+            UpdateCommunitySpaceRequest req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var productIds = req.Product_ids?.Select(pid => Guid.TryParse(pid, out var parsed) ? parsed : Guid.Empty)
+                                            .Where(pid => pid != Guid.Empty)
+                                            .ToList() ?? new List<Guid>();
+
+            var updateSpaceCmd = new UpdateCommunitySpaceCommand(
+                ctx.TenantId,
+                id,
+                productIds,
+                req.Name,
+                req.Telegram_link,
+                req.Zoom_link
+            );
+
+            await mediator.Send(updateSpaceCmd);
+
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
+        });
+
+        group.MapDelete("/spaces/{id:guid}", async Task<Ok<StatusResponse>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            await mediator.Send(new DeleteCommunitySpaceCommand(ctx.TenantId, id));
+
+            return TypedResults.Ok(new StatusResponse { Status = "deleted" });
         });
 
         return group;

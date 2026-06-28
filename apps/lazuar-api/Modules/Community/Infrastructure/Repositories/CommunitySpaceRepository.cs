@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Modules.Community.Application;
 using Modules.Community.Domain.Aggregates;
 
@@ -15,7 +16,15 @@ public class CommunitySpaceRepository : ICommunitySpaceRepository
         _context = context;
     }
 
+    public async Task<CommunitySpace?> GetByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
+    {
+        return await _context.CommunitySpaces
+            .FirstOrDefaultAsync(s => s.Id == id && s.OrganizationId == organizationId, ct);
+    }
+
     public void Add(CommunitySpace space) => _context.CommunitySpaces.Add(space);
+
+    public void Remove(CommunitySpace space) => _context.CommunitySpaces.Remove(space);
 
     public async Task SaveChangesAsync(CancellationToken ct = default) => await _context.SaveChangesAsync(ct);
 }

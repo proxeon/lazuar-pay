@@ -22,11 +22,13 @@ public class CommunitySpace : Entity, IAggregateRoot, IMustHaveTenant
 
     public CommunitySpace(Guid organizationId, IEnumerable<Guid> productIds, string name, string? telegramLink, string? zoomLink)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
-        Name = name;
-        TelegramLink = telegramLink;
-        ZoomLink = zoomLink;
+        Name = name.Trim();
+        TelegramLink = telegramLink?.Trim();
+        ZoomLink = zoomLink?.Trim();
 
         if (productIds != null)
         {
@@ -36,7 +38,22 @@ public class CommunitySpace : Entity, IAggregateRoot, IMustHaveTenant
 
     public void UpdateLinks(string? telegramLink, string? zoomLink)
     {
-        TelegramLink = telegramLink;
-        ZoomLink = zoomLink;
+        TelegramLink = telegramLink?.Trim();
+        ZoomLink = zoomLink?.Trim();
+    }
+
+    public void UpdateDetails(string name, string? telegramLink, string? zoomLink, IEnumerable<Guid> productIds)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+
+        Name = name.Trim();
+        TelegramLink = telegramLink?.Trim();
+        ZoomLink = zoomLink?.Trim();
+
+        _productIds.Clear();
+        if (productIds != null)
+        {
+            _productIds.AddRange(productIds);
+        }
     }
 }
