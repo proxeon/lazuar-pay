@@ -173,12 +173,14 @@ model PaymentRecordDto {
 model TransactionLogDto {
   id: string; // GUID
   amount: float64;
+  fee_amount: float64;
+  net_amount: float64;
   currency: string;
-  payment_method: string;
   status: string;
   created_at: utcDateTime;
   customer_name: string;
   customer_email: string;
+  product_name?: string;
   recorded_by_name: string;
   external_reference?: string;
 }

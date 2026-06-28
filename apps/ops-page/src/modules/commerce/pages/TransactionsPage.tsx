@@ -7,6 +7,9 @@ import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
+import TransactionDetailPanel from "../components/TransactionDetailPanel";
+
+type TransactionLogDto = components["schemas"]["Commerce.TransactionLogDto"];
 
 export default function TransactionsPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
@@ -15,6 +18,8 @@ export default function TransactionsPage() {
   const [methodFilter, setMethodFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionLogDto | null>(null);
+
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const limit = 50;
 
@@ -123,7 +128,11 @@ export default function TransactionsPage() {
                   const isSystem = tx.recorded_by_name?.includes("System") || tx.recorded_by_name?.includes("AI Agent");
                   
                   return (
-                    <tr key={tx.id} className="hover:bg-[#fafafa] transition-colors group">
+                    <tr 
+                      key={tx.id} 
+                      onClick={() => setSelectedTransaction(tx)}
+                      className="hover:bg-[#fafafa] transition-colors cursor-pointer group"
+                    >
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <p className="text-[12px] font-medium text-[#09090b]">
                           {new Date(tx.created_at).toLocaleDateString('en-GB')}
@@ -133,7 +142,7 @@ export default function TransactionsPage() {
                         </p>
                       </td>
                       <td className="px-5 py-3.5 min-w-[200px]">
-                        <p className="font-medium text-[#09090b] text-[13px]">{tx.customer_name}</p>
+                        <p className="font-medium text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{tx.customer_name}</p>
                         <p className="text-[11px] text-[#71717a] mt-0.5">{tx.customer_email}</p>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
@@ -157,9 +166,9 @@ export default function TransactionsPage() {
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[12px] font-mono font-bold text-[#09090b]">
-                              {tx.system_reference}
+                              {tx.id.substring(0,8)}...
                             </span>
-                            <QuickCopy text={tx.system_reference} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
+                            <QuickCopy text={tx.id} iconSize={10} className="opacity-0 group-hover:opacity-100 p-0.5" />
                           </div>
                           {tx.external_reference && (
                             <div className="flex items-center gap-1.5">
@@ -209,6 +218,12 @@ export default function TransactionsPage() {
           </div>
         </div>
       </div>
+
+      <TransactionDetailPanel
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+        onUpdate={setSelectedTransaction}
+      />
     </PageLayout>
   );
 }
