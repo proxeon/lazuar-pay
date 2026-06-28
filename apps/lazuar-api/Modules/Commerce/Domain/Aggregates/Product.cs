@@ -41,6 +41,11 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         CheckoutConfiguration checkoutConfiguration,
         IEnumerable<string> fulfillmentTargets)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(slug, nameof(slug));
+        ArgumentException.ThrowIfNullOrWhiteSpace(currency, nameof(currency));
+        ArgumentException.ThrowIfNullOrWhiteSpace(interval, nameof(interval));
+
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
         Name = name.Trim();
@@ -48,8 +53,8 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         Price = price;
         PricingModel = string.IsNullOrWhiteSpace(pricingModel) ? "FIXED" : pricingModel.Trim().ToUpperInvariant();
         MinimumPrice = minimumPrice;
-        Currency = currency.ToUpperInvariant();
-        Interval = interval.ToLowerInvariant();
+        Currency = currency.Trim().ToUpperInvariant();
+        Interval = interval.Trim().ToLowerInvariant();
         CheckoutConfiguration = checkoutConfiguration;
         IsActive = true;
         
@@ -64,12 +69,16 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
 
     public void UpdateDetails(string name, string slug, decimal price, string pricingModel, decimal minimumPrice, string interval, bool isActive, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(slug, nameof(slug));
+        ArgumentException.ThrowIfNullOrWhiteSpace(interval, nameof(interval));
+
         Name = name.Trim();
         Slug = slug.Trim().ToLowerInvariant();
         Price = price;
         PricingModel = string.IsNullOrWhiteSpace(pricingModel) ? "FIXED" : pricingModel.Trim().ToUpperInvariant();
         MinimumPrice = minimumPrice;
-        Interval = interval.ToLowerInvariant();
+        Interval = interval.Trim().ToLowerInvariant();
         IsActive = isActive;
         CheckoutConfiguration = checkoutConfiguration;
 
