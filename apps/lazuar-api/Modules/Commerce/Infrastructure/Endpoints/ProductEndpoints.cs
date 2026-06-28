@@ -125,6 +125,16 @@ public static class ProductEndpoints
             return TypedResults.Ok(new StatusResponse { Status = "archived" });
         });
 
+        group.MapPost("/products/{id:guid}/restore", async Task<Ok<StatusResponse>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            await mediator.Send(new RestoreProductCommand(ctx.TenantId, id));
+
+            return TypedResults.Ok(new StatusResponse { Status = "restored" });
+        });
+
         return group;
     }
 }

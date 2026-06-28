@@ -87,4 +87,10 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         IsActive = false;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void Restore()
+    {
+        IsActive = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

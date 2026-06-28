@@ -38,6 +38,12 @@ interface AdminCommerceOperations {
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/products/{id}/restore")
+  restoreProduct(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @get
   @route("/reminder-schedules")
   getReminderSchedules(
