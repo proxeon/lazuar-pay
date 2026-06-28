@@ -1,14 +1,27 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, Users, ExternalLink, Video } from "lucide-react";
-import { client } from "../../../lib/api-client";
+import { client, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
 import CreateSpaceModal from "../components/CreateSpaceModal";
+import SpaceDetailPanel from "../components/SpaceDetailPanel";
+
+type AdminCommunitySpaceDto = components["schemas"]["Community.AdminCommunitySpaceDto"];
 
 export default function SpacesPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedSpace, setSelectedSpace] = useState<AdminCommunitySpaceDto | null>(null);
+
+  const { data: products } = useQuery({
+    queryKey: ["commerce-products"],
+    queryFn: async () => {
+      const { data } = await client.GET("/admin/commerce/products");
+      return data || [];
+    },
+    enabled: !!activeWorkspaceId
+  });
 
   const { data: spaces, isLoading } = useQuery({
     queryKey: ["community-spaces-list"],
@@ -60,22 +73,22 @@ export default function SpacesPage() {
                 </tr>
               ) : (
                 spaces?.map((space) => (
-                  <tr key={space.id} className="hover:bg-[#fafafa] transition-colors">
+                  <tr key={space.id} onClick={() => setSelectedSpace(space)} className="hover:bg-[#fafafa] transition-colors cursor-pointer group">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <Users size={14} className="text-[#a1a1aa]" />
-                        <span className="font-bold text-[#09090b] text-[13px]">{space.name}</span>
+                        <Users size={14} className="text-indigo-600" />
+                        <span className="font-bold text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{space.name}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4 space-y-1.5">
                       {space.telegram_link && (
-                        <a href={space.telegram_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] font-mono text-blue-600 hover:underline">
-                          <ExternalLink size={12} /> {space.telegram_link}
+                        <a href={space.telegram_link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-[11px] font-mono text-blue-600 hover:underline">
+                          <ExternalLink size={12} className="shrink-0" /> {space.telegram_link}
                         </a>
                       )}
                       {space.zoom_link && (
-                        <a href={space.zoom_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] font-mono text-indigo-600 hover:underline">
-                          <Video size={12} /> {space.zoom_link}
+                        <a href={space.zoom_link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-[11px] font-mono text-indigo-600 hover:underline">
+                          <Video size={12} className="shrink-0" /> {space.zoom_link}
                         </a>
                       )}
                     </td>
@@ -93,6 +106,13 @@ export default function SpacesPage() {
       <CreateSpaceModal 
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+      />
+
+      <SpaceDetailPanel
+        space={selectedSpace}
+        products={products}
+        onClose={() => setSelectedSpace(null)}
+        onUpdate={setSelectedSpace}
       />
     </PageLayout>
   );
