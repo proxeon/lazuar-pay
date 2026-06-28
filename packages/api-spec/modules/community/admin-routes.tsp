@@ -18,4 +18,17 @@ interface AdminCommunityOperations {
   @get
   @route("/spaces")
   getSpaces(): AdminCommunitySpaceDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/spaces/{id}")
+  updateSpace(
+    @path id: string,
+    @body body: UpdateCommunitySpaceRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @delete
+  @route("/spaces/{id}")
+  deleteSpace(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

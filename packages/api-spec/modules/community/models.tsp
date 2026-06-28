@@ -7,6 +7,13 @@ model CreateCommunitySpaceRequestDto {
   zoom_link?: string;
 }
 
+model UpdateCommunitySpaceRequestDto {
+  product_ids: string[]; // GUID array
+  name: string;
+  telegram_link?: string;
+  zoom_link?: string;
+}
+
 model AdminCommunitySpaceDto {
   id: string; // GUID
   name: string;

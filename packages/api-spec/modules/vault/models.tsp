@@ -6,6 +6,12 @@ model CreateVaultAssetRequestDto {
   cloudflare_r2_url: string;
 }
 
+model UpdateVaultAssetRequestDto {
+  product_ids: string[]; // GUID array
+  name: string;
+  cloudflare_r2_url: string;
+}
+
 model VaultAssetDto {
   id: string; // GUID
   product_ids: string[]; // GUID array
