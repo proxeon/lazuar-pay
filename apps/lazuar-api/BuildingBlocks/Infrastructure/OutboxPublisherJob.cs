@@ -70,7 +70,6 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                             if (integrationEvent is IIntegrationEvent @event)
                             {
                                 await eventBus.PublishAsync(@event);
-                                message.ProcessedAt = DateTime.UtcNow;
                             }
                             else
                             {
@@ -81,6 +80,11 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                         {
                             message.Error = ex.ToString();
                             _logger.LogError(ex, "Failed to process outbox message {Id}", message.Id);
+                        }
+                        finally
+                        {
+                            // CRITICAL FIX: Always mark as processed to prevent infinite CPU loops on poisoned messages
+                            message.ProcessedAt = DateTime.UtcNow;
                         }
                     }
 
