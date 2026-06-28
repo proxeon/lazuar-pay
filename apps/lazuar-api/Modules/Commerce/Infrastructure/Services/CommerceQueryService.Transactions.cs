@@ -11,10 +11,28 @@ namespace Modules.Commerce.Infrastructure.Services;
 public partial class CommerceQueryService
 {
     private record RawGlobalTxDto(
-        Guid Id, decimal Amount, decimal FeeAmount, decimal NetAmount, string Currency, string Status, DateTime CreatedAt, 
-        string CustomerName, string CustomerEmail, string ProductName, string PaymentMethod, string ExternalReference);
+        Guid Id, 
+        decimal Amount, 
+        decimal FeeAmount, 
+        decimal NetAmount, 
+        string Currency, 
+        string Status, 
+        DateTime CreatedAt, 
+        string CustomerName, 
+        string CustomerEmail, 
+        string ProductName, 
+        string PaymentMethod, 
+        string ExternalReference,
+        int TotalCount
+    );
 
-    public async Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, string? searchTerm = null)
+    public async Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(
+        Guid organizationId, 
+        int page, 
+        int limit, 
+        string? status, 
+        string? paymentMethod, 
+        string? searchTerm = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
@@ -55,11 +73,6 @@ public partial class CommerceQueryService
                 LEFT JOIN crm.""ClientProfiles"" cp ON cp.""Id"" = COALESCE(s.""ClientProfileId"", o.""ClientProfileId"")
                 LEFT JOIN commerce.""Products"" p ON p.""Id"" = COALESCE(s.""ProductId"", o.""ProductId"")
             )
-            SELECT COUNT(*)::int 
-            FROM ResolvedCustomers rc
-            WHERE (@Status IS NULL OR rc.Status = @Status)
-            AND (@SearchTerm IS NULL OR rc.CustomerName ILIKE @SearchTerm OR rc.CustomerEmail ILIKE @SearchTerm);
-
             SELECT 
                 rc.""Id"", 
                 rc.Amount,
@@ -72,19 +85,29 @@ public partial class CommerceQueryService
                 rc.CustomerEmail,
                 rc.ProductName,
                 rc.PaymentMethod,
-                rc.""ReferenceId"" as ExternalReference
+                rc.""ReferenceId"" as ExternalReference,
+                COUNT(*) OVER() AS TotalCount
             FROM ResolvedCustomers rc
             WHERE (@Status IS NULL OR rc.Status = @Status)
             AND (@SearchTerm IS NULL OR rc.CustomerName ILIKE @SearchTerm OR rc.CustomerEmail ILIKE @SearchTerm)
             ORDER BY rc.CreatedAt DESC
             LIMIT @Limit OFFSET @Offset;";
 
-        using var multi = await connection.QueryMultipleAsync(sql, new { OrgId = organizationId, Limit = limit, Offset = offset, SearchTerm = searchPattern, Status = status });
+        // Query database using a single round-trip mapping to capture matching records and counts
+        var rawTx = (await connection.QueryAsync<RawGlobalTxDto>(sql, new { 
+            OrgId = organizationId, 
+            Limit = limit, 
+            Offset = offset, 
+            SearchTerm = searchPattern, 
+            Status = status 
+        })).ToList();
 
-        var totalCount = await multi.ReadFirstAsync<int>();
-        var rawTx = (await multi.ReadAsync<RawGlobalTxDto>()).ToList();
+        int totalCount = rawTx.FirstOrDefault()?.TotalCount ?? 0;
 
-        if (totalCount == 0) return new PaginatedResponse<TransactionLogDto>(Enumerable.Empty<TransactionLogDto>(), 0, page, limit);
+        if (totalCount == 0) 
+        {
+            return new PaginatedResponse<TransactionLogDto>(Enumerable.Empty<TransactionLogDto>(), 0, page, limit);
+        }
 
         var dtos = rawTx.Select(t => new TransactionLogDto
         {
@@ -98,7 +121,6 @@ public partial class CommerceQueryService
             Customer_name = t.CustomerName,
             Customer_email = t.CustomerEmail,
             Product_name = t.ProductName,
-            // Removed mapping for Payment_method as it does not exist in the generated TypeSpec DTO
             Recorded_by_name = "SYSTEM",
             External_reference = t.ExternalReference
         });

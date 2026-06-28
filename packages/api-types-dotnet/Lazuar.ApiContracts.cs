@@ -45,6 +45,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateTopUpRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateTopUpRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -64,6 +81,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreditBalanceDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreditBalanceDto>(data, options);
+
         }
 
     }
@@ -88,6 +122,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreditTransactionDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreditTransactionDto>(data, options);
+
         }
 
     }
@@ -126,6 +177,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static FinancialSummaryDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<FinancialSummaryDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -157,6 +225,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LedgerEntryDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LedgerEntryDto>(data, options);
+
         }
 
     }
@@ -195,6 +280,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LedgerLineDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LedgerLineDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -228,6 +330,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static NetProfitDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<NetProfitDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -244,6 +363,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TopUpResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TopUpResponseDto>(data, options);
+
         }
 
     }
@@ -267,6 +403,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static AggregatedPortalDataResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<AggregatedPortalDataResponse>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -285,6 +438,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static BillingLinkResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<BillingLinkResponseDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -301,6 +471,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CancelPortalRequest FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CancelPortalRequest>(data, options);
+
         }
 
     }
@@ -322,6 +509,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CashFlowTrendDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CashFlowTrendDto>(data, options);
+
         }
 
     }
@@ -348,6 +552,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CheckoutConfigurationDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CheckoutConfigurationDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -369,6 +590,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CheckoutResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CheckoutResponse>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -388,6 +626,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CheckoutStatusResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CheckoutStatusResponse>(data, options);
+
         }
 
     }
@@ -433,6 +688,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CommerceStatsDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CommerceStatsDto>(data, options);
+
         }
 
     }
@@ -495,6 +767,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CommerceSubscriptionDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CommerceSubscriptionDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -543,6 +832,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CouponDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CouponDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -577,6 +883,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateCouponRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateCouponRequestDto>(data, options);
+
         }
 
     }
@@ -627,6 +950,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateProductRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateProductRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -660,6 +1000,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateReminderScheduleRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateReminderScheduleRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -676,6 +1033,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static MagicLinkRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<MagicLinkRequestDto>(data, options);
+
         }
 
     }
@@ -720,6 +1094,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PaymentConfigDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PaymentConfigDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -742,6 +1133,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PaymentMethodDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PaymentMethodDto>(data, options);
+
         }
 
     }
@@ -777,6 +1185,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PaymentRecordDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PaymentRecordDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -807,6 +1232,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PortalOrderDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PortalOrderDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -835,6 +1277,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PortalSubscriptionDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PortalSubscriptionDto>(data, options);
+
         }
 
     }
@@ -883,6 +1342,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ProductDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ProductDto>(data, options);
+
         }
 
     }
@@ -945,6 +1421,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PublicCheckoutRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PublicCheckoutRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -990,6 +1483,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ReminderScheduleDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ReminderScheduleDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1030,6 +1540,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static SavePaymentConfigRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<SavePaymentConfigRequestDto>(data, options);
+
         }
 
     }
@@ -1083,6 +1610,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TransactionLogDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TransactionLogDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1120,6 +1664,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateCouponRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateCouponRequestDto>(data, options);
+
         }
 
     }
@@ -1173,6 +1734,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateProductRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateProductRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1206,6 +1784,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateReminderScheduleRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateReminderScheduleRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1231,6 +1826,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ValidateCouponResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ValidateCouponResponseDto>(data, options);
+
         }
 
     }
@@ -1269,6 +1881,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateBroadcastRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateBroadcastRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1303,6 +1932,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateTemplateRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateTemplateRequestDto>(data, options);
+
         }
 
     }
@@ -1350,6 +1996,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static MessageTemplateDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<MessageTemplateDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1372,6 +2035,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TemplatePreviewRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TemplatePreviewRequestDto>(data, options);
+
         }
 
     }
@@ -1398,6 +2078,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TemplatePreviewResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TemplatePreviewResponseDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1417,6 +2114,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TemplateVariableCategoryDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TemplateVariableCategoryDto>(data, options);
+
         }
 
     }
@@ -1440,6 +2154,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TemplateVariableDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TemplateVariableDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1461,6 +2192,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TestReminderRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TestReminderRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1480,6 +2228,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TestReminderResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TestReminderResponse>(data, options);
+
         }
 
     }
@@ -1504,6 +2269,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateTemplateRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateTemplateRequestDto>(data, options);
+
         }
 
     }
@@ -1539,6 +2321,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static AdminCommunitySpaceDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<AdminCommunitySpaceDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1564,6 +2363,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateCommunitySpaceRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateCommunitySpaceRequestDto>(data, options);
+
         }
 
     }
@@ -1593,6 +2409,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PortalCommunitySpaceDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PortalCommunitySpaceDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1620,6 +2453,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateCommunitySpaceRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateCommunitySpaceRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1636,6 +2486,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static IdResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<IdResponse>(data, options);
+
         }
 
     }
@@ -1660,6 +2527,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LinkedCheckoutDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LinkedCheckoutDto>(data, options);
+
         }
 
     }
@@ -1692,6 +2576,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ProblemDetails FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ProblemDetails>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1710,6 +2611,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static StatusResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<StatusResponse>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1718,6 +2636,23 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("errors")]
         public System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>>? Errors { get; set; } = default!;
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ValidationProblemDetails FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ValidationProblemDetails>(data, options);
+
+        }
 
     }
 
@@ -1753,6 +2688,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static BillingAddressDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<BillingAddressDto>(data, options);
+
         }
 
     }
@@ -1800,6 +2752,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ClientProfileDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ClientProfileDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1837,6 +2806,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateClientProfileRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateClientProfileRequestDto>(data, options);
+
         }
 
     }
@@ -1878,6 +2864,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateClientProfileRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateClientProfileRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1908,6 +2911,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ApiKeyDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ApiKeyDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1924,6 +2944,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CancelDocumentRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CancelDocumentRequestDto>(data, options);
+
         }
 
     }
@@ -1947,6 +2984,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static GenerateApiKeyRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<GenerateApiKeyRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1963,6 +3017,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static GenerateApiKeyResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<GenerateApiKeyResponseDto>(data, options);
+
         }
 
     }
@@ -2000,6 +3071,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LhdnAddressDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LhdnAddressDto>(data, options);
+
         }
 
     }
@@ -2044,6 +3132,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LhdnDocumentResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LhdnDocumentResponseDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2084,6 +3189,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LhdnItemDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LhdnItemDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2106,6 +3228,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static RegisterWebhookRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<RegisterWebhookRequestDto>(data, options);
+
         }
 
     }
@@ -2182,6 +3321,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static SubmitDocumentRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<SubmitDocumentRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2201,6 +3357,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateLhdnCertificateRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateLhdnCertificateRequestDto>(data, options);
+
         }
 
     }
@@ -2228,6 +3401,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ValidateTinRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ValidateTinRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2250,6 +3440,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ValidateTinResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ValidateTinResponseDto>(data, options);
+
         }
 
     }
@@ -2282,6 +3489,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WebhookSubscriptionDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WebhookSubscriptionDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2298,6 +3522,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static AcceptWorkspaceInvitationDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<AcceptWorkspaceInvitationDto>(data, options);
+
         }
 
     }
@@ -2327,6 +3568,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static AuthUser FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<AuthUser>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2348,6 +3606,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ChangePasswordRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ChangePasswordRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2367,6 +3642,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateWorkspaceInvitationDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateWorkspaceInvitationDto>(data, options);
+
         }
 
     }
@@ -2391,6 +3683,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateWorkspaceRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateWorkspaceRequestDto>(data, options);
+
         }
 
     }
@@ -2420,6 +3729,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static EntitlementDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<EntitlementDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2436,6 +3762,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ForgotPasswordRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ForgotPasswordRequestDto>(data, options);
+
         }
 
     }
@@ -2459,6 +3802,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LoginRequest FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LoginRequest>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2475,6 +3835,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LoginResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LoginResponse>(data, options);
+
         }
 
     }
@@ -2507,6 +3884,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PublicRegisterRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PublicRegisterRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2523,6 +3917,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ResendVerificationRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ResendVerificationRequestDto>(data, options);
+
         }
 
     }
@@ -2549,6 +3960,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ResetPasswordRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ResetPasswordRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2570,6 +3998,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static SaveWebhookEndpointRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<SaveWebhookEndpointRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2588,6 +4033,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ToggleAppEntitlementRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ToggleAppEntitlementRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2604,6 +4066,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateProfileRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateProfileRequestDto>(data, options);
+
         }
 
     }
@@ -2637,6 +4116,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateWorkspaceLhdnConfigRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateWorkspaceLhdnConfigRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2658,6 +4154,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateWorkspaceRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateWorkspaceRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2674,6 +4187,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static VerifyEmailRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<VerifyEmailRequestDto>(data, options);
+
         }
 
     }
@@ -2709,6 +4239,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WebhookDeliveryLogDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WebhookDeliveryLogDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2739,6 +4286,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WebhookEndpointDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WebhookEndpointDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2755,6 +4319,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WorkspaceAppDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WorkspaceAppDto>(data, options);
+
         }
 
     }
@@ -2787,6 +4368,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WorkspaceDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WorkspaceDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2815,6 +4413,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WorkspaceInvitationDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WorkspaceInvitationDto>(data, options);
+
         }
 
     }
@@ -2846,6 +4461,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WorkspaceLhdnConfigDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WorkspaceLhdnConfigDto>(data, options);
+
         }
 
     }
@@ -2881,6 +4513,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WorkspaceMemberDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WorkspaceMemberDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2902,6 +4551,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ChatRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ChatRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2921,6 +4587,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ChatResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ChatResponseDto>(data, options);
+
         }
 
     }
@@ -2956,6 +4639,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ChatStreamChunkDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ChatStreamChunkDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2978,6 +4678,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static OpsConversationDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<OpsConversationDto>(data, options);
+
         }
 
     }
@@ -3022,6 +4739,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static OpsMessageDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<OpsMessageDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3055,6 +4789,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ProposedActionDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ProposedActionDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3071,6 +4822,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static RenameConversationRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<RenameConversationRequestDto>(data, options);
+
         }
 
     }
@@ -3100,6 +4868,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UiRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UiRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3124,6 +4909,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateVaultAssetRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateVaultAssetRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3145,6 +4947,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static GetPresignedUrlRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<GetPresignedUrlRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3164,6 +4983,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static GetPresignedUrlResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<GetPresignedUrlResponseDto>(data, options);
+
         }
 
     }
@@ -3190,6 +5026,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PortalVaultAssetDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PortalVaultAssetDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3212,6 +5065,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateVaultAssetRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateVaultAssetRequestDto>(data, options);
+
         }
 
     }
@@ -3244,6 +5114,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static VaultAssetDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<VaultAssetDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3269,6 +5156,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static Response FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<Response>(data, options);
+
         }
 
     }
@@ -3298,6 +5202,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static Response2 FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<Response2>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3325,6 +5246,23 @@ namespace Lazuar.ApiTypes
             set { _additionalProperties = value; }
         }
 
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static Response3 FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<Response3>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -3350,6 +5288,23 @@ namespace Lazuar.ApiTypes
         {
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static Response4 FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<Response4>(data, options);
+
         }
 
     }
