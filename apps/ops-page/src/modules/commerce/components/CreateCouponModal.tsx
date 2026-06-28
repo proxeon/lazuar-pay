@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
+type CreateCouponRequestDto = components["schemas"]["Commerce.CreateCouponRequestDto"];
 
 interface CreateCouponModalProps {
   isOpen: boolean;
@@ -34,17 +35,9 @@ export default function CreateCouponModal({ isOpen, onClose, products }: CreateC
   };
 
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (payload: CreateCouponRequestDto) => {
       const { error } = await client.POST("/admin/commerce/coupons", {
-        body: {
-          code: code.trim().toUpperCase(),
-          discount_type: discountType,
-          amount: Number(amount),
-          max_uses: Number(maxUses),
-          minimum_original_price: Number(minPrice),
-          expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
-          applicable_product_ids: applicableProducts.length > 0 ? applicableProducts : undefined
-        }
+        body: payload
       });
       if (error) throw new Error(error.detail);
     },
@@ -83,7 +76,18 @@ export default function CreateCouponModal({ isOpen, onClose, products }: CreateC
           <button onClick={handleClose} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
         </div>
         <div className="overflow-y-auto flex-1 bg-[#fafafa]/30">
-          <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}>
+          <form onSubmit={(e) => { 
+            e.preventDefault(); 
+            createMutation.mutate({
+              code: code.trim().toUpperCase(),
+              discount_type: discountType,
+              amount: Number(amount),
+              max_uses: Number(maxUses),
+              minimum_original_price: Number(minPrice),
+              expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+              applicable_product_ids: applicableProducts.length > 0 ? applicableProducts : undefined
+            }); 
+          }}>
             <div className="p-6 space-y-6">
               
               <div className="space-y-4">

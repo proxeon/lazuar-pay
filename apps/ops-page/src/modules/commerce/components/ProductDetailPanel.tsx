@@ -9,6 +9,7 @@ import QuickCopy from "../../core/components/QuickCopy";
 import ProductForm from "./ProductForm";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
+type UpdateProductRequestDto = components["schemas"]["Commerce.UpdateProductRequestDto"];
 
 interface ProductDetailPanelProps {
   product: ProductDto | null;
@@ -23,7 +24,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
   const [isActionLoading, setIsActionLoading] = useState(false);
 
   const editMutation = useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: { id: string } & UpdateProductRequestDto) => {
       const { id, ...body } = payload;
       const { error } = await client.PUT("/admin/commerce/products/{id}", {
         params: { path: { id } },
@@ -58,6 +59,23 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
       onUpdate(product ? { ...product, is_active: false } : null);
     },
     onError: (err: any) => toast.error("Failed to archive product", { description: err.message })
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await client.POST("/admin/commerce/products/{id}/restore", {
+        params: { path: { id } }
+      });
+      if (error) throw new Error(error.detail);
+    },
+    onMutate: () => setIsActionLoading(true),
+    onSettled: () => setIsActionLoading(false),
+    onSuccess: () => {
+      toast.success("Product restored successfully");
+      queryClient.invalidateQueries({ queryKey: ["commerce-products"] });
+      onUpdate(product ? { ...product, is_active: true } : null);
+    },
+    onError: (err: any) => toast.error("Failed to restore product", { description: err.message })
   });
 
   const generateCheckoutUrl = (productSlug: string) => {
@@ -191,7 +209,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
                 </button>
               ) : (
                 <button 
-                  onClick={() => { if(window.confirm("Restore this product? It will become purchasable again.")) editMutation.mutate({ id: product.id, is_active: true }); }} 
+                  onClick={() => { if(window.confirm("Restore this product? It will become purchasable again.")) restoreMutation.mutate(product.id); }} 
                   disabled={isActionLoading} 
                   className="h-8 col-span-2 border border-[#09090b] bg-[#09090b] text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
@@ -215,7 +233,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
           <div className="flex-1 flex flex-col overflow-hidden bg-white min-h-0">
             <ProductForm 
               initialData={product}
-              onSubmit={(data) => editMutation.mutate({ id: product.id, ...data })} 
+              onSubmit={(data: UpdateProductRequestDto) => editMutation.mutate({ id: product.id, ...data })} 
               onCancel={() => setIsEditing(false)} 
               isPending={editMutation.isPending}
               submitLabel="Save Changes"

@@ -9,6 +9,7 @@ import QuickCopy from "../../core/components/QuickCopy";
 
 type CouponDto = components["schemas"]["Commerce.CouponDto"];
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
+type UpdateCouponRequestDto = components["schemas"]["Commerce.UpdateCouponRequestDto"];
 
 interface CouponDetailPanelProps {
   coupon: CouponDto | null;
@@ -44,7 +45,7 @@ export default function CouponDetailPanel({ coupon, products, onClose, onUpdate 
   }, [coupon, isEditingInSlider]);
 
   const editMutation = useMutation({
-    mutationFn: async (payload: { id: string, code: string, discount_type: string, amount: number, max_uses: number, minimum_original_price: number, expires_at: string | null, applicable_product_ids: string[] | undefined, is_active?: boolean }) => {
+    mutationFn: async (payload: { id: string } & UpdateCouponRequestDto) => {
       const { id, ...body } = payload;
       const { error } = await client.PUT("/admin/commerce/coupons/{id}", {
         params: { path: { id } },
@@ -70,11 +71,11 @@ export default function CouponDetailPanel({ coupon, products, onClose, onUpdate 
       
       onUpdate({
         ...coupon!,
-        code: variables.code,
-        discount_type: variables.discount_type,
-        amount: variables.amount,
-        max_uses: variables.max_uses,
-        minimum_original_price: variables.minimum_original_price,
+        code: variables.code || coupon!.code,
+        discount_type: variables.discount_type || coupon!.discount_type,
+        amount: variables.amount ?? coupon!.amount,
+        max_uses: variables.max_uses ?? coupon!.max_uses,
+        minimum_original_price: variables.minimum_original_price ?? coupon!.minimum_original_price,
         expires_at: variables.expires_at || undefined,
         applicable_product_ids: variables.applicable_product_ids || [],
         is_active: variables.is_active ?? coupon!.is_active
@@ -226,7 +227,7 @@ export default function CouponDetailPanel({ coupon, products, onClose, onUpdate 
                 </button>
               ) : (
                 <button 
-                  onClick={() => { if(window.confirm("Restore this promotion? It will become valid immediately.")) editMutation.mutate({ id: coupon.id, code: coupon.code, discount_type: coupon.discount_type, amount: coupon.amount, max_uses: coupon.max_uses, minimum_original_price: coupon.minimum_original_price, expires_at: coupon.expires_at ? new Date(coupon.expires_at).toISOString() : null, applicable_product_ids: coupon.applicable_product_ids || [], is_active: true }); }} 
+                  onClick={() => { if(window.confirm("Restore this promotion? It will become valid immediately.")) editMutation.mutate({ id: coupon.id, is_active: true }); }} 
                   disabled={isActionLoading} 
                   className="h-8 border border-[#09090b] bg-[#09090b] text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >

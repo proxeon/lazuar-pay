@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { toast } from "sonner";
-import { client } from "../../../lib/api-client";
+import { client, type components } from "../../../lib/api-client";
 import ProductForm from "./ProductForm";
+
+type CreateProductRequestDto = components["schemas"]["Commerce.CreateProductRequestDto"];
 
 interface CreateProductModalProps {
   isOpen: boolean;
@@ -13,7 +15,7 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: CreateProductRequestDto) => {
       const { data, error } = await client.POST("/admin/commerce/products", { body: payload });
       if (error || !data) throw new Error(error?.detail || "Failed to create product");
     },
@@ -42,7 +44,7 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
         
         <div className="flex-1 flex flex-col overflow-hidden bg-white min-h-0">
           <ProductForm 
-            onSubmit={(data) => createMutation.mutate(data)} 
+            onSubmit={(data: CreateProductRequestDto) => createMutation.mutate(data)} 
             onCancel={onClose} 
             isPending={createMutation.isPending}
             submitLabel="Create Product"
