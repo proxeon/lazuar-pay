@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Plus } from "lucide-react";
+import { Loader2, Search, Zap, X, AlertTriangle, Download, ArrowRightCircle, Plus, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { client, API_URL, type CommerceSubscriptionDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
@@ -29,8 +29,8 @@ export default function SubscribersPage() {
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("BANK_TRANSFER");
 
-  const [extendGraceModal, setExtendGraceModal] = useState({ isOpen: false, days: "7" });
   const [refundModal, setRefundModal] = useState({ isOpen: false, paymentId: "", reason: "" });
+  const [pauseDunningModal, setPauseDunningModal] = useState({ isOpen: false, date: "" });
 
   const { data: subscribersData, isLoading } = useQuery({
     queryKey: ["commerce-subscribers", page, debouncedSearchTerm],
@@ -104,19 +104,19 @@ export default function SubscribersPage() {
         setIsPaymentModalOpen(false);
         setPaymentAmount("");
         setPaymentRef("");
-      } else if (variables.action === "extend-grace") {
-        setExtendGraceModal({ isOpen: false, days: "7" });
+        setSelectedSub(prev => prev ? { ...prev, status: "ACTIVE" } : null);
       } else if (variables.action === "refund") {
         setRefundModal({ isOpen: false, paymentId: "", reason: "" });
+      } else if (variables.action === "dunning/pause") {
+        setPauseDunningModal({ isOpen: false, date: "" });
+        setSelectedSub(prev => prev ? { ...prev, dunning_paused_until: new Date(variables.payload.pause_until).toISOString() } : null);
+      } else if (variables.action === "dunning/resume") {
+        setSelectedSub(prev => prev ? { ...prev, dunning_paused_until: undefined } : null);
+      } else if (variables.action === "cancel") {
+        setSelectedSub(prev => prev ? { ...prev, status: "CANCELLED" } : null);
+      } else if (variables.action === "ban") {
+        setSelectedSub(prev => prev ? { ...prev, status: "BANNED" } : null);
       }
-      
-      setSelectedSub(prev => {
-        if (!prev) return null;
-        if (variables.action === "cancel") return { ...prev, status: "CANCELLED" };
-        if (variables.action === "ban") return { ...prev, status: "BANNED" };
-        if (variables.action === "record-payment") return { ...prev, status: "ACTIVE" };
-        return prev;
-      });
     },
     onError: (err: any) => toast.error("Action Failed", { description: err.message })
   });
@@ -281,17 +281,60 @@ export default function SubscribersPage() {
               </div>
             </div>
 
+            {selectedSub.status === "PAST_DUE" && (
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Revenue Recovery (Dunning)</h3>
+                <div className="bg-amber-50 border border-amber-200 p-4 space-y-3 rounded-sm">
+                  <div className="flex items-center gap-2 text-amber-800 font-bold text-[12px]">
+                    <AlertTriangle size={14} /> Payment is Past Due
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-amber-700/80 block">Active Campaign</span>
+                      <span className="font-bold text-amber-900">{selectedSub.dunning_campaign_name || "None (Will not escalate)"}</span>
+                    </div>
+                    <div>
+                      <span className="text-amber-700/80 block">Current Step</span>
+                      <span className="font-bold text-amber-900">{selectedSub.current_dunning_step !== undefined ? `Step ${selectedSub.current_dunning_step}` : "N/A"}</span>
+                    </div>
+                  </div>
+                  
+                  {selectedSub.dunning_paused_until && new Date(selectedSub.dunning_paused_until).getTime() > Date.now() ? (
+                    <div className="pt-2 border-t border-amber-200/50 flex items-center justify-between">
+                      <div className="text-[10px] text-amber-800">
+                        <span className="font-bold">Automations Paused</span> until {new Date(selectedSub.dunning_paused_until).toLocaleDateString()}
+                      </div>
+                      <button 
+                        onClick={() => actionMutation.mutate({ action: "dunning/resume" })}
+                        disabled={activeAction !== null}
+                        className="text-[10px] font-bold uppercase tracking-widest bg-white border border-amber-200 text-amber-700 px-2 py-1 hover:bg-amber-100 transition-colors"
+                      >
+                        {activeAction === "dunning/resume" ? <Loader2 size={12} className="animate-spin" /> : "Resume"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-amber-200/50">
+                      <button 
+                        onClick={() => setPauseDunningModal({ isOpen: true, date: "" })}
+                        disabled={activeAction !== null}
+                        className="w-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-amber-200 text-amber-700 h-8 hover:bg-amber-100 transition-colors"
+                      >
+                        <CalendarClock size={12} /> Pause Automations
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
-                <button onClick={() => setExtendGraceModal({ isOpen: true, days: "7" })} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
-                  {activeAction === "extend-grace" && <Loader2 size={12} className="animate-spin" />} Extend Grace
-                </button>
                 <button onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }} disabled={activeAction !== null} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                   {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
                 </button>
-                <button onClick={() => { if (window.confirm("CRITICAL: Ban user and revoke all access immediately?")) actionMutation.mutate({ action: "ban" }); }} disabled={activeAction !== null} className="h-8 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
+                <button onClick={() => { if (window.confirm("CRITICAL: Ban user and revoke all access immediately?")) actionMutation.mutate({ action: "ban" }); }} disabled={activeAction !== null} className="h-8 col-span-2 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
                   {activeAction === "ban" ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />} Ban User
                 </button>
               </div>
@@ -310,7 +353,7 @@ export default function SubscribersPage() {
                         <div className="flex flex-col gap-1">
                           <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.payment_method}</span></p>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-bold text-[#09090b]">{payment.system_reference}</span>
+                            <span className="text-[10px] font-mono font-bold text-[#09090b]">{payment.id.substring(0,8)}</span>
                           </div>
                           <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
                         </div>
@@ -371,24 +414,27 @@ export default function SubscribersPage() {
         </div>
       )}
 
-      {extendGraceModal.isOpen && (
+      {pauseDunningModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setExtendGraceModal({ isOpen: false, days: "7" })} />
-          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "extend-grace", payload: { days: parseInt(extendGraceModal.days) }}); }} className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-xs flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setPauseDunningModal({ isOpen: false, date: "" })} />
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "dunning/pause", payload: { pause_until: new Date(pauseDunningModal.date).toISOString() }}); }} className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
-              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Extend Grace Period</h3>
-              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50 p-1"><X size={16} /></button>
+              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Pause Automations</h3>
+              <button type="button" onClick={() => setPauseDunningModal({ isOpen: false, date: "" })} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50 p-1"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-4">
+              <p className="text-[12px] text-[#52525b] leading-relaxed">
+                Temporarily pause all automated dunning emails and escalation actions (like suspension) for this customer until a specific date.
+              </p>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Additional Days *</label>
-                <input required type="number" min="1" max="90" value={extendGraceModal.days} onChange={e => setExtendGraceModal({ ...extendGraceModal, days: e.target.value })} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Pause Until *</label>
+                <input required type="datetime-local" value={pauseDunningModal.date} onChange={e => setPauseDunningModal({ ...pauseDunningModal, date: e.target.value })} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
               </div>
             </div>
             <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
-              <button type="button" onClick={() => setExtendGraceModal({ isOpen: false, days: "7" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
+              <button type="button" onClick={() => setPauseDunningModal({ isOpen: false, date: "" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
               <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
-                {activeAction === "extend-grace" && <Loader2 size={13} className="animate-spin" />} Confirm
+                {activeAction === "dunning/pause" && <Loader2 size={13} className="animate-spin" />} Pause Rule
               </button>
             </div>
           </form>

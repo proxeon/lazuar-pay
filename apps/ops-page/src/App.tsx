@@ -11,9 +11,9 @@ import SubscribersPage from "./modules/commerce/pages/SubscribersPage";
 import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
 import CouponsPage from "./modules/commerce/pages/CouponsPage";
 import PaymentSettingsPage from "./modules/commerce/pages/PaymentSettingsPage";
+import DunningCampaignsPage from "./modules/commerce/pages/DunningCampaignsPage";
 
 import SpacesPage from "./modules/community/pages/SpacesPage";
-import DunningSchedulesPage from "./modules/community/pages/DunningSchedulesPage";
 import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
 import TemplatesPage from "./modules/community/pages/TemplatesPage";
 
@@ -173,10 +173,10 @@ export default function App() {
         <Route path="/commerce/subscribers" element={<SubscribersPage />} />
         <Route path="/commerce/transactions" element={<TransactionsPage />} />
         <Route path="/commerce/coupons" element={<CouponsPage />} />
+        <Route path="/commerce/dunning-campaigns" element={<DunningCampaignsPage />} />
         <Route path="/commerce/payment" element={<PaymentSettingsPage />} />
 
         <Route path="/community/spaces" element={<SpacesPage />} />
-        <Route path="/community/dunning-schedules" element={<DunningSchedulesPage />} />
         <Route path="/community/broadcasts" element={<BroadcastsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
 

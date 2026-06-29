@@ -186,15 +186,11 @@ export default function Sidebar({
         )}
       </div>
 
-     {/* FIXED: Removed overflow-y-auto here to comply with ADR-012.
-     Overflow clips absolute positioned flyout menus in collapsed mode. */}
-      {/* ADR-012 COMPLIANCE + SCROLL FIX: Apply overflow-y-auto ONLY when expanded 
-      so the user profile stays anchored. When collapsed, allow overflow-visible for flyouts. */}
       <div className={cn("flex-1 py-4 flex flex-col gap-6", expanded ? "overflow-y-auto" : "overflow-visible")}>
         <nav className="space-y-0.5">
           <ModuleNav 
             title="Commerce" 
-            basePath={["/commerce", "/community/dunning-schedules"]} 
+            basePath={["/commerce"]} 
             icon={ShoppingCart}
             links={[
               { label: "Dashboard", href: "/commerce/dashboard" },
@@ -202,7 +198,7 @@ export default function Sidebar({
               { label: "Subscribers", href: "/commerce/subscribers" },
               { label: "Transaction Logs", href: "/commerce/transactions" },
               { label: "Promotions", href: "/commerce/coupons" },
-              { label: "Dunning Schedules", href: "/community/dunning-schedules" },
+              { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" },
               { label: "Gateway Settings", href: "/commerce/payment" }
             ]} 
           />
