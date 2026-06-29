@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
@@ -13,7 +14,7 @@ public interface ICommerceQueryService
     Task<IEnumerable<ProductDto>> GetProductsAsync(Guid organizationId);
     Task<ProductDto?> GetProductByIdAsync(Guid organizationId, Guid productId);
     Task<AggregatedPortalDataResponse?> GetPortalDataAsync(Guid organizationId, Guid subscriptionId);
-    Task<IEnumerable<ReminderScheduleDto>> GetReminderSchedulesAsync(Guid organizationId);
+    Task<IEnumerable<DunningCampaignDto>> GetDunningCampaignsAsync(Guid organizationId);
     
     Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null);
     Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, string? searchTerm = null);

@@ -22,7 +22,10 @@ public partial class CommerceQueryService
         DateTime? NextBillingDate, 
         DateTime CreatedAt,
         string? VaultedCustomerId, 
-        string? VaultedTokenId
+        string? VaultedTokenId,
+        string? DunningCampaignName,
+        int CurrentDunningStepIndex,
+        DateTime? DunningPausedUntil
     );
 
     public async Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(
@@ -34,15 +37,18 @@ public partial class CommerceQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        // Query only from local commerce tables to preserve schema boundaries
         const string sql = @"
             SELECT
                 s.""Id"", s.""ClientProfileId"", s.""ProductId"",
                 p.""Name"" as ProductName, p.""Price"" as ProductPrice,
                 s.""Status"", s.""CurrentPeriodEnd"", s.""NextBillingDate"", s.""CreatedAt"",
-                s.""VaultedCustomerId"", s.""VaultedTokenId""
+                s.""VaultedCustomerId"", s.""VaultedTokenId"",
+                d.""Name"" as DunningCampaignName,
+                s.""CurrentDunningStepIndex"",
+                s.""DunningPausedUntil""
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
+            LEFT JOIN commerce.""DunningCampaigns"" d ON s.""CurrentDunningCampaignId"" = d.""Id""
             WHERE s.""OrganizationId"" = @OrgId 
             AND s.""Status"" != 'PENDING'
             ORDER BY s.""CreatedAt"" DESC;";
@@ -53,7 +59,6 @@ public partial class CommerceQueryService
             return new PaginatedResponse<CommerceSubscriptionDto>(Enumerable.Empty<CommerceSubscriptionDto>(), 0, page, limit);
         }
 
-        // Batch resolve client details asynchronously from the CRM module
         var profileIds = rawSubs.Select(s => s.ClientProfileId).Distinct().ToList();
         var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
         var profileMap = profiles.ToDictionary(p => Guid.Parse(p.Id), p => p);
@@ -83,11 +88,13 @@ public partial class CommerceQueryService
                 Days_overdue = daysOverdue,
                 Vaulted_customer_id = s.VaultedCustomerId,
                 Vaulted_token_id = s.VaultedTokenId,
+                Dunning_campaign_name = s.DunningCampaignName,
+                Current_dunning_step = s.CurrentDunningStepIndex,
+                Dunning_paused_until = s.DunningPausedUntil.HasValue ? new DateTimeOffset(s.DunningPausedUntil.Value) : null,
                 Created_at = new DateTimeOffset(s.CreatedAt)
             };
         });
 
-        // Apply search filtering in-memory
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             dtos = dtos.Where(d => 

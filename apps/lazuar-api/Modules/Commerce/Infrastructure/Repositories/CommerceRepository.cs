@@ -89,9 +89,11 @@ public class CommerceRepository : ICommerceRepository
             .AnyAsync(l => l.SubscriptionId == subscriptionId && l.TargetBillingDate.Date == targetDate.Date, ct);
     }
 
-    public async Task<ReminderSchedule?> GetReminderScheduleByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<DunningCampaign?> GetDunningCampaignByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
     {
-        return await _context.ReminderSchedules.FirstOrDefaultAsync(r => r.Id == id, ct);
+        return await _context.DunningCampaigns
+            .Include(c => c.Steps)
+            .FirstOrDefaultAsync(c => c.Id == id && c.OrganizationId == organizationId, ct);
     }
 
     public async Task<Dictionary<string, Guid>> GetDefaultTemplateIdsAsync(Guid organizationId, CancellationToken ct = default)
@@ -118,20 +120,14 @@ public class CommerceRepository : ICommerceRepository
     }
 
     public void AddProduct(Product product) => _context.Products.Add(product);
-
     public void AddSubscription(Subscription subscription) => _context.Subscriptions.Add(subscription);
-
     public void AddOrder(Order order) => _context.Orders.Add(order);
-
     public void AddChargeAttempt(ChargeAttemptLog log) => _context.ChargeAttemptLogs.Add(log);
-
-    public void AddReminderSchedule(ReminderSchedule schedule) => _context.ReminderSchedules.Add(schedule);
-
-    public void RemoveReminderSchedule(ReminderSchedule schedule) => _context.ReminderSchedules.Remove(schedule);
-
     public void AddCheckoutSession(CheckoutSession session) => _context.CheckoutSessions.Add(session);
-
     public void AddCoupon(Coupon coupon) => _context.Coupons.Add(coupon);
+    
+    public void AddDunningCampaign(DunningCampaign campaign) => _context.DunningCampaigns.Add(campaign);
+    public void RemoveDunningCampaign(DunningCampaign campaign) => _context.DunningCampaigns.Remove(campaign);
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
