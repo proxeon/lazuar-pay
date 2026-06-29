@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { X, Loader2, UploadCloud, FileText, ShoppingCart, ArrowRight } from "lucide-react";
+import { X, Loader2, UploadCloud, FileText, ShoppingCart, ArrowRight, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { client } from "../../../lib/api-client";
+import { useProductAssociations } from "../../../hooks/use-product-associations";
 
 interface CreateVaultAssetModalProps {
   isOpen: boolean;
@@ -14,11 +15,14 @@ export default function CreateVaultAssetModal({ isOpen, onClose }: CreateVaultAs
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeWorkspaceId = localStorage.getItem("ops_active_workspace_id");
 
   const [name, setName] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
+
+  const { getAssociations } = useProductAssociations(activeWorkspaceId);
 
   const { data: products, isLoading: isProductsLoading } = useQuery({
     queryKey: ["commerce-products"],
@@ -83,6 +87,9 @@ export default function CreateVaultAssetModal({ isOpen, onClose }: CreateVaultAs
     onSuccess: () => {
       toast.success("Digital Asset created successfully.");
       queryClient.invalidateQueries({ queryKey: ["vault-assets"] });
+      setSelectedProductIds([]);
+      setName("");
+      setUploadedUrl("");
       onClose();
     },
     onError: (err: any) => toast.error(err.message)
@@ -102,6 +109,16 @@ export default function CreateVaultAssetModal({ isOpen, onClose }: CreateVaultAs
   if (!isOpen) return null;
 
   const showEmptyState = !isProductsLoading && products?.length === 0;
+
+  const flaggedAssociations = selectedProductIds.flatMap(id => {
+    const associations = getAssociations(id);
+    const product = products?.find(p => p.id === id);
+    return associations.map(a => ({
+      productName: product?.name || "Selected Product",
+      targetName: a.name,
+      targetType: a.type || (a.id.startsWith("00000000") ? "Asset" : "Space")
+    }));
+  });
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -191,6 +208,24 @@ export default function CreateVaultAssetModal({ isOpen, onClose }: CreateVaultAs
                   </div>
                 </div>
               </div>
+
+              {flaggedAssociations.length > 0 && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-sm flex flex-col gap-1.5 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2 text-amber-800">
+                    <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-600" />
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-widest leading-none">Potential Over-Provisioning Warning</p>
+                      <ul className="list-disc pl-4 text-[11px] text-amber-700 space-y-1 mt-1.5 leading-normal">
+                        {flaggedAssociations.map((flag, idx) => (
+                          <li key={idx}>
+                            <strong>{flag.productName}</strong> is already linked to <strong>&quot;{flag.assocName}&quot;</strong>. This will create a bundle.
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
 

@@ -4,10 +4,10 @@ import { Loader2, Trash2, Edit2, Link as LinkIcon, FileText } from "lucide-react
 import { toast } from "sonner";
 import { useOutletContext } from "react-router-dom";
 import { client, type components, type EntitlementDto } from "../../../lib/api-client";
-import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import DigitalProductForm from "./DigitalProductForm";
+import FulfillmentFlowchart from "../../core/components/FulfillmentFlowchart";
 
 type VaultAssetDto = components["schemas"]["Vault.VaultAssetDto"];
 
@@ -104,6 +104,14 @@ export default function AssetDetailPanel({ asset, onClose, onUpdate }: AssetDeta
             <div className="h-10 w-10 bg-indigo-50 border border-indigo-100 flex items-center justify-center rounded-none shrink-0">
                <FileText size={20} className="text-indigo-600" />
             </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Fulfillment Journey</h4>
+            <FulfillmentFlowchart 
+              priceLabel="One-Time Purchase" 
+              targets={["internal:vault"]} 
+            />
           </div>
 
           <div className="space-y-4">

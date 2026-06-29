@@ -7,6 +7,7 @@ import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import ProductForm from "./ProductForm";
+import FulfillmentFlowchart from "../../core/components/FulfillmentFlowchart";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
 type UpdateProductRequestDto = components["schemas"]["Commerce.UpdateProductRequestDto"];
@@ -122,6 +123,14 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
             )}>
               {product.is_active ? "Active" : "Archived"}
             </span>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Fulfillment Journey</h4>
+            <FulfillmentFlowchart 
+              priceLabel={`RM ${product.price.toFixed(2)}`} 
+              targets={product.fulfillment_targets || []} 
+            />
           </div>
 
           <div className="space-y-4">
