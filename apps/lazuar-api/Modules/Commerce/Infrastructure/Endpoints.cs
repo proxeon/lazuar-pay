@@ -11,7 +11,7 @@ public static class Endpoints
         var publicGroup = endpoints.MapGroup("/public/commerce");
 
         adminGroup.MapProductEndpoints();
-        adminGroup.MapReminderScheduleEndpoints();
+        adminGroup.MapDunningCampaignEndpoints();
         adminGroup.MapPaymentConfigEndpoints();
         
         adminGroup.MapSubscriberEndpoints();
