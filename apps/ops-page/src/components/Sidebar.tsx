@@ -188,7 +188,9 @@ export default function Sidebar({
 
      {/* FIXED: Removed overflow-y-auto here to comply with ADR-012.
      Overflow clips absolute positioned flyout menus in collapsed mode. */}
-      <div className="flex-1 py-4 flex flex-col gap-6">
+      {/* ADR-012 COMPLIANCE + SCROLL FIX: Apply overflow-y-auto ONLY when expanded 
+      so the user profile stays anchored. When collapsed, allow overflow-visible for flyouts. */}
+      <div className={cn("flex-1 py-4 flex flex-col gap-6", expanded ? "overflow-y-auto" : "overflow-visible")}>
         <nav className="space-y-0.5">
           <ModuleNav 
             title="Commerce" 
