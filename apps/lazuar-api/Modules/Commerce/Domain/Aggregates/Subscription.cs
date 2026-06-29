@@ -16,6 +16,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime? NextBillingDate { get; private set; }
     public string? VaultedCustomerId { get; private set; }
     public string? VaultedTokenId { get; private set; }
+    public bool IsReminderOnly { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -33,15 +34,17 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         ClientProfileId = clientProfileId;
         ProductId = productId;
         Status = "PENDING";
+        IsReminderOnly = false;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Activate(DateTime currentPeriodEnd, DateTime nextBillingDate)
+    public void Activate(DateTime currentPeriodEnd, DateTime nextBillingDate, bool isReminderOnly = false)
     {
         Status = "ACTIVE";
         CurrentPeriodEnd = currentPeriodEnd;
         NextBillingDate = nextBillingDate;
+        IsReminderOnly = isReminderOnly;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -49,6 +52,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         VaultedCustomerId = customerId;
         VaultedTokenId = tokenId;
+        IsReminderOnly = false;
         UpdatedAt = DateTime.UtcNow;
     }
 

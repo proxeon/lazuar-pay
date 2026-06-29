@@ -1,59 +1,24 @@
-# Community Module (The "Subscription & Retention Engine")
+# Community Module (Downstream Access Fulfillment)
 
 ## 1. Overview
-The `Community` module is the core business engine for managing recurring subscriptions, member lifecycles, automated dunning, and localized tenant configurations. It acts as the fulfillment layer that grants access to community resources (Telegram, Zoom) upon successful payment verification.
+The `Community` module acts as a strict, downstream **Access Fulfillment Wrapper** within the Lazuar ecosystem. It is completely decoupled from payment processing, ledger accounting, and subscription lifecycle management. It listens to system-wide transaction events and manages membership access levels for active spaces.
 
 ## 2. Core Responsibilities
-* **Plan & Tier Management:** Defining subscription catalogs (`CommunityPlan`), including pricing, capacity limits, and fulfillment links.
-* **Subscriber Lifecycle State Machine:** Managing the strict state transitions of a subscription (`PENDING` -> `ACTIVE` -> `PAST_DUE` -> `EXPIRED` / `CANCELLED` / `BANNED`).
-* **Automated Dunning & Reminders:** Scheduling and dispatching automated renewal reminders via the `Messaging` module based on tenant-configured rules.
-* **Coupon & Discount Management:** Generating, reserving, and redeeming promotional codes with strict idempotency and expiration rules.
-* **Broadcast Campaigns:** Scheduling bulk announcements to active subscribers or specific plan cohorts.
-* **Localized Template Management:** Storing tenant-specific email/WhatsApp templates for community events (Welcome, Renewal, Cancellation).
-* **Public Checkout & Portals:** Generating payment sessions and securing magic-link subscriber portals for end-users to manage their billing.
+*   **Space Registration:** Defining private virtual environments (`CommunitySpace`) linked to specific Commerce Products (pricing tiers).
+*   **Membership Management:** Maintaining the active roster of members (`CommunityMember`) inside private spaces.
+*   **Self-Service Delivery:** Generating dynamic, post-purchase links to private resources (such as Telegram join links or Zoom links) inside the buyer dashboard.
 
 ## 3. Architectural Boundaries (What this module is NOT)
-* **Not a Payment Gateway:** It does not hold Stripe/Billplz API keys or parse raw webhooks. It relies entirely on the `Payments` module to generate checkout URLs and publish `GatewayPaymentCompletedIntegrationEvent`.
-* **Not a PII Database:** It does not store the master customer profile. It references the `CRM` module's `ClientProfileId` to resolve names and emails for templating.
-* **Not a Message Dispatcher:** It renders templates and publishes `DispatchMessageIntegrationEvent`, but the physical delivery of SMS/Email is handled by the `Messaging` module.
-* **No Financial Accounting:** It tracks `PaymentRecord` strictly as an *Access Grant Log* (proof of payment for the current cycle). True financial ledger accounting (MRR, Gateway Fees, Taxes) is handled by the `Billing` module.
+*   **No Financial Logic:** This module does not manage payments, record invoices, process refunds, or compile double-entry accounting ledgers. Centralized financial operations live in `Billing` and `Commerce`.
+*   **No Direct DB Joins:** To maintain strict database isolation, the module never joins its tables to schemas outside of the private `community` schema. Customer profile details are resolved dynamically at the application boundary via `ICrmQueryService`.
 
 ## 4. Key Domain Aggregates & Entities
-* **`CommunityPlan`**: The catalog aggregate. Holds pricing, intervals, capacity limits, and JSON-serialized features/FAQs.
-* **`CommunitySubscription`**: The lifecycle aggregate. Enforces strict state transition rules and holds the navigation collection of `PaymentRecord` and `ReminderDispatchLog`.
-* **`CommunityCoupon`**: Manages discount logic, usage limits, and checkout reservation locks to prevent race conditions.
-* **`BroadcastCampaign`**: Aggregate for scheduling and tracking bulk message delivery jobs.
-* **`CommunityReminderSchedule`**: Defines the rules for automated dunning (e.g., "Send Email 3 days before due date").
-* **`MessageTemplate`**: Tenant-scoped entity storing localized copy for automated notifications.
+*   **`CommunitySpace`**: The aggregate root mapping private group parameters (Telegram, Zoom) to the Commerce product identifiers that unlock them.
+*   **`CommunityMember`**: Junction entity tracking individual CRM profiles and their access status (`ACTIVE`, `SUSPENDED`, `CANCELLED`).
 
-## 5. Integration Events
-### Published
-* **`CommunitySubscriptionActivatedIntegrationEvent`**: Fired when a subscription enters the `ACTIVE` state. Triggers the `One` module to grant portal access and the `Messaging` module to send welcome kits.
-* **`CommunitySubscriptionCancelledIntegrationEvent`**: Fired on cancellation.
-* **`CommunityCheckoutInitiatedIntegrationEvent`**: Fired when a user reaches the checkout page. Triggers abandoned cart timers in `Messaging`.
-* **`CommunityRenewalReminderDueIntegrationEvent`**: Fired by the lifecycle worker to trigger a dunning email/SMS.
-* **`DispatchMessageIntegrationEvent`**: The universal command sent to the `Messaging` module to physically deliver rendered templates.
-
-### Consumed
-* **`GatewayPaymentCompletedIntegrationEvent`** (from `Payments`): Records the payment, activates the subscription, and extends the billing cycle.
-* **`GatewayPaymentFailedIntegrationEvent`** (from `Payments`): Transitions the subscription to `PAST_DUE`.
-* **`GatewayRefundCompletedIntegrationEvent`** (from `Payments`): Logs the refund and updates the subscription state.
-* **`ClientProfileAnonymizedIntegrationEvent`** (from `CRM`): Instantly bans the user and cancels all active subscriptions to comply with GDPR/PDPA deletion requests.
-* **`AppEntitlementGrantedIntegrationEvent`** (from `One`): Triggers JIT seeding of default `MessageTemplate` records when the Community app is first enabled for a tenant.
-
-## 6. Background Workers
-* **`CommunityLifecycleJob`**: The critical hourly cron worker. It transitions overdue subscriptions to `PAST_DUE`/`EXPIRED` based on grace periods, evaluates `ReminderSchedules`, and dispatches renewal events.
-* **`BroadcastPublisherJob`**: Processes pending `BroadcastCampaign` aggregates, chunking recipients to prevent event-bus timeouts.
-* **`CommunityInboxConsumerJob` / `CommunityOutboxPublisherJob`**: Standard transactional workers.
-
-## 7. Database Schema
-All tables reside in the isolated `community` schema.
-* `community.Plans`
-* `community.Subscriptions`
-* `community.PaymentRecords`
-* `community.ReminderSchedules`
-* `community.ReminderDispatchLogs` (Idempotency guard against reminder storms)
-* `community.Coupons`
-* `community.BroadcastCampaigns`
-* `community.MessageTemplates`
-* `community.OutboxMessages` / `community.InboxMessages`
+## 5. Integration Events (Consumed)
+The module listens to the following events to fulfill access asynchronously:
+*   `OrderCompletedIntegrationEvent` (from `Commerce`): Grants access for one-time purchases.
+*   `SubscriptionActivatedIntegrationEvent` (from `Commerce`): Grants/restores access upon subscription activation or payment.
+*   `SubscriptionSuspendedIntegrationEvent` (from `Commerce`): Suspends membership on dunning failure.
+*   `SubscriptionCanceledIntegrationEvent` (from `Commerce`): Cancels access at period end.

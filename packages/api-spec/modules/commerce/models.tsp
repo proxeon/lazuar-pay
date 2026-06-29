@@ -272,3 +272,17 @@ model CheckoutStatusResponse {
   status: string;
   token?: string;
 }
+
+@summary("Input details required to manually enroll a subscriber via admin dashboard.")
+model CreateManualSubscriberDto {
+  name: string;
+  email: string;
+  phone: string;
+  product_id: string; // GUID
+  payment_method: string;
+  amount_paid: float64;
+  reference_number?: string;
+  send_welcome_email?: boolean = true;
+  start_date?: utcDateTime;
+  next_billing_date?: utcDateTime;
+}

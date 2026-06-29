@@ -20,14 +20,14 @@ We actively avoid the "CMS Trap" (ADR-015). We don't build website builders, and
   │ UI / Sales  │── Buy Link ───▶│    (Stripe/FPX)   │── Success ───▶ │    (Secure R2 PDF)│
   │ Copy        │                │                   │                │                   │
   └─────────────┘                │ 2. Universal      │                │ 👥 Community      │
-                                 │    Ledger         │                │    (Telegram/Zoom)│
+                                 │    Ledger         │── Success ───▶ │    (Telegram/Zoom)│
   ┌─────────────┐                │                   │                │                   │
   │ Linktree /  │── Buy Link ───▶│ 3. LHDN Tax       │── Success ───▶ │ ⚡ SaaS Webhooks  │
   │ Social Bio  │                │    e-Invoicing    │                │    (App Unlock)   │
   └─────────────┘                │                   │                │                   │
-                                 │ 4. WhatsApp       │                │ 🎟️ Event          │
-  ┌─────────────┐                │    Dunning & CRM  │                │    (Live Booking) │
-  │ Custom      │── API Call ───▶└───────────────────┘                └───────────────────┘
+                                 │ 4. WhatsApp       │                └───────────────────┘
+  ┌─────────────┐                │    Dunning & CRM  │
+  │ Custom      │── API Call ───▶└───────────────────┘
   │ Next.js App │
   └─────────────┘
 ```
@@ -38,37 +38,19 @@ We actively avoid the "CMS Trap" (ADR-015). We don't build website builders, and
 
 ---
 
-## 📜 The Playbook
-
-```txt
-True Wealth =
-((Value × Ψ) / Friction × Distribution)
-× (Code × Math × Automations)
-× (Timing × Focus × Retention)
-```
-
-**Where:**
-- **Decreasing Friction:** Offloading UI to best-in-class tools (Framer) while we provide blazing-fast, 1-click checkout execution.
-- **Code × Math × Automations:** The sovereign CaaS infrastructure (BYOK Payments + Double-Entry Ledger + WhatsApp Dunning).
-
----
-
 ## ⚡ Core Principles
 
-### 1. Headless Commerce (Avoiding the CMS Trap)
-We refuse to build WYSIWYG editors or page builders. All marketing copy and imagery live on external static edge networks (Astro, Webflow). Lazuar exclusively handles the deterministic financial transaction and fulfillment. 
+### 1. Headless Commerce (Centralized Checkout Engine)
+Marketing and presentation layers are fully decoupled from our transactional core. All payment orchestration, double-entry ledgers, and automated dunning are managed centrally inside the `Commerce` and `Billing` cores.
 
 ### 2. Bring Your Own Key (BYOK)
-Unlike Merchants of Record (MoRs) like Lemon Squeezy or Paddle, we do not take a 5–8% cut of your revenue, and we don't hold your funds. You plug in your own Stripe, Billplz, or CHIP API keys. Money flows instantly to you.
+We do not take transaction fees or hold your funds. You plug in your own Stripe, Billplz, or CHIP API keys. Money flows instantly to your merchant accounts.
 
 ### 3. Prepaid Utility Wallet
-Instead of penalizing your growth with transaction fees, we charge a flat SaaS fee for the checkout core. High-leverage automations (like auto-submitting LHDN XML e-Invoices or sending WhatsApp recovery messages) deduct micro-credits from a prepaid `TenantCreditBalance`.
+Automated compliance tasks (LHDN XML e-Invoicing) and retention actions (WhatsApp dunning) deduct micro-credits from a prepaid `TenantCreditBalance` wallet.
 
-### 4. Thin Fulfillment Wrappers (The 15 Apps)
-Our "15 Apps" are not massive standalone software suites. They are lightweight metadata wrappers that execute *after* the Checkout Engine takes money. A "Vault App" is simply `CaaS + an R2 Download Link`. A "Community App" is `CaaS + a Telegram Redirect`. 
-
-### 5. Developer-First Extensibility
-SaaS founders shouldn't spend 3 weeks parsing Stripe and Billplz webhooks. Drop a Lazuar link into your app, and we will send a clean, HMAC-SHA256 signed `Payment_Success` outbound webhook to your server to unlock the user's account.
+### 4. Downstream Access Fulfillment (Thin Wrappers)
+downstream apps like `Community` and `Vault` are designed as thin, stateless fulfillment wrappers. They are completely decoupled from billing mechanics, executing access modifications asynchronously based on global subscription state transitions.
 
 ---
 

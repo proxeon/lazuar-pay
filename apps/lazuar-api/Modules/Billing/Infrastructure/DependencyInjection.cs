@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentSubmittedIntegrationEventHandler>();
         services.AddTransient<ZeroAmountCheckoutHandler>();
+        services.AddTransient<ManualSubscriberEnrolledIntegrationEventHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -75,6 +76,7 @@ public static class DependencyInjection
         eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentSubmittedIntegrationEvent, LhdnDocumentSubmittedIntegrationEventHandler>();
         eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
+        eventBus.Subscribe<ManualSubscriberEnrolledIntegrationEvent, ManualSubscriberEnrolledIntegrationEventHandler>();
 
         return app;
     }

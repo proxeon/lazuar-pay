@@ -42,6 +42,7 @@ public static class DependencyInjection
 
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
         services.AddTransient<LifecycleEventHandlers>();
+        services.AddTransient<FulfillmentRequestedIntegrationEventHandler>();
 
         return services;
     }
@@ -52,6 +53,7 @@ public static class DependencyInjection
         eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>();
         eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, LifecycleEventHandlers>();
         eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, LifecycleEventHandlers>();
+        eventBus.Subscribe<FulfillmentRequestedIntegrationEvent, FulfillmentRequestedIntegrationEventHandler>();
         return app;
     }
 }

@@ -116,6 +116,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => x.OrganizationId);
             builder.HasIndex(x => x.Status);
             builder.HasIndex(x => x.NextBillingDate);
+            builder.Property(x => x.IsReminderOnly).HasDefaultValue(false);
 
             builder.HasMany(x => x.ReminderLogs)
                 .WithOne()

@@ -91,6 +91,12 @@ interface AdminCommerceOperations {
     @query search?: string,
   ): LazuarApi.Core.PaginatedResponse<CommerceSubscriptionDto> | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/subscribers")
+  createSubscriber(
+    @body body: CreateManualSubscriberDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
   @get
   @route("/transactions")
   getTransactions(
