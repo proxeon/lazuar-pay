@@ -13,6 +13,7 @@ public interface ICommerceRepository
     Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default);
     Task<Coupon?> GetCouponByIdAsync(Guid id, CancellationToken ct = default);
     Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default);
+    Task<Coupon?> GetCouponByCodeWithLockAsync(Guid organizationId, string code, CancellationToken ct = default);
     Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default);
     Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default);
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);

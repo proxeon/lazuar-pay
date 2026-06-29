@@ -7,10 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Lazuar.Api.Middleware;
 
-/// <summary>
-/// Intercepts requests bearing LHDN API Keys, resolves them securely via in-memory caching 
-/// to protect database throughput, and constructs the tenant execution context.
-/// </summary>
 public class ApiKeyAuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
@@ -57,6 +53,20 @@ public class ApiKeyAuthenticationMiddleware
 
                     tenantId = result.Value;
                     _cache.Set(cacheKey, tenantId, TimeSpan.FromMinutes(5));
+
+                    var tenantKeysKey = $"TenantKeys_{tenantId}";
+                    if (!_cache.TryGetValue(tenantKeysKey, out List<string>? keyHashes) || keyHashes == null)
+                    {
+                        keyHashes = new List<string>();
+                    }
+                    lock (keyHashes)
+                    {
+                        if (!keyHashes.Contains(keyHash))
+                        {
+                            keyHashes.Add(keyHash);
+                        }
+                    }
+                    _cache.Set(tenantKeysKey, keyHashes, TimeSpan.FromMinutes(10));
                 }
 
                 var claims = new List<Claim>

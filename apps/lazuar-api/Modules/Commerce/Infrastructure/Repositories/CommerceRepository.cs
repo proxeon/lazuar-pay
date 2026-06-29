@@ -51,6 +51,18 @@ public class CommerceRepository : ICommerceRepository
             .FirstOrDefaultAsync(c => c.OrganizationId == organizationId && c.Code == normalizedCode && c.IsActive, ct);
     }
 
+    public async Task<Coupon?> GetCouponByCodeWithLockAsync(Guid organizationId, string code, CancellationToken ct = default)
+    {
+        var normalizedCode = code.Trim().ToUpperInvariant();
+        return await _context.Coupons
+            .FromSqlRaw(@"
+                SELECT * FROM commerce.""Coupons"" 
+                WHERE ""OrganizationId"" = {0} AND ""Code"" = {1} AND ""IsActive"" = true 
+                FOR UPDATE", organizationId, normalizedCode)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(ct);
+    }
+
     public async Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.CheckoutSessions.FirstOrDefaultAsync(s => s.Id == id, ct);

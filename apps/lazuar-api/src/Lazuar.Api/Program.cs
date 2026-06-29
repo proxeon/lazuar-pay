@@ -135,6 +135,7 @@ builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(s3Credentials, r2Con
 builder.Services.AddSingleton<IR2StorageService, R2StorageService>();
 
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
+builder.Services.AddTransient<Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -272,6 +273,7 @@ app.UseCommunicationsSubscriptions();
 
 var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
 eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
+eventBus.Subscribe<Modules.One.Contracts.WorkspaceUpdatedIntegrationEvent, Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 

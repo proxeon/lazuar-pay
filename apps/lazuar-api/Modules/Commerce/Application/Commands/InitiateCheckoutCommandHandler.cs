@@ -35,21 +35,18 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
     public async Task<CheckoutResultDto> Handle(InitiateCheckoutCommand request, CancellationToken ct)
     {
-        // 1. Resolve organization using provided Slug
         var tenantId = await _oneQueryService.GetTenantIdBySlugAsync(request.TenantSlug);
         if (!tenantId.HasValue)
         {
             throw new InvalidOperationException($"Workspace with slug '{request.TenantSlug}' not found.");
         }
 
-        // 2. Fetch targeted catalog product
         var product = await _repository.GetProductBySlugAsync(tenantId.Value, request.ProductSlug, ct);
         if (product == null)
         {
             throw new InvalidOperationException($"Product with slug '{request.ProductSlug}' not found or is inactive.");
         }
 
-        // 3. Resolve customer profile securely via CRM module integration boundary
         BillingAddressDto? billingAddress = null;
         if (!string.IsNullOrEmpty(request.AddressLine1))
         {
@@ -76,14 +73,13 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         var clientProfileId = await _mediator.Send(resolveCrmProfileCmd, ct);
 
-        // 4. Calculate prices and process optional promo codes
         decimal basePrice = product.Price * request.Quantity;
         decimal discountAmount = 0m;
         Guid? couponId = null;
 
         if (!string.IsNullOrWhiteSpace(request.CouponCode))
         {
-            var coupon = await _repository.GetCouponByCodeAsync(tenantId.Value, request.CouponCode, ct);
+            var coupon = await _repository.GetCouponByCodeWithLockAsync(tenantId.Value, request.CouponCode, ct);
             if (coupon == null)
             {
                 throw new InvalidOperationException($"Coupon with code '{request.CouponCode}' is invalid or expired.");
@@ -97,7 +93,6 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         decimal netAmount = Math.Max(0, basePrice - discountAmount);
 
-        // 5. Build Checkout Session aggregate representing purchase intent
         var session = new CheckoutSession(
             tenantId.Value,
             clientProfileId,
@@ -109,7 +104,6 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         _repository.AddCheckoutSession(session);
         await _repository.SaveChangesAsync(ct);
 
-        // 6. Split execution depending on net amount (Zero-Amount Bypass vs. Payment Gateway redirect)
         if (netAmount == 0)
         {
             var processZeroAmountCmd = new ProcessZeroAmountCheckoutCommand(tenantId.Value, session.Id);
