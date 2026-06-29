@@ -42,7 +42,10 @@ public static class DependencyInjection
 
         services.AddHostedService<CommerceInboxConsumerJob>();
         services.AddHostedService<CommerceOutboxPublisherJob>();
-        services.AddHostedService<CommerceLifecycleJob>();
+        
+        // Dunning & Billing Deterministic Engines
+        services.AddHostedService<BillingEngineJob>();
+        services.AddHostedService<DunningEngineJob>();
 
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<GatewayRefundCompletedIntegrationEventHandler>();
