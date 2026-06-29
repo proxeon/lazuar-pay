@@ -17,25 +17,38 @@ namespace Modules.Commerce.Infrastructure;
 public record GenerateCustomerPortalRequest(string Customer_email, string Return_url);
 public record GenerateCustomerPortalResponse(string Url);
 
+public record CreateManualSubscriberRequest(
+    string Name,
+    string Email,
+    string Phone,
+    string Product_id,
+    string Payment_method,
+    decimal Amount_paid,
+    string? Reference_number,
+    bool? Send_welcome_email,
+    DateTimeOffset? Start_date,
+    DateTimeOffset? Next_billing_date
+);
+
 public static class SubscriberEndpoints
 {
     public static RouteGroupBuilder MapSubscriberEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/subscribers", async Task<Ok<PaginatedResponse<CommerceSubscriptionDto>>> (
-            [FromQuery] int page,
-            [FromQuery] int limit,
+        group.MapGet("/subscribers", async (
+            [FromQuery] int? page,
+            [FromQuery] int? limit,
             [FromQuery] string? search,
             IExecutionContextAccessor ctx,
             ICommerceQueryService queryService) =>
           {
-              var p = page < 1 ? 1 : page;
-              var l = limit < 1 || limit > 100 ? 50 : limit;
+              var p = page ?? 1;
+              var l = limit ?? 50;
               var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l, search);
               return TypedResults.Ok(response);
           });
 
-        group.MapPost("/subscribers", async Task<Ok<StatusResponse>> (
-            CreateManualSubscriberDto req,
+        group.MapPost("/subscribers", async (
+            CreateManualSubscriberRequest req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
           {
@@ -46,7 +59,7 @@ public static class SubscriberEndpoints
                   req.Phone,
                   Guid.Parse(req.Product_id),
                   req.Payment_method,
-                  (decimal)req.Amount_paid,
+                  req.Amount_paid,
                   req.Reference_number,
                   req.Send_welcome_email ?? true,
                   req.Start_date?.UtcDateTime,
@@ -57,7 +70,7 @@ public static class SubscriberEndpoints
               return TypedResults.Ok(new StatusResponse { Status = "enrolled" });
           });
 
-        group.MapPost("/subscribers/portal-link", async Task<Ok<GenerateCustomerPortalResponse>> (
+        group.MapPost("/subscribers/portal-link", async (
             GenerateCustomerPortalRequest req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>

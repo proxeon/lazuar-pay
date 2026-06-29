@@ -79,8 +79,8 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         }
 
         var subject = PopulateVariables(template.Subject);
-        var emailBody = PopulateVariables(template.Email_body);
-        var whatsappBody = PopulateVariables(template.WhatsApp_body);
+        var emailBody = PopulateVariables(template.EmailBody);
+        var whatsappBody = PopulateVariables(template.WhatsAppBody);
 
         var dispatchEvent = new DispatchMessageIntegrationEvent(
             @event.OrganizationId,
