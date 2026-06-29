@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using MediatR;
@@ -36,6 +38,37 @@ public class CommerceDbContext : PlatformDbContext
         DatabaseJobTrigger jobTrigger)
         : base(options, executionContext, mediator, jobTrigger)
     {
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Intercept pre-assigned UUID child entities attached to existing aggregates
+        // to prevent EF Core from mistaking them as "Modified" updates.
+        foreach (var entry in ChangeTracker.Entries<DunningStep>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<ReminderDispatchLog>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<ChargeAttemptLog>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
