@@ -88,35 +88,45 @@ model AggregatedPortalDataResponse {
   orders: PortalOrderDto[];
 }
 
-model ReminderScheduleDto {
-  id: string; // GUID
-  product_id?: string; // GUID
-  product_name?: string;
+model DunningStepDto {
+  day_offset: int32;
   template_id: string; // GUID
-  template_name: string;
   channel: string;
-  days_relative_to_due: int32;
-  time_of_day: string;
-  is_enabled: boolean;
+}
+
+model DunningCampaignDto {
+  id: string; // GUID
+  name: string;
+  is_active: boolean;
+  final_action: string;
+  grace_period_days: int32;
+  target_product_ids: string[]; // GUID array
+  target_payment_methods: string[];
+  steps: DunningStepDto[];
   created_at: utcDateTime;
 }
 
-model CreateReminderScheduleRequestDto {
-  product_id?: string;
-  template_id: string;
-  channel: string;
-  days_relative_to_due: int32;
-  time_of_day: string;
-  is_enabled: boolean;
+model CreateDunningCampaignRequestDto {
+  name: string;
+  final_action: string;
+  grace_period_days: int32;
+  target_product_ids?: string[]; // GUID array
+  target_payment_methods?: string[];
+  steps: DunningStepDto[];
 }
 
-model UpdateReminderScheduleRequestDto {
-  product_id?: string;
-  template_id?: string;
-  channel?: string;
-  days_relative_to_due?: int32;
-  time_of_day?: string;
-  is_enabled?: boolean;
+model UpdateDunningCampaignRequestDto {
+  name: string;
+  final_action: string;
+  grace_period_days: int32;
+  target_product_ids?: string[]; // GUID array
+  target_payment_methods?: string[];
+  steps: DunningStepDto[];
+  is_active?: boolean;
+}
+
+model PauseDunningRequestDto {
+  pause_until: utcDateTime;
 }
 
 model PaymentConfigDto {
@@ -158,6 +168,9 @@ model CommerceSubscriptionDto {
   days_overdue?: int32;
   vaulted_customer_id?: string;
   vaulted_token_id?: string;
+  dunning_campaign_name?: string;
+  current_dunning_step?: int32;
+  dunning_paused_until?: utcDateTime;
   created_at: utcDateTime;
 }
 
