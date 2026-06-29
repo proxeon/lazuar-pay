@@ -6,6 +6,7 @@ import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
 import CreateSpaceModal from "../components/CreateSpaceModal";
 import SpaceDetailPanel from "../components/SpaceDetailPanel";
+import { cn } from "../../../lib/utils";
 
 type AdminCommunitySpaceDto = components["schemas"]["Community.AdminCommunitySpaceDto"];
 
@@ -33,6 +34,31 @@ export default function SpacesPage() {
     enabled: !!activeWorkspaceId
   });
 
+  const renderStatusIndicator = (space: AdminCommunitySpaceDto) => {
+    const hasTelegram = !!space.telegram_link?.trim();
+    const hasZoom = !!space.zoom_link?.trim();
+
+    if (hasTelegram && hasZoom) {
+      return (
+        <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block bg-emerald-50 text-emerald-700 border-emerald-200">
+          Fully Configured
+        </span>
+      );
+    }
+    if (hasTelegram || hasZoom) {
+      return (
+        <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block bg-amber-50 text-amber-700 border-amber-200">
+          Partial Config
+        </span>
+      );
+    }
+    return (
+      <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block bg-rose-50 text-rose-700 border-rose-200">
+        Missing Setup Links
+      </span>
+    );
+  };
+
   return (
     <PageLayout 
       title="Community Spaces" 
@@ -52,21 +78,22 @@ export default function SpacesPage() {
           <table className="w-full text-left text-[13px] min-w-[750px]">
             <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
               <tr>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Space Name</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Access Links</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Linked Products</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[30%]">Space Name</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[25%]">Access Links</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[30%]">Linked Product Tiers</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={3} className="py-12 text-center text-[#a1a1aa]">
+                  <td colSpan={4} className="py-12 text-center text-[#a1a1aa]">
                     <Loader2 className="animate-spin mx-auto" size={20} />
                   </td>
                 </tr>
               ) : spaces?.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="py-12 text-center text-[13px] text-[#71717a] leading-relaxed">
+                  <td colSpan={4} className="py-12 text-center text-[13px] text-[#71717a] leading-relaxed">
                     No community spaces configured yet.<br /> 
                     Click "Create Space" to link Telegram and Zoom details to your Commerce products.
                   </td>
@@ -92,8 +119,24 @@ export default function SpacesPage() {
                         </a>
                       )}
                     </td>
-                    <td className="px-5 py-4 font-mono text-[11px] text-[#71717a]">
-                      {space.product_ids?.length || 0} product(s)
+                    <td className="px-5 py-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {space.linked_checkouts && space.linked_checkouts.length > 0 ? (
+                          space.linked_checkouts.map((checkout) => (
+                            <span 
+                              key={checkout.id} 
+                              className="text-[10px] font-bold uppercase tracking-widest bg-zinc-100 text-[#09090b] border border-zinc-200 px-1.5 py-0.5 rounded-sm"
+                            >
+                              {checkout.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-rose-600 font-semibold uppercase tracking-wider">Unlinked Space</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      {renderStatusIndicator(space)}
                     </td>
                   </tr>
                 ))

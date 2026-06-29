@@ -8,6 +8,7 @@ import PageLayout from "../../core/components/PageLayout";
 import { cn } from "../../../lib/utils";
 import CreateProductModal from "../components/CreateProductModal";
 import ProductDetailPanel from "../components/ProductDetailPanel";
+import QuickCopy from "../../core/components/QuickCopy";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
 
@@ -49,6 +50,39 @@ export default function ProductsPage() {
   const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
   const showGatewayWarning = paymentConfigError || !paymentConfig || !paymentConfig.is_active;
 
+  const renderFulfillmentBadges = (targets: string[] | undefined) => {
+    if (!targets || targets.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-1.5">
+        {targets.map((target, idx) => {
+          const isCommunity = target.includes("community") || target.includes("spaces");
+          const isVault = target.includes("vault") || target.includes("assets");
+          const isWebhook = target.startsWith("http");
+
+          let label = "Fulfillment";
+          let classes = "bg-zinc-50 text-zinc-600 border-zinc-200";
+
+          if (isCommunity) {
+            label = "Community";
+            classes = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/50";
+          } else if (isVault) {
+            label = "Vault";
+            classes = "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50";
+          } else if (isWebhook) {
+            label = "Webhook";
+            classes = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50";
+          }
+
+          return (
+            <span key={idx} className={cn("text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border rounded-sm", classes)}>
+              {label}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <PageLayout 
       title="Checkout Links" 
@@ -82,21 +116,22 @@ export default function ProductsPage() {
 
         <div className="bg-white border border-[#e5e5e5] rounded-none overflow-hidden">
           <div className="w-full overflow-x-auto min-h-[320px]">
-            <table className="w-full text-left text-[13px] min-w-[700px]">
+            <table className="w-full text-left text-[13px] min-w-[800px]">
               <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
                 <tr>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Link Details</th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Pricing Model</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[25%]">Price (MYR)</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Status</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Price (MYR)</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Billing Interval</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f4f4f5]">
                 {isLoading ? (
-                  <tr><td colSpan={4} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
                 ) : products?.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-[13px] text-[#71717a]">
+                    <td colSpan={5} className="py-12 text-center text-[13px] text-[#71717a]">
                       No checkout links found. Click "Create Link" to build one.
                     </td>
                   </tr>
@@ -114,7 +149,11 @@ export default function ProductsPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-bold text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{product.name}</span>
                         </div>
-                        <p className="text-[11px] font-mono text-[#71717a]">{product.slug}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[11px] font-mono text-[#71717a]">{product.slug}</p>
+                          <QuickCopy text={product.slug} iconSize={10} className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        {renderFulfillmentBadges(product.fulfillment_targets)}
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-[11px] font-medium text-[#52525b]">
@@ -122,10 +161,12 @@ export default function ProductsPage() {
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <div className="font-mono text-[#09090b]">
-                          <span className="font-bold">RM {product.price.toFixed(2)}</span>
-                          <span className="text-[11px] text-[#71717a] ml-1 uppercase">{product.interval}</span>
-                        </div>
+                        <span className="font-mono font-bold text-[#09090b]">
+                          RM {product.price.toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 font-mono text-[11px] text-[#52525b] uppercase font-bold">
+                        {product.interval}
                       </td>
                       <td className="px-5 py-4">
                         <span className={cn(
