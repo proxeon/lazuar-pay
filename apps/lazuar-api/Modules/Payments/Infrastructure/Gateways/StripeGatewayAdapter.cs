@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Payments/Infrastructure/Gateways/StripeGatewayAdapter.cs
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
 using Stripe;
@@ -20,7 +21,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail,
         string successUrl, string cancelUrl, Dictionary<string, string> metadata,
-        string? merchantId, bool setupFutureUsage = false)
+        string? merchantId, bool setupFutureUsage = false, int quantity = 1)
     {
         try
         {
@@ -45,7 +46,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                                 Name = string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName
                             },
                         },
-                        Quantity = 1,
+                        Quantity = quantity,
                     }
                 },
                 Metadata = metadata,

@@ -1,3 +1,4 @@
+// packages/api-spec/modules/one/routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -175,4 +176,26 @@ interface OneOperations {
     @path id: string,
     @body body: UpdateWorkspaceLhdnConfigRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @get
+  @route("/workspaces/{id}/webhooks")
+  getWorkspaceWebhooks(
+    @path id: string,
+  ): WebhookEndpointDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @put
+  @route("/workspaces/{id}/webhooks")
+  saveWorkspaceWebhook(
+    @path id: string,
+    @body body: SaveWebhookEndpointRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @get
+  @route("/workspaces/{id}/webhooks/logs")
+  getWorkspaceWebhookLogs(
+    @path id: string,
+  ): WebhookDeliveryLogDto[] | LazuarApi.Core.ProblemDetailsResponse;
 }

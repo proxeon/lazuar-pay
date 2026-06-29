@@ -10,12 +10,13 @@ using Modules.Billing.Application.Llm;
 using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Events;
 using Modules.Billing.Infrastructure.EventHandlers;
+using Modules.Billing.Infrastructure.Commands;
 using Modules.Billing.Infrastructure.Repositories;
 using Modules.Billing.Infrastructure.Services;
 using Modules.Billing.Infrastructure.Workers;
-using Modules.Community.Contracts;
 using Modules.Payments.Contracts.Events;
 using Modules.Lhdn.Contracts.Events;
+using Modules.Commerce.Contracts.Events;
 using System;
 
 namespace Modules.Billing.Infrastructure;
@@ -42,14 +43,15 @@ public static class DependencyInjection
         services.AddScoped<IBillingQueryService, BillingQueryService>();
 
         services.AddTransient<GatewayPaymentCompletedHandler>();
-        services.AddTransient<ZeroAmountCheckoutHandler>();
+        services.AddTransient<PlatformTopUpEventHandler>();
         services.AddTransient<GatewayRefundCompletedHandler>();
         services.AddTransient<InvoiceIssuedHandler>();
-        services.AddTransient<ManualPaymentRecordedHandler>();
         services.AddTransient<CommissionAccruedHandler>();
         services.AddTransient<LhdnDocumentValidatedIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentCancelledIntegrationEventHandler>();
         services.AddTransient<LhdnDocumentSubmittedIntegrationEventHandler>();
+        services.AddTransient<ZeroAmountCheckoutHandler>();
+        services.AddTransient<ManualSubscriberEnrolledIntegrationEventHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -66,14 +68,15 @@ public static class DependencyInjection
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedHandler>();
-        eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
+        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, PlatformTopUpEventHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedHandler>();
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedHandler>();
-        eventBus.Subscribe<CommunityManualPaymentRecordedIntegrationEvent, ManualPaymentRecordedHandler>();
         eventBus.Subscribe<CommissionAccruedIntegrationEvent, CommissionAccruedHandler>();
         eventBus.Subscribe<LhdnDocumentValidatedIntegrationEvent, LhdnDocumentValidatedIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentCancelledIntegrationEvent, LhdnDocumentCancelledIntegrationEventHandler>();
         eventBus.Subscribe<LhdnDocumentSubmittedIntegrationEvent, LhdnDocumentSubmittedIntegrationEventHandler>();
+        eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
+        eventBus.Subscribe<ManualSubscriberEnrolledIntegrationEvent, ManualSubscriberEnrolledIntegrationEventHandler>();
 
         return app;
     }

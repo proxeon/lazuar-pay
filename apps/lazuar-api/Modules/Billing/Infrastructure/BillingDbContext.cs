@@ -26,6 +26,29 @@ public class BillingDbContext : PlatformDbContext
     {
     }
 
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Intercept pre-assigned UUID child entities attached to existing aggregates
+        // to prevent EF Core from mistaking them as "Modified" updates.
+        foreach (var entry in ChangeTracker.Entries<CreditLedger>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+        
+        foreach (var entry in ChangeTracker.Entries<LedgerLine>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

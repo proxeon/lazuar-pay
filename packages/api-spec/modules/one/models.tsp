@@ -1,3 +1,4 @@
+// packages/api-spec/modules/one/models.tsp
 namespace LazuarApi.One;
 
 model LoginRequest {
@@ -127,4 +128,26 @@ model UpdateWorkspaceLhdnConfigRequestDto {
   myinvois_env: EnvironmentType;
   supplier_tin?: string;
   msic_code?: string;
+}
+
+model WebhookEndpointDto {
+  id: string; // GUID
+  url: string;
+  secret_key: string;
+  is_active: boolean;
+  created_at: utcDateTime;
+}
+
+model SaveWebhookEndpointRequestDto {
+  url: string;
+  is_active: boolean;
+}
+
+model WebhookDeliveryLogDto {
+  id: string; // GUID
+  event_type: string;
+  status: string;
+  attempt_count: int32;
+  last_error?: string;
+  created_at: utcDateTime;
 }

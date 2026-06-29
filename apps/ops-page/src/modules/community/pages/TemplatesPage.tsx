@@ -4,10 +4,10 @@ import { Edit2, Loader2, Mail, Plus, BookOpen, X, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import PageLayout from "../../core/components/PageLayout";
-import MessageTemplateEditor from "../components/MessageTemplateEditor";
+import MessageTemplateEditor from "../../commerce/components/MessageTemplateEditor";
 import { cn } from "../../../lib/utils";
 
-type MessageTemplateDto = components["schemas"]["Community.MessageTemplateDto"];
+type MessageTemplateDto = components["schemas"]["Communications.MessageTemplateDto"];
 
 export default function TemplatesPage() {
   const queryClient = useQueryClient();
@@ -21,18 +21,18 @@ export default function TemplatesPage() {
   const [newWhatsappBody, setNewWhatsappBody] = useState("");
 
   const { data: rawTemplates, isLoading } = useQuery<MessageTemplateDto[]>({
-    queryKey: ["message-templates"],
+    queryKey: ["communications-templates"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/templates");
+      const { data, error } = await client.GET("/admin/communications/templates");
       if (error) throw new Error(error.detail);
       return data;
     }
   });
 
   const { data: dictionaryGroups } = useQuery({
-    queryKey: ["template-variables"],
+    queryKey: ["communications-template-variables"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/community/templates/variables");
+      const { data, error } = await client.GET("/admin/communications/templates/variables");
       if (error) throw new Error(error.detail);
       return data;
     },
@@ -43,7 +43,7 @@ export default function TemplatesPage() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await client.POST("/admin/community/templates", {
+      const { error } = await client.POST("/admin/communications/templates", {
         body: {
           name: newName,
           subject: newSubject,
@@ -58,7 +58,7 @@ export default function TemplatesPage() {
     },
     onSuccess: () => {
       toast.success("Template created successfully");
-      queryClient.invalidateQueries({ queryKey: ["message-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["communications-templates"] });
       setIsCreateModalOpen(false);
       resetCreateForm();
     },
@@ -67,7 +67,7 @@ export default function TemplatesPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, subject, email_body, whatsapp_body }: { id: string, subject: string, email_body: string, whatsapp_body: string }) => {
-      const { error } = await client.PUT("/admin/community/templates/{id}", {
+      const { error } = await client.PUT("/admin/communications/templates/{id}", {
         params: { path: { id } },
         body: { subject, email_body, whatsapp_body }
       });
@@ -75,7 +75,7 @@ export default function TemplatesPage() {
     },
     onSuccess: () => {
       toast.success("Template saved successfully.");
-      queryClient.invalidateQueries({ queryKey: ["message-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["communications-templates"] });
       setSelectedTemplate(null);
     },
     onError: (err: any) => toast.error(err.message)
@@ -83,14 +83,14 @@ export default function TemplatesPage() {
 
   const resetMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await client.DELETE("/admin/community/templates/{id}", {
+      const { error } = await client.DELETE("/admin/communications/templates/{id}", {
         params: { path: { id } }
       });
       if (error) throw new Error(error.detail);
     },
     onSuccess: () => {
       toast.success("Template reset to system defaults.");
-      queryClient.invalidateQueries({ queryKey: ["message-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["communications-templates"] });
       setSelectedTemplate(null);
     },
     onError: (err: any) => toast.error(err.message)
@@ -154,8 +154,10 @@ export default function TemplatesPage() {
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLoading ? (
                 <tr><td colSpan={4} className="py-12 text-center"><Loader2 className="animate-spin text-[#a1a1aa] mx-auto" /></td></tr>
+              ) : templates.length === 0 ? (
+                <tr><td colSpan={4} className="py-12 text-center text-[#71717a] text-[12px]">No templates found.</td></tr>
               ) : (
-                templates?.map((template) => (
+                templates.map((template) => (
                   <tr key={template.id} className="hover:bg-[#fafafa]/50 transition-colors group">
                     <td className="px-5 py-3.5 font-bold text-[#09090b]">
                       <div className="flex items-center gap-2">
@@ -196,8 +198,8 @@ export default function TemplatesPage() {
               <button onClick={() => setIsWikiOpen(false)} className="p-1 text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors rounded-sm"><X size={16} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {!dictionaryGroups ? (
-                <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#a1a1aa]" /></div>
+              {!dictionaryGroups || dictionaryGroups.length === 0 ? (
+                <div className="text-center p-8 text-[#71717a] text-[12px]">No variables available.</div>
               ) : (
                 dictionaryGroups.map((group: any) => (
                   <div key={group.title} className="space-y-3">

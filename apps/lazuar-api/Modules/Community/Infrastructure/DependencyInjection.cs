@@ -1,21 +1,16 @@
-using BuildingBlocks.Application;
-using BuildingBlocks.Application.Llm;
-using BuildingBlocks.Infrastructure;
+using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
 using Modules.Community.Application;
-using Modules.Community.Application.IntegrationEvents;
-using Modules.Community.Application.Llm;
 using Modules.Community.Application.Queries;
 using Modules.Community.Infrastructure.EventHandlers;
-using Modules.Community.Infrastructure.Repositories;
 using Modules.Community.Infrastructure.Services;
 using Modules.Community.Infrastructure.Workers;
-using Modules.Payments.Contracts.Events;
-using Modules.One.Contracts;
-using Modules.CRM.Contracts;
+using Modules.Commerce.Contracts.Events;
 
 namespace Modules.Community.Infrastructure;
 
@@ -35,29 +30,20 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("CommunitySqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
-        services.AddScoped<ICommunityPlanRepository, CommunityPlanRepository>();
-        services.AddScoped<ICommunitySubscriptionRepository, CommunitySubscriptionRepository>();
-        services.AddScoped<ICommunityReminderScheduleRepository, CommunityReminderScheduleRepository>();
-        services.AddScoped<ICommunityCouponRepository, CommunityCouponRepository>();
-        services.AddScoped<IBroadcastCampaignRepository, CommunityBroadcastRepository>();
+        services.AddScoped<ICommunitySpaceRepository, Repositories.CommunitySpaceRepository>();
 
-        services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddScoped<ICommunityQueryService, CommunityQueryService>();
-        services.AddScoped<IMessageTemplateQueryService, MessageTemplateQueryService>();
         services.AddSingleton<ICommunityLinkService, CommunityLinkService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunityDbContext>>("CommunityEventBus");
 
         services.AddHostedService<CommunityInboxConsumerJob>();
         services.AddHostedService<CommunityOutboxPublisherJob>();
-        services.AddHostedService<CommunityLifecycleJob>();
-        services.AddHostedService<BroadcastPublisherJob>();
 
-        services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
-        services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
-        services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
-
-        services.AddSingleton<IAgentPromptProvider, CommunityPromptProvider>();
+        services.AddTransient<OrderCompletedIntegrationEventHandler>();
+        services.AddTransient<SubscriptionActivatedIntegrationEventHandler>();
+        services.AddTransient<SubscriptionSuspendedIntegrationEventHandler>();
+        services.AddTransient<SubscriptionCanceledIntegrationEventHandler>();
 
         return services;
     }
@@ -65,9 +51,10 @@ public static class DependencyInjection
     public static IApplicationBuilder UseCommunitySubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
-        eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>();
-        eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
+        eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionActivatedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, SubscriptionSuspendedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, SubscriptionCanceledIntegrationEventHandler>();
         return app;
     }
 }

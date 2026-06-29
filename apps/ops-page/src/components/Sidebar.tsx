@@ -1,4 +1,3 @@
-// apps/ops-page/src/components/Sidebar.tsx
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -8,7 +7,11 @@ import {
   PanelLeftOpen, 
   Settings,
   ChevronDown,
-  Users
+  Users,
+  Box,
+  ShoppingCart,
+  Zap,
+  Mail
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
@@ -39,8 +42,9 @@ export default function Sidebar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const ModuleNav = ({ title, basePath, icon: Icon, links }: { title: string, basePath: string, icon: any, links: { label: string, href: string }[] }) => {
-    const isActiveModule = location.pathname.startsWith(basePath);
+  const ModuleNav = ({ title, basePath, icon: Icon, links }: { title: string, basePath: string | string[], icon: any, links: { label: string, href: string }[] }) => {
+    const basePaths = Array.isArray(basePath) ? basePath : [basePath];
+    const isActiveModule = basePaths.some(path => location.pathname.startsWith(path));
     const [isAccordionOpen, setIsAccordionOpen] = useState(isActiveModule);
     const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
     const navRef = useRef<HTMLDivElement>(null);
@@ -182,22 +186,57 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className="flex-1 py-4 flex flex-col gap-6">
+     {/* FIXED: Removed overflow-y-auto here to comply with ADR-012.
+     Overflow clips absolute positioned flyout menus in collapsed mode. */}
+      {/* ADR-012 COMPLIANCE + SCROLL FIX: Apply overflow-y-auto ONLY when expanded 
+      so the user profile stays anchored. When collapsed, allow overflow-visible for flyouts. */}
+      <div className={cn("flex-1 py-4 flex flex-col gap-6", expanded ? "overflow-y-auto" : "overflow-visible")}>
         <nav className="space-y-0.5">
           <ModuleNav 
+            title="Commerce" 
+            basePath={["/commerce", "/community/dunning-schedules"]} 
+            icon={ShoppingCart}
+            links={[
+              { label: "Dashboard", href: "/commerce/dashboard" },
+              { label: "Checkout Links", href: "/commerce/products" },
+              { label: "Subscribers", href: "/commerce/subscribers" },
+              { label: "Transaction Logs", href: "/commerce/transactions" },
+              { label: "Promotions", href: "/commerce/coupons" },
+              { label: "Dunning Schedules", href: "/community/dunning-schedules" },
+              { label: "Gateway Settings", href: "/commerce/payment" }
+            ]} 
+          />
+          <ModuleNav 
+            title="Communications" 
+            basePath={["/community/broadcasts", "/community/templates"]} 
+            icon={Mail}
+            links={[
+              { label: "Bulk Broadcast", href: "/community/broadcasts" },
+              { label: "Message Templates", href: "/community/templates" }
+            ]} 
+          />
+          <ModuleNav 
             title="Community" 
-            basePath="/community" 
+            basePath="/community/spaces" 
             icon={Users}
             links={[
-              { label: "Dashboard", href: "/community/dashboard" },
-              { label: "Subscribers", href: "/community/subscribers" },
-              { label: "Transaction Logs", href: "/community/transactions" },
-              { label: "Plans & Products", href: "/community/plans" },
-              { label: "Promotions", href: "/community/coupons" },
-              { label: "Dunning Schedules", href: "/community/dunning-schedules" },
-              { label: "Bulk Broadcast", href: "/community/broadcasts" },
-              { label: "Payment Settings", href: "/community/payment" },
-              { label: "Message Templates", href: "/community/templates" }
+              { label: "Community Spaces", href: "/community/spaces" }
+            ]} 
+          />
+          <ModuleNav 
+            title="Vault" 
+            basePath="/vault" 
+            icon={Box}
+            links={[
+              { label: "Digital Files", href: "/vault/products" }
+            ]} 
+          />
+          <ModuleNav 
+            title="Developer" 
+            basePath="/developer" 
+            icon={Zap}
+            links={[
+              { label: "Outbound Webhooks", href: "/developer/webhooks" }
             ]} 
           />
           <ModuleNav 
@@ -205,7 +244,8 @@ export default function Sidebar({
             basePath="/workspace" 
             icon={Settings}
             links={[
-              { label: "General Settings", href: "/workspace/general" }
+              { label: "General Settings", href: "/workspace/general" },
+              { label: "Platform Billing", href: "/workspace/billing" }
             ]} 
           />
         </nav>

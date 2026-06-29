@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using MediatR;
+using BuildingBlocks.Application;
 
 namespace BuildingBlocks.Infrastructure;
 
@@ -70,13 +71,16 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                             {
                                 await mediator.Publish(notification, stoppingToken);
                             }
-
-                            message.ProcessedAt = DateTime.UtcNow;
                         }
                         catch (Exception ex)
                         {
                             message.Error = ex.ToString();
                             _logger.LogError(ex, "Failed to process inbox message {Id}", message.Id);
+                        }
+                        finally
+                        {
+                            // CRITICAL FIX: Always mark as processed to prevent infinite CPU loops on poisoned messages
+                            message.ProcessedAt = DateTime.UtcNow;
                         }
                     }
 

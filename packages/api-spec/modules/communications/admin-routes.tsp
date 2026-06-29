@@ -1,0 +1,57 @@
+import "@typespec/http";
+import "../../common/models.tsp";
+import "./models.tsp";
+
+using TypeSpec.Http;
+
+namespace LazuarApi.Communications;
+
+@useAuth(BearerAuth)
+@route("/admin/communications")
+interface AdminCommunicationsOperations {
+  @get
+  @route("/templates")
+  getTemplates(): MessageTemplateDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/templates")
+  createTemplate(
+    @body body: CreateTemplateRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/templates/variables")
+  getTemplateVariables(
+  ): TemplateVariableCategoryDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/templates/preview")
+  previewTemplate(
+    @body body: TemplatePreviewRequestDto,
+  ): TemplatePreviewResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/templates/{id}")
+  updateTemplate(
+    @path id: string,
+    @body body: UpdateTemplateRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @delete
+  @route("/templates/{id}")
+  resetTemplate(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/reminders/test")
+  testReminder(
+    @body body: TestReminderRequestDto,
+  ): TestReminderResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/broadcasts")
+  sendBroadcast(
+    @body body: CreateBroadcastRequestDto,
+  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+}

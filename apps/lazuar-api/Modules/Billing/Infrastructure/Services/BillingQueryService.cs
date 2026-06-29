@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
@@ -23,12 +24,21 @@ public class BillingQueryService : IBillingQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
+        // Isolates dashboard Net Revenue strictly to customer sales activity by 
+        // subtracting gateway fees, taxes, and refunds from gross revenue, 
+        // completely ignoring unrelated operational expenses like utility credit top-ups.
         const string sql = @"
             SELECT 
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Gross_revenue"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Total_gateway_fees"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Total_tax_liabilities"",
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'ASSET_CASH' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Net_revenue"",
+                (
+                    COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'CONTRA_REVENUE_REFUNDS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_DISCOUNT' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                ) as ""Net_revenue"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_DEFERRED_REVENUE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Deferred_revenue"",
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_RECOGNIZED' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Recognized_revenue"",
                 'MYR' as ""Currency""
@@ -64,5 +74,43 @@ public class BillingQueryService : IBillingQueryService
         var credits = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { OrgId = organizationId });
         
         return credits.HasValue && credits.Value > 0;
+    }
+
+    public async Task<CreditBalanceDto> GetCreditBalanceWithHistoryAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string balanceSql = @"
+            SELECT ""Id"", ""AvailableCredits"" 
+            FROM billing.""TenantCreditBalances"" 
+            WHERE ""OrganizationId"" = @OrgId 
+            LIMIT 1";
+
+        var balanceRow = await connection.QuerySingleOrDefaultAsync<dynamic>(balanceSql, new { OrgId = organizationId });
+
+        if (balanceRow == null)
+        {
+            return new CreditBalanceDto
+            {
+                Available_credits = 0,
+                Recent_transactions = new List<CreditTransactionDto>()
+            };
+        }
+
+        const string historySql = @"
+            SELECT ""Amount"", ""Reference"", ""CreatedAt"" as Created_at
+            FROM billing.""CreditLedgers""
+            WHERE ""TenantCreditBalanceId"" = @BalanceId
+            ORDER BY ""CreatedAt"" DESC
+            LIMIT 50";
+
+        var history = await connection.QueryAsync<CreditTransactionDto>(historySql, new { BalanceId = (Guid)balanceRow.Id });
+
+        return new CreditBalanceDto
+        {
+            Available_credits = (int)balanceRow.AvailableCredits,
+            Recent_transactions = history.ToList()
+        };
     }
 }

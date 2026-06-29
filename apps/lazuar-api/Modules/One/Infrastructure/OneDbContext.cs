@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/One/Infrastructure/OneDbContext.cs
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
@@ -13,6 +14,8 @@ public class OneDbContext : PlatformDbContext
     public DbSet<TenantMembership> TenantMemberships { get; set; } = null!;
     public DbSet<TenantAppEntitlement> TenantAppEntitlements { get; set; } = null!;
     public DbSet<WorkspaceInvitation> WorkspaceInvitations { get; set; } = null!;
+    public DbSet<TenantWebhookEndpoint> TenantWebhookEndpoints { get; set; } = null!;
+    public DbSet<WebhookDeliveryOutbox> WebhookDeliveryOutboxes { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -67,6 +70,20 @@ public class OneDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.TokenHash).IsUnique();
             builder.HasIndex(x => new { x.OrganizationId, x.Email }).HasFilter("\"Status\" = 'PENDING'");
+        });
+
+        modelBuilder.Entity<TenantWebhookEndpoint>(builder =>
+        {
+            builder.ToTable("TenantWebhookEndpoints");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId);
+        });
+
+        modelBuilder.Entity<WebhookDeliveryOutbox>(builder =>
+        {
+            builder.ToTable("WebhookDeliveryOutboxes");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.Status, x.NextAttemptAt });
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

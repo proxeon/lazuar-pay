@@ -1,3 +1,4 @@
+// packages/api-spec/modules/billing/models.tsp
 namespace LazuarApi.Billing;
 
 model LedgerLineDto {
@@ -38,6 +39,22 @@ model NetProfitDto {
   currency: string;
 }
 
+model CreditTransactionDto {
+  amount: int32;
+  reference: string;
+  created_at: utcDateTime;
+}
+
 model CreditBalanceDto {
   available_credits: int32;
+  recent_transactions: CreditTransactionDto[];
+}
+
+model CreateTopUpRequestDto {
+  amount_myr: float64;
+  return_url: string;
+}
+
+model TopUpResponseDto {
+  checkout_url: string;
 }

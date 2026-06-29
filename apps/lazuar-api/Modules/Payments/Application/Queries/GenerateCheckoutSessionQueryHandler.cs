@@ -23,7 +23,7 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
 
         if (config == null || !config.IsActive || string.IsNullOrEmpty(config.ApiKey))
         {
-            throw new InvalidOperationException("Payment gateway is not configured or active for this tenant.");
+            throw new InvalidOperationException("Payment gateway is not configured or active for this workspace.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
@@ -39,7 +39,8 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
             request.CancelUrl,
             request.Metadata,
             config.MerchantId,
-            request.SetupFutureUsage);
+            request.SetupFutureUsage,
+            request.Quantity);
 
         if (!result.Success || string.IsNullOrEmpty(result.CheckoutUrl))
         {

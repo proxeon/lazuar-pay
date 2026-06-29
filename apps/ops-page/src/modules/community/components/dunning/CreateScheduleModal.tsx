@@ -5,14 +5,14 @@ import { toast } from "sonner";
 import { client } from "../../../../lib/api-client";
 
 interface CreateScheduleModalProps {
-  plans?: any[];
+  products?: any[];
   templates?: any[];
   onClose: () => void;
 }
 
-export default function CreateScheduleModal({ plans, templates, onClose }: CreateScheduleModalProps) {
+export default function CreateScheduleModal({ products, templates, onClose }: CreateScheduleModalProps) {
   const queryClient = useQueryClient();
-  const [planId, setPlanId] = useState("");
+  const [productId, setProductId] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [channel, setChannel] = useState("EMAIL");
   const [days, setDays] = useState<number | string>(0);
@@ -21,9 +21,9 @@ export default function CreateScheduleModal({ plans, templates, onClose }: Creat
   const createScheduleMutation = useMutation({
     mutationFn: async () => {
       if (!templateId) throw new Error("A message template is required.");
-      const { error } = await client.POST("/admin/community/reminder-schedules", {
+      const { error } = await client.POST("/admin/commerce/reminder-schedules", {
         body: {
-          plan_id: planId || undefined,
+          product_id: productId || undefined,
           template_id: templateId,
           channel,
           days_relative_to_due: Number(days),
@@ -35,7 +35,7 @@ export default function CreateScheduleModal({ plans, templates, onClose }: Creat
     },
     onSuccess: () => {
       toast.success("Reminder schedule created successfully.");
-      queryClient.invalidateQueries({ queryKey: ["community-reminder-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-reminder-schedules"] });
       onClose();
     },
     onError: (err: any) => toast.error("Failed to create schedule", { description: err.message })
@@ -53,11 +53,14 @@ export default function CreateScheduleModal({ plans, templates, onClose }: Creat
           <form onSubmit={(e) => { e.preventDefault(); createScheduleMutation.mutate(); }}>
             <div className="p-5 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Plan</label>
-                <select value={planId} onChange={e => setPlanId(e.target.value)} disabled={createScheduleMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
-                  <option value="">All Plans (Global)</option>
-                  {plans?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Product</label>
+                <select value={productId} onChange={e => setProductId(e.target.value)} disabled={createScheduleMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
+                  <option value="">All Products (Global)</option>
+                  {products?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+                {products?.length === 0 && (
+                  <p className="text-[10px] text-amber-600 mt-1">You have no Commerce Products yet. This rule will automatically apply globally to future products.</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Message Template *</label>

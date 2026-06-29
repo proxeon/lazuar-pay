@@ -85,158 +85,11 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.ToTable("OutboxMessages", "community");
                 });
 
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.BroadcastCampaign", b =>
+            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunitySpace", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Channel")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("EmailBody")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool?>("TargetIsReminderOnly")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("TargetPlanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TargetStatus")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("TotalRecipients")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("WhatsAppBody")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId", "Status");
-
-                    b.ToTable("BroadcastCampaigns", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunityCoupon", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<string>("ApplicablePlanIds")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DiscountType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<int>("MaxUses")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("MinimumOriginalPrice")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ReservedCount")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("UsedCount")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId", "Code")
-                        .IsUnique();
-
-                    b.ToTable("Coupons", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunityPlan", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AdminNotes")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("Audience")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("GracePeriodDays")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Interval")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("MaxCapacity")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -245,337 +98,49 @@ namespace Modules.Community.Infrastructure.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("Price")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<string>("Slug")
+                    b.Property<string>("ProductIds")
                         .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("TelegramLink")
                         .HasColumnType("text");
 
-                    b.Property<string>("TelegramInviteLink")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("WeeklyMeetingLink")
+                    b.Property<string>("ZoomLink")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "Slug")
-                        .IsUnique();
-
-                    b.ToTable("Plans", "community");
+                    b.ToTable("CommunitySpaces", "community");
                 });
 
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunityReminderSchedule", b =>
+            modelBuilder.Entity("Modules.Community.Domain.Entities.CommunityMember", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Channel")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("DaysRelativeToDue")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PlanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TemplateId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TimeOfDay")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlanId");
-
-                    b.HasIndex("OrganizationId", "DaysRelativeToDue");
-
-                    b.ToTable("ReminderSchedules", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunitySubscription", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AdminNotes")
-                        .HasColumnType("text");
 
                     b.Property<Guid>("ClientProfileId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("CommunitySpaceId")
+                        .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("CurrentPeriodEnd")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("GatewaySubscriptionId")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsReminderOnly")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("NextRenewalDate")
+                    b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("PaymentGatewaySessionId")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("PendingCouponId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PendingPlanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PreferredChannel")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("RemindersPausedUntil")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("VaultedCustomerId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("VaultedTokenId")
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientProfileId");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.HasIndex("PendingCouponId")
-                        .HasFilter("\"PendingCouponId\" IS NOT NULL");
-
-                    b.HasIndex("PlanId");
-
-                    b.ToTable("Subscriptions", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Entities.MessageTemplate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Channel")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("EmailBody")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("OptionalVariables")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RequiredVariables")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("WhatsAppBody")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.ToTable("MessageTemplates", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Entities.PaymentRecord", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ExternalReference")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("PeriodEnd")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("PeriodStart")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReceiptUrl")
-                        .HasColumnType("text");
-
-                    b.Property<string>("RecordedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SystemReference")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SystemReference")
+                    b.HasIndex("CommunitySpaceId", "ClientProfileId")
                         .IsUnique();
 
-                    b.HasIndex("SubscriptionId", "ExternalReference")
-                        .IsUnique()
-                        .HasFilter("\"ExternalReference\" IS NOT NULL");
-
-                    b.ToTable("PaymentRecords", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Entities.ReminderDispatchLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("DispatchedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("ScheduleId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("TargetRenewalDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubscriptionId", "ScheduleId", "TargetRenewalDate")
-                        .IsUnique();
-
-                    b.ToTable("ReminderDispatchLog", "community");
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunityReminderSchedule", b =>
-                {
-                    b.HasOne("Modules.Community.Domain.Aggregates.CommunityPlan", null)
-                        .WithMany()
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunitySubscription", b =>
-                {
-                    b.HasOne("Modules.Community.Domain.Aggregates.CommunityPlan", null)
-                        .WithMany()
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Entities.PaymentRecord", b =>
-                {
-                    b.HasOne("Modules.Community.Domain.Aggregates.CommunitySubscription", null)
-                        .WithMany("PaymentRecords")
-                        .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Entities.ReminderDispatchLog", b =>
-                {
-                    b.HasOne("Modules.Community.Domain.Aggregates.CommunitySubscription", null)
-                        .WithMany("ReminderLogs")
-                        .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Modules.Community.Domain.Aggregates.CommunitySubscription", b =>
-                {
-                    b.Navigation("PaymentRecords");
-
-                    b.Navigation("ReminderLogs");
+                    b.ToTable("CommunityMembers", "community");
                 });
 #pragma warning restore 612, 618
         }

@@ -27,6 +27,8 @@
       "arrayInstanceType": "System.Collections.Generic.List",
       "dictionaryType": "System.Collections.Generic.Dictionary",
       "dictionaryInstanceType": "System.Collections.Generic.Dictionary",
+      "propertyNameGeneratorType": "CamelCase",
+      "generateJsonMethods": true,
       "output": "Lazuar.ApiContracts.cs"
     }
   }

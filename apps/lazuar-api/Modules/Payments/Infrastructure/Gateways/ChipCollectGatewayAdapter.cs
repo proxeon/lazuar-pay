@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Payments/Infrastructure/Gateways/ChipCollectGatewayAdapter.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,14 +38,15 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
     public async Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail, string successUrl, string cancelUrl,
-        Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false)
+        Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false, int quantity = 1)
     {
         if (string.IsNullOrEmpty(merchantId))
         {
             return new GatewayCheckoutResult(false, null, null, "MerchantId (Brand ID) is required for CHIP Collect.");
         }
 
-        var amountInCents = (int)Math.Round(amount * 100, 0);
+        var amountInCents = (int)Math.Round(amount * quantity * 100, 0);
+        var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : (string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName);
 
         metadata["tenant_id"] = tenantId.ToString();
         var clientName = ExtractName(customerEmail);
@@ -63,7 +65,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 {
                     new
                     {
-                        name = string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName,
+                        name = finalDescription,
                         price = amountInCents
                     }
                 },

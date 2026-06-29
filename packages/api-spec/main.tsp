@@ -16,6 +16,13 @@ import "./modules/community/public-routes.tsp";
 import "./modules/ops/models.tsp";
 import "./modules/ops/routes.tsp";
 
+import "./modules/commerce/models.tsp";
+import "./modules/commerce/admin-routes.tsp";
+import "./modules/commerce/public-routes.tsp";
+
+import "./modules/communications/models.tsp";
+import "./modules/communications/admin-routes.tsp";
+
 import "./modules/billing/models.tsp";
 import "./modules/billing/routes.tsp";
 
@@ -23,6 +30,12 @@ import "./modules/lhdn/models.tsp";
 import "./modules/lhdn/routes.tsp";
 
 import "./modules/crm/models.tsp";
+
+import "./modules/vault/models.tsp";
+import "./modules/vault/admin-routes.tsp";
+import "./modules/vault/public-routes.tsp";
+
+import "./modules/platform/routes.tsp";
 
 using TypeSpec.Http;
 

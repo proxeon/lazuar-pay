@@ -1,3 +1,4 @@
+// apps/lazuar-api/Modules/Payments/Infrastructure/Gateways/RazorpayGatewayAdapter.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,12 +32,13 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
     public Task<GatewayCheckoutResult> GenerateCheckoutAsync(
         string apiKey, Guid tenantId, decimal amount, string currency,
         string productName, string customerEmail, string successUrl, string cancelUrl,
-        Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false)
+        Dictionary<string, string> metadata, string? merchantId, bool setupFutureUsage = false, int quantity = 1)
     {
         try
         {
             var client = GetClient(apiKey);
-            var amountPaise = (int)(amount * 100);
+            var amountPaise = (int)(amount * quantity * 100);
+            var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : productName;
             
             metadata.TryGetValue("customer_name", out var customerName);
             metadata.TryGetValue("customer_phone", out var customerPhone);
@@ -67,7 +69,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
                     { "type", "link" },
                     { "amount", amountPaise },
                     { "currency", currency.ToUpperInvariant() },
-                    { "description", productName },
+                    { "description", finalDescription },
                     { "customer", customer },
                     { "subscription_registration", subReg },
                     { "receipt", "rcpt_" + Guid.NewGuid().ToString("N")[..10] },
@@ -85,7 +87,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
                 {
                     { "amount", amountPaise },
                     { "currency", currency.ToUpperInvariant() },
-                    { "description", productName },
+                    { "description", finalDescription },
                     { "customer", customer },
                     { "notes", notes },
                     { "callback_url", successUrl },

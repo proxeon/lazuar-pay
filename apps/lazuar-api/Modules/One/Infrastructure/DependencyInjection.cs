@@ -8,9 +8,10 @@ using Modules.One.Contracts;
 using Modules.One.Infrastructure.Services;
 using Modules.One.Infrastructure.Repositories;
 using Modules.One.Infrastructure.Workers;
-using Modules.One.Application.IntegrationEvents;
-using Modules.Community.Contracts;
+using Modules.One.Infrastructure.EventHandlers;
+using Modules.Commerce.Contracts.Events;
 using Microsoft.AspNetCore.Builder;
+using System;
 
 namespace Modules.One.Infrastructure;
 
@@ -36,13 +37,18 @@ public static class DependencyInjection
         services.AddSingleton<ITokenGeneratorService, TokenGeneratorService>();
         services.AddSingleton<IOneLinkService, OneLinkService>();
 
+        services.AddHttpClient("DeveloperWebhooks", client => {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
+
         services.AddKeyedScoped<IEventBus, OutboxEventBus<OneDbContext>>("OneEventBus");
 
         services.AddHostedService<SystemGenesisBootstrapperJob>();
         services.AddHostedService<OneInboxConsumerJob>();
         services.AddHostedService<OneOutboxPublisherJob>();
+        services.AddHostedService<OutboundWebhookDispatcherJob>();
 
-        services.AddTransient<CommunitySubscriptionActivatedIntegrationEventHandler>();
+        services.AddTransient<OutboundWebhookEventHandlers>();
 
         return services;
     }
@@ -50,7 +56,7 @@ public static class DependencyInjection
     public static IApplicationBuilder UseOneSubscriptions(this IApplicationBuilder app)
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
-        eventBus.Subscribe<CommunitySubscriptionActivatedIntegrationEvent, CommunitySubscriptionActivatedIntegrationEventHandler>();
+        eventBus.Subscribe<OutboundWebhookRequestedIntegrationEvent, OutboundWebhookEventHandlers>();
 
         return app;
     }

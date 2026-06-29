@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Billing.Application;
 using Modules.Billing.Domain.Aggregates;
-using Modules.Community.Contracts;
+using Modules.Commerce.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
 
@@ -18,7 +18,7 @@ public class ZeroAmountCheckoutHandler : IIntegrationEventHandler<ZeroAmountChec
     public async Task HandleAsync(ZeroAmountCheckoutCompletedIntegrationEvent @event)
     {
         var referenceType = "ZERO_AMOUNT_CHECKOUT";
-        var referenceId = @event.SubscriptionId.ToString();
+        var referenceId = @event.CheckoutSessionId.ToString();
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
             return;

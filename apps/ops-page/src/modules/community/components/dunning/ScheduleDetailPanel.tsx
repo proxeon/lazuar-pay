@@ -6,21 +6,21 @@ import { client, type components } from "../../../../lib/api-client";
 import { cn } from "../../../../lib/utils";
 import SidePanel from "../../../core/components/SidePanel";
 
-type CommunityReminderScheduleDto = components["schemas"]["Community.CommunityReminderScheduleDto"];
+type ReminderScheduleDto = components["schemas"]["Commerce.ReminderScheduleDto"];
 
 interface ScheduleDetailPanelProps {
-  schedule: CommunityReminderScheduleDto | null;
-  plans?: any[];
+  schedule: ReminderScheduleDto | null;
+  products?: any[];
   templates?: any[];
   onClose: () => void;
   formatTiming: (days: number) => string;
 }
 
-export default function ScheduleDetailPanel({ schedule, plans, templates, onClose, formatTiming }: ScheduleDetailPanelProps) {
+export default function ScheduleDetailPanel({ schedule, products, templates, onClose, formatTiming }: ScheduleDetailPanelProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   
-  const [planId, setPlanId] = useState("");
+  const [productId, setProductId] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [channel, setChannel] = useState("EMAIL");
   const [days, setDays] = useState<number | string>(0);
@@ -28,7 +28,7 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
 
   useEffect(() => {
     if (schedule && isEditing) {
-      setPlanId(schedule.plan_id || "");
+      setProductId(schedule.product_id || "");
       setTemplateId(schedule.template_id);
       setChannel(schedule.channel);
       setDays(schedule.days_relative_to_due);
@@ -39,7 +39,7 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
   const toggleMutation = useMutation({
     mutationFn: async (is_enabled: boolean) => {
       if (!schedule) throw new Error("No schedule selected");
-      const { error } = await client.PUT("/admin/community/reminder-schedules/{id}", {
+      const { error } = await client.PUT("/admin/commerce/reminder-schedules/{id}", {
         params: { path: { id: schedule.id } },
         body: { is_enabled }
       });
@@ -47,7 +47,7 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
       return is_enabled;
     },
     onSuccess: (is_enabled) => {
-      queryClient.invalidateQueries({ queryKey: ["community-reminder-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-reminder-schedules"] });
       toast.success(`Rule ${is_enabled ? "enabled" : "paused"} successfully.`);
       onClose();
     },
@@ -59,10 +59,10 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
       if (!schedule) throw new Error("No schedule selected");
       if (!templateId) throw new Error("A message template is required.");
       
-      const { error } = await client.PUT("/admin/community/reminder-schedules/{id}", {
+      const { error } = await client.PUT("/admin/commerce/reminder-schedules/{id}", {
         params: { path: { id: schedule.id } },
         body: {
-          plan_id: planId || undefined,
+          product_id: productId || undefined,
           template_id: templateId,
           channel,
           days_relative_to_due: Number(days),
@@ -74,7 +74,7 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
     },
     onSuccess: () => {
       toast.success("Reminder schedule updated successfully.");
-      queryClient.invalidateQueries({ queryKey: ["community-reminder-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-reminder-schedules"] });
       setIsEditing(false);
       onClose();
     },
@@ -84,14 +84,14 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (!schedule) throw new Error("No schedule selected");
-      const { error } = await client.DELETE("/admin/community/reminder-schedules/{id}", {
+      const { error } = await client.DELETE("/admin/commerce/reminder-schedules/{id}", {
         params: { path: { id: schedule.id } }
       });
       if (error) throw new Error(error.detail);
     },
     onSuccess: () => {
       toast.success("Reminder schedule deleted permanently.");
-      queryClient.invalidateQueries({ queryKey: ["community-reminder-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-reminder-schedules"] });
       onClose();
     },
     onError: (err: any) => toast.error("Failed to delete schedule", { description: err.message })
@@ -125,7 +125,7 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Targeting Scope</h4>
             <div className="flex items-center gap-3 p-3 bg-[#fafafa] border border-[#e5e5e5] rounded-sm text-[12px]">
               <Target size={15} className="text-[#a1a1aa] shrink-0" />
-              <span className="font-semibold text-[#09090b]">{schedule.plan_name || "All Plans (Global)"}</span>
+              <span className="font-semibold text-[#09090b]">{schedule.product_name || "All Products (Global)"}</span>
             </div>
           </div>
 
@@ -195,10 +195,10 @@ export default function ScheduleDetailPanel({ schedule, plans, templates, onClos
             <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate(); }}>
               <div className="p-6 space-y-5">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Plan</label>
-                  <select value={planId} onChange={e => setPlanId(e.target.value)} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
-                    <option value="">All Plans (Global)</option>
-                    {plans?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Product</label>
+                  <select value={productId} onChange={e => setProductId(e.target.value)} disabled={editMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
+                    <option value="">All Products (Global)</option>
+                    {products?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">

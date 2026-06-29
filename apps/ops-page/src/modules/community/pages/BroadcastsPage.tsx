@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/community/pages/BroadcastsPage.tsx
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2, Megaphone } from "lucide-react";
@@ -11,25 +10,25 @@ export default function BroadcastsPage() {
   const [emailBody, setEmailBody] = useState("");
   const [whatsappBody, setWhatsappBody] = useState("");
   const [channel, setChannel] = useState("ALL");
-  const [targetPlanId, setTargetPlanId] = useState("");
+  const [targetProductId, setTargetProductId] = useState("");
 
-  const { data: plans } = useQuery({
-    queryKey: ["community-plans-lookup"],
+  const { data: products } = useQuery({
+    queryKey: ["commerce-products"],
     queryFn: async () => {
-      const { data } = await client.GET("/admin/community/plans");
+      const { data } = await client.GET("/admin/commerce/products");
       return data || [];
     }
   });
 
   const broadcastMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await client.POST("/admin/community/broadcasts", {
+      const { error } = await client.POST("/admin/communications/broadcasts", {
         body: {
           subject,
           email_body: emailBody,
           whatsapp_body: whatsappBody,
           channel,
-          target_plan_id: targetPlanId || undefined,
+          target_plan_id: targetProductId || undefined,
           target_status: "ACTIVE"
         }
       });
@@ -57,9 +56,9 @@ export default function BroadcastsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Audience</label>
-                <select value={targetPlanId} onChange={e => setTargetPlanId(e.target.value)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
+                <select value={targetProductId} onChange={e => setTargetProductId(e.target.value)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
                   <option value="">All Active Subscribers (Global)</option>
-                  {plans?.map((p: any) => <option key={p.id} value={p.id}>Enrolled in: {p.name}</option>)}
+                  {products?.map((p: any) => <option key={p.id} value={p.id}>Purchased: {p.name}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">

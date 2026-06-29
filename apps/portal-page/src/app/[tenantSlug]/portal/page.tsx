@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { serverClient } from "../../../modules/core/lib/server-client";
+import { ShieldCheck, Download, ExternalLink, Video, FileText } from "lucide-react";
 
-export default async function RootPortalPage({
+export default async function AggregatedPortalPage({
   params,
   searchParams,
 }: {
@@ -12,38 +13,163 @@ export default async function RootPortalPage({
   const resolvedSearchParams = await searchParams;
   const token = resolvedSearchParams.token as string | undefined;
 
-  if (token) {
-    redirect(`/${tenantSlug}/community/portal?token=${encodeURIComponent(token)}`);
+  if (!token) {
+    const { data: authCheck } = await serverClient.GET("/one/auth/me");
+    if (!authCheck) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
+          <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Please log in using a secure magic link sent to your email to manage your subscriptions and downloads.
+          </p>
+        </div>
+      );
+    }
   }
 
-  const { data: authData } = await serverClient.GET("/one/auth/me");
+  const { data: commerceData, error: commerceError } = await serverClient.GET("/public/commerce/{tenantSlug}/portal", {
+    params: { path: { tenantSlug }, query: { token: token ?? "" } },
+    next: { revalidate: 0 }
+  });
 
-  if (!authData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
-        <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
-        <p className="text-muted-foreground text-sm max-w-md">
-          Please log in using a secure magic link sent to your email to manage your subscriptions and downloads.
-        </p>
-      </div>
-    );
+  if (commerceError || !commerceData) {
+    notFound();
   }
+
+  const subProductIds = commerceData.subscriptions.map(s => s.product_id);
+  const orderProductIds = commerceData.orders.map(o => o.product_id);
+
+  const [spacesRes, assetsRes] = await Promise.all([
+    subProductIds.length > 0 ? serverClient.GET("/public/community/{tenantSlug}/portal/spaces", {
+      params: { path: { tenantSlug }, query: { product_ids: subProductIds } }
+    }) : Promise.resolve({ data: [] }),
+    orderProductIds.length > 0 ? serverClient.GET("/public/vault/{tenantSlug}/portal/assets", {
+      params: { path: { tenantSlug }, query: { product_ids: orderProductIds } }
+    }) : Promise.resolve({ data: [] })
+  ]);
+
+  const spacesMap = new Map();
+  spacesRes.data?.forEach(space => {
+    space.product_ids?.forEach(id => spacesMap.set(id, space));
+  });
+
+  const assetsMap = new Map();
+  assetsRes.data?.forEach(asset => {
+    asset.product_ids?.forEach(id => assetsMap.set(id, asset));
+  });
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
-      <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome back, {authData.name}</h1>
-      <p className="text-muted-foreground text-sm max-w-md mb-8">
-        Your active subscriptions and digital products are managed across the ecosystem. Use the specific portal links sent to your email to access your resources.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
-         <div className="bg-card border border-border p-6 rounded-sm text-left">
-           <h3 className="text-sm font-bold uppercase tracking-widest text-foreground mb-2">Community</h3>
-           <p className="text-xs text-muted-foreground">Manage your recurring subscriptions and Telegram group access.</p>
-         </div>
-         <div className="bg-card border border-border p-6 rounded-sm text-left opacity-60">
-           <h3 className="text-sm font-bold uppercase tracking-widest text-foreground mb-2">Vault</h3>
-           <p className="text-xs text-muted-foreground">Access your digital downloads and courses. (Coming Soon)</p>
-         </div>
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-emerald-50/50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-500 flex items-center gap-1.5">
+          <ShieldCheck size={14} /> Identity Verified
+        </p>
+        <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-500/80">
+          Accessing resources for this workspace.
+        </p>
+      </div>
+
+      <div className="space-y-8">
+        <h2 className="text-xl font-bold tracking-tight text-foreground border-b border-border/60 pb-2">Active Subscriptions</h2>
+        {commerceData.subscriptions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No active subscriptions found.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {commerceData.subscriptions.map(sub => {
+              const space = spacesMap.get(sub.product_id);
+              const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE";
+
+              return (
+                <div key={sub.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col md:flex-row gap-6 justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold text-foreground">{sub.product_name}</h3>
+                      <span className="text-[10px] font-bold uppercase tracking-widest bg-secondary text-foreground px-2 py-0.5 border border-border">
+                        {sub.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    {sub.current_period_end && (
+                      <p className="text-xs text-muted-foreground font-mono mb-4">
+                        Renews/Expires: {new Date(sub.current_period_end).toLocaleDateString()}
+                      </p>
+                    )}
+                    
+                    {isActive && space && (
+                      <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                        {space.telegram_link && (
+                          <a href={space.telegram_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                            <ExternalLink size={16} /> Join Telegram Group
+                          </a>
+                        )}
+                        {space.zoom_link && (
+                          <a href={space.zoom_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                            <Video size={16} /> Open Weekly Zoom
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="shrink-0 flex flex-col gap-2 items-end justify-center">
+                    <a href={`/api/billing/invoice?subscription=${sub.id}`} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-2">
+                      <FileText size={12} /> Download Tax Invoice
+                    </a>
+                    {isActive && (
+                      <form action={async () => {
+                        "use server";
+                        await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
+                          params: { path: { tenantSlug }, query: { token: token ?? "" } },
+                          body: { subscription_id: sub.id }
+                        });
+                      }}>
+                        <button className="h-9 px-4 border border-red-200 bg-background text-red-600 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors rounded-none">
+                          Cancel Plan
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <h2 className="text-xl font-bold tracking-tight text-foreground border-b border-border/60 pb-2 mt-12">Digital Vault (One-Time Purchases)</h2>
+        {commerceData.orders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No digital downloads found.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {commerceData.orders.map(order => {
+              const asset = assetsMap.get(order.product_id);
+              
+              return (
+                <div key={order.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-base font-semibold text-foreground mb-1 pr-2">{order.product_name}</h3>
+                      <a href={`/api/billing/invoice?order=${order.id}`} className="text-muted-foreground hover:text-foreground transition-colors p-1" title="Download Tax Invoice">
+                        <FileText size={14} />
+                      </a>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-6">
+                      Purchased: {new Date(order.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  
+                  {asset ? (
+                    <a href={asset.cloudflare_r2_url} download className="h-10 w-full bg-foreground text-background flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
+                      <Download size={14} /> Download File
+                    </a>
+                  ) : (
+                    <button disabled className="h-10 w-full bg-secondary text-muted-foreground flex items-center justify-center text-[11px] font-bold uppercase tracking-widest cursor-not-allowed">
+                      Pending Fulfillment
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

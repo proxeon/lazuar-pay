@@ -1,12 +1,8 @@
+// apps/lazuar-api/Modules/Payments/Contracts/Queries/GenerateCheckoutSessionQuery.cs
 using BuildingBlocks.Application;
 
 namespace Modules.Payments.Contracts.Queries;
 
-/// <summary>
-/// A synchronous cross-module query. 
-/// Allows other modules to request a checkout URL so they can immediately redirect the user in the frontend.
-/// The SetupFutureUsage flag instructs the gateway to vault the payment method for future off-session charging.
-/// </summary>
 public record GenerateCheckoutSessionQuery(
     Guid TenantId,
     decimal Amount,
@@ -16,4 +12,5 @@ public record GenerateCheckoutSessionQuery(
     string SuccessUrl,
     string CancelUrl,
     Dictionary<string, string> Metadata,
-    bool SetupFutureUsage = false) : IQuery<string>;
+    bool SetupFutureUsage = false,
+    int Quantity = 1) : IQuery<string>;
