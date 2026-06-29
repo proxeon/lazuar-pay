@@ -74,12 +74,12 @@ export default function CreateSpaceModal({ isOpen, onClose }: CreateSpaceModalPr
 
   const showEmptyState = !isProductsLoading && products?.length === 0;
 
-  const flaggedProducts = selectedProductIds.flatMap(id => {
+  const flaggedAssociations = selectedProductIds.flatMap(id => {
     const associations = getAssociations(id);
     const product = products?.find(p => p.id === id);
     return associations.map(a => ({
       productName: product?.name || "Selected Product",
-      targetName: a.name,
+      assocName: a.name,
       targetType: a.type || (a.id.startsWith("00000000") ? "Asset" : "Space") 
     }));
   });
