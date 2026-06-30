@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Commerce.Contracts.Events;
+using Modules.Billing.Contracts.Events;
 using Modules.One.Contracts;
 using Modules.Communications.Application;
 using Modules.Communications.Application.Queries;
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
         services.AddTransient<LifecycleEventHandlers>();
         services.AddTransient<FulfillmentRequestedIntegrationEventHandler>();
+        services.AddTransient<DocumentPublishedIntegrationEventHandler>();
 
         return services;
     }
@@ -54,6 +56,7 @@ public static class DependencyInjection
         eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, LifecycleEventHandlers>();
         eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, LifecycleEventHandlers>();
         eventBus.Subscribe<FulfillmentRequestedIntegrationEvent, FulfillmentRequestedIntegrationEventHandler>();
+        eventBus.Subscribe<DocumentPublishedIntegrationEvent, DocumentPublishedIntegrationEventHandler>();
         return app;
     }
 }

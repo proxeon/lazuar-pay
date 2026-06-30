@@ -12,6 +12,7 @@ public interface IR2StorageService
 {
     Task<string?> UploadAsync(Stream data, string bucket, string key, string contentType, CancellationToken ct = default);
     string GetPresignedUploadUrl(string bucket, string key, string contentType, int expiryMinutes = 60);
+    string GetPresignedDownloadUrl(string bucket, string key, int expiryMinutes = 60);
 }
 
 public class R2StorageService : IR2StorageService
@@ -31,7 +32,7 @@ public class R2StorageService : IR2StorageService
             Key = key,
             InputStream = data,
             ContentType = contentType,
-            UseChunkEncoding = false // FIX: Explicitly disable chunked encoding here for R2 compatibility
+            UseChunkEncoding = false
         };
 
         var response = await _client.PutObjectAsync(request, ct);
@@ -47,6 +48,19 @@ public class R2StorageService : IR2StorageService
             Verb = HttpVerb.PUT,
             Expires = DateTime.UtcNow.AddMinutes(expiryMinutes),
             ContentType = contentType
+        };
+
+        return _client.GetPreSignedURL(request);
+    }
+
+    public string GetPresignedDownloadUrl(string bucket, string key, int expiryMinutes = 60)
+    {
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = bucket,
+            Key = key,
+            Verb = HttpVerb.GET,
+            Expires = DateTime.UtcNow.AddMinutes(expiryMinutes)
         };
 
         return _client.GetPreSignedURL(request);

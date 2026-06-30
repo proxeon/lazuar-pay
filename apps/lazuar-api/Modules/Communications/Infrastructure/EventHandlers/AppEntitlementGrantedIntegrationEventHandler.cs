@@ -104,7 +104,19 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
                     "Payment Receipt", 
                     "Hi {{customer_name}},\n\nThank you for your purchase. We have received your payment.", 
                     "Hi {{customer_name}}, thank you for your purchase. We have received your payment.", 
-                    true, System.Array.Empty<string>(), new[] { "{{customer_name}}" })
+                    true, System.Array.Empty<string>(), new[] { "{{customer_name}}" }),
+                    
+                new MessageTemplate(@event.TenantId, "Quotation Ready", "ALL", 
+                    "Your quotation from {{business_name}} is ready", 
+                    "Hi {{customer_name}},\n\nYour requested quotation from {{business_name}} has been generated. You can view and download the document using the secure link below:\n\n[Download Quotation]({{document_link}})\n\nIf you have any questions, please reply directly to this email.\n\n— {{business_name}}", 
+                    "Hi {{customer_name}}, your quotation from {{business_name}} is ready. View and download it here: {{document_link}}", 
+                    true, new[] { "{{document_link}}" }, new[] { "{{customer_name}}", "{{business_name}}" }),
+
+                new MessageTemplate(@event.TenantId, "Official Receipt", "ALL", 
+                    "Your official receipt from {{business_name}}", 
+                    "Hi {{customer_name}},\n\nThank you for your payment. Your official receipt and tax invoice (if applicable) have been generated. You can download the document securely using the link below:\n\n[Download Receipt]({{document_link}})\n\n— {{business_name}}", 
+                    "Hi {{customer_name}}, thank you for your payment to {{business_name}}. You can download your official receipt here: {{document_link}}", 
+                    true, new[] { "{{document_link}}" }, new[] { "{{customer_name}}", "{{business_name}}" })
             };
 
             _dbContext.MessageTemplates.AddRange(templates);

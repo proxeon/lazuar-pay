@@ -1,18 +1,23 @@
 // apps/lazuar-api/Modules/Billing/Infrastructure/Endpoints.cs
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
 using MediatR;
 using Modules.Billing.Contracts;
-using Modules.Payments.Contracts.Queries;
-using Lazuar.ApiTypes;
 using Modules.Billing.Contracts.Commands;
+using Modules.Payments.Contracts.Queries;
+using Modules.One.Contracts;
+using Lazuar.ApiTypes;
 
 namespace Modules.Billing.Infrastructure;
 
@@ -21,6 +26,7 @@ public static class Endpoints
     public static IEndpointRouteBuilder MapBillingEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var admin = endpoints.MapGroup("/admin/billing").RequireAuthorization("OrgAdmin");
+        var publicGroup = endpoints.MapGroup("/public/billing");
         
         admin.MapGet("/summary", async Task<Ok<FinancialSummaryDto>> (
             IExecutionContextAccessor ctx,
@@ -98,6 +104,42 @@ public static class Endpoints
 
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "updated" });
+        });
+
+        publicGroup.MapGet("/{tenantSlug}/documents/{ledgerEntryId:guid}", async Task<IResult> (
+            string tenantSlug,
+            Guid ledgerEntryId,
+            [FromQuery] string sig,
+            [FromQuery] long exp,
+            IConfiguration config,
+            IOneQueryService oneQueryService,
+            IR2StorageService r2Service) =>
+        {
+            if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > exp)
+            {
+                return TypedResults.BadRequest("This secure document link has expired.");
+            }
+
+            var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+            var payload = $"{tenantSlug}:{ledgerEntryId}:{exp}";
+            var keyBytes = Encoding.UTF8.GetBytes(secret);
+            var payloadBytes = Encoding.UTF8.GetBytes(payload);
+            var expectedSig = Convert.ToHexString(HMACSHA256.HashData(keyBytes, payloadBytes)).ToLowerInvariant();
+
+            if (sig.ToLowerInvariant() != expectedSig)
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            var bucket = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
+            var key = $"vault/{tenantId.Value}/documents/{ledgerEntryId}.pdf";
+
+            var downloadUrl = r2Service.GetPresignedDownloadUrl(bucket, key, 5);
+
+            return TypedResults.Redirect(downloadUrl);
         });
 
         return endpoints;
