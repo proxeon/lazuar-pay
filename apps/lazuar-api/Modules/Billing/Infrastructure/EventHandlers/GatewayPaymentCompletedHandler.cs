@@ -64,14 +64,17 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             var receiptNumber = await _mediator.Send(seqCommand);
             
             entry.UpdateLhdnStatus(receiptNumber, "B2C_RECEIPT");
+        }
 
+        await _repository.SaveChangesAsync();
+
+        if (!isB2b)
+        {
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
                 entry.Id,
                 "Official Receipt"
             ));
         }
-
-        await _repository.SaveChangesAsync();
     }
 }

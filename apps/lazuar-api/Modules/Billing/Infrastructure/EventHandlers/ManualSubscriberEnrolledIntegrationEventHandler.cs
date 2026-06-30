@@ -28,7 +28,6 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
             return;
 
-        // Note: For Manual Enrollment currently all are treated as B2C unless a specific flag dictates otherwise.
         var entry = new LedgerEntry(
             @event.OrganizationId,
             referenceType,
@@ -47,12 +46,12 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
             
         entry.UpdateLhdnStatus(receiptNumber, "B2C_RECEIPT");
 
+        await _repository.SaveChangesAsync();
+
         await _mediator.Send(new GenerateAndStoreDocumentCommand(
             @event.OrganizationId,
             entry.Id,
             "Official Receipt"
         ));
-
-        await _repository.SaveChangesAsync();
     }
 }

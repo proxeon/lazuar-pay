@@ -1,0 +1,48 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using MediatR;
+using Modules.Billing.Application;
+using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Infrastructure.EventHandlers;
+using Modules.Commerce.Contracts.Events;
+using NSubstitute;
+using NUnit.Framework;
+
+namespace Lazuar.ModuleTests.Billing.EventHandlers;
+
+[TestFixture]
+public class ManualSubscriberEnrolledHandlerTests
+{
+    [Test]
+    public async Task HandleAsync_SavesChangesBeforeGeneratingDocument()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator);
+
+        var @event = new ManualSubscriberEnrolledIntegrationEvent(
+            OrganizationId: Guid.CreateVersion7(),
+            SubscriptionId: Guid.CreateVersion7(),
+            ClientProfileId: Guid.CreateVersion7(),
+            ProductId: Guid.CreateVersion7(),
+            AmountPaid: 150m,
+            Currency: "MYR",
+            PaymentMethod: "BANK_TRANSFER",
+            ReferenceNumber: "REF-999"
+        );
+
+        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("RCPT-2026");
+
+        await handler.HandleAsync(@event);
+
+        Received.InOrder(() =>
+        {
+            mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>());
+            repository.SaveChangesAsync(Arg.Any<CancellationToken>());
+            mediator.Send(Arg.Any<GenerateAndStoreDocumentCommand>(), Arg.Any<CancellationToken>());
+        });
+    }
+}

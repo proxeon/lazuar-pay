@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
@@ -15,7 +16,6 @@ public class BillingQueryService : IBillingQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
 
-    // Explicit Dapper mapping records to resolve CS1977 dynamic dispatch errors
     private record RawLedgerEntryDto(
         Guid Id, DateTime Timestamp, string ReferenceType, string ReferenceId, 
         string? Description, string CustomerType, string? TaxInvoiceId, 
@@ -38,29 +38,46 @@ public class BillingQueryService : IBillingQueryService
         int offset = (page - 1) * limit;
         var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search}%";
 
-        var sql = @"
+        // Dynamically build the query to avoid Npgsql parameter type inference errors on NULLs
+        var sqlBuilder = new StringBuilder(@"
             SELECT 
                 e.""Id"", e.""Timestamp"", e.""ReferenceType"", e.""ReferenceId"", 
                 e.""Description"", e.""CustomerType"", e.""TaxInvoiceId"", e.""LhdnValidationStatus"",
                 (COUNT(*) OVER())::int AS ""TotalCount""
             FROM billing.""LedgerEntries"" e
-            WHERE e.""OrganizationId"" = @OrgId
-            AND (@Search IS NULL OR e.""ReferenceId"" ILIKE @Search OR e.""TaxInvoiceId"" ILIKE @Search)
-            AND (@TypeFilter IS NULL 
-                 OR (@TypeFilter = 'sales' AND e.""ReferenceType"" NOT IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION'))
-                 OR (@TypeFilter = 'reversals' AND e.""ReferenceType"" IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION'))
-            )
-            AND (@FromDate IS NULL OR e.""Timestamp"" >= @FromDate)
-            AND (@ToDate IS NULL OR e.""Timestamp"" <= @ToDate)
-            ORDER BY e.""Timestamp"" DESC
-            LIMIT @Limit OFFSET @Offset;";
+            WHERE e.""OrganizationId"" = @OrgId");
 
-        var entries = (await connection.QueryAsync<RawLedgerEntryDto>(sql, new { 
+        if (!string.IsNullOrWhiteSpace(searchPattern))
+        {
+            sqlBuilder.Append(@" AND (e.""ReferenceId"" ILIKE @Search OR e.""TaxInvoiceId"" ILIKE @Search)");
+        }
+
+        if (typeFilter == "sales")
+        {
+            sqlBuilder.Append(@" AND e.""ReferenceType"" NOT IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION')");
+        }
+        else if (typeFilter == "reversals")
+        {
+            sqlBuilder.Append(@" AND e.""ReferenceType"" IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION')");
+        }
+
+        if (fromDate.HasValue)
+        {
+            sqlBuilder.Append(@" AND e.""Timestamp"" >= @FromDate");
+        }
+
+        if (toDate.HasValue)
+        {
+            sqlBuilder.Append(@" AND e.""Timestamp"" <= @ToDate");
+        }
+
+        sqlBuilder.Append(@" ORDER BY e.""Timestamp"" DESC LIMIT @Limit OFFSET @Offset;");
+
+        var entries = (await connection.QueryAsync<RawLedgerEntryDto>(sqlBuilder.ToString(), new { 
             OrgId = organizationId, 
             Limit = limit, 
             Offset = offset, 
             Search = searchPattern,
-            TypeFilter = typeFilter,
             FromDate = fromDate,
             ToDate = toDate
         })).ToList();
