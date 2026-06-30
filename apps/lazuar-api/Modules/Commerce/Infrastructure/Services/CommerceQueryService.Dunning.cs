@@ -28,9 +28,9 @@ public partial class CommerceQueryService
                     ""DunningCampaignId"",
                     jsonb_agg(
                         jsonb_build_object(
-                            'DayOffset', ""DayOffset"",
-                            'TemplateId', ""TemplateId"",
-                            'Channel', ""Channel""
+                            'day_offset', ""DayOffset"",
+                            'template_id', ""TemplateId"",
+                            'channel', ""Channel""
                         ) ORDER BY ""DayOffset""
                     ) as StepsJson
                 FROM commerce.""DunningSteps""

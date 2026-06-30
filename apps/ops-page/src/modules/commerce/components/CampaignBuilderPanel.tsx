@@ -1,12 +1,18 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, GripVertical, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import SidePanel from "../../core/components/SidePanel";
 
 type DunningCampaignDto = components["schemas"]["Commerce.DunningCampaignDto"];
-type DunningStepDto = components["schemas"]["Commerce.DunningStepDto"];
+
+// We store day_offset as a strict string locally to perfectly map to HTML <select> options.
+interface LocalStepState {
+  day_offset: string;
+  template_id: string;
+  channel: string;
+}
 
 interface CampaignBuilderPanelProps {
   campaign: DunningCampaignDto | null;
@@ -26,7 +32,7 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
   const [gracePeriodDays, setGracePeriodDays] = useState(3);
   const [targetProductIds, setTargetProductIds] = useState<string[]>([]);
   const [targetPaymentMethods, setTargetPaymentMethods] = useState<string[]>([]);
-  const [steps, setSteps] = useState<DunningStepDto[]>([]);
+  const [steps, setSteps] = useState<LocalStepState[]>([]);
 
   useEffect(() => {
     if (campaign) {
@@ -36,7 +42,13 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
       setGracePeriodDays(campaign.grace_period_days);
       setTargetProductIds(campaign.target_product_ids || []);
       setTargetPaymentMethods(campaign.target_payment_methods || []);
-      setSteps(campaign.steps ? [...campaign.steps] : []);
+      
+      // Map incoming integers to strings for safe dropdown binding
+      setSteps(campaign.steps ? campaign.steps.map(s => ({ 
+        day_offset: String(s.day_offset), 
+        template_id: s.template_id, 
+        channel: s.channel 
+      })) : []);
     } else {
       setName("");
       setIsActive(true);
@@ -49,14 +61,14 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
   }, [campaign]);
 
   const addStep = () => {
-    setSteps(prev => [...prev, { day_offset: 0, template_id: "", channel: "EMAIL" }]);
+    setSteps(prev => [...prev, { day_offset: "0", template_id: "", channel: "EMAIL" }]);
   };
 
   const removeStep = (index: number) => {
     setSteps(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updateStep = (index: number, field: keyof DunningStepDto, value: any) => {
+  const updateStep = (index: number, field: keyof LocalStepState, value: any) => {
     setSteps(prev => prev.map((step, i) => i === index ? { ...step, [field]: value } : step));
   };
 
@@ -70,13 +82,20 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
       if (steps.some(s => !s.template_id)) throw new Error("All steps must have a template assigned.");
       if (gracePeriodDays < 0) throw new Error("Grace period cannot be negative.");
 
+      // Parse the local strings back into strict integers and sort them for the API payload
+      const formattedSteps = steps.map(s => ({
+        day_offset: parseInt(s.day_offset, 10),
+        template_id: s.template_id,
+        channel: s.channel
+      })).sort((a, b) => a.day_offset - b.day_offset);
+
       const payload = {
         name: name.trim(),
         final_action: finalAction,
         grace_period_days: gracePeriodDays,
         target_product_ids: targetProductIds.length > 0 ? targetProductIds : undefined,
         target_payment_methods: targetPaymentMethods.length > 0 ? targetPaymentMethods : undefined,
-        steps: steps.sort((a, b) => a.day_offset - b.day_offset),
+        steps: formattedSteps,
         is_active: isActive
       };
 
@@ -123,7 +142,7 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
 
   return (
     <SidePanel
-      isOpen={campaign !== null || name === ""} 
+      isOpen={true} 
       onClose={onClose}
       title={campaign ? "Edit Dunning Campaign" : "Build Dunning Campaign"}
       disableOutsideClick={isActionLoading}
@@ -192,15 +211,31 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
               <div className="space-y-3">
                 {steps.map((step, idx) => (
                   <div key={idx} className="flex gap-3 p-3 border border-[#e5e5e5] bg-white rounded-sm items-start relative group">
-                    <div className="mt-1 cursor-grab text-[#a1a1aa] hover:text-[#09090b]"><GripVertical size={14} /></div>
                     <div className="flex-1 grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Day Offset</label>
-                        <input type="number" required value={step.day_offset} onChange={e => updateStep(idx, "day_offset", Number(e.target.value))} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] font-mono focus:outline-none focus:border-[#09090b]" />
+                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Timing Offset</label>
+                        <select 
+                          value={step.day_offset} 
+                          onChange={e => updateStep(idx, "day_offset", e.target.value)} 
+                          disabled={isActionLoading} 
+                          className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
+                        >
+                          <option value="-14">14 Days Before Due</option>
+                          <option value="-7">7 Days Before Due</option>
+                          <option value="-3">3 Days Before Due</option>
+                          <option value="-1">1 Day Before Due</option>
+                          <option value="0">On Due Date</option>
+                          <option value="1">1 Day After Due</option>
+                          <option value="3">3 Days After Due</option>
+                          <option value="5">5 Days After Due</option>
+                          <option value="7">7 Days After Due</option>
+                          <option value="14">14 Days After Due</option>
+                          <option value="30">30 Days After Due</option>
+                        </select>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Channel</label>
-                        <select value={step.channel} onChange={e => updateStep(idx, "channel", e.target.value)} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b]">
+                        <select value={step.channel} onChange={e => updateStep(idx, "channel", e.target.value)} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
                           <option value="EMAIL">Email</option>
                           <option value="WHATSAPP">WhatsApp</option>
                           <option value="ALL">Email & WhatsApp</option>
@@ -208,13 +243,13 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
                       </div>
                       <div className="col-span-2 space-y-1">
                         <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Template</label>
-                        <select required value={step.template_id} onChange={e => updateStep(idx, "template_id", e.target.value)} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b]">
+                        <select required value={step.template_id} onChange={e => updateStep(idx, "template_id", e.target.value)} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
                           <option value="" disabled>Select a template...</option>
                           {templates?.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       </div>
                     </div>
-                    <button type="button" onClick={() => removeStep(idx)} disabled={isActionLoading} className="text-rose-400 hover:text-rose-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
+                    <button type="button" onClick={() => removeStep(idx)} disabled={isActionLoading} className="text-rose-400 hover:text-rose-600 p-1 transition-opacity"><Trash2 size={14} /></button>
                   </div>
                 ))}
               </div>
@@ -233,7 +268,7 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Final Action</label>
-                  <select value={finalAction} onChange={e => setFinalAction(e.target.value)} disabled={isActionLoading} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
+                  <select value={finalAction} onChange={e => setFinalAction(e.target.value)} disabled={isActionLoading} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
                     <option value="CANCEL">Cancel Subscription</option>
                     <option value="SUSPEND">Suspend Access (Pause)</option>
                     <option value="NONE">Do Nothing (Leave Unpaid)</option>
@@ -241,7 +276,7 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Grace Period (Days) *</label>
-                  <input type="number" min="0" required value={gracePeriodDays} onChange={e => setGracePeriodDays(Number(e.target.value))} disabled={isActionLoading} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:border-[#09090b]" />
+                  <input type="number" min="0" required value={gracePeriodDays} onChange={e => setGracePeriodDays(Number(e.target.value))} disabled={isActionLoading} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
                 </div>
               </div>
             </div>
@@ -251,14 +286,14 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
 
         <div className="pt-4 border-t border-[#e5e5e5] bg-white flex justify-between gap-2 shrink-0">
           {campaign ? (
-            <button type="button" onClick={() => { if(window.confirm("Delete this campaign?")) deleteMutation.mutate(); }} disabled={isActionLoading} className="h-9 px-4 border border-rose-200 bg-rose-50 text-rose-700 text-[11px] font-bold uppercase tracking-widest hover:bg-rose-100 transition-colors flex items-center gap-1.5 rounded-sm">
+            <button type="button" onClick={() => { if(window.confirm("Delete this campaign?")) deleteMutation.mutate(); }} disabled={isActionLoading} className="h-9 px-4 border border-rose-200 bg-rose-50 text-rose-700 text-[11px] font-bold uppercase tracking-widest hover:bg-rose-100 transition-colors flex items-center gap-1.5 rounded-sm disabled:opacity-50">
               <Trash2 size={13} /> Delete
             </button>
           ) : (
             <div></div>
           )}
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} disabled={isActionLoading} className="h-9 px-4 border border-[#e5e5e5] bg-white text-[#71717a] text-[11px] font-bold uppercase tracking-widest hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors rounded-sm">Cancel</button>
+            <button type="button" onClick={onClose} disabled={isActionLoading} className="h-9 px-4 border border-[#e5e5e5] bg-white text-[#71717a] text-[11px] font-bold uppercase tracking-widest hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors rounded-sm disabled:opacity-50">Cancel</button>
             <button type="submit" disabled={isActionLoading} className="h-9 px-6 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
               {isActionLoading && <Loader2 size={13} className="animate-spin" />} Save Campaign
             </button>
