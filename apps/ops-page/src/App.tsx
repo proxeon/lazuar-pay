@@ -21,7 +21,9 @@ import DigitalProductsPage from "./modules/vault/pages/DigitalProductsPage";
 
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
+import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
+import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 
 export interface OpsOutletContext {
   activeWorkspaceId: string | null;
@@ -183,9 +185,11 @@ export default function App() {
         <Route path="/vault/products" element={<DigitalProductsPage />} />
 
         <Route path="/developer/webhooks" element={<DeveloperSettingsPage />} />
+        <Route path="/developer/logs" element={<DeliveryLogsPage />} />
         
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
+        <Route path="/workspace/ledger" element={<UtilityLedgerPage />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/commerce/dashboard" replace />} />
