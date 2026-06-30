@@ -755,6 +755,15 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("vaulted_token_id")]
         public string? Vaulted_token_id { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("dunning_campaign_name")]
+        public string? Dunning_campaign_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_dunning_step")]
+        public int? Current_dunning_step { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("dunning_paused_until")]
+        public System.DateTimeOffset? Dunning_paused_until { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
 
@@ -905,6 +914,118 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateDunningCampaignRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("final_action")]
+        public string Final_action { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("grace_period_days")]
+        public int Grace_period_days { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_product_ids")]
+        public System.Collections.Generic.List<string>? Target_product_ids { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_payment_methods")]
+        public System.Collections.Generic.List<string>? Target_payment_methods { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("steps")]
+        public System.Collections.Generic.List<DunningStepDto> Steps { get; set; } = new System.Collections.Generic.List<DunningStepDto>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateDunningCampaignRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateDunningCampaignRequestDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateManualSubscriberDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+        public string Email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("phone")]
+        public string Phone { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
+        public string Product_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("payment_method")]
+        public string Payment_method { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount_paid")]
+        public double Amount_paid { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reference_number")]
+        public string? Reference_number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("send_welcome_email")]
+        public bool? Send_welcome_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("start_date")]
+        public System.DateTimeOffset? Start_date { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("next_billing_date")]
+        public System.DateTimeOffset? Next_billing_date { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateManualSubscriberDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateManualSubscriberDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateProductRequestDto
     {
 
@@ -970,26 +1091,35 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CreateReminderScheduleRequestDto
+    public partial class DunningCampaignDto
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string? Product_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
-        public string Template_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("channel")]
-        public string Channel { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool Is_active { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("days_relative_to_due")]
-        public int Days_relative_to_due { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("final_action")]
+        public string Final_action { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("time_of_day")]
-        public string Time_of_day { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("grace_period_days")]
+        public int Grace_period_days { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("is_enabled")]
-        public bool Is_enabled { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("target_product_ids")]
+        public System.Collections.Generic.List<string> Target_product_ids { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_payment_methods")]
+        public System.Collections.Generic.List<string> Target_payment_methods { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("steps")]
+        public System.Collections.Generic.List<DunningStepDto> Steps { get; set; } = new System.Collections.Generic.List<DunningStepDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1008,12 +1138,53 @@ namespace Lazuar.ApiTypes
             return System.Text.Json.JsonSerializer.Serialize(this, options);
 
         }
-        public static CreateReminderScheduleRequestDto FromJson(string data)
+        public static DunningCampaignDto FromJson(string data)
         {
 
             var options = new System.Text.Json.JsonSerializerOptions();
 
-            return System.Text.Json.JsonSerializer.Deserialize<CreateReminderScheduleRequestDto>(data, options);
+            return System.Text.Json.JsonSerializer.Deserialize<DunningCampaignDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DunningStepDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("day_offset")]
+        public int Day_offset { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
+        public string Template_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("channel")]
+        public string Channel { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static DunningStepDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<DunningStepDto>(data, options);
 
         }
 
@@ -1049,6 +1220,41 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<MagicLinkRequestDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PauseDunningRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("pause_until")]
+        public System.DateTimeOffset Pause_until { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PauseDunningRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PauseDunningRequestDto>(data, options);
 
         }
 
@@ -1441,68 +1647,6 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ReminderScheduleDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public string Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string? Product_id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("product_name")]
-        public string? Product_name { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
-        public string Template_id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("template_name")]
-        public string Template_name { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("channel")]
-        public string Channel { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("days_relative_to_due")]
-        public int Days_relative_to_due { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("time_of_day")]
-        public string Time_of_day { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("is_enabled")]
-        public bool Is_enabled { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
-        public System.DateTimeOffset Created_at { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-        public string ToJson()
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Serialize(this, options);
-
-        }
-        public static ReminderScheduleDto FromJson(string data)
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Deserialize<ReminderScheduleDto>(data, options);
-
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SavePaymentConfigRequestDto
     {
 
@@ -1686,6 +1830,59 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateDunningCampaignRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("final_action")]
+        public string Final_action { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("grace_period_days")]
+        public int Grace_period_days { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_product_ids")]
+        public System.Collections.Generic.List<string>? Target_product_ids { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("target_payment_methods")]
+        public System.Collections.Generic.List<string>? Target_payment_methods { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("steps")]
+        public System.Collections.Generic.List<DunningStepDto> Steps { get; set; } = new System.Collections.Generic.List<DunningStepDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool? Is_active { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateDunningCampaignRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateDunningCampaignRequestDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UpdateProductRequestDto
     {
 
@@ -1748,56 +1945,6 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<UpdateProductRequestDto>(data, options);
-
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateReminderScheduleRequestDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
-        public string? Product_id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
-        public string? Template_id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("channel")]
-        public string? Channel { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("days_relative_to_due")]
-        public int? Days_relative_to_due { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("time_of_day")]
-        public string? Time_of_day { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("is_enabled")]
-        public bool? Is_enabled { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-        public string ToJson()
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Serialize(this, options);
-
-        }
-        public static UpdateReminderScheduleRequestDto FromJson(string data)
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Deserialize<UpdateReminderScheduleRequestDto>(data, options);
 
         }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
-import { LogOut, PanelLeftClose, PanelLeftOpen, Server, ChevronDown } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen, Server, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
 
@@ -13,11 +13,114 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
+const MODULES = [
+  { id: "platform", title: "Infrastructure", basePath: "/platform", icon: Server }
+];
+
+function ModuleNav({ 
+  id, title, basePath, icon: Icon, links, expanded, isAccordionOpen, onToggle, currentPath, isMobile, closeSidebar 
+}: { 
+  id: string, title: string, basePath: string, icon: any, links: { label: string, href: string }[],
+  expanded: boolean, isAccordionOpen: boolean, onToggle: () => void, currentPath: string, isMobile?: boolean, closeSidebar: () => void 
+}) {
+  const isActiveModule = currentPath.startsWith(basePath);
+  
+  const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setIsFlyoutOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleToggle = () => {
+    if (expanded) {
+      onToggle();
+    } else {
+      setIsFlyoutOpen(!isFlyoutOpen);
+    }
+  };
+
+  return (
+    <div className="flex flex-col w-full relative mb-1" ref={navRef}>
+      <button onClick={handleToggle} className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", isActiveModule ? "text-[#09090b]" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}>
+        <div className="w-12 h-full shrink-0 flex items-center justify-center">
+          <Icon size={16} />
+        </div>
+        <motion.div initial={false} animate={{ opacity: expanded ? 1 : 0 }} className="flex flex-1 items-center justify-between min-w-0 overflow-hidden pr-4">
+          <span className="text-[11px] font-bold uppercase tracking-widest whitespace-nowrap truncate">{title}</span>
+          <ChevronDown size={14} className={cn("transition-transform duration-200 shrink-0", isAccordionOpen && "rotate-180")} />
+        </motion.div>
+      </button>
+      
+      <AnimatePresence initial={false}>
+        {expanded && isAccordionOpen && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2, ease: "easeInOut" }} className="overflow-hidden">
+            <div className="flex flex-col py-1 space-y-0.5">
+              {links.map((link) => {
+                const isExactActive = currentPath.startsWith(link.href);
+                return (
+                  <Link key={link.href} to={link.href} onClick={() => isMobile && closeSidebar()} className={cn("flex h-8 w-full items-center pl-[48px] pr-4 text-[13px] transition-colors focus:outline-none", isExactActive ? "text-[#09090b] font-medium bg-[#f4f4f5]" : "text-[#71717a] hover:text-[#09090b] hover:bg-[#fafafa]")}>
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {!expanded && isFlyoutOpen && (
+          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className="absolute left-[calc(100%+8px)] top-0 z-[100] min-w-[200px] rounded-none border border-[#e5e5e5] bg-white p-1 shadow-sm">
+            <div className="px-2 py-1.5 mb-1 border-b border-[#f4f4f5]">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#09090b]">{title}</span>
+            </div>
+            {links.map((link) => {
+              const isExactActive = currentPath.startsWith(link.href);
+              return (
+                <Link key={link.href} to={link.href} onClick={() => setIsFlyoutOpen(false)} className={cn("flex items-center px-2 py-1.5 text-xs transition-colors focus:outline-none", isExactActive ? "text-[#09090b] font-medium bg-[#fafafa]" : "text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b]")}>
+                  {link.label}
+                </Link>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function Sidebar({ isOpen, setIsOpen, isMobile, user, onLogout }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const expanded = isMobile ? true : isOpen;
   const location = useLocation();
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem("lazuar-admin-sidebar-sections");
+      if (stored) return JSON.parse(stored);
+    } catch { }
+    return MODULES.reduce((acc, mod) => ({ ...acc, [mod.id]: true }), {});
+  });
+
+  useEffect(() => {
+    localStorage.setItem("lazuar-admin-sidebar-sections", JSON.stringify(openSections));
+  }, [openSections]);
+
+  useEffect(() => {
+    MODULES.forEach(mod => {
+      if (location.pathname.startsWith(mod.basePath) && !openSections[mod.id]) {
+        setOpenSections(prev => ({ ...prev, [mod.id]: true }));
+      }
+    });
+  }, [location.pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -29,84 +132,14 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile, user, onLogout }:
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const ModuleNav = ({ title, basePath, icon: Icon, links }: { title: string, basePath: string, icon: any, links: { label: string, href: string }[] }) => {
-    const isActiveModule = location.pathname.startsWith(basePath);
-    const [isAccordionOpen, setIsAccordionOpen] = useState(isActiveModule);
-    const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
-    const navRef = useRef<HTMLDivElement>(null);
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
-    useEffect(() => {
-      if (isActiveModule && expanded) {
-        setIsAccordionOpen(true);
-      }
-    }, [isActiveModule, expanded]);
-
-    useEffect(() => {
-      function handleClickOutside(event: MouseEvent) {
-        if (navRef.current && !navRef.current.contains(event.target as Node)) {
-          setIsFlyoutOpen(false);
-        }
-      }
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const handleToggle = () => {
-      if (expanded) {
-        setIsAccordionOpen(!isAccordionOpen);
-      } else {
-        setIsFlyoutOpen(!isFlyoutOpen);
-      }
-    };
-
-    return (
-      <div className="flex flex-col w-full relative mb-1" ref={navRef}>
-        <button onClick={handleToggle} className={cn("group flex h-9 w-full items-center text-left focus:outline-none transition-colors", isActiveModule ? "text-[#09090b]" : "text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]")}>
-          <div className="w-12 h-full shrink-0 flex items-center justify-center">
-            <Icon size={16} />
-          </div>
-          <motion.div initial={false} animate={{ opacity: expanded ? 1 : 0 }} className="flex flex-1 items-center justify-between min-w-0 overflow-hidden pr-4">
-            <span className="text-[11px] font-bold uppercase tracking-widest whitespace-nowrap truncate">{title}</span>
-            <ChevronDown size={14} className={cn("transition-transform duration-200 shrink-0", isAccordionOpen && "rotate-180")} />
-          </motion.div>
-        </button>
-        
-        <AnimatePresence initial={false}>
-          {expanded && isAccordionOpen && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2, ease: "easeInOut" }} className="overflow-hidden">
-              <div className="flex flex-col py-1 space-y-0.5">
-                {links.map((link) => {
-                  const isExactActive = location.pathname.startsWith(link.href);
-                  return (
-                    <Link key={link.href} to={link.href} onClick={() => isMobile && setIsOpen()} className={cn("flex h-8 w-full items-center pl-[48px] pr-4 text-[13px] transition-colors focus:outline-none", isExactActive ? "text-[#09090b] font-medium bg-[#f4f4f5]" : "text-[#71717a] hover:text-[#09090b] hover:bg-[#fafafa]")}>
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {!expanded && isFlyoutOpen && (
-            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }} className="absolute left-[calc(100%+8px)] top-0 z-[100] min-w-[200px] rounded-none border border-[#e5e5e5] bg-white p-1 shadow-sm">
-              <div className="px-2 py-1.5 mb-1 border-b border-[#f4f4f5]">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#09090b]">{title}</span>
-              </div>
-              {links.map((link) => {
-                const isExactActive = location.pathname.startsWith(link.href);
-                return (
-                  <Link key={link.href} to={link.href} onClick={() => setIsFlyoutOpen(false)} className={cn("flex items-center px-2 py-1.5 text-xs transition-colors focus:outline-none", isExactActive ? "text-[#09090b] font-medium bg-[#fafafa]" : "text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b]")}>
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
+  const toggleAllSections = () => {
+    const areAllOpen = Object.values(openSections).every(Boolean);
+    const newState = MODULES.reduce((acc, mod) => ({ ...acc, [mod.id]: !areAllOpen }), {});
+    setOpenSections(newState);
   };
 
   return (
@@ -114,12 +147,21 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile, user, onLogout }:
       <div className="flex h-14 w-full shrink-0 items-center overflow-hidden relative border-b border-[#e5e5e5]">
         {expanded ? (
           <div className="w-full flex items-center justify-between px-4">
-            <span className="text-[14px] font-bold tracking-tight text-[#09090b] select-none font-sans">Platform Control</span>
-            {!isMobile && (
-              <button onClick={setIsOpen} className="text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none">
-                <PanelLeftClose size={16} />
-              </button>
-            )}
+            <span className="text-[14px] font-bold tracking-tight text-[#09090b] select-none font-sans flex items-center gap-2">
+              Platform Control
+            </span>
+            <div className="flex items-center gap-1">
+              {!isMobile && (
+                <button onClick={toggleAllSections} className="p-1.5 text-[#a1a1aa] hover:text-[#09090b] hover:bg-[#f4f4f5] rounded-sm transition-colors focus:outline-none" title="Expand/Collapse All">
+                  <ChevronsUpDown size={14} />
+                </button>
+              )}
+              {!isMobile && (
+                <button onClick={setIsOpen} className="p-1.5 text-[#a1a1aa] hover:text-[#09090b] hover:bg-[#f4f4f5] rounded-sm transition-colors focus:outline-none" title="Collapse Sidebar">
+                  <PanelLeftClose size={14} />
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <button onClick={setIsOpen} className="w-full h-full flex items-center justify-center text-[#71717a] hover:text-[#09090b] transition-colors focus:outline-none">
@@ -128,16 +170,26 @@ export default function Sidebar({ isOpen, setIsOpen, isMobile, user, onLogout }:
         )}
       </div>
 
-      <div className="flex-1 py-4 flex flex-col gap-6">
+      <div className={cn("flex-1 py-4 flex flex-col gap-6", expanded ? "overflow-y-auto" : "overflow-visible")}>
         <nav className="space-y-0.5">
-          <ModuleNav 
-            title="Infrastructure" 
-            basePath="/platform" 
-            icon={Server}
-            links={[
-              { label: "Payment Gateways", href: "/platform/gateways" }
-            ]} 
-          />
+          {MODULES.map(mod => (
+            <ModuleNav 
+              key={mod.id}
+              id={mod.id}
+              title={mod.title}
+              basePath={mod.basePath}
+              icon={mod.icon}
+              expanded={expanded}
+              isAccordionOpen={openSections[mod.id] || false}
+              onToggle={() => toggleSection(mod.id)}
+              currentPath={location.pathname}
+              isMobile={isMobile}
+              closeSidebar={setIsOpen}
+              links={[
+                { label: "Payment Gateways", href: "/platform/gateways" }
+              ]} 
+            />
+          ))}
         </nav>
       </div>
 

@@ -17,6 +17,11 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public string? VaultedCustomerId { get; private set; }
     public string? VaultedTokenId { get; private set; }
     public bool IsReminderOnly { get; private set; }
+    
+    public Guid? CurrentDunningCampaignId { get; private set; }
+    public int CurrentDunningStepIndex { get; private set; }
+    public DateTime? DunningPausedUntil { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -35,6 +40,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         ProductId = productId;
         Status = "PENDING";
         IsReminderOnly = false;
+        CurrentDunningStepIndex = 0;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -71,5 +77,38 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public void RecordReminderDispatched(Guid scheduleId, DateTime targetBillingDate)
     {
         _reminderLogs.Add(new ReminderDispatchLog(Id, scheduleId, targetBillingDate));
+    }
+
+    public void AssignDunningCampaign(Guid campaignId)
+    {
+        CurrentDunningCampaignId = campaignId;
+        CurrentDunningStepIndex = 0;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AdvanceDunningStep()
+    {
+        CurrentDunningStepIndex++;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void PauseDunning(DateTime until)
+    {
+        DunningPausedUntil = until;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResumeDunning()
+    {
+        DunningPausedUntil = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearDunning()
+    {
+        CurrentDunningCampaignId = null;
+        CurrentDunningStepIndex = 0;
+        DunningPausedUntil = null;
+        UpdatedAt = DateTime.UtcNow;
     }
 }

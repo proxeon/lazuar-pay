@@ -80,6 +80,25 @@ public static class SubscriberEndpoints
               return TypedResults.Ok(new GenerateCustomerPortalResponse(url));
           });
 
+        group.MapPost("/subscribers/{id:guid}/dunning/pause", async Task<Ok<StatusResponse>> (
+            Guid id,
+            PauseDunningRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            await mediator.Send(new PauseSubscriberDunningCommand(ctx.TenantId, id, req.Pause_until.UtcDateTime));
+            return TypedResults.Ok(new StatusResponse { Status = "paused" });
+        });
+
+        group.MapPost("/subscribers/{id:guid}/dunning/resume", async Task<Ok<StatusResponse>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            await mediator.Send(new ResumeSubscriberDunningCommand(ctx.TenantId, id));
+            return TypedResults.Ok(new StatusResponse { Status = "resumed" });
+        });
+
         return group;
     }
 }

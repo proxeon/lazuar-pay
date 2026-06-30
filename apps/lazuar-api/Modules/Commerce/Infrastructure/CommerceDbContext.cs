@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using MediatR;
@@ -21,7 +23,8 @@ public class CommerceDbContext : PlatformDbContext
     public DbSet<Order> Orders { get; set; } = null!;
     public DbSet<CheckoutSession> CheckoutSessions { get; set; } = null!;
     public DbSet<ChargeAttemptLog> ChargeAttemptLogs { get; set; } = null!;
-    public DbSet<ReminderSchedule> ReminderSchedules { get; set; } = null!;
+    public DbSet<DunningCampaign> DunningCampaigns { get; set; } = null!;
+    public DbSet<DunningStep> DunningSteps { get; set; } = null!;
     public DbSet<ReminderDispatchLog> ReminderDispatchLogs { get; set; } = null!;
     public DbSet<CommerceTransactionLog> TransactionLogs { get; set; } = null!;
 
@@ -35,6 +38,37 @@ public class CommerceDbContext : PlatformDbContext
         DatabaseJobTrigger jobTrigger)
         : base(options, executionContext, mediator, jobTrigger)
     {
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // Intercept pre-assigned UUID child entities attached to existing aggregates
+        // to prevent EF Core from mistaking them as "Modified" updates.
+        foreach (var entry in ChangeTracker.Entries<DunningStep>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<ReminderDispatchLog>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<ChargeAttemptLog>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -147,11 +181,36 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => new { x.SubscriptionId, x.TargetBillingDate }).IsUnique();
         });
 
-        modelBuilder.Entity<ReminderSchedule>(builder =>
+        modelBuilder.Entity<DunningCampaign>(builder =>
         {
-            builder.ToTable("ReminderSchedules");
+            builder.ToTable("DunningCampaigns");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.OrganizationId, x.DaysRelativeToDue });
+            builder.HasIndex(x => x.OrganizationId);
+
+            builder.Property(x => x.TargetProductIds)
+                .HasField("_targetProductIds")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasConversion(guidListConverter, guidListComparer)
+                .HasColumnType("jsonb");
+
+            builder.Property(x => x.TargetPaymentMethods)
+                .HasField("_targetPaymentMethods")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasConversion(stringListConverter, stringListComparer)
+                .HasColumnType("jsonb");
+
+            builder.HasMany(x => x.Steps)
+                .WithOne()
+                .HasForeignKey(x => x.DunningCampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Metadata.FindNavigation("Steps")?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<DunningStep>(builder =>
+        {
+            builder.ToTable("DunningSteps");
+            builder.HasKey(x => x.Id);
         });
 
         modelBuilder.Entity<ReminderDispatchLog>(builder =>

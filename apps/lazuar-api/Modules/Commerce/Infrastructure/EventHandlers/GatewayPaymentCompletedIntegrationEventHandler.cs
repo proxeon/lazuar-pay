@@ -40,6 +40,30 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
             var session = await _repository.GetCheckoutSessionByIdAsync(sessionId);
             if (session == null || session.Status == "COMPLETED")
             {
+                // This might be a recurring charge hitting the existing subscription ID instead of a session ID
+                var existingSub = await _repository.GetSubscriptionByIdAsync(sessionId);
+                if (existingSub != null)
+                {
+                    var productInfo = await _repository.GetProductByIdAsync(existingSub.ProductId);
+                    if (productInfo != null && productInfo.Interval != "one_time")
+                    {
+                        var updatedNextBilling = productInfo.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
+                        existingSub.Activate(DateTime.UtcNow, updatedNextBilling, existingSub.IsReminderOnly);
+                        existingSub.ClearDunning();
+
+                        await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
+                            existingSub.OrganizationId,
+                            existingSub.Id,
+                            existingSub.ClientProfileId,
+                            existingSub.ProductId,
+                            productInfo.FulfillmentTargets.ToList(),
+                            false
+                        ));
+
+                        await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM");
+                        await _repository.SaveChangesAsync();
+                    }
+                }
                 return;
             }
 
@@ -100,28 +124,30 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
                 ));
             }
 
-            // Resolve customer credentials via cross-module query contract
-            var clientProfile = await _crmQueryService.GetClientProfileAsync(session.ClientProfileId);
-            var customerName = clientProfile?.Full_name ?? "Unknown Customer";
-            var customerEmail = clientProfile?.Email ?? string.Empty;
-
-            // Project flat record to local read model for reporting
-            var transactionLog = new CommerceTransactionLog(
-                @event.OrganizationId,
-                @event.AmountPaid,
-                @event.GatewayFee,
-                @event.Currency,
-                "CONFIRMED",
-                customerName,
-                customerEmail,
-                product.Name,
-                "SYSTEM",
-                @event.GatewayTransactionId
-            );
-
-            _dbContext.TransactionLogs.Add(transactionLog);
-
+            await LogTransactionAsync(@event, session.ClientProfileId, product.Name, "SYSTEM");
             await _repository.SaveChangesAsync();
         }
+    }
+
+    private async Task LogTransactionAsync(GatewayPaymentCompletedIntegrationEvent @event, Guid clientProfileId, string productName, string recordedBy)
+    {
+        var clientProfile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var customerName = clientProfile?.Full_name ?? "Unknown Customer";
+        var customerEmail = clientProfile?.Email ?? string.Empty;
+
+        var transactionLog = new CommerceTransactionLog(
+            @event.OrganizationId,
+            @event.AmountPaid,
+            @event.GatewayFee,
+            @event.Currency,
+            "CONFIRMED",
+            customerName,
+            customerEmail,
+            productName,
+            recordedBy,
+            @event.GatewayTransactionId
+        );
+
+        _dbContext.TransactionLogs.Add(transactionLog);
     }
 }

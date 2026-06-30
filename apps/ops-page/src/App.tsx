@@ -11,9 +11,9 @@ import SubscribersPage from "./modules/commerce/pages/SubscribersPage";
 import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
 import CouponsPage from "./modules/commerce/pages/CouponsPage";
 import PaymentSettingsPage from "./modules/commerce/pages/PaymentSettingsPage";
+import DunningCampaignsPage from "./modules/commerce/pages/DunningCampaignsPage";
 
 import SpacesPage from "./modules/community/pages/SpacesPage";
-import DunningSchedulesPage from "./modules/community/pages/DunningSchedulesPage";
 import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
 import TemplatesPage from "./modules/community/pages/TemplatesPage";
 
@@ -21,7 +21,9 @@ import DigitalProductsPage from "./modules/vault/pages/DigitalProductsPage";
 
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
+import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
+import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 
 export interface OpsOutletContext {
   activeWorkspaceId: string | null;
@@ -173,19 +175,21 @@ export default function App() {
         <Route path="/commerce/subscribers" element={<SubscribersPage />} />
         <Route path="/commerce/transactions" element={<TransactionsPage />} />
         <Route path="/commerce/coupons" element={<CouponsPage />} />
+        <Route path="/commerce/dunning-campaigns" element={<DunningCampaignsPage />} />
         <Route path="/commerce/payment" element={<PaymentSettingsPage />} />
 
         <Route path="/community/spaces" element={<SpacesPage />} />
-        <Route path="/community/dunning-schedules" element={<DunningSchedulesPage />} />
         <Route path="/community/broadcasts" element={<BroadcastsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
 
         <Route path="/vault/products" element={<DigitalProductsPage />} />
 
         <Route path="/developer/webhooks" element={<DeveloperSettingsPage />} />
+        <Route path="/developer/logs" element={<DeliveryLogsPage />} />
         
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
+        <Route path="/workspace/ledger" element={<UtilityLedgerPage />} />
       </Route>
       
       <Route path="*" element={<Navigate to="/commerce/dashboard" replace />} />

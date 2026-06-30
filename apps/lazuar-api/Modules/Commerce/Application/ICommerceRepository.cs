@@ -18,17 +18,19 @@ public interface ICommerceRepository
     Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default);
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
     Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default);
-    Task<ReminderSchedule?> GetReminderScheduleByIdAsync(Guid id, CancellationToken ct = default);
+    
+    Task<DunningCampaign?> GetDunningCampaignByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<Dictionary<string, Guid>> GetDefaultTemplateIdsAsync(Guid organizationId, CancellationToken ct = default);
 
     void AddProduct(Product product);
     void AddSubscription(Subscription subscription);
     void AddOrder(Order order);
     void AddChargeAttempt(ChargeAttemptLog log);
-    void AddReminderSchedule(ReminderSchedule schedule);
-    void RemoveReminderSchedule(ReminderSchedule schedule);
     void AddCheckoutSession(CheckoutSession session);
     void AddCoupon(Coupon coupon);
+    
+    void AddDunningCampaign(DunningCampaign campaign);
+    void RemoveDunningCampaign(DunningCampaign campaign);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }

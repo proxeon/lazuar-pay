@@ -45,31 +45,31 @@ interface AdminCommerceOperations {
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
-  @route("/reminder-schedules")
-  getReminderSchedules(
-  ): ReminderScheduleDto[] | LazuarApi.Core.ProblemDetailsResponse;
+  @route("/dunning-campaigns")
+  getDunningCampaigns(
+  ): DunningCampaignDto[] | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
-  @route("/reminder-schedules")
-  createReminderSchedule(
-    @body body: CreateReminderScheduleRequestDto,
+  @route("/dunning-campaigns")
+  createDunningCampaign(
+    @body body: CreateDunningCampaignRequestDto,
   ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
-  @route("/reminder-schedules/defaults")
-  generateDefaultSchedules(
+  @route("/dunning-campaigns/defaults")
+  generateDefaultDunningCampaigns(
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @put
-  @route("/reminder-schedules/{id}")
-  updateReminderSchedule(
+  @route("/dunning-campaigns/{id}")
+  updateDunningCampaign(
     @path id: string,
-    @body body: UpdateReminderScheduleRequestDto,
+    @body body: UpdateDunningCampaignRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @delete
-  @route("/reminder-schedules/{id}")
-  deleteReminderSchedule(
+  @route("/dunning-campaigns/{id}")
+  deleteDunningCampaign(
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
@@ -95,6 +95,19 @@ interface AdminCommerceOperations {
   @route("/subscribers")
   createSubscriber(
     @body body: CreateManualSubscriberDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/dunning/pause")
+  pauseSubscriberDunning(
+    @path id: string,
+    @body body: PauseDunningRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/dunning/resume")
+  resumeSubscriberDunning(
+    @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
