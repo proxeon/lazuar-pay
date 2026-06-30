@@ -10,18 +10,17 @@ import QuickCopy from "../../core/components/QuickCopy";
 
 type CustomCheckoutDto = components["schemas"]["Commerce.CustomCheckoutDto"];
 
-interface PaymentRequestDetailPanelProps {
+interface QuoteDetailPanelProps {
   request: CustomCheckoutDto | null;
   onClose: () => void;
   onUpdate: (request: CustomCheckoutDto | null) => void;
 }
 
-export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }: PaymentRequestDetailPanelProps) {
+export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDetailPanelProps) {
   const queryClient = useQueryClient();
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  // Fetch entitlements to resolve the actual workspace slug dynamically
   const { data: entitlements } = useQuery({
     queryKey: ["entitlements"],
     queryFn: async () => {
@@ -45,7 +44,7 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
       return;
     }
     navigator.clipboard.writeText(url);
-    toast.success("Payment link copied to clipboard.");
+    toast.success("Quote link copied to clipboard.");
   };
 
   const markPaidMutation = useMutation({
@@ -58,7 +57,7 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
     onMutate: () => setIsActionLoading(true),
     onSettled: () => setIsActionLoading(false),
     onSuccess: () => {
-      toast.success("Payment request marked as paid. Official receipt generation triggered.");
+      toast.success("Quote marked as paid. Official receipt generation triggered.");
       queryClient.invalidateQueries({ queryKey: ["custom-checkouts"] });
       onUpdate(request ? { ...request, status: "COMPLETED" } : null);
     },
@@ -74,7 +73,7 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
     <SidePanel
       isOpen={!!request}
       onClose={onClose}
-      title="Payment Request Detail"
+      title="Quote Detail"
       disableOutsideClick={isActionLoading}
     >
       <div className="space-y-8 animate-in fade-in duration-200">
@@ -149,10 +148,10 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
         </div>
 
         <div className="space-y-4">
-          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Payment Link & Expiration</h4>
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Quote Link & Expiration</h4>
           <div className="space-y-4">
             <div>
-              <span className="text-[11px] text-[#a1a1aa] block mb-0.5">Secure Checkout URL</span>
+              <span className="text-[11px] text-[#a1a1aa] block mb-0.5">Secure Quote URL</span>
               <div className="flex items-center gap-2 bg-[#fafafa] border border-[#e5e5e5] p-2 rounded-sm">
                 <a href={generatePaymentUrl(request.id)} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-blue-600 hover:opacity-80 underline underline-offset-2 truncate max-w-[280px]">
                   {generatePaymentUrl(request.id) || "Loading..."}
@@ -184,7 +183,7 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
                 disabled={isActionLoading || !activeWorkspaceSlug} 
                 className="h-9 w-full border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 rounded-sm"
               >
-                <LinkIcon size={14} /> Copy Payment Link
+                <LinkIcon size={14} /> Copy Quote Link
               </button>
               
               <button 
@@ -193,6 +192,24 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
                 className="h-9 w-full border border-[#09090b] bg-[#09090b] text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 rounded-sm"
               >
                 {isActionLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Mark as Paid (Bank Transfer)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isCompleted && (
+          <div className="space-y-4 pt-4">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h4>
+            <div className="grid grid-cols-1 gap-3">
+              <button 
+                onClick={() => {
+                  onClose();
+                  // For Phase 4 we will wire this to the proper route
+                  // navigate(`/invoicing/tax-invoices?search=${request.id}`);
+                }} 
+                className="h-9 w-full border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 rounded-sm"
+              >
+                <FileText size={14} /> View Official Tax Invoice →
               </button>
             </div>
           </div>

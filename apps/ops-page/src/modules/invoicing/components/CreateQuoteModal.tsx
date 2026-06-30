@@ -43,12 +43,12 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
       if (error) throw new Error(error.detail);
     },
     onSuccess: () => {
-      toast.success("Custom payment request created successfully");
+      toast.success("Custom quote created successfully");
       queryClient.invalidateQueries({ queryKey: ["custom-checkouts"] });
       resetFormStates();
       onClose();
     },
-    onError: (err: any) => toast.error("Failed to create request", { description: err.message })
+    onError: (err: any) => toast.error("Failed to create quote", { description: err.message })
   });
 
   const handleAddLineItem = () => {
@@ -104,7 +104,7 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={handleClose} />
       <div className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
         <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5] bg-[#fafafa]/50 shrink-0">
-          <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Custom Payment Request</h3>
+          <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Create Proforma Quote</h3>
           <button onClick={handleClose} disabled={createMutation.isPending} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1 disabled:opacity-50"><X size={16} /></button>
         </div>
         
@@ -185,7 +185,7 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
               <div className="flex gap-2">
                 <button type="button" onClick={handleClose} disabled={createMutation.isPending} className="h-10 px-4 rounded-sm border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#09090b] transition-colors disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="h-10 px-6 rounded-sm bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#27272a] transition-colors disabled:opacity-50">
-                  {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Generate Link
+                  {createMutation.isPending && <Loader2 size={13} className="animate-spin" />} Generate Quote
                 </button>
               </div>
             </div>

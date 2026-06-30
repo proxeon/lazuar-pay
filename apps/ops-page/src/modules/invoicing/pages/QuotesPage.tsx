@@ -5,12 +5,12 @@ import { Loader2, Plus, ArrowLeft, ArrowRight, FileText } from "lucide-react";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
-import PaymentRequestDetailPanel from "../components/PaymentRequestDetailPanel";
+import QuoteDetailPanel from "../components/QuoteDetailPanel";
 import CreateQuoteModal from "../components/CreateQuoteModal";
 
 type CustomCheckoutDto = components["schemas"]["Commerce.CustomCheckoutDto"];
 
-export default function PaymentRequestsPage() {
+export default function QuotesPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [page, setPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -39,15 +39,15 @@ export default function PaymentRequestsPage() {
 
   return (
     <PageLayout 
-      title="Payment Requests & Quotes" 
-      description="Create custom, one-off checkout links for ad-hoc services or B2B invoicing."
-      breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Payment Requests" }]}
+      title="Quotes & Proforma Invoices" 
+      description="Create custom, one-off quotes and proforma invoices for ad-hoc services or B2B clients."
+      breadcrumbs={[{ label: "Invoicing" }, { label: "Quotes & Requests" }]}
       actionButton={
         <button 
           onClick={() => setIsCreateModalOpen(true)}
           className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
         >
-          <Plus size={14} /> Create Custom Link
+          <Plus size={14} /> Create Quote
         </button>
       }
     >
@@ -76,7 +76,7 @@ export default function PaymentRequestsPage() {
               {isLoading ? (
                 <tr><td colSpan={5} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
               ) : response?.data.length === 0 ? (
-                <tr><td colSpan={5} className="py-12 text-center text-[12px] text-[#71717a]">No custom payment requests found.</td></tr>
+                <tr><td colSpan={5} className="py-12 text-center text-[12px] text-[#71717a]">No quotes found.</td></tr>
               ) : (
                 response?.data.map((req) => (
                   <tr 
@@ -142,7 +142,7 @@ export default function PaymentRequestsPage() {
         onClose={() => setIsCreateModalOpen(false)} 
       />
 
-      <PaymentRequestDetailPanel 
+      <QuoteDetailPanel 
         request={selectedRequest} 
         onClose={() => setSelectedRequest(null)} 
         onUpdate={setSelectedRequest}
