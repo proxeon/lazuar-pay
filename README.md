@@ -139,3 +139,14 @@ When modifying API endpoints or models, edit the TypeSpec files in `packages/api
 task gen
 ```
 This automatically updates both frontend TypeScript definitions and backend C# models.
+
+### Development Context
+For AI context passing or searching codebase structures:
+
+```sh
+fd -t f --ignore-file ctx.ignore | ctx | hxn
+```
+
+```sh
+cat ctx.include | ctx | hxn
+```
