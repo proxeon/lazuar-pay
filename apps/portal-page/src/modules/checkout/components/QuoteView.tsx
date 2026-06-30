@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Download, Building2, CheckCircle2 } from "lucide-react";
 import { components } from "@repo/api-types-ts";
 import { submitCheckout } from "../lib/api";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../../../lib/utils";
 import Link from "next/link";
 
 type CustomCheckoutDto = components["schemas"]["Commerce.CustomCheckoutDto"];
@@ -18,6 +19,7 @@ interface QuoteViewProps {
 }
 
 export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteViewProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
