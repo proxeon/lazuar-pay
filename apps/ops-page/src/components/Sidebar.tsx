@@ -34,7 +34,6 @@ const MODULES = [
   { id: "workspace", title: "Workspace", basePath: ["/workspace"], icon: Settings }
 ];
 
-// Extracted completely outside to prevent React from destroying DOM nodes on state changes
 function ModuleNav({ 
   id, title, basePath, icon: Icon, links, expanded, isAccordionOpen, onToggle, currentPath, isMobile, closeSidebar 
 }: { 
@@ -272,6 +271,7 @@ export default function Sidebar({
                   { label: "Delivery Logs", href: "/developer/logs" }
                 ] : [
                   { label: "General Settings", href: "/workspace/general" },
+                  { label: "Legal & Billing Profile", href: "/workspace/billing-profile" },
                   { label: "Platform Billing", href: "/workspace/billing" },
                   { label: "Utility Ledger", href: "/workspace/ledger" }
                 ]
