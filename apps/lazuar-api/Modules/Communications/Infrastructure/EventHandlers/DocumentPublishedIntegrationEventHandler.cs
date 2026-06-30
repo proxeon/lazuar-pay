@@ -19,6 +19,9 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
     private readonly IConfiguration _config;
     private readonly IEventBus _eventBus;
 
+    // Strictly typed record to satisfy .NET 10 nullability checks from Dapper
+    private record DocumentData(string? TenantSlug, string? BusinessName, string? CustomerName, string? CustomerEmail);
+
     public DocumentPublishedIntegrationEventHandler(
         CommunicationsDbContext dbContext,
         [FromKeyedServices("CommunicationsSqlConnectionFactory")] ISqlConnectionFactory sqlFactory,
@@ -49,9 +52,9 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
             WHERE e.""Id"" = @LedgerEntryId
             LIMIT 1";
 
-        var data = await connection.QuerySingleOrDefaultAsync(query, new { LedgerEntryId = @event.LedgerEntryId });
+        var data = await connection.QuerySingleOrDefaultAsync<DocumentData>(query, new { LedgerEntryId = @event.LedgerEntryId });
         
-        if (data == null || string.IsNullOrEmpty((string)data.CustomerEmail)) return;
+        if (data == null || string.IsNullOrEmpty(data.CustomerEmail) || string.IsNullOrEmpty(data.TenantSlug)) return;
 
         var templateName = @event.DocumentType == "Draft Quotation" ? "Quotation Ready" : "Official Receipt";
 
@@ -62,35 +65,38 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
         if (template == null) return;
 
         var exp = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeSeconds();
-        var payload = $"{(string)data.TenantSlug}:{@event.LedgerEntryId}:{exp}";
+        var payload = $"{data.TenantSlug}:{@event.LedgerEntryId}:{exp}";
         var secret = _config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
         
         var sig = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
         var apiBaseUrl = _config["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
         
-        var documentLink = $"{apiBaseUrl}/public/billing/{(string)data.TenantSlug}/documents/{@event.LedgerEntryId}?sig={sig}&exp={exp}";
+        var documentLink = $"{apiBaseUrl}/public/billing/{data.TenantSlug}/documents/{@event.LedgerEntryId}?sig={sig}&exp={exp}";
+
+        var customerName = data.CustomerName ?? "Customer";
+        var businessName = data.BusinessName ?? "Business";
 
         var htmlBody = (template.EmailBody ?? "")
-            .Replace("{{customer_name}}", (string)data.CustomerName, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{business_name}}", (string)data.BusinessName, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{customer_name}}", customerName, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{business_name}}", businessName, StringComparison.OrdinalIgnoreCase)
             .Replace("{{document_link}}", documentLink, StringComparison.OrdinalIgnoreCase);
 
         var whatsappBody = (template.WhatsAppBody ?? "")
-            .Replace("{{customer_name}}", (string)data.CustomerName, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{business_name}}", (string)data.BusinessName, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{customer_name}}", customerName, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{business_name}}", businessName, StringComparison.OrdinalIgnoreCase)
             .Replace("{{document_link}}", documentLink, StringComparison.OrdinalIgnoreCase);
 
         var subject = (template.Subject ?? "")
-            .Replace("{{business_name}}", (string)data.BusinessName, StringComparison.OrdinalIgnoreCase);
+            .Replace("{{business_name}}", businessName, StringComparison.OrdinalIgnoreCase);
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
             @event.OrganizationId,
-            (string)data.CustomerEmail,
+            data.CustomerEmail,
             null,
             subject,
             MarkdownParser.ToHtml(htmlBody),
             whatsappBody,
-            template.Channel
+            template.Channel ?? "EMAIL"
         ));
     }
 }

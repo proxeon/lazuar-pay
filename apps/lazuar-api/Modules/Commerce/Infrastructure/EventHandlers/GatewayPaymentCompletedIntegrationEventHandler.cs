@@ -35,12 +35,11 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
     {
         var type = @event.Metadata.GetValueOrDefault("type");
 
-        if (type == "commerce_subscription" && @event.Metadata.TryGetValue("subscription_id", out var sessionIdStr) && Guid.TryParse(sessionIdStr, out var sessionId))
+        if ((type == "commerce_subscription" || type == "custom_payment_link") && @event.Metadata.TryGetValue("subscription_id", out var sessionIdStr) && Guid.TryParse(sessionIdStr, out var sessionId))
         {
             var session = await _repository.GetCheckoutSessionByIdAsync(sessionId);
             if (session == null || session.Status == "COMPLETED")
             {
-                // This might be a recurring charge hitting the existing subscription ID instead of a session ID
                 var existingSub = await _repository.GetSubscriptionByIdAsync(sessionId);
                 if (existingSub != null)
                 {
@@ -67,13 +66,20 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
                 return;
             }
 
-            var product = await _repository.GetProductByIdAsync(session.ProductId);
-            if (product == null)
+            session.Complete();
+
+            if (type == "custom_payment_link")
             {
-                throw new InvalidOperationException($"Product with ID {session.ProductId} associated with session {sessionId} not found.");
+                await LogTransactionAsync(@event, session.ClientProfileId, "Custom Payment Request", "SYSTEM");
+                await _repository.SaveChangesAsync();
+                return;
             }
 
-            session.Complete();
+            var product = await _repository.GetProductByIdAsync(session.ProductId ?? Guid.Empty);
+            if (product == null)
+            {
+                throw new InvalidOperationException($"Product associated with session {sessionId} not found.");
+            }
 
             if (product.Interval != "one_time")
             {

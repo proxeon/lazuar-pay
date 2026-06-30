@@ -80,8 +80,9 @@ public class CommerceQueryServiceTests
         Assert.DoesNotThrowAsync(async () => await _queryService.GetCouponsAsync(orgId));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetSubscribersAsync(orgId, 1, 50, null));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetTransactionsAsync(orgId, 1, 50, null, null, null));
-        Assert.DoesNotThrowAsync(async () => await _queryService.GetReminderSchedulesAsync(orgId));
+        Assert.DoesNotThrowAsync(async () => await _queryService.GetDunningCampaignsAsync(orgId));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetStatsAsync(orgId));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetPortalDataAsync(orgId, Guid.CreateVersion7()));
+        Assert.DoesNotThrowAsync(async () => await _queryService.GetCustomCheckoutsAsync(orgId, 1, 50));
     }
 }
