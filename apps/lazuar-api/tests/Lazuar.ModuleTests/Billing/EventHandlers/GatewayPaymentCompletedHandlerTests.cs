@@ -1,3 +1,4 @@
+// Lazuar.ModuleTests/Billing/EventHandlers/GatewayPaymentCompletedHandlerTests.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -42,8 +43,6 @@ public class GatewayPaymentCompletedHandlerTests
 
         await handler.HandleAsync(@event);
 
-        // Asserts that database changes are strictly committed before the document generation 
-        // command is dispatched, preventing "Record Not Found" query errors downstream.
         Received.InOrder(() =>
         {
             mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>());
