@@ -1,20 +1,21 @@
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Modules.Billing.Contracts.Commands;
 using Modules.Lhdn.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
 
-/// <summary>
-/// Receives official LHDN UUIDs and attaches them to the internal financial ledger entry.
-/// </summary>
 public class LhdnDocumentValidatedIntegrationEventHandler : IIntegrationEventHandler<LhdnDocumentValidatedIntegrationEvent>
 {
     private readonly BillingDbContext _dbContext;
+    private readonly IMediator _mediator;
 
-    public LhdnDocumentValidatedIntegrationEventHandler(BillingDbContext dbContext)
+    public LhdnDocumentValidatedIntegrationEventHandler(BillingDbContext dbContext, IMediator mediator)
     {
         _dbContext = dbContext;
+        _mediator = mediator;
     }
 
     public async Task HandleAsync(LhdnDocumentValidatedIntegrationEvent @event)
@@ -27,6 +28,18 @@ public class LhdnDocumentValidatedIntegrationEventHandler : IIntegrationEventHan
         {
             ledgerEntry.UpdateLhdnStatus(@event.LhdnUuid, @event.Status);
             await _dbContext.SaveChangesAsync();
+
+            if (@event.Status == "VALIDATED")
+            {
+                var docType = ledgerEntry.ReferenceType.Contains("REFUND") ? "Credit Note" : "Tax Invoice";
+
+                await _mediator.Send(new GenerateAndStoreDocumentCommand(
+                    @event.OrganizationId,
+                    ledgerEntry.Id,
+                    docType,
+                    @event.QrLink
+                ));
+            }
         }
     }
 }
