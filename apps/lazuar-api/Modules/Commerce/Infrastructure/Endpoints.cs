@@ -9,7 +9,6 @@ using Microsoft.Extensions.Configuration;
 using BuildingBlocks.Application;
 using MediatR;
 using Modules.Commerce.Contracts.Commands;
-using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Application.Queries;
 using Lazuar.ApiTypes;
 using System.Linq;
@@ -38,7 +37,7 @@ public static class Endpoints
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
-            var lineItems = req.Line_items.Select(x => new AdHocLineItem(x.Description, x.Quantity, (decimal)x.Unit_price)).ToList();
+            var lineItems = req.Line_items.Select(x => new CustomLineItemData(x.Description, x.Quantity, (decimal)x.Unit_price)).ToList();
             
             var command = new CreateCustomCheckoutCommand(
                 ctx.TenantId,

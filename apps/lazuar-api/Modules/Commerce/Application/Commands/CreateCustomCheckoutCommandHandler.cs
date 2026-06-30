@@ -1,10 +1,12 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Domain.Aggregates;
+using Modules.Commerce.Domain.ValueObjects;
 using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
@@ -33,10 +35,14 @@ public class CreateCustomCheckoutCommandHandler : ICommandHandler<CreateCustomCh
 
         var expiresAt = request.ExpiresAt ?? DateTime.UtcNow.AddDays(30);
 
+        var domainLineItems = request.LineItems
+            .Select(x => new AdHocLineItem(x.Description, x.Quantity, x.UnitPrice))
+            .ToList();
+
         var session = new CheckoutSession(
             request.OrganizationId,
             clientProfileId,
-            request.LineItems,
+            domainLineItems,
             expiresAt,
             request.IsB2bRequired
         );
