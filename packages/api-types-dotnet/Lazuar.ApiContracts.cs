@@ -215,6 +215,15 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("customer_type")]
+        public string Customer_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tax_invoice_id")]
+        public string? Tax_invoice_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lhdn_validation_status")]
+        public string? Lhdn_validation_status { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("lines")]
         public System.Collections.Generic.List<LedgerLineDto> Lines { get; set; } = new System.Collections.Generic.List<LedgerLineDto>();
 
