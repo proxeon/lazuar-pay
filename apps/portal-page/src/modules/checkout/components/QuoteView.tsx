@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Download, Building2, CheckCircle2 } from "lucide-react";
 import { components } from "@repo/api-types-ts";
 import { submitCheckout } from "../lib/api";
 import { cn } from "../../../lib/utils";
+import Link from "next/link";
 
 type CustomCheckoutDto = components["schemas"]["Commerce.CustomCheckoutDto"];
 type TenantBillingProfileDto = components["schemas"]["Billing.TenantBillingProfileDto"];
@@ -18,7 +18,6 @@ interface QuoteViewProps {
 }
 
 export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteViewProps) {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
@@ -79,9 +78,9 @@ export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteV
               <p className="text-sm font-medium">This payment request has been successfully completed.</p>
             </div>
           </div>
-          <button onClick={() => window.alert("Official receipt will be emailed shortly or available in the client portal.")} className="h-10 px-6 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap">
+          <Link href={`/${tenantSlug}/portal`} className="h-10 px-6 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-widest transition-colors shrink-0 flex items-center justify-center whitespace-nowrap">
             View Official Receipt
-          </button>
+          </Link>
         </div>
       )}
 
