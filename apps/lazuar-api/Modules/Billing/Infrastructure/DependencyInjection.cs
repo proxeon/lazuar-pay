@@ -17,6 +17,7 @@ using Modules.Billing.Infrastructure.Workers;
 using Modules.Payments.Contracts.Events;
 using Modules.Lhdn.Contracts.Events;
 using Modules.Commerce.Contracts.Events;
+using QuestPDF.Infrastructure;
 using System;
 
 namespace Modules.Billing.Infrastructure;
@@ -25,6 +26,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddBillingModule(this IServiceCollection services, IConfiguration configuration)
     {
+        QuestPDF.Settings.License = LicenseType.Community;
+
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Default connection string was not found.");
 
