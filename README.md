@@ -1,39 +1,39 @@
 
 # Lazuar Platform (Checkout-as-a-Service)
 
-> **A Sovereign Checkout, Billing, and Fulfillment Engine for Creators and SaaS Founders.**
+> **A Sovereign Checkout, Billing, and Compliance Engine for Asian Creators and B2B SaaS Founders.**
 
-Lazuar is an API-first, Headless Commerce platform built on a strict .NET 10 Modular Monolith. We provide the financial infrastructure—multi-gateway orchestration, double-entry ledgers, automated WhatsApp dunning, and LHDN tax e-Invoicing—so you don't have to.
+Lazuar is an API-first, Headless Commerce platform built on a strict .NET 10 Modular Monolith. We provide the enterprise-grade financial infrastructure—multi-gateway orchestration, double-entry ledgers, automated WhatsApp dunning, and LHDN tax e-Invoicing—so you don't have to.
 
-We actively avoid the "CMS Trap" (ADR-015). We don't build website builders, and we don't force you to migrate your domains. You build your beautiful landing pages on Framer, Webflow, WordPress, or custom Next.js apps. We simply power the "Buy Now" button.
+We actively avoid the "CMS Trap." We don't build website builders, and we don't force you to migrate your domains. You build your beautiful landing pages on Framer, Webflow, Astro, or custom Next.js apps. We simply power the "Buy Now" button.
 
 ---
 
 ## 🏗 Headless Architecture
 
 ```txt
-[ YOUR FRONTEND ]              [ LAZUAR CAAS ENGINE ]               [ THIN FULFILLMENT ]
-(Framer, WP, SaaS)             (portal.lazuar.com)                  (Post-Purchase Hooks)
+[ YOUR FRONTEND ]              [ LAZUAR CAAS ENGINE ]               [ COMPLIANCE & FULFILLMENT ]
+(Framer, WP, SaaS)             (portal.lazuar.com)                  (Post-Purchase Automation)
 
   ┌─────────────┐                ┌───────────────────┐                ┌───────────────────┐
-  │ Landing Page│                │ 1. Multi-Gateway  │                │ 📦 Vault          │
-  │ UI / Sales  │── Buy Link ───▶│    (Stripe/FPX)   │── Success ───▶ │    (Secure R2 PDF)│
+  │ Landing Page│                │ 1. BYOK Gateways  │                │ 🏛 LHDN / GSTN    │
+  │ UI / Sales  │── Buy Link ───▶│    (Stripe/FPX)   │── Success ───▶ │    (Govt e-Invoice) │
   │ Copy        │                │                   │                │                   │
-  └─────────────┘                │ 2. Universal      │                │ 👥 Community      │
-                                 │    Ledger         │── Success ───▶ │    (Telegram/Zoom)│
-  ┌─────────────┐                │                   │                │                   │
-  │ Linktree /  │── Buy Link ───▶│ 3. LHDN Tax       │── Success ───▶ │ ⚡ SaaS Webhooks  │
-  │ Social Bio  │                │    e-Invoicing    │                │    (App Unlock)   │
-  └─────────────┘                │                   │                │                   │
-                                 │ 4. WhatsApp       │                └───────────────────┘
-  ┌─────────────┐                │    Dunning & CRM  │
+  └─────────────┘                │ 2. Universal      │                │ 📦 Vault / SaaS   │
+                                 │    Ledger         │── Success ───▶ │    (Secure R2 PDF / │
+  ┌─────────────┐                │                   │                │     App Webhooks)   │
+  │ SaaS Pricing│── Buy Link ───▶│ 3. Automated      │                │                   │
+  │ Table       │                │    Compliance     │── Failure ───▶ │ 💬 WhatsApp       │
+  └─────────────┘                │                   │                │    (Smart Dunning)  │
+                                 │ 4. Dunning Engine │                └───────────────────┘
+  ┌─────────────┐                │    & Retries      │
   │ Custom      │── API Call ───▶└───────────────────┘
   │ Next.js App │
   └─────────────┘
 ```
 
 **Key Separation:**
-- **`ops-page` (Admin):** The AWS-style superapp. Internal staff and creators use this to configure products, view the financial ledger, and manage Dunning schedules. 
+- **`ops-page` (Admin):** The AWS-style superapp. Internal staff use this to configure products, view the financial ledger, construct Dunning campaigns, and manage operations. 
 - **`portal-page` (Checkout):** The headless cash register. Highly optimized, distraction-free SSR Next.js app that processes transactions and grants access.
 
 ---
@@ -44,30 +44,60 @@ We actively avoid the "CMS Trap" (ADR-015). We don't build website builders, and
 Marketing and presentation layers are fully decoupled from our transactional core. All payment orchestration, double-entry ledgers, and automated dunning are managed centrally inside the `Commerce` and `Billing` cores.
 
 ### 2. Bring Your Own Key (BYOK)
-We do not take transaction fees or hold your funds. You plug in your own Stripe, Billplz, or CHIP API keys. Money flows instantly to your merchant accounts.
+We do not act as a Merchant of Record (MoR) and we do not take 8% transaction fees. You plug in your own Stripe, Billplz, or CHIP API keys. Money flows instantly to your merchant accounts. 
 
-### 3. Prepaid Utility Wallet
-Automated compliance tasks (LHDN XML e-Invoicing) and retention actions (WhatsApp dunning) deduct micro-credits from a prepaid `TenantCreditBalance` wallet.
+### 3. Absolute Financial Truth (Double-Entry Ledger)
+To the Ledger, all money looks the same. Whether a customer pays via Stripe, FPX, or Bitcoin, the `Billing` module executes strict double-entry bookkeeping (`Cash` + `Fee` - `Gross Revenue` - `Tax` = `0`). This isolates exact gateway fees and tax liabilities, giving founders a true "Net Cash in Bank" metric.
 
-### 4. Downstream Access Fulfillment (Thin Wrappers)
-downstream apps like `Community` and `Vault` are designed as thin, stateless fulfillment wrappers. They are completely decoupled from billing mechanics, executing access modifications asynchronously based on global subscription state transitions.
+### 4. Prepaid Utility Wallet
+Automated compliance tasks (LHDN XML e-Invoicing) and retention actions (WhatsApp dunning messages) deduct micro-credits from a prepaid `TenantCreditBalance` wallet. This allows Lazuar to monetize infrastructure usage heavily without taxing the creator's gross sales volume.
+
+---
+
+## 🚀 Master Integration Roadmap
+
+The platform is designed to replace the fragmented, manual workflows currently crippling Asian creators and B2B founders.
+
+### Phase 1: The "Un-Fireable" Core (Current)
+*   **Local Asian Gateways (BYOK):** Billplz, Fiuu, CHIP, Xendit, Razorpay (Zero-fee, localized checkouts).
+*   **Government Tax Compliance:** Malaysia LHDN, India GSTN, Indonesia Coretax (Automated legal survival).
+*   **Global Cloud Accounting Sync:** Xero, QuickBooks (Internal CFO integration).
+*   **Native WhatsApp Dunning:** Meta Cloud API (Automated revenue recovery engine via chat).
+
+### Phase 2: High-Ticket & Asset Fulfillment
+*   **Escrow for High-Ticket B2B:** Escrow.com API (Eliminates trust friction for 5-figure deals).
+*   **Embedded E-Signatures:** PandaDoc / DocuSign API (Merge the legal contract with the payment link).
+*   **Community "Bouncer" Bots:** Telegram / Discord APIs (Automated invite and kick based on billing status).
+*   **Software Licensing (DRM):** Keygen.sh (Automated license key generation and revocation for developers).
+
+### Phase 3: Borderless Scaling & Operations
+*   **Mass Affiliate Payouts:** Wise MassPay / PayPal Payouts (Automate the creator's viral growth engine).
+*   **B2B "Buy Now, Pay Later":** Capchase / Funding Societies (Offer 12-month terms to buyers, pay creators upfront).
+*   **Bitcoin / Web3 Settlement:** Direct RPCs / BTCPay (Borderless, zero-chargeback crypto checkouts).
+*   **National Digital KYC:** Singpass / MyDigital ID (Zero-fraud checkouts and instant B2B tax ID verification).
 
 ---
 
 ## 📂 Project Structure
 
 ```md
-apps/
-├── lazuar-api/       # The Brain (.NET Modular Monolith) -> api.lazuar.com
+.
+├── apps/
+│   ├── lazuar-api/       # The Brain (.NET Modular Monolith) -> api.lazuar.com
+│   ├── ops-page/         # The Back-Office (Vite CSR)        -> ops.lazuar.com
+│   ├── portal-page/      # The Cash Register (Next.js SSR)   -> portal.lazuar.com
+│   └── superadmin-page/  # The Global Control Plane          -> admin.lazuar.com
 │
-├── ops-page/         # The Back-Office (Vite CSR)        -> ops.lazuar.com
+├── packages/
+│   ├── api-spec/         # TypeSpec definitions (Single Source of Truth)
+│   ├── api-types-dotnet/ # Auto-generated C# Models
+│   └── api-types-ts/     # Auto-generated TypeScript Interfaces
 │
-└── portal-page/      # The Cash Register (Next.js SSR)   -> portal.lazuar.com
+└── docs/                 # Architecture Decision Logs (ADR)
 ```
 
 ### Module Pattern (Backend)
-
-Every backend module is strictly decoupled:
+Every backend module is strictly decoupled to guarantee future microservice-readiness:
 
 ```txt
 Modules/{ModuleName}/
@@ -76,24 +106,6 @@ Modules/{ModuleName}/
 ├── Domain/              # Aggregates, entities, value objects, rules
 └── Infrastructure/      # EF Core, endpoints, background workers, gateways
 ```
-
----
-
-## 🚀 Ecosystem Roadmap (Fulfillment Hooks)
-
-Modules are built sequentially. We build the central CaaS Engine, then attach "Hooks" for different business verticals.
-
-| Priority | Fulfillment Hook | Category | Core Function |
-|---|---|---|---|
-| 1 | **Core CaaS** | Infrastructure | Payments, Ledger, Taxes, Automations |
-| 2 | **Webhooks** | Developers | B2B SaaS Account Unlocking |
-| 3 | **Community** | Retention | Recurring Dunning, Telegram/Zoom routing |
-| 4 | **Vault** | Fulfillment | Secure R2 Digital File Delivery |
-| 5 | **Event** | Acquisition | Live Workshop Ticketing & Reminders |
-| 6 | **Giveaway** | Acquisition | Viral Lead Generation Engine |
-| 7 | **Broadcast** | Retention | Email/WhatsApp Nurture Sequences |
-| 8 | **Affiliate** | Distribution | Partner Commission Ledgers |
-| 9 | **Consult** | Acquisition | Calendar Booking Integration |
 
 ---
 
@@ -121,13 +133,9 @@ task fe
 | `portal-page`| 3004 | `http://localhost:3004` | Universal Checkout & Dashboard |
 | `superadmin` | 3005 | `http://localhost:3005` | Platform Infrastructure Admin |
 
-### Development Context
-For AI context passing or searching codebase structures:
-
-```sh
-fd -t f --ignore-file ctx.ignore | ctx | hxn
+### Type Generation Pipeline
+When modifying API endpoints or models, edit the TypeSpec files in `packages/api-spec/` and run:
+```bash
+task gen
 ```
-
-```sh
-cat ctx.include | ctx | hxn
-```
+This automatically updates both frontend TypeScript definitions and backend C# models.

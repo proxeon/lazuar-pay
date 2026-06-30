@@ -48,6 +48,12 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
         LhdnValidationStatus = status;
     }
 
+    // This guarantees that it is impossible for Lazuar to lose track of a
+    // single cent.
+    // 
+    // NOTE: Double-entry bookkeeping is a 500-year-old accounting rule: Every
+    // financial transaction has equal and opposite reactions. Debits and
+    // Credits must always equal zero.
     public void ValidateBalanced()
     {
         var netBaseAmount = _lines.Sum(l => l.BaseCurrencyAmount);
