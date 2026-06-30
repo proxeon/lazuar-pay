@@ -1,20 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\Application\Modules.Billing.Application.csproj" />
-    <ProjectReference Include="..\..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Payments\Contracts\Modules.Payments.Contracts.csproj" />
-    <ProjectReference Include="..\..\Community\Contracts\Modules.Community.Contracts.csproj" />
-    <ProjectReference Include="..\..\Lhdn\Contracts\Modules.Lhdn.Contracts.csproj" />
-    <ProjectReference Include="..\..\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Dapper" />
-    <PackageReference Include="QRCoder" />
     <PackageReference Include="QuestPDF" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\Application\Modules.Billing.Application.csproj" />
+    <ProjectReference Include="..\..\Payments\Contracts\Modules.Payments.Contracts.csproj" />
+    <ProjectReference Include="..\..\Lhdn\Contracts\Modules.Lhdn.Contracts.csproj" />
+    <ProjectReference Include="..\..\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
+    <ProjectReference Include="..\..\One\Contracts\Modules.One.Contracts.csproj" />
   </ItemGroup>
 </Project>
