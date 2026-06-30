@@ -14,6 +14,8 @@ interface AdminBillingOperations {
   getLedgerEntries(
     @query page?: int32 = 1,
     @query limit?: int32 = 50,
+    @query search?: string,
+    @query type_filter?: string,
     @query from_date?: utcDateTime,
     @query to_date?: utcDateTime,
   ):

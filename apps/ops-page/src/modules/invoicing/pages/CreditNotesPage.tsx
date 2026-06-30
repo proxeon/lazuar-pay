@@ -1,11 +1,12 @@
-// apps/ops-page/src/modules/invoicing/pages/CreditNotesPage.tsx
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, ArrowRight, FileMinus, Info } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, FileMinus, Info, Search } from "lucide-react";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import TaxInvoiceDetailPanel from "../components/TaxInvoiceDetailPanel";
+import { useDebounce } from "../../../hooks/use-debounce";
 
 type BaseLedgerEntryDto = components["schemas"]["Billing.LedgerEntryDto"];
 
@@ -16,31 +17,51 @@ interface LedgerEntryExtended extends BaseLedgerEntryDto {
 }
 
 export default function CreditNotesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") || "";
+
   const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedNote, setSelectedNote] = useState<LedgerEntryExtended | null>(null);
   
   const limit = 50;
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ["billing-ledger-credit-notes", page],
+    queryKey: ["billing-ledger-credit-notes", page, debouncedSearchTerm],
     queryFn: async () => {
       const { data, error } = await client.GET("/admin/billing/ledger", {
-        params: { query: { page, limit } }
+        params: { 
+          query: { 
+            page, 
+            limit,
+            search: debouncedSearchTerm || undefined,
+            type_filter: "reversals" 
+          } 
+        }
       });
       if (error) throw new Error(error.detail);
       return data;
     }
   });
 
-  const creditNotes = (response?.data as LedgerEntryExtended[] | undefined)?.filter(
-    (entry) => entry.reference_type === "GATEWAY_REFUND" || entry.reference_type === "LHDN_CANCELLATION"
-  ) || [];
+  const creditNotes = (response?.data as LedgerEntryExtended[] | undefined) || [];
 
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => {
     if (response && page < response.total_pages) {
       setPage((p) => p + 1);
     }
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchTerm(val);
+    setPage(1);
+    
+    const newParams = new URLSearchParams(searchParams);
+    if (val) newParams.set("search", val);
+    else newParams.delete("search");
+    setSearchParams(newParams, { replace: true });
   };
 
   const getNoteMath = (lines: any[]) => {
@@ -91,11 +112,23 @@ export default function CreditNotesPage() {
 
         <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full min-h-[500px]">
           <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
-            <div className="flex items-center gap-2 text-[11px] text-[#71717a] font-mono">
-              <FileMinus size={14} /> Contra-Revenue Ledger
+            <div className="flex items-center gap-3">
+              <div className="relative w-64">
+                <Search size={14} className="absolute left-3 top-2 text-[#a1a1aa]" />
+                <input 
+                  type="text" 
+                  placeholder="Search reference ID or UUID..." 
+                  value={searchTerm}
+                  onChange={e => handleSearchChange(e.target.value)}
+                  className="w-full h-8 pl-9 pr-3 text-[12px] bg-white border border-[#e5e5e5] focus:outline-none focus:border-[#09090b]" 
+                />
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-[#71717a] font-mono hidden sm:flex">
+                <FileMinus size={14} /> Contra-Revenue Ledger
+              </div>
             </div>
             <div className="text-[11px] text-[#71717a] font-mono">
-              {response ? `Total Notes: ${creditNotes.length}` : "..."}
+              {response ? `Total Notes: ${response.total_count}` : "..."}
             </div>
           </div>
 

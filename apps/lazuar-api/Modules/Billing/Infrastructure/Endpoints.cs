@@ -27,6 +27,22 @@ public static class Endpoints
     {
         var admin = endpoints.MapGroup("/admin/billing").RequireAuthorization("OrgAdmin");
         var publicGroup = endpoints.MapGroup("/public/billing");
+
+        admin.MapGet("/ledger", async Task<Ok<PaginatedResponse<LedgerEntryDto>>> (
+            [FromQuery] int? page,
+            [FromQuery] int? limit,
+            [FromQuery] string? search,
+            [FromQuery] string? type_filter,
+            [FromQuery] DateTime? from_date,
+            [FromQuery] DateTime? to_date,
+            IExecutionContextAccessor ctx,
+            IBillingQueryService queryService) =>
+        {
+            var p = page ?? 1;
+            var l = limit ?? 50;
+            var response = await queryService.GetLedgerEntriesAsync(ctx.TenantId, p, l, search, type_filter, from_date, to_date);
+            return TypedResults.Ok(response);
+        });
         
         admin.MapGet("/summary", async Task<Ok<FinancialSummaryDto>> (
             IExecutionContextAccessor ctx,

@@ -1,4 +1,3 @@
-// apps/ops-page/src/modules/invoicing/components/QuoteDetailPanel.tsx
 import { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, FileText, Link as LinkIcon, CheckCircle2 } from "lucide-react";
@@ -206,11 +205,11 @@ export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDe
               <button 
                 onClick={() => {
                   onClose();
-                  navigate(`/invoicing/tax-invoices`);
+                  navigate(`/invoicing/tax-invoices?search=${request.id}`);
                 }} 
                 className="h-9 w-full border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 rounded-sm"
               >
-                <FileText size={14} /> View Official Tax Invoice →
+                <FileText size={14} /> View Ledger Entry →
               </button>
             </div>
           </div>

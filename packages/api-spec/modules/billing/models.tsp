@@ -17,6 +17,9 @@ model LedgerEntryDto {
   reference_type: string;
   reference_id: string;
   description?: string;
+  customer_type: string;
+  tax_invoice_id?: string;
+  lhdn_validation_status?: string;
   lines: LedgerLineDto[];
 }
 

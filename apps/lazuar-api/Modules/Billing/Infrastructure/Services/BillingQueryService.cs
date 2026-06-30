@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,14 +20,85 @@ public class BillingQueryService : IBillingQueryService
         _connectionFactory = connectionFactory;
     }
 
+    public async Task<PaginatedResponse<LedgerEntryDto>> GetLedgerEntriesAsync(Guid organizationId, int page, int limit, string? search, string? typeFilter, DateTime? fromDate, DateTime? toDate)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        int offset = (page - 1) * limit;
+        var searchPattern = string.IsNullOrWhiteSpace(search) ? null : $"%{search}%";
+
+        var sql = @"
+            SELECT 
+                e.""Id"", e.""Timestamp"", e.""ReferenceType"", e.""ReferenceId"", 
+                e.""Description"", e.""CustomerType"", e.""TaxInvoiceId"", e.""LhdnValidationStatus"",
+                (COUNT(*) OVER())::int AS ""TotalCount""
+            FROM billing.""LedgerEntries"" e
+            WHERE e.""OrganizationId"" = @OrgId
+            AND (@Search IS NULL OR e.""ReferenceId"" ILIKE @Search OR e.""TaxInvoiceId"" ILIKE @Search)
+            AND (@TypeFilter IS NULL 
+                 OR (@TypeFilter = 'sales' AND e.""ReferenceType"" NOT IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION'))
+                 OR (@TypeFilter = 'reversals' AND e.""ReferenceType"" IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION'))
+            )
+            AND (@FromDate IS NULL OR e.""Timestamp"" >= @FromDate)
+            AND (@ToDate IS NULL OR e.""Timestamp"" <= @ToDate)
+            ORDER BY e.""Timestamp"" DESC
+            LIMIT @Limit OFFSET @Offset;";
+
+        var entries = (await connection.QueryAsync<dynamic>(sql, new { 
+            OrgId = organizationId, 
+            Limit = limit, 
+            Offset = offset, 
+            Search = searchPattern,
+            TypeFilter = typeFilter,
+            FromDate = fromDate,
+            ToDate = toDate
+        })).ToList();
+
+        if (!entries.Any()) 
+            return new PaginatedResponse<LedgerEntryDto>(Enumerable.Empty<LedgerEntryDto>(), 0, page, limit);
+
+        int totalCount = entries.First().TotalCount;
+        var entryIds = entries.Select(e => (Guid)e.Id).ToList();
+
+        var linesSql = @"
+            SELECT ""Id"", ""LedgerEntryId"", ""AccountType"", ""Amount"", ""Currency"", ""BaseCurrencyAmount"", ""BaseCurrency""
+            FROM billing.""LedgerLines""
+            WHERE ""LedgerEntryId"" = ANY(@EntryIds)";
+
+        var lines = (await connection.QueryAsync<dynamic>(linesSql, new { EntryIds = entryIds })).ToList();
+        var linesLookup = lines.GroupBy(l => (Guid)l.LedgerEntryId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var dtos = entries.Select(e => new LedgerEntryDto
+        {
+            Id = e.Id.ToString(),
+            Timestamp = new DateTimeOffset(e.Timestamp),
+            Reference_type = e.ReferenceType,
+            Reference_id = e.ReferenceId,
+            Description = e.Description,
+            Customer_type = e.CustomerType,
+            Tax_invoice_id = e.TaxInvoiceId,
+            Lhdn_validation_status = e.LhdnValidationStatus,
+            Lines = linesLookup.ContainsKey(e.Id) ? linesLookup[e.Id].Select(l => new LedgerLineDto
+            {
+                Id = l.Id.ToString(),
+                Ledger_entry_id = l.LedgerEntryId.ToString(),
+                Account_type = l.AccountType,
+                Amount = (double)l.Amount,
+                Currency = l.Currency,
+                Base_currency_amount = (double)l.BaseCurrencyAmount,
+                Base_currency = l.BaseCurrency
+            }).ToList() : new List<LedgerLineDto>()
+        });
+
+        return new PaginatedResponse<LedgerEntryDto>(dtos, totalCount, page, limit);
+    }
+
     public async Task<FinancialSummaryDto> GetFinancialSummaryAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        // Isolates dashboard Net Revenue strictly to customer sales activity by 
-        // subtracting gateway fees, taxes, and refunds from gross revenue, 
-        // completely ignoring unrelated operational expenses like utility credit top-ups.
         const string sql = @"
             SELECT 
                 COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Gross_revenue"",
