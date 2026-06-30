@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.Commerce.Domain.ValueObjects;
 
 namespace Modules.Commerce.Infrastructure;
 
@@ -42,8 +43,6 @@ public class CommerceDbContext : PlatformDbContext
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Intercept pre-assigned UUID child entities attached to existing aggregates
-        // to prevent EF Core from mistaking them as "Modified" updates.
         foreach (var entry in ChangeTracker.Entries<DunningStep>())
         {
             if (entry.State == EntityState.Modified)
@@ -99,6 +98,17 @@ public class CommerceDbContext : PlatformDbContext
         );
 
         var guidListComparer = new ValueComparer<IReadOnlyCollection<Guid>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList()
+        );
+
+        var adHocLineItemConverter = new ValueConverter<IReadOnlyCollection<AdHocLineItem>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<AdHocLineItem>>(v, jsonOptions) ?? new List<AdHocLineItem>()
+        );
+
+        var adHocLineItemComparer = new ValueComparer<IReadOnlyCollection<AdHocLineItem>>(
             (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
             c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
             c => c.ToList()
@@ -172,6 +182,12 @@ public class CommerceDbContext : PlatformDbContext
             builder.ToTable("CheckoutSessions");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.Status);
+
+            builder.Property(x => x.AdHocLineItems)
+                .HasField("_adHocLineItems")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasConversion(adHocLineItemConverter, adHocLineItemComparer)
+                .HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<ChargeAttemptLog>(builder =>

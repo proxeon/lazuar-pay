@@ -299,3 +299,17 @@ model CreateManualSubscriberDto {
   start_date?: utcDateTime;
   next_billing_date?: utcDateTime;
 }
+
+model CustomLineItemDto {
+  description: string;
+  quantity: int32;
+  unit_price: float64;
+}
+
+model CreateCustomCheckoutRequestDto {
+  client_email: string;
+  client_name: string;
+  line_items: CustomLineItemDto[];
+  expires_at?: utcDateTime;
+  is_b2b_required: boolean;
+}
