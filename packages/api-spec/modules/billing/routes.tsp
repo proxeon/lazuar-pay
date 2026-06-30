@@ -61,6 +61,12 @@ interface AdminBillingOperations {
 @route("/public/billing")
 interface PublicBillingOperations {
   @get
+  @route("/{tenantSlug}/profile")
+  getPublicBillingProfile(@path tenantSlug: string):
+    | TenantBillingProfileDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
   @route("/{tenantSlug}/documents/draft/{sessionId}")
   getDraftDocument(@path tenantSlug: string, @path sessionId: string):
     | bytes

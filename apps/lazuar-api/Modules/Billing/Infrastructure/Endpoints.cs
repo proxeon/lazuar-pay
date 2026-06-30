@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Billing/Infrastructure/Endpoints.cs
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -105,6 +104,18 @@ public static class Endpoints
 
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "updated" });
+        });
+
+        publicGroup.MapGet("/{tenantSlug}/profile", async Task<Results<Ok<TenantBillingProfileDto>, NotFound>> (
+            string tenantSlug,
+            IOneQueryService oneQueryService,
+            IBillingQueryService queryService) =>
+        {
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            var profile = await queryService.GetBillingProfileAsync(tenantId.Value);
+            return profile != null ? TypedResults.Ok(profile) : TypedResults.NotFound();
         });
 
         publicGroup.MapGet("/{tenantSlug}/documents/{ledgerEntryId:guid}", async Task<IResult> (
