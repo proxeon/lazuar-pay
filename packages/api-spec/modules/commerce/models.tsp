@@ -52,6 +52,7 @@ model UpdateProductRequestDto {
 model PublicCheckoutRequestDto {
   tenant_slug: string;
   product_slug: string;
+  session_id?: string; // GUID
   name: string;
   email: string;
   phone?: string;
@@ -312,4 +313,17 @@ model CreateCustomCheckoutRequestDto {
   line_items: CustomLineItemDto[];
   expires_at?: utcDateTime;
   is_b2b_required: boolean;
+}
+
+model CustomCheckoutDto {
+  id: string; // GUID
+  client_profile_id: string; // GUID
+  client_name?: string;
+  client_email?: string;
+  status: string;
+  expires_at: utcDateTime;
+  is_b2b_required: boolean;
+  line_items: CustomLineItemDto[];
+  total_amount: float64;
+  created_at: utcDateTime;
 }

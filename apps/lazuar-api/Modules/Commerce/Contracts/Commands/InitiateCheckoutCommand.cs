@@ -18,7 +18,8 @@ public record InitiateCheckoutCommand(
     string? CountryCode,
     int Quantity,
     bool IsGuestCheckout,
-    string? CouponCode
+    string? CouponCode,
+    Guid? SessionId = null
 ) : ICommand<CheckoutResultDto>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

@@ -21,4 +21,7 @@ public interface ICommerceQueryService
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
     Task<CommerceStatsDto> GetStatsAsync(Guid organizationId);
     Task<CheckoutStatusDto?> GetCheckoutStatusAsync(Guid sessionId, CancellationToken ct = default);
+
+    Task<PaginatedResponse<CustomCheckoutDto>> GetCustomCheckoutsAsync(Guid organizationId, int page, int limit);
+    Task<CustomCheckoutDto?> GetCustomCheckoutBySessionIdAsync(Guid organizationId, Guid sessionId);
 }

@@ -1,13 +1,19 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Lazuar.ApiTypes;
-using MediatR;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using BuildingBlocks.Application;
+using MediatR;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Domain.ValueObjects;
+using Modules.Commerce.Application.Queries;
+using Lazuar.ApiTypes;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Modules.Commerce.Infrastructure;
 
@@ -54,6 +60,18 @@ public static class Endpoints
         {
             await mediator.Send(new MarkCheckoutAsPaidOfflineCommand(ctx.TenantId, id));
             return TypedResults.Ok(new StatusResponse { Status = "completed" });
+        });
+
+        adminGroup.MapGet("/custom-checkouts", async Task<Ok<PaginatedResponse<CustomCheckoutDto>>> (
+            [FromQuery] int page,
+            [FromQuery] int limit,
+            IExecutionContextAccessor ctx,
+            ICommerceQueryService queryService) =>
+        {
+            var p = page < 1 ? 1 : page;
+            var l = limit < 1 || limit > 100 ? 50 : limit;
+            var response = await queryService.GetCustomCheckoutsAsync(ctx.TenantId, p, l);
+            return TypedResults.Ok(response);
         });
 
         publicGroup.MapPublicCommerceEndpoints();

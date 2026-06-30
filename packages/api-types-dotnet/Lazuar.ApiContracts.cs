@@ -1291,6 +1291,68 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CustomCheckoutDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("client_profile_id")]
+        public string Client_profile_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("client_name")]
+        public string? Client_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("client_email")]
+        public string? Client_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
+        public System.DateTimeOffset Expires_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_b2b_required")]
+        public bool Is_b2b_required { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("line_items")]
+        public System.Collections.Generic.List<CustomLineItemDto> Line_items { get; set; } = new System.Collections.Generic.List<CustomLineItemDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_amount")]
+        public double Total_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CustomCheckoutDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CustomCheckoutDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CustomLineItemDto
     {
 
@@ -1819,6 +1881,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("product_slug")]
         public string Product_slug { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("session_id")]
+        public string? Session_id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; } = default!;
@@ -5570,7 +5635,7 @@ namespace Lazuar.ApiTypes
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("data")]
-        public System.Collections.Generic.List<CommerceSubscriptionDto> Data { get; set; } = new System.Collections.Generic.List<CommerceSubscriptionDto>();
+        public System.Collections.Generic.List<CustomCheckoutDto> Data { get; set; } = new System.Collections.Generic.List<CustomCheckoutDto>();
 
         [System.Text.Json.Serialization.JsonPropertyName("total_count")]
         public int Total_count { get; set; } = default!;
@@ -5614,7 +5679,7 @@ namespace Lazuar.ApiTypes
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("data")]
-        public System.Collections.Generic.List<TransactionLogDto> Data { get; set; } = new System.Collections.Generic.List<TransactionLogDto>();
+        public System.Collections.Generic.List<CommerceSubscriptionDto> Data { get; set; } = new System.Collections.Generic.List<CommerceSubscriptionDto>();
 
         [System.Text.Json.Serialization.JsonPropertyName("total_count")]
         public int Total_count { get; set; } = default!;
@@ -5658,7 +5723,7 @@ namespace Lazuar.ApiTypes
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("data")]
-        public System.Collections.Generic.List<OpsConversationDto> Data { get; set; } = new System.Collections.Generic.List<OpsConversationDto>();
+        public System.Collections.Generic.List<TransactionLogDto> Data { get; set; } = new System.Collections.Generic.List<TransactionLogDto>();
 
         [System.Text.Json.Serialization.JsonPropertyName("total_count")]
         public int Total_count { get; set; } = default!;
@@ -5692,6 +5757,50 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<Response4>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Response5
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.List<OpsConversationDto> Data { get; set; } = new System.Collections.Generic.List<OpsConversationDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_count")]
+        public int Total_count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_page")]
+        public int Current_page { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_pages")]
+        public int Total_pages { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static Response5 FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<Response5>(data, options);
 
         }
 
@@ -5870,6 +5979,43 @@ namespace Lazuar.ApiTypes
         SANDBOX = 1,
 
     }
+
+    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class FileResponse : System.IDisposable
+    {
+        private System.IDisposable? _client;
+        private System.IDisposable? _response;
+
+        public int StatusCode { get; private set; }
+
+        public System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> Headers { get; private set; }
+
+        public System.IO.Stream Stream { get; private set; }
+
+        public bool IsPartial
+        {
+            get { return StatusCode == 206; }
+        }
+
+        public FileResponse(int statusCode, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.IO.Stream stream, System.IDisposable? client, System.IDisposable? response)
+        {
+            StatusCode = statusCode;
+            Headers = headers;
+            Stream = stream;
+            _client = client;
+            _response = response;
+        }
+
+        public void Dispose()
+        {
+            Stream.Dispose();
+            if (_response != null)
+                _response.Dispose();
+            if (_client != null)
+                _client.Dispose();
+        }
+    }
+
 
 
 }

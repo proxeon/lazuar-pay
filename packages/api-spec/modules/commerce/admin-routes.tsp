@@ -161,4 +161,10 @@ interface AdminCommerceOperations {
   markCheckoutAsPaidOffline(@path id: string):
     | LazuarApi.Core.StatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/custom-checkouts")
+  getCustomCheckouts(@query page?: int32 = 1, @query limit?: int32 = 50):
+    | LazuarApi.Core.PaginatedResponse<CustomCheckoutDto>
+    | LazuarApi.Core.ProblemDetailsResponse;
 }

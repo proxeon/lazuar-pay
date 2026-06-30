@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -10,7 +11,6 @@ using Modules.Commerce.Domain.Aggregates;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts.Queries;
-using Lazuar.ApiTypes;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -39,6 +39,45 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         if (!tenantId.HasValue)
         {
             throw new InvalidOperationException($"Workspace with slug '{request.TenantSlug}' not found.");
+        }
+
+        var clientUrl = _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
+
+        if (request.SessionId.HasValue)
+        {
+            var existingSession = await _repository.GetCheckoutSessionByIdAsync(request.SessionId.Value, ct);
+            if (existingSession == null || existingSession.OrganizationId != tenantId.Value || existingSession.Status != "OPEN")
+            {
+                throw new InvalidOperationException("Invalid or completed custom checkout session.");
+            }
+
+            decimal customTotalAmount = existingSession.AdHocLineItems.Sum(x => x.UnitPrice * x.Quantity);
+            
+            var customSuccessUrl = $"{clientUrl}/{request.TenantSlug}/checkout/custom/success?sub_id={existingSession.Id}";
+            var customCancelUrl = $"{clientUrl}/{request.TenantSlug}/pay/{existingSession.Id}?cancelled=true";
+
+            var customMetadata = new Dictionary<string, string>
+            {
+                { "type", "custom_payment_link" },
+                { "subscription_id", existingSession.Id.ToString() },
+                { "tenant_id", tenantId.Value.ToString() }
+            };
+
+            var customGatewayQuery = new GenerateCheckoutSessionQuery(
+                tenantId.Value,
+                customTotalAmount,
+                "MYR",
+                "Custom Payment Request",
+                request.Email,
+                customSuccessUrl,
+                customCancelUrl,
+                customMetadata,
+                false,
+                1
+            );
+
+            var customCheckoutUrl = await _mediator.Send(customGatewayQuery, ct);
+            return new CheckoutResultDto(customCheckoutUrl, false);
         }
 
         var product = await _repository.GetProductBySlugAsync(tenantId.Value, request.ProductSlug, ct);
@@ -113,8 +152,6 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         }
         else
         {
-            var clientUrl = _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
-            
             var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
             var cancelUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}?cancelled=true";
 

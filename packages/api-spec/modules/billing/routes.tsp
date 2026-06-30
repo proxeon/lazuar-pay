@@ -1,4 +1,3 @@
-// packages/api-spec/modules/billing/routes.tsp
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";
@@ -56,5 +55,14 @@ interface AdminBillingOperations {
   @route("/profile")
   updateBillingProfile(@body body: UpdateTenantBillingProfileRequestDto):
     | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+}
+
+@route("/public/billing")
+interface PublicBillingOperations {
+  @get
+  @route("/{tenantSlug}/documents/draft/{sessionId}")
+  getDraftDocument(@path tenantSlug: string, @path sessionId: string):
+    | bytes
     | LazuarApi.Core.ProblemDetailsResponse;
 }

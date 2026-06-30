@@ -10,10 +10,9 @@ namespace LazuarApi.Commerce;
 interface PublicCommerceOperations {
   @get
   @route("/{tenantSlug}/products/{slug}")
-  getProductBySlug(
-    @path tenantSlug: string,
-    @path slug: string,
-  ): ProductDto | LazuarApi.Core.ProblemDetailsResponse;
+  getProductBySlug(@path tenantSlug: string, @path slug: string):
+    | ProductDto
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/{tenantSlug}/validate-coupon")
@@ -25,23 +24,21 @@ interface PublicCommerceOperations {
 
   @post
   @route("/checkout")
-  initiateCheckout(
-    @body body: PublicCheckoutRequestDto,
-  ): CheckoutResponse | LazuarApi.Core.ProblemDetailsResponse;
+  initiateCheckout(@body body: PublicCheckoutRequestDto):
+    | CheckoutResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/{tenantSlug}/portal")
-  getPortalData(
-    @path tenantSlug: string,
-    @query token: string,
-  ): AggregatedPortalDataResponse | LazuarApi.Core.ProblemDetailsResponse;
+  getPortalData(@path tenantSlug: string, @query token: string):
+    | AggregatedPortalDataResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/{tenantSlug}/portal/magic-link")
-  requestMagicLink(
-    @path tenantSlug: string,
-    @body body: MagicLinkRequestDto,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+  requestMagicLink(@path tenantSlug: string, @body body: MagicLinkRequestDto):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/{tenantSlug}/portal/cancel")
@@ -53,14 +50,19 @@ interface PublicCommerceOperations {
 
   @get
   @route("/{tenantSlug}/portal/billing-link")
-  getBillingLink(
-    @path tenantSlug: string,
-    @query token: string,
-  ): BillingLinkResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+  getBillingLink(@path tenantSlug: string, @query token: string):
+    | BillingLinkResponseDto
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/checkout/{subId}/status")
-  getCheckoutStatus(
-    @path subId: string,
-  ): CheckoutStatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+  getCheckoutStatus(@path subId: string):
+    | CheckoutStatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/{tenantSlug}/custom-checkouts/{sessionId}")
+  getCustomCheckout(@path tenantSlug: string, @path sessionId: string):
+    | CustomCheckoutDto
+    | LazuarApi.Core.ProblemDetailsResponse;
 }

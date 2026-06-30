@@ -15,6 +15,7 @@ using BuildingBlocks.Infrastructure;
 using MediatR;
 using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Application.Queries;
 using Modules.Payments.Contracts.Queries;
 using Modules.One.Contracts;
 using Lazuar.ApiTypes;
@@ -140,6 +141,27 @@ public static class Endpoints
             var downloadUrl = r2Service.GetPresignedDownloadUrl(bucket, key, 5);
 
             return TypedResults.Redirect(downloadUrl);
+        });
+
+        publicGroup.MapGet("/{tenantSlug}/documents/draft/{sessionId:guid}", async Task<IResult> (
+            string tenantSlug,
+            Guid sessionId,
+            IOneQueryService oneQueryService,
+            IMediator mediator) =>
+        {
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            try
+            {
+                var query = new GenerateDraftDocumentQuery(tenantId.Value, sessionId);
+                var pdfBytes = await mediator.Send(query);
+                return Results.File(pdfBytes, "application/pdf", $"Proforma_{sessionId.ToString()[..8].ToUpperInvariant()}.pdf");
+            }
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest(ex.Message);
+            }
         });
 
         return endpoints;

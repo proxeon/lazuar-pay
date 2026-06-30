@@ -91,8 +91,15 @@ public static class PublicEndpoints
 
         group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
             [FromBody] PublicCheckoutRequestDto req,
+            IOneQueryService oneQueryService,
             IMediator mediator) =>
         {
+            Guid? parsedSessionId = null;
+            if (!string.IsNullOrWhiteSpace(req.Session_id) && Guid.TryParse(req.Session_id, out var sid))
+            {
+                parsedSessionId = sid;
+            }
+
             var command = new InitiateCheckoutCommand(
                 req.Tenant_slug,
                 req.Product_slug,
@@ -108,7 +115,8 @@ public static class PublicEndpoints
                 req.Country_code,
                 req.Quantity ?? 1,
                 req.Is_guest_checkout ?? false,
-                req.Coupon_code
+                req.Coupon_code,
+                parsedSessionId
             );
 
             try
@@ -151,6 +159,19 @@ public static class PublicEndpoints
             };
 
             return TypedResults.Ok(response);
+        });
+
+        group.MapGet("/{tenantSlug}/custom-checkouts/{sessionId:guid}", async Task<Results<Ok<CustomCheckoutDto>, NotFound>> (
+            string tenantSlug,
+            Guid sessionId,
+            IOneQueryService oneQueryService,
+            ICommerceQueryService queryService) =>
+        {
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            var checkout = await queryService.GetCustomCheckoutBySessionIdAsync(tenantId.Value, sessionId);
+            return checkout != null ? TypedResults.Ok(checkout) : TypedResults.NotFound();
         });
 
         return group;

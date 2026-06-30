@@ -155,7 +155,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["AdminCommerceOperations_getCustomCheckouts"];
         put?: never;
         post: operations["AdminCommerceOperations_createCustomCheckout"];
         delete?: never;
@@ -1225,6 +1225,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/billing/{tenantSlug}/documents/draft/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PublicBillingOperations_getDraftDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/commerce/checkout": {
         parameters: {
             query?: never;
@@ -1249,6 +1265,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["PublicCommerceOperations_getCheckoutStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/commerce/{tenantSlug}/custom-checkouts/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PublicCommerceOperations_getCustomCheckout"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1637,6 +1669,21 @@ export interface components {
             requires_phone: boolean;
             fulfillment_targets: string[];
         };
+        "Commerce.CustomCheckoutDto": {
+            id: string;
+            client_profile_id: string;
+            client_name?: string;
+            client_email?: string;
+            status: string;
+            /** Format: date-time */
+            expires_at: string;
+            is_b2b_required: boolean;
+            line_items: components["schemas"]["Commerce.CustomLineItemDto"][];
+            /** Format: double */
+            total_amount: number;
+            /** Format: date-time */
+            created_at: string;
+        };
         "Commerce.CustomLineItemDto": {
             description: string;
             /** Format: int32 */
@@ -1735,6 +1782,7 @@ export interface components {
         "Commerce.PublicCheckoutRequestDto": {
             tenant_slug: string;
             product_slug: string;
+            session_id?: string;
             name: string;
             email: string;
             phone?: string;
@@ -3092,6 +3140,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommerceOperations_getCustomCheckouts: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["Commerce.CustomCheckoutDto"][];
+                        /** Format: int32 */
+                        total_count: number;
+                        /** Format: int32 */
+                        current_page: number;
+                        /** Format: int32 */
+                        total_pages: number;
+                    };
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -9220,6 +9344,74 @@ export interface operations {
             };
         };
     };
+    PublicBillingOperations_getDraftDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantSlug: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     PublicCommerceOperations_initiateCheckout: {
         parameters: {
             query?: never;
@@ -9307,6 +9499,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Commerce.CheckoutStatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicCommerceOperations_getCustomCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantSlug: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Commerce.CustomCheckoutDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
