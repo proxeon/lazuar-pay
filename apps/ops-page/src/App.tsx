@@ -7,6 +7,7 @@ import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
 import DashboardPage from "./modules/commerce/pages/DashboardPage";
 import ProductsPage from "./modules/commerce/pages/ProductsPage";
+import PaymentRequestsPage from "./modules/commerce/pages/PaymentRequestsPage";
 import SubscribersPage from "./modules/commerce/pages/SubscribersPage";
 import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
 import CouponsPage from "./modules/commerce/pages/CouponsPage";
@@ -173,6 +174,7 @@ export default function App() {
         
         <Route path="/commerce/dashboard" element={<DashboardPage />} />
         <Route path="/commerce/products" element={<ProductsPage />} />
+        <Route path="/commerce/requests" element={<PaymentRequestsPage />} />
         <Route path="/commerce/subscribers" element={<SubscribersPage />} />
         <Route path="/commerce/transactions" element={<TransactionsPage />} />
         <Route path="/commerce/coupons" element={<CouponsPage />} />

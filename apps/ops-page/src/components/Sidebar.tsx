@@ -254,6 +254,7 @@ export default function Sidebar({
                 mod.id === "commerce" ? [
                   { label: "Dashboard", href: "/commerce/dashboard" },
                   { label: "Checkout Links", href: "/commerce/products" },
+                  { label: "Payment Requests", href: "/commerce/requests" },
                   { label: "Subscribers", href: "/commerce/subscribers" },
                   { label: "Transaction Logs", href: "/commerce/transactions" },
                   { label: "Promotions", href: "/commerce/coupons" },
