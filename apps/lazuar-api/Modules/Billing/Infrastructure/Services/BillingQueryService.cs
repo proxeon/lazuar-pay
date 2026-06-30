@@ -15,6 +15,16 @@ public class BillingQueryService : IBillingQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
 
+    // Explicit Dapper mapping records to resolve CS1977 dynamic dispatch errors
+    private record RawLedgerEntryDto(
+        Guid Id, DateTime Timestamp, string ReferenceType, string ReferenceId, 
+        string? Description, string CustomerType, string? TaxInvoiceId, 
+        string? LhdnValidationStatus, int TotalCount);
+
+    private record RawLedgerLineDto(
+        Guid Id, Guid LedgerEntryId, string AccountType, decimal Amount, 
+        string Currency, decimal BaseCurrencyAmount, string BaseCurrency);
+
     public BillingQueryService([FromKeyedServices("BillingSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
@@ -45,7 +55,7 @@ public class BillingQueryService : IBillingQueryService
             ORDER BY e.""Timestamp"" DESC
             LIMIT @Limit OFFSET @Offset;";
 
-        var entries = (await connection.QueryAsync<dynamic>(sql, new { 
+        var entries = (await connection.QueryAsync<RawLedgerEntryDto>(sql, new { 
             OrgId = organizationId, 
             Limit = limit, 
             Offset = offset, 
@@ -59,15 +69,15 @@ public class BillingQueryService : IBillingQueryService
             return new PaginatedResponse<LedgerEntryDto>(Enumerable.Empty<LedgerEntryDto>(), 0, page, limit);
 
         int totalCount = entries.First().TotalCount;
-        var entryIds = entries.Select(e => (Guid)e.Id).ToList();
+        var entryIds = entries.Select(e => e.Id).ToList();
 
         var linesSql = @"
             SELECT ""Id"", ""LedgerEntryId"", ""AccountType"", ""Amount"", ""Currency"", ""BaseCurrencyAmount"", ""BaseCurrency""
             FROM billing.""LedgerLines""
             WHERE ""LedgerEntryId"" = ANY(@EntryIds)";
 
-        var lines = (await connection.QueryAsync<dynamic>(linesSql, new { EntryIds = entryIds })).ToList();
-        var linesLookup = lines.GroupBy(l => (Guid)l.LedgerEntryId).ToDictionary(g => g.Key, g => g.ToList());
+        var lines = (await connection.QueryAsync<RawLedgerLineDto>(linesSql, new { EntryIds = entryIds })).ToList();
+        var linesLookup = lines.GroupBy(l => l.LedgerEntryId).ToDictionary(g => g.Key, g => g.ToList());
 
         var dtos = entries.Select(e => new LedgerEntryDto
         {
