@@ -89,3 +89,7 @@ model UpdateTenantBillingProfileRequestDto {
   logo_url?: string;
   address?: TenantBillingAddressDto;
 }
+
+model DocumentDownloadUrlDto {
+  url: string;
+}

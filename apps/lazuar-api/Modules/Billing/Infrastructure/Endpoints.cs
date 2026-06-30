@@ -43,6 +43,19 @@ public static class Endpoints
             var response = await queryService.GetLedgerEntriesAsync(ctx.TenantId, p, l, search, type_filter, from_date, to_date);
             return TypedResults.Ok(response);
         });
+
+        admin.MapGet("/ledger/{id:guid}/document", Task<Ok<DocumentDownloadUrlDto>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IR2StorageService r2Service,
+            IConfiguration config) =>
+        {
+            var bucket = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
+            var key = $"vault/{ctx.TenantId}/documents/{id}.pdf";
+            
+            var downloadUrl = r2Service.GetPresignedDownloadUrl(bucket, key, 5);
+            return Task.FromResult(TypedResults.Ok(new DocumentDownloadUrlDto { Url = downloadUrl }));
+        });
         
         admin.MapGet("/summary", async Task<Ok<FinancialSummaryDto>> (
             IExecutionContextAccessor ctx,

@@ -1,10 +1,8 @@
-// apps/ops-page/src/modules/invoicing/components/TaxInvoiceDetailPanel.tsx
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, X, Download, ShieldCheck, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { useOutletContext } from "react-router-dom";
-import { client, type components, type EntitlementDto } from "../../../lib/api-client";
+import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
@@ -24,19 +22,9 @@ interface TaxInvoiceDetailPanelProps {
 
 export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDetailPanelProps) {
   const queryClient = useQueryClient();
-  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
-
-  const { data: entitlements } = useQuery({
-    queryKey: ["entitlements"],
-    queryFn: async () => {
-      const { data } = await client.GET("/one/me/entitlements");
-      return data as EntitlementDto[];
-    }
-  });
-
-  const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -58,6 +46,23 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
     },
     onError: (err: any) => toast.error("Cancellation Failed", { description: err.message })
   });
+
+  const handleDownload = async () => {
+    if (!invoice) return;
+    setIsDownloading(true);
+    try {
+      const { data, error } = await client.GET("/admin/billing/ledger/{id}/document", {
+        params: { path: { id: invoice.id } }
+      });
+      if (error || !data) throw new Error(error?.detail || "Failed to generate download link.");
+      
+      window.open(data.url, "_blank");
+    } catch (err: any) {
+      toast.error("Download failed", { description: err.message });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const math = useMemo(() => {
     if (!invoice) return { subtotal: 0, discount: 0, tax: 0, total: 0, currency: "MYR", lines: [] };
@@ -108,16 +113,13 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
     }
   };
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
-  const downloadUrl = activeWorkspaceSlug ? `${API_URL}/public/billing/${activeWorkspaceSlug}/documents/draft/${invoice.id}` : "#"; // Note: For formal invoices we use a generic download route, using draft placeholder here until the formal presigned route is mapped in phase 4 if needed.
-
   return (
     <>
       <SidePanel
         isOpen={!!invoice}
         onClose={onClose}
         title="Tax Document Details"
-        disableOutsideClick={cancelMutation.isPending}
+        disableOutsideClick={cancelMutation.isPending || isDownloading}
       >
         <div className="space-y-8 animate-in fade-in duration-200">
           
@@ -221,14 +223,13 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
           <div className="space-y-4 pt-4 border-t border-[#f4f4f5]">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] pb-1">Operations</h4>
             <div className="grid grid-cols-1 gap-3">
-              <a 
-                href={downloadUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="h-9 w-full border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center justify-center gap-1.5 rounded-sm"
+              <button 
+                onClick={handleDownload}
+                disabled={isDownloading || cancelMutation.isPending}
+                className="h-9 w-full border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors flex items-center justify-center gap-1.5 rounded-sm disabled:opacity-50"
               >
-                <Download size={14} /> Download PDF Document
-              </a>
+                {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Download PDF Document
+              </button>
               
               {isLhdnValidated && (
                 isCancelable ? (

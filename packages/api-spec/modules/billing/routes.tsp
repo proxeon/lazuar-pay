@@ -22,6 +22,13 @@ interface AdminBillingOperations {
     | LazuarApi.Core.PaginatedResponse<LedgerEntryDto>
     | LazuarApi.Core.ProblemDetailsResponse;
 
+  @summary("Generates a secure R2 presigned download URL for the requested ledger document.")
+  @get
+  @route("/ledger/{id}/document")
+  downloadLedgerDocument(@path id: string):
+    | DocumentDownloadUrlDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
   @get
   @route("/summary")
   getFinancialSummary(
