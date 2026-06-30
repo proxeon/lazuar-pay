@@ -7,12 +7,14 @@ import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
 import DashboardPage from "./modules/commerce/pages/DashboardPage";
 import ProductsPage from "./modules/commerce/pages/ProductsPage";
-import PaymentRequestsPage from "./modules/commerce/pages/PaymentRequestsPage";
 import SubscribersPage from "./modules/commerce/pages/SubscribersPage";
 import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
 import CouponsPage from "./modules/commerce/pages/CouponsPage";
-import PaymentSettingsPage from "./modules/commerce/pages/PaymentSettingsPage";
 import DunningCampaignsPage from "./modules/commerce/pages/DunningCampaignsPage";
+
+import QuotesPage from "./modules/invoicing/pages/QuotesPage";
+import TaxInvoicesPage from "./modules/invoicing/pages/TaxInvoicesPage";
+import CreditNotesPage from "./modules/invoicing/pages/CreditNotesPage";
 
 import SpacesPage from "./modules/community/pages/SpacesPage";
 import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
@@ -26,6 +28,7 @@ import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
 import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 import BillingProfilePage from "./modules/workspace/pages/BillingProfilePage";
+import PaymentSettingsPage from "./modules/workspace/pages/PaymentSettingsPage";
 
 export interface OpsOutletContext {
   activeWorkspaceId: string | null;
@@ -174,12 +177,14 @@ export default function App() {
         
         <Route path="/commerce/dashboard" element={<DashboardPage />} />
         <Route path="/commerce/products" element={<ProductsPage />} />
-        <Route path="/commerce/requests" element={<PaymentRequestsPage />} />
         <Route path="/commerce/subscribers" element={<SubscribersPage />} />
         <Route path="/commerce/transactions" element={<TransactionsPage />} />
         <Route path="/commerce/coupons" element={<CouponsPage />} />
         <Route path="/commerce/dunning-campaigns" element={<DunningCampaignsPage />} />
-        <Route path="/commerce/payment" element={<PaymentSettingsPage />} />
+
+        <Route path="/invoicing/quotes" element={<QuotesPage />} />
+        <Route path="/invoicing/tax-invoices" element={<TaxInvoicesPage />} />
+        <Route path="/invoicing/credit-notes" element={<CreditNotesPage />} />
 
         <Route path="/community/spaces" element={<SpacesPage />} />
         <Route path="/community/broadcasts" element={<BroadcastsPage />} />
@@ -192,6 +197,7 @@ export default function App() {
         
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
         <Route path="/workspace/billing-profile" element={<BillingProfilePage />} />
+        <Route path="/workspace/payment-gateways" element={<PaymentSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
         <Route path="/workspace/ledger" element={<UtilityLedgerPage />} />
       </Route>

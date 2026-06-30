@@ -12,7 +12,8 @@ import {
   ShoppingCart,
   Zap,
   Mail,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Receipt
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
@@ -27,6 +28,7 @@ interface SidebarProps {
 
 const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
+  { id: "invoicing", title: "Invoicing", basePath: ["/invoicing"], icon: Receipt },
   { id: "communications", title: "Communications", basePath: ["/community/broadcasts", "/community/templates"], icon: Mail },
   { id: "community", title: "Community", basePath: ["/community/spaces"], icon: Users },
   { id: "vault", title: "Vault", basePath: ["/vault"], icon: Box },
@@ -254,12 +256,14 @@ export default function Sidebar({
                 mod.id === "commerce" ? [
                   { label: "Dashboard", href: "/commerce/dashboard" },
                   { label: "Checkout Links", href: "/commerce/products" },
-                  { label: "Payment Requests", href: "/commerce/requests" },
                   { label: "Subscribers", href: "/commerce/subscribers" },
                   { label: "Transaction Logs", href: "/commerce/transactions" },
                   { label: "Promotions", href: "/commerce/coupons" },
-                  { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" },
-                  { label: "Gateway Settings", href: "/commerce/payment" }
+                  { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" }
+                ] : mod.id === "invoicing" ? [
+                  { label: "Quotes & Requests", href: "/invoicing/quotes" },
+                  { label: "Tax Invoices", href: "/invoicing/tax-invoices" },
+                  { label: "Credit & Debit Notes", href: "/invoicing/credit-notes" }
                 ] : mod.id === "communications" ? [
                   { label: "Bulk Broadcast", href: "/community/broadcasts" },
                   { label: "Message Templates", href: "/community/templates" }
@@ -273,6 +277,7 @@ export default function Sidebar({
                 ] : [
                   { label: "General Settings", href: "/workspace/general" },
                   { label: "Legal & Billing Profile", href: "/workspace/billing-profile" },
+                  { label: "Payment Gateways", href: "/workspace/payment-gateways" },
                   { label: "Platform Billing", href: "/workspace/billing" },
                   { label: "Utility Ledger", href: "/workspace/ledger" }
                 ]
