@@ -26,7 +26,7 @@ public class BaseInvoiceDocument : IDocument
                 page.Margin(50);
                 page.Size(PageSizes.A4);
                 page.PageColor(Colors.White);
-                page.DefaultTextStyle(x => x.FontSize(10).FontFamily(Fonts.Helvetica).FontColor(Colors.Black));
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Helvetica").FontColor(Colors.Black));
 
                 page.Header().Element(ComposeHeader);
                 page.Content().Element(ComposeContent);

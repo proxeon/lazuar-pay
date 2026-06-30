@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Application.Queries;
 using Modules.Billing.Infrastructure.Documents;
+using QuestPDF.Fluent;
 
 namespace Modules.Billing.Infrastructure.Queries;
 

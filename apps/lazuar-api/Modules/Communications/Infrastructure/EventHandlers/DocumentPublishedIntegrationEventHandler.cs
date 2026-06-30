@@ -70,21 +70,24 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
         
         var documentLink = $"{apiBaseUrl}/public/billing/{(string)data.TenantSlug}/documents/{@event.LedgerEntryId}?sig={sig}&exp={exp}";
 
-        var htmlBody = template.EmailBody
+        var htmlBody = (template.EmailBody ?? "")
             .Replace("{{customer_name}}", (string)data.CustomerName, StringComparison.OrdinalIgnoreCase)
             .Replace("{{business_name}}", (string)data.BusinessName, StringComparison.OrdinalIgnoreCase)
             .Replace("{{document_link}}", documentLink, StringComparison.OrdinalIgnoreCase);
 
-        var whatsappBody = template.WhatsAppBody
+        var whatsappBody = (template.WhatsAppBody ?? "")
             .Replace("{{customer_name}}", (string)data.CustomerName, StringComparison.OrdinalIgnoreCase)
             .Replace("{{business_name}}", (string)data.BusinessName, StringComparison.OrdinalIgnoreCase)
             .Replace("{{document_link}}", documentLink, StringComparison.OrdinalIgnoreCase);
+
+        var subject = (template.Subject ?? "")
+            .Replace("{{business_name}}", (string)data.BusinessName, StringComparison.OrdinalIgnoreCase);
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
             @event.OrganizationId,
             (string)data.CustomerEmail,
             null,
-            template.Subject.Replace("{{business_name}}", (string)data.BusinessName, StringComparison.OrdinalIgnoreCase),
+            subject,
             MarkdownParser.ToHtml(htmlBody),
             whatsappBody,
             template.Channel

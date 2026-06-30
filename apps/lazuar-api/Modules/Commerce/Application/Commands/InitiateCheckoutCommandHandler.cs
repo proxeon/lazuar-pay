@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Modules.Commerce.Contracts.Commands;

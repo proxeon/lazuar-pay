@@ -35,7 +35,7 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             throw new InvalidOperationException("Checkout session is invalid or already processed.");
         }
 
-        var product = await _repository.GetProductByIdAsync(session.ProductId, ct);
+        var product = await _repository.GetProductByIdAsync(session.ProductId ?? Guid.Empty, ct);
         if (product == null) throw new InvalidOperationException("Product not found.");
 
         var discountAmount = 0m;
