@@ -9,9 +9,7 @@ import "./modules/billing/routes.tsp";
 
 using TypeSpec.Http;
 
-@service({
-  title: "Lazuar Platform API (Core)",
-  description: "Global identity, workspace provisioning, and platform entitlements.",
-})
+@service(#{ title: "Lazuar Platform API (Core)" })
+@doc("Global identity, workspace provisioning, and platform entitlements.")
 @server("http://localhost:8080/api/v1", "Local development server")
 namespace LazuarApi;

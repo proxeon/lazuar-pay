@@ -7,9 +7,6 @@ import "./modules/billing/routes.tsp";
 
 using TypeSpec.Http;
 
-@service({
-  title: "Lazuar Billing API",
-  description: "Financial ledger, revenue recognition, and net profit analytics.",
-})
+@service(#{ title: "Lazuar Billing API" })
 @server("http://localhost:8080/api/v1", "Local development server")
 namespace LazuarApi;

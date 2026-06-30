@@ -9,9 +9,6 @@ import "./modules/billing/routes.tsp";
 
 using TypeSpec.Http;
 
-@service({
-  title: "Lazuar Ops API",
-  description: "AI Agent orchestration, tool execution, and stream handling.",
-})
+@service(#{ title: "Lazuar Ops API" })
 @server("http://localhost:8080/api/v1", "Local development server")
 namespace LazuarApi;

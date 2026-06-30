@@ -260,7 +260,7 @@ export function deserializeIntoLhdnItemDto(lhdnItemDto: Partial<LhdnItemDto> | u
 // @ts-ignore
 export function deserializeIntoRegisterWebhookRequestDto(registerWebhookRequestDto: Partial<RegisterWebhookRequestDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
     return {
-        "events": n => { registerWebhookRequestDto.events = n.getCollectionOfPrimitiveValues<string>(); },
+        "events": n => { registerWebhookRequestDto.events = n.getCollectionOfPrimitiveValues<string>("string"); },
         "secret": n => { registerWebhookRequestDto.secret = n.getStringValue(); },
         "url": n => { registerWebhookRequestDto.url = n.getStringValue(); },
     }
@@ -341,7 +341,7 @@ export function deserializeIntoValidateTinResponseDto(validateTinResponseDto: Pa
 export function deserializeIntoWebhookSubscriptionDto(webhookSubscriptionDto: Partial<WebhookSubscriptionDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
     return {
         "created_at": n => { webhookSubscriptionDto.createdAt = n.getDateValue(); },
-        "events": n => { webhookSubscriptionDto.events = n.getCollectionOfPrimitiveValues<string>(); },
+        "events": n => { webhookSubscriptionDto.events = n.getCollectionOfPrimitiveValues<string>("string"); },
         "id": n => { webhookSubscriptionDto.id = n.getStringValue(); },
         "is_active": n => { webhookSubscriptionDto.isActive = n.getBooleanValue(); },
         "url": n => { webhookSubscriptionDto.url = n.getStringValue(); },

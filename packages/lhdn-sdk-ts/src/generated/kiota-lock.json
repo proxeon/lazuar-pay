@@ -1,8 +1,8 @@
 {
-  "descriptionHash": "58C4CCFFD09B4F513E3BEE2C6F294091558C89879B09096CCFC65E24914E7BA5899E134B0B4C0E22D6FE50E4B237F26CF36C22B0A8FD55F17067DAA560DE2E64",
+  "descriptionHash": "2534B23D07E32328919D87F5AA3FBD2DA8CE7DCAE8D0076F02AA2001FA008C90C96ABAF7082231838D13CB023C24BEAD6D0F3C62E953068DCA39694570E75B23",
   "descriptionLocation": "../../../api-spec/dist/lhdn/openapi.yaml",
   "lockFileVersion": "1.0.0",
-  "kiotaVersion": "1.32.2",
+  "kiotaVersion": "1.32.4",
   "clientClassName": "LhdnClient",
   "typeAccessModifier": "Public",
   "clientNamespaceName": "ApiSdk",

@@ -8,9 +8,6 @@ import "./modules/vault/admin-routes.tsp";
 
 using TypeSpec.Http;
 
-@service({
-  title: "Lazuar Vault API",
-  description: "Secure digital asset delivery, file streaming, and access logs.",
-})
+@service(#{ title: "Lazuar Vault API" })
 @server("http://localhost:8080/api/v1", "Local development server")
 namespace LazuarApi;

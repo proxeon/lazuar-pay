@@ -39,8 +39,6 @@ import "./modules/platform/routes.tsp";
 
 using TypeSpec.Http;
 
-@service({
-  title: "Lazuar Platform API",
-})
+@service(#{ title: "Lazuar Platform API" })
 @server("http://localhost:8080/api/v1", "Local development server")
 namespace LazuarApi;
