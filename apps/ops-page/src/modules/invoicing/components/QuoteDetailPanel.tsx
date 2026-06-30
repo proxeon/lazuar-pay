@@ -1,8 +1,9 @@
+// apps/ops-page/src/modules/invoicing/components/QuoteDetailPanel.tsx
 import { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, FileText, Link as LinkIcon, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import { client, type components, type EntitlementDto } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
@@ -18,6 +19,7 @@ interface QuoteDetailPanelProps {
 
 export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDetailPanelProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -204,8 +206,7 @@ export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDe
               <button 
                 onClick={() => {
                   onClose();
-                  // For Phase 4 we will wire this to the proper route
-                  // navigate(`/invoicing/tax-invoices?search=${request.id}`);
+                  navigate(`/invoicing/tax-invoices`);
                 }} 
                 className="h-9 w-full border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 rounded-sm"
               >
