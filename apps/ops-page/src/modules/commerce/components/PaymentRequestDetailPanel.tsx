@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Loader2, FileText, Link as LinkIcon, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useOutletContext } from "react-router-dom";
@@ -21,19 +21,29 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  const entitlementsRaw = localStorage.getItem("lazuar-ops-sidebar-sections"); // Safe generic fallback context access
-  const activeWorkspaceSlug = "demo"; // Replace with dynamic context logic if strictly required for production routing
+  // Fetch entitlements to resolve the actual workspace slug dynamically
+  const { data: entitlements } = useQuery({
+    queryKey: ["entitlements"],
+    queryFn: async () => {
+      const { data } = await client.GET("/one/me/entitlements");
+      return data as EntitlementDto[];
+    }
+  });
+
+  const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
 
   const generatePaymentUrl = (sessionId: string) => {
-    // Dynamic fallback for the base portal URL to prevent breaks if not strictly provided
+    if (!activeWorkspaceSlug) return "";
     const baseUrl = import.meta.env.VITE_PORTAL_URL || "http://localhost:3004";
-    // Assuming activeWorkspaceSlug would normally be passed down or retrieved via context properly
-    // Using a placeholder fallback for immediate structural safety.
-    return `${baseUrl}/demo/pay/${sessionId}`;
+    return `${baseUrl}/${activeWorkspaceSlug}/pay/${sessionId}`;
   };
 
   const copyPaymentLink = (sessionId: string) => {
     const url = generatePaymentUrl(sessionId);
+    if (!url) {
+      toast.error("Could not resolve workspace slug.");
+      return;
+    }
     navigator.clipboard.writeText(url);
     toast.success("Payment link copied to clipboard.");
   };
@@ -145,9 +155,9 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
               <span className="text-[11px] text-[#a1a1aa] block mb-0.5">Secure Checkout URL</span>
               <div className="flex items-center gap-2 bg-[#fafafa] border border-[#e5e5e5] p-2 rounded-sm">
                 <a href={generatePaymentUrl(request.id)} target="_blank" rel="noopener noreferrer" className="text-[11px] font-mono text-blue-600 hover:opacity-80 underline underline-offset-2 truncate max-w-[280px]">
-                  {generatePaymentUrl(request.id)}
+                  {generatePaymentUrl(request.id) || "Loading..."}
                 </a>
-                <QuickCopy text={generatePaymentUrl(request.id)} iconSize={12} className="bg-white border border-[#e5e5e5] hover:bg-[#f4f4f5]" />
+                {activeWorkspaceSlug && <QuickCopy text={generatePaymentUrl(request.id)} iconSize={12} className="bg-white border border-[#e5e5e5] hover:bg-[#f4f4f5]" />}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-[12px]">
@@ -171,7 +181,7 @@ export default function PaymentRequestDetailPanel({ request, onClose, onUpdate }
             <div className="grid grid-cols-1 gap-3">
               <button 
                 onClick={() => copyPaymentLink(request.id)} 
-                disabled={isActionLoading} 
+                disabled={isActionLoading || !activeWorkspaceSlug} 
                 className="h-9 w-full border border-[#e5e5e5] bg-white text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 rounded-sm"
               >
                 <LinkIcon size={14} /> Copy Payment Link
