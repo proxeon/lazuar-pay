@@ -12,6 +12,7 @@ using MediatR;
 using Modules.Billing.Contracts;
 using Modules.Payments.Contracts.Queries;
 using Lazuar.ApiTypes;
+using Modules.Billing.Contracts.Commands;
 
 namespace Modules.Billing.Infrastructure;
 
@@ -70,6 +71,33 @@ public static class Endpoints
             {
                 return TypedResults.BadRequest(ex.Message);
             }
+        });
+
+        admin.MapGet("/profile", async Task<Results<Ok<TenantBillingProfileDto>, NotFound>> (
+            IExecutionContextAccessor ctx,
+            IBillingQueryService queryService) =>
+        {
+            var profile = await queryService.GetBillingProfileAsync(ctx.TenantId);
+            return profile != null ? TypedResults.Ok(profile) : TypedResults.NotFound();
+        });
+
+        admin.MapPut("/profile", async Task<Ok<StatusResponse>> (
+            UpdateTenantBillingProfileRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var command = new UpdateTenantBillingProfileCommand(
+                ctx.TenantId,
+                req.Legal_name,
+                req.Tin,
+                req.Registration_number,
+                req.Sst_registration_number,
+                req.Logo_url,
+                req.Address
+            );
+
+            await mediator.Send(command);
+            return TypedResults.Ok(new StatusResponse { Status = "updated" });
         });
 
         return endpoints;

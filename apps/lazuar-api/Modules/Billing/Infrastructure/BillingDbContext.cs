@@ -14,6 +14,9 @@ public class BillingDbContext : PlatformDbContext
     public DbSet<DeferredRevenueSchedule> DeferredRevenueSchedules { get; set; } = null!;
     public DbSet<TenantCreditBalance> TenantCreditBalances { get; set; } = null!;
     public DbSet<CreditLedger> CreditLedgers { get; set; } = null!;
+    public DbSet<TenantBillingProfile> TenantBillingProfiles { get; set; } = null!;
+    public DbSet<DocumentSequence> DocumentSequences { get; set; } = null!;
+    
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
@@ -28,8 +31,6 @@ public class BillingDbContext : PlatformDbContext
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Intercept pre-assigned UUID child entities attached to existing aggregates
-        // to prevent EF Core from mistaking them as "Modified" updates.
         foreach (var entry in ChangeTracker.Entries<CreditLedger>())
         {
             if (entry.State == EntityState.Modified)
@@ -101,6 +102,31 @@ public class BillingDbContext : PlatformDbContext
         {
             builder.ToTable("CreditLedgers");
             builder.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<TenantBillingProfile>(builder =>
+        {
+            builder.ToTable("TenantBillingProfiles");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId).IsUnique();
+
+            builder.OwnsOne(x => x.Address, a =>
+            {
+                a.Property(p => p.Line1).HasColumnName("AddressLine1").HasMaxLength(150);
+                a.Property(p => p.Line2).HasColumnName("AddressLine2").HasMaxLength(150);
+                a.Property(p => p.Line3).HasColumnName("AddressLine3").HasMaxLength(150);
+                a.Property(p => p.City).HasColumnName("City").HasMaxLength(50);
+                a.Property(p => p.PostalCode).HasColumnName("PostalCode").HasMaxLength(20);
+                a.Property(p => p.StateCode).HasColumnName("StateCode").HasMaxLength(10);
+                a.Property(p => p.CountryCode).HasColumnName("CountryCode").HasMaxLength(10);
+            });
+        });
+
+        modelBuilder.Entity<DocumentSequence>(builder =>
+        {
+            builder.ToTable("DocumentSequences");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.Prefix }).IsUnique();
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

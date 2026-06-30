@@ -350,6 +350,109 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TenantBillingAddressDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("line1")]
+        public string Line1 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("line2")]
+        public string? Line2 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("line3")]
+        public string? Line3 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("city")]
+        public string City { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("postal_code")]
+        public string Postal_code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state_code")]
+        public string State_code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country_code")]
+        public string Country_code { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TenantBillingAddressDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TenantBillingAddressDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TenantBillingProfileDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("legal_name")]
+        public string Legal_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tin")]
+        public string Tin { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("registration_number")]
+        public string? Registration_number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_registration_number")]
+        public string? Sst_registration_number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("logo_url")]
+        public string? Logo_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("address")]
+        public TenantBillingAddressDto? Address { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static TenantBillingProfileDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<TenantBillingProfileDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class TopUpResponseDto
     {
 
@@ -379,6 +482,56 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<TopUpResponseDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateTenantBillingProfileRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("legal_name")]
+        public string Legal_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tin")]
+        public string Tin { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("registration_number")]
+        public string? Registration_number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_registration_number")]
+        public string? Sst_registration_number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("logo_url")]
+        public string? Logo_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("address")]
+        public TenantBillingAddressDto? Address { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateTenantBillingProfileRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateTenantBillingProfileRequestDto>(data, options);
 
         }
 

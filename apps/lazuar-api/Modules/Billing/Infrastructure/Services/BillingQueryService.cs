@@ -113,4 +113,47 @@ public class BillingQueryService : IBillingQueryService
             Recent_transactions = history.ToList()
         };
     }
+
+    public async Task<TenantBillingProfileDto?> GetBillingProfileAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""LegalName"", ""Tin"", ""RegistrationNumber"", ""SstRegistrationNumber"", ""LogoUrl"",
+                   ""AddressLine1"" as Line1, ""AddressLine2"" as Line2, ""AddressLine3"" as Line3, 
+                   ""City"", ""PostalCode"", ""StateCode"", ""CountryCode""
+            FROM billing.""TenantBillingProfiles""
+            WHERE ""OrganizationId"" = @OrgId 
+            LIMIT 1";
+
+        var row = await connection.QuerySingleOrDefaultAsync<dynamic>(sql, new { OrgId = organizationId });
+
+        if (row == null) return null;
+
+        TenantBillingAddressDto? address = null;
+        if (!string.IsNullOrWhiteSpace((string?)row.Line1) && !string.IsNullOrWhiteSpace((string?)row.City))
+        {
+            address = new TenantBillingAddressDto
+            {
+                Line1 = row.Line1,
+                Line2 = row.Line2,
+                Line3 = row.Line3,
+                City = row.City,
+                Postal_code = row.PostalCode,
+                State_code = row.StateCode,
+                Country_code = row.CountryCode
+            };
+        }
+
+        return new TenantBillingProfileDto
+        {
+            Legal_name = row.LegalName,
+            Tin = row.Tin,
+            Registration_number = row.RegistrationNumber,
+            Sst_registration_number = row.SstRegistrationNumber,
+            Logo_url = row.LogoUrl,
+            Address = address
+        };
+    }
 }

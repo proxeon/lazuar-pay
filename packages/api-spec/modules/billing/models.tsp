@@ -58,3 +58,31 @@ model CreateTopUpRequestDto {
 model TopUpResponseDto {
   checkout_url: string;
 }
+
+model TenantBillingAddressDto {
+  line1: string;
+  line2?: string;
+  line3?: string;
+  city: string;
+  postal_code: string;
+  state_code: string;
+  country_code: string;
+}
+
+model TenantBillingProfileDto {
+  legal_name: string;
+  tin: string;
+  registration_number?: string;
+  sst_registration_number?: string;
+  logo_url?: string;
+  address?: TenantBillingAddressDto;
+}
+
+model UpdateTenantBillingProfileRequestDto {
+  legal_name: string;
+  tin: string;
+  registration_number?: string;
+  sst_registration_number?: string;
+  logo_url?: string;
+  address?: TenantBillingAddressDto;
+}
