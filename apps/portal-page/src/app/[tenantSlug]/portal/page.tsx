@@ -1,6 +1,6 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { serverClient } from "../../../modules/core/lib/server-client";
-import { ShieldCheck, Download, ExternalLink, Video, FileText } from "lucide-react";
+import { ShieldCheck, FileText, CreditCard, RefreshCw } from "lucide-react";
 
 export default async function AggregatedPortalPage({
   params,
@@ -18,9 +18,9 @@ export default async function AggregatedPortalPage({
     if (!authCheck) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
-          <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
+          <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Billing Dashboard</h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Please log in using a secure magic link sent to your email to manage your subscriptions and downloads.
+            Please log in using a secure magic link sent to your email to manage your subscriptions and tax invoices.
           </p>
         </div>
       );
@@ -36,83 +36,54 @@ export default async function AggregatedPortalPage({
     notFound();
   }
 
-  const subProductIds = commerceData.subscriptions.map(s => s.product_id);
-  const orderProductIds = commerceData.orders.map(o => o.product_id);
-
-  const [spacesRes, assetsRes] = await Promise.all([
-    subProductIds.length > 0 ? serverClient.GET("/public/community/{tenantSlug}/portal/spaces", {
-      params: { path: { tenantSlug }, query: { product_ids: subProductIds } }
-    }) : Promise.resolve({ data: [] }),
-    orderProductIds.length > 0 ? serverClient.GET("/public/vault/{tenantSlug}/portal/assets", {
-      params: { path: { tenantSlug }, query: { product_ids: orderProductIds } }
-    }) : Promise.resolve({ data: [] })
-  ]);
-
-  const spacesMap = new Map();
-  spacesRes.data?.forEach(space => {
-    space.product_ids?.forEach(id => spacesMap.set(id, space));
-  });
-
-  const assetsMap = new Map();
-  assetsRes.data?.forEach(asset => {
-    asset.product_ids?.forEach(id => assetsMap.set(id, asset));
-  });
-
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-emerald-50/50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 gap-2">
+    <div className="w-full max-w-5xl mx-auto space-y-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-emerald-50/50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 gap-2 rounded-none">
         <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-500 flex items-center gap-1.5">
           <ShieldCheck size={14} /> Identity Verified
         </p>
         <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-500/80">
-          Accessing resources for this workspace.
+          Managing billing and tax invoices for this workspace.
         </p>
       </div>
 
-      <div className="space-y-8">
-        <h2 className="text-xl font-bold tracking-tight text-foreground border-b border-border/60 pb-2">Active Subscriptions</h2>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2">
+          <h2 className="text-lg font-bold tracking-tight text-foreground uppercase">Active Subscriptions</h2>
+        </div>
+        
         {commerceData.subscriptions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No active subscriptions found.</p>
+          <div className="p-8 text-center border border-dashed border-border/60 bg-secondary/10">
+            <p className="text-sm text-muted-foreground">No active subscriptions found.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {commerceData.subscriptions.map(sub => {
-              const space = spacesMap.get(sub.product_id);
               const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE";
 
               return (
-                <div key={sub.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col md:flex-row gap-6 justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-foreground">{sub.product_name}</h3>
-                      <span className="text-[10px] font-bold uppercase tracking-widest bg-secondary text-foreground px-2 py-0.5 border border-border">
+                <div key={sub.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-base font-semibold text-foreground leading-tight">{sub.product_name}</h3>
+                      <span className="text-[10px] font-bold uppercase tracking-widest bg-secondary text-foreground px-2 py-0.5 border border-border shrink-0 ml-2">
                         {sub.status.replace("_", " ")}
                       </span>
                     </div>
-                    {sub.current_period_end && (
-                      <p className="text-xs text-muted-foreground font-mono mb-4">
-                        Renews/Expires: {new Date(sub.current_period_end).toLocaleDateString()}
-                      </p>
-                    )}
                     
-                    {isActive && space && (
-                      <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                        {space.telegram_link && (
-                          <a href={space.telegram_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
-                            <ExternalLink size={16} /> Join Telegram Group
-                          </a>
-                        )}
-                        {space.zoom_link && (
-                          <a href={space.zoom_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                            <Video size={16} /> Open Weekly Zoom
-                          </a>
-                        )}
+                    <div className="space-y-2 mb-6 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Next Billing Date</span>
+                        <span className="font-mono text-foreground font-medium">
+                          {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : "N/A"}
+                        </span>
                       </div>
-                    )}
+                    </div>
                   </div>
                   
-                  <div className="shrink-0 flex flex-col gap-2 items-end justify-center">
-                    <a href={`/api/billing/invoice?subscription=${sub.id}`} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-2">
-                      <FileText size={12} /> Download Tax Invoice
+                  <div className="pt-4 border-t border-border/40 flex items-center justify-between">
+                    <a href={`/api/billing/invoice?subscription=${sub.id}`} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
+                      <FileText size={12} /> Tax Invoice
                     </a>
                     {isActive && (
                       <form action={async () => {
@@ -122,8 +93,8 @@ export default async function AggregatedPortalPage({
                           body: { subscription_id: sub.id }
                         });
                       }}>
-                        <button className="h-9 px-4 border border-red-200 bg-background text-red-600 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors rounded-none">
-                          Cancel Plan
+                        <button className="h-8 px-4 border border-red-200 bg-background text-red-600 text-[10px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors rounded-none">
+                          Cancel
                         </button>
                       </form>
                     )}
@@ -133,41 +104,72 @@ export default async function AggregatedPortalPage({
             })}
           </div>
         )}
+      </div>
 
-        <h2 className="text-xl font-bold tracking-tight text-foreground border-b border-border/60 pb-2 mt-12">Digital Vault (One-Time Purchases)</h2>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2">
+          <h2 className="text-lg font-bold tracking-tight text-foreground uppercase">Payment Methods</h2>
+        </div>
+        
+        <div className="p-6 bg-secondary/10 border border-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-background border border-border flex items-center justify-center shrink-0">
+              <CreditCard size={18} className="text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Secure Payment Vault</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Manage the cards charged for your active subscriptions.</p>
+            </div>
+          </div>
+          <button disabled className="h-9 px-4 bg-foreground text-background text-[11px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center gap-2 rounded-none opacity-50 cursor-not-allowed">
+            <RefreshCw size={12} /> Update Card
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2">
+          <h2 className="text-lg font-bold tracking-tight text-foreground uppercase">Transaction History & Tax Invoices</h2>
+        </div>
+        
         {commerceData.orders.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No digital downloads found.</p>
+          <div className="p-8 text-center border border-dashed border-border/60 bg-secondary/10">
+            <p className="text-sm text-muted-foreground">No historical transactions found.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {commerceData.orders.map(order => {
-              const asset = assetsMap.get(order.product_id);
-              
-              return (
-                <div key={order.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col justify-between h-full">
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <h3 className="text-base font-semibold text-foreground mb-1 pr-2">{order.product_name}</h3>
-                      <a href={`/api/billing/invoice?order=${order.id}`} className="text-muted-foreground hover:text-foreground transition-colors p-1" title="Download Tax Invoice">
-                        <FileText size={14} />
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-secondary/30 border-b border-border/60">
+                <tr>
+                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-muted-foreground text-[10px]">Date</th>
+                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-muted-foreground text-[10px]">Description</th>
+                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-muted-foreground text-[10px]">Status</th>
+                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-muted-foreground text-[10px] text-right">Document</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {commerceData.orders.map(order => (
+                  <tr key={order.id} className="bg-card hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-4 font-mono text-muted-foreground text-xs">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-foreground">
+                      {order.product_name}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <a href={`/api/billing/invoice?order=${order.id}`} className="inline-flex items-center justify-center h-8 px-3 border border-border bg-background hover:bg-accent hover:text-accent-foreground text-[10px] font-bold uppercase tracking-widest transition-colors gap-1.5">
+                        <FileText size={12} /> Download
                       </a>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-6">
-                      Purchased: {new Date(order.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  
-                  {asset ? (
-                    <a href={asset.cloudflare_r2_url} download className="h-10 w-full bg-foreground text-background flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
-                      <Download size={14} /> Download File
-                    </a>
-                  ) : (
-                    <button disabled className="h-10 w-full bg-secondary text-muted-foreground flex items-center justify-center text-[11px] font-bold uppercase tracking-widest cursor-not-allowed">
-                      Pending Fulfillment
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
