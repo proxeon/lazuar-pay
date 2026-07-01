@@ -15,9 +15,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- LHDN Module References -->
     <ProjectReference Include="..\..\Modules\Lhdn\Infrastructure\Modules.Lhdn.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Lhdn\Application\Modules.Lhdn.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Lhdn\Domain\Modules.Lhdn.Domain.csproj" />
+
+    <!-- Billing Module References -->
+    <ProjectReference Include="..\..\Modules\Billing\Application\Modules.Billing.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
+    
+    <!-- External Module Contracts needed for Integration Events in Tests -->
+    <ProjectReference Include="..\..\Modules\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Contracts\Modules.Payments.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
