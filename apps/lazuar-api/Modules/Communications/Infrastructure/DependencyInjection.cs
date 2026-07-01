@@ -42,6 +42,7 @@ public static class DependencyInjection
 
         services.AddHostedService<CommunicationsInboxConsumerJob>();
         services.AddHostedService<CommunicationsOutboxPublisherJob>();
+        services.AddHostedService<BroadcastFanoutJob>();
 
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();
         services.AddTransient<LifecycleEventHandlers>();

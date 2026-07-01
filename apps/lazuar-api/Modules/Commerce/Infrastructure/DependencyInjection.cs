@@ -1,6 +1,7 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
 using BuildingBlocks.Infrastructure;
+using Modules.Commerce.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -37,6 +38,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICommerceRepository, CommerceRepository>();
         services.AddScoped<ICommerceQueryService, CommerceQueryService>();
+        services.AddScoped<ISubscriberQueryService, SubscriberQueryService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommerceDbContext>>("CommerceEventBus");
 

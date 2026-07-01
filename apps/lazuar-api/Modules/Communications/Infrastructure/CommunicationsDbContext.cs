@@ -16,6 +16,7 @@ public class CommunicationsDbContext : PlatformDbContext
 {
     public DbSet<MessageTemplate> MessageTemplates { get; set; } = null!;
     public DbSet<SuppressionEntry> SuppressionEntries { get; set; } = null!;
+    public DbSet<Broadcast> Broadcasts { get; set; } = null!;
     
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
@@ -81,6 +82,16 @@ public class CommunicationsDbContext : PlatformDbContext
             builder.Property(x => x.Email).HasMaxLength(320);
             builder.Property(x => x.Reason).HasMaxLength(20);
             builder.Property(x => x.Source).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<Broadcast>(builder =>
+        {
+            builder.ToTable("Broadcasts");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.Status });
+            builder.Property(x => x.Status).HasMaxLength(20);
+            builder.Property(x => x.Subject).HasMaxLength(300);
+            builder.Property(x => x.FailureReason).HasMaxLength(500);
         });
 
         modelBuilder.Entity<InboxMessage>(builder =>

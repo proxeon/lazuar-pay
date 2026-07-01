@@ -58,9 +58,13 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         var emailCost = _creditCostService.GetCost(CreditAction.EmailSend);
         var whatsappCost = _creditCostService.GetCost(CreditAction.WhatsAppSend);
 
+        // Broadcast fan-out passes a CreditHoldId: the caller already reserved credits in a
+        // hold, so this dispatch must not pre-check or deduct from the wallet (avoids double-charge).
+        var billedViaHold = @event.CreditHoldId.HasValue;
+
         // Pre-check sufficiency (not just positive balance) so a multi-channel dispatch cannot
-        // send on credits it cannot pay for. System tenant is exempt.
-        if (!isSystemTenant)
+        // send on credits it cannot pay for. System tenant and hold-billed dispatches are exempt.
+        if (!isSystemTenant && !billedViaHold)
         {
             var plannedCost = (wantsEmail ? emailCost : 0) + (wantsWhatsApp ? whatsappCost : 0);
             if (plannedCost > 0)
@@ -89,7 +93,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
             actualCost += whatsappCost;
         }
 
-        if (actualCost > 0 && !isSystemTenant)
+        if (actualCost > 0 && !isSystemTenant && !billedViaHold)
         {
             try
             {

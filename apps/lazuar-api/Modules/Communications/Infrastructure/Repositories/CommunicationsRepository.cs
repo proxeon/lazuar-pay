@@ -35,6 +35,18 @@ public class CommunicationsRepository : ICommunicationsRepository
         _context.MessageTemplates.Add(template);
     }
 
+    public async Task<Broadcast?> GetBroadcastByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
+    {
+        return await _context.Broadcasts
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(b => b.Id == id && b.OrganizationId == organizationId, ct);
+    }
+
+    public void AddBroadcast(Broadcast broadcast)
+    {
+        _context.Broadcasts.Add(broadcast);
+    }
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await _context.SaveChangesAsync(ct);
