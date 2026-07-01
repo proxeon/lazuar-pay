@@ -8,13 +8,12 @@ export function cn(...classes: (string | undefined | null | false)[]) {
 interface OrderSummaryCardProps {
   context: CheckoutContext;
   onCustomPriceChange: (price: number) => void;
+  onQuantityChange: (qty: number) => void;
   promoCodeSlot?: ReactNode;
 }
 
-export function OrderSummaryCard({ context, onCustomPriceChange, promoCodeSlot }: OrderSummaryCardProps) {
+export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChange, promoCodeSlot }: OrderSummaryCardProps) {
   const finalPriceToDisplay = context.finalPrice !== null ? context.finalPrice : context.currentPrice;
-  const hasVault = context.fulfillmentTargets.includes("internal:vault");
-  const hasCommunity = context.fulfillmentTargets.includes("internal:community");
 
   const handlePriceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
@@ -30,6 +29,12 @@ export function OrderSummaryCard({ context, onCustomPriceChange, promoCodeSlot }
     }
   };
 
+  const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = parseInt(e.target.value, 10);
+    if (isNaN(val) || val < 1) val = 1;
+    onQuantityChange(val);
+  };
+
   return (
     <div className="border border-border/60 bg-card p-6 shadow-sm rounded-none space-y-4">
       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Order Summary</h3>
@@ -39,7 +44,21 @@ export function OrderSummaryCard({ context, onCustomPriceChange, promoCodeSlot }
         {context.audience && <p className="text-sm text-muted-foreground">{context.audience}</p>}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-4">
+        {context.pricingModel === "FIXED" && context.interval === "one_time" && (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Quantity</span>
+            <input 
+              type="number" 
+              min="1"
+              step="1"
+              value={context.quantity.toString()}
+              onChange={handleQuantityInput}
+              className="w-16 h-8 border border-border/60 bg-background px-2 text-sm text-center focus:outline-none focus:border-foreground"
+            />
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Subtotal</span>
           {context.pricingModel === "PWYW" && !context.isCouponApplied ? (
@@ -49,7 +68,7 @@ export function OrderSummaryCard({ context, onCustomPriceChange, promoCodeSlot }
                   type="number" 
                   min={context.minimumPrice}
                   step="1"
-                  value={context.currentPrice.toString()}
+                  value={(context.currentPrice / context.quantity).toString()}
                   onChange={handlePriceInput}
                   onBlur={handlePriceBlur}
                   className="w-20 h-8 border border-border/60 bg-background px-2 text-sm text-right focus:outline-none focus:border-foreground"
@@ -70,26 +89,16 @@ export function OrderSummaryCard({ context, onCustomPriceChange, promoCodeSlot }
         )}
       </div>
 
-      {(hasVault || hasCommunity) && (
-        <div className="pt-2 space-y-2">
-          {hasVault && (
-            <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 px-3 py-2">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Includes Digital Download
-            </div>
-          )}
-          {hasCommunity && (
-            <div className="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 px-3 py-2">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              Includes Private Community Access
-            </div>
-          )}
-        </div>
-      )}
+      <div className="pt-2 space-y-2">
+        {context.fulfillmentTargets.some(t => t.startsWith("http")) && (
+          <div className="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 px-3 py-2">
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Includes API Delivery / SaaS Access
+          </div>
+        )}
+      </div>
 
       {promoCodeSlot && (
         <div className="pt-4 border-t border-border/40">
@@ -104,6 +113,13 @@ export function OrderSummaryCard({ context, onCustomPriceChange, promoCodeSlot }
             {context.currency} {finalPriceToDisplay.toFixed(2)}
           </span>
         </div>
+        {context.interval !== "one_time" && (
+          <div className="mt-1 text-right">
+            <span className="text-xs text-muted-foreground uppercase tracking-widest">
+              Billed {context.interval === "mo" ? "Monthly" : "Annually"}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

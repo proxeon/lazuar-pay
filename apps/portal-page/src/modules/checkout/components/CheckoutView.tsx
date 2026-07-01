@@ -102,6 +102,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     basePrice: product.price,
     minimumPrice: product.minimum_price,
     currentPrice: basePriceForQuantity,
+    quantity: quantity,
     interval: product.interval,
     currency: product.currency,
     discountAmount: discountAmount,
@@ -143,6 +144,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
           <OrderSummaryCard
             context={checkoutContext}
             onCustomPriceChange={handleCustomPriceChange}
+            onQuantityChange={handleQuantityChange}
             promoCodeSlot={
               <PromoCodeInput
                 isApplied={isCouponApplied}

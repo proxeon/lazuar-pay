@@ -5,6 +5,7 @@ export interface CheckoutContext {
   basePrice: number;
   minimumPrice: number;
   currentPrice: number;
+  quantity: number;
   interval?: string;
   currency: string;
   discountAmount: number | null;
