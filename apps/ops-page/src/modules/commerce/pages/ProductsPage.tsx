@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { client, type EntitlementDto, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
-import { cn } from "../../../lib/utils";
+import { cn, filterHiddenFulfillmentTargets } from "../../../lib/utils";
 import CreateProductModal from "../components/CreateProductModal";
 import ProductDetailPanel from "../components/ProductDetailPanel";
 import QuickCopy from "../../core/components/QuickCopy";
@@ -51,27 +51,16 @@ export default function ProductsPage() {
   const showGatewayWarning = paymentConfigError || !paymentConfig || !paymentConfig.is_active;
 
   const renderFulfillmentBadges = (targets: string[] | undefined) => {
-    if (!targets || targets.length === 0) return null;
+    const visible = filterHiddenFulfillmentTargets(targets);
+    if (visible.length === 0) return null;
     return (
       <div className="flex flex-wrap gap-1 mt-1.5">
-        {targets.map((target, idx) => {
-          const isCommunity = target.includes("community") || target.includes("spaces");
-          const isVault = target.includes("vault") || target.includes("assets");
+        {visible.map((target, idx) => {
           const isWebhook = target.startsWith("http");
-
-          let label = "Fulfillment";
-          let classes = "bg-zinc-50 text-zinc-600 border-zinc-200";
-
-          if (isCommunity) {
-            label = "Community";
-            classes = "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/50";
-          } else if (isVault) {
-            label = "Vault";
-            classes = "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/50";
-          } else if (isWebhook) {
-            label = "Webhook";
-            classes = "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50";
-          }
+          const label = isWebhook ? "Webhook" : "Fulfillment";
+          const classes = isWebhook
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50"
+            : "bg-zinc-50 text-zinc-600 border-zinc-200";
 
           return (
             <span key={idx} className={cn("text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border rounded-sm", classes)}>

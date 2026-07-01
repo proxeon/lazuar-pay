@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { components } from "../../../lib/api-client";
+import { filterHiddenFulfillmentTargets } from "../../../lib/utils";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
 
@@ -31,16 +32,18 @@ export default function ProductForm({
   const [reqPhone, setReqPhone] = useState(initialData?.checkout_configuration?.requires_phone ?? false);
 
   const [webhooksText, setWebhooksText] = useState(() => 
-    initialData?.fulfillment_targets?.join("\n") || ""
+    filterHiddenFulfillmentTargets(initialData?.fulfillment_targets).join("\n")
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const targets = webhooksText
-      .split("\n")
-      .map(url => url.trim())
-      .filter(url => url.length > 0);
+    const targets = filterHiddenFulfillmentTargets(
+      webhooksText
+        .split("\n")
+        .map(url => url.trim())
+        .filter(url => url.length > 0)
+    );
 
     onSubmit({
       name: name.trim(),

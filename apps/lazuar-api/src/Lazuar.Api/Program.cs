@@ -26,7 +26,7 @@ using Modules.Ops.Infrastructure;
 using Modules.Billing.Infrastructure;
 using Modules.Lhdn.Infrastructure;
 using Modules.Commerce.Infrastructure;
-// using Modules.Vault.Infrastructure; // Hidden: Vault module
+using Modules.Vault.Infrastructure;
 using Modules.Communications.Infrastructure;
 using Lazuar.Api;
 using Lazuar.Api.Middleware;
@@ -285,7 +285,8 @@ apiGroup.MapOpsEndpoints();
 apiGroup.MapBillingEndpoints();
 apiGroup.MapLhdnEndpoints();
 apiGroup.MapCommerceEndpoints();
-// apiGroup.MapVaultEndpoints(); // Hidden: Vault module
+// apiGroup.MapVaultEndpoints(); // Hidden: Vault module (assets + public vault)
+apiGroup.MapGroup("/admin/vault").RequireAuthorization("OrgAdmin").MapPresignedUrlEndpoints(); // Re-exposed: presigned-url only (shared file-upload utility used by workspace BillingProfile)
 apiGroup.MapCommunicationsEndpoints();
 
 var platformGroup = app.MapGroup("/api/v1/platform")

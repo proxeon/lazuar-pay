@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Archive, RotateCcw, Edit2, Link as LinkIcon, Lock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
-import { cn } from "../../../lib/utils";
+import { cn, filterHiddenFulfillmentTargets } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import ProductForm from "./ProductForm";
@@ -111,6 +111,8 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
     activeSnippetTab === "REACT" ? reactSnippet : 
     markdownSnippet;
 
+  const visibleFulfillmentTargets = filterHiddenFulfillmentTargets(product?.fulfillment_targets);
+
   return (
     <SidePanel
       isOpen={!!product}
@@ -139,8 +141,8 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
           <div className="space-y-4">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Fulfillment Targets</h4>
             <div className="flex flex-col gap-2">
-              {product.fulfillment_targets && product.fulfillment_targets.length > 0 ? (
-                product.fulfillment_targets.map((target, idx) => (
+              {visibleFulfillmentTargets.length > 0 ? (
+                visibleFulfillmentTargets.map((target, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-[12px] p-2 bg-[#fafafa] border border-[#e5e5e5] rounded-sm">
                     <span className="font-mono text-[#52525b]">{target}</span>
                   </div>
@@ -226,9 +228,9 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
 
           <div className="space-y-4">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Configured Webhooks</h4>
-            {product.fulfillment_targets && product.fulfillment_targets.length > 0 ? (
+            {visibleFulfillmentTargets.length > 0 ? (
               <ul className="space-y-2">
-                {product.fulfillment_targets.map((url, idx) => (
+                {visibleFulfillmentTargets.map((url, idx) => (
                   <li key={idx} className="flex items-center gap-2 p-2.5 bg-[#fafafa] border border-[#e5e5e5] rounded-sm text-[11px] font-mono text-[#52525b]">
                     <Zap size={12} className="text-amber-500 shrink-0" />
                     <span className="truncate">{url}</span>
