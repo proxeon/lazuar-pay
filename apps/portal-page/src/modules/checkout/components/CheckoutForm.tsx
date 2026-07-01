@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CheckoutAuthContext } from "../types";
 import { IdentityBanner } from "./IdentityBanner";
@@ -45,9 +45,15 @@ export function CheckoutForm({
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [stateCode, setStateCode] = useState("");
-  const [countryCode, setCountryCode] = useState("MY");
+  const [countryCode, setCountryCode] = useState("MYS");
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (countryCode !== "MYS" && countryCode !== "MY") {
+      setIsCompany(false);
+    }
+  }, [countryCode]);
 
   const handleEnableGuestMode = () => {
     onSetGuestMode(true);
@@ -65,14 +71,16 @@ export function CheckoutForm({
     e.preventDefault();
     setIsSubmitting(true);
 
+    const isDomestic = countryCode === "MYS" || countryCode === "MY";
+
     const payload: PublicCheckoutRequestDto = {
       tenant_slug: tenantSlug,
       product_slug: product.slug,
       name: name,
       email: email,
       phone: config.requires_phone ? phone : undefined,
-      company_name: config.requires_tax_id && isCompany ? companyName : undefined,
-      tax_id: config.requires_tax_id && isCompany ? taxId : undefined,
+      company_name: config.requires_tax_id && isCompany && isDomestic ? companyName : undefined,
+      tax_id: config.requires_tax_id && isCompany && isDomestic ? taxId : undefined,
       address_line1: config.requires_address ? addressLine1 : undefined,
       city: config.requires_address ? city : undefined,
       postal_code: config.requires_address ? postalCode : undefined,
@@ -98,6 +106,7 @@ export function CheckoutForm({
   };
 
   const isProfileLocked = !!(authContext.userName && !authContext.isGuestMode);
+  const isDomestic = countryCode === "MYS" || countryCode === "MY";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -159,37 +168,29 @@ export function CheckoutForm({
         <div className="space-y-4 border-b border-border/60 pb-6">
           <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Billing Details</h3>
           
-          {config.requires_tax_id && (
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 cursor-pointer w-fit group">
-                <input 
-                  type="checkbox" 
-                  checked={isCompany} 
-                  onChange={e => setIsCompany(e.target.checked)} 
-                  className="rounded-sm border-border/60 bg-background text-foreground focus:ring-foreground" 
-                />
-                <span className="text-sm font-medium text-foreground group-hover:text-foreground/80 transition-colors">I am buying on behalf of a company</span>
-              </label>
-
-              {isCompany && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Company Name *</label>
-                    <input required type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Tax Identification Number (TIN) *</label>
-                    <input required type="text" value={taxId} onChange={e => setTaxId(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="e.g. C12345678" />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {config.requires_address && (
             <div className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Country</label>
+                  <select 
+                    required 
+                    value={countryCode} 
+                    onChange={e => setCountryCode(e.target.value)} 
+                    className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                  >
+                    <option value="MYS">Malaysia</option>
+                    <option value="SGP">Singapore</option>
+                    <option value="IDN">Indonesia</option>
+                    <option value="USA">United States</option>
+                    <option value="GBR">United Kingdom</option>
+                    <option value="AUS">Australia</option>
+                    <option value="OTR">Other / International</option>
+                  </select>
+                </div>
+              </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">{isCompany ? "Company Address *" : "Billing Address *"}</label>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{isCompany && isDomestic ? "Company Address *" : "Billing Address *"}</label>
                 <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="Street Address" />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -202,12 +203,44 @@ export function CheckoutForm({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <input required type="text" value={stateCode} onChange={e => setStateCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="State" />
-                </div>
-                <div className="space-y-2">
-                  <input required type="text" value={countryCode} onChange={e => setCountryCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="Country Code (e.g. MY)" />
+                  <input required type="text" value={stateCode} onChange={e => setStateCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="State/Province" />
                 </div>
               </div>
+            </div>
+          )}
+
+          {config.requires_tax_id && isDomestic && (
+            <div className="space-y-4 pt-4 border-t border-border/40">
+              <label className="flex items-center gap-2 cursor-pointer w-fit group">
+                <input 
+                  type="checkbox" 
+                  checked={isCompany} 
+                  onChange={e => setIsCompany(e.target.checked)} 
+                  className="rounded-sm border-border/60 bg-background text-foreground focus:ring-foreground" 
+                />
+                <span className="text-sm font-medium text-foreground group-hover:text-foreground/80 transition-colors">I am buying on behalf of a Malaysian company</span>
+              </label>
+
+              {isCompany && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Company Name *</label>
+                    <input required type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">LHDN TIN *</label>
+                    <input required type="text" value={taxId} onChange={e => setTaxId(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="e.g. C12345678" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {config.requires_tax_id && !isDomestic && (
+            <div className="pt-2">
+              <p className="text-[11px] font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 p-3">
+                International purchases are automatically processed under LHDN general export tax codes. No TIN required.
+              </p>
             </div>
           )}
         </div>
