@@ -13,6 +13,7 @@ public interface ICommunicationsRepository
     void AddTemplate(MessageTemplate template);
 
     Task<Broadcast?> GetBroadcastByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
+    Task<bool> HasRecentBroadcastAsync(Guid organizationId, TimeSpan within, CancellationToken ct = default);
     void AddBroadcast(Broadcast broadcast);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

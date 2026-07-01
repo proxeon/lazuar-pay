@@ -37,6 +37,10 @@ public class SendBroadcastCommandHandler : ICommandHandler<SendBroadcastCommand,
         if (!string.Equals(request.Channel, "EMAIL", StringComparison.OrdinalIgnoreCase))
             throw new BusinessRuleValidationException(new GenericBusinessRule("Only EMAIL broadcasts are supported in v1."));
 
+        // Abuse protection: cooldown between broadcasts per tenant.
+        if (await _repository.HasRecentBroadcastAsync(request.OrganizationId, TimeSpan.FromMinutes(1), ct))
+            throw new BusinessRuleValidationException(new GenericBusinessRule("Another broadcast was sent very recently. Please wait a moment and try again."));
+
         var recipientCount = await _subscriberQueryService.GetActiveSubscriberCountAsync(request.OrganizationId);
         if (recipientCount == 0)
             throw new BusinessRuleValidationException(new GenericBusinessRule("No active subscribers to broadcast to."));

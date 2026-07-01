@@ -42,6 +42,14 @@ public class CommunicationsRepository : ICommunicationsRepository
             .FirstOrDefaultAsync(b => b.Id == id && b.OrganizationId == organizationId, ct);
     }
 
+    public async Task<bool> HasRecentBroadcastAsync(Guid organizationId, TimeSpan within, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow - within;
+        return await _context.Broadcasts
+            .IgnoreQueryFilters()
+            .AnyAsync(b => b.OrganizationId == organizationId && b.CreatedAt > since, ct);
+    }
+
     public void AddBroadcast(Broadcast broadcast)
     {
         _context.Broadcasts.Add(broadcast);

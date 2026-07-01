@@ -16,6 +16,7 @@ using Modules.Billing.Infrastructure.Repositories;
 using Modules.Billing.Infrastructure.Services;
 using Modules.Billing.Infrastructure.Workers;
 using Modules.Payments.Contracts.Events;
+using Modules.One.Contracts;
 using Modules.Lhdn.Contracts.Events;
 using Modules.Commerce.Contracts.Events;
 using QuestPDF.Infrastructure;
@@ -58,6 +59,7 @@ public static class DependencyInjection
         services.AddTransient<LhdnDocumentSubmittedIntegrationEventHandler>();
         services.AddTransient<ZeroAmountCheckoutHandler>();
         services.AddTransient<ManualSubscriberEnrolledIntegrationEventHandler>();
+        services.AddTransient<StarterCreditSeederHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -83,6 +85,7 @@ public static class DependencyInjection
         eventBus.Subscribe<LhdnDocumentSubmittedIntegrationEvent, LhdnDocumentSubmittedIntegrationEventHandler>();
         eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
         eventBus.Subscribe<ManualSubscriberEnrolledIntegrationEvent, ManualSubscriberEnrolledIntegrationEventHandler>();
+        eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, StarterCreditSeederHandler>();
 
         return app;
     }
