@@ -11,9 +11,6 @@ import "./modules/communications/admin-routes.tsp";
 
 using TypeSpec.Http;
 
-@service({
-  title: "Lazuar Commerce API",
-  description: "Universal checkout engine, products, and subscription lifecycle management.",
-})
+@service(#{ title: "Lazuar Commerce API" })
 @server("http://localhost:8080/api/v1", "Local development server")
 namespace LazuarApi;
