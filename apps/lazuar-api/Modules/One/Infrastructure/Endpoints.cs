@@ -298,6 +298,16 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<WebhookDeliveryLogDto>)dtos);
         }).RequireAuthorization();
 
+        group.MapPost("/workspaces/{id:guid}/webhooks/logs/{logId:guid}/retry", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, Guid logId, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            await mediator.Send(new RetryWebhookDeliveryCommand(id, logId));
+            return TypedResults.Ok(new StatusResponse { Status = "queued_for_retry" });
+        }).RequireAuthorization();
+
         return endpoints;
     }
 

@@ -53,4 +53,11 @@ public class WebhookDeliveryOutbox : Entity, IMustHaveTenant
             NextAttemptAt = DateTime.UtcNow.AddMinutes(Math.Pow(2, AttemptCount));
         }
     }
+
+    public void ResetForRetry()
+    {
+        AttemptCount = 0;
+        Status = "PENDING";
+        NextAttemptAt = DateTime.UtcNow;
+    }
 }

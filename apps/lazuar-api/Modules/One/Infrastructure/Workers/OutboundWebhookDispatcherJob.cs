@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/One/Infrastructure/Workers/OutboundWebhookDispatcherJob.cs
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -6,11 +5,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.One.Domain;
+using Modules.Messaging.Contracts;
 
 namespace Modules.One.Infrastructure.Workers;
 
@@ -53,6 +54,7 @@ public class OutboundWebhookDispatcherJob : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<OneDbContext>();
+        var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("OneEventBus");
 
         var pendingDeliveries = await db.WebhookDeliveryOutboxes
             .IgnoreQueryFilters()
@@ -100,6 +102,37 @@ public class OutboundWebhookDispatcherJob : BackgroundService
             catch (Exception ex)
             {
                 delivery.RecordFailure(ex.Message);
+            }
+
+            if (delivery.Status == "FAILED" && delivery.AttemptCount == 5)
+            {
+                var org = await db.Organizations.IgnoreQueryFilters().FirstOrDefaultAsync(o => o.Id == delivery.OrganizationId, ct);
+                var owner = await db.TenantMemberships
+                    .IgnoreQueryFilters()
+                    .Where(m => m.OrganizationId == delivery.OrganizationId && m.Role == "ADMIN")
+                    .Join(db.GlobalUsers.IgnoreQueryFilters(), m => m.GlobalUserId, u => u.Id, (m, u) => u)
+                    .FirstOrDefaultAsync(ct);
+
+                if (owner != null && org != null)
+                {
+                    var subject = "URGENT: Webhook Delivery Permanently Failed";
+                    var htmlBody = $@"Hi {owner.Name},<br/><br/>
+A critical webhook delivery to your endpoint <strong>{endpoint.Url}</strong> has permanently failed after 5 retry attempts.<br/><br/>
+<strong>Event Type:</strong> {delivery.EventType}<br/>
+<strong>Last Error:</strong> {delivery.LastError}<br/><br/>
+Please check your server logs. If this event was an <code>order.completed</code> or <code>subscription.activated</code> payload, your customer may not have received access to their purchase. Manual intervention may be required to fulfill this order.<br/><br/>
+Once your server is back online, you can manually trigger a retry for this payload from the <strong>Developer > Delivery Logs</strong> section of your Lazuar Dashboard.";
+
+                    await eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
+                        Guid.Empty,
+                        owner.Email,
+                        null,
+                        subject,
+                        htmlBody,
+                        null,
+                        "EMAIL"
+                    ));
+                }
             }
         }
 
