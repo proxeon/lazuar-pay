@@ -7,11 +7,8 @@ import {
   PanelLeftOpen, 
   Settings,
   ChevronDown,
-  Users,
-  Box,
   ShoppingCart,
   Zap,
-  Mail,
   ChevronsUpDown,
   Receipt
 } from "lucide-react";
@@ -29,9 +26,6 @@ interface SidebarProps {
 const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
   { id: "invoicing", title: "Invoicing", basePath: ["/invoicing"], icon: Receipt },
-  { id: "communications", title: "Communications", basePath: ["/community/broadcasts", "/community/templates"], icon: Mail },
-  { id: "community", title: "Community", basePath: ["/community/spaces"], icon: Users },
-  { id: "vault", title: "Vault", basePath: ["/vault"], icon: Box },
   { id: "developer", title: "Developer", basePath: ["/developer"], icon: Zap },
   { id: "workspace", title: "Workspace", basePath: ["/workspace"], icon: Settings }
 ];
@@ -264,13 +258,6 @@ export default function Sidebar({
                   { label: "Quotes & Requests", href: "/invoicing/quotes" },
                   { label: "Tax Invoices", href: "/invoicing/tax-invoices" },
                   { label: "Credit & Debit Notes", href: "/invoicing/credit-notes" }
-                ] : mod.id === "communications" ? [
-                  { label: "Bulk Broadcast", href: "/community/broadcasts" },
-                  { label: "Message Templates", href: "/community/templates" }
-                ] : mod.id === "community" ? [
-                  { label: "Community Spaces", href: "/community/spaces" }
-                ] : mod.id === "vault" ? [
-                  { label: "Digital Files", href: "/vault/products" }
                 ] : mod.id === "developer" ? [
                   { label: "Outbound Webhooks", href: "/developer/webhooks" },
                   { label: "Delivery Logs", href: "/developer/logs" }

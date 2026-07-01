@@ -16,12 +16,6 @@ import QuotesPage from "./modules/invoicing/pages/QuotesPage";
 import TaxInvoicesPage from "./modules/invoicing/pages/TaxInvoicesPage";
 import CreditNotesPage from "./modules/invoicing/pages/CreditNotesPage";
 
-import SpacesPage from "./modules/community/pages/SpacesPage";
-import BroadcastsPage from "./modules/community/pages/BroadcastsPage";
-import TemplatesPage from "./modules/community/pages/TemplatesPage";
-
-import DigitalProductsPage from "./modules/vault/pages/DigitalProductsPage";
-
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
 import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
@@ -185,12 +179,6 @@ export default function App() {
         <Route path="/invoicing/quotes" element={<QuotesPage />} />
         <Route path="/invoicing/tax-invoices" element={<TaxInvoicesPage />} />
         <Route path="/invoicing/credit-notes" element={<CreditNotesPage />} />
-
-        <Route path="/community/spaces" element={<SpacesPage />} />
-        <Route path="/community/broadcasts" element={<BroadcastsPage />} />
-        <Route path="/community/templates" element={<TemplatesPage />} />
-
-        <Route path="/vault/products" element={<DigitalProductsPage />} />
 
         <Route path="/developer/webhooks" element={<DeveloperSettingsPage />} />
         <Route path="/developer/logs" element={<DeliveryLogsPage />} />
