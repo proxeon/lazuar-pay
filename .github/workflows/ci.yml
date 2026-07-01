@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/lazuar-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore Lazuar.slnx
+      - name: Build
+        run: dotnet build Lazuar.slnx --no-restore
+      - name: Test (Architecture)
+        run: dotnet test tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj --no-build --verbosity normal
+      - name: Test (Integration)
+        run: dotnet test tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj --no-build --verbosity normal
+      - name: Test (Module)
+        run: dotnet test tests/Lazuar.ModuleTests/Lazuar.ModuleTests.csproj --no-build --verbosity normal
+      - name: Test (Billing)
+        run: dotnet test tests/Modules.Billing.Tests/Modules.Billing.Tests.csproj --no-build --verbosity normal
