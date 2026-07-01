@@ -7,7 +7,6 @@ import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import ProductForm from "./ProductForm";
-import FulfillmentFlowchart from "../../core/components/FulfillmentFlowchart";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
 type UpdateProductRequestDto = components["schemas"]["Commerce.UpdateProductRequestDto"];
@@ -23,6 +22,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [activeSnippetTab, setActiveSnippetTab] = useState<"URL" | "HTML" | "REACT" | "MARKDOWN">("URL");
 
   const editMutation = useMutation({
     mutationFn: async (payload: { id: string } & UpdateProductRequestDto) => {
@@ -100,6 +100,17 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
     onClose();
   };
 
+  const checkoutUrl = product ? generateCheckoutUrl(product.slug) : "";
+  const htmlSnippet = product ? `<a href="${checkoutUrl}" style="display:inline-block; padding:12px 24px; background-color:#09090b; color:#ffffff; text-decoration:none; border-radius:4px; font-family:sans-serif; font-weight:bold;">Buy ${product.name}</a>` : "";
+  const reactSnippet = product ? `import Link from 'next/link';\n\n<Link \n  href="${checkoutUrl}" \n  className="bg-black text-white px-6 py-3 rounded-md font-bold"\n>\n  Buy ${product.name}\n</Link>` : "";
+  const markdownSnippet = product ? `[Buy ${product.name}](${checkoutUrl})` : "";
+
+  const activeSnippetContent = 
+    activeSnippetTab === "URL" ? checkoutUrl :
+    activeSnippetTab === "HTML" ? htmlSnippet :
+    activeSnippetTab === "REACT" ? reactSnippet : 
+    markdownSnippet;
+
   return (
     <SidePanel
       isOpen={!!product}
@@ -126,22 +137,45 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Fulfillment Journey</h4>
-            <FulfillmentFlowchart 
-              priceLabel={`RM ${product.price.toFixed(2)}`} 
-              targets={product.fulfillment_targets || []} 
-            />
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Fulfillment Targets</h4>
+            <div className="flex flex-col gap-2">
+              {product.fulfillment_targets && product.fulfillment_targets.length > 0 ? (
+                product.fulfillment_targets.map((target, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-[12px] p-2 bg-[#fafafa] border border-[#e5e5e5] rounded-sm">
+                    <span className="font-mono text-[#52525b]">{target}</span>
+                  </div>
+                ))
+              ) : (
+                <span className="text-[11px] text-[#a1a1aa] italic">No fulfillment targets configured.</span>
+              )}
+            </div>
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Sales Integration</h4>
-            <div>
-              <span className="text-[11px] text-[#a1a1aa] block mb-0.5">Headless Checkout URL</span>
-              <div className="flex items-center gap-2">
-                <a href={generateCheckoutUrl(product.slug)} target="_blank" rel="noopener noreferrer" className="text-[12px] font-mono text-blue-600 hover:opacity-80 underline underline-offset-2 truncate max-w-[280px]">
-                  {generateCheckoutUrl(product.slug)}
-                </a>
-                <QuickCopy text={generateCheckoutUrl(product.slug)} iconSize={12} className="hover:bg-[#fafafa]" />
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Headless Integrations</h4>
+            <div className="border border-[#e5e5e5] rounded-sm bg-white overflow-hidden">
+              <div className="flex items-center border-b border-[#e5e5e5] bg-[#fafafa]">
+                {(["URL", "HTML", "REACT", "MARKDOWN"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveSnippetTab(tab)}
+                    className={cn(
+                      "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors",
+                      activeSnippetTab === tab ? "bg-white text-[#09090b] border-b-2 border-[#09090b]" : "text-[#71717a] hover:text-[#09090b]"
+                    )}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              <div className="p-3 bg-[#fafafa] flex items-start gap-3">
+                <pre className="text-[11px] font-mono text-[#52525b] overflow-x-auto whitespace-pre-wrap flex-1 break-all">
+                  {activeSnippetContent}
+                </pre>
+                <QuickCopy 
+                  text={activeSnippetContent} 
+                  className="bg-white border border-[#e5e5e5] hover:bg-[#f4f4f5]" 
+                />
               </div>
             </div>
           </div>

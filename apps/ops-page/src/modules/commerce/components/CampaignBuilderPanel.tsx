@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -271,7 +272,12 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
                       </select>
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Template</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Template</label>
+                        <Link to="/community/templates" className="text-[9px] text-blue-600 hover:underline">
+                          Manage Copy →
+                        </Link>
+                      </div>
                       <select required value={step.template_id} onChange={e => updateStep(idx, "template_id", e.target.value)} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
                         <option value="" disabled>Select a template...</option>
                         {templates?.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
