@@ -153,8 +153,13 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         }
         else
         {
-            var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
-            var cancelUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}?cancelled=true";
+            var successUrl = !string.IsNullOrWhiteSpace(product.SuccessUrl) 
+                ? $"{product.SuccessUrl}?sub_id={session.Id}" 
+                : $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
+                
+            var cancelUrl = !string.IsNullOrWhiteSpace(product.CancelUrl) 
+                ? product.CancelUrl 
+                : $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}?cancelled=true";
 
             var metadata = new Dictionary<string, string>
             {

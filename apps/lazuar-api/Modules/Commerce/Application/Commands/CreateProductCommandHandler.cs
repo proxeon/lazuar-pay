@@ -31,7 +31,9 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             request.Currency,
             request.Interval,
             config,
-            request.FulfillmentTargets
+            request.FulfillmentTargets,
+            request.SuccessUrl,
+            request.CancelUrl
         );
 
         _repository.AddProduct(product);

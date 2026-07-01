@@ -1595,6 +1595,8 @@ export interface components {
             requires_tax_id: boolean;
             requires_phone: boolean;
             fulfillment_targets: string[];
+            success_url?: string;
+            cancel_url?: string;
         };
         "Commerce.CustomCheckoutDto": {
             id: string;
@@ -1705,6 +1707,8 @@ export interface components {
             is_active: boolean;
             fulfillment_targets: string[];
             checkout_configuration: components["schemas"]["Commerce.CheckoutConfigurationDto"];
+            success_url?: string;
+            cancel_url?: string;
         };
         "Commerce.PublicCheckoutRequestDto": {
             tenant_slug: string;
@@ -1796,6 +1800,8 @@ export interface components {
             requires_tax_id: boolean;
             requires_phone: boolean;
             fulfillment_targets: string[];
+            success_url?: string;
+            cancel_url?: string;
         };
         "Commerce.ValidateCouponResponseDto": {
             is_valid: boolean;

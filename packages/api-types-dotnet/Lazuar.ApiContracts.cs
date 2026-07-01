@@ -1306,6 +1306,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();
 
+        [System.Text.Json.Serialization.JsonPropertyName("success_url")]
+        public string? Success_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cancel_url")]
+        public string? Cancel_url { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -1888,6 +1894,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("checkout_configuration")]
         public CheckoutConfigurationDto Checkout_configuration { get; set; } = new CheckoutConfigurationDto();
 
+        [System.Text.Json.Serialization.JsonPropertyName("success_url")]
+        public string? Success_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cancel_url")]
+        public string? Cancel_url { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2271,6 +2283,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("success_url")]
+        public string? Success_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cancel_url")]
+        public string? Cancel_url { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

@@ -14,7 +14,7 @@ public partial class CommerceQueryService
     private record RawProductDto(
         Guid Id, string Slug, string Name, decimal Price, string PricingModel, decimal MinimumPrice, string Currency, string Interval,
         bool RequiresAddress, bool RequiresTaxId, bool RequiresPhone,
-        string? FulfillmentTargets, bool IsActive);
+        string? FulfillmentTargets, bool IsActive, string? SuccessUrl, string? CancelUrl);
 
     public async Task<IEnumerable<ProductDto>> GetProductsAsync(Guid organizationId)
     {
@@ -25,7 +25,7 @@ public partial class CommerceQueryService
             SELECT 
                 ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
-                ""FulfillmentTargets""::text, ""IsActive""
+                ""FulfillmentTargets""::text, ""IsActive"", ""SuccessUrl"", ""CancelUrl""
             FROM commerce.""Products""
             WHERE ""OrganizationId"" = @OrgId
             ORDER BY ""CreatedAt"" DESC";
@@ -44,7 +44,7 @@ public partial class CommerceQueryService
             SELECT 
                 ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
-                ""FulfillmentTargets""::text, ""IsActive""
+                ""FulfillmentTargets""::text, ""IsActive"", ""SuccessUrl"", ""CancelUrl""
             FROM commerce.""Products""
             WHERE ""OrganizationId"" = @OrgId AND ""Id"" = @ProductId
             LIMIT 1";
@@ -95,7 +95,9 @@ public partial class CommerceQueryService
                 Requires_phone = raw.RequiresPhone,
                 Requires_tax_id = raw.RequiresTaxId
             },
-            Fulfillment_targets = fulfillmentTargets
+            Fulfillment_targets = fulfillmentTargets,
+            Success_url = raw.SuccessUrl,
+            Cancel_url = raw.CancelUrl
         };
     }
 }

@@ -18,7 +18,9 @@ public record UpdateProductCommand(
     bool RequiresAddress,
     bool RequiresTaxId,
     bool RequiresPhone,
-    List<string> FulfillmentTargets) : ICommand
+    List<string> FulfillmentTargets,
+    string? SuccessUrl,
+    string? CancelUrl) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

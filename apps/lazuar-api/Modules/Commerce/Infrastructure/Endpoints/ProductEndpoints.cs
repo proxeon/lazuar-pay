@@ -25,7 +25,9 @@ public record CreateProductRequest(
     bool Requires_address, 
     bool Requires_tax_id, 
     bool Requires_phone, 
-    List<string> Fulfillment_targets);
+    List<string> Fulfillment_targets,
+    string? Success_url,
+    string? Cancel_url);
 
 public record UpdateProductRequest(
     string Name, 
@@ -39,7 +41,9 @@ public record UpdateProductRequest(
     bool Requires_address, 
     bool Requires_tax_id, 
     bool Requires_phone, 
-    List<string> Fulfillment_targets);
+    List<string> Fulfillment_targets,
+    string? Success_url,
+    string? Cancel_url);
 
 public static class ProductEndpoints
 {
@@ -79,7 +83,9 @@ public static class ProductEndpoints
                 req.Requires_address,
                 req.Requires_tax_id,
                 req.Requires_phone,
-                req.Fulfillment_targets ?? new List<string>()
+                req.Fulfillment_targets ?? new List<string>(),
+                req.Success_url,
+                req.Cancel_url
             );
 
             var productId = await mediator.Send(command);
@@ -107,7 +113,9 @@ public static class ProductEndpoints
                 req.Requires_address,
                 req.Requires_tax_id,
                 req.Requires_phone,
-                req.Fulfillment_targets ?? new List<string>()
+                req.Fulfillment_targets ?? new List<string>(),
+                req.Success_url,
+                req.Cancel_url
             );
 
             await mediator.Send(command);

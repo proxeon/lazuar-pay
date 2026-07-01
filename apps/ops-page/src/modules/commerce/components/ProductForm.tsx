@@ -30,6 +30,9 @@ export default function ProductForm({
   const [reqTaxId, setReqTaxId] = useState(initialData?.checkout_configuration?.requires_tax_id ?? false);
   const [reqPhone, setReqPhone] = useState(initialData?.checkout_configuration?.requires_phone ?? false);
 
+  const [successUrl, setSuccessUrl] = useState(initialData?.success_url || "");
+  const [cancelUrl, setCancelUrl] = useState(initialData?.cancel_url || "");
+
   const [webhooksText, setWebhooksText] = useState(() => 
     initialData?.fulfillment_targets?.join("\n") || ""
   );
@@ -54,7 +57,9 @@ export default function ProductForm({
       requires_address: reqAddress,
       requires_tax_id: reqTaxId,
       requires_phone: reqPhone,
-      fulfillment_targets: targets, 
+      fulfillment_targets: targets,
+      success_url: successUrl.trim() || undefined,
+      cancel_url: cancelUrl.trim() || undefined
     });
   };
 
@@ -120,7 +125,22 @@ export default function ProductForm({
         </div>
 
         <div className="space-y-4">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">3. Post-Purchase Webhooks (Optional)</label>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">3. Custom Redirects (Optional)</label>
+          <p className="text-[10px] text-[#71717a]">Leave empty to use the default Lazuar buyer portal experience.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Success URL Override</label>
+              <input type="url" value={successUrl} onChange={e => setSuccessUrl(e.target.value)} disabled={isPending} placeholder="https://app.yourdomain.com/onboarding" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Cancel URL Override</label>
+              <input type="url" value={cancelUrl} onChange={e => setCancelUrl(e.target.value)} disabled={isPending} placeholder="https://yourdomain.com/pricing" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">4. Post-Purchase Webhooks (Optional)</label>
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">External SaaS Integrations</label>
             <textarea 

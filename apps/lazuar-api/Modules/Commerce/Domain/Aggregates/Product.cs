@@ -18,6 +18,9 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
     public string Interval { get; private set; }
     public bool IsActive { get; private set; }
     public CheckoutConfiguration CheckoutConfiguration { get; private set; }
+    
+    public string? SuccessUrl { get; private set; }
+    public string? CancelUrl { get; private set; }
 
     private readonly List<string> _fulfillmentTargets = new();
     public IReadOnlyCollection<string> FulfillmentTargets => _fulfillmentTargets.AsReadOnly();
@@ -39,7 +42,9 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         string currency, 
         string interval,
         CheckoutConfiguration checkoutConfiguration,
-        IEnumerable<string> fulfillmentTargets)
+        IEnumerable<string> fulfillmentTargets,
+        string? successUrl = null,
+        string? cancelUrl = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentException.ThrowIfNullOrWhiteSpace(slug, nameof(slug));
@@ -58,6 +63,9 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         CheckoutConfiguration = checkoutConfiguration;
         IsActive = true;
         
+        SuccessUrl = string.IsNullOrWhiteSpace(successUrl) ? null : successUrl.Trim();
+        CancelUrl = string.IsNullOrWhiteSpace(cancelUrl) ? null : cancelUrl.Trim();
+        
         if (fulfillmentTargets != null)
         {
             _fulfillmentTargets.AddRange(fulfillmentTargets);
@@ -67,7 +75,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateDetails(string name, string slug, decimal price, string pricingModel, decimal minimumPrice, string interval, bool isActive, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
+    public void UpdateDetails(string name, string slug, decimal price, string pricingModel, decimal minimumPrice, string interval, bool isActive, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets, string? successUrl = null, string? cancelUrl = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentException.ThrowIfNullOrWhiteSpace(slug, nameof(slug));
@@ -81,6 +89,9 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         Interval = interval.Trim().ToLowerInvariant();
         IsActive = isActive;
         CheckoutConfiguration = checkoutConfiguration;
+        
+        SuccessUrl = string.IsNullOrWhiteSpace(successUrl) ? null : successUrl.Trim();
+        CancelUrl = string.IsNullOrWhiteSpace(cancelUrl) ? null : cancelUrl.Trim();
 
         if (fulfillmentTargets != null)
         {

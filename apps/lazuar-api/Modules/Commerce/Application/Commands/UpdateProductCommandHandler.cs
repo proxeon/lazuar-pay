@@ -36,7 +36,9 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand>
             request.Interval,
             request.IsActive,
             config,
-            request.FulfillmentTargets
+            request.FulfillmentTargets,
+            request.SuccessUrl,
+            request.CancelUrl
         );
 
         await _repository.SaveChangesAsync(ct);

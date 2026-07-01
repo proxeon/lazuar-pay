@@ -18,6 +18,8 @@ model ProductDto {
   is_active: boolean;
   fulfillment_targets: string[];
   checkout_configuration: CheckoutConfigurationDto;
+  success_url?: string;
+  cancel_url?: string;
 }
 
 model CreateProductRequestDto {
@@ -32,6 +34,8 @@ model CreateProductRequestDto {
   requires_tax_id: boolean;
   requires_phone: boolean;
   fulfillment_targets: string[];
+  success_url?: string;
+  cancel_url?: string;
 }
 
 model UpdateProductRequestDto {
@@ -47,6 +51,8 @@ model UpdateProductRequestDto {
   requires_tax_id: boolean;
   requires_phone: boolean;
   fulfillment_targets: string[];
+  success_url?: string;
+  cancel_url?: string;
 }
 
 model PublicCheckoutRequestDto {
