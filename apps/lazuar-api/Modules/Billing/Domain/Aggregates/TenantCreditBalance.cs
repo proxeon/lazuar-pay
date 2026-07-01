@@ -61,4 +61,19 @@ public class TenantCreditBalance : Entity, IAggregateRoot, IMustHaveTenant
         _transactions.Add(new CreditLedger(Id, -credits, reference));
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Claw back credits following a chargeback/dispute. Unlike <see cref="Deduct"/>, this does NOT
+    /// throw on insufficient balance — it clamps at zero (the tenant may have already spent the credits;
+    /// we recover what remains).
+    /// </summary>
+    public void Clawback(int credits, string reference)
+    {
+        if (credits <= 0) return;
+        var recovered = Math.Min(AvailableCredits, credits);
+        if (recovered <= 0) return;
+        AvailableCredits -= recovered;
+        _transactions.Add(new CreditLedger(Id, -recovered, reference));
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

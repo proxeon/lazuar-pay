@@ -69,4 +69,31 @@ public class TenantCreditBalanceTests
         wallet.Deduct(25, "email dispatch");
         wallet.Transactions.Should().HaveCount(2);
     }
+
+    [Test]
+    public void Clawback_RecoversUpToAvailableBalance()
+    {
+        var wallet = new TenantCreditBalance(Guid.NewGuid());
+        wallet.TopUp(30, "top-up");
+        wallet.Clawback(50, "chargeback");
+        wallet.AvailableCredits.Should().Be(0); // clamped, no throw
+    }
+
+    [Test]
+    public void Clawback_PartialRecoveryWhenSufficient()
+    {
+        var wallet = new TenantCreditBalance(Guid.NewGuid());
+        wallet.TopUp(100, "top-up");
+        wallet.Clawback(40, "chargeback");
+        wallet.AvailableCredits.Should().Be(60);
+    }
+
+    [Test]
+    public void Clawback_NoOpOnZeroBalance()
+    {
+        var wallet = new TenantCreditBalance(Guid.NewGuid());
+        wallet.Clawback(50, "chargeback");
+        wallet.AvailableCredits.Should().Be(0);
+        wallet.Transactions.Should().BeEmpty();
+    }
 }

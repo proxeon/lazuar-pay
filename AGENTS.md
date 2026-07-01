@@ -44,3 +44,11 @@ Cross-module billing work (e.g. Messaging deducting credits) must go through `Mo
 - Credit deduction must be atomic and idempotent. Use the wallet row-version for optimistic concurrency and the idempotency-key log to prevent double-deducts on retry.
 - Never deduct without a sufficiency check. `TenantCreditBalance.Deduct` throws on insufficient balance.
 - Money-path logic ships with unit tests in `tests/Modules.Billing.Tests/`.
+
+## Money-handling policies
+
+- **Chargebacks:** Stripe `charge.dispute.created` webhooks flow through `ProcessGatewayWebhookCommandHandler` → `GatewayDisputeCreatedIntegrationEvent` → `ChargebackClawbackHandler`, which recomputes the granted credits from the disputed amount and claws them back via `ClawbackCreditsCommand` (clamps at zero; spent credits are a loss).
+- **FX buffer:** Tenants pay in MYR; Resend/WhatsApp charge in USD. The `Credits:Costs` rates must be priced above provider cost with a buffer for FX movement. Review when USD/MYR moves >10%.
+- **Refunds:** Accidental top-ups are handled manually (Stripe refund + `ClawbackCreditsCommand` or credit grant). No self-serve refund flow in v1.
+- **Credit expiry:** Not yet implemented. Free starter credits currently never expire. Grant-level expiry (FIFO consumption) is a deferred follow-up — see `plan/backup/396-credit-monetization.md` Phase 6.
+- **Observability:** Per-tenant credit burn is queryable via `GetCreditBalanceWithHistoryAsync`. Full per-action revenue / per-channel margin dashboards are a deferred follow-up.

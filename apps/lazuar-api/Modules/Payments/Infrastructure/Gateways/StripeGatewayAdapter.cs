@@ -173,7 +173,46 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     );
                 }
             }
-            
+
+            if (stripeEvent.Type == "charge.dispute.created" && stripeEvent.Data.Object is Dispute dispute)
+            {
+                var meta = new Dictionary<string, string>();
+                var amount = dispute.Amount / 100m;
+
+                if (!string.IsNullOrEmpty(dispute.PaymentIntentId))
+                {
+                    try
+                    {
+                        var client = new StripeClient(apiKey);
+                        var piService = new PaymentIntentService(client);
+                        var pi = await piService.GetAsync(dispute.PaymentIntentId);
+                        if (pi.Metadata != null) meta = new Dictionary<string, string>(pi.Metadata);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to fetch PaymentIntent for dispute metadata.");
+                    }
+                }
+
+                return new GatewayWebhookParsedResult(
+                    Verified: true,
+                    EventType: "DISPUTE_CREATED",
+                    EventId: stripeEvent.Id,
+                    AmountPaid: amount,
+                    Currency: dispute.Currency ?? "myr",
+                    GatewayTransactionId: dispute.PaymentIntentId ?? dispute.Id,
+                    Metadata: meta,
+                    GatewayFee: 0,
+                    TaxAmount: 0,
+                    NetAmount: amount,
+                    FxRate: 1,
+                    BaseCurrency: dispute.Currency ?? "myr",
+                    Error: null,
+                    GatewayCustomerId: null,
+                    GatewayTokenId: null
+                );
+            }
+
             return new GatewayWebhookParsedResult(true, stripeEvent.Type, stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "", null);
         }
         catch (StripeException ex)

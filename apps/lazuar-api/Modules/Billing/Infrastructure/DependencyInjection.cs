@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddTransient<ZeroAmountCheckoutHandler>();
         services.AddTransient<ManualSubscriberEnrolledIntegrationEventHandler>();
         services.AddTransient<StarterCreditSeederHandler>();
+        services.AddTransient<ChargebackClawbackHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
@@ -86,6 +87,7 @@ public static class DependencyInjection
         eventBus.Subscribe<ZeroAmountCheckoutCompletedIntegrationEvent, ZeroAmountCheckoutHandler>();
         eventBus.Subscribe<ManualSubscriberEnrolledIntegrationEvent, ManualSubscriberEnrolledIntegrationEventHandler>();
         eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, StarterCreditSeederHandler>();
+        eventBus.Subscribe<GatewayDisputeCreatedIntegrationEvent, ChargebackClawbackHandler>();
 
         return app;
     }
