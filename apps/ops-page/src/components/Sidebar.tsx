@@ -30,6 +30,7 @@ const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
   { id: "invoicing", title: "Invoicing", basePath: ["/invoicing"], icon: Receipt },
   { id: "communications", title: "Communications", basePath: ["/community/broadcasts", "/community/templates"], icon: Mail },
+  // TODO(ADR-022): remove Community & Vault modules in Phase 2 — see docs/architecture-decision-log/022-remove-community-vault-modules.md
   // { id: "community", title: "Community", basePath: ["/community/spaces"], icon: Users }, // Hidden: Community module
   // { id: "vault", title: "Vault", basePath: ["/vault"], icon: Box }, // Hidden: Vault module
   { id: "developer", title: "Developer", basePath: ["/developer"], icon: Zap },

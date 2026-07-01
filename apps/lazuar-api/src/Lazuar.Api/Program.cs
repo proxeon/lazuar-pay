@@ -240,6 +240,7 @@ builder.Services.AddMediatR(cfg =>
 
 builder.Services.AddOneModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
+// TODO(ADR-022): remove Community & Vault modules in Phase 2 — see docs/architecture-decision-log/022-remove-community-vault-modules.md
 // builder.Services.AddCommunityModule(builder.Configuration); // Hidden: Community module
 builder.Services.AddCrmModule(builder.Configuration);
 builder.Services.AddPaymentsModule(builder.Configuration);

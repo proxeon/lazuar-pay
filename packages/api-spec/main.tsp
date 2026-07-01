@@ -9,6 +9,7 @@ import "./modules/one/routes.tsp";
 
 import "./modules/messaging/models.tsp";
 
+// TODO(ADR-022): remove Community & Vault modules in Phase 2 — see docs/architecture-decision-log/022-remove-community-vault-modules.md
 // Hidden: Community module
 // import "./modules/community/models.tsp";
 // import "./modules/community/admin-routes.tsp";
