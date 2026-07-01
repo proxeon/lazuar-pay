@@ -9,9 +9,10 @@ import "./modules/one/routes.tsp";
 
 import "./modules/messaging/models.tsp";
 
-import "./modules/community/models.tsp";
-import "./modules/community/admin-routes.tsp";
-import "./modules/community/public-routes.tsp";
+// Hidden: Community module
+// import "./modules/community/models.tsp";
+// import "./modules/community/admin-routes.tsp";
+// import "./modules/community/public-routes.tsp";
 
 import "./modules/ops/models.tsp";
 import "./modules/ops/routes.tsp";
@@ -31,9 +32,10 @@ import "./modules/lhdn/routes.tsp";
 
 import "./modules/crm/models.tsp";
 
-import "./modules/vault/models.tsp";
-import "./modules/vault/admin-routes.tsp";
-import "./modules/vault/public-routes.tsp";
+// Hidden: Vault module
+// import "./modules/vault/models.tsp";
+// import "./modules/vault/admin-routes.tsp";
+// import "./modules/vault/public-routes.tsp";
 
 import "./modules/platform/routes.tsp";
 

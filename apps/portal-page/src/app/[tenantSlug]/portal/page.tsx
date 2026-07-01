@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { serverClient } from "../../../modules/core/lib/server-client";
-import { ShieldCheck, Download, ExternalLink, Video, FileText } from "lucide-react";
+import { ShieldCheck, FileText } from "lucide-react";
 
 export default async function AggregatedPortalPage({
   params,
@@ -36,28 +36,6 @@ export default async function AggregatedPortalPage({
     notFound();
   }
 
-  const subProductIds = commerceData.subscriptions.map(s => s.product_id);
-  const orderProductIds = commerceData.orders.map(o => o.product_id);
-
-  const [spacesRes, assetsRes] = await Promise.all([
-    subProductIds.length > 0 ? serverClient.GET("/public/community/{tenantSlug}/portal/spaces", {
-      params: { path: { tenantSlug }, query: { product_ids: subProductIds } }
-    }) : Promise.resolve({ data: [] }),
-    orderProductIds.length > 0 ? serverClient.GET("/public/vault/{tenantSlug}/portal/assets", {
-      params: { path: { tenantSlug }, query: { product_ids: orderProductIds } }
-    }) : Promise.resolve({ data: [] })
-  ]);
-
-  const spacesMap = new Map();
-  spacesRes.data?.forEach(space => {
-    space.product_ids?.forEach(id => spacesMap.set(id, space));
-  });
-
-  const assetsMap = new Map();
-  assetsRes.data?.forEach(asset => {
-    asset.product_ids?.forEach(id => assetsMap.set(id, asset));
-  });
-
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-emerald-50/50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 gap-2">
@@ -76,7 +54,6 @@ export default async function AggregatedPortalPage({
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {commerceData.subscriptions.map(sub => {
-              const space = spacesMap.get(sub.product_id);
               const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE";
 
               return (
@@ -92,21 +69,6 @@ export default async function AggregatedPortalPage({
                       <p className="text-xs text-muted-foreground font-mono mb-4">
                         Renews/Expires: {new Date(sub.current_period_end).toLocaleDateString()}
                       </p>
-                    )}
-                    
-                    {isActive && space && (
-                      <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                        {space.telegram_link && (
-                          <a href={space.telegram_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
-                            <ExternalLink size={16} /> Join Telegram Group
-                          </a>
-                        )}
-                        {space.zoom_link && (
-                          <a href={space.zoom_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                            <Video size={16} /> Open Weekly Zoom
-                          </a>
-                        )}
-                      </div>
                     )}
                   </div>
                   
@@ -128,43 +90,6 @@ export default async function AggregatedPortalPage({
                       </form>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <h2 className="text-xl font-bold tracking-tight text-foreground border-b border-border/60 pb-2 mt-12">Digital Vault (One-Time Purchases)</h2>
-        {commerceData.orders.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No digital downloads found.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {commerceData.orders.map(order => {
-              const asset = assetsMap.get(order.product_id);
-              
-              return (
-                <div key={order.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col justify-between h-full">
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <h3 className="text-base font-semibold text-foreground mb-1 pr-2">{order.product_name}</h3>
-                      <a href={`/api/billing/invoice?order=${order.id}`} className="text-muted-foreground hover:text-foreground transition-colors p-1" title="Download Tax Invoice">
-                        <FileText size={14} />
-                      </a>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-6">
-                      Purchased: {new Date(order.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  
-                  {asset ? (
-                    <a href={asset.cloudflare_r2_url} download className="h-10 w-full bg-foreground text-background flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
-                      <Download size={14} /> Download File
-                    </a>
-                  ) : (
-                    <button disabled className="h-10 w-full bg-secondary text-muted-foreground flex items-center justify-center text-[11px] font-bold uppercase tracking-widest cursor-not-allowed">
-                      Pending Fulfillment
-                    </button>
-                  )}
                 </div>
               );
             })}

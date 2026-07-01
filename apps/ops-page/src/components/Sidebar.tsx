@@ -7,8 +7,8 @@ import {
   PanelLeftOpen, 
   Settings,
   ChevronDown,
-  Users,
-  Box,
+  // Users, // Hidden: Community module
+  // Box, // Hidden: Vault module
   ShoppingCart,
   Zap,
   Mail,
@@ -30,8 +30,8 @@ const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
   { id: "invoicing", title: "Invoicing", basePath: ["/invoicing"], icon: Receipt },
   { id: "communications", title: "Communications", basePath: ["/community/broadcasts", "/community/templates"], icon: Mail },
-  { id: "community", title: "Community", basePath: ["/community/spaces"], icon: Users },
-  { id: "vault", title: "Vault", basePath: ["/vault"], icon: Box },
+  // { id: "community", title: "Community", basePath: ["/community/spaces"], icon: Users }, // Hidden: Community module
+  // { id: "vault", title: "Vault", basePath: ["/vault"], icon: Box }, // Hidden: Vault module
   { id: "developer", title: "Developer", basePath: ["/developer"], icon: Zap },
   { id: "workspace", title: "Workspace", basePath: ["/workspace"], icon: Settings }
 ];
