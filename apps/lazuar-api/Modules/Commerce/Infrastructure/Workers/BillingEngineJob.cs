@@ -102,13 +102,7 @@ public class BillingEngineJob : BackgroundService
 
                 foreach (var target in product.FulfillmentTargets)
                 {
-                    if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                        await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                            sub.OrganizationId, internalApp, "subscription.suspended", payloadElement));
-                    }
-                    else if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                    if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
                         await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                             sub.OrganizationId, target, "subscription.suspended", payloadElement));

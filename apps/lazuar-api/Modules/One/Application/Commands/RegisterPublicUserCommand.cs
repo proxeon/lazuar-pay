@@ -19,7 +19,7 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
     private readonly IPasswordService _passwordService;
     private readonly IEventBus _eventBus;
     
-    private static readonly string[] CoreModules = { "COMMUNITY", "OPS", "BILLING", "PAYMENTS", "CRM", "LHDN" };
+    private static readonly string[] CoreModules = { "OPS", "BILLING", "PAYMENTS", "CRM", "LHDN", "COMMUNICATIONS", "COMMERCE" };
 
     public RegisterPublicUserCommandHandler(
         IOneRepository repository, 
@@ -65,11 +65,9 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
             var entitlement = new TenantAppEntitlement(organization.Id, module);
             _repository.AddEntitlement(entitlement);
             
-            // Publish the event so the target module can run its seeders!
             await _eventBus.PublishAsync(new AppEntitlementGrantedIntegrationEvent(organization.Id, module));
         }
 
-        // Commits everything atomically in one database transaction
         await _repository.SaveChangesAsync(ct);
 
         return user.Id;

@@ -63,7 +63,6 @@ public class DunningEngineJob : BackgroundService
             var inferredPaymentMethod = string.IsNullOrEmpty(sub.VaultedTokenId) ? "MANUAL" : "ONLINE_GATEWAY";
             var daysOverdue = (now - sub.NextBillingDate!.Value).TotalDays;
 
-            // Action 1: Assignment
             if (sub.CurrentDunningCampaignId == null)
             {
                 var matchingCampaign = await db.DunningCampaigns
@@ -85,7 +84,7 @@ public class DunningEngineJob : BackgroundService
                 }
                 else
                 {
-                    continue; // No matching campaign found, subscription remains PAST_DUE indefinitely.
+                    continue; 
                 }
             }
 
@@ -96,7 +95,6 @@ public class DunningEngineJob : BackgroundService
 
             if (campaign == null) continue;
 
-            // Action 3: Escalation
             if (daysOverdue >= campaign.GracePeriodDays)
             {
                 if (campaign.FinalAction == "CANCEL")
@@ -116,13 +114,7 @@ public class DunningEngineJob : BackgroundService
                     var targets = product?.FulfillmentTargets.ToList() ?? new System.Collections.Generic.List<string>();
                     foreach (var target in targets)
                     {
-                        if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                            await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                                sub.OrganizationId, internalApp, "subscription.canceled", payloadElement));
-                        }
-                        else if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                        if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                         {
                             await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                                 sub.OrganizationId, target, "subscription.canceled", payloadElement));
@@ -132,10 +124,9 @@ public class DunningEngineJob : BackgroundService
                     requiresSave = true;
                     _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Hard canceled.", sub.Id);
                 }
-                continue; // Prevent further step execution if escalated
+                continue; 
             }
 
-            // Action 2: Execution
             var orderedSteps = campaign.Steps.OrderBy(s => s.DayOffset).ToList();
             if (sub.CurrentDunningStepIndex < orderedSteps.Count)
             {
@@ -143,7 +134,6 @@ public class DunningEngineJob : BackgroundService
 
                 if (daysOverdue >= currentStep.DayOffset)
                 {
-                    // Check idempotency for the day to prevent duplicate emails if service restarts
                     if (!sub.ReminderLogs.Any(l => l.ScheduleId == currentStep.Id && l.TargetBillingDate.Date == now.Date))
                     {
                         var payloadObj = new

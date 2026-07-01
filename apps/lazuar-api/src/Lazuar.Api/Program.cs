@@ -19,14 +19,12 @@ using BuildingBlocks.Infrastructure.Llm;
 using Modules.One.Infrastructure;
 using Modules.One.Infrastructure.Configuration;
 using Modules.Messaging.Infrastructure;
-using Modules.Community.Infrastructure;
 using Modules.CRM.Infrastructure;
 using Modules.Payments.Infrastructure;
 using Modules.Ops.Infrastructure;
 using Modules.Billing.Infrastructure;
 using Modules.Lhdn.Infrastructure;
 using Modules.Commerce.Infrastructure;
-using Modules.Vault.Infrastructure;
 using Modules.Communications.Infrastructure;
 using Lazuar.Api;
 using Lazuar.Api.Middleware;
@@ -216,38 +214,32 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.One.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Application.DependencyInjection).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Ops.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Lhdn.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Commerce.Application.DependencyInjection).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Vault.Application.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Communications.Application.DependencyInjection).Assembly);
     
     cfg.RegisterServicesFromAssembly(typeof(Modules.One.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Messaging.Infrastructure.DependencyInjection).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Community.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Payments.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.CRM.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Ops.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Billing.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Lhdn.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Commerce.Infrastructure.DependencyInjection).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(Modules.Vault.Infrastructure.DependencyInjection).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(Modules.Communications.Infrastructure.DependencyInjection).Assembly);
 });
 
 builder.Services.AddOneModule(builder.Configuration);
 builder.Services.AddMessagingModule(builder.Configuration);
-builder.Services.AddCommunityModule(builder.Configuration);
 builder.Services.AddCrmModule(builder.Configuration);
 builder.Services.AddPaymentsModule(builder.Configuration);
 builder.Services.AddOpsModule(builder.Configuration);
 builder.Services.AddBillingModule(builder.Configuration);
 builder.Services.AddLhdnModule(builder.Configuration);
 builder.Services.AddCommerceModule(builder.Configuration);
-builder.Services.AddVaultModule(builder.Configuration);
 builder.Services.AddCommunicationsModule(builder.Configuration);
 
 var app = builder.Build();
@@ -261,14 +253,12 @@ app.UseAuthorization();
 
 app.UseOneSubscriptions();
 app.UseMessagingSubscriptions();
-app.UseCommunitySubscriptions();
 app.UseCrmSubscriptions();
 app.UsePaymentsSubscriptions();
 app.UseOpsSubscriptions();
 app.UseBillingSubscriptions();
 app.UseLhdnSubscriptions();
 app.UseCommerceSubscriptions();
-app.UseVaultSubscriptions();
 app.UseCommunicationsSubscriptions();
 
 var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
@@ -279,13 +269,11 @@ var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
 apiGroup.MapOneEndpoints();
 apiGroup.MapMessagingEndpoints();
-apiGroup.MapCommunityEndpoints();
 apiGroup.MapPaymentsEndpoints();
 apiGroup.MapOpsEndpoints();
 apiGroup.MapBillingEndpoints();
 apiGroup.MapLhdnEndpoints();
 apiGroup.MapCommerceEndpoints();
-apiGroup.MapVaultEndpoints();
 apiGroup.MapCommunicationsEndpoints();
 
 var platformGroup = app.MapGroup("/api/v1/platform")
