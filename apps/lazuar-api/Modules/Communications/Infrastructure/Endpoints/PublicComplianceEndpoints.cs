@@ -34,8 +34,9 @@ public static class PublicComplianceEndpoints
             HttpRequest request,
             IConfiguration config,
             ISuppressionService suppression,
-            ILogger logger) =>
+            ILoggerFactory loggerFactory) =>
         {
+            var logger = loggerFactory.CreateLogger("PublicComplianceEndpoints");
             var org = request.Query["org"].ToString();
             var email = request.Query["email"].ToString();
             var sig = request.Query["sig"].ToString();
@@ -61,8 +62,9 @@ public static class PublicComplianceEndpoints
             HttpRequest request,
             IConfiguration config,
             ISuppressionService suppression,
-            ILogger logger) =>
+            ILoggerFactory loggerFactory) =>
         {
+            var logger = loggerFactory.CreateLogger("PublicComplianceEndpoints");
             var secret = config["Resend:WebhookSecret"];
             request.EnableBuffering();
             using var reader = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
