@@ -106,7 +106,7 @@ export default function LoginPage() {
           {mode === "signin" && (
             <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <div className="text-center mb-8">
-                <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Sign in to Lazuar Ops</h1>
+                <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Sign in to Lazuar</h1>
                 <p className="text-[13px] text-[#71717a] mt-1.5">Welcome back to your ecosystem.</p>
               </div>
 
