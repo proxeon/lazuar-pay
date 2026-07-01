@@ -1,8 +1,11 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Modules.Billing.Domain.Aggregates;
+using Modules.Billing.Infrastructure.Services;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
@@ -10,10 +13,12 @@ namespace Modules.Billing.Infrastructure.EventHandlers;
 public class PlatformTopUpEventHandler : IIntegrationEventHandler<GatewayPaymentCompletedIntegrationEvent>
 {
     private readonly BillingDbContext _dbContext;
+    private readonly CreditCostOptions _creditOptions;
 
-    public PlatformTopUpEventHandler(BillingDbContext dbContext)
+    public PlatformTopUpEventHandler(BillingDbContext dbContext, IOptions<CreditCostOptions> creditOptions)
     {
         _dbContext = dbContext;
+        _creditOptions = creditOptions.Value;
     }
 
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
@@ -24,10 +29,12 @@ public class PlatformTopUpEventHandler : IIntegrationEventHandler<GatewayPayment
         if (!@event.Metadata.TryGetValue("tenant_id", out var tenantIdStr) || !Guid.TryParse(tenantIdStr, out var targetTenantId))
             return;
 
-        var credits = 0;
-        if (@event.AmountPaid >= 50) credits = 500;
-        if (@event.AmountPaid >= 100) credits = 1100;
-        if (@event.AmountPaid >= 200) credits = 2500;
+        // Grant the highest package whose price threshold the tenant has met.
+        var credits = _creditOptions.Packages
+            .Where(p => p.AmountMyr <= @event.AmountPaid)
+            .OrderByDescending(p => p.AmountMyr)
+            .Select(p => (int?)p.Credits)
+            .FirstOrDefault() ?? 0;
 
         if (credits > 0)
         {

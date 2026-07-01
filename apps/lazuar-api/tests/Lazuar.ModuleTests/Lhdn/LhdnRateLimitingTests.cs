@@ -4,7 +4,10 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using FluentAssertions;
 using Lazuar.ApiTypes;
+using MediatR;
+using Microsoft.Extensions.Logging;
 using Modules.Billing.Contracts;
+using Modules.Billing.Contracts.Commands;
 using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
@@ -22,6 +25,9 @@ public class LhdnRateLimitingTests
     private IUblValidatorService _validatorService = null!;
     private IExecutionContextAccessor _executionContext = null!;
     private IBillingQueryService _billingQueryService = null!;
+    private ICreditCostService _creditCostService = null!;
+    private IMediator _mediator = null!;
+    private ILogger<SubmitTaxDocumentCommandHandler> _logger = null!;
     private SubmitTaxDocumentCommandHandler _handler = null!;
 
     [SetUp]
@@ -32,16 +38,23 @@ public class LhdnRateLimitingTests
         _validatorService = Substitute.For<IUblValidatorService>();
         _executionContext = Substitute.For<IExecutionContextAccessor>();
         _billingQueryService = Substitute.For<IBillingQueryService>();
+        _creditCostService = Substitute.For<ICreditCostService>();
+        _mediator = Substitute.For<IMediator>();
+        _logger = Substitute.For<ILogger<SubmitTaxDocumentCommandHandler>>();
 
         _executionContext.IsTestMode.Returns(false);
-        _billingQueryService.HasPositiveCreditBalanceAsync(Arg.Any<Guid>()).Returns(true);
+        _billingQueryService.HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>()).Returns(true);
+        _creditCostService.GetCost(Arg.Any<CreditAction>()).Returns(3);
 
         _handler = new SubmitTaxDocumentCommandHandler(
-            _repository, 
-            _strategyFactory, 
-            _validatorService, 
-            _executionContext, 
-            _billingQueryService);
+            _repository,
+            _strategyFactory,
+            _validatorService,
+            _executionContext,
+            _billingQueryService,
+            _creditCostService,
+            _mediator,
+            _logger);
     }
 
     [Test]

@@ -48,6 +48,12 @@ interface AdminBillingOperations {
     | CreditBalanceDto
     | LazuarApi.Core.ProblemDetailsResponse;
 
+  @get
+  @route("/credits/packages")
+  getCreditPackages():
+    | CreditPackageDto[]
+    | LazuarApi.Core.ProblemDetailsResponse;
+
   @post
   @route("/credits/top-up")
   createTopUpSession(@body body: CreateTopUpRequestDto):

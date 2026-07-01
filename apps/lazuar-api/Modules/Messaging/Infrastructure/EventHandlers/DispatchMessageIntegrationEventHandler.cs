@@ -14,6 +14,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
     private readonly IEmailService _emailService;
     private readonly IMessagingService _messagingService;
     private readonly IBillingQueryService _billingQueryService;
+    private readonly ICreditCostService _creditCostService;
     private readonly IMediator _mediator;
     private readonly ILogger<DispatchMessageIntegrationEventHandler> _logger;
 
@@ -21,12 +22,14 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         IEmailService emailService, 
         IMessagingService messagingService,
         IBillingQueryService billingQueryService,
+        ICreditCostService creditCostService,
         IMediator mediator,
         ILogger<DispatchMessageIntegrationEventHandler> logger)
     {
         _emailService = emailService;
         _messagingService = messagingService;
         _billingQueryService = billingQueryService;
+        _creditCostService = creditCostService;
         _mediator = mediator;
         _logger = logger;
     }
@@ -36,16 +39,17 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         var isSystemTenant = @event.OrganizationId == Guid.Empty
             || @event.OrganizationId.ToString() == "00000000-0000-0000-0000-000000000001";
 
+        var wantsEmail = @event.Channel is "EMAIL" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToEmail) && !string.IsNullOrWhiteSpace(@event.HtmlEmailBody);
+        var wantsWhatsApp = @event.Channel is "WHATSAPP" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToPhone) && !string.IsNullOrWhiteSpace(@event.PlainTextPhoneBody);
+
+        var emailCost = _creditCostService.GetCost(CreditAction.EmailSend);
+        var whatsappCost = _creditCostService.GetCost(CreditAction.WhatsAppSend);
+
         // Pre-check sufficiency (not just positive balance) so a multi-channel dispatch cannot
         // send on credits it cannot pay for. System tenant is exempt.
         if (!isSystemTenant)
         {
-            var plannedCost = 0;
-            if (@event.Channel is "EMAIL" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToEmail) && !string.IsNullOrWhiteSpace(@event.HtmlEmailBody))
-                plannedCost++;
-            if (@event.Channel is "WHATSAPP" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToPhone) && !string.IsNullOrWhiteSpace(@event.PlainTextPhoneBody))
-                plannedCost++;
-
+            var plannedCost = (wantsEmail ? emailCost : 0) + (wantsWhatsApp ? whatsappCost : 0);
             if (plannedCost > 0)
             {
                 var sufficient = await _billingQueryService.HasSufficientCreditsAsync(@event.OrganizationId, plannedCost);
@@ -57,29 +61,29 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
             }
         }
 
-        int deductAmount = 0;
+        int actualCost = 0;
 
-        if (@event.Channel is "EMAIL" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToEmail) && !string.IsNullOrWhiteSpace(@event.HtmlEmailBody))
+        if (wantsEmail)
         {
-            var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlEmailBody);
+            var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlEmailBody!);
             await _emailService.SendEmailAsync(@event.ToEmail, @event.Subject, htmlPayload);
-            deductAmount++;
+            actualCost += emailCost;
         }
 
-        if (@event.Channel is "WHATSAPP" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToPhone) && !string.IsNullOrWhiteSpace(@event.PlainTextPhoneBody))
+        if (wantsWhatsApp)
         {
-            await _messagingService.SendMessageAsync(@event.ToPhone, @event.PlainTextPhoneBody);
-            deductAmount++;
+            await _messagingService.SendMessageAsync(@event.ToPhone!, @event.PlainTextPhoneBody!);
+            actualCost += whatsappCost;
         }
 
-        if (deductAmount > 0 && !isSystemTenant)
+        if (actualCost > 0 && !isSystemTenant)
         {
             try
             {
                 // Idempotent on the dispatch event id: a retried delivery cannot double-deduct.
                 await _mediator.Send(new DeductTenantCreditCommand(
                     @event.OrganizationId,
-                    deductAmount,
+                    actualCost,
                     $"Automated message dispatch ({@event.Channel})",
                     @event.Id.ToString()));
             }

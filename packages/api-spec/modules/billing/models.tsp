@@ -53,6 +53,11 @@ model CreditBalanceDto {
   recent_transactions: CreditTransactionDto[];
 }
 
+model CreditPackageDto {
+  amount_myr: float64;
+  credits: int32;
+}
+
 model CreateTopUpRequestDto {
   amount_myr: float64;
   return_url: string;

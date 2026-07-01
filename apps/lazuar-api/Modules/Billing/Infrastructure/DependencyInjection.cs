@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Modules.Billing.Application;
 using Modules.Billing.Application.Llm;
 using Modules.Billing.Contracts;
@@ -44,6 +45,8 @@ public static class DependencyInjection
         
         services.AddScoped<ILedgerRepository, LedgerRepository>();
         services.AddScoped<IBillingQueryService, BillingQueryService>();
+        services.AddSingleton<ICreditCostService, CreditCostService>();
+        services.Configure<CreditCostOptions>(configuration.GetSection("Credits"));
 
         services.AddTransient<GatewayPaymentCompletedHandler>();
         services.AddTransient<PlatformTopUpEventHandler>();

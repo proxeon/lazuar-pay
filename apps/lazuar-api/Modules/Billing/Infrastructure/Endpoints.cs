@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -71,6 +72,15 @@ public static class Endpoints
         {
             var balance = await queryService.GetCreditBalanceWithHistoryAsync(ctx.TenantId);
             return TypedResults.Ok(balance);
+        });
+
+        admin.MapGet("/credits/packages", (
+            ICreditCostService creditCostService) =>
+        {
+            var packages = creditCostService.GetPackages()
+                .Select(p => new CreditPackageDto { Amount_myr = (double)p.AmountMyr, Credits = p.Credits })
+                .ToList();
+            return TypedResults.Ok(packages);
         });
 
         admin.MapPost("/credits/top-up", async Task<Results<Ok<TopUpResponseDto>, BadRequest<string>>> (

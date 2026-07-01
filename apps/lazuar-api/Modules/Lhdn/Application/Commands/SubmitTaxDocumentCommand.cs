@@ -7,7 +7,10 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using Lazuar.ApiTypes;
+using MediatR;
+using Microsoft.Extensions.Logging;
 using Modules.Billing.Contracts;
+using Modules.Billing.Contracts.Commands;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain.Aggregates;
@@ -27,31 +30,41 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
     private readonly IUblValidatorService _validatorService;
     private readonly IExecutionContextAccessor _executionContext;
     private readonly IBillingQueryService _billingQueryService;
+    private readonly ICreditCostService _creditCostService;
+    private readonly IMediator _mediator;
+    private readonly ILogger<SubmitTaxDocumentCommandHandler> _logger;
 
     public SubmitTaxDocumentCommandHandler(
         ILhdnRepository repository, 
         IDocumentStrategyFactory strategyFactory,
         IUblValidatorService validatorService,
         IExecutionContextAccessor executionContext,
-        IBillingQueryService billingQueryService)
+        IBillingQueryService billingQueryService,
+        ICreditCostService creditCostService,
+        IMediator mediator,
+        ILogger<SubmitTaxDocumentCommandHandler> logger)
     {
         _repository = repository;
         _strategyFactory = strategyFactory;
         _validatorService = validatorService;
         _executionContext = executionContext;
         _billingQueryService = billingQueryService;
+        _creditCostService = creditCostService;
+        _mediator = mediator;
+        _logger = logger;
     }
 
     public async Task<Guid> Handle(SubmitTaxDocumentCommand request, CancellationToken ct)
     {
         var isTestMode = _executionContext.IsTestMode;
+        var lhdnCost = _creditCostService.GetCost(CreditAction.LhdnSubmit);
 
         if (!isTestMode)
         {
-            var hasCredits = await _billingQueryService.HasPositiveCreditBalanceAsync(request.OrganizationId);
+            var hasCredits = await _billingQueryService.HasSufficientCreditsAsync(request.OrganizationId, lhdnCost);
             if (!hasCredits)
             {
-                throw new BusinessRuleValidationException(new GenericBusinessRule("402: Insufficient API Credits. Please top up your balance."));
+                throw new BusinessRuleValidationException(new GenericBusinessRule($"402: Insufficient API Credits ({lhdnCost} required). Please top up your balance."));
             }
         }
 
@@ -120,6 +133,29 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
                 return concurrentDocId;
             }
             throw new InvalidOperationException("Concurrent idempotency collision unresolvable.");
+        }
+
+        // Deduct credits for the submission. Idempotent on the LHDN idempotency key (or document id),
+        // so a retried command cannot double-charge. Test mode is exempt. The document is already
+        // persisted; a deduction failure is logged rather than failing the submission.
+        if (!isTestMode)
+        {
+            try
+            {
+                var deductionKey = !string.IsNullOrWhiteSpace(request.IdempotencyKey)
+                    ? $"lhdn:{request.IdempotencyKey}"
+                    : $"lhdn:{taxDocument.Id}";
+
+                await _mediator.Send(new DeductTenantCreditCommand(
+                    request.OrganizationId,
+                    lhdnCost,
+                    $"LHDN submission ({request.Payload.Document_type})",
+                    deductionKey), ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "LHDN document {DocId} saved for tenant {OrganizationId} but credit deduction failed.", taxDocument.Id, request.OrganizationId);
+            }
         }
 
         return taxDocument.Id;
