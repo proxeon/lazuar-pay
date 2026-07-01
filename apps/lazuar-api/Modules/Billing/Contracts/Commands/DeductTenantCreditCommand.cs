@@ -4,7 +4,7 @@ using BuildingBlocks.Application;
 
 namespace Modules.Billing.Contracts.Commands;
 
-public record DeductTenantCreditCommand(Guid OrganizationId, int Amount, string Reference) : ICommand
+public record DeductTenantCreditCommand(Guid OrganizationId, int Amount, string Reference, string? IdempotencyKey = null) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

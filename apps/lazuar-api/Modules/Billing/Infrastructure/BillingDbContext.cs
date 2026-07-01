@@ -14,6 +14,8 @@ public class BillingDbContext : PlatformDbContext
     public DbSet<DeferredRevenueSchedule> DeferredRevenueSchedules { get; set; } = null!;
     public DbSet<TenantCreditBalance> TenantCreditBalances { get; set; } = null!;
     public DbSet<CreditLedger> CreditLedgers { get; set; } = null!;
+    public DbSet<CreditHold> CreditHolds { get; set; } = null!;
+    public DbSet<CreditDeductionIdempotencyLog> CreditDeductionIdempotencyLogs { get; set; } = null!;
     public DbSet<TenantBillingProfile> TenantBillingProfiles { get; set; } = null!;
     public DbSet<DocumentSequence> DocumentSequences { get; set; } = null!;
     
@@ -89,13 +91,36 @@ public class BillingDbContext : PlatformDbContext
             builder.ToTable("TenantCreditBalances");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId).IsUnique();
-            
+
+            // xmin system column provides optimistic concurrency for the wallet.
+            builder.Property<byte[]>("xmin").IsRowVersion();
+
             builder.HasMany(x => x.Transactions)
                    .WithOne()
                    .HasForeignKey("TenantCreditBalanceId")
                    .OnDelete(DeleteBehavior.Cascade);
-                   
+
             builder.Metadata.FindNavigation("Transactions")?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<CreditHold>(builder =>
+        {
+            builder.ToTable("CreditHolds");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.CorrelationId });
+            builder.Property<byte[]>("xmin").IsRowVersion();
+            builder.Property(x => x.Status).HasMaxLength(20);
+            builder.Property(x => x.CorrelationId).HasMaxLength(100);
+            builder.Property(x => x.Reference).HasMaxLength(300);
+        });
+
+        modelBuilder.Entity<CreditDeductionIdempotencyLog>(builder =>
+        {
+            builder.ToTable("CreditDeductionIdempotencyLogs");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.IdempotencyKey }).IsUnique();
+            builder.Property(x => x.IdempotencyKey).HasMaxLength(200);
+            builder.Property(x => x.Reference).HasMaxLength(300);
         });
 
         modelBuilder.Entity<CreditLedger>(builder =>

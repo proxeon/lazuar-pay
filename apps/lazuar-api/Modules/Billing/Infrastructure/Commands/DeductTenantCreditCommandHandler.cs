@@ -5,12 +5,15 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Domain.Aggregates;
+using Modules.Billing.Domain.Entities;
 
 namespace Modules.Billing.Infrastructure.Commands;
 
 public class DeductTenantCreditCommandHandler : ICommandHandler<DeductTenantCreditCommand>
 {
     private readonly BillingDbContext _dbContext;
+    private const int MaxAttempts = 3;
 
     public DeductTenantCreditCommandHandler(BillingDbContext dbContext)
     {
@@ -19,16 +22,49 @@ public class DeductTenantCreditCommandHandler : ICommandHandler<DeductTenantCred
 
     public async Task Handle(DeductTenantCreditCommand request, CancellationToken ct)
     {
-        var wallet = await _dbContext.TenantCreditBalances
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(w => w.OrganizationId == request.OrganizationId, ct);
-
-        if (wallet == null)
+        for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
-            throw new InvalidOperationException("Tenant credit wallet not found.");
-        }
+            // Re-check idempotency on every attempt: a concurrent request may have already
+            // committed the deduction for this key.
+            if (!string.IsNullOrEmpty(request.IdempotencyKey))
+            {
+                var existing = await _dbContext.CreditDeductionIdempotencyLogs
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.OrganizationId == request.OrganizationId
+                        && x.IdempotencyKey == request.IdempotencyKey, ct);
+                if (existing != null)
+                    return;
+            }
 
-        wallet.Deduct(request.Amount, request.Reference);
-        await _dbContext.SaveChangesAsync(ct);
+            var wallet = await _dbContext.TenantCreditBalances
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(w => w.OrganizationId == request.OrganizationId, ct);
+
+            if (wallet == null)
+                throw new InvalidOperationException("Tenant credit wallet not found.");
+
+            try
+            {
+                // Throws on insufficient balance (domain enforces sufficiency).
+                wallet.Deduct(request.Amount, request.Reference);
+
+                if (!string.IsNullOrEmpty(request.IdempotencyKey))
+                {
+                    _dbContext.CreditDeductionIdempotencyLogs.Add(
+                        new CreditDeductionIdempotencyLog(
+                            request.OrganizationId, request.IdempotencyKey, request.Amount, request.Reference));
+                }
+
+                await _dbContext.SaveChangesAsync(ct);
+                return;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Row-version conflict: another concurrent deduction modified the wallet. Retry.
+                _dbContext.ChangeTracker.Clear();
+                if (attempt == MaxAttempts - 1) throw;
+            }
+        }
     }
 }

@@ -15,11 +15,12 @@ public class TenantCreditBalance : Entity, IAggregateRoot, IMustHaveTenant
     public Guid OrganizationId { get; set; }
     
     /// <summary>
-    /// Current available credits. Can technically drop below zero due to eventual 
-    /// consistency processing of concurrent API bursts.
+    /// Current available credits. Deduction throws on insufficient balance; the wallet's
+    /// xmin system column provides optimistic concurrency (configured in BillingDbContext)
+    /// so concurrent deductions cannot overdraw the wallet.
     /// </summary>
     public int AvailableCredits { get; private set; }
-    
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -51,7 +52,11 @@ public class TenantCreditBalance : Entity, IAggregateRoot, IMustHaveTenant
     public void Deduct(int credits, string reference)
     {
         if (credits <= 0) throw new ArgumentException("Deduction amount must be positive.");
-        
+
+        if (AvailableCredits < credits)
+            throw new BusinessRuleValidationException(
+                new GenericBusinessRule($"402: Insufficient credits. Available: {AvailableCredits}, requested: {credits}."));
+
         AvailableCredits -= credits;
         _transactions.Add(new CreditLedger(Id, -credits, reference));
         UpdatedAt = DateTime.UtcNow;

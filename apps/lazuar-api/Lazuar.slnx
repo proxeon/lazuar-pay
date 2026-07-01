@@ -4,6 +4,7 @@
     <Project Path="tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj" />
     <Project Path="tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj" />
     <Project Path="tests/Lazuar.ModuleTests/Lazuar.ModuleTests.csproj" />
+    <Project Path="tests/Modules.Billing.Tests/Modules.Billing.Tests.csproj" />
   </Folder>
   <Project Path="src\Lazuar.Api\Lazuar.Api.csproj" />
   <Folder Name="/BuildingBlocks/">
@@ -36,6 +37,7 @@
     <Project Path="Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
     <Project Path="Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/Modules/Billing/Infrastructure/" />
   <Folder Name="/Modules/Commerce/">
     <Project Path="Modules/Commerce/Application/Modules.Commerce.Application.csproj" />
     <Project Path="Modules/Commerce/Contracts/Modules.Commerce.Contracts.csproj" />

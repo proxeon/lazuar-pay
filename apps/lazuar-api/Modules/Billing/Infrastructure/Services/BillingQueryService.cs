@@ -175,6 +175,28 @@ public class BillingQueryService : IBillingQueryService
         return credits.HasValue && credits.Value > 0;
     }
 
+    public async Task<int> GetAvailableCreditsAsync(Guid organizationId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""AvailableCredits""
+            FROM billing.""TenantCreditBalances""
+            WHERE ""OrganizationId"" = @OrgId
+            LIMIT 1";
+
+        var credits = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { OrgId = organizationId });
+        return credits ?? 0;
+    }
+
+    public async Task<bool> HasSufficientCreditsAsync(Guid organizationId, int amount)
+    {
+        if (amount <= 0) return true;
+        var available = await GetAvailableCreditsAsync(organizationId);
+        return available >= amount;
+    }
+
     public async Task<CreditBalanceDto> GetCreditBalanceWithHistoryAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
