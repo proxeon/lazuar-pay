@@ -12,6 +12,8 @@ public static class Endpoints
         adminGroup.MapTemplateEndpoints();
         adminGroup.MapBroadcastEndpoints();
 
+        endpoints.MapPublicComplianceEndpoints();
+
         return endpoints;
     }
 }

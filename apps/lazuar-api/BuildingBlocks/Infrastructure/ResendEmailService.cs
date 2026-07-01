@@ -22,7 +22,7 @@ public sealed class ResendEmailService : IEmailService
         _logger = logger;
     }
 
-    public async Task SendEmailAsync(string to, string subject, string body)
+    public async Task SendEmailAsync(string to, string subject, string body, Guid? organizationId = null)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
@@ -39,7 +39,10 @@ public sealed class ResendEmailService : IEmailService
                 from = _options.SenderEmail,
                 to = new[] { to },
                 subject = subject,
-                html = body // Using HTML payload, replace with 'text' if you send plaintext
+                html = body, // Using HTML payload, replace with 'text' if you send plaintext
+                tags = organizationId.HasValue
+                    ? new[] { new { name = "org", value = organizationId.Value.ToString() } }
+                    : null
             };
 
             var response = await client.PostAsJsonAsync("emails", payload);

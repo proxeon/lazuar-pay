@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Contracts;
+using Modules.Communications.Contracts;
 using Modules.Messaging.Contracts;
 
 namespace Modules.Messaging.Infrastructure.EventHandlers;
@@ -15,14 +16,16 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
     private readonly IMessagingService _messagingService;
     private readonly IBillingQueryService _billingQueryService;
     private readonly ICreditCostService _creditCostService;
+    private readonly ISuppressionService _suppressionService;
     private readonly IMediator _mediator;
     private readonly ILogger<DispatchMessageIntegrationEventHandler> _logger;
 
     public DispatchMessageIntegrationEventHandler(
-        IEmailService emailService, 
+        IEmailService emailService,
         IMessagingService messagingService,
         IBillingQueryService billingQueryService,
         ICreditCostService creditCostService,
+        ISuppressionService suppressionService,
         IMediator mediator,
         ILogger<DispatchMessageIntegrationEventHandler> logger)
     {
@@ -30,6 +33,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         _messagingService = messagingService;
         _billingQueryService = billingQueryService;
         _creditCostService = creditCostService;
+        _suppressionService = suppressionService;
         _mediator = mediator;
         _logger = logger;
     }
@@ -41,6 +45,15 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
 
         var wantsEmail = @event.Channel is "EMAIL" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToEmail) && !string.IsNullOrWhiteSpace(@event.HtmlEmailBody);
         var wantsWhatsApp = @event.Channel is "WHATSAPP" or "ALL" && !string.IsNullOrWhiteSpace(@event.ToPhone) && !string.IsNullOrWhiteSpace(@event.PlainTextPhoneBody);
+
+        // Skip suppressed email addresses to protect sender reputation (bounces/complaints)
+        // and honor opt-outs.
+        if (wantsEmail && !isSystemTenant
+            && await _suppressionService.IsSuppressedAsync(@event.OrganizationId, @event.ToEmail))
+        {
+            _logger.LogInformation("Skipping email to {Email} for tenant {OrganizationId}: address is suppressed.", @event.ToEmail, @event.OrganizationId);
+            wantsEmail = false;
+        }
 
         var emailCost = _creditCostService.GetCost(CreditAction.EmailSend);
         var whatsappCost = _creditCostService.GetCost(CreditAction.WhatsAppSend);
@@ -66,7 +79,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         if (wantsEmail)
         {
             var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlEmailBody!);
-            await _emailService.SendEmailAsync(@event.ToEmail, @event.Subject, htmlPayload);
+            await _emailService.SendEmailAsync(@event.ToEmail, @event.Subject, htmlPayload, @event.OrganizationId);
             actualCost += emailCost;
         }
 

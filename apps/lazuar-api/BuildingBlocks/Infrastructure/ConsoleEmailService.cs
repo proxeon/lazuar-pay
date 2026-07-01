@@ -13,9 +13,9 @@ public sealed class ConsoleEmailService : IEmailService
         _logger = logger;
     }
 
-    public Task SendEmailAsync(string to, string subject, string body)
+    public Task SendEmailAsync(string to, string subject, string body, Guid? organizationId = null)
     {
-        _logger.LogInformation("[Local Dispatch] [EMAIL] To: {To} | Subject: {Subject} | Body: {Body}", to, subject, body);
+        _logger.LogInformation("[Local Dispatch] [EMAIL] Org: {Org} | To: {To} | Subject: {Subject} | Body: {Body}", organizationId, to, subject, body);
         return Task.CompletedTask;
     }
 }

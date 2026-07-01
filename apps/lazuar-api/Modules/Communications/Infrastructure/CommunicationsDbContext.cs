@@ -15,6 +15,7 @@ namespace Modules.Communications.Infrastructure;
 public class CommunicationsDbContext : PlatformDbContext
 {
     public DbSet<MessageTemplate> MessageTemplates { get; set; } = null!;
+    public DbSet<SuppressionEntry> SuppressionEntries { get; set; } = null!;
     
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
@@ -70,6 +71,16 @@ public class CommunicationsDbContext : PlatformDbContext
             builder.ToTable("OutboxMessages");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.ProcessedAt, x.OccurredOn }).HasFilter("\"ProcessedAt\" IS NULL");
+        });
+
+        modelBuilder.Entity<SuppressionEntry>(builder =>
+        {
+            builder.ToTable("SuppressionEntries");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.Email }).IsUnique();
+            builder.Property(x => x.Email).HasMaxLength(320);
+            builder.Property(x => x.Reason).HasMaxLength(20);
+            builder.Property(x => x.Source).HasMaxLength(100);
         });
 
         modelBuilder.Entity<InboxMessage>(builder =>

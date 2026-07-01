@@ -10,6 +10,7 @@ using Modules.Billing.Contracts.Events;
 using Modules.One.Contracts;
 using Modules.Communications.Application;
 using Modules.Communications.Application.Queries;
+using Modules.Communications.Contracts;
 using Modules.Communications.Infrastructure.Repositories;
 using Modules.Communications.Infrastructure.Services;
 using Modules.Communications.Infrastructure.EventHandlers;
@@ -35,6 +36,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICommunicationsRepository, CommunicationsRepository>();
         services.AddScoped<ICommunicationsQueryService, CommunicationsQueryService>();
+        services.AddScoped<ISuppressionService, SuppressionService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunicationsDbContext>>("CommunicationsEventBus");
 

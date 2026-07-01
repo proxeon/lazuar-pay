@@ -23,6 +23,9 @@
     <!-- Billing Module References -->
     <ProjectReference Include="..\..\Modules\Billing\Application\Modules.Billing.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
+
+    <!-- Communications Module References -->
+    <ProjectReference Include="..\..\Modules\Communications\Domain\Modules.Communications.Domain.csproj" />
     
     <!-- External Module Contracts needed for Integration Events in Tests -->
     <ProjectReference Include="..\..\Modules\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
