@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { components } from "../../../lib/api-client";
-import { filterHiddenFulfillmentTargets } from "../../../lib/utils";
+import { filterHiddenFulfillmentTargets, cn } from "../../../lib/utils";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
 
@@ -11,6 +11,7 @@ interface ProductFormProps {
   onCancel: () => void;
   isPending: boolean;
   submitLabel: React.ReactNode;
+  hasValidEmailConfig: boolean;
 }
 
 export default function ProductForm({
@@ -18,7 +19,8 @@ export default function ProductForm({
   onSubmit,
   onCancel,
   isPending,
-  submitLabel
+  submitLabel,
+  hasValidEmailConfig
 }: ProductFormProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [slug, setSlug] = useState(initialData?.slug || "");
@@ -28,8 +30,9 @@ export default function ProductForm({
   const [interval, setInterval] = useState(initialData?.interval || "one_time");
 
   const [reqAddress, setReqAddress] = useState(initialData?.checkout_configuration?.requires_address ?? false);
-  // [MVP-HIDE] const [reqTaxId, setReqTaxId] = useState(initialData?.checkout_configuration?.requires_tax_id ?? false);
   const [reqPhone, setReqPhone] = useState(initialData?.checkout_configuration?.requires_phone ?? false);
+
+  const [isActive, setIsActive] = useState(initialData?.is_active ?? hasValidEmailConfig);
 
   const [webhooksText, setWebhooksText] = useState(() => 
     filterHiddenFulfillmentTargets(initialData?.fulfillment_targets).join("\n")
@@ -53,9 +56,9 @@ export default function ProductForm({
       minimum_price: Number(minimumPrice),
       currency: "MYR",
       interval,
-      is_active: initialData?.is_active ?? true,
+      is_active: isActive,
       requires_address: reqAddress,
-      requires_tax_id: false, // [MVP-HIDE]
+      requires_tax_id: false,
       requires_phone: reqPhone,
       fulfillment_targets: targets, 
     });
@@ -105,18 +108,33 @@ export default function ProductForm({
         </div>
 
         <div className="space-y-4">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">2. Checkout UX Constraints</label>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">2. Product Status</label>
+          <div className="flex flex-col gap-3">
+            <label className={cn("flex items-center gap-2 w-fit", hasValidEmailConfig ? "cursor-pointer" : "cursor-not-allowed opacity-60")}>
+              <input 
+                type="checkbox" 
+                checked={isActive} 
+                onChange={e => setIsActive(e.target.checked)} 
+                disabled={isPending || !hasValidEmailConfig} 
+                className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b] disabled:opacity-50" 
+              />
+              <span className="text-[12px] font-medium text-[#09090b]">Active (Visible at Checkout)</span>
+            </label>
+            {!hasValidEmailConfig && (
+              <p className="text-[10px] text-rose-600">
+                You must configure a valid Resend API key before activating checkout links.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">3. Checkout UX Constraints</label>
           <div className="flex flex-col gap-3">
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={reqAddress} onChange={e => setReqAddress(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require Full Billing Address</span>
             </label>
-            {/* [MVP-HIDE]
-            <label className="flex items-center gap-2 cursor-pointer w-fit">
-              <input type="checkbox" checked={reqTaxId} onChange={e => setReqTaxId(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
-              <span className="text-[12px] font-medium text-[#09090b]">Require Company Name & Tax ID (LHDN B2B)</span>
-            </label>
-            */}
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={reqPhone} onChange={e => setReqPhone(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require WhatsApp Number</span>
@@ -125,7 +143,7 @@ export default function ProductForm({
         </div>
 
         <div className="space-y-4">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">3. Post-Purchase Webhooks (Optional)</label>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">4. Post-Purchase Webhooks (Optional)</label>
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">External SaaS Integrations</label>
             <textarea 

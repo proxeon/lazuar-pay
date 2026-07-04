@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, CreditCard } from "lucide-react";
+import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, CreditCard, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { client } from "../../../lib/api-client";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -44,7 +44,17 @@ export default function DashboardPage() {
     }
   });
 
-  if (statsLoading || financialsLoading || productsLoading || paymentConfigLoading) {
+  const { data: emailConfig, error: emailConfigError, isLoading: emailConfigLoading } = useQuery({
+    queryKey: ["email-config-status"],
+    queryFn: async () => {
+      const { data, error, response } = await client.GET("/admin/communications/email-config");
+      if (response.status === 404) return null;
+      if (error) throw new Error(error.detail);
+      return data;
+    }
+  });
+
+  if (statsLoading || financialsLoading || productsLoading || paymentConfigLoading || emailConfigLoading) {
     return (
       <div className="flex-1 flex items-center justify-center h-full bg-[#fafafa]">
         <Loader2 className="animate-spin text-[#a1a1aa] h-8 w-8" />
@@ -62,6 +72,7 @@ export default function DashboardPage() {
   ];
 
   const showGatewayWarning = paymentConfigError || !paymentConfig || !paymentConfig.is_active;
+  const showEmailWarning = emailConfigError || !emailConfig || !emailConfig.is_active;
 
   return (
     <PageLayout 
@@ -82,6 +93,21 @@ export default function DashboardPage() {
             </div>
             <Link to="/workspace/payment-gateways" className="h-8 px-4 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
               <CreditCard size={14} /> Configure Now
+            </Link>
+          </div>
+        )}
+
+        {showEmailWarning && (
+          <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={18} className="text-amber-600" />
+              <div>
+                <p className="text-[13px] font-bold text-amber-800">Action Required: Configure Email Provider</p>
+                <p className="text-[12px] text-amber-700 mt-0.5">You must connect a Resend API key to activate checkout links and send automated receipts.</p>
+              </div>
+            </div>
+            <Link to="/workspace/email" className="h-8 px-4 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+              <Mail size={14} /> Connect Email
             </Link>
           </div>
         )}

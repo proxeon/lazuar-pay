@@ -17,23 +17,20 @@ public class BroadcastTests
     }
 
     [Test]
-    public void Queue_SetsRecipientsAndHold()
+    public void Queue_SetsRecipients()
     {
         var b = new Broadcast(Guid.NewGuid(), "Subject", "<p>body</p>");
-        var holdId = Guid.NewGuid();
-        b.Queue(100, holdId, 100);
+        b.Queue(100);
         b.Status.Should().Be("QUEUED");
         b.TotalRecipients.Should().Be(100);
-        b.CreditHoldId.Should().Be(holdId);
-        b.CreditsReserved.Should().Be(100);
     }
 
     [Test]
     public void Queue_Twice_Throws()
     {
         var b = new Broadcast(Guid.NewGuid(), "Subject", "<p>body</p>");
-        b.Queue(10, Guid.NewGuid(), 10);
-        var act = () => b.Queue(10, Guid.NewGuid(), 10);
+        b.Queue(10);
+        var act = () => b.Queue(10);
         act.Should().Throw<InvalidOperationException>();
     }
 
@@ -46,22 +43,21 @@ public class BroadcastTests
     }
 
     [Test]
-    public void RecordSent_AccumulatesCreditsUsed()
+    public void RecordSent_AccumulatesSentCount()
     {
         var b = new Broadcast(Guid.NewGuid(), "Subject", "<p>body</p>");
-        b.Queue(10, Guid.NewGuid(), 10);
+        b.Queue(10);
         b.MarkSending();
-        b.RecordSent(1);
-        b.RecordSent(1);
+        b.RecordSent();
+        b.RecordSent();
         b.SentCount.Should().Be(2);
-        b.CreditsUsed.Should().Be(2);
     }
 
     [Test]
     public void MarkCompleted_SetsStatusAndTimestamp()
     {
         var b = new Broadcast(Guid.NewGuid(), "Subject", "<p>body</p>");
-        b.Queue(10, Guid.NewGuid(), 10);
+        b.Queue(10);
         b.MarkSending();
         b.MarkCompleted();
         b.Status.Should().Be("COMPLETED");
@@ -72,7 +68,7 @@ public class BroadcastTests
     public void MarkFailed_SetsReason()
     {
         var b = new Broadcast(Guid.NewGuid(), "Subject", "<p>body</p>");
-        b.Queue(10, Guid.NewGuid(), 10);
+        b.Queue(10);
         b.MarkFailed("boom");
         b.Status.Should().Be("FAILED");
         b.FailureReason.Should().Be("boom");

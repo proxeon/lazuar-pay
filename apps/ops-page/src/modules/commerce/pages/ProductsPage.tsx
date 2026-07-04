@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, AlertTriangle, CreditCard } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, CreditCard, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { client, type EntitlementDto, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
@@ -39,6 +39,17 @@ export default function ProductsPage() {
     enabled: !!activeWorkspaceId
   });
 
+  const { data: emailConfig, error: emailConfigError } = useQuery({
+    queryKey: ["email-config-status"],
+    queryFn: async () => {
+      const { data, error, response } = await client.GET("/admin/communications/email-config");
+      if (response.status === 404) return null;
+      if (error) throw new Error(error.detail);
+      return data;
+    },
+    enabled: !!activeWorkspaceId
+  });
+
   const { data: entitlements } = useQuery({
     queryKey: ["entitlements"],
     queryFn: async () => {
@@ -49,6 +60,7 @@ export default function ProductsPage() {
 
   const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
   const showGatewayWarning = paymentConfigError || !paymentConfig || !paymentConfig.is_active;
+  const hasValidEmailConfig = !emailConfigError && emailConfig && emailConfig.is_active;
 
   const renderFulfillmentBadges = (targets: string[] | undefined) => {
     const visible = filterHiddenFulfillmentTargets(targets);
@@ -99,6 +111,21 @@ export default function ProductsPage() {
             </div>
             <Link to="/workspace/payment-gateways" className="h-8 px-4 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
               <CreditCard size={14} /> Configure Now
+            </Link>
+          </div>
+        )}
+
+        {!hasValidEmailConfig && (
+          <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={18} className="text-amber-600" />
+              <div>
+                <p className="text-[13px] font-bold text-amber-800">Action Required: Configure Email Provider</p>
+                <p className="text-[12px] text-amber-700 mt-0.5">You must connect a Resend API key to activate checkout links and send automated receipts.</p>
+              </div>
+            </div>
+            <Link to="/workspace/email" className="h-8 px-4 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+              <Mail size={14} /> Connect Email
             </Link>
           </div>
         )}
@@ -162,7 +189,7 @@ export default function ProductsPage() {
                           "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block",
                           product.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-zinc-100 text-zinc-500 border-zinc-200"
                         )}>
-                          {product.is_active ? "Active" : "Archived"}
+                          {product.is_active ? "Active" : "Draft"}
                         </span>
                       </td>
                     </tr>
@@ -177,6 +204,7 @@ export default function ProductsPage() {
       <CreateProductModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
+        hasValidEmailConfig={hasValidEmailConfig}
       />
 
       <ProductDetailPanel 
@@ -184,6 +212,7 @@ export default function ProductsPage() {
         activeWorkspaceSlug={activeWorkspaceSlug}
         onClose={() => setSelectedProduct(null)} 
         onUpdate={setSelectedProduct}
+        hasValidEmailConfig={hasValidEmailConfig}
       />
     </PageLayout>
   );

@@ -51,16 +51,15 @@ public static class BroadcastEndpoints
             IBillingQueryService billingQuery) =>
         {
             var recipientCount = await subscriberQuery.GetActiveSubscriberCountAsync(ctx.TenantId);
-            var costPerRecipient = costService.GetCost(CreditAction.BroadcastEmailPerRecipient);
-            var totalCredits = recipientCount * costPerRecipient;
+            // Broadcasts are free now; set costs to 0 to preserve DTO compatibility
             var available = await billingQuery.GetAvailableCreditsAsync(ctx.TenantId);
 
             return TypedResults.Ok(new BroadcastCostPreviewDto
             {
                 RecipientCount = recipientCount,
-                CreditsPerRecipient = costPerRecipient,
-                TotalCredits = totalCredits,
-                SufficientCredits = available >= totalCredits,
+                CreditsPerRecipient = 0,
+                TotalCredits = 0,
+                SufficientCredits = true,
                 AvailableCredits = available
             });
         });
@@ -81,8 +80,8 @@ public static class BroadcastEndpoints
                 SentCount = broadcast.SentCount,
                 SuppressedCount = broadcast.SuppressedCount,
                 FailedCount = broadcast.FailedCount,
-                CreditsReserved = broadcast.CreditsReserved,
-                CreditsUsed = broadcast.CreditsUsed,
+                CreditsReserved = 0, // Hardcoded to 0 to preserve DTO structure
+                CreditsUsed = 0,     // Hardcoded to 0 to preserve DTO structure
                 CreatedAt = new DateTimeOffset(broadcast.CreatedAt),
                 CompletedAt = broadcast.CompletedAt.HasValue ? new DateTimeOffset(broadcast.CompletedAt.Value) : null,
                 FailureReason = broadcast.FailureReason

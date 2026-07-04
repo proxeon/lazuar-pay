@@ -1,2 +1,1 @@
-apps/lazuar-api/tests/Lazuar.IntegrationTests/CommerceQueryServiceTests.cs
-Modules/Commerce/Infrastructure/CommerceDbContext.cs
+apps/lazuar-api/tests/Lazuar.ModuleTests/Communications/BroadcastTests.cs

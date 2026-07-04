@@ -1,4 +1,3 @@
-// apps/lazuar-api/Modules/Messaging/Infrastructure/EventHandlers/DispatchMessageIntegrationEventHandler.cs
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
@@ -81,12 +80,12 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
 
             if (!isSystemTenant)
             {
-                // Inject credentials via Dapper read model to bypass DB context dependencies
                 var emailConfig = await _communicationsQueryService.GetEmailConfigAsync(@event.OrganizationId);
-                if (emailConfig != null && emailConfig.is_active && !string.IsNullOrWhiteSpace(emailConfig.api_key) && !string.IsNullOrWhiteSpace(emailConfig.sender_email))
+                // Fix: Use NSwag generated C# PascalCase properties
+                if (emailConfig != null && emailConfig.Is_active && !string.IsNullOrWhiteSpace(emailConfig.Api_key) && !string.IsNullOrWhiteSpace(emailConfig.Sender_email))
                 {
-                    tenantApiKey = emailConfig.api_key;
-                    tenantSenderEmail = emailConfig.sender_email;
+                    tenantApiKey = emailConfig.Api_key;
+                    tenantSenderEmail = emailConfig.Sender_email;
                 }
             }
 

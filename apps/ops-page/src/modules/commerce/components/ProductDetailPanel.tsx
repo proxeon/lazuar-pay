@@ -16,9 +16,10 @@ interface ProductDetailPanelProps {
   activeWorkspaceSlug?: string;
   onClose: () => void;
   onUpdate: (product: ProductDto | null) => void;
+  hasValidEmailConfig: boolean;
 }
 
-export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClose, onUpdate }: ProductDetailPanelProps) {
+export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClose, onUpdate, hasValidEmailConfig }: ProductDetailPanelProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -134,7 +135,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
               "text-[10px] px-2 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap mt-1",
               product.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-zinc-100 text-zinc-500 border-zinc-200"
             )}>
-              {product.is_active ? "Active" : "Archived"}
+              {product.is_active ? "Active" : "Archived/Draft"}
             </span>
           </div>
 
@@ -215,35 +216,11 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
                 {product.checkout_configuration.requires_address ? <Lock size={12} className="text-emerald-600" /> : <Lock size={12} className="text-[#e5e5e5]" />}
                 <span className={cn(product.checkout_configuration.requires_address ? "text-[#09090b]" : "text-[#a1a1aa]")}>Requires Full Billing Address</span>
               </div>
-              {/* [MVP-HIDE]
-              <div className="flex items-center gap-2 text-[12px]">
-                {product.checkout_configuration.requires_tax_id ? <Lock size={12} className="text-emerald-600" /> : <Lock size={12} className="text-[#e5e5e5]" />}
-                <span className={cn(product.checkout_configuration.requires_tax_id ? "text-[#09090b]" : "text-[#a1a1aa]")}>Requires Company TIN (LHDN B2B)</span>
-              </div>
-              */}
               <div className="flex items-center gap-2 text-[12px]">
                 {product.checkout_configuration.requires_phone ? <Lock size={12} className="text-emerald-600" /> : <Lock size={12} className="text-[#e5e5e5]" />}
                 <span className={cn(product.checkout_configuration.requires_phone ? "text-[#09090b]" : "text-[#a1a1aa]")}>Requires WhatsApp Number</span>
               </div>
             </div>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Configured Webhooks</h4>
-            {visibleFulfillmentTargets.length > 0 ? (
-              <ul className="space-y-2">
-                {visibleFulfillmentTargets.map((url, idx) => (
-                  <li key={idx} className="flex items-center gap-2 p-2.5 bg-[#fafafa] border border-[#e5e5e5] rounded-sm text-[11px] font-mono text-[#52525b]">
-                    <Zap size={12} className="text-amber-500 shrink-0" />
-                    <span className="truncate">{url}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="p-3 bg-[#fafafa] border border-[#e5e5e5] rounded-sm text-[11px] text-[#a1a1aa] text-center">
-                No external webhooks configured.
-              </div>
-            )}
           </div>
 
           <div className="space-y-4 pt-4">
@@ -274,8 +251,14 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
                 </button>
               ) : (
                 <button 
-                  onClick={() => { if(window.confirm("Restore this checkout link? It will become purchasable again.")) restoreMutation.mutate(product.id); }} 
-                  disabled={isActionLoading} 
+                  onClick={() => {
+                    if (!hasValidEmailConfig) {
+                      toast.error("You must configure a valid Resend API key before activating checkout links.");
+                      return;
+                    }
+                    if(window.confirm("Restore this checkout link? It will become purchasable again.")) restoreMutation.mutate(product.id); 
+                  }} 
+                  disabled={isActionLoading || !hasValidEmailConfig} 
                   className="h-8 col-span-2 border border-[#09090b] bg-[#09090b] text-[10px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isActionLoading ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Restore Link
@@ -302,6 +285,7 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
               onCancel={() => setIsEditing(false)} 
               isPending={editMutation.isPending}
               submitLabel="Save Changes"
+              hasValidEmailConfig={hasValidEmailConfig}
             />
           </div>
         </div>

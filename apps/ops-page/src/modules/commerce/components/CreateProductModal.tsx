@@ -9,9 +9,10 @@ type CreateProductRequestDto = components["schemas"]["Commerce.CreateProductRequ
 interface CreateProductModalProps {
   isOpen: boolean;
   onClose: () => void;
+  hasValidEmailConfig: boolean;
 }
 
-export default function CreateProductModal({ isOpen, onClose }: CreateProductModalProps) {
+export default function CreateProductModal({ isOpen, onClose, hasValidEmailConfig }: CreateProductModalProps) {
   const queryClient = useQueryClient();
 
   const createMutation = useMutation({
@@ -48,6 +49,7 @@ export default function CreateProductModal({ isOpen, onClose }: CreateProductMod
             onCancel={onClose} 
             isPending={createMutation.isPending}
             submitLabel="Create Link"
+            hasValidEmailConfig={hasValidEmailConfig}
           />
         </div>
       </div>

@@ -22,6 +22,7 @@ import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
 import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 import PaymentSettingsPage from "./modules/workspace/pages/PaymentSettingsPage";
+import EmailSettingsPage from "./modules/workspace/pages/EmailSettingsPage";
 
 export interface OpsOutletContext {
   activeWorkspaceId: string | null;
@@ -185,6 +186,7 @@ export default function App() {
         
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
         <Route path="/workspace/payment-gateways" element={<PaymentSettingsPage />} />
+        <Route path="/workspace/email" element={<EmailSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
         <Route path="/workspace/ledger" element={<UtilityLedgerPage />} />
       </Route>

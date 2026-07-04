@@ -11,7 +11,6 @@ import {
   Zap,
   Mail,
   ChevronsUpDown
-  // [MVP-HIDE] Receipt
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
@@ -26,8 +25,6 @@ interface SidebarProps {
 
 const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
-  // [MVP-HIDE]
-  // { id: "invoicing", title: "Invoicing", basePath: ["/invoicing"], icon: Receipt },
   { id: "communications", title: "Communications", basePath: ["/community/broadcasts", "/community/templates"], icon: Mail },
   { id: "developer", title: "Developer", basePath: ["/developer"], icon: Zap },
   { id: "workspace", title: "Workspace", basePath: ["/workspace"], icon: Settings }
@@ -257,12 +254,7 @@ export default function Sidebar({
                   { label: "Transaction Logs", href: "/commerce/transactions" },
                   { label: "Promotions", href: "/commerce/coupons" },
                   { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" }
-                ] : /* [MVP-HIDE]
-                mod.id === "invoicing" ? [
-                  { label: "Quotes & Requests", href: "/invoicing/quotes" },
-                  { label: "Tax Invoices", href: "/invoicing/tax-invoices" },
-                  { label: "Credit & Debit Notes", href: "/invoicing/credit-notes" }
-                ] : */ mod.id === "communications" ? [
+                ] : mod.id === "communications" ? [
                   { label: "Bulk Broadcast", href: "/community/broadcasts" },
                   { label: "Message Templates", href: "/community/templates" }
                 ] : mod.id === "developer" ? [
@@ -270,10 +262,10 @@ export default function Sidebar({
                   { label: "Delivery Logs", href: "/developer/logs" }
                 ] : [
                   { label: "General Settings", href: "/workspace/general" },
-                  // [MVP-HIDE] { label: "Legal & Billing Profile", href: "/workspace/billing-profile" },
                   { label: "Payment Gateways", href: "/workspace/payment-gateways" },
-                  { label: "Platform Billing", href: "/workspace/billing" },
-                  { label: "Utility Ledger", href: "/workspace/ledger" }
+                  { label: "Email Provider", href: "/workspace/email" },
+                  // [MVP-HIDE] { label: "Platform Billing", href: "/workspace/billing" },
+                  // [MVP-HIDE] { label: "Utility Ledger", href: "/workspace/ledger" }
                 ]
               }
             />
