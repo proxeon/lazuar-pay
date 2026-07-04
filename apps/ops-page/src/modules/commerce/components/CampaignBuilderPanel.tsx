@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertTriangle, CreditCard, Mail, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import SidePanel from "../../core/components/SidePanel";
@@ -10,19 +9,21 @@ type DunningCampaignDto = components["schemas"]["Commerce.DunningCampaignDto"];
 
 interface LocalStepState {
   day_offset: string;
-  template_id: string;
-  channel: string;
+  action_type: string;
+  subject: string;
+  email_body: string;
+  whatsapp_body: string;
 }
 
 interface CampaignBuilderPanelProps {
   campaign: DunningCampaignDto | null;
   products?: any[];
-  templates?: any[];
+  templates?: any[]; 
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function CampaignBuilderPanel({ campaign, products, templates, onClose, onSuccess }: CampaignBuilderPanelProps) {
+export default function CampaignBuilderPanel({ campaign, products, onClose, onSuccess }: CampaignBuilderPanelProps) {
   const queryClient = useQueryClient();
   const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -30,6 +31,7 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
   const [isActive, setIsActive] = useState(true);
   const [finalAction, setFinalAction] = useState("CANCEL");
   const [gracePeriodDays, setGracePeriodDays] = useState(3);
+  const [priorityOrder, setPriorityOrder] = useState(0);
   const [targetProductIds, setTargetProductIds] = useState<string[]>([]);
   const [targetPaymentMethods, setTargetPaymentMethods] = useState<string[]>([]);
   const [steps, setSteps] = useState<LocalStepState[]>([]);
@@ -40,18 +42,22 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
       setIsActive(campaign.is_active);
       setFinalAction(campaign.final_action);
       setGracePeriodDays(campaign.grace_period_days);
+      setPriorityOrder(campaign.priority_order || 0);
       setTargetProductIds(campaign.target_product_ids || []);
       setTargetPaymentMethods(campaign.target_payment_methods || []);
       setSteps(campaign.steps ? campaign.steps.map(s => ({ 
         day_offset: String(s.day_offset), 
-        template_id: s.template_id, 
-        channel: s.channel 
+        action_type: s.action_type || "EMAIL",
+        subject: s.subject || "",
+        email_body: s.email_body || "",
+        whatsapp_body: s.whatsapp_body || ""
       })) : []);
     } else {
       setName("");
       setIsActive(true);
       setFinalAction("CANCEL");
       setGracePeriodDays(3);
+      setPriorityOrder(0);
       setTargetProductIds([]);
       setTargetPaymentMethods([]);
       setSteps([]);
@@ -59,7 +65,7 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
   }, [campaign]);
 
   const addStep = () => {
-    setSteps(prev => [...prev, { day_offset: "0", template_id: "", channel: "EMAIL" }]);
+    setSteps(prev => [...prev, { day_offset: "0", action_type: "EMAIL", subject: "", email_body: "", whatsapp_body: "" }]);
   };
 
   const removeStep = (index: number) => {
@@ -77,19 +83,28 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error("Campaign name is required.");
-      if (steps.some(s => !s.template_id)) throw new Error("All steps must have a template assigned.");
       if (gracePeriodDays < 0) throw new Error("Grace period cannot be negative.");
+
+      if (steps.some(s => s.action_type === "EMAIL" && (!s.subject.trim() || !s.email_body.trim()))) {
+        throw new Error("All Email steps require a subject and body.");
+      }
+      if (steps.some(s => s.action_type === "WHATSAPP" && !s.whatsapp_body.trim())) {
+        throw new Error("All WhatsApp steps require a message body.");
+      }
 
       const formattedSteps = steps.map(s => ({
         day_offset: parseInt(s.day_offset, 10),
-        template_id: s.template_id,
-        channel: s.channel
+        action_type: s.action_type,
+        subject: s.action_type === "EMAIL" ? s.subject.trim() : undefined,
+        email_body: s.action_type === "EMAIL" ? s.email_body.trim() : undefined,
+        whatsapp_body: s.action_type === "WHATSAPP" ? s.whatsapp_body.trim() : undefined
       })).sort((a, b) => a.day_offset - b.day_offset);
 
       const payload = {
         name: name.trim(),
         final_action: finalAction,
         grace_period_days: gracePeriodDays,
+        priority_order: priorityOrder,
         target_product_ids: targetProductIds.length > 0 ? targetProductIds : undefined,
         target_payment_methods: targetPaymentMethods.length > 0 ? targetPaymentMethods : undefined,
         steps: formattedSteps,
@@ -182,12 +197,18 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
         
         <div className="space-y-4">
           <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1.5">1. Campaign Identity</h4>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Campaign Name *</label>
-            <input required value={name} onChange={e => setName(e.target.value)} disabled={isActionLoading} placeholder="e.g. VIP High-Touch Recovery" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="space-y-1.5 sm:col-span-3">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Campaign Name *</label>
+              <input required value={name} onChange={e => setName(e.target.value)} disabled={isActionLoading} placeholder="e.g. VIP High-Touch Recovery" className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Priority</label>
+              <input type="number" required value={priorityOrder} onChange={e => setPriorityOrder(Number(e.target.value))} disabled={isActionLoading} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />
+            </div>
           </div>
           {campaign && (
-            <label className="flex items-center gap-2 cursor-pointer w-fit">
+            <label className="flex items-center gap-2 cursor-pointer w-fit mt-2">
               <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} disabled={isActionLoading} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Campaign is Active</span>
             </label>
@@ -235,56 +256,110 @@ export default function CampaignBuilderPanel({ campaign, products, templates, on
           
           {steps.length === 0 ? (
             <div className="p-6 border border-dashed border-[#e5e5e5] text-center text-[#71717a] text-[12px]">
-              No communications will be sent in this campaign.
+              No actions will be executed in this campaign.
             </div>
           ) : (
             <div className="space-y-3">
               {steps.map((step, idx) => (
-                <div key={idx} className="flex gap-3 p-3 border border-[#e5e5e5] bg-white rounded-sm items-start relative group">
-                  <div className="flex-1 grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Timing Offset</label>
-                      <select 
-                        value={step.day_offset} 
-                        onChange={e => updateStep(idx, "day_offset", e.target.value)} 
-                        disabled={isActionLoading} 
-                        className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
-                      >
-                        <option value="-14">14 Days Before Due</option>
-                        <option value="-7">7 Days Before Due</option>
-                        <option value="-3">3 Days Before Due</option>
-                        <option value="-1">1 Day Before Due</option>
-                        <option value="0">On Due Date</option>
-                        <option value="1">1 Day After Due</option>
-                        <option value="3">3 Days After Due</option>
-                        <option value="5">5 Days After Due</option>
-                        <option value="7">7 Days After Due</option>
-                        <option value="14">14 Days After Due</option>
-                        <option value="30">30 Days After Due</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Channel</label>
-                      <select value={step.channel} onChange={e => updateStep(idx, "channel", e.target.value)} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
-                        <option value="EMAIL">Email</option>
-                        <option value="WHATSAPP">WhatsApp</option>
-                        <option value="ALL">Email & WhatsApp</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Template</label>
-                        <Link to="/community/templates" className="text-[9px] text-blue-600 hover:underline">
-                          Manage Copy →
-                        </Link>
+                <div key={idx} className="flex flex-col gap-3 p-3 border border-[#e5e5e5] bg-white rounded-sm relative group">
+                  <div className="flex gap-3 items-start">
+                    <div className="flex-1 grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Timing Offset</label>
+                        <select 
+                          value={step.day_offset} 
+                          onChange={e => updateStep(idx, "day_offset", e.target.value)} 
+                          disabled={isActionLoading} 
+                          className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
+                        >
+                          <option value="-14">14 Days Before Due</option>
+                          <option value="-7">7 Days Before Due</option>
+                          <option value="-3">3 Days Before Due</option>
+                          <option value="-1">1 Day Before Due</option>
+                          <option value="0">On Due Date</option>
+                          <option value="1">1 Day After Due</option>
+                          <option value="3">3 Days After Due</option>
+                          <option value="5">5 Days After Due</option>
+                          <option value="7">7 Days After Due</option>
+                          <option value="14">14 Days After Due</option>
+                          <option value="30">30 Days After Due</option>
+                        </select>
                       </div>
-                      <select required value={step.template_id} onChange={e => updateStep(idx, "template_id", e.target.value)} disabled={isActionLoading} className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
-                        <option value="" disabled>Select a template...</option>
-                        {templates?.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Action Type</label>
+                        <select 
+                          value={step.action_type} 
+                          onChange={e => updateStep(idx, "action_type", e.target.value)} 
+                          disabled={isActionLoading} 
+                          className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
+                        >
+                          <option value="EMAIL">Send Email</option>
+                          <option value="WHATSAPP">Send WhatsApp</option>
+                          <option value="AUTO_CHARGE">Auto-Retry Card</option>
+                        </select>
+                      </div>
                     </div>
+                    <button type="button" onClick={() => removeStep(idx)} disabled={isActionLoading} className="text-rose-400 hover:text-rose-600 p-1 transition-opacity mt-5"><Trash2 size={14} /></button>
                   </div>
-                  <button type="button" onClick={() => removeStep(idx)} disabled={isActionLoading} className="text-rose-400 hover:text-rose-600 p-1 transition-opacity"><Trash2 size={14} /></button>
+
+                  {step.action_type === "AUTO_CHARGE" && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 flex items-start gap-2 rounded-sm mt-1">
+                      <CreditCard size={14} className="text-blue-600 mt-0.5" />
+                      <p className="text-[11px] text-blue-800 leading-relaxed">
+                        The system will attempt to silently charge the customer's vaulted payment method. 
+                        Max 4 retries per billing cycle to prevent gateway fraud flags.
+                      </p>
+                    </div>
+                  )}
+
+                  {step.action_type === "EMAIL" && (
+                    <div className="space-y-3 mt-1 bg-[#fafafa] p-3 border border-[#e5e5e5] rounded-sm">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#09090b] mb-1">
+                        <Mail size={12} /> Email Configuration
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Subject Line</label>
+                        <input 
+                          type="text" 
+                          value={step.subject} 
+                          onChange={e => updateStep(idx, "subject", e.target.value)} 
+                          disabled={isActionLoading}
+                          placeholder="e.g. Action Required: Your payment failed"
+                          className="w-full h-8 px-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Email Body (HTML/Markdown)</label>
+                        <textarea 
+                          value={step.email_body} 
+                          onChange={e => updateStep(idx, "email_body", e.target.value)} 
+                          disabled={isActionLoading}
+                          rows={4}
+                          placeholder="Available variables: {{customer_name}}, {{plan_name}}, {{renewal_link}}"
+                          className="w-full p-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50 font-mono resize-y"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {step.action_type === "WHATSAPP" && (
+                    <div className="space-y-3 mt-1 bg-[#fafafa] p-3 border border-[#e5e5e5] rounded-sm">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#09090b] mb-1">
+                        <Smartphone size={12} /> WhatsApp Configuration
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[#71717a]">Message Body (Plain Text)</label>
+                        <textarea 
+                          value={step.whatsapp_body} 
+                          onChange={e => updateStep(idx, "whatsapp_body", e.target.value)} 
+                          disabled={isActionLoading}
+                          rows={3}
+                          placeholder="Available variables: {{customer_name}}, {{plan_name}}, {{renewal_link}}"
+                          className="w-full p-2 border border-[#e5e5e5] text-[12px] focus:outline-none focus:border-[#09090b] disabled:opacity-50 resize-y"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -22,14 +22,6 @@ export default function DunningCampaignsPage() {
     }
   });
 
-  const { data: templates } = useQuery({
-    queryKey: ["communications-templates"],
-    queryFn: async () => {
-      const { data } = await client.GET("/admin/communications/templates");
-      return data || [];
-    }
-  });
-
   const { data: campaigns, isLoading: isCampaignsLoading } = useQuery({
     queryKey: ["commerce-dunning-campaigns"],
     queryFn: async () => {
@@ -77,7 +69,7 @@ export default function DunningCampaignsPage() {
             </div>
             <h3 className="text-[16px] font-bold text-[#09090b] mb-2">Revenue Recovery Engine</h3>
             <p className="text-[13px] text-[#71717a] max-w-md mb-8 leading-relaxed">
-              Dunning Campaigns tell Lazuar exactly when to chase failing payments and when to cut off access. Deploy the standard 3-step strategy to minimize involuntary churn.
+              Dunning Campaigns tell Lazuar exactly when to chase failing payments and when to cut off access. Deploy the standard strategy to minimize involuntary churn.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <button
@@ -92,13 +84,14 @@ export default function DunningCampaignsPage() {
           </div>
         ) : (
           <div className="p-0 overflow-x-auto flex-1">
-            <table className="w-full text-left text-[13px] min-w-[800px]">
+            <table className="w-full text-left text-[13px] min-w-[950px]">
               <thead className="bg-[#fafafa]/50 border-b border-[#f4f4f5] select-none">
                 <tr>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[30%]">Campaign Identity</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Targeting Scope</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Sequence Engine</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Final Escalation</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Campaign</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Configuration</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Final Escalation</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%] text-right">Recovered Revenue</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%] text-center">Saved / Churned</th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[10%] text-right">Status</th>
                 </tr>
               </thead>
@@ -113,26 +106,31 @@ export default function DunningCampaignsPage() {
                       <p className="font-bold text-[#09090b] group-hover:text-blue-600 transition-colors">
                         {campaign.name}
                       </p>
-                      <p className="text-[10px] font-mono text-[#71717a] mt-1">ID: {campaign.id.substring(0,8)}</p>
+                      <p className="text-[10px] font-mono text-[#71717a] mt-1">Priority: {campaign.priority_order}</p>
                     </td>
                     <td className="px-5 py-4">
                       <p className="text-[11px] font-bold text-[#52525b] uppercase tracking-wider mb-0.5">
                         {campaign.target_product_ids?.length ? `${campaign.target_product_ids.length} Products` : "All Products"}
                       </p>
                       <p className="text-[11px] text-[#71717a]">
-                        {campaign.target_payment_methods?.length ? campaign.target_payment_methods.join(", ") : "All Methods"}
+                        {campaign.steps?.length || 0} Steps
                       </p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-sm">
-                        {campaign.steps?.length || 0} Steps
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <p className={cn("text-[11px] font-bold uppercase tracking-widest", campaign.final_action === "CANCEL" ? "text-rose-600" : "text-amber-600")}>
+                      <p className={cn("text-[11px] font-bold uppercase tracking-widest", campaign.final_action === "CANCEL" ? "text-rose-600" : campaign.final_action === "SUSPEND" ? "text-amber-600" : "text-[#71717a]")}>
                         {campaign.final_action}
                       </p>
                       <p className="text-[11px] text-[#71717a] mt-0.5">After {campaign.grace_period_days} Days</p>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <span className="font-mono font-bold text-emerald-600">RM {campaign.recovered_revenue.toFixed(2)}</span>
+                    </td>
+                    <td className="px-5 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2 text-[11px] font-mono">
+                        <span className="text-emerald-600 font-bold" title="Saved Subscriptions">{campaign.saved_subscriptions}</span>
+                        <span className="text-[#d4d4d8]">/</span>
+                        <span className="text-rose-600 font-bold" title="Churned Subscriptions">{campaign.churned_subscriptions}</span>
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-right">
                        <span className={cn(
@@ -153,7 +151,6 @@ export default function DunningCampaignsPage() {
           <CampaignBuilderPanel 
             campaign={selectedCampaign}
             products={products} 
-            templates={templates} 
             onClose={() => { setIsBuilderOpen(false); setSelectedCampaign(null); }} 
             onSuccess={() => { setIsBuilderOpen(false); setSelectedCampaign(null); }}
           />

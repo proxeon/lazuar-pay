@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Modules.Communications.Application.Queries;
 using Modules.Communications.Contracts.Commands;
 
@@ -55,7 +56,6 @@ public static class TemplateEndpoints
         group.MapPost("/templates/preview", async Task<Ok<TemplatePreviewResponseDto>> (
             TemplatePreviewRequestDto req) =>
         {
-            // Lightweight preview mock builder
             string PopulateMocks(string text)
             {
                 if (string.IsNullOrEmpty(text)) return text;
@@ -103,6 +103,32 @@ public static class TemplateEndpoints
         {
             await mediator.Send(new ResetMessageTemplateCommand(ctx.TenantId, id));
             return TypedResults.Ok(new StatusResponse { Status = "reset" });
+        });
+
+        // Utility endpoint to clean up legacy Dunning templates
+        group.MapDelete("/templates/legacy-cleanup", async Task<Ok<StatusResponse>> (
+            IExecutionContextAccessor ctx,
+            CommunicationsDbContext dbContext) =>
+        {
+            var legacyNames = new[] 
+            { 
+                "Payment Failed", 
+                "Subscription Renewal (3 Days)", 
+                "Subscription Renewal Due Today", 
+                "Subscription Renewal Overdue" 
+            };
+
+            var templatesToDelete = await dbContext.MessageTemplates
+                .Where(t => t.OrganizationId == ctx.TenantId && legacyNames.Contains(t.Name))
+                .ToListAsync();
+
+            if (templatesToDelete.Any())
+            {
+                dbContext.MessageTemplates.RemoveRange(templatesToDelete);
+                await dbContext.SaveChangesAsync();
+            }
+
+            return TypedResults.Ok(new StatusResponse { Status = "cleaned" });
         });
 
         group.MapPost("/reminders/test", async Task<Ok<TestReminderResponse>> (
