@@ -122,4 +122,27 @@ public class CommunicationsQueryService : ICommunicationsQueryService
         var result = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { TenantId = tenantId });
         return result.HasValue;
     }
+
+    public async Task<EmailConfigDto?> GetEmailConfigAsync(Guid tenantId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""ApiKey"", ""SenderEmail"", ""IsActive""
+            FROM communications.""TenantEmailConfigurations"" 
+            WHERE ""OrganizationId"" = @TenantId 
+            LIMIT 1";
+
+        var result = await connection.QuerySingleOrDefaultAsync<dynamic>(sql, new { TenantId = tenantId });
+        
+        if (result == null) return null;
+
+        return new EmailConfigDto
+        {
+            Api_key = result.ApiKey,
+            Sender_email = result.SenderEmail,
+            Is_active = result.IsActive
+        };
+    }
 }

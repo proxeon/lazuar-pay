@@ -11,4 +11,5 @@ public interface ICommunicationsQueryService
     Task<MessageTemplateDto?> GetTemplateByNameAsync(Guid organizationId, string name);
     Task<IEnumerable<TemplateVariableCategoryDto>> GetTemplateVariablesAsync();
     Task<bool> HasValidEmailConfigAsync(Guid tenantId);
+    Task<EmailConfigDto?> GetEmailConfigAsync(Guid tenantId);
 }
