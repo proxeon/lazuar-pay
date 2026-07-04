@@ -5,16 +5,21 @@ using BuildingBlocks.Application;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.ValueObjects;
+using Modules.Communications.Application.Queries;
 
 namespace Modules.Commerce.Application.Commands;
 
 public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand, Guid>
 {
     private readonly ICommerceRepository _repository;
+    private readonly ICommunicationsQueryService _communicationsQueryService;
 
-    public CreateProductCommandHandler(ICommerceRepository repository)
+    public CreateProductCommandHandler(
+        ICommerceRepository repository,
+        ICommunicationsQueryService communicationsQueryService)
     {
         _repository = repository;
+        _communicationsQueryService = communicationsQueryService;
     }
 
     public async Task<Guid> Handle(CreateProductCommand request, CancellationToken ct)
@@ -33,6 +38,12 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             config,
             request.FulfillmentTargets
         );
+
+        var hasEmailConfig = await _communicationsQueryService.HasValidEmailConfigAsync(request.OrganizationId);
+        if (!hasEmailConfig)
+        {
+            product.Archive();
+        }
 
         _repository.AddProduct(product);
         await _repository.SaveChangesAsync(ct);

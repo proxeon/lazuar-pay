@@ -12,6 +12,7 @@ using Modules.Commerce.Domain.Aggregates;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts.Queries;
+using Modules.Communications.Application.Queries;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -21,17 +22,20 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
     private readonly ICommerceRepository _repository;
     private readonly IMediator _mediator;
     private readonly IConfiguration _configuration;
+    private readonly ICommunicationsQueryService _communicationsQueryService;
 
     public InitiateCheckoutCommandHandler(
         IOneQueryService oneQueryService,
         ICommerceRepository repository,
         IMediator mediator,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ICommunicationsQueryService communicationsQueryService)
     {
         _oneQueryService = oneQueryService;
         _repository = repository;
         _mediator = mediator;
         _configuration = configuration;
+        _communicationsQueryService = communicationsQueryService;
     }
 
     public async Task<CheckoutResultDto> Handle(InitiateCheckoutCommand request, CancellationToken ct)
@@ -40,6 +44,12 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         if (!tenantId.HasValue)
         {
             throw new InvalidOperationException($"Workspace with slug '{request.TenantSlug}' not found.");
+        }
+
+        var hasEmailConfig = await _communicationsQueryService.HasValidEmailConfigAsync(tenantId.Value);
+        if (!hasEmailConfig)
+        {
+            throw new InvalidOperationException("This workspace has not configured an active email provider. Checkout is temporarily disabled.");
         }
 
         var clientUrl = _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
