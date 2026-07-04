@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.Configuration;
@@ -22,24 +23,46 @@ public sealed class ResendEmailService : IEmailService
         _logger = logger;
     }
 
-    public async Task SendEmailAsync(string to, string subject, string body, Guid? organizationId = null)
+    public async Task SendEmailAsync(string to, string subject, string body, Guid? organizationId = null, string? tenantApiKey = null, string? tenantSenderEmail = null)
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        string apiKey;
+        string senderEmail;
+
+        var isSystemTenant = organizationId == null || 
+                             organizationId == Guid.Empty || 
+                             organizationId.ToString() == "00000000-0000-0000-0000-000000000001";
+
+        if (!string.IsNullOrWhiteSpace(tenantApiKey) && !string.IsNullOrWhiteSpace(tenantSenderEmail))
         {
-            _logger.LogWarning("[Resend] API Key is missing. Falling back to console log.\nTo: {To}\nSubject: {Subject}\nBody: {Body}", to, subject, body);
-            return;
+            apiKey = tenantApiKey;
+            senderEmail = tenantSenderEmail;
+        }
+        else if (isSystemTenant)
+        {
+            if (string.IsNullOrWhiteSpace(_options.ApiKey))
+            {
+                _logger.LogWarning("[Resend] Platform API Key is missing. Falling back to console log.\nTo: {To}\nSubject: {Subject}\nBody: {Body}", to, subject, body);
+                return;
+            }
+            apiKey = _options.ApiKey;
+            senderEmail = _options.SenderEmail;
+        }
+        else
+        {
+            throw new InvalidOperationException("No platform fallback allowed for tenant emails. You must configure a valid BYOK Resend API key and Sender Email to dispatch tenant communications.");
         }
 
         try
         {
             var client = _httpClientFactory.CreateClient("Resend");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
             var payload = new
             {
-                from = _options.SenderEmail,
+                from = senderEmail,
                 to = new[] { to },
                 subject = subject,
-                html = body, // Using HTML payload, replace with 'text' if you send plaintext
+                html = body,
                 tags = organizationId.HasValue
                     ? new[] { new { name = "org", value = organizationId.Value.ToString() } }
                     : null
@@ -52,8 +75,6 @@ public sealed class ResendEmailService : IEmailService
                 var error = await response.Content.ReadAsStringAsync();
                 _logger.LogError("[Resend] Failed to send email to {To}. Status: {Status}. Error: {Error}", to, response.StatusCode, error);
 
-                // Throwing ensures the Outbox/Inbox worker will mark the message as FAILED
-                // and automatically retry it later!
                 throw new InvalidOperationException($"Failed to send email via Resend: {error}");
             }
 
