@@ -24,6 +24,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
 
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public DateTime? SuspendedAt { get; private set; }
 
     private readonly List<ReminderDispatchLog> _reminderLogs = new();
     public IReadOnlyCollection<ReminderDispatchLog> ReminderLogs => _reminderLogs.AsReadOnly();
@@ -47,10 +48,21 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
 
     public void Activate(DateTime currentPeriodEnd, DateTime nextBillingDate, bool isReminderOnly = false)
     {
+        // Prevent cycle advancement if the subscription was in arrears and is just updating config
+        if (Status == "PAST_DUE" || Status == "SUSPENDED")
+        {
+            NextBillingDate = NextBillingDate; 
+            CurrentPeriodEnd = CurrentPeriodEnd;
+        }
+        else
+        {
+            CurrentPeriodEnd = currentPeriodEnd;
+            NextBillingDate = nextBillingDate;
+        }
+
         Status = "ACTIVE";
-        CurrentPeriodEnd = currentPeriodEnd;
-        NextBillingDate = nextBillingDate;
         IsReminderOnly = isReminderOnly;
+        SuspendedAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -65,6 +77,22 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public void MarkAsPastDue()
     {
         Status = "PAST_DUE";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Suspend()
+    {
+        Status = "SUSPENDED";
+        SuspendedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Resume(DateTime newNextBillingDate)
+    {
+        Status = "ACTIVE";
+        SuspendedAt = null;
+        NextBillingDate = newNextBillingDate;
+        ClearDunning();
         UpdatedAt = DateTime.UtcNow;
     }
 

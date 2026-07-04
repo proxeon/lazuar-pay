@@ -203,6 +203,8 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
 
+            builder.Property(x => x.RecoveredRevenue).HasPrecision(18, 4);
+
             builder.Property(x => x.TargetProductIds)
                 .HasField("_targetProductIds")
                 .UsePropertyAccessMode(PropertyAccessMode.Field)
@@ -227,6 +229,7 @@ public class CommerceDbContext : PlatformDbContext
         {
             builder.ToTable("DunningSteps");
             builder.HasKey(x => x.Id);
+            builder.Property(x => x.ActionType).HasMaxLength(50);
         });
 
         modelBuilder.Entity<ReminderDispatchLog>(builder =>

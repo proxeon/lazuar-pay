@@ -23,12 +23,13 @@ public class CreateDunningCampaignCommandHandler : ICommandHandler<CreateDunning
             request.Name,
             request.FinalAction,
             request.GracePeriodDays,
+            request.PriorityOrder,
             request.TargetProductIds,
             request.TargetPaymentMethods);
 
         foreach (var step in request.Steps)
         {
-            campaign.AddStep(step.DayOffset, step.TemplateId, step.Channel);
+            campaign.AddStep(step.DayOffset, step.ActionType, step.Subject, step.EmailBody, step.WhatsAppBody);
         }
 
         _repository.AddDunningCampaign(campaign);
@@ -56,13 +57,14 @@ public class UpdateDunningCampaignCommandHandler : ICommandHandler<UpdateDunning
             request.Name,
             request.FinalAction,
             request.GracePeriodDays,
+            request.PriorityOrder,
             request.TargetProductIds,
             request.TargetPaymentMethods);
 
         campaign.ClearSteps();
         foreach (var step in request.Steps)
         {
-            campaign.AddStep(step.DayOffset, step.TemplateId, step.Channel);
+            campaign.AddStep(step.DayOffset, step.ActionType, step.Subject, step.EmailBody, step.WhatsAppBody);
         }
 
         if (request.IsActive.HasValue)
@@ -105,22 +107,27 @@ public class GenerateDefaultDunningCampaignsCommandHandler : ICommandHandler<Gen
 
     public async Task Handle(GenerateDefaultDunningCampaignsCommand request, CancellationToken ct)
     {
-        var templateDict = await _repository.GetDefaultTemplateIdsAsync(request.OrganizationId, ct);
-
         var campaign = new DunningCampaign(
             request.OrganizationId,
             "Standard Recovery Strategy",
             "CANCEL",
-            3);
+            7, 
+            0);
 
-        if (templateDict.TryGetValue("Subscription Renewal (3 Days)", out var preTemplateId))
-            campaign.AddStep(-3, preTemplateId, "ALL");
-
-        if (templateDict.TryGetValue("Subscription Renewal Due Today", out var dueTemplateId))
-            campaign.AddStep(0, dueTemplateId, "ALL");
-
-        if (templateDict.TryGetValue("Subscription Renewal Overdue", out var postTemplateId))
-            campaign.AddStep(3, postTemplateId, "ALL");
+        campaign.AddStep(-3, "EMAIL", 
+            "Upcoming renewal for {{plan_name}}", 
+            "Your {{plan_name}} subscription will renew in 3 days. Manage your account here: {{renewal_link}}", 
+            null);
+            
+        campaign.AddStep(0, "EMAIL", 
+            "Action Required: {{plan_name}} renewal due today", 
+            "Your {{plan_name}} subscription is due today. Renew here: {{renewal_link}}", 
+            null);
+            
+        campaign.AddStep(3, "WHATSAPP", 
+            null, 
+            null, 
+            "Hey {{customer_name}}, your {{plan_name}} subscription is past due. Renew here: {{renewal_link}}");
 
         _repository.AddDunningCampaign(campaign);
         await _repository.SaveChangesAsync(ct);

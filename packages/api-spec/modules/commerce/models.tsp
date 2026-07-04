@@ -91,8 +91,10 @@ model AggregatedPortalDataResponse {
 
 model DunningStepDto {
   day_offset: int32;
-  template_id: string; // GUID
-  channel: string;
+  action_type: string;
+  subject?: string;
+  email_body?: string;
+  whatsapp_body?: string;
 }
 
 model DunningCampaignDto {
@@ -101,6 +103,10 @@ model DunningCampaignDto {
   is_active: boolean;
   final_action: string;
   grace_period_days: int32;
+  priority_order: int32;
+  recovered_revenue: float64;
+  saved_subscriptions: int32;
+  churned_subscriptions: int32;
   target_product_ids: string[]; // GUID array
   target_payment_methods: string[];
   steps: DunningStepDto[];
@@ -111,6 +117,7 @@ model CreateDunningCampaignRequestDto {
   name: string;
   final_action: string;
   grace_period_days: int32;
+  priority_order?: int32 = 0;
   target_product_ids?: string[]; // GUID array
   target_payment_methods?: string[];
   steps: DunningStepDto[];
@@ -120,6 +127,7 @@ model UpdateDunningCampaignRequestDto {
   name: string;
   final_action: string;
   grace_period_days: int32;
+  priority_order?: int32 = 0;
   target_product_ids?: string[]; // GUID array
   target_payment_methods?: string[];
   steps: DunningStepDto[];

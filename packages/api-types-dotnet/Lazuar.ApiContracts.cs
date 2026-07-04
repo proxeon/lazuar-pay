@@ -1208,6 +1208,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("grace_period_days")]
         public int Grace_period_days { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("priority_order")]
+        public int? Priority_order { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("target_product_ids")]
         public System.Collections.Generic.List<string>? Target_product_ids { get; set; } = default!;
 
@@ -1494,6 +1497,18 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("grace_period_days")]
         public int Grace_period_days { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("priority_order")]
+        public int Priority_order { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recovered_revenue")]
+        public double Recovered_revenue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("saved_subscriptions")]
+        public int Saved_subscriptions { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("churned_subscriptions")]
+        public int Churned_subscriptions { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("target_product_ids")]
         public System.Collections.Generic.List<string> Target_product_ids { get; set; } = new System.Collections.Generic.List<string>();
 
@@ -1541,11 +1556,17 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("day_offset")]
         public int Day_offset { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("template_id")]
-        public string Template_id { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("action_type")]
+        public string Action_type { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("channel")]
-        public string Channel { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("subject")]
+        public string? Subject { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email_body")]
+        public string? Email_body { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_body")]
+        public string? Whatsapp_body { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2229,6 +2250,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("grace_period_days")]
         public int Grace_period_days { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("priority_order")]
+        public int? Priority_order { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("target_product_ids")]
         public System.Collections.Generic.List<string>? Target_product_ids { get; set; } = default!;

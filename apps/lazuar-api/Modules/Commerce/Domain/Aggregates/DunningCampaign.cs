@@ -13,6 +13,11 @@ public class DunningCampaign : Entity, IAggregateRoot, IMustHaveTenant
     public bool IsActive { get; private set; }
     public string FinalAction { get; private set; } 
     public int GracePeriodDays { get; private set; }
+    public int PriorityOrder { get; private set; }
+
+    public decimal RecoveredRevenue { get; private set; }
+    public int SavedSubscriptions { get; private set; }
+    public int ChurnedSubscriptions { get; private set; }
 
     private readonly List<Guid> _targetProductIds = new();
     public IReadOnlyCollection<Guid> TargetProductIds => _targetProductIds.AsReadOnly();
@@ -30,7 +35,7 @@ public class DunningCampaign : Entity, IAggregateRoot, IMustHaveTenant
     private DunningCampaign() { }
 #pragma warning restore CS8618
 
-    public DunningCampaign(Guid organizationId, string name, string finalAction, int gracePeriodDays, IEnumerable<Guid>? targetProductIds = null, IEnumerable<string>? targetPaymentMethods = null)
+    public DunningCampaign(Guid organizationId, string name, string finalAction, int gracePeriodDays, int priorityOrder = 0, IEnumerable<Guid>? targetProductIds = null, IEnumerable<string>? targetPaymentMethods = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
 
@@ -40,6 +45,11 @@ public class DunningCampaign : Entity, IAggregateRoot, IMustHaveTenant
         IsActive = true;
         FinalAction = string.IsNullOrWhiteSpace(finalAction) ? "NONE" : finalAction.ToUpperInvariant();
         GracePeriodDays = gracePeriodDays;
+        PriorityOrder = priorityOrder;
+
+        RecoveredRevenue = 0;
+        SavedSubscriptions = 0;
+        ChurnedSubscriptions = 0;
 
         if (targetProductIds != null) _targetProductIds.AddRange(targetProductIds);
         if (targetPaymentMethods != null) _targetPaymentMethods.AddRange(targetPaymentMethods);
@@ -48,11 +58,12 @@ public class DunningCampaign : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateDetails(string name, string finalAction, int gracePeriodDays, IEnumerable<Guid>? targetProductIds, IEnumerable<string>? targetPaymentMethods)
+    public void UpdateDetails(string name, string finalAction, int gracePeriodDays, int priorityOrder, IEnumerable<Guid>? targetProductIds, IEnumerable<string>? targetPaymentMethods)
     {
         Name = name.Trim();
         FinalAction = string.IsNullOrWhiteSpace(finalAction) ? "NONE" : finalAction.ToUpperInvariant();
         GracePeriodDays = gracePeriodDays;
+        PriorityOrder = priorityOrder;
 
         _targetProductIds.Clear();
         if (targetProductIds != null) _targetProductIds.AddRange(targetProductIds);
@@ -69,9 +80,22 @@ public class DunningCampaign : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void AddStep(int dayOffset, Guid templateId, string channel)
+    public void AddStep(int dayOffset, string actionType, string? subject, string? emailBody, string? whatsAppBody)
     {
-        _steps.Add(new DunningStep(Id, dayOffset, templateId, channel));
+        _steps.Add(new DunningStep(Id, dayOffset, actionType, subject, emailBody, whatsAppBody));
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RecordRecovery(decimal amount)
+    {
+        RecoveredRevenue += amount;
+        SavedSubscriptions++;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RecordChurn()
+    {
+        ChurnedSubscriptions++;
         UpdatedAt = DateTime.UtcNow;
     }
 

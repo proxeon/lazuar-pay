@@ -4,13 +4,14 @@ using BuildingBlocks.Application;
 
 namespace Modules.Commerce.Contracts.Commands;
 
-public record DunningStepData(int DayOffset, Guid TemplateId, string Channel);
+public record DunningStepData(int DayOffset, string ActionType, string? Subject, string? EmailBody, string? WhatsAppBody);
 
 public record CreateDunningCampaignCommand(
     Guid OrganizationId,
     string Name,
     string FinalAction,
     int GracePeriodDays,
+    int PriorityOrder,
     List<Guid>? TargetProductIds,
     List<string>? TargetPaymentMethods,
     List<DunningStepData> Steps) : ICommand<Guid>
@@ -24,6 +25,7 @@ public record UpdateDunningCampaignCommand(
     string Name,
     string FinalAction,
     int GracePeriodDays,
+    int PriorityOrder,
     List<Guid>? TargetProductIds,
     List<string>? TargetPaymentMethods,
     List<DunningStepData> Steps,

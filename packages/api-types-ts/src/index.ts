@@ -1598,6 +1598,11 @@ export interface components {
             final_action: string;
             /** Format: int32 */
             grace_period_days: number;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            priority_order: number;
             target_product_ids?: string[];
             target_payment_methods?: string[];
             steps: components["schemas"]["Commerce.DunningStepDto"][];
@@ -1663,6 +1668,14 @@ export interface components {
             final_action: string;
             /** Format: int32 */
             grace_period_days: number;
+            /** Format: int32 */
+            priority_order: number;
+            /** Format: double */
+            recovered_revenue: number;
+            /** Format: int32 */
+            saved_subscriptions: number;
+            /** Format: int32 */
+            churned_subscriptions: number;
             target_product_ids: string[];
             target_payment_methods: string[];
             steps: components["schemas"]["Commerce.DunningStepDto"][];
@@ -1672,8 +1685,10 @@ export interface components {
         "Commerce.DunningStepDto": {
             /** Format: int32 */
             day_offset: number;
-            template_id: string;
-            channel: string;
+            action_type: string;
+            subject?: string;
+            email_body?: string;
+            whatsapp_body?: string;
         };
         "Commerce.MagicLinkRequestDto": {
             email: string;
@@ -1814,6 +1829,11 @@ export interface components {
             final_action: string;
             /** Format: int32 */
             grace_period_days: number;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            priority_order: number;
             target_product_ids?: string[];
             target_payment_methods?: string[];
             steps: components["schemas"]["Commerce.DunningStepDto"][];
