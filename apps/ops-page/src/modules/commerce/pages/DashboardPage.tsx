@@ -80,7 +80,7 @@ export default function DashboardPage() {
                 <p className="text-[12px] text-rose-700 mt-0.5">Your checkout links cannot accept payments. Customers will be unable to purchase your products.</p>
               </div>
             </div>
-            <Link to="/commerce/payment" className="h-8 px-4 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+            <Link to="/workspace/payment-gateways" className="h-8 px-4 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
               <CreditCard size={14} /> Configure Now
             </Link>
           </div>
