@@ -51,7 +51,11 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
 
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(@event.OrganizationId);
         var workspaceSlug = workspace?.Slug ?? "";
+        
         var portalLink = $"https://portal.lazuar.com/{workspaceSlug}/portal";
+        var subIdStr = root.TryGetProperty("subscription_id", out var sidProp) ? sidProp.GetString() : "";
+        var updatePaymentLink = $"https://portal.lazuar.com/{workspaceSlug}/update-payment/{subIdStr}";
+        
         var channel = root.TryGetProperty("channel", out var channelProp) ? channelProp.GetString() ?? "EMAIL" : "EMAIL";
 
         string subject = "";
@@ -89,7 +93,8 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
                 .Replace("{{customer_phone}}", profile.Phone ?? "", StringComparison.OrdinalIgnoreCase)
                 .Replace("{{business_name}}", workspace?.Name ?? "Lazuar Merchant", StringComparison.OrdinalIgnoreCase)
                 .Replace("{{renewal_link}}", portalLink, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{portal_magic_link}}", portalLink, StringComparison.OrdinalIgnoreCase);
+                .Replace("{{portal_magic_link}}", portalLink, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{update_payment_link}}", updatePaymentLink, StringComparison.OrdinalIgnoreCase);
         }
 
         var dispatchEvent = new DispatchMessageIntegrationEvent(

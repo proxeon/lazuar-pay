@@ -65,4 +65,16 @@ interface PublicCommerceOperations {
   getCustomCheckout(@path tenantSlug: string, @path sessionId: string):
     | CustomCheckoutDto
     | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/checkout/{subId}/arrears")
+  getArrearsSummary(@path subId: string):
+    | ArrearsSummaryDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/checkout/{subId}/update-payment")
+  updatePayment(@path subId: string):
+    | CheckoutResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 }

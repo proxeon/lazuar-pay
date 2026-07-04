@@ -335,3 +335,10 @@ model CustomCheckoutDto {
   total_amount: float64;
   created_at: utcDateTime;
 }
+
+model ArrearsSummaryDto {
+  product_name: string;
+  amount: float64;
+  currency: string;
+  status: string;
+}

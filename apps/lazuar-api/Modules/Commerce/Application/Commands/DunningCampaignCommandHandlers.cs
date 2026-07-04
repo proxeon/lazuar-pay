@@ -116,18 +116,18 @@ public class GenerateDefaultDunningCampaignsCommandHandler : ICommandHandler<Gen
 
         campaign.AddStep(-3, "EMAIL", 
             "Upcoming renewal for {{plan_name}}", 
-            "Your {{plan_name}} subscription will renew in 3 days. Manage your account here: {{renewal_link}}", 
+            "Your {{plan_name}} subscription will renew in 3 days. Ensure your payment method is up to date here: {{update_payment_link}}", 
             null);
             
         campaign.AddStep(0, "EMAIL", 
             "Action Required: {{plan_name}} renewal due today", 
-            "Your {{plan_name}} subscription is due today. Renew here: {{renewal_link}}", 
+            "Your {{plan_name}} subscription is due today. To maintain access, please update your payment method here: {{update_payment_link}}", 
             null);
             
         campaign.AddStep(3, "WHATSAPP", 
             null, 
             null, 
-            "Hey {{customer_name}}, your {{plan_name}} subscription is past due. Renew here: {{renewal_link}}");
+            "Hey {{customer_name}}, your {{plan_name}} subscription is past due. You can securely update your payment method to restore access here: {{update_payment_link}}");
 
         _repository.AddDunningCampaign(campaign);
         await _repository.SaveChangesAsync(ct);
