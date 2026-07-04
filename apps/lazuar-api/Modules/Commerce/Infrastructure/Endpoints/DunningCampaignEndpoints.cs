@@ -32,10 +32,18 @@ public static class DunningCampaignEndpoints
             IMediator mediator) =>
         {
             var targetProductIds = req.Target_product_ids?.Select(Guid.Parse).ToList();
-            var steps = req.Steps.Select(s => new DunningStepData(s.Day_offset, Guid.Parse(s.Template_id), s.Channel)).ToList();
+            
+            // Map the newly generated DTO fields
+            var steps = req.Steps.Select(s => new DunningStepData(
+                s.Day_offset, 
+                s.Action_type, 
+                s.Subject, 
+                s.Email_body, 
+                s.Whatsapp_body
+            )).ToList();
 
             var command = new CreateDunningCampaignCommand(
-                ctx.TenantId, req.Name, req.Final_action, req.Grace_period_days,
+                ctx.TenantId, req.Name, req.Final_action, req.Grace_period_days, req.Priority_order ?? 0,
                 targetProductIds, req.Target_payment_methods, steps);
             
             var id = await mediator.Send(command);
@@ -57,10 +65,18 @@ public static class DunningCampaignEndpoints
             IMediator mediator) =>
         {
             var targetProductIds = req.Target_product_ids?.Select(Guid.Parse).ToList();
-            var steps = req.Steps.Select(s => new DunningStepData(s.Day_offset, Guid.Parse(s.Template_id), s.Channel)).ToList();
+            
+            // Map the newly generated DTO fields
+            var steps = req.Steps.Select(s => new DunningStepData(
+                s.Day_offset, 
+                s.Action_type, 
+                s.Subject, 
+                s.Email_body, 
+                s.Whatsapp_body
+            )).ToList();
 
             await mediator.Send(new UpdateDunningCampaignCommand(
-                ctx.TenantId, id, req.Name, req.Final_action, req.Grace_period_days,
+                ctx.TenantId, id, req.Name, req.Final_action, req.Grace_period_days, req.Priority_order ?? 0,
                 targetProductIds, req.Target_payment_methods, steps, req.Is_active));
             
             return TypedResults.Ok(new StatusResponse { Status = "updated" });

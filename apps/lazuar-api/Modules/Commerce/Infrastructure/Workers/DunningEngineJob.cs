@@ -186,7 +186,8 @@ public class DunningEngineJob : BackgroundService
                         {
                             db.ChargeAttemptLogs.Add(new Domain.Entities.ChargeAttemptLog(sub.Id, sub.NextBillingDate.Value.Date));
                             
-                            await eventBus.PublishAsync(new ExecuteOffSessionChargeIntegrationEvent(
+                            // Explicitly use Payments module's event
+                            await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                                 sub.OrganizationId,
                                 sub.Id,
                                 product.Price,

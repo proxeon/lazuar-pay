@@ -12,10 +12,11 @@ namespace Modules.Commerce.Infrastructure.Services;
 public partial class CommerceQueryService
 {
     private record RawDunningCampaignDto(
-        Guid Id, string Name, bool IsActive, string FinalAction, int GracePeriodDays,
+        Guid Id, string Name, bool IsActive, string FinalAction, int GracePeriodDays, int PriorityOrder, 
+        decimal RecoveredRevenue, int SavedSubscriptions, int ChurnedSubscriptions,
         string? TargetProductIdsJson, string? TargetPaymentMethodsJson, string? StepsJson, DateTime CreatedAt);
 
-    private record RawDunningStepDto(int DayOffset, Guid TemplateId, string Channel);
+    private record RawDunningStepDto(int DayOffset, string ActionType, string? Subject, string? EmailBody, string? WhatsAppBody);
 
     public async Task<IEnumerable<DunningCampaignDto>> GetDunningCampaignsAsync(Guid organizationId)
     {
@@ -29,15 +30,18 @@ public partial class CommerceQueryService
                     jsonb_agg(
                         jsonb_build_object(
                             'day_offset', ""DayOffset"",
-                            'template_id', ""TemplateId"",
-                            'channel', ""Channel""
+                            'action_type', ""ActionType"",
+                            'subject', ""Subject"",
+                            'email_body', ""EmailBody"",
+                            'whatsapp_body', ""WhatsAppBody""
                         ) ORDER BY ""DayOffset""
                     ) as StepsJson
                 FROM commerce.""DunningSteps""
                 GROUP BY ""DunningCampaignId""
             )
             SELECT
-                c.""Id"", c.""Name"", c.""IsActive"", c.""FinalAction"", c.""GracePeriodDays"",
+                c.""Id"", c.""Name"", c.""IsActive"", c.""FinalAction"", c.""GracePeriodDays"", c.""PriorityOrder"",
+                c.""RecoveredRevenue"", c.""SavedSubscriptions"", c.""ChurnedSubscriptions"",
                 c.""TargetProductIds""::text as TargetProductIdsJson, 
                 c.""TargetPaymentMethods""::text as TargetPaymentMethodsJson,
                 COALESCE(s.StepsJson::text, '[]') as StepsJson,
@@ -45,7 +49,7 @@ public partial class CommerceQueryService
             FROM commerce.""DunningCampaigns"" c
             LEFT JOIN StepData s ON c.""Id"" = s.""DunningCampaignId""
             WHERE c.""OrganizationId"" = @OrgId
-            ORDER BY c.""CreatedAt"" DESC";
+            ORDER BY c.""PriorityOrder"" DESC, c.""CreatedAt"" DESC";
 
         var rawCampaigns = await connection.QueryAsync<RawDunningCampaignDto>(sql, new { OrgId = organizationId });
 
@@ -85,13 +89,19 @@ public partial class CommerceQueryService
                 Is_active = c.IsActive,
                 Final_action = c.FinalAction,
                 Grace_period_days = c.GracePeriodDays,
+                Priority_order = c.PriorityOrder,
+                Recovered_revenue = (double)c.RecoveredRevenue,
+                Saved_subscriptions = c.SavedSubscriptions,
+                Churned_subscriptions = c.ChurnedSubscriptions,
                 Target_product_ids = targetProductIds.Select(id => id.ToString()).ToList(),
                 Target_payment_methods = targetPaymentMethods,
                 Steps = rawSteps.Select(s => new DunningStepDto
                 {
                     Day_offset = s.DayOffset,
-                    Template_id = s.TemplateId.ToString(),
-                    Channel = s.Channel
+                    Action_type = s.ActionType,
+                    Subject = s.Subject,
+                    Email_body = s.EmailBody,
+                    Whatsapp_body = s.WhatsAppBody
                 }).ToList(),
                 Created_at = new DateTimeOffset(c.CreatedAt)
             };

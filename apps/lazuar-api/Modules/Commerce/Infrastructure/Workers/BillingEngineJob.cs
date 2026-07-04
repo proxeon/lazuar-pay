@@ -9,8 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Contracts.Events;
-using Modules.Commerce.Domain.Entities;
-using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -60,7 +58,6 @@ public class BillingEngineJob : BackgroundService
 
         foreach (var sub in dueSubscriptions)
         {
-            // Strict Cycle Freeze Guard: Never advance the billing cycle if they are currently in arrears or suspended.
             if (sub.Status == "PAST_DUE" || sub.Status == "SUSPENDED" || sub.Status == "CANCELED")
             {
                 continue;
@@ -77,9 +74,10 @@ public class BillingEngineJob : BackgroundService
 
                 if (!attemptExists)
                 {
-                    db.ChargeAttemptLogs.Add(new ChargeAttemptLog(sub.Id, targetDate));
+                    db.ChargeAttemptLogs.Add(new Domain.Entities.ChargeAttemptLog(sub.Id, targetDate));
                     
-                    await eventBus.PublishAsync(new ExecuteOffSessionChargeIntegrationEvent(
+                    // Explicitly use Payments module's event to avoid ambiguous reference
+                    await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                         sub.OrganizationId,
                         sub.Id,
                         product.Price,
