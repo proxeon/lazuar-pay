@@ -1,2 +1,2 @@
-apps/lazuar-api/tests/Modules.Ops.Tests/Services/LlmOrchestratorServiceTests.cs
-apps/lazuar-api/src/Lazuar.Api/Program.cs
+apps/lazuar-api/tests/Lazuar.IntegrationTests/CommerceQueryServiceTests.cs
+Modules/Commerce/Infrastructure/CommerceDbContext.cs

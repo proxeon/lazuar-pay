@@ -23,7 +23,6 @@ public class CommerceQueryServiceTests
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        // 1. Spin up an ephemeral PostgreSQL database specifically for this test run
 #pragma warning disable CS0618
         _dbContainer = new PostgreSqlBuilder()
             .WithDatabase("lazuar_test")
@@ -41,9 +40,10 @@ public class CommerceQueryServiceTests
             {
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "commerce");
             })
+            // Ignore strict pending model changes warning in tests
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
-        // Mock required dependencies for the DbContext
         var executionContext = Substitute.For<IExecutionContextAccessor>();
         executionContext.TenantId.Returns(Guid.CreateVersion7());
 
@@ -52,7 +52,6 @@ public class CommerceQueryServiceTests
 
         _dbContext = new CommerceDbContext(options, executionContext, mediator, jobTrigger);
 
-        // 2. Apply the exact, current Entity Framework schema to the test container
         await _dbContext.Database.MigrateAsync();
 
         var connectionFactory = new NpgsqlConnectionFactory(connectionString);
@@ -74,8 +73,6 @@ public class CommerceQueryServiceTests
     {
         var orgId = Guid.CreateVersion7();
 
-        // 3. Execute all read models. If any column selected in the raw Dapper SQL 
-        // does not exist in the EF Core migrated schema, it will throw an NpgsqlException.
         Assert.DoesNotThrowAsync(async () => await _queryService.GetProductsAsync(orgId));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetCouponsAsync(orgId));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetSubscribersAsync(orgId, 1, 50, null));
