@@ -45,7 +45,6 @@ public static class DependencyInjection
         services.AddHostedService<CommerceInboxConsumerJob>();
         services.AddHostedService<CommerceOutboxPublisherJob>();
         
-        // Dunning & Billing Deterministic Engines
         services.AddHostedService<BillingEngineJob>();
         services.AddHostedService<DunningEngineJob>();
 
@@ -67,6 +66,7 @@ public static class DependencyInjection
         eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
+        eventBus.Subscribe<SubscriptionResumedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<DefaultTemplatesSeededIntegrationEvent, DefaultTemplatesSeededIntegrationEventHandler>();
         return app;
     }

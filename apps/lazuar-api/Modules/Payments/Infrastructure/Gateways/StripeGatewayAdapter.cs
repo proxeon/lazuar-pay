@@ -151,7 +151,6 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 }
                 else if (stripeEvent.Data.Object is PaymentIntent pi)
                 {
-                    // Catch off-session direct charges
                     var amount = pi.AmountReceived / 100m;
                     var meta = pi.Metadata != null ? new Dictionary<string, string>(pi.Metadata) : new Dictionary<string, string>();
                     return new GatewayWebhookParsedResult(
@@ -162,7 +161,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         Currency: pi.Currency ?? "myr",
                         GatewayTransactionId: pi.Id,
                         Metadata: meta,
-                        GatewayFee: 0, // Fallback, would need balance_transaction extraction here too
+                        GatewayFee: 0, 
                         TaxAmount: 0,
                         NetAmount: amount,
                         FxRate: 1,
@@ -222,12 +221,16 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public async Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt)
+    public async Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt, Guid? dunningCampaignId = null)
     {
         try
         {
             var client = new StripeClient(apiKey);
             var service = new PaymentIntentService(client);
+            
+            var meta = new Dictionary<string, string> { { "receipt", receipt } };
+            if (dunningCampaignId.HasValue) meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+
             var options = new PaymentIntentCreateOptions
             {
                 Amount = (long)(amount * 100),
@@ -237,7 +240,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 OffSession = true,
                 Confirm = true,
                 Description = description,
-                Metadata = new Dictionary<string, string> { { "receipt", receipt } }
+                Metadata = meta
             };
             var intent = await service.CreateAsync(options);
             return intent.Status == "succeeded" || intent.Status == "processing";

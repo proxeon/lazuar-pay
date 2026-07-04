@@ -68,7 +68,8 @@ public interface IPaymentGatewayAdapter
         decimal amount,
         string currency,
         string description,
-        string receipt);
+        string receipt,
+        Guid? dunningCampaignId = null);
 }
 
 public interface IPaymentGatewayFactory

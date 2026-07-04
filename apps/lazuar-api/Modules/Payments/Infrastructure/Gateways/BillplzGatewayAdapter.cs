@@ -57,20 +57,14 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             return new GatewayCheckoutResult(false, null, null, "MerchantId (Collection ID) is required for Billplz.");
         }
 
-        if (setupFutureUsage)
-        {
-            _logger.LogWarning("Billplz does not support off-session tokenization. Proceeding with standard one-time checkout.");
-        }
-
         var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
         var isProd = apiBaseUrl.Contains("lazuar.com");
         var endpoint = isProd ? ProductionApiUrl : SandboxApiUrl;
 
         metadata.TryGetValue("type", out var type);
         metadata.TryGetValue("subscription_id", out var subId);
-        metadata.TryGetValue("tenant_id", out var metaTenantId); // Crucial for utility credits
+        metadata.TryGetValue("tenant_id", out var metaTenantId); 
         
-        // Map data into Billplz's limited reference fields
         var ref1 = subId ?? metaTenantId ?? tenantId.ToString();
         var typeValue = type ?? "payment";
         
@@ -81,7 +75,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             webhookUrl = webhookUrl.Replace("localhost", "lazuar-local-dev.com");
         }
 
-        // Pass references through the callback URL query string to ensure stateless persistence
         webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&reference_1={Uri.EscapeDataString(ref1)}";
 
         var totalAmountCents = (int)(amount * quantity * 100);
@@ -148,7 +141,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
             if (!formData.TryGetValue("x_signature", out var providedSignature) || string.IsNullOrEmpty(providedSignature))
             {
-                _logger.LogWarning("Missing x_signature in Billplz callback.");
                 return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing x_signature in Billplz callback."));
             }
 
@@ -159,7 +151,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
                 var computedSigWithoutExtra = ComputeHmac(formData, webhookSecret, excludeExtra: true);
                 if (!string.Equals(providedSignature, computedSigWithoutExtra, StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogWarning("Billplz x_signature verification failed.");
                     return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Billplz x_signature verification failed."));
                 }
             }
@@ -173,7 +164,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             var isPaid = paid.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                          state.Equals("paid", StringComparison.OrdinalIgnoreCase);
 
-            // Reconstruct Metadata from Fallback Query Strings and Billplz References
             var reference1 = formData.GetValueOrDefault("reference_1", "");
             if (string.IsNullOrEmpty(reference1) && headers.TryGetValue("Query-reference_1", out var qsRef1))
             {
@@ -181,7 +171,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             }
             if (string.IsNullOrEmpty(reference1) && headers.TryGetValue("Query-subscription_id", out var qsSubId))
             {
-                reference1 = qsSubId; // Fallback for legacy webhooks
+                reference1 = qsSubId; 
             }
 
             var reference2 = formData.GetValueOrDefault("reference_2", "");
@@ -198,7 +188,6 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             
             if (!string.IsNullOrEmpty(reference1)) 
             {
-                // If it's a platform credit purchase, ref1 holds the buyer's tenant_id, not a sub_id.
                 if (reference2 == "utility_credit_topup")
                     metadata["tenant_id"] = reference1;
                 else
@@ -234,14 +223,13 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt)
+    public Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt, Guid? dunningCampaignId = null)
     {
         throw new NotSupportedException("Billplz does not support vaulted token off-session charges.");
     }
 
     public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
     {
-        _logger.LogWarning("Billplz does not support automated API refunds. Process manually.");
         return Task.FromResult(false);
     }
 

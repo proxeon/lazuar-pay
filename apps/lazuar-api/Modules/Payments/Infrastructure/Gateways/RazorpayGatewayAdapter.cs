@@ -59,7 +59,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             {
                 var subReg = new Dictionary<string, object>
                 {
-                    { "method", "card" }, // MUST be "card" for MYR
+                    { "method", "card" }, 
                     { "max_amount", amountPaise * 10 },
                     { "expire_at", DateTimeOffset.UtcNow.AddYears(10).ToUnixTimeSeconds() }
                 };
@@ -74,8 +74,8 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
                     { "subscription_registration", subReg },
                     { "receipt", "rcpt_" + Guid.NewGuid().ToString("N")[..10] },
                     { "notes", notes },
-                    { "callback_url", successUrl },      // Tells Razorpay where to redirect
-                    { "callback_method", "get" }         // Tells Razorpay to use standard HTTP GET
+                    { "callback_url", successUrl },      
+                    { "callback_method", "get" }         
                 };
 
                 var invoice = client.Invoice.CreateRegistrationLink(req);
@@ -175,7 +175,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt)
+    public Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt, Guid? dunningCampaignId = null)
     {
         try
         {

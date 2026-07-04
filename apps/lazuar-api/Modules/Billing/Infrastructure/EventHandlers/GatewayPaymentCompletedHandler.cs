@@ -30,6 +30,9 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
 
         var isB2b = @event.Metadata.TryGetValue("is_b2b_required", out var b2bFlag) && b2bFlag == "true";
 
+        // The LedgerEntry constructor assigns Timestamp = DateTime.UtcNow automatically.
+        // This ensures LHDN e-Invoices reflect the actual realization date of the recovered payment,
+        // rather than the original overdue NextBillingDate of the subscription.
         var entry = new LedgerEntry(
             @event.OrganizationId,
             referenceType,

@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Contracts.Events;
-using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -60,7 +59,6 @@ public class DunningEngineJob : BackgroundService
             .ThenByDescending(c => c.CreatedAt)
             .ToListAsync(ct);
 
-        // Track 1: Pre-Dunning (ACTIVE subscriptions nearing renewal)
         var preDunningSubs = await db.Subscriptions
             .Include(s => s.ReminderLogs)
             .IgnoreQueryFilters()
@@ -91,7 +89,6 @@ public class DunningEngineJob : BackgroundService
             }
         }
 
-        // Track 2 & 3: Active Dunning and Terminal Escalation
         var pastDueSubs = await db.Subscriptions
             .Include(s => s.ReminderLogs)
             .IgnoreQueryFilters()
@@ -125,7 +122,6 @@ public class DunningEngineJob : BackgroundService
             var campaign = campaigns.FirstOrDefault(c => c.Id == sub.CurrentDunningCampaignId);
             if (campaign == null) continue;
 
-            // Track 3: Terminal Escalation
             if (daysOverdue >= campaign.GracePeriodDays)
             {
                 if (campaign.FinalAction == "CANCEL" || campaign.FinalAction == "SUSPEND")
@@ -176,7 +172,6 @@ public class DunningEngineJob : BackgroundService
                 continue; 
             }
 
-            // Track 2: Active Dunning Steps
             var step = campaign.Steps.FirstOrDefault(s => s.DayOffset == daysOverdue);
             if (step != null && !sub.ReminderLogs.Any(l => l.ScheduleId == step.Id && l.TargetBillingDate.Date == sub.NextBillingDate.Value.Date))
             {
@@ -184,7 +179,6 @@ public class DunningEngineJob : BackgroundService
                 {
                     var attemptCount = await db.ChargeAttemptLogs.CountAsync(l => l.SubscriptionId == sub.Id && l.TargetBillingDate == sub.NextBillingDate.Value.Date, ct);
                     
-                    // Safety Guard: Limit auto-charge retries to max 4 times
                     if (attemptCount < 4 && !string.IsNullOrEmpty(sub.VaultedCustomerId) && !string.IsNullOrEmpty(sub.VaultedTokenId))
                     {
                         var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
@@ -198,7 +192,8 @@ public class DunningEngineJob : BackgroundService
                                 product.Price,
                                 product.Currency,
                                 sub.VaultedCustomerId,
-                                sub.VaultedTokenId
+                                sub.VaultedTokenId,
+                                campaign.Id
                             ));
                             _logger.LogInformation("Dispatched auto-charge dunning step for Subscription {Id}.", sub.Id);
                         }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
@@ -46,18 +47,54 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
                     var productInfo = await _repository.GetProductByIdAsync(existingSub.ProductId);
                     if (productInfo != null && productInfo.Interval != "one_time")
                     {
-                        var updatedNextBilling = productInfo.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
-                        existingSub.Activate(DateTime.UtcNow, updatedNextBilling, existingSub.IsReminderOnly);
-                        existingSub.ClearDunning();
+                        var wasInArrears = existingSub.Status == "PAST_DUE" || existingSub.Status == "SUSPENDED";
+                        var wasSuspended = existingSub.Status == "SUSPENDED";
 
-                        await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
-                            existingSub.OrganizationId,
-                            existingSub.Id,
-                            existingSub.ClientProfileId,
-                            existingSub.ProductId,
-                            productInfo.FulfillmentTargets.ToList(),
-                            false
-                        ));
+                        var updatedNextBilling = productInfo.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
+                        
+                        if (wasSuspended)
+                        {
+                            existingSub.Resume(updatedNextBilling);
+                        }
+                        else
+                        {
+                            existingSub.Activate(DateTime.UtcNow, updatedNextBilling, existingSub.IsReminderOnly);
+                            existingSub.ClearDunning();
+                        }
+
+                        if (wasInArrears && @event.Metadata.TryGetValue("dunning_campaign_id", out var dunningCampaignIdStr) && Guid.TryParse(dunningCampaignIdStr, out var dunningCampaignId))
+                        {
+                            var campaign = await _dbContext.DunningCampaigns
+                                .IgnoreQueryFilters()
+                                .FirstOrDefaultAsync(c => c.Id == dunningCampaignId && c.OrganizationId == @event.OrganizationId);
+
+                            if (campaign != null)
+                            {
+                                campaign.RecordRecovery(@event.AmountPaid);
+                            }
+                        }
+
+                        if (wasSuspended)
+                        {
+                            await _eventBus.PublishAsync(new SubscriptionResumedIntegrationEvent(
+                                existingSub.OrganizationId,
+                                existingSub.Id,
+                                existingSub.ClientProfileId,
+                                existingSub.ProductId,
+                                productInfo.FulfillmentTargets.ToList()
+                            ));
+                        }
+                        else
+                        {
+                            await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
+                                existingSub.OrganizationId,
+                                existingSub.Id,
+                                existingSub.ClientProfileId,
+                                existingSub.ProductId,
+                                productInfo.FulfillmentTargets.ToList(),
+                                false
+                            ));
+                        }
 
                         await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM");
                         await _repository.SaveChangesAsync();

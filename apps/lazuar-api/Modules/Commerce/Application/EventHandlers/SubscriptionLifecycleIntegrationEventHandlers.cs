@@ -9,7 +9,8 @@ namespace Modules.Commerce.Application.EventHandlers;
 public class SubscriptionLifecycleIntegrationEventHandlers : 
     IIntegrationEventHandler<SubscriptionActivatedIntegrationEvent>,
     IIntegrationEventHandler<SubscriptionSuspendedIntegrationEvent>,
-    IIntegrationEventHandler<SubscriptionCanceledIntegrationEvent>
+    IIntegrationEventHandler<SubscriptionCanceledIntegrationEvent>,
+    IIntegrationEventHandler<SubscriptionResumedIntegrationEvent>
 {
     private readonly IEventBus _eventBus;
 
@@ -47,7 +48,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
             subscription_id = @event.SubscriptionId.ToString(),
             client_profile_id = @event.ClientProfileId.ToString(),
             product_id = @event.ProductId.ToString(),
-            status = "PAST_DUE"
+            status = "SUSPENDED"
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
@@ -78,6 +79,27 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
             {
                 await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                     @event.OrganizationId, target, "subscription.canceled", payloadElement));
+            }
+        }
+    }
+
+    public async Task HandleAsync(SubscriptionResumedIntegrationEvent @event)
+    {
+        var payloadObj = new
+        {
+            subscription_id = @event.SubscriptionId.ToString(),
+            client_profile_id = @event.ClientProfileId.ToString(),
+            product_id = @event.ProductId.ToString(),
+            status = "ACTIVE"
+        };
+        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+
+        foreach (var target in @event.FulfillmentTargets)
+        {
+            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
+            {
+                await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+                    @event.OrganizationId, target, "subscription.resumed", payloadElement));
             }
         }
     }

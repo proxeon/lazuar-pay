@@ -225,7 +225,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
 
     public async Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount, 
-        string currency, string description, string receipt)
+        string currency, string description, string receipt, Guid? dunningCampaignId = null)
     {
         try
         {
@@ -248,6 +248,9 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var clientEmail = clientNode.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : "customer@example.com";
             var clientName = clientNode.TryGetProperty("full_name", out var nameProp) ? nameProp.GetString() : "Customer";
 
+            var meta = new Dictionary<string, string> { { "receipt", receipt } };
+            if (dunningCampaignId.HasValue) meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+
             var amountInCents = (int)Math.Round(amount * 100, 0);
             var newPurchasePayload = new Dictionary<string, object>
             {
@@ -258,7 +261,8 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                     products = new[]
                     {
                         new { name = description, price = amountInCents }
-                    }
+                    },
+                    metadata = meta
                 }
             };
 

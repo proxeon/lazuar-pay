@@ -1,7 +1,7 @@
 using System;
 using BuildingBlocks.Application;
 
-namespace Modules.Payments.Contracts.Events;
+namespace Modules.Commerce.Contracts.Events;
 
 public record ExecuteOffSessionChargeIntegrationEvent(
     Guid TenantId,

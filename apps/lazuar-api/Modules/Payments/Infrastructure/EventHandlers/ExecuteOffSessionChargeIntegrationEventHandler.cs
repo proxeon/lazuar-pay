@@ -41,13 +41,12 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
             @event.Amount,
             @event.Currency,
             $"Auto-renewal for subscription {@event.SubscriptionId}",
-            @event.SubscriptionId.ToString());
+            @event.SubscriptionId.ToString(),
+            @event.DunningCampaignId);
 
         if (!success)
         {
             _logger.LogError("Off-session charge failed at gateway level for subscription {SubscriptionId}.", @event.SubscriptionId);
-            // In MIT architecture, gateway failures will typically fire a payment.failed webhook
-            // which the global webhook endpoint catches to transition the subscription to PAST_DUE.
         }
     }
 }
