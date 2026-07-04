@@ -3,12 +3,6 @@ using BuildingBlocks.Domain;
 
 namespace Modules.Communications.Domain.Aggregates;
 
-/// <summary>
-/// A bulk marketing email send to a tenant's active subscribers. Credits are reserved in a
-/// <c>CreditHold</c> up front (TotalRecipients × per-recipient cost) and consumed per
-/// recipient as the fan-out worker dispatches; suppressed/failed recipients' credits are
-/// released back to the wallet on completion.
-/// </summary>
 public class Broadcast : Entity, IAggregateRoot, IMustHaveTenant
 {
     public Guid Id { get; private set; }
@@ -17,7 +11,6 @@ public class Broadcast : Entity, IAggregateRoot, IMustHaveTenant
     public string Subject { get; private set; }
     public string EmailBody { get; private set; }
 
-    /// <summary>DRAFT, QUEUED, SENDING, COMPLETED, FAILED.</summary>
     public string Status { get; private set; } = "DRAFT";
 
     public int TotalRecipients { get; private set; }
@@ -25,18 +18,14 @@ public class Broadcast : Entity, IAggregateRoot, IMustHaveTenant
     public int SuppressedCount { get; private set; }
     public int FailedCount { get; private set; }
 
-    public Guid? CreditHoldId { get; private set; }
-    public int CreditsReserved { get; private set; }
-    public int CreditsUsed { get; private set; }
-
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public DateTime? CompletedAt { get; private set; }
     public string? FailureReason { get; private set; }
 
-    #pragma warning disable CS8618
+#pragma warning disable CS8618
     private Broadcast() { }
-    #pragma warning restore CS8618
+#pragma warning restore CS8618
 
     public Broadcast(Guid organizationId, string subject, string emailBody)
     {
@@ -51,12 +40,10 @@ public class Broadcast : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Queue(int totalRecipients, Guid creditHoldId, int creditsReserved)
+    public void Queue(int totalRecipients)
     {
         if (Status != "DRAFT") throw new InvalidOperationException("Broadcast already queued.");
         TotalRecipients = totalRecipients;
-        CreditHoldId = creditHoldId;
-        CreditsReserved = creditsReserved;
         Status = "QUEUED";
         UpdatedAt = DateTime.UtcNow;
     }
@@ -68,10 +55,9 @@ public class Broadcast : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void RecordSent(int creditsPerRecipient)
+    public void RecordSent()
     {
         SentCount++;
-        CreditsUsed += creditsPerRecipient;
         UpdatedAt = DateTime.UtcNow;
     }
 

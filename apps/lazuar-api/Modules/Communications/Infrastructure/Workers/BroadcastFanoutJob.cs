@@ -3,13 +3,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Modules.Billing.Contracts;
-using Modules.Billing.Contracts.Commands;
 using Modules.Communications.Contracts;
 using Modules.Communications.Domain.Aggregates;
 using Modules.Commerce.Contracts;
@@ -54,8 +51,6 @@ public class BroadcastFanoutJob : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<CommunicationsDbContext>();
         var subscriberQuery = scope.ServiceProvider.GetRequiredService<ISubscriberQueryService>();
         var suppression = scope.ServiceProvider.GetRequiredService<ISuppressionService>();
-        var costService = scope.ServiceProvider.GetRequiredService<ICreditCostService>();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("CommunicationsEventBus");
 
         var queued = await db.Broadcasts
@@ -65,7 +60,7 @@ public class BroadcastFanoutJob : BackgroundService
 
         foreach (var broadcast in queued)
         {
-            await ProcessOneAsync(broadcast, db, subscriberQuery, suppression, costService, mediator, eventBus, ct);
+            await ProcessOneAsync(broadcast, db, subscriberQuery, suppression, eventBus, ct);
         }
     }
 
@@ -74,14 +69,9 @@ public class BroadcastFanoutJob : BackgroundService
         CommunicationsDbContext db,
         ISubscriberQueryService subscriberQuery,
         ISuppressionService suppression,
-        ICreditCostService costService,
-        IMediator mediator,
         IEventBus eventBus,
         CancellationToken ct)
     {
-        var costPerRecipient = costService.GetCost(CreditAction.BroadcastEmailPerRecipient);
-        var holdId = broadcast.CreditHoldId!.Value;
-
         try
         {
             broadcast.MarkSending();
@@ -101,12 +91,6 @@ public class BroadcastFanoutJob : BackgroundService
                         continue;
                     }
 
-                    // Consume from the reserved hold BEFORE dispatching so a send can never happen
-                    // without a committed credit.
-                    await mediator.Send(new ConsumeCreditHoldCommand(
-                        broadcast.OrganizationId, holdId, costPerRecipient,
-                        $"Broadcast recipient: {recipient.Email}"), ct);
-
                     await eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
                         broadcast.OrganizationId,
                         recipient.Email,
@@ -115,21 +99,16 @@ public class BroadcastFanoutJob : BackgroundService
                         broadcast.EmailBody,
                         null,
                         "EMAIL",
-                        holdId));
+                        broadcast.Id)); // Pass broadcast ID instead of CreditHoldId to bypass wallet checks
 
-                    broadcast.RecordSent(costPerRecipient);
+                    broadcast.RecordSent();
                 }
 
-                // Persist progress so the UI can show live counts.
                 await db.SaveChangesAsync(ct);
                 page++;
 
                 if (recipients.Count < PageSize) break;
             }
-
-            // Release unused credits (suppressed recipients) back to the wallet.
-            await mediator.Send(new ReleaseCreditHoldCommand(
-                broadcast.OrganizationId, holdId, $"Broadcast completed: {broadcast.Subject}"), ct);
 
             broadcast.MarkCompleted();
             await db.SaveChangesAsync(ct);
@@ -140,15 +119,6 @@ public class BroadcastFanoutJob : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Broadcast {Id} failed during fan-out.", broadcast.Id);
-            try
-            {
-                await mediator.Send(new ReleaseCreditHoldCommand(
-                    broadcast.OrganizationId, holdId, $"Broadcast failed: {broadcast.Subject}"), ct);
-            }
-            catch (Exception releaseEx)
-            {
-                _logger.LogError(releaseEx, "Failed to release credit hold {HoldId} for failed broadcast {Id}.", holdId, broadcast.Id);
-            }
 
             broadcast.MarkFailed(ex.Message);
             await db.SaveChangesAsync(ct);
