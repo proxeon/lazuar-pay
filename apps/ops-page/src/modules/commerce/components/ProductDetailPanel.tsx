@@ -215,10 +215,12 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
                 {product.checkout_configuration.requires_address ? <Lock size={12} className="text-emerald-600" /> : <Lock size={12} className="text-[#e5e5e5]" />}
                 <span className={cn(product.checkout_configuration.requires_address ? "text-[#09090b]" : "text-[#a1a1aa]")}>Requires Full Billing Address</span>
               </div>
+              {/* [MVP-HIDE]
               <div className="flex items-center gap-2 text-[12px]">
                 {product.checkout_configuration.requires_tax_id ? <Lock size={12} className="text-emerald-600" /> : <Lock size={12} className="text-[#e5e5e5]" />}
                 <span className={cn(product.checkout_configuration.requires_tax_id ? "text-[#09090b]" : "text-[#a1a1aa]")}>Requires Company TIN (LHDN B2B)</span>
               </div>
+              */}
               <div className="flex items-center gap-2 text-[12px]">
                 {product.checkout_configuration.requires_phone ? <Lock size={12} className="text-emerald-600" /> : <Lock size={12} className="text-[#e5e5e5]" />}
                 <span className={cn(product.checkout_configuration.requires_phone ? "text-[#09090b]" : "text-[#a1a1aa]")}>Requires WhatsApp Number</span>

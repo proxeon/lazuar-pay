@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { serverClient } from "../../../modules/core/lib/server-client";
-import { ShieldCheck, FileText } from "lucide-react";
+import { ShieldCheck /* [MVP-HIDE] , FileText */ } from "lucide-react";
 
 export default async function AggregatedPortalPage({
   params,
@@ -73,9 +73,11 @@ export default async function AggregatedPortalPage({
                   </div>
                   
                   <div className="shrink-0 flex flex-col gap-2 items-end justify-center">
+                    {/* [MVP-HIDE]
                     <a href={`/api/billing/invoice?subscription=${sub.id}`} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-2">
                       <FileText size={12} /> Download Tax Invoice
                     </a>
+                    */}
                     {isActive && (
                       <form action={async () => {
                         "use server";

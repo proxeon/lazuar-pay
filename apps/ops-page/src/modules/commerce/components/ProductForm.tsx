@@ -28,7 +28,7 @@ export default function ProductForm({
   const [interval, setInterval] = useState(initialData?.interval || "one_time");
 
   const [reqAddress, setReqAddress] = useState(initialData?.checkout_configuration?.requires_address ?? false);
-  const [reqTaxId, setReqTaxId] = useState(initialData?.checkout_configuration?.requires_tax_id ?? false);
+  // [MVP-HIDE] const [reqTaxId, setReqTaxId] = useState(initialData?.checkout_configuration?.requires_tax_id ?? false);
   const [reqPhone, setReqPhone] = useState(initialData?.checkout_configuration?.requires_phone ?? false);
 
   const [webhooksText, setWebhooksText] = useState(() => 
@@ -55,7 +55,7 @@ export default function ProductForm({
       interval,
       is_active: initialData?.is_active ?? true,
       requires_address: reqAddress,
-      requires_tax_id: reqTaxId,
+      requires_tax_id: false, // [MVP-HIDE]
       requires_phone: reqPhone,
       fulfillment_targets: targets, 
     });
@@ -111,10 +111,12 @@ export default function ProductForm({
               <input type="checkbox" checked={reqAddress} onChange={e => setReqAddress(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require Full Billing Address</span>
             </label>
+            {/* [MVP-HIDE]
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={reqTaxId} onChange={e => setReqTaxId(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require Company Name & Tax ID (LHDN B2B)</span>
             </label>
+            */}
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={reqPhone} onChange={e => setReqPhone(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require WhatsApp Number</span>

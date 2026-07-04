@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { serverClient } from "../../../../modules/core/lib/server-client";
-import { QuoteView } from "../../../../modules/checkout/components/QuoteView";
+// [MVP-HIDE] import { serverClient } from "../../../../modules/core/lib/server-client";
+// [MVP-HIDE] import { QuoteView } from "../../../../modules/checkout/components/QuoteView";
 
 export default async function CustomPaymentRequestPage({
   params,
@@ -9,6 +9,10 @@ export default async function CustomPaymentRequestPage({
   params: Promise<{ tenantSlug: string; sessionId: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  // [MVP-HIDE] Disable B2B Custom Quotes for CaaS MVP
+  notFound();
+
+  /*
   const { tenantSlug, sessionId } = await params;
   const isCancelled = (await searchParams).cancelled === "true";
 
@@ -36,4 +40,5 @@ export default async function CustomPaymentRequestPage({
       />
     </div>
   );
+  */
 }

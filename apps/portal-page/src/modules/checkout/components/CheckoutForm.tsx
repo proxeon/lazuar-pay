@@ -37,9 +37,10 @@ export function CheckoutForm({
   const [email, setEmail] = useState(authContext.userEmail || "");
   const [phone, setPhone] = useState("");
   
-  const [isCompany, setIsCompany] = useState(false);
-  const [companyName, setCompanyName] = useState("");
-  const [taxId, setTaxId] = useState("");
+  // [MVP-HIDE]
+  // const [isCompany, setIsCompany] = useState(false);
+  // const [companyName, setCompanyName] = useState("");
+  // const [taxId, setTaxId] = useState("");
 
   const [addressLine1, setAddressLine1] = useState("");
   const [city, setCity] = useState("");
@@ -71,8 +72,8 @@ export function CheckoutForm({
       name: name,
       email: email,
       phone: config.requires_phone ? phone : undefined,
-      company_name: config.requires_tax_id && isCompany ? companyName : undefined,
-      tax_id: config.requires_tax_id && isCompany ? taxId : undefined,
+      company_name: undefined, // [MVP-HIDE] config.requires_tax_id && isCompany ? companyName : undefined,
+      tax_id: undefined, // [MVP-HIDE] config.requires_tax_id && isCompany ? taxId : undefined,
       address_line1: config.requires_address ? addressLine1 : undefined,
       city: config.requires_address ? city : undefined,
       postal_code: config.requires_address ? postalCode : undefined,
@@ -159,6 +160,7 @@ export function CheckoutForm({
         <div className="space-y-4 border-b border-border/60 pb-6">
           <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Billing Details</h3>
           
+          {/* [MVP-HIDE]
           {config.requires_tax_id && (
             <div className="space-y-4">
               <label className="flex items-center gap-2 cursor-pointer w-fit group">
@@ -185,11 +187,13 @@ export function CheckoutForm({
               )}
             </div>
           )}
+          */}
 
           {config.requires_address && (
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">{isCompany ? "Company Address *" : "Billing Address *"}</label>
+                {/* [MVP-HIDE] <label className="text-sm font-semibold text-foreground">{isCompany ? "Company Address *" : "Billing Address *"}</label> */}
+                <label className="text-sm font-semibold text-foreground">Billing Address *</label>
                 <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="Street Address" />
               </div>
               <div className="grid grid-cols-2 gap-4">

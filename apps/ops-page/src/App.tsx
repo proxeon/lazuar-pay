@@ -12,9 +12,10 @@ import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
 import CouponsPage from "./modules/commerce/pages/CouponsPage";
 import DunningCampaignsPage from "./modules/commerce/pages/DunningCampaignsPage";
 
-import QuotesPage from "./modules/invoicing/pages/QuotesPage";
-import TaxInvoicesPage from "./modules/invoicing/pages/TaxInvoicesPage";
-import CreditNotesPage from "./modules/invoicing/pages/CreditNotesPage";
+// [MVP-HIDE]
+// import QuotesPage from "./modules/invoicing/pages/QuotesPage";
+// import TaxInvoicesPage from "./modules/invoicing/pages/TaxInvoicesPage";
+// import CreditNotesPage from "./modules/invoicing/pages/CreditNotesPage";
 
 import BroadcastsPage from "./modules/communications/pages/BroadcastsPage";
 import TemplatesPage from "./modules/communications/pages/TemplatesPage";
@@ -24,7 +25,7 @@ import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPa
 import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
 import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
-import BillingProfilePage from "./modules/workspace/pages/BillingProfilePage";
+// [MVP-HIDE] import BillingProfilePage from "./modules/workspace/pages/BillingProfilePage";
 import PaymentSettingsPage from "./modules/workspace/pages/PaymentSettingsPage";
 
 export interface OpsOutletContext {
@@ -179,9 +180,11 @@ export default function App() {
         <Route path="/commerce/coupons" element={<CouponsPage />} />
         <Route path="/commerce/dunning-campaigns" element={<DunningCampaignsPage />} />
 
+        {/* [MVP-HIDE]
         <Route path="/invoicing/quotes" element={<QuotesPage />} />
         <Route path="/invoicing/tax-invoices" element={<TaxInvoicesPage />} />
         <Route path="/invoicing/credit-notes" element={<CreditNotesPage />} />
+        */}
 
         <Route path="/community/broadcasts" element={<BroadcastsPage />} />
         <Route path="/community/templates" element={<TemplatesPage />} />
@@ -190,7 +193,7 @@ export default function App() {
         <Route path="/developer/logs" element={<DeliveryLogsPage />} />
         
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
-        <Route path="/workspace/billing-profile" element={<BillingProfilePage />} />
+        {/* [MVP-HIDE] <Route path="/workspace/billing-profile" element={<BillingProfilePage />} /> */}
         <Route path="/workspace/payment-gateways" element={<PaymentSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
         <Route path="/workspace/ledger" element={<UtilityLedgerPage />} />

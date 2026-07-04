@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Zap, ShieldCheck, Settings } from "lucide-react";
+import { Loader2, Plus, Zap, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
@@ -110,8 +110,8 @@ export default function DunningCampaignsPage() {
                     className={cn("transition-colors cursor-pointer group hover:bg-[#fafafa]", !campaign.is_active && "opacity-60 bg-[#fafafa]/50")}
                   >
                     <td className="px-5 py-4">
-                      <p className="font-bold text-[#09090b] group-hover:text-blue-600 transition-colors flex items-center gap-2">
-                        <Settings size={14} className="text-[#a1a1aa]" /> {campaign.name}
+                      <p className="font-bold text-[#09090b] group-hover:text-blue-600 transition-colors">
+                        {campaign.name}
                       </p>
                       <p className="text-[10px] font-mono text-[#71717a] mt-1">ID: {campaign.id.substring(0,8)}</p>
                     </td>
