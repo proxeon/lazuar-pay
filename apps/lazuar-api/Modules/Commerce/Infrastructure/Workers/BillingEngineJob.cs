@@ -55,11 +55,17 @@ public class BillingEngineJob : BackgroundService
 
         var dueSubscriptions = await db.Subscriptions
             .IgnoreQueryFilters()
-            .Where(s => s.Status == "ACTIVE" && s.NextBillingDate != null && s.NextBillingDate <= now)
+            .Where(s => s.NextBillingDate != null && s.NextBillingDate <= now)
             .ToListAsync(ct);
 
         foreach (var sub in dueSubscriptions)
         {
+            // Strict Cycle Freeze Guard: Never advance the billing cycle if they are currently in arrears or suspended.
+            if (sub.Status == "PAST_DUE" || sub.Status == "SUSPENDED" || sub.Status == "CANCELED")
+            {
+                continue;
+            }
+
             var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
             if (product == null) continue;
 

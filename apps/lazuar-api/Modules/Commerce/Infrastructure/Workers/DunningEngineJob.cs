@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Contracts.Events;
+using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -51,29 +52,61 @@ public class DunningEngineJob : BackgroundService
         var now = DateTime.UtcNow;
         bool requiresSave = false;
 
-        var pastDueSubscriptions = await db.Subscriptions
-            .Include(s => s.ReminderLogs)
+        var campaigns = await db.DunningCampaigns
             .IgnoreQueryFilters()
-            .Where(s => s.Status == "PAST_DUE" && s.NextBillingDate != null 
-                        && (s.DunningPausedUntil == null || s.DunningPausedUntil <= now))
+            .Include(c => c.Steps)
+            .Where(c => c.IsActive)
+            .OrderByDescending(c => c.PriorityOrder)
+            .ThenByDescending(c => c.CreatedAt)
             .ToListAsync(ct);
 
-        foreach (var sub in pastDueSubscriptions)
+        // Track 1: Pre-Dunning (ACTIVE subscriptions nearing renewal)
+        var preDunningSubs = await db.Subscriptions
+            .Include(s => s.ReminderLogs)
+            .IgnoreQueryFilters()
+            .Where(s => s.Status == "ACTIVE" && s.NextBillingDate != null && s.NextBillingDate > now && s.NextBillingDate <= now.AddDays(14))
+            .ToListAsync(ct);
+
+        foreach (var sub in preDunningSubs)
         {
             var inferredPaymentMethod = string.IsNullOrEmpty(sub.VaultedTokenId) ? "MANUAL" : "ONLINE_GATEWAY";
-            var daysOverdue = (now - sub.NextBillingDate!.Value).TotalDays;
+            var campaign = campaigns.FirstOrDefault(c => 
+                c.OrganizationId == sub.OrganizationId &&
+                (c.TargetProductIds.Count == 0 || c.TargetProductIds.Contains(sub.ProductId)) &&
+                (c.TargetPaymentMethods.Count == 0 || c.TargetPaymentMethods.Contains(inferredPaymentMethod))
+            );
 
-            // Action 1: Assignment
+            if (campaign == null) continue;
+
+            int daysUntilDue = (sub.NextBillingDate!.Value.Date - now.Date).Days;
+            
+            var step = campaign.Steps.FirstOrDefault(s => s.DayOffset < 0 && Math.Abs(s.DayOffset) == daysUntilDue && (s.ActionType == "EMAIL" || s.ActionType == "WHATSAPP" || s.ActionType == "ALL"));
+            
+            if (step != null && !sub.ReminderLogs.Any(l => l.ScheduleId == step.Id && l.TargetBillingDate.Date == sub.NextBillingDate.Value.Date))
+            {
+                await DispatchCommunicationStepAsync(sub, step, eventBus);
+                sub.RecordReminderDispatched(step.Id, sub.NextBillingDate.Value.Date);
+                requiresSave = true;
+                _logger.LogInformation("Dispatched pre-dunning step {StepId} for Subscription {SubId}.", step.Id, sub.Id);
+            }
+        }
+
+        // Track 2 & 3: Active Dunning and Terminal Escalation
+        var pastDueSubs = await db.Subscriptions
+            .Include(s => s.ReminderLogs)
+            .IgnoreQueryFilters()
+            .Where(s => s.Status == "PAST_DUE" && s.NextBillingDate != null && (s.DunningPausedUntil == null || s.DunningPausedUntil <= now))
+            .ToListAsync(ct);
+
+        foreach (var sub in pastDueSubs)
+        {
+            var inferredPaymentMethod = string.IsNullOrEmpty(sub.VaultedTokenId) ? "MANUAL" : "ONLINE_GATEWAY";
+            int daysOverdue = (now.Date - sub.NextBillingDate!.Value.Date).Days;
+
             if (sub.CurrentDunningCampaignId == null)
             {
-                var matchingCampaign = await db.DunningCampaigns
-                    .IgnoreQueryFilters()
-                    .Include(c => c.Steps)
-                    .Where(c => c.OrganizationId == sub.OrganizationId && c.IsActive)
-                    .OrderByDescending(c => c.CreatedAt)
-                    .ToListAsync(ct);
-
-                var campaignToAssign = matchingCampaign.FirstOrDefault(c => 
+                var campaignToAssign = campaigns.FirstOrDefault(c => 
+                    c.OrganizationId == sub.OrganizationId &&
                     (c.TargetProductIds.Count == 0 || c.TargetProductIds.Contains(sub.ProductId)) &&
                     (c.TargetPaymentMethods.Count == 0 || c.TargetPaymentMethods.Contains(inferredPaymentMethod))
                 );
@@ -85,31 +118,41 @@ public class DunningEngineJob : BackgroundService
                 }
                 else
                 {
-                    continue; // No matching campaign found, subscription remains PAST_DUE indefinitely.
+                    continue;
                 }
             }
 
-            var campaign = await db.DunningCampaigns
-                .IgnoreQueryFilters()
-                .Include(c => c.Steps)
-                .FirstOrDefaultAsync(c => c.Id == sub.CurrentDunningCampaignId, ct);
-
+            var campaign = campaigns.FirstOrDefault(c => c.Id == sub.CurrentDunningCampaignId);
             if (campaign == null) continue;
 
-            // Action 3: Escalation
+            // Track 3: Terminal Escalation
             if (daysOverdue >= campaign.GracePeriodDays)
             {
-                if (campaign.FinalAction == "CANCEL")
+                if (campaign.FinalAction == "CANCEL" || campaign.FinalAction == "SUSPEND")
                 {
-                    sub.Cancel();
-                    
+                    var statusString = campaign.FinalAction == "CANCEL" ? "CANCELED" : "SUSPENDED";
+                    var eventTypeString = campaign.FinalAction == "CANCEL" ? "subscription.canceled" : "subscription.suspended";
+
+                    if (campaign.FinalAction == "CANCEL")
+                    {
+                        sub.Cancel();
+                        campaign.RecordChurn();
+                        _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Canceled.", sub.Id);
+                    }
+                    else
+                    {
+                        sub.Suspend();
+                        _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Suspended.", sub.Id);
+                    }
+
                     var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+                    
                     var payloadObj = new
                     {
                         subscription_id = sub.Id.ToString(),
                         client_profile_id = sub.ClientProfileId.ToString(),
                         product_id = sub.ProductId.ToString(),
-                        status = "CANCELED"
+                        status = statusString
                     };
                     var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
@@ -120,53 +163,59 @@ public class DunningEngineJob : BackgroundService
                         {
                             var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
                             await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                                sub.OrganizationId, internalApp, "subscription.canceled", payloadElement));
+                                sub.OrganizationId, internalApp, eventTypeString, payloadElement));
                         }
                         else if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                         {
                             await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                                sub.OrganizationId, target, "subscription.canceled", payloadElement));
+                                sub.OrganizationId, target, eventTypeString, payloadElement));
                         }
                     }
-
                     requiresSave = true;
-                    _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Hard canceled.", sub.Id);
                 }
-                continue; // Prevent further step execution if escalated
+                continue; 
             }
 
-            // Action 2: Execution
-            var orderedSteps = campaign.Steps.OrderBy(s => s.DayOffset).ToList();
-            if (sub.CurrentDunningStepIndex < orderedSteps.Count)
+            // Track 2: Active Dunning Steps
+            var step = campaign.Steps.FirstOrDefault(s => s.DayOffset == daysOverdue);
+            if (step != null && !sub.ReminderLogs.Any(l => l.ScheduleId == step.Id && l.TargetBillingDate.Date == sub.NextBillingDate.Value.Date))
             {
-                var currentStep = orderedSteps[sub.CurrentDunningStepIndex];
-
-                if (daysOverdue >= currentStep.DayOffset)
+                if (step.ActionType == "AUTOCHARGE" || step.ActionType == "AUTO_CHARGE")
                 {
-                    // Check idempotency for the day to prevent duplicate emails if service restarts
-                    if (!sub.ReminderLogs.Any(l => l.ScheduleId == currentStep.Id && l.TargetBillingDate.Date == now.Date))
+                    var attemptCount = await db.ChargeAttemptLogs.CountAsync(l => l.SubscriptionId == sub.Id && l.TargetBillingDate == sub.NextBillingDate.Value.Date, ct);
+                    
+                    // Safety Guard: Limit auto-charge retries to max 4 times
+                    if (attemptCount < 4 && !string.IsNullOrEmpty(sub.VaultedCustomerId) && !string.IsNullOrEmpty(sub.VaultedTokenId))
                     {
-                        var payloadObj = new
+                        var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+                        if (product != null)
                         {
-                            subscription_id = sub.Id.ToString(),
-                            client_profile_id = sub.ClientProfileId.ToString(),
-                            product_id = sub.ProductId.ToString(),
-                            template_id = currentStep.TemplateId.ToString(),
-                            channel = currentStep.Channel
-                        };
-                        
-                        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
-
-                        await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                            sub.OrganizationId, "COMMUNICATIONS", "reminder.due", payloadElement));
-
-                        sub.RecordReminderDispatched(currentStep.Id, now.Date);
-                        sub.AdvanceDunningStep();
-                        requiresSave = true;
-                        
-                        _logger.LogInformation("Dispatched dunning step {Index} for Subscription {Id}.", sub.CurrentDunningStepIndex, sub.Id);
+                            db.ChargeAttemptLogs.Add(new Domain.Entities.ChargeAttemptLog(sub.Id, sub.NextBillingDate.Value.Date));
+                            
+                            await eventBus.PublishAsync(new ExecuteOffSessionChargeIntegrationEvent(
+                                sub.OrganizationId,
+                                sub.Id,
+                                product.Price,
+                                product.Currency,
+                                sub.VaultedCustomerId,
+                                sub.VaultedTokenId
+                            ));
+                            _logger.LogInformation("Dispatched auto-charge dunning step for Subscription {Id}.", sub.Id);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Skipped auto-charge for Subscription {Id} due to limits or missing token. Falling back.", sub.Id);
                     }
                 }
+                else
+                {
+                    await DispatchCommunicationStepAsync(sub, step, eventBus);
+                    _logger.LogInformation("Dispatched communication dunning step for Subscription {Id}.", sub.Id);
+                }
+
+                sub.RecordReminderDispatched(step.Id, sub.NextBillingDate.Value.Date);
+                requiresSave = true;
             }
         }
 
@@ -174,5 +223,24 @@ public class DunningEngineJob : BackgroundService
         {
             await db.SaveChangesAsync(ct);
         }
+    }
+
+    private async Task DispatchCommunicationStepAsync(Domain.Aggregates.Subscription sub, Domain.Entities.DunningStep step, IEventBus eventBus)
+    {
+        var payloadObj = new
+        {
+            subscription_id = sub.Id.ToString(),
+            client_profile_id = sub.ClientProfileId.ToString(),
+            product_id = sub.ProductId.ToString(),
+            action_type = step.ActionType,
+            subject = step.Subject,
+            email_body = step.EmailBody,
+            whatsapp_body = step.WhatsAppBody
+        };
+        
+        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+
+        await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
+            sub.OrganizationId, "COMMUNICATIONS", "reminder.dunning", payloadElement));
     }
 }
