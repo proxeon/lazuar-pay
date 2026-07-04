@@ -96,7 +96,7 @@ function ModuleNav({
           >
             <div className="flex flex-col py-1 space-y-0.5">
               {links.map((link) => {
-                const isExactActive = currentPath.startsWith(link.href);
+                const isExactActive = currentPath === link.href || currentPath.startsWith(`${link.href}/`);
                 return (
                   <Link 
                     key={link.href} 
@@ -129,7 +129,7 @@ function ModuleNav({
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#09090b]">{title}</span>
             </div>
             {links.map((link) => {
-              const isExactActive = currentPath.startsWith(link.href);
+              const isExactActive = currentPath === link.href || currentPath.startsWith(`${link.href}/`);
               return (
                 <Link 
                   key={link.href} 
