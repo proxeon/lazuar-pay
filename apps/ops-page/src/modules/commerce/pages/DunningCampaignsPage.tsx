@@ -1,26 +1,14 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Zap, ShieldCheck } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { client, type components } from "../../../lib/api-client";
+import { client } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
-import CampaignBuilderPanel from "../components/CampaignBuilderPanel";
-
-type DunningCampaignDto = components["schemas"]["Commerce.DunningCampaignDto"];
 
 export default function DunningCampaignsPage() {
   const queryClient = useQueryClient();
-  const [selectedCampaign, setSelectedCampaign] = useState<DunningCampaignDto | null>(null);
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-
-  const { data: products } = useQuery({
-    queryKey: ["commerce-products"],
-    queryFn: async () => {
-      const { data } = await client.GET("/admin/commerce/products");
-      return data || [];
-    }
-  });
+  const navigate = useNavigate();
 
   const { data: campaigns, isLoading: isCampaignsLoading } = useQuery({
     queryKey: ["commerce-dunning-campaigns"],
@@ -49,12 +37,12 @@ export default function DunningCampaignsPage() {
       description="Automate revenue recovery by defining communication sequences and subscription escalation rules for failed payments."
       breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Dunning Campaigns" }]}
       actionButton={
-        <button 
-          onClick={() => setIsBuilderOpen(true)}
+        <Link 
+          to="/commerce/dunning-campaigns/new"
           className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
         >
           <Plus size={14} /> Create Campaign
-        </button>
+        </Link>
       }
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col min-h-[600px] relative">
@@ -99,7 +87,7 @@ export default function DunningCampaignsPage() {
                 {campaigns?.map((campaign) => (
                   <tr 
                     key={campaign.id} 
-                    onClick={() => { setSelectedCampaign(campaign); setIsBuilderOpen(true); }}
+                    onClick={() => navigate(`/commerce/dunning-campaigns/${campaign.id}`)}
                     className={cn("transition-colors cursor-pointer group hover:bg-[#fafafa]", !campaign.is_active && "opacity-60 bg-[#fafafa]/50")}
                   >
                     <td className="px-5 py-4">
@@ -145,15 +133,6 @@ export default function DunningCampaignsPage() {
               </tbody>
             </table>
           </div>
-        )}
-
-        {(isBuilderOpen || selectedCampaign) && (
-          <CampaignBuilderPanel 
-            campaign={selectedCampaign}
-            products={products} 
-            onClose={() => { setIsBuilderOpen(false); setSelectedCampaign(null); }} 
-            onSuccess={() => { setIsBuilderOpen(false); setSelectedCampaign(null); }}
-          />
         )}
       </div>
     </PageLayout>
