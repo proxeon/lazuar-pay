@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,8 +7,10 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
 using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Modules.One.Contracts;
 using Modules.Ops.Application.Services;
 using Modules.Ops.Infrastructure.Services;
 using NSubstitute;
@@ -23,6 +26,9 @@ public class LlmOrchestratorServiceTests
     private IMediator _mediator = null!;
     private IExecutionContextAccessor _executionContext = null!;
     private IServiceScopeFactory _scopeFactory = null!;
+    private IOneQueryService _oneQueryService = null!;
+    private IEnumerable<IAgentPromptProvider> _promptProviders = null!;
+    private IConfiguration _configuration = null!;
     private ILogger<LlmOrchestratorService> _logger = null!;
     private LlmOrchestratorService _service = null!;
     private MethodInfo _executeReadToolMethod = null!;
@@ -42,10 +48,22 @@ public class LlmOrchestratorServiceTests
         _mediator = Substitute.For<IMediator>();
         _executionContext = Substitute.For<IExecutionContextAccessor>();
         _scopeFactory = Substitute.For<IServiceScopeFactory>();
+        _oneQueryService = Substitute.For<IOneQueryService>();
+        _promptProviders = Array.Empty<IAgentPromptProvider>();
+        _configuration = Substitute.For<IConfiguration>();
         _logger = Substitute.For<ILogger<LlmOrchestratorService>>();
 
+        // Inject the newly required dependencies into the service constructor
         _service = new LlmOrchestratorService(
-            _clientFactory, _toolRegistry, _mediator, _executionContext, _scopeFactory, _logger);
+            _clientFactory, 
+            _toolRegistry, 
+            _mediator, 
+            _executionContext, 
+            _scopeFactory, 
+            _oneQueryService,
+            _promptProviders,
+            _configuration,
+            _logger);
 
         _executeReadToolMethod = typeof(LlmOrchestratorService).GetMethod(
             "ExecuteReadToolAsync", BindingFlags.NonPublic | BindingFlags.Instance)!;

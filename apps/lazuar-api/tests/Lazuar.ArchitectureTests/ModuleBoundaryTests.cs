@@ -13,14 +13,14 @@ public class ModuleBoundaryTests
     {
         "Modules.One",
         "Modules.Messaging",
-        "Modules.Community",
+        
         "Modules.CRM",
         "Modules.Payments",
         "Modules.Ops",
         "Modules.Billing",
         "Modules.Lhdn",
         "Modules.Commerce",
-        "Modules.Vault",
+        
         "Modules.Communications"
     };
 

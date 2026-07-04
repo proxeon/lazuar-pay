@@ -26,7 +26,7 @@ export default function CreateWorkspaceModal({ onClose, onSuccess }: CreateWorks
         body: {
           name: name.trim(),
           slug: slug.trim(),
-          provision_apps: ["COMMUNITY", "OPS", "BILLING", "PAYMENTS", "CRM", "LHDN"]
+          provision_apps: ["OPS", "BILLING", "PAYMENTS", "CRM", "LHDN"]
         }
       });
       if (error) throw new Error(error.detail);

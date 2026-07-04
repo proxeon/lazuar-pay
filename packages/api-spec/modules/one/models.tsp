@@ -151,3 +151,13 @@ model WebhookDeliveryLogDto {
   last_error?: string;
   created_at: utcDateTime;
 }
+
+model GetPresignedUrlRequestDto {
+  file_name: string;
+  content_type: string;
+}
+
+model GetPresignedUrlResponseDto {
+  upload_url: string;
+  final_url: string;
+}

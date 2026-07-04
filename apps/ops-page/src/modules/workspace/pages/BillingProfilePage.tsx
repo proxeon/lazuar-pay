@@ -65,7 +65,7 @@ export default function BillingProfilePage() {
     setIsUploading(true);
 
     try {
-      const { data, error } = await client.POST("/admin/vault/presigned-url", {
+      const { data, error } = await client.POST("/one/storage/presigned-url", {
         body: {
           file_name: file.name,
           content_type: file.type

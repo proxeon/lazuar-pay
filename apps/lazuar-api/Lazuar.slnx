@@ -5,6 +5,7 @@
     <Project Path="tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj" />
     <Project Path="tests/Lazuar.ModuleTests/Lazuar.ModuleTests.csproj" />
     <Project Path="tests/Modules.Billing.Tests/Modules.Billing.Tests.csproj" />
+    <Project Path="tests/Modules.Ops.Tests/Modules.Ops.Tests.csproj" />
   </Folder>
   <Project Path="src\Lazuar.Api\Lazuar.Api.csproj" />
   <Folder Name="/BuildingBlocks/">
@@ -50,12 +51,6 @@
     <Project Path="Modules/Communications/Domain/Modules.Communications.Domain.csproj" />
     <Project Path="Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/Community/">
-    <Project Path="Modules\Community\Contracts\Modules.Community.Contracts.csproj" />
-    <Project Path="Modules\Community\Domain\Modules.Community.Domain.csproj" />
-    <Project Path="Modules\Community\Application\Modules.Community.Application.csproj" />
-    <Project Path="Modules\Community\Infrastructure\Modules.Community.Infrastructure.csproj" />
-  </Folder>
   <Folder Name="/Modules/CRM/">
     <Project Path="Modules\CRM\Contracts\Modules.CRM.Contracts.csproj" />
     <Project Path="Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
@@ -80,13 +75,6 @@
     <Project Path="Modules\Billing\Application\Modules.Billing.Application.csproj" />
     <Project Path="Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/Vault/">
-    <Project Path="Modules/Vault/Application/Modules.Vault.Application.csproj" />
-    <Project Path="Modules/Vault/Contracts/Modules.Vault.Contracts.csproj" />
-    <Project Path="Modules/Vault/Domain/Modules.Vault.Domain.csproj" />
-    <Project Path="Modules/Vault/Infrastructure/Modules.Vault.Infrastructure.csproj" />
-  </Folder>
-  
   <Folder Name="/Packages/">
     <Project Path="../../packages/lhdn-sdk-dotnet/Lazuar.Lhdn.Sdk.csproj" />
   </Folder>

@@ -62,14 +62,12 @@ tasks:
     cmds:
       - dotnet ef database update --context OneDbContext --project ../../Modules/One/Infrastructure/Modules.One.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      # - dotnet ef database update --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context CommerceDbContext --project ../../Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj --startup-project Lazuar.Api.csproj
-      # - dotnet ef database update --context VaultDbContext --project ../../Modules/Vault/Infrastructure/Modules.Vault.Infrastructure.csproj --startup-project Lazuar.Api.csproj
       - dotnet ef database update --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj
 
   api:migrations:purge:
@@ -77,14 +75,12 @@ tasks:
     cmds:
       - rm -rf apps/lazuar-api/Modules/One/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/Messaging/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Community/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/Payments/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/CRM/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/Ops/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/Billing/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/Lhdn/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/Commerce/Infrastructure/Migrations
-      - rm -rf apps/lazuar-api/Modules/Vault/Infrastructure/Migrations
       - rm -rf apps/lazuar-api/Modules/Communications/Infrastructure/Migrations
 
   api:migrations:init:
@@ -93,14 +89,12 @@ tasks:
     cmds:
       - dotnet ef migrations add InitialOneSchema --context OneDbContext --project ../../Modules/One/Infrastructure/Modules.One.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialMessagingSchema --context MessagingDbContext --project ../../Modules/Messaging/Infrastructure/Modules.Messaging.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      # - dotnet ef migrations add InitialCommunitySchema --context CommunityDbContext --project ../../Modules/Community/Infrastructure/Modules.Community.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialPaymentsSchema --context PaymentsDbContext --project ../../Modules/Payments/Infrastructure/Modules.Payments.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialCrmSchema --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialOpsSchema --context OpsDbContext --project ../../Modules/Ops/Infrastructure/Modules.Ops.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialBillingSchema --context BillingDbContext --project ../../Modules/Billing/Infrastructure/Modules.Billing.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialLhdnSchema --context LhdnDbContext --project ../../Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialCommerceSchema --context CommerceDbContext --project ../../Modules/Commerce/Infrastructure/Modules.Commerce.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
-      # - dotnet ef migrations add InitialVaultSchema --context VaultDbContext --project ../../Modules/Vault/Infrastructure/Modules.Vault.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
       - dotnet ef migrations add InitialCommunicationsSchema --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:

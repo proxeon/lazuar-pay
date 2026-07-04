@@ -7,8 +7,6 @@ import {
   PanelLeftOpen, 
   Settings,
   ChevronDown,
-  // Users, // Hidden: Community module
-  // Box, // Hidden: Vault module
   ShoppingCart,
   Zap,
   Mail,
@@ -30,9 +28,6 @@ const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
   { id: "invoicing", title: "Invoicing", basePath: ["/invoicing"], icon: Receipt },
   { id: "communications", title: "Communications", basePath: ["/community/broadcasts", "/community/templates"], icon: Mail },
-  // TODO(ADR-022): remove Community & Vault modules in Phase 2 — see docs/architecture-decision-log/022-remove-community-vault-modules.md
-  // { id: "community", title: "Community", basePath: ["/community/spaces"], icon: Users }, // Hidden: Community module
-  // { id: "vault", title: "Vault", basePath: ["/vault"], icon: Box }, // Hidden: Vault module
   { id: "developer", title: "Developer", basePath: ["/developer"], icon: Zap },
   { id: "workspace", title: "Workspace", basePath: ["/workspace"], icon: Settings }
 ];
@@ -268,10 +263,6 @@ export default function Sidebar({
                 ] : mod.id === "communications" ? [
                   { label: "Bulk Broadcast", href: "/community/broadcasts" },
                   { label: "Message Templates", href: "/community/templates" }
-                ] : mod.id === "community" ? [
-                  { label: "Community Spaces", href: "/community/spaces" }
-                ] : mod.id === "vault" ? [
-                  { label: "Digital Files", href: "/vault/products" }
                 ] : mod.id === "developer" ? [
                   { label: "Outbound Webhooks", href: "/developer/webhooks" },
                   { label: "Delivery Logs", href: "/developer/logs" }

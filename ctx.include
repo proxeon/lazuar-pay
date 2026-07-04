@@ -1,3 +1,2 @@
-apps/lazuar-api/Modules/Lhdn/Infrastructure/Services/Strategies/StandardInvoiceStrategy.cs
-apps/lazuar-api/Modules/Lhdn/Infrastructure/Services/Strategies/ConsolidatedInvoiceStrategy.cs
-apps/lazuar-api/Modules/Lhdn/Infrastructure/Services/Strategies/CreditNoteStrategy.cs
+apps/lazuar-api/tests/Modules.Ops.Tests/Services/LlmOrchestratorServiceTests.cs
+apps/lazuar-api/src/Lazuar.Api/Program.cs
