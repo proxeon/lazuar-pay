@@ -70,3 +70,15 @@ model CreateBroadcastRequestDto {
   target_status?: string;
   target_is_reminder_only?: boolean;
 }
+
+model EmailConfigDto {
+  api_key?: string;
+  sender_email?: string;
+  is_active: boolean;
+}
+
+model SaveEmailConfigRequestDto {
+  api_key: string;
+  sender_email: string;
+  is_active: boolean;
+}

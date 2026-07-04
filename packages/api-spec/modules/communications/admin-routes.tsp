@@ -15,43 +15,53 @@ interface AdminCommunicationsOperations {
 
   @post
   @route("/templates")
-  createTemplate(
-    @body body: CreateTemplateRequestDto,
-  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+  createTemplate(@body body: CreateTemplateRequestDto):
+    | LazuarApi.Core.IdResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/templates/variables")
-  getTemplateVariables(
-  ): TemplateVariableCategoryDto[] | LazuarApi.Core.ProblemDetailsResponse;
+  getTemplateVariables():
+    | TemplateVariableCategoryDto[]
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/templates/preview")
-  previewTemplate(
-    @body body: TemplatePreviewRequestDto,
-  ): TemplatePreviewResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+  previewTemplate(@body body: TemplatePreviewRequestDto):
+    | TemplatePreviewResponseDto
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @put
   @route("/templates/{id}")
-  updateTemplate(
-    @path id: string,
-    @body body: UpdateTemplateRequestDto,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+  updateTemplate(@path id: string, @body body: UpdateTemplateRequestDto):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @delete
   @route("/templates/{id}")
-  resetTemplate(
-    @path id: string,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+  resetTemplate(@path id: string):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/reminders/test")
-  testReminder(
-    @body body: TestReminderRequestDto,
-  ): TestReminderResponse | LazuarApi.Core.ProblemDetailsResponse;
+  testReminder(@body body: TestReminderRequestDto):
+    | TestReminderResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/broadcasts")
-  sendBroadcast(
-    @body body: CreateBroadcastRequestDto,
-  ): LazuarApi.Core.IdResponse | LazuarApi.Core.ProblemDetailsResponse;
+  sendBroadcast(@body body: CreateBroadcastRequestDto):
+    | LazuarApi.Core.IdResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/email-config")
+  getEmailConfig(): EmailConfigDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @put
+  @route("/email-config")
+  saveEmailConfig(@body body: SaveEmailConfigRequestDto):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 }
