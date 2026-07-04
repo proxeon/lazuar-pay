@@ -15,5 +15,9 @@ public interface ICommunicationsRepository
     Task<Broadcast?> GetBroadcastByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<bool> HasRecentBroadcastAsync(Guid organizationId, TimeSpan within, CancellationToken ct = default);
     void AddBroadcast(Broadcast broadcast);
+
+    Task<TenantEmailConfiguration?> GetEmailConfigAsync(Guid organizationId, CancellationToken ct = default);
+    void AddEmailConfig(TenantEmailConfiguration config);
+
     Task SaveChangesAsync(CancellationToken ct = default);
 }

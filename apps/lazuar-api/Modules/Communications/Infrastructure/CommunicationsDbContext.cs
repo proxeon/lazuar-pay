@@ -17,6 +17,7 @@ public class CommunicationsDbContext : PlatformDbContext
     public DbSet<MessageTemplate> MessageTemplates { get; set; } = null!;
     public DbSet<SuppressionEntry> SuppressionEntries { get; set; } = null!;
     public DbSet<Broadcast> Broadcasts { get; set; } = null!;
+    public DbSet<TenantEmailConfiguration> TenantEmailConfigurations { get; set; } = null!;
     
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
@@ -65,6 +66,13 @@ public class CommunicationsDbContext : PlatformDbContext
             builder.Property(x => x.OptionalVariables)
                 .HasConversion(stringListConverter, stringListComparer)
                 .HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<TenantEmailConfiguration>(builder =>
+        {
+            builder.ToTable("TenantEmailConfigurations");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId).IsUnique();
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

@@ -55,6 +55,18 @@ public class CommunicationsRepository : ICommunicationsRepository
         _context.Broadcasts.Add(broadcast);
     }
 
+    public async Task<TenantEmailConfiguration?> GetEmailConfigAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.TenantEmailConfigurations
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.OrganizationId == organizationId, ct);
+    }
+
+    public void AddEmailConfig(TenantEmailConfiguration config)
+    {
+        _context.TenantEmailConfigurations.Add(config);
+    }
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await _context.SaveChangesAsync(ct);

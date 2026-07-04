@@ -104,4 +104,22 @@ public class CommunicationsQueryService : ICommunicationsQueryService
 
         return Task.FromResult<IEnumerable<TemplateVariableCategoryDto>>(categories);
     }
+
+    public async Task<bool> HasValidEmailConfigAsync(Guid tenantId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT 1 
+            FROM communications.""TenantEmailConfigurations"" 
+            WHERE ""OrganizationId"" = @TenantId 
+              AND ""IsActive"" = true 
+              AND ""ApiKey"" IS NOT NULL AND ""ApiKey"" != ''
+              AND ""SenderEmail"" IS NOT NULL AND ""SenderEmail"" != ''
+            LIMIT 1";
+
+        var result = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { TenantId = tenantId });
+        return result.HasValue;
+    }
 }
