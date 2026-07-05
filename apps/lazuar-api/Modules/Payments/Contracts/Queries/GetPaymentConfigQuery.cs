@@ -1,7 +1,8 @@
 using System;
+using System.Collections.Generic;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 
 namespace Modules.Payments.Application.Queries;
 
-public record GetPaymentConfigQuery(Guid OrganizationId) : IQuery<PaymentConfigDto?>;
+public record GetPaymentConfigQuery(Guid OrganizationId) : IQuery<IEnumerable<PaymentConfigDto>>;

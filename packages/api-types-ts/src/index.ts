@@ -252,7 +252,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["AdminCommerceOperations_getPaymentConfig"];
+        get: operations["AdminCommerceOperations_getPaymentConfigs"];
         put: operations["AdminCommerceOperations_savePaymentConfig"];
         post?: never;
         delete?: never;
@@ -1199,8 +1199,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the system payment gateway configuration. Requires SUPER_ADMIN role. */
-        get: operations["PlatformOperations_getPaymentConfig"];
+        /** Get the system payment gateway configurations. Requires SUPER_ADMIN role. */
+        get: operations["PlatformOperations_getPaymentConfigs"];
         /** Save the system payment gateway configuration. Requires SUPER_ADMIN role. */
         put: operations["PlatformOperations_savePaymentConfig"];
         post?: never;
@@ -1689,6 +1689,7 @@ export interface components {
             minimum_price: number;
             currency: string;
             interval: string;
+            gateway_name: string;
             requires_address: boolean;
             requires_tax_id: boolean;
             requires_phone: boolean;
@@ -1758,13 +1759,6 @@ export interface components {
             merchant_id?: string;
             webhook_secret?: string;
             secret_key?: string;
-            is_active: boolean;
-            /** Format: double */
-            estimated_fee_percentage: number;
-            /** Format: double */
-            fixed_fee: number;
-            /** Format: double */
-            tax_rate: number;
         };
         "Commerce.PaymentMethodDto": {
             method: string;
@@ -1811,6 +1805,7 @@ export interface components {
             currency: string;
             interval: string;
             is_active: boolean;
+            gateway_name: string;
             fulfillment_targets: string[];
             checkout_configuration: components["schemas"]["Commerce.CheckoutConfigurationDto"];
         };
@@ -1839,13 +1834,6 @@ export interface components {
             collection_id?: string;
             webhook_secret?: string;
             secret_key?: string;
-            is_active: boolean;
-            /** Format: double */
-            estimated_fee_percentage?: number;
-            /** Format: double */
-            fixed_fee?: number;
-            /** Format: double */
-            tax_rate?: number;
         };
         "Commerce.TransactionLogDto": {
             id: string;
@@ -1905,6 +1893,7 @@ export interface components {
             currency: string;
             interval: string;
             is_active: boolean;
+            gateway_name: string;
             requires_address: boolean;
             requires_tax_id: boolean;
             requires_phone: boolean;
@@ -3807,7 +3796,7 @@ export interface operations {
             };
         };
     };
-    AdminCommerceOperations_getPaymentConfig: {
+    AdminCommerceOperations_getPaymentConfigs: {
         parameters: {
             query?: never;
             header?: never;
@@ -3822,7 +3811,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Commerce.PaymentConfigDto"];
+                    "application/json": components["schemas"]["Commerce.PaymentConfigDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -8869,7 +8858,7 @@ export interface operations {
             };
         };
     };
-    PlatformOperations_getPaymentConfig: {
+    PlatformOperations_getPaymentConfigs: {
         parameters: {
             query?: never;
             header?: never;
@@ -8884,7 +8873,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Commerce.PaymentConfigDto"];
+                    "application/json": components["schemas"]["Commerce.PaymentConfigDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

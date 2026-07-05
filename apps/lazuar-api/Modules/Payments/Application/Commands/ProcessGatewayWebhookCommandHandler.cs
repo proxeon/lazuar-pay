@@ -31,10 +31,10 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
 
     public async Task Handle(ProcessGatewayWebhookCommand request, CancellationToken cancellationToken)
     {
-        var config = await _configRepository.GetActiveByTenantIdAsync(request.TenantId, cancellationToken);
+        var config = await _configRepository.GetByTenantAndGatewayAsync(request.TenantId, request.GatewayType, cancellationToken);
         if (config == null || string.IsNullOrEmpty(config.WebhookSecret))
         {
-            throw new InvalidOperationException("Webhook secret not configured for this tenant.");
+            throw new InvalidOperationException("Webhook secret not configured for this tenant gateway.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
@@ -43,9 +43,9 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             config.WebhookSecret, 
             request.RawBody, 
             request.Headers,
-            config.EstimatedFeePercentage,
-            config.FixedFee,
-            config.TaxRate);
+            0, // estimatedFeePercentage - removed from config
+            0, // fixedFee - removed from config
+            0); // taxRate - removed from config
 
         if (!parsedResult.Verified)
         {

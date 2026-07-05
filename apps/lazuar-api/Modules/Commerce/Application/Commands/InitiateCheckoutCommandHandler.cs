@@ -84,7 +84,8 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 customCancelUrl,
                 customMetadata,
                 false,
-                1
+                1,
+                "BILLPLZ" // Default fallback for custom checkouts
             );
 
             var customCheckoutUrl = await _mediator.Send(customGatewayQuery, ct);
@@ -183,7 +184,8 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 cancelUrl,
                 metadata,
                 product.Interval != "one_time",
-                request.Quantity
+                request.Quantity,
+                product.GatewayName
             );
 
             var checkoutUrl = await _mediator.Send(gatewayQuery, ct);

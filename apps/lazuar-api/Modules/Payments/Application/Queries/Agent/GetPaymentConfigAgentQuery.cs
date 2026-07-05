@@ -1,5 +1,6 @@
-// apps/lazuar-api/Modules/Payments/Application/Queries/Agent/GetPaymentConfigAgentQuery.cs
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -7,10 +8,10 @@ using Modules.Payments.Application.Ports;
 
 namespace Modules.Payments.Application.Queries.Agent;
 
-[AgentTool("Check the current payment gateway configuration.", "CORE", "low", "SUPER_ADMIN", "ADMIN")]
+[AgentTool("Check the current payment gateway configurations for the workspace.", "CORE", "low", "SUPER_ADMIN", "ADMIN")]
 public record GetPaymentConfigAgentQuery(Guid OrganizationId) : IQuery<AgentPaymentConfigResult>;
 
-public record AgentPaymentConfigResult(string GatewayType, bool IsActive, bool HasApiKey, bool HasWebhookSecret);
+public record AgentPaymentConfigResult(string[] ConfiguredGateways);
 
 public class GetPaymentConfigAgentQueryHandler : IQueryHandler<GetPaymentConfigAgentQuery, AgentPaymentConfigResult>
 {
@@ -23,17 +24,9 @@ public class GetPaymentConfigAgentQueryHandler : IQueryHandler<GetPaymentConfigA
 
     public async Task<AgentPaymentConfigResult> Handle(GetPaymentConfigAgentQuery request, CancellationToken cancellationToken)
     {
-        var config = await _repository.GetActiveByTenantIdAsync(request.OrganizationId, cancellationToken);
+        var configs = await _repository.GetAllByTenantIdAsync(request.OrganizationId, cancellationToken);
+        var gateways = configs.Where(c => !string.IsNullOrEmpty(c.ApiKey)).Select(c => c.GatewayType).ToArray();
 
-        if (config == null)
-        {
-            return new AgentPaymentConfigResult("NONE", false, false, false);
-        }
-
-        return new AgentPaymentConfigResult(
-            config.GatewayType,
-            config.IsActive,
-            !string.IsNullOrWhiteSpace(config.ApiKey),
-            !string.IsNullOrWhiteSpace(config.WebhookSecret));
+        return new AgentPaymentConfigResult(gateways);
     }
 }

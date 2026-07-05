@@ -1379,6 +1379,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("interval")]
         public string Interval { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
+        public string Gateway_name { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("requires_address")]
         public bool Requires_address { get; set; } = default!;
 
@@ -1729,18 +1732,6 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
         public string? Secret_key { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
-        public bool Is_active { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("estimated_fee_percentage")]
-        public double Estimated_fee_percentage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("fixed_fee")]
-        public double Fixed_fee { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tax_rate")]
-        public double Tax_rate { get; set; } = default!;
-
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -1985,6 +1976,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
+        public string Gateway_name { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();
 
@@ -2117,18 +2111,6 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
         public string? Secret_key { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
-        public bool Is_active { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("estimated_fee_percentage")]
-        public double? Estimated_fee_percentage { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("fixed_fee")]
-        public double? Fixed_fee { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tax_rate")]
-        public double? Tax_rate { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2365,6 +2347,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
+        public string Gateway_name { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("requires_address")]
         public bool Requires_address { get; set; } = default!;

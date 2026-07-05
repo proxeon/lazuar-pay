@@ -50,6 +50,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand>
             request.MinimumPrice,
             request.Interval,
             request.IsActive,
+            request.GatewayName,
             config,
             request.FulfillmentTargets
         );

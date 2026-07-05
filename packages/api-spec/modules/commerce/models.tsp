@@ -16,6 +16,7 @@ model ProductDto {
   currency: string;
   interval: string;
   is_active: boolean;
+  gateway_name: string;
   fulfillment_targets: string[];
   checkout_configuration: CheckoutConfigurationDto;
 }
@@ -28,6 +29,7 @@ model CreateProductRequestDto {
   minimum_price: float64;
   currency: string;
   interval: string;
+  gateway_name: string;
   requires_address: boolean;
   requires_tax_id: boolean;
   requires_phone: boolean;
@@ -43,6 +45,7 @@ model UpdateProductRequestDto {
   currency: string;
   interval: string;
   is_active: boolean;
+  gateway_name: string;
   requires_address: boolean;
   requires_tax_id: boolean;
   requires_phone: boolean;
@@ -144,10 +147,6 @@ model PaymentConfigDto {
   merchant_id?: string;
   webhook_secret?: string;
   secret_key?: string;
-  is_active: boolean;
-  estimated_fee_percentage: float64;
-  fixed_fee: float64;
-  tax_rate: float64;
 }
 
 model SavePaymentConfigRequestDto {
@@ -156,10 +155,6 @@ model SavePaymentConfigRequestDto {
   collection_id?: string;
   webhook_secret?: string;
   secret_key?: string;
-  is_active: boolean;
-  estimated_fee_percentage?: float64;
-  fixed_fee?: float64;
-  tax_rate?: float64;
 }
 
 model CommerceSubscriptionDto {

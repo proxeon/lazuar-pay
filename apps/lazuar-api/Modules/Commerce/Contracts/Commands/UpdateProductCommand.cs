@@ -15,6 +15,7 @@ public record UpdateProductCommand(
     string Currency,
     string Interval,
     bool IsActive,
+    string GatewayName,
     bool RequiresAddress,
     bool RequiresTaxId,
     bool RequiresPhone,

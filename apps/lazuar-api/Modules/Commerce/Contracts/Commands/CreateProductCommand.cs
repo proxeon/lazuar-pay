@@ -13,6 +13,7 @@ public record CreateProductCommand(
     decimal MinimumPrice,
     string Currency,
     string Interval,
+    string GatewayName,
     bool RequiresAddress,
     bool RequiresTaxId,
     bool RequiresPhone,

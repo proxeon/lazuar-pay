@@ -1,42 +1,36 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Queries;
+using Modules.Payments.Application.Ports;
 using Lazuar.ApiTypes;
 
 namespace Modules.Payments.Infrastructure.Queries;
 
-public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery, PaymentConfigDto?>
+public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery, IEnumerable<PaymentConfigDto>>
 {
-    private readonly PaymentsDbContext _context;
+    private readonly ITenantPaymentConfigRepository _repository;
 
-    public GetPaymentConfigQueryHandler(PaymentsDbContext context)
+    public GetPaymentConfigQueryHandler(ITenantPaymentConfigRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
-    public async Task<PaymentConfigDto?> Handle(GetPaymentConfigQuery request, CancellationToken ct)
+    public async Task<IEnumerable<PaymentConfigDto>> Handle(GetPaymentConfigQuery request, CancellationToken ct)
     {
-        var config = await _context.TenantPaymentConfigurations
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(c => c.OrganizationId == request.OrganizationId, ct);
+        var configs = await _repository.GetAllByTenantIdAsync(request.OrganizationId, ct);
 
-        if (config == null) return null;
-
-        return new PaymentConfigDto
+        return configs.Select(config => new PaymentConfigDto
         {
             Gateway_type = config.GatewayType,
             Api_key = MaskSecret(config.ApiKey),
             Merchant_id = config.MerchantId,
             Webhook_secret = MaskSecret(config.WebhookSecret),
-            Secret_key = MaskSecret(config.ApiKey),
-            Is_active = config.IsActive,
-            Estimated_fee_percentage = (double)config.EstimatedFeePercentage,
-            Fixed_fee = (double)config.FixedFee,
-            Tax_rate = (double)config.TaxRate
-        };
+            Secret_key = MaskSecret(config.ApiKey)
+        });
     }
 
     private static string? MaskSecret(string? value)

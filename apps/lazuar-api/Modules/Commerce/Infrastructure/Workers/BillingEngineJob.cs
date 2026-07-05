@@ -76,14 +76,15 @@ public class BillingEngineJob : BackgroundService
                 {
                     db.ChargeAttemptLogs.Add(new Domain.Entities.ChargeAttemptLog(sub.Id, targetDate));
                     
-                    // Explicitly use Payments module's event to avoid ambiguous reference
                     await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                         sub.OrganizationId,
                         sub.Id,
                         product.Price,
                         product.Currency,
                         sub.VaultedCustomerId,
-                        sub.VaultedTokenId
+                        sub.VaultedTokenId,
+                        null,
+                        product.GatewayName
                     ));
                     
                     requiresSave = true;

@@ -12,15 +12,16 @@ interface PlatformOperations {
   @summary("Authenticate as a superadmin and receive a dedicated platform cookie.")
   @post
   @route("/auth/login")
-  login(
-    @body body: LazuarApi.One.LoginRequest,
-  ): LazuarApi.One.LoginResponse | LazuarApi.Core.ProblemDetailsResponse;
+  login(@body body: LazuarApi.One.LoginRequest):
+    | LazuarApi.One.LoginResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @summary("Destroy the platform superadmin cookie.")
   @post
   @route("/auth/logout")
-  logout(
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+  logout():
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
   @summary("Get the currently authenticated superadmin's profile.")
@@ -29,11 +30,12 @@ interface PlatformOperations {
   getMe(): LazuarApi.One.AuthUser | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
-  @summary("Get the system payment gateway configuration. Requires SUPER_ADMIN role.")
+  @summary("Get the system payment gateway configurations. Requires SUPER_ADMIN role.")
   @get
   @route("/payment-config")
-  getPaymentConfig(
-  ): LazuarApi.Commerce.PaymentConfigDto | LazuarApi.Core.ProblemDetailsResponse;
+  getPaymentConfigs():
+    | LazuarApi.Commerce.PaymentConfigDto[]
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
   @summary("Save the system payment gateway configuration. Requires SUPER_ADMIN role.")

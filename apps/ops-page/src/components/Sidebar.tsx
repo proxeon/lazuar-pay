@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ShoppingCart,
   Zap,
-  Mail,
   ChevronsUpDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -25,7 +24,6 @@ interface SidebarProps {
 
 const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
-  { id: "communications", title: "Communications", basePath: ["/community/broadcasts", "/community/templates"], icon: Mail },
   { id: "developer", title: "Developer", basePath: ["/developer"], icon: Zap },
   { id: "workspace", title: "Workspace", basePath: ["/workspace"], icon: Settings }
 ];
@@ -253,10 +251,8 @@ export default function Sidebar({
                   { label: "Subscribers", href: "/commerce/subscribers" },
                   { label: "Transaction Logs", href: "/commerce/transactions" },
                   { label: "Promotions", href: "/commerce/coupons" },
-                  { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" }
-                ] : mod.id === "communications" ? [
-                  { label: "Bulk Broadcast", href: "/community/broadcasts" },
-                  { label: "Message Templates", href: "/community/templates" }
+                  { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" },
+                  { label: "Notification Templates", href: "/commerce/templates" }
                 ] : mod.id === "developer" ? [
                   { label: "Outbound Webhooks", href: "/developer/webhooks" },
                   { label: "Delivery Logs", href: "/developer/logs" }
@@ -264,8 +260,6 @@ export default function Sidebar({
                   { label: "General Settings", href: "/workspace/general" },
                   { label: "Payment Gateways", href: "/workspace/payment-gateways" },
                   { label: "Email Provider", href: "/workspace/email" },
-                  // [MVP-HIDE] { label: "Platform Billing", href: "/workspace/billing" },
-                  // [MVP-HIDE] { label: "Utility Ledger", href: "/workspace/ledger" }
                 ]
               }
             />

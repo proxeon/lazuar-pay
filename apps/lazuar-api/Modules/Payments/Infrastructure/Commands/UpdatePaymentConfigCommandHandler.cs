@@ -102,11 +102,7 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
                 request.GatewayType,
                 resolvedGatewayKey,
                 finalWebhookSecret,
-                finalMerchantId,
-                request.IsActive,
-                request.EstimatedFeePercentage,
-                request.FixedFee,
-                request.TaxRate);
+                finalMerchantId);
             _context.TenantPaymentConfigurations.Add(config);
         }
         else
@@ -115,11 +111,7 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
                 request.GatewayType,
                 resolvedGatewayKey,
                 finalWebhookSecret,
-                finalMerchantId,
-                request.IsActive,
-                request.EstimatedFeePercentage,
-                request.FixedFee,
-                request.TaxRate);
+                finalMerchantId);
         }
         
         await _context.SaveChangesAsync(ct);

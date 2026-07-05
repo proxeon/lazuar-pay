@@ -106,13 +106,13 @@ public static class PlatformEndpoints
             });
         });
 
-        group.MapGet("/payment-config", async Task<Results<Ok<PaymentConfigDto>, NotFound>> (
+        group.MapGet("/payment-config", async Task<Ok<IEnumerable<PaymentConfigDto>>> (
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
             var query = new GetPaymentConfigQuery(ctx.TenantId);
-            var config = await mediator.Send(query);
-            return config != null ? TypedResults.Ok(config) : TypedResults.NotFound();
+            var configs = await mediator.Send(query);
+            return TypedResults.Ok(configs);
         });
 
         group.MapPut("/payment-config", async Task<Ok<StatusResponse>> (
@@ -121,7 +121,7 @@ public static class PlatformEndpoints
             IMediator mediator) =>
         {
             var command = new UpdatePaymentConfigCommand(
-                ctx.TenantId, req.Gateway_type, req.Api_key, req.Collection_id, req.Webhook_secret, req.Secret_key, req.Is_active);
+                ctx.TenantId, req.Gateway_type, req.Api_key, req.Collection_id, req.Webhook_secret, req.Secret_key);
             
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "saved" });

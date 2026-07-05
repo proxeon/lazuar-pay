@@ -186,7 +186,6 @@ public class DunningEngineJob : BackgroundService
                         {
                             db.ChargeAttemptLogs.Add(new Domain.Entities.ChargeAttemptLog(sub.Id, sub.NextBillingDate.Value.Date));
                             
-                            // Explicitly use Payments module's event
                             await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                                 sub.OrganizationId,
                                 sub.Id,
@@ -194,7 +193,8 @@ public class DunningEngineJob : BackgroundService
                                 product.Currency,
                                 sub.VaultedCustomerId,
                                 sub.VaultedTokenId,
-                                campaign.Id
+                                campaign.Id,
+                                product.GatewayName
                             ));
                             _logger.LogInformation("Dispatched auto-charge dunning step for Subscription {Id}.", sub.Id);
                         }

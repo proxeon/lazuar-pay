@@ -17,6 +17,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
     public string Currency { get; private set; }
     public string Interval { get; private set; }
     public bool IsActive { get; private set; }
+    public string GatewayName { get; private set; }
     public CheckoutConfiguration CheckoutConfiguration { get; private set; }
 
     private readonly List<string> _fulfillmentTargets = new();
@@ -38,6 +39,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         decimal minimumPrice,
         string currency, 
         string interval,
+        string gatewayName,
         CheckoutConfiguration checkoutConfiguration,
         IEnumerable<string> fulfillmentTargets)
     {
@@ -45,6 +47,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         ArgumentException.ThrowIfNullOrWhiteSpace(slug, nameof(slug));
         ArgumentException.ThrowIfNullOrWhiteSpace(currency, nameof(currency));
         ArgumentException.ThrowIfNullOrWhiteSpace(interval, nameof(interval));
+        ArgumentException.ThrowIfNullOrWhiteSpace(gatewayName, nameof(gatewayName));
 
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -55,6 +58,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         MinimumPrice = minimumPrice;
         Currency = currency.Trim().ToUpperInvariant();
         Interval = interval.Trim().ToLowerInvariant();
+        GatewayName = gatewayName.Trim().ToUpperInvariant();
         CheckoutConfiguration = checkoutConfiguration;
         IsActive = true;
         
@@ -67,11 +71,12 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateDetails(string name, string slug, decimal price, string pricingModel, decimal minimumPrice, string interval, bool isActive, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
+    public void UpdateDetails(string name, string slug, decimal price, string pricingModel, decimal minimumPrice, string interval, bool isActive, string gatewayName, CheckoutConfiguration checkoutConfiguration, IEnumerable<string> fulfillmentTargets)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentException.ThrowIfNullOrWhiteSpace(slug, nameof(slug));
         ArgumentException.ThrowIfNullOrWhiteSpace(interval, nameof(interval));
+        ArgumentException.ThrowIfNullOrWhiteSpace(gatewayName, nameof(gatewayName));
 
         Name = name.Trim();
         Slug = slug.Trim().ToLowerInvariant();
@@ -80,6 +85,7 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         MinimumPrice = minimumPrice;
         Interval = interval.Trim().ToLowerInvariant();
         IsActive = isActive;
+        GatewayName = gatewayName.Trim().ToUpperInvariant();
         CheckoutConfiguration = checkoutConfiguration;
 
         if (fulfillmentTargets != null)

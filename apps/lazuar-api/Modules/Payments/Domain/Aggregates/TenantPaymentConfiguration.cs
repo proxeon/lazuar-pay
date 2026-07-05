@@ -1,3 +1,4 @@
+using System;
 using BuildingBlocks.Domain;
 
 namespace Modules.Payments.Domain.Aggregates;
@@ -10,10 +11,6 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
     public string? ApiKey { get; private set; }
     public string? WebhookSecret { get; private set; }
     public string? MerchantId { get; private set; }
-    public bool IsActive { get; private set; }
-    public decimal EstimatedFeePercentage { get; private set; }
-    public decimal FixedFee { get; private set; }
-    public decimal TaxRate { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -26,11 +23,7 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
         string gatewayType,
         string? apiKey,
         string? webhookSecret,
-        string? merchantId,
-        bool isActive,
-        decimal estimatedFeePercentage = 0,
-        decimal fixedFee = 0,
-        decimal taxRate = 0)
+        string? merchantId)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -38,10 +31,6 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
         ApiKey = apiKey;
         WebhookSecret = webhookSecret;
         MerchantId = merchantId;
-        IsActive = isActive;
-        EstimatedFeePercentage = estimatedFeePercentage;
-        FixedFee = fixedFee;
-        TaxRate = taxRate;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -50,20 +39,12 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
         string gatewayType, 
         string? apiKey, 
         string? webhookSecret, 
-        string? merchantId, 
-        bool isActive,
-        decimal estimatedFeePercentage,
-        decimal fixedFee,
-        decimal taxRate)
+        string? merchantId)
     {
         GatewayType = gatewayType.ToUpperInvariant();
         ApiKey = apiKey;
         WebhookSecret = webhookSecret;
         MerchantId = merchantId;
-        IsActive = isActive;
-        EstimatedFeePercentage = estimatedFeePercentage;
-        FixedFee = fixedFee;
-        TaxRate = taxRate;
         UpdatedAt = DateTime.UtcNow;
     }
 }

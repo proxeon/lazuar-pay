@@ -28,11 +28,11 @@ export default function ProductsPage() {
     enabled: !!activeWorkspaceId
   });
 
-  const { data: paymentConfig, error: paymentConfigError } = useQuery({
+  const { data: paymentConfigs, error: paymentConfigError } = useQuery({
     queryKey: ["payment-config-status"],
     queryFn: async () => {
       const { data, error, response } = await client.GET("/admin/commerce/payment-config");
-      if (response.status === 404) return null;
+      if (response.status === 404) return [];
       if (error) throw new Error(error.detail);
       return data;
     },
@@ -59,7 +59,9 @@ export default function ProductsPage() {
   });
 
   const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
-  const showGatewayWarning = paymentConfigError || !paymentConfig || !paymentConfig.is_active;
+  
+  // FIX: Check if the array is empty or if no gateways have a valid API key
+  const showGatewayWarning = paymentConfigError || !paymentConfigs || paymentConfigs.length === 0 || !paymentConfigs.some(c => c.api_key || c.secret_key);
   const hasValidEmailConfig = !emailConfigError && emailConfig && emailConfig.is_active;
 
   const renderFulfillmentBadges = (targets: string[] | undefined) => {

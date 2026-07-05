@@ -12,9 +12,7 @@ import TransactionsPage from "./modules/commerce/pages/TransactionsPage";
 import CouponsPage from "./modules/commerce/pages/CouponsPage";
 import DunningCampaignsPage from "./modules/commerce/pages/DunningCampaignsPage";
 import CampaignBuilderPage from "./modules/commerce/pages/CampaignBuilderPage";
-
-import BroadcastsPage from "./modules/communications/pages/BroadcastsPage";
-import TemplatesPage from "./modules/communications/pages/TemplatesPage";
+import TemplatesPage from "./modules/commerce/pages/TemplatesPage";
 
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
@@ -177,9 +175,7 @@ export default function App() {
         <Route path="/commerce/dunning-campaigns" element={<DunningCampaignsPage />} />
         <Route path="/commerce/dunning-campaigns/new" element={<CampaignBuilderPage />} />
         <Route path="/commerce/dunning-campaigns/:id" element={<CampaignBuilderPage />} />
-
-        <Route path="/community/broadcasts" element={<BroadcastsPage />} />
-        <Route path="/community/templates" element={<TemplatesPage />} />
+        <Route path="/commerce/templates" element={<TemplatesPage />} />
 
         <Route path="/developer/webhooks" element={<DeveloperSettingsPage />} />
         <Route path="/developer/logs" element={<DeliveryLogsPage />} />

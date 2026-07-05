@@ -76,7 +76,9 @@ interface AdminCommerceOperations {
 
   @get
   @route("/payment-config")
-  getPaymentConfig(): PaymentConfigDto | LazuarApi.Core.ProblemDetailsResponse;
+  getPaymentConfigs():
+    | PaymentConfigDto[]
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   @put
   @route("/payment-config")

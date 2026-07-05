@@ -24,7 +24,7 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
 
     public async Task HandleAsync(GatewayRefundRequestedIntegrationEvent @event)
     {
-        var config = await _configRepository.GetActiveByTenantIdAsync(@event.OrganizationId);
+        var config = await _configRepository.GetByTenantAndGatewayAsync(@event.OrganizationId, @event.GatewayName);
         if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
             await _eventBus.PublishAsync(new GatewayRefundFailedIntegrationEvent(

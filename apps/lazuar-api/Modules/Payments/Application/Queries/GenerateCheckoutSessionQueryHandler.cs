@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Queries;
@@ -19,11 +22,11 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
 
     public async Task<string> Handle(GenerateCheckoutSessionQuery request, CancellationToken cancellationToken)
     {
-        var config = await _configRepository.GetActiveByTenantIdAsync(request.TenantId, cancellationToken);
+        var config = await _configRepository.GetByTenantAndGatewayAsync(request.TenantId, request.GatewayName, cancellationToken);
 
-        if (config == null || !config.IsActive || string.IsNullOrEmpty(config.ApiKey))
+        if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
-            throw new InvalidOperationException("Payment gateway is not configured or active for this workspace.");
+            throw new InvalidOperationException($"Payment gateway '{request.GatewayName}' is not configured for this workspace.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import type { components } from "../../../lib/api-client";
+import { useQuery } from "@tanstack/react-query";
+import { client, type components } from "../../../lib/api-client";
 import { filterHiddenFulfillmentTargets, cn } from "../../../lib/utils";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
+type PaymentConfigDto = components["schemas"]["Commerce.PaymentConfigDto"];
 
 interface ProductFormProps {
   initialData?: ProductDto | null;
@@ -22,12 +24,22 @@ export default function ProductForm({
   submitLabel,
   hasValidEmailConfig
 }: ProductFormProps) {
+  const { data: configuredGateways } = useQuery<PaymentConfigDto[]>({
+    queryKey: ["configured-gateways"],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/commerce/payment-config");
+      if (error) throw new Error(error.detail);
+      return data.filter(c => c.api_key || c.secret_key); // Only return gateways with saved credentials
+    }
+  });
+
   const [name, setName] = useState(initialData?.name || "");
   const [slug, setSlug] = useState(initialData?.slug || "");
   const [pricingModel, setPricingModel] = useState(initialData?.pricing_model || "FIXED");
   const [price, setPrice] = useState(initialData?.price ?? 0);
   const [minimumPrice, setMinimumPrice] = useState(initialData?.minimum_price ?? 0);
   const [interval, setInterval] = useState(initialData?.interval || "one_time");
+  const [gatewayName, setGatewayName] = useState(initialData?.gateway_name || "");
 
   const [reqAddress, setReqAddress] = useState(initialData?.checkout_configuration?.requires_address ?? false);
   const [reqPhone, setReqPhone] = useState(initialData?.checkout_configuration?.requires_phone ?? false);
@@ -37,6 +49,12 @@ export default function ProductForm({
   const [webhooksText, setWebhooksText] = useState(() => 
     filterHiddenFulfillmentTargets(initialData?.fulfillment_targets).join("\n")
   );
+
+  useEffect(() => {
+    if (!gatewayName && configuredGateways && configuredGateways.length > 0) {
+      setGatewayName(configuredGateways[0].gateway_type);
+    }
+  }, [configuredGateways, gatewayName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +74,7 @@ export default function ProductForm({
       minimum_price: Number(minimumPrice),
       currency: "MYR",
       interval,
+      gateway_name: gatewayName,
       is_active: isActive,
       requires_address: reqAddress,
       requires_tax_id: false,
@@ -104,6 +123,16 @@ export default function ProductForm({
                 <input type="number" step="0.01" required value={minimumPrice} onChange={e => setMinimumPrice(Number(e.target.value))} disabled={isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
               </div>
             )}
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Payment Gateway *</label>
+              <select required value={gatewayName} onChange={e => setGatewayName(e.target.value)} disabled={isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50">
+                <option value="" disabled>Select a configured gateway...</option>
+                {configuredGateways?.map(g => (
+                  <option key={g.gateway_type} value={g.gateway_type}>{g.gateway_type}</option>
+                ))}
+              </select>
+              {configuredGateways?.length === 0 && <p className="text-[10px] text-rose-600">No gateways configured in Workspace Settings.</p>}
+            </div>
           </div>
         </div>
 
@@ -162,7 +191,7 @@ export default function ProductForm({
 
       <div className="px-5 py-4 border-t border-[#e5e5e5] bg-[#fafafa]/50 flex justify-end gap-2 shrink-0">
         <button type="button" onClick={onCancel} disabled={isPending} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
-        <button type="submit" disabled={isPending} className="px-6 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
+        <button type="submit" disabled={isPending || !gatewayName} className="px-6 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
           {isPending && <Loader2 size={13} className="animate-spin" />} {submitLabel}
         </button>
       </div>

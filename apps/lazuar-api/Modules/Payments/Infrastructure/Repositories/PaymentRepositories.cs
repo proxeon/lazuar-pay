@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Domain.Aggregates;
@@ -14,11 +19,19 @@ public class TenantPaymentConfigRepository : ITenantPaymentConfigRepository
         _context = context;
     }
 
-    public async Task<TenantPaymentConfiguration?> GetActiveByTenantIdAsync(Guid tenantId, CancellationToken ct = default)
+    public async Task<TenantPaymentConfiguration?> GetByTenantAndGatewayAsync(Guid tenantId, string gatewayType, CancellationToken ct = default)
     {
         return await _context.TenantPaymentConfigurations
-            .IgnoreQueryFilters() // CRITICAL FIX: Bypass tenant isolation so the creator can read the system's public keys
-            .FirstOrDefaultAsync(c => c.OrganizationId == tenantId && c.IsActive, ct);
+            .IgnoreQueryFilters() // Bypass tenant isolation so the creator can read the system's public keys
+            .FirstOrDefaultAsync(c => c.OrganizationId == tenantId && c.GatewayType == gatewayType.ToUpperInvariant(), ct);
+    }
+
+    public async Task<IReadOnlyList<TenantPaymentConfiguration>> GetAllByTenantIdAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        return await _context.TenantPaymentConfigurations
+            .IgnoreQueryFilters()
+            .Where(c => c.OrganizationId == tenantId)
+            .ToListAsync(ct);
     }
 }
 
@@ -34,7 +47,7 @@ public class PaymentWebhookLogRepository : IPaymentWebhookLogRepository
     public async Task<bool> HasBeenProcessedAsync(string eventId, string provider, CancellationToken ct = default)
     {
         return await _context.PaymentWebhookLogs
-            .IgnoreQueryFilters() // CRITICAL FIX: Webhooks hit without a logged-in user context
+            .IgnoreQueryFilters() // Webhooks hit without a logged-in user context
             .AnyAsync(l => l.EventId == eventId && l.Provider == provider, ct);
     }
 

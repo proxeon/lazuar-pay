@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { X, Loader2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { client } from "../lib/api-client";
-import { cn } from "../lib/utils";
 
 interface PaymentSettingsModalProps {
   onClose: () => void;
@@ -12,32 +11,26 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
+  const [configs, setConfigs] = useState<any[]>([]);
   const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP">("BILLPLZ");
-  const [isActive, setIsActive] = useState(true);
   
   const [apiKey, setApiKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState(""); 
   const [secretKey, setSecretKey] = useState(""); 
   const [collectionId, setCollectionId] = useState(""); 
-  
-  const [estimatedFeePct, setEstimatedFeePct] = useState("0");
-  const [fixedFee, setFixedFee] = useState("0");
-  const [taxRate, setTaxRate] = useState("0");
 
   useEffect(() => {
     async function loadConfig() {
       try {
         const { data, error } = await client.GET("/admin/commerce/payment-config");
-        if (!error && data) {
-          setGatewayType(data.gateway_type as any || "BILLPLZ");
-          setIsActive(data.is_active ?? true);
-          setApiKey(data.api_key || "");
-          setWebhookSecret(data.webhook_secret || "");
-          setSecretKey(data.secret_key || "");
-          setCollectionId(data.merchant_id || "");
-          setEstimatedFeePct((data.estimated_fee_percentage || 0).toString());
-          setFixedFee((data.fixed_fee || 0).toString());
-          setTaxRate((data.tax_rate || 0).toString());
+        if (error) throw new Error(error.detail);
+        if (data) {
+          setConfigs(data);
+          const current = data.find(c => c.gateway_type === "BILLPLZ");
+          setApiKey(current?.api_key || "");
+          setWebhookSecret(current?.webhook_secret || "");
+          setSecretKey(current?.secret_key || "");
+          setCollectionId(current?.merchant_id || "");
         }
       } catch (err) {
         toast.error("Failed to load payment configuration.");
@@ -47,6 +40,15 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
     }
     loadConfig();
   }, []);
+
+  const handleGatewayChange = (type: any) => {
+    setGatewayType(type);
+    const current = configs.find(c => c.gateway_type === type);
+    setApiKey(current?.api_key || "");
+    setWebhookSecret(current?.webhook_secret || "");
+    setSecretKey(current?.secret_key || "");
+    setCollectionId(current?.merchant_id || "");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,20 +77,16 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
       const { error } = await client.PUT("/admin/commerce/payment-config", {
         body: {
           gateway_type: gatewayType,
-          is_active: isActive,
           api_key: apiKey.trim(),
           secret_key: secretKey.trim(),
           webhook_secret: webhookSecret.trim(),
-          collection_id: collectionId.trim(),
-          estimated_fee_percentage: parseFloat(estimatedFeePct) || 0,
-          fixed_fee: parseFloat(fixedFee) || 0,
-          tax_rate: parseFloat(taxRate) || 0
+          collection_id: collectionId.trim()
         }
       });
 
       if (error) throw new Error(error.detail || "Failed to save configuration");
       
-      toast.success("Payment configuration saved securely.");
+      toast.success(`${gatewayType} credentials saved securely.`);
       onClose();
     } catch (err: any) {
       toast.error(err.message);
@@ -108,8 +106,8 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
               <CreditCard size={16} />
             </div>
             <div>
-              <h3 className="text-[14px] font-semibold tracking-tight text-[#09090b]">Payment Configuration</h3>
-              <p className="text-[11px] text-[#71717a] mt-0.5">Securely manage your active payment gateway.</p>
+              <h3 className="text-[14px] font-semibold tracking-tight text-[#09090b]">Payment Credential Vault</h3>
+              <p className="text-[11px] text-[#71717a] mt-0.5">Securely store API keys for multiple providers.</p>
             </div>
           </div>
           <button onClick={onClose} className="text-[#a1a1aa] hover:bg-[#e5e5e5] hover:text-[#09090b] transition-colors p-1"><X size={16} /></button>
@@ -122,22 +120,15 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
             <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto">
               
               <div className="space-y-3">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Provider Settings</label>
-                <div className="grid grid-cols-2 gap-4">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Target Provider</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#09090b]">Gateway Type</label>
-                    <select value={gatewayType} onChange={e => setGatewayType(e.target.value as any)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
+                    <select value={gatewayType} onChange={e => handleGatewayChange(e.target.value)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
                       <option value="CHIP">CHIP Collect (Malaysia)</option>
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
                       <option value="RAZORPAY">Razorpay (Global)</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-[#09090b]">Status</label>
-                    <select value={isActive ? "true" : "false"} onChange={e => setIsActive(e.target.value === "true")} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
-                      <option value="true">Active (Accepting Payments)</option>
-                      <option value="false">Disabled</option>
                     </select>
                   </div>
                 </div>
@@ -206,30 +197,12 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                 )}
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1">Accounting Overrides</label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-[#09090b]">Est. Fee (%)</label>
-                    <input type="number" step="0.01" value={estimatedFeePct} onChange={e => setEstimatedFeePct(e.target.value)} className="w-full h-10 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-[#09090b]">Fixed Fee (MYR)</label>
-                    <input type="number" step="0.01" value={fixedFee} onChange={e => setFixedFee(e.target.value)} className="w-full h-10 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-[#09090b]">Tax Rate (%)</label>
-                    <input type="number" step="0.01" value={taxRate} onChange={e => setTaxRate(e.target.value)} className="w-full h-10 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b]" />
-                  </div>
-                </div>
-              </div>
-
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50 mt-auto">
+            <div className="flex items-center justify-end p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50 mt-auto">
               <button type="button" onClick={onClose} className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] transition-colors">Cancel</button>
               <button type="submit" disabled={isSaving} className="h-10 px-6 bg-[#09090b] text-white text-[11px] font-bold tracking-widest uppercase rounded-none hover:bg-[#27272a] disabled:opacity-50 transition-colors flex items-center gap-2">
-                {isSaving && <Loader2 size={13} className="animate-spin" />} Save Configuration
+                {isSaving && <Loader2 size={13} className="animate-spin" />} Save Credentials
               </button>
             </div>
           </form>

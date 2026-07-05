@@ -24,11 +24,11 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
 
     public async Task HandleAsync(ExecuteOffSessionChargeIntegrationEvent @event)
     {
-        var config = await _configRepository.GetActiveByTenantIdAsync(@event.TenantId);
+        var config = await _configRepository.GetByTenantAndGatewayAsync(@event.TenantId, @event.GatewayName);
         
         if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
-            _logger.LogWarning("Cannot execute off-session charge for subscription {SubscriptionId}. Payment gateway not configured for tenant {TenantId}.", @event.SubscriptionId, @event.TenantId);
+            _logger.LogWarning("Cannot execute off-session charge for subscription {SubscriptionId}. Gateway {GatewayName} not configured for tenant {TenantId}.", @event.SubscriptionId, @event.GatewayName, @event.TenantId);
             return;
         }
 

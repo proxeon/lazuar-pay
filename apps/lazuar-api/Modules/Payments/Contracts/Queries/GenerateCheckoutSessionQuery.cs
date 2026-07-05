@@ -1,4 +1,5 @@
-// apps/lazuar-api/Modules/Payments/Contracts/Queries/GenerateCheckoutSessionQuery.cs
+using System;
+using System.Collections.Generic;
 using BuildingBlocks.Application;
 
 namespace Modules.Payments.Contracts.Queries;
@@ -13,4 +14,5 @@ public record GenerateCheckoutSessionQuery(
     string CancelUrl,
     Dictionary<string, string> Metadata,
     bool SetupFutureUsage = false,
-    int Quantity = 1) : IQuery<string>;
+    int Quantity = 1,
+    string GatewayName = "BILLPLZ") : IQuery<string>;

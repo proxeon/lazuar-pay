@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Modules.Payments.Domain.Aggregates;
 using Modules.Payments.Domain.Entities;
 
@@ -5,7 +9,8 @@ namespace Modules.Payments.Application.Ports;
 
 public interface ITenantPaymentConfigRepository
 {
-    Task<TenantPaymentConfiguration?> GetActiveByTenantIdAsync(Guid tenantId, CancellationToken ct = default);
+    Task<TenantPaymentConfiguration?> GetByTenantAndGatewayAsync(Guid tenantId, string gatewayType, CancellationToken ct = default);
+    Task<IReadOnlyList<TenantPaymentConfiguration>> GetAllByTenantIdAsync(Guid tenantId, CancellationToken ct = default);
 }
 
 public interface IPaymentWebhookLogRepository

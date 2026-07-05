@@ -35,6 +35,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             request.MinimumPrice,
             request.Currency,
             request.Interval,
+            request.GatewayName,
             config,
             request.FulfillmentTargets
         );

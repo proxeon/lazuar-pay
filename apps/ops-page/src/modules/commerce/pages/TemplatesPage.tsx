@@ -125,9 +125,9 @@ export default function TemplatesPage() {
 
   return (
     <PageLayout 
-      title="Communication Templates" 
+      title="Notification Templates" 
       description="Manage the content and wording of your automated multi-channel notifications."
-      breadcrumbs={[{ label: "Communications" }, { label: "Templates" }]}
+      breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Notification Templates" }]}
       actionButton={
         <div className="flex gap-2">
           <button onClick={() => setIsWikiOpen(true)} className="h-9 px-4 bg-white border border-[#e5e5e5] text-[#09090b] text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#fafafa] transition-colors"><BookOpen size={13} /> Variable Wiki</button>

@@ -206,6 +206,10 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
                 <span className="text-[#a1a1aa] block mb-1">Interval</span>
                 <span className="font-mono text-[#09090b] font-bold uppercase">{product.interval}</span>
               </div>
+              <div className="col-span-2">
+                <span className="text-[#a1a1aa] block mb-1">Payment Gateway</span>
+                <span className="font-mono text-[#09090b] font-bold uppercase tracking-wider">{product.gateway_name}</span>
+              </div>
             </div>
           </div>
 

@@ -23,11 +23,11 @@ public class GenerateSystemCheckoutSessionQueryHandler : IQueryHandler<GenerateS
     public async Task<string> Handle(GenerateSystemCheckoutSessionQuery request, CancellationToken cancellationToken)
     {
         var systemId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-        var config = await _configRepository.GetActiveByTenantIdAsync(systemId, cancellationToken);
+        var config = await _configRepository.GetByTenantAndGatewayAsync(systemId, request.GatewayName, cancellationToken);
 
-        if (config == null || !config.IsActive)
+        if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
-            throw new InvalidOperationException("Platform payment gateway is not configured.");
+            throw new InvalidOperationException($"Platform payment gateway '{request.GatewayName}' is not configured.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
@@ -39,7 +39,7 @@ public class GenerateSystemCheckoutSessionQueryHandler : IQueryHandler<GenerateS
             request.Metadata.Add("type", "utility_credit_topup");
 
         var result = await adapter.GenerateCheckoutAsync(
-            config.ApiKey ?? "",
+            config.ApiKey,
             systemId,
             request.Amount,
             request.Currency,

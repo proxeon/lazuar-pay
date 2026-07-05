@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Queries;
@@ -19,11 +23,12 @@ public class GenerateCustomerPortalQueryHandler : IQueryHandler<GenerateCustomer
 
     public async Task<string> Handle(GenerateCustomerPortalQuery request, CancellationToken cancellationToken)
     {
-        var config = await _configRepository.GetActiveByTenantIdAsync(request.TenantId, cancellationToken);
+        // For customer portal, we specifically look for Stripe as it's the only one supporting it.
+        var config = await _configRepository.GetByTenantAndGatewayAsync(request.TenantId, "STRIPE", cancellationToken);
 
-        if (config == null || !config.IsActive || string.IsNullOrEmpty(config.ApiKey))
+        if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
-            throw new InvalidOperationException("Payment gateway is not configured or active for this tenant.");
+            throw new InvalidOperationException("Stripe is not configured for this tenant (required for Customer Portal).");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
