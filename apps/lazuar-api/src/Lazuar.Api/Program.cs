@@ -115,22 +115,31 @@ builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 
+// R2 / S3 is optional at boot — production can run without object storage until keys are set.
 AWSConfigsS3.UseSignatureVersion4 = true;
-
-var r2Config = new AmazonS3Config
+var r2Endpoint = builder.Configuration["R2_ENDPOINT"];
+if (!string.IsNullOrWhiteSpace(r2Endpoint))
 {
-    ServiceURL = builder.Configuration["R2_ENDPOINT"],
-    ForcePathStyle = true,
-    AuthenticationRegion = "auto", 
-    SignatureVersion = "4"
-};
+    var r2Config = new AmazonS3Config
+    {
+        ServiceURL = r2Endpoint,
+        ForcePathStyle = true,
+        AuthenticationRegion = "auto",
+        SignatureVersion = "4"
+    };
 
-var s3Credentials = new BasicAWSCredentials(
-    builder.Configuration["R2_ACCESS_KEY"] ?? "",
-    builder.Configuration["R2_SECRET_KEY"] ?? "");
+    var s3Credentials = new BasicAWSCredentials(
+        builder.Configuration["R2_ACCESS_KEY"] ?? "",
+        builder.Configuration["R2_SECRET_KEY"] ?? "");
 
-builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(s3Credentials, r2Config));
-builder.Services.AddSingleton<IR2StorageService, R2StorageService>();
+    builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(s3Credentials, r2Config));
+    builder.Services.AddSingleton<IR2StorageService, R2StorageService>();
+}
+else
+{
+    Log.Warning("R2_ENDPOINT not set — object storage disabled (uploads will fail until configured).");
+    builder.Services.AddSingleton<IR2StorageService, DisabledR2StorageService>();
+}
 
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();

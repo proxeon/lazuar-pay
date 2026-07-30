@@ -15,6 +15,25 @@ public interface IR2StorageService
     string GetPresignedDownloadUrl(string bucket, string key, int expiryMinutes = 60);
 }
 
+/// <summary>
+/// No-op storage used when R2 is not configured so the API can still boot.
+/// Calls fail with a clear error until R2_* env vars are set.
+/// </summary>
+public sealed class DisabledR2StorageService : IR2StorageService
+{
+    private static InvalidOperationException Disabled() =>
+        new("Object storage is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY, R2_SECRET_KEY, and R2_BUCKET_NAME.");
+
+    public Task<string?> UploadAsync(Stream data, string bucket, string key, string contentType, CancellationToken ct = default)
+        => throw Disabled();
+
+    public string GetPresignedUploadUrl(string bucket, string key, string contentType, int expiryMinutes = 60)
+        => throw Disabled();
+
+    public string GetPresignedDownloadUrl(string bucket, string key, int expiryMinutes = 60)
+        => throw Disabled();
+}
+
 public class R2StorageService : IR2StorageService
 {
     private readonly IAmazonS3 _client;
