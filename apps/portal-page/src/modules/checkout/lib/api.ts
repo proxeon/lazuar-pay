@@ -5,12 +5,12 @@ const BROWSER_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:808
 
 export const browserClient = createClient<paths>({
   baseUrl: BROWSER_API_URL,
-  fetch: (url, init) => fetch(url, { ...init, credentials: "include" })
+  fetch: (request) => fetch(new Request(request, { credentials: "include" })),
 });
 
 export type ProductDto = components["schemas"]["Commerce.ProductDto"];
 export type PublicCheckoutRequestDto = components["schemas"]["Commerce.PublicCheckoutRequestDto"];
-export type ValidateCouponResponseDto = components["schemas"]["Community.ValidateCouponResponseDto"];
+export type ValidateCouponResponseDto = components["schemas"]["Commerce.ValidateCouponResponseDto"];
 
 export async function validateCouponCode(tenantSlug: string, productSlug: string, code: string) {
   const { data, error } = await browserClient.GET("/public/commerce/{tenantSlug}/validate-coupon", {

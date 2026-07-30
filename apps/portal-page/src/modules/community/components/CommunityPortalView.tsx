@@ -5,12 +5,12 @@ import { browserClient } from "../lib/api";
 import { components } from "@repo/api-types-ts";
 import { ShieldCheck, MessageCircle, Video, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 
-type CommunitySubscription = components["schemas"]["Community.CommunitySubscriptionDto"];
+type PortalSubscription = components["schemas"]["Commerce.PortalSubscriptionDto"];
 type AuthUser = components["schemas"]["One.AuthUser"];
 
 interface CommunityPortalViewProps {
   tenantSlug: string;
-  subscription: CommunitySubscription;
+  subscription: PortalSubscription;
   user: AuthUser;
   token: string;
 }
@@ -20,7 +20,7 @@ export function cn(...classes: (string | undefined | null | false)[]) {
 }
 
 export function CommunityPortalView({ tenantSlug, subscription: initialSubscription, user, token }: CommunityPortalViewProps) {
-  const [sub, setSub] = useState<CommunitySubscription>(initialSubscription);
+  const [sub, setSub] = useState<PortalSubscription>(initialSubscription);
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export function CommunityPortalView({ tenantSlug, subscription: initialSubscript
     setError(null);
 
     try {
-      const { error: apiError } = await browserClient.POST("/public/community/{tenantSlug}/portal/cancel", {
+      const { error: apiError } = await browserClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
         params: { path: { tenantSlug }, query: { token } },
         body: { subscription_id: sub.id }
       });
@@ -51,12 +51,12 @@ export function CommunityPortalView({ tenantSlug, subscription: initialSubscript
   const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
   const isCancelled = sub.status === "CANCELLED" || sub.status === "CANCELED";
   const isPastDue = sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
-  const nextDateStr = sub.next_billing_date 
-    ? new Date(sub.next_billing_date).toLocaleDateString("en-MY", { year: 'numeric', month: 'short', day: 'numeric' }) 
+  const nextDateStr = sub.current_period_end
+    ? new Date(sub.current_period_end).toLocaleDateString("en-MY", { year: "numeric", month: "short", day: "numeric" })
     : "N/A";
 
-  const displayName = user.name || sub.customer_name;
-  const displayEmail = user.email || sub.customer_email;
+  const displayName = user.name || "Member";
+  const displayEmail = user.email || "";
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
@@ -85,7 +85,7 @@ export function CommunityPortalView({ tenantSlug, subscription: initialSubscript
         <div className="pb-6 border-b border-border/40">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground leading-tight">
-              {sub.plan_name}
+              {sub.product_name}
             </h1>
             <div className="shrink-0">
               {isActive && !isPastDue && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-none inline-block">Active</span>}
@@ -133,8 +133,8 @@ export function CommunityPortalView({ tenantSlug, subscription: initialSubscript
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-secondary/20 border border-border/60 p-5 rounded-none">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Subscription Price</p>
-              <p className="text-lg font-mono text-foreground font-semibold">RM {sub.plan_price.toFixed(2)}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Product</p>
+              <p className="text-lg font-mono text-foreground font-semibold truncate">{sub.product_name}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Next Billing Date</p>

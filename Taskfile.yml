@@ -180,15 +180,14 @@ tasks:
         echo "Active builder supports: $(docker buildx inspect --bootstrap | sed -n 's/.*Platforms: //p')"
 
   docker:build:
-    desc: "Build runtime images (api + portal) as linux/amd64. Vite SPAs are not containerized."
+    desc: "Build all runtime images (api + frontends) as linux/amd64"
     deps: [docker:builder]
     cmds:
       - |
         TAG="${TAG:-$(git rev-parse --short HEAD)}"
         REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
         PLATFORMS="${PLATFORMS:-linux/amd64}"
-        echo "Building REGISTRY=$REGISTRY TAG=$TAG PLATFORMS=$PLATFORMS (api, portal-page)"
-        # --load only supports a single platform; we pin linux/amd64 for server parity
+        echo "Building REGISTRY=$REGISTRY TAG=$TAG PLATFORMS=$PLATFORMS (api, portal, ops, superadmin)"
         docker buildx bake --load \
           --builder lazuar-builder \
           REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
@@ -250,6 +249,6 @@ tasks:
       - docker compose -f docker-compose.ghcr.yml up -d
 
   docker:up:full:
-    desc: Build and run local stack including portal (Next.js). Run ops/superadmin via pnpm; host Caddy later on server.
+    desc: Build and run full local stack (api + all frontends)
     cmds:
       - docker compose --profile full up -d --build

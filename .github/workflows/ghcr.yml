@@ -17,7 +17,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  # Images: ghcr.io/<owner>/lazuar-hub/<service>
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/lazuar-hub
 
 jobs:
@@ -27,13 +26,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Runtime process containers only. Vite SPAs are static — serve via host Caddy.
           - name: api
             dockerfile: apps/lazuar-api/Dockerfile
-            context: .
           - name: portal-page
             dockerfile: apps/portal-page/Dockerfile
-            context: .
+          - name: ops-page
+            dockerfile: apps/ops-page/Dockerfile
+          - name: superadmin-page
+            dockerfile: apps/superadmin-page/Dockerfile
 
     steps:
       - name: Checkout
@@ -66,9 +66,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
+          context: .
           file: ${{ matrix.dockerfile }}
-          # Ubuntu servers are almost always x86_64 — never push host-native Mac arm64
           push: true
           platforms: linux/amd64
           provenance: false
@@ -80,4 +79,6 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_PORTAL_URL=${{ vars.VITE_PORTAL_URL }}
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}

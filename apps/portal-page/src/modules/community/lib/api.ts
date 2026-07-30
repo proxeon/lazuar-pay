@@ -5,19 +5,20 @@ const BROWSER_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:808
 
 export const browserClient = createClient<paths>({
   baseUrl: BROWSER_API_URL,
-  fetch: (url, init) => fetch(url, { ...init, credentials: "include" })
+  fetch: (request) => fetch(new Request(request, { credentials: "include" })),
 });
 
-export type CommunityPlanDto = components["schemas"]["Community.CommunityPlanDto"];
-export type PublicCheckoutRequestDto = components["schemas"]["Community.PublicCheckoutRequestDto"];
-export type ValidateCouponResponseDto = components["schemas"]["Community.ValidateCouponResponseDto"];
+export type ProductDto = components["schemas"]["Commerce.ProductDto"];
+export type PublicCheckoutRequestDto = components["schemas"]["Commerce.PublicCheckoutRequestDto"];
+export type ValidateCouponResponseDto = components["schemas"]["Commerce.ValidateCouponResponseDto"];
+export type PortalSubscriptionDto = components["schemas"]["Commerce.PortalSubscriptionDto"];
 
-export async function validateCouponCode(tenantSlug: string, planSlug: string, code: string) {
-  const { data, error } = await browserClient.GET("/public/community/{tenantSlug}/validate-coupon", {
+export async function validateCouponCode(tenantSlug: string, productSlug: string, code: string) {
+  const { data, error } = await browserClient.GET("/public/commerce/{tenantSlug}/validate-coupon", {
     params: {
       path: { tenantSlug },
-      query: { code, plan_slug: planSlug }
-    }
+      query: { code, product_slug: productSlug },
+    },
   });
 
   if (error || !data) {
@@ -32,8 +33,8 @@ export async function validateCouponCode(tenantSlug: string, planSlug: string, c
 }
 
 export async function submitCheckout(payload: PublicCheckoutRequestDto) {
-  const { data, error } = await browserClient.POST("/public/community/checkout", {
-    body: payload
+  const { data, error } = await browserClient.POST("/public/commerce/checkout", {
+    body: payload,
   });
 
   if (error || !data) {
@@ -44,10 +45,10 @@ export async function submitCheckout(payload: PublicCheckoutRequestDto) {
 }
 
 export async function getCheckoutStatus(subId: string) {
-  const { data, error } = await browserClient.GET("/public/community/checkout/{subId}/status", {
+  const { data, error } = await browserClient.GET("/public/commerce/checkout/{subId}/status", {
     params: {
-      path: { subId }
-    }
+      path: { subId },
+    },
   });
 
   if (error || !data) {

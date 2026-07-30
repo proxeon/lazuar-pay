@@ -1,5 +1,5 @@
-# Pull prebuilt runtime images from GHCR (linux/amd64).
-# Host Caddyfile on the server should reverse_proxy / file_server as needed.
+# Pull prebuilt linux/amd64 images from GHCR.
+# Host Caddy on the server reverse_proxies published ports.
 #
 #   export TAG=latest
 #   docker compose -f docker-compose.ghcr.yml pull
@@ -48,6 +48,16 @@ services:
     networks:
       - lazuar-network
 
+  ops-page:
+    image: ghcr.io/proxeon/lazuar-hub/ops-page:${TAG:-latest}
+    container_name: lazuar-ops
+    ports:
+      - "3003:3000"
+    depends_on:
+      - api
+    networks:
+      - lazuar-network
+
   portal-page:
     image: ghcr.io/proxeon/lazuar-hub/portal-page:${TAG:-latest}
     container_name: lazuar-portal
@@ -56,6 +66,16 @@ services:
     environment:
       API_URL: http://api:8080/api/v1
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+    depends_on:
+      - api
+    networks:
+      - lazuar-network
+
+  superadmin-page:
+    image: ghcr.io/proxeon/lazuar-hub/superadmin-page:${TAG:-latest}
+    container_name: lazuar-superadmin
+    ports:
+      - "3005:3000"
     depends_on:
       - api
     networks:

@@ -1,9 +1,6 @@
-# Local runtime stack (process containers only — no embedded reverse proxy).
-# Vite SPAs (ops / superadmin) are not containerized; run via pnpm and later
-# serve their dist/ from the host Caddyfile on the server.
-#
-#   docker compose up -d --build          # db + api
-#   docker compose --profile full up -d   # also portal (Next.js)
+# Local runtime stack. Host Caddy (on the server later) reverse_proxies these ports.
+#   docker compose up -d --build                 # db + api
+#   docker compose --profile full up -d --build  # + all frontends
 #   docker compose -f docker-compose.ghcr.yml up -d
 services:
   db:
@@ -49,6 +46,23 @@ services:
     networks:
       - lazuar-network
 
+  ops-page:
+    build:
+      context: .
+      dockerfile: apps/ops-page/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
+        VITE_PORTAL_URL: ${VITE_PORTAL_URL:-http://localhost:3004}
+    image: ghcr.io/proxeon/lazuar-hub/ops-page:local
+    container_name: lazuar-ops
+    ports:
+      - "3003:3000"
+    depends_on:
+      - api
+    networks:
+      - lazuar-network
+    profiles: ["full"]
+
   portal-page:
     build:
       context: .
@@ -62,6 +76,22 @@ services:
     environment:
       API_URL: http://api:8080/api/v1
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+    depends_on:
+      - api
+    networks:
+      - lazuar-network
+    profiles: ["full"]
+
+  superadmin-page:
+    build:
+      context: .
+      dockerfile: apps/superadmin-page/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
+    image: ghcr.io/proxeon/lazuar-hub/superadmin-page:local
+    container_name: lazuar-superadmin
+    ports:
+      - "3005:3000"
     depends_on:
       - api
     networks:
