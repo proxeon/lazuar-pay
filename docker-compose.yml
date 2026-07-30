@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: apps/lazuar-api/Dockerfile
-    image: ghcr.io/proxeon/lazuar-hub/api:local
+    image: ghcr.io/proxeon/lazuar-hub-api:local
     container_name: lazuar-api
     ports:
       - "8080:8080"
@@ -53,7 +53,7 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
         VITE_PORTAL_URL: ${VITE_PORTAL_URL:-http://localhost:3004}
-    image: ghcr.io/proxeon/lazuar-hub/ops-page:local
+    image: ghcr.io/proxeon/lazuar-hub-ops:local
     container_name: lazuar-ops
     ports:
       - "3003:3000"
@@ -69,7 +69,7 @@ services:
       dockerfile: apps/portal-page/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
-    image: ghcr.io/proxeon/lazuar-hub/portal-page:local
+    image: ghcr.io/proxeon/lazuar-hub-portal:local
     container_name: lazuar-portal
     ports:
       - "3004:3000"
@@ -88,7 +88,7 @@ services:
       dockerfile: apps/superadmin-page/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
-    image: ghcr.io/proxeon/lazuar-hub/superadmin-page:local
+    image: ghcr.io/proxeon/lazuar-hub-superadmin:local
     container_name: lazuar-superadmin
     ports:
       - "3005:3000"

@@ -237,7 +237,7 @@ tasks:
         TAG="${TAG:-$(git rev-parse --short HEAD)}"
         REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
         PLATFORMS="${PLATFORMS:-linux/amd64}"
-        echo "Pushing $REGISTRY/lazuar-hub/api:$TAG as $PLATFORMS"
+        echo "Pushing $REGISTRY/lazuar-hub-api:$TAG as $PLATFORMS"
         docker buildx bake api --push \
           --builder lazuar-builder \
           REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"

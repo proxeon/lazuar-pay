@@ -1,15 +1,15 @@
 // Multi-image build definitions for Lazuar Hub → GHCR
-// Images are ALWAYS built for linux/amd64 so they run on Ubuntu servers.
+// Flat image names (avoids nested-package 403 from GITHUB_TOKEN):
+//   ghcr.io/proxeon/lazuar-hub-api
+//   ghcr.io/proxeon/lazuar-hub-ops
+//   ghcr.io/proxeon/lazuar-hub-portal
+//   ghcr.io/proxeon/lazuar-hub-superadmin
 //
-// Public paths (single host):
+// Public paths:
 //   https://hub.lazuar.com/           ops
 //   https://hub.lazuar.com/portal     portal
 //   https://hub.lazuar.com/api/v1     api
 //   https://hub.lazuar.com/admin      superadmin
-//
-// Usage:
-//   docker buildx bake --push
-//   TAG=$(git rev-parse --short HEAD) docker buildx bake --push
 
 variable "REGISTRY" {
   default = "ghcr.io/proxeon"
@@ -63,11 +63,11 @@ target "api" {
   context    = "."
   dockerfile = "apps/lazuar-api/Dockerfile"
   tags = [
-    "${REGISTRY}/lazuar-hub/api:${TAG}",
-    "${REGISTRY}/lazuar-hub/api:latest",
+    "${REGISTRY}/lazuar-hub-api:${TAG}",
+    "${REGISTRY}/lazuar-hub-api:latest",
   ]
   labels = {
-    "org.opencontainers.image.title" = "lazuar-hub/api"
+    "org.opencontainers.image.title" = "lazuar-hub-api"
   }
 }
 
@@ -76,15 +76,15 @@ target "portal-page" {
   context    = "."
   dockerfile = "apps/portal-page/Dockerfile"
   tags = [
-    "${REGISTRY}/lazuar-hub/portal-page:${TAG}",
-    "${REGISTRY}/lazuar-hub/portal-page:latest",
+    "${REGISTRY}/lazuar-hub-portal:${TAG}",
+    "${REGISTRY}/lazuar-hub-portal:latest",
   ]
   args = {
     NEXT_PUBLIC_API_URL = NEXT_PUBLIC_API_URL
     NEXT_BASE_PATH      = NEXT_BASE_PATH
   }
   labels = {
-    "org.opencontainers.image.title" = "lazuar-hub/portal-page"
+    "org.opencontainers.image.title" = "lazuar-hub-portal"
   }
 }
 
@@ -93,8 +93,8 @@ target "ops-page" {
   context    = "."
   dockerfile = "apps/ops-page/Dockerfile"
   tags = [
-    "${REGISTRY}/lazuar-hub/ops-page:${TAG}",
-    "${REGISTRY}/lazuar-hub/ops-page:latest",
+    "${REGISTRY}/lazuar-hub-ops:${TAG}",
+    "${REGISTRY}/lazuar-hub-ops:latest",
   ]
   args = {
     VITE_API_URL    = VITE_API_URL
@@ -102,7 +102,7 @@ target "ops-page" {
     VITE_BASE_PATH  = "/"
   }
   labels = {
-    "org.opencontainers.image.title" = "lazuar-hub/ops-page"
+    "org.opencontainers.image.title" = "lazuar-hub-ops"
   }
 }
 
@@ -111,14 +111,14 @@ target "superadmin-page" {
   context    = "."
   dockerfile = "apps/superadmin-page/Dockerfile"
   tags = [
-    "${REGISTRY}/lazuar-hub/superadmin-page:${TAG}",
-    "${REGISTRY}/lazuar-hub/superadmin-page:latest",
+    "${REGISTRY}/lazuar-hub-superadmin:${TAG}",
+    "${REGISTRY}/lazuar-hub-superadmin:latest",
   ]
   args = {
     VITE_API_URL   = VITE_API_URL
     VITE_BASE_PATH = VITE_BASE_PATH_ADMIN
   }
   labels = {
-    "org.opencontainers.image.title" = "lazuar-hub/superadmin-page"
+    "org.opencontainers.image.title" = "lazuar-hub-superadmin"
   }
 }

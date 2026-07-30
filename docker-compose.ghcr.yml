@@ -28,7 +28,7 @@ services:
       - lazuar-network
 
   api:
-    image: ghcr.io/proxeon/lazuar-hub/api:${TAG:-latest}
+    image: ghcr.io/proxeon/lazuar-hub-api:${TAG:-latest}
     container_name: lazuar-api
     ports:
       - "8080:8080"
@@ -49,7 +49,7 @@ services:
       - lazuar-network
 
   ops-page:
-    image: ghcr.io/proxeon/lazuar-hub/ops-page:${TAG:-latest}
+    image: ghcr.io/proxeon/lazuar-hub-ops:${TAG:-latest}
     container_name: lazuar-ops
     ports:
       - "3003:3000"
@@ -59,7 +59,7 @@ services:
       - lazuar-network
 
   portal-page:
-    image: ghcr.io/proxeon/lazuar-hub/portal-page:${TAG:-latest}
+    image: ghcr.io/proxeon/lazuar-hub-portal:${TAG:-latest}
     container_name: lazuar-portal
     ports:
       - "3004:3000"
@@ -72,7 +72,7 @@ services:
       - lazuar-network
 
   superadmin-page:
-    image: ghcr.io/proxeon/lazuar-hub/superadmin-page:${TAG:-latest}
+    image: ghcr.io/proxeon/lazuar-hub-superadmin:${TAG:-latest}
     container_name: lazuar-superadmin
     ports:
       - "3005:3000"
