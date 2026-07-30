@@ -1,11 +1,11 @@
 // Multi-image build definitions for Lazuar Hub → GHCR
 // Images are ALWAYS built for linux/amd64 so they run on Ubuntu servers.
 //
-// Runtime images (pull on server; host Caddy reverse_proxies):
-//   - api              .NET :8080
-//   - portal-page      Next.js :3000
-//   - ops-page         Vite SPA via serve :3000
-//   - superadmin-page  Vite SPA via serve :3000
+// Public paths (single host):
+//   https://hub.lazuar.com/           ops
+//   https://hub.lazuar.com/portal     portal
+//   https://hub.lazuar.com/api/v1     api
+//   https://hub.lazuar.com/admin      superadmin
 //
 // Usage:
 //   docker buildx bake --push
@@ -20,15 +20,23 @@ variable "TAG" {
 }
 
 variable "VITE_API_URL" {
-  default = "http://localhost:8080/api/v1"
+  default = "https://hub.lazuar.com/api/v1"
 }
 
 variable "VITE_PORTAL_URL" {
-  default = "http://localhost:3004"
+  default = "https://hub.lazuar.com/portal"
 }
 
 variable "NEXT_PUBLIC_API_URL" {
-  default = "http://localhost:8080/api/v1"
+  default = "https://hub.lazuar.com/api/v1"
+}
+
+variable "NEXT_BASE_PATH" {
+  default = "/portal"
+}
+
+variable "VITE_BASE_PATH_ADMIN" {
+  default = "/admin/"
 }
 
 variable "PLATFORMS" {
@@ -73,6 +81,7 @@ target "portal-page" {
   ]
   args = {
     NEXT_PUBLIC_API_URL = NEXT_PUBLIC_API_URL
+    NEXT_BASE_PATH      = NEXT_BASE_PATH
   }
   labels = {
     "org.opencontainers.image.title" = "lazuar-hub/portal-page"
@@ -90,6 +99,7 @@ target "ops-page" {
   args = {
     VITE_API_URL    = VITE_API_URL
     VITE_PORTAL_URL = VITE_PORTAL_URL
+    VITE_BASE_PATH  = "/"
   }
   labels = {
     "org.opencontainers.image.title" = "lazuar-hub/ops-page"
@@ -105,7 +115,8 @@ target "superadmin-page" {
     "${REGISTRY}/lazuar-hub/superadmin-page:latest",
   ]
   args = {
-    VITE_API_URL = VITE_API_URL
+    VITE_API_URL   = VITE_API_URL
+    VITE_BASE_PATH = VITE_BASE_PATH_ADMIN
   }
   labels = {
     "org.opencontainers.image.title" = "lazuar-hub/superadmin-page"

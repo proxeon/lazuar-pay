@@ -18,6 +18,9 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/lazuar-hub
+  # Single-host public paths on hub.lazuar.com
+  PUBLIC_API_URL: https://hub.lazuar.com/api/v1
+  PUBLIC_PORTAL_URL: https://hub.lazuar.com/portal
 
 jobs:
   build-and-push:
@@ -28,12 +31,23 @@ jobs:
         include:
           - name: api
             dockerfile: apps/lazuar-api/Dockerfile
+            build_args: ""
           - name: portal-page
             dockerfile: apps/portal-page/Dockerfile
+            build_args: |
+              NEXT_PUBLIC_API_URL=https://hub.lazuar.com/api/v1
+              NEXT_BASE_PATH=/portal
           - name: ops-page
             dockerfile: apps/ops-page/Dockerfile
+            build_args: |
+              VITE_API_URL=https://hub.lazuar.com/api/v1
+              VITE_PORTAL_URL=https://hub.lazuar.com/portal
+              VITE_BASE_PATH=/
           - name: superadmin-page
             dockerfile: apps/superadmin-page/Dockerfile
+            build_args: |
+              VITE_API_URL=https://hub.lazuar.com/api/v1
+              VITE_BASE_PATH=/admin/
 
     steps:
       - name: Checkout
@@ -78,7 +92,4 @@ jobs:
             org.opencontainers.image.title=lazuar-hub/${{ matrix.name }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-          build-args: |
-            VITE_API_URL=${{ vars.VITE_API_URL }}
-            VITE_PORTAL_URL=${{ vars.VITE_PORTAL_URL }}
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          build-args: ${{ matrix.build_args }}

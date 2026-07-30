@@ -18,8 +18,10 @@ COPY packages/api-types-ts packages/api-types-ts
 COPY packages/typescript-config packages/typescript-config
 COPY apps/superadmin-page apps/superadmin-page
 
-ARG VITE_API_URL=http://localhost:8080/api/v1
+ARG VITE_API_URL=https://hub.lazuar.com/api/v1
+ARG VITE_BASE_PATH=/admin/
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
 
 RUN pnpm --filter ./apps/superadmin-page build
 

@@ -18,8 +18,10 @@ COPY packages/api-types-ts packages/api-types-ts
 COPY packages/typescript-config packages/typescript-config
 COPY apps/portal-page apps/portal-page
 
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+ARG NEXT_PUBLIC_API_URL=https://hub.lazuar.com/api/v1
+ARG NEXT_BASE_PATH=/portal
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_BASE_PATH=$NEXT_BASE_PATH
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm --filter ./apps/portal-page build
@@ -45,6 +47,6 @@ COPY --from=build --chown=nextjs:nodejs /app/apps/portal-page/public ./apps/port
 USER nextjs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/ || exit 1
+  CMD wget -qO- http://127.0.0.1:3000/portal || exit 1
 
 CMD ["node", "apps/portal-page/server.js"]

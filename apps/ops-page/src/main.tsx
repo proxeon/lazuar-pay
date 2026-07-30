@@ -8,10 +8,13 @@ import './index.css';
 
 const queryClient = new QueryClient();
 
+// Vite BASE_URL ends with "/"; React Router basename should not.
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, "") || undefined;
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename}>
         <App />
         {/* Rendered above all standard overlays to ensure backend errors are always visible */}
         <Toaster position="top-center" richColors theme="light" style={{ zIndex: 9999 }} />

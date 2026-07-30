@@ -18,10 +18,12 @@ COPY packages/api-types-ts packages/api-types-ts
 COPY packages/typescript-config packages/typescript-config
 COPY apps/ops-page apps/ops-page
 
-ARG VITE_API_URL=http://localhost:8080/api/v1
-ARG VITE_PORTAL_URL=http://localhost:3004
+ARG VITE_API_URL=https://hub.lazuar.com/api/v1
+ARG VITE_PORTAL_URL=https://hub.lazuar.com/portal
+ARG VITE_BASE_PATH=/
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_PORTAL_URL=$VITE_PORTAL_URL
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
 
 RUN pnpm --filter ./apps/ops-page build
 
