@@ -1,7 +1,9 @@
 using Serilog;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -253,6 +255,33 @@ builder.Services.AddCommunicationsModule(builder.Configuration);
 
 var app = builder.Build();
 
+// First boot / empty Neon: apply EF migrations for every module schema before hosted services run.
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var sp = scope.ServiceProvider;
+    var migratorLog = sp.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigrator");
+    DbContext[] contexts =
+    [
+        sp.GetRequiredService<OneDbContext>(),
+        sp.GetRequiredService<MessagingDbContext>(),
+        sp.GetRequiredService<PaymentsDbContext>(),
+        sp.GetRequiredService<CrmDbContext>(),
+        sp.GetRequiredService<OpsDbContext>(),
+        sp.GetRequiredService<BillingDbContext>(),
+        sp.GetRequiredService<LhdnDbContext>(),
+        sp.GetRequiredService<CommerceDbContext>(),
+        sp.GetRequiredService<CommunicationsDbContext>(),
+    ];
+
+    foreach (var ctx in contexts)
+    {
+        var name = ctx.GetType().Name;
+        migratorLog.LogInformation("Applying EF migrations for {DbContext}...", name);
+        await ctx.Database.MigrateAsync();
+        migratorLog.LogInformation("Migrations applied for {DbContext}", name);
+    }
+}
+
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
@@ -291,6 +320,6 @@ var platformGroup = app.MapGroup("/api/v1/platform")
 
 platformGroup.MapPlatformEndpoints();
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { }
