@@ -1,4 +1,3 @@
-// apps/portal-page/src/app/[tenantSlug]/community/[resourceSlug]/checkout/layout.tsx
 import { ReactNode } from "react";
 
 export default async function BlindCheckoutLayout({
@@ -6,7 +5,7 @@ export default async function BlindCheckoutLayout({
   params,
 }: {
   children: ReactNode;
-  params: Promise<{ tenantSlug: string; resourceSlug: string }>;
+  params: Promise<{ tenantSlug: string; productSlug: string }>;
 }) {
   await params;
 

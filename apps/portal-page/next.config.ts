@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Required for slim Docker images (copies only needed server files)
+  output: "standalone",
 };
 
 export default nextConfig;

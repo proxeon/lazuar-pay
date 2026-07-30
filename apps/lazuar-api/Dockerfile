@@ -6,23 +6,25 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copy directory-level MSBuild properties and packages configurations
+# Directory-level MSBuild props / solution metadata
 COPY ["apps/lazuar-api/Directory.Build.props", "apps/lazuar-api/"]
 COPY ["apps/lazuar-api/Directory.Packages.props", "apps/lazuar-api/"]
 COPY ["apps/lazuar-api/global.json", "apps/lazuar-api/"]
 COPY ["apps/lazuar-api/Lazuar.slnx", "apps/lazuar-api/"]
 
-# Dynamically copy ALL .csproj files while preserving their folder structure!
-# This eliminates the need to manually update the Dockerfile when adding new modules.
+# Generated API contracts live outside apps/lazuar-api but are project-referenced
+COPY ["packages/api-types-dotnet/Lazuar.ApiContracts.csproj", "packages/api-types-dotnet/"]
+
+# Dynamically copy ALL .csproj files while preserving folder structure
 COPY --parents apps/lazuar-api/**/*.csproj ./
 
-# Restore dependencies
+# Restore (layer-cached while csproj graph is stable)
 RUN dotnet restore "apps/lazuar-api/src/Lazuar.Api/Lazuar.Api.csproj"
 
-# Copy entire source files
+# Full sources for publish
+COPY ["packages/api-types-dotnet/", "packages/api-types-dotnet/"]
 COPY ["apps/lazuar-api/", "apps/lazuar-api/"]
 
-# Build and publish to /app/publish
 WORKDIR "/src/apps/lazuar-api/src/Lazuar.Api"
 RUN dotnet publish "Lazuar.Api.csproj" -c Release -o /app/publish --no-restore
 
@@ -33,9 +35,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 EXPOSE 8080
 
-# Configure ASP.NET Core production port
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-COPY --from=build /app/publish .
+# Official aspnet images already ship a non-root `app` user
+USER app
+
+COPY --from=build --chown=app:app /app/publish .
 ENTRYPOINT ["dotnet", "Lazuar.Api.dll"]

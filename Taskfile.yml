@@ -164,3 +164,92 @@ tasks:
     cmds:
       - dotnet tool run kiota generate -l typescript -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-ts/src/generated --class-name LhdnClient --clean-output
       - dotnet tool run kiota generate -l csharp -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-dotnet/src/Generated --class-name LhdnClient --namespace-name Lazuar.Lhdn.Sdk.Generated --clean-output
+
+  # ==========================================
+  # Docker / GHCR  (always linux/amd64 for Ubuntu servers)
+  # ==========================================
+  docker:builder:
+    desc: Ensure a buildx builder that can cross-compile linux/amd64 (from Mac ARM too)
+    cmds:
+      - |
+        if ! docker buildx inspect lazuar-builder >/dev/null 2>&1; then
+          docker buildx create --name lazuar-builder --driver docker-container --bootstrap
+        fi
+        docker buildx use lazuar-builder
+        docker buildx inspect --bootstrap
+        echo "Active builder supports: $(docker buildx inspect --bootstrap | sed -n 's/.*Platforms: //p')"
+
+  docker:build:
+    desc: "Build runtime images (api + portal) as linux/amd64. Vite SPAs are not containerized."
+    deps: [docker:builder]
+    cmds:
+      - |
+        TAG="${TAG:-$(git rev-parse --short HEAD)}"
+        REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
+        PLATFORMS="${PLATFORMS:-linux/amd64}"
+        echo "Building REGISTRY=$REGISTRY TAG=$TAG PLATFORMS=$PLATFORMS (api, portal-page)"
+        # --load only supports a single platform; we pin linux/amd64 for server parity
+        docker buildx bake --load \
+          --builder lazuar-builder \
+          REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
+
+  docker:build:api:
+    desc: Build only the API image as linux/amd64
+    deps: [docker:builder]
+    cmds:
+      - |
+        TAG="${TAG:-$(git rev-parse --short HEAD)}"
+        REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
+        PLATFORMS="${PLATFORMS:-linux/amd64}"
+        docker buildx bake api --load \
+          --builder lazuar-builder \
+          REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
+
+  docker:login:ghcr:
+    desc: "Login to GHCR using env GHCR_TOKEN + GHCR_USER (PAT needs write:packages, read:packages)"
+    cmds:
+      - |
+        if [ -z "${GHCR_TOKEN:-}" ] || [ -z "${GHCR_USER:-}" ]; then
+          echo "Set GHCR_USER and GHCR_TOKEN env vars (do not commit the token)."
+          echo "  export GHCR_USER=your-github-username"
+          echo "  export GHCR_TOKEN=ghp_..."
+          exit 1
+        fi
+        echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+  docker:push:
+    desc: "Build linux/amd64 and push all images to GHCR (lazuar-hub/*). Requires docker login."
+    deps: [docker:builder]
+    cmds:
+      - |
+        TAG="${TAG:-$(git rev-parse --short HEAD)}"
+        REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
+        PLATFORMS="${PLATFORMS:-linux/amd64}"
+        echo "Pushing $REGISTRY/lazuar-hub/*:$TAG as $PLATFORMS"
+        docker buildx bake --push \
+          --builder lazuar-builder \
+          REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
+
+  docker:push:api:
+    desc: "Build linux/amd64 API only and push to GHCR"
+    deps: [docker:builder]
+    cmds:
+      - |
+        TAG="${TAG:-$(git rev-parse --short HEAD)}"
+        REGISTRY="${REGISTRY:-ghcr.io/proxeon}"
+        PLATFORMS="${PLATFORMS:-linux/amd64}"
+        echo "Pushing $REGISTRY/lazuar-hub/api:$TAG as $PLATFORMS"
+        docker buildx bake api --push \
+          --builder lazuar-builder \
+          REGISTRY="$REGISTRY" TAG="$TAG" PLATFORMS="$PLATFORMS"
+
+  docker:up:ghcr:
+    desc: Run stack from GHCR images (docker-compose.ghcr.yml)
+    cmds:
+      - docker compose -f docker-compose.ghcr.yml pull
+      - docker compose -f docker-compose.ghcr.yml up -d
+
+  docker:up:full:
+    desc: Build and run local stack including portal (Next.js). Run ops/superadmin via pnpm; host Caddy later on server.
+    cmds:
+      - docker compose --profile full up -d --build

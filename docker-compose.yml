@@ -1,4 +1,10 @@
-# docker-compose.yml
+# Local runtime stack (process containers only — no embedded reverse proxy).
+# Vite SPAs (ops / superadmin) are not containerized; run via pnpm and later
+# serve their dist/ from the host Caddyfile on the server.
+#
+#   docker compose up -d --build          # db + api
+#   docker compose --profile full up -d   # also portal (Next.js)
+#   docker compose -f docker-compose.ghcr.yml up -d
 services:
   db:
     image: postgres:16-alpine
@@ -23,6 +29,7 @@ services:
     build:
       context: .
       dockerfile: apps/lazuar-api/Dockerfile
+    image: ghcr.io/proxeon/lazuar-hub/api:local
     container_name: lazuar-api
     ports:
       - "8080:8080"
@@ -41,6 +48,25 @@ services:
         condition: service_healthy
     networks:
       - lazuar-network
+
+  portal-page:
+    build:
+      context: .
+      dockerfile: apps/portal-page/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+    image: ghcr.io/proxeon/lazuar-hub/portal-page:local
+    container_name: lazuar-portal
+    ports:
+      - "3004:3000"
+    environment:
+      API_URL: http://api:8080/api/v1
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+    depends_on:
+      - api
+    networks:
+      - lazuar-network
+    profiles: ["full"]
 
 volumes:
   pgdata:

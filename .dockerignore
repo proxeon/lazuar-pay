@@ -1,0 +1,45 @@
+# Git & IDE
+.git
+.github
+.vscode
+.idea
+**/.DS_Store
+
+# Dependencies & caches
+**/node_modules
+**/.pnpm-store
+**/.turbo
+**/.next
+**/dist
+**/build
+**/out
+**/.task
+
+# .NET build artifacts
+**/bin
+**/obj
+**/.vs
+**/TestResults
+
+# Env & secrets — never bake into images
+.env
+.env.*
+!**/.env.example
+**/*credentials*
+**/*secret*
+
+# Docs, tests, local tooling (not needed in runtime images)
+docs
+scripts
+**/README.md
+**/*.md
+ctx.include
+mprocs-dev.yaml
+dotnet-tools.json
+
+# API tests (not needed for publish)
+apps/lazuar-api/tests
+
+# Large lock-adjacent / unused for single-app builds can still stay for monorepo
+**/.cache
+**/coverage
