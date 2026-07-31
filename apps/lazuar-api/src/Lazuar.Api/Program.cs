@@ -303,6 +303,9 @@ var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
 eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 eventBus.Subscribe<Modules.One.Contracts.WorkspaceUpdatedIntegrationEvent, Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
 
+// Liveness for deploy health-gates / Caddy (no auth, no CORS requirement)
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 
 apiGroup.MapOneEndpoints();

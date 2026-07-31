@@ -1,0 +1,33 @@
+# Lazuar Hub — single host path routing
+# DNS: hub.lazuar.com A → this VPS (Cloudflare DNS only / grey cloud for ACME)
+
+hub.lazuar.com {
+	encode gzip
+
+	# Liveness (deploy health-gate)
+	handle /health {
+		reverse_proxy api:8080
+	}
+
+	# API — keep /api prefix (app serves /api/v1/...)
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Portal (Next.js basePath=/portal)
+	handle /portal* {
+		reverse_proxy portal:3000
+	}
+
+	# Superadmin (Vite base=/admin/) — strip prefix so static assets resolve
+	@adminExact path /admin
+	redir @adminExact /admin/ permanent
+	handle_path /admin/* {
+		reverse_proxy superadmin:3000
+	}
+
+	# Ops creator console at /
+	handle {
+		reverse_proxy ops:3000
+	}
+}

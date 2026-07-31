@@ -1,0 +1,100 @@
+# Production stack for dedicated hub VPS (Neon + Caddy).
+# Server path: /root/lazuar-hub-prod
+#
+#   export VERSION=sha-abc1234   # or latest
+#   docker compose pull && docker compose up -d
+#
+# Only Caddy publishes 80/443. Apps stay on the internal network.
+
+name: lazuar-hub
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: hub-caddy
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - hub
+    depends_on:
+      - api
+      - ops
+      - portal
+      - superadmin
+
+  api:
+    image: ghcr.io/proxeon/lazuar-hub-api:${VERSION:-latest}
+    container_name: hub-api
+    restart: unless-stopped
+    mem_limit: 1024m
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+    expose:
+      - "8080"
+    networks:
+      - hub
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  ops:
+    image: ghcr.io/proxeon/lazuar-hub-ops:${VERSION:-latest}
+    container_name: hub-ops
+    restart: unless-stopped
+    mem_limit: 256m
+    expose:
+      - "3000"
+    networks:
+      - hub
+
+  portal:
+    image: ghcr.io/proxeon/lazuar-hub-portal:${VERSION:-latest}
+    container_name: hub-portal
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      # SSR → API inside Docker network
+      API_URL: http://api:8080/api/v1
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://hub.lazuar.com/api/v1}
+    expose:
+      - "3000"
+    networks:
+      - hub
+    depends_on:
+      api:
+        condition: service_healthy
+
+  superadmin:
+    image: ghcr.io/proxeon/lazuar-hub-superadmin:${VERSION:-latest}
+    container_name: hub-superadmin
+    restart: unless-stopped
+    mem_limit: 256m
+    expose:
+      - "3000"
+    networks:
+      - hub
+
+networks:
+  hub:
+    name: hub
+
+volumes:
+  caddy_data:
+  caddy_config:
