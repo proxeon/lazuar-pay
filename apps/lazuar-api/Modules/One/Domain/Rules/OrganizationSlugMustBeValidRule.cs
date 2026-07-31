@@ -41,5 +41,26 @@ public class OrganizationSlugMustBeValidRule : IBusinessRule
         return false;
     }
 
-    public string Message => "The provided workspace slug is invalid, improperly formatted, or reserved for system use. Slugs must be between 3 and 63 characters long, contain only lowercase letters, numbers, and single hyphens.";
+    public string Message
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_slug))
+                return "Workspace slug is required.";
+
+            if (_slug.Length < 3)
+                return "Workspace slug must be at least 3 characters long.";
+
+            if (_slug.Length > 63)
+                return "Workspace slug must be at most 63 characters long.";
+
+            if (ReservedSlugs.Contains(_slug))
+                return $"The workspace slug \"{_slug}\" is reserved for system use. Please choose another.";
+
+            if (!SlugRegex.IsMatch(_slug) || _slug.StartsWith('-') || _slug.EndsWith('-') || _slug.Contains("--"))
+                return "Workspace slug must use only lowercase letters, numbers, and single hyphens (no leading/trailing hyphens).";
+
+            return "The provided workspace slug is invalid.";
+        }
+    }
 }
