@@ -32,6 +32,7 @@ services:
       - ops
       - portal
       - superadmin
+      - developers
 
   api:
     image: ghcr.io/proxeon/lazuar-hub-api:${VERSION:-latest}
@@ -86,6 +87,18 @@ services:
     container_name: hub-superadmin
     restart: unless-stopped
     mem_limit: 256m
+    expose:
+      - "3000"
+    networks:
+      - hub
+
+  developers:
+    image: ghcr.io/proxeon/lazuar-hub-developers:${VERSION:-latest}
+    container_name: hub-developers
+    restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      OPENAPI_SPEC_ROOT: /app/openapi-specs
     expose:
       - "3000"
     networks:

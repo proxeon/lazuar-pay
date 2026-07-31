@@ -6,6 +6,7 @@ Path-based host: **https://hub.lazuar.com**
 |------|---------|
 | `/` | ops |
 | `/portal` | portal (Next) |
+| `/docs` | developer API docs (Next + Scalar) |
 | `/api/*` | .NET API |
 | `/admin/*` | superadmin |
 | `/health` | API liveness |

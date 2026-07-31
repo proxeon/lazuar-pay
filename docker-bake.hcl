@@ -4,10 +4,12 @@
 //   ghcr.io/proxeon/lazuar-hub-ops
 //   ghcr.io/proxeon/lazuar-hub-portal
 //   ghcr.io/proxeon/lazuar-hub-superadmin
+//   ghcr.io/proxeon/lazuar-hub-developers
 //
 // Public paths:
 //   https://hub.lazuar.com/           ops
 //   https://hub.lazuar.com/portal     portal
+//   https://hub.lazuar.com/docs       developers
 //   https://hub.lazuar.com/api/v1     api
 //   https://hub.lazuar.com/admin      superadmin
 
@@ -44,7 +46,7 @@ variable "PLATFORMS" {
 }
 
 group "default" {
-  targets = ["api", "portal-page", "ops-page", "superadmin-page"]
+  targets = ["api", "portal-page", "ops-page", "superadmin-page", "developers-page"]
 }
 
 target "docker-metadata-action" {}
@@ -120,5 +122,21 @@ target "superadmin-page" {
   }
   labels = {
     "org.opencontainers.image.title" = "lazuar-hub-superadmin"
+  }
+}
+
+target "developers-page" {
+  inherits   = ["_common"]
+  context    = "."
+  dockerfile = "apps/developers-page/Dockerfile"
+  tags = [
+    "${REGISTRY}/lazuar-hub-developers:${TAG}",
+    "${REGISTRY}/lazuar-hub-developers:latest",
+  ]
+  args = {
+    NEXT_BASE_PATH = "/docs"
+  }
+  labels = {
+    "org.opencontainers.image.title" = "lazuar-hub-developers"
   }
 }

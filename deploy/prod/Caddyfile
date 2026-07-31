@@ -19,6 +19,11 @@ hub.lazuar.com {
 		reverse_proxy portal:3000
 	}
 
+	# Developer docs (Next.js basePath=/docs)
+	handle /docs* {
+		reverse_proxy developers:3000
+	}
+
 	# Superadmin (Vite base=/admin/) — strip prefix so static assets resolve
 	@adminExact path /admin
 	redir @adminExact /admin/ permanent

@@ -80,6 +80,10 @@ jobs:
             build_args: |
               VITE_API_URL=https://hub.lazuar.com/api/v1
               VITE_BASE_PATH=/admin/
+          - name: lazuar-hub-developers
+            dockerfile: apps/developers-page/Dockerfile
+            build_args: |
+              NEXT_BASE_PATH=/docs
     steps:
       - uses: actions/checkout@v4
 

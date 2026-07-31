@@ -72,6 +72,7 @@ wait_healthy hub-api 180
 wait_healthy hub-ops 60
 wait_healthy hub-portal 90
 wait_healthy hub-superadmin 60
+wait_healthy hub-developers 90
 wait_healthy hub-caddy 60
 
 if docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null; then
@@ -87,6 +88,8 @@ code=$(curl -sS -o /dev/null -w "%{http_code}" -m 15 -H "Host: hub.lazuar.com" h
 echo "http / → $code"
 code=$(curl -sS -o /dev/null -w "%{http_code}" -m 15 -H "Host: hub.lazuar.com" http://127.0.0.1/portal || echo 000)
 echo "http /portal → $code"
+code=$(curl -sS -o /dev/null -w "%{http_code}" -m 15 -H "Host: hub.lazuar.com" http://127.0.0.1/docs || echo 000)
+echo "http /docs → $code"
 
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
 log "done VERSION=${VERSION:-latest}"

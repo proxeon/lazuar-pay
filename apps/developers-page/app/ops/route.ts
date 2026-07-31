@@ -1,7 +1,7 @@
 import { ApiReference } from "@scalar/nextjs-api-reference";
 import { readOpenApiSpec } from "../../lib/openapi";
 
-const openapiSpec = readOpenApiSpec("one");
+const openapiSpec = readOpenApiSpec("ops");
 
 export const GET = ApiReference({
   spec: {
@@ -9,6 +9,6 @@ export const GET = ApiReference({
   },
   theme: "default",
   metaData: {
-    title: "Lazuar Platform API",
+    title: "Lazuar Ops API",
   },
 });
