@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,12 +18,17 @@ namespace Modules.Communications.Infrastructure.Workers;
 public class BroadcastFanoutJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<BroadcastFanoutJob> _logger;
     private const int PageSize = 100;
 
-    public BroadcastFanoutJob(IServiceScopeFactory scopeFactory, ILogger<BroadcastFanoutJob> logger)
+    public BroadcastFanoutJob(
+        IServiceScopeFactory scopeFactory,
+        IConfiguration configuration,
+        ILogger<BroadcastFanoutJob> logger)
     {
         _scopeFactory = scopeFactory;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -77,6 +83,9 @@ public class BroadcastFanoutJob : BackgroundService
             broadcast.MarkSending();
             await db.SaveChangesAsync(ct);
 
+            var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
+            var jwtSecret = _configuration["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+
             var page = 1;
             while (true)
             {
@@ -91,15 +100,22 @@ public class BroadcastFanoutJob : BackgroundService
                         continue;
                     }
 
-                    await eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
+                    var unsubscribeUrl = PublicComplianceEndpoints.BuildUnsubscribeUrl(
+                        apiBaseUrl,
                         broadcast.OrganizationId,
                         recipient.Email,
-                        null,
-                        broadcast.Subject,
-                        broadcast.EmailBody,
-                        null,
-                        "EMAIL",
-                        broadcast.Id)); // Pass broadcast ID instead of CreditHoldId to bypass wallet checks
+                        jwtSecret);
+
+                    await eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
+                        OrganizationId: broadcast.OrganizationId,
+                        ToEmail: recipient.Email,
+                        ToPhone: null,
+                        Subject: broadcast.Subject,
+                        HtmlEmailBody: broadcast.EmailBody,
+                        PlainTextPhoneBody: null,
+                        Channel: "EMAIL",
+                        CreditHoldId: broadcast.Id, // Pass broadcast ID instead of CreditHoldId to bypass wallet checks
+                        UnsubscribeUrl: unsubscribeUrl));
 
                     broadcast.RecordSent();
                 }

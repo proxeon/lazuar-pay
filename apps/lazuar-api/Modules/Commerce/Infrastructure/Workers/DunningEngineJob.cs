@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -17,11 +18,16 @@ namespace Modules.Commerce.Infrastructure.Workers;
 public class DunningEngineJob : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<DunningEngineJob> _logger;
 
-    public DunningEngineJob(IServiceScopeFactory scopeFactory, ILogger<DunningEngineJob> logger)
+    public DunningEngineJob(
+        IServiceScopeFactory scopeFactory,
+        IConfiguration configuration,
+        ILogger<DunningEngineJob> logger)
     {
         _scopeFactory = scopeFactory;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -52,6 +58,7 @@ public class DunningEngineJob : BackgroundService
 
         var now = DateTime.UtcNow;
         bool requiresSave = false;
+        var whatsAppEnabled = _configuration.GetValue("Messaging:WhatsAppEnabled", false);
 
         var campaigns = await db.DunningCampaigns
             .IgnoreQueryFilters()
@@ -93,12 +100,23 @@ public class DunningEngineJob : BackgroundService
 
             foreach (var step in dueSteps)
             {
-                await DispatchCommunicationStepAsync(db, sub, step, daysOverdue: 0, eventBus, ct);
+                var effectiveAction = ResolveEffectiveCommunicationAction(step, whatsAppEnabled);
+                if (effectiveAction == null)
+                {
+                    _logger.LogInformation(
+                        "Skipped pre-dunning WHATSAPP step DayOffset={DayOffset} ({StepId}) for Subscription {SubId}: WhatsApp disabled and no email body.",
+                        step.DayOffset, step.Id, sub.Id);
+                    sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
+                    requiresSave = true;
+                    continue;
+                }
+
+                await DispatchCommunicationStepAsync(db, sub, step, daysOverdue: 0, effectiveAction, eventBus, ct);
                 sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
                 requiresSave = true;
                 _logger.LogInformation(
-                    "Dispatched pre-dunning step DayOffset={DayOffset} ({StepId}) for Subscription {SubId}.",
-                    step.DayOffset, step.Id, sub.Id);
+                    "Dispatched pre-dunning step DayOffset={DayOffset} ({StepId}) for Subscription {SubId} as {Action}.",
+                    step.DayOffset, step.Id, sub.Id, effectiveAction);
             }
         }
 
@@ -260,10 +278,20 @@ public class DunningEngineJob : BackgroundService
                 }
                 else
                 {
-                    await DispatchCommunicationStepAsync(db, sub, step, daysOverdue, eventBus, ct);
-                    _logger.LogInformation(
-                        "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id}.",
-                        step.DayOffset, sub.Id);
+                    var effectiveAction = ResolveEffectiveCommunicationAction(step, whatsAppEnabled);
+                    if (effectiveAction == null)
+                    {
+                        _logger.LogInformation(
+                            "Skipped communication dunning WHATSAPP step DayOffset={DayOffset} for Subscription {Id}: WhatsApp disabled and no email body.",
+                            step.DayOffset, sub.Id);
+                    }
+                    else
+                    {
+                        await DispatchCommunicationStepAsync(db, sub, step, daysOverdue, effectiveAction, eventBus, ct);
+                        _logger.LogInformation(
+                            "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id} as {Action}.",
+                            step.DayOffset, sub.Id, effectiveAction);
+                    }
                 }
 
                 sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
@@ -277,11 +305,37 @@ public class DunningEngineJob : BackgroundService
         }
     }
 
+    /// <summary>
+    /// When WhatsApp is not productized (Messaging:WhatsAppEnabled=false), demote WHATSAPP/ALL
+    /// to email-only recovery. Pure WhatsApp steps without email copy are skipped.
+    /// </summary>
+    private static string? ResolveEffectiveCommunicationAction(Domain.Entities.DunningStep step, bool whatsAppEnabled)
+    {
+        var action = (step.ActionType ?? "EMAIL").ToUpperInvariant();
+        if (action is "AUTOCHARGE" or "AUTO_CHARGE") return action;
+
+        if (whatsAppEnabled) return action;
+
+        if (action == "WHATSAPP")
+        {
+            // Only demote when email copy exists; otherwise skip the step.
+            if (!string.IsNullOrWhiteSpace(step.EmailBody))
+                return "EMAIL";
+            return null;
+        }
+
+        if (action == "ALL")
+            return "EMAIL";
+
+        return action;
+    }
+
     private async Task DispatchCommunicationStepAsync(
         CommerceDbContext db,
         Domain.Aggregates.Subscription sub,
         Domain.Entities.DunningStep step,
         int daysOverdue,
+        string effectiveActionType,
         IEventBus eventBus,
         CancellationToken ct)
     {
@@ -292,10 +346,11 @@ public class DunningEngineJob : BackgroundService
             subscription_id = sub.Id.ToString(),
             client_profile_id = sub.ClientProfileId.ToString(),
             product_id = sub.ProductId.ToString(),
-            action_type = step.ActionType,
+            action_type = effectiveActionType,
             subject = step.Subject,
             email_body = step.EmailBody,
-            whatsapp_body = step.WhatsAppBody,
+            // When forced to EMAIL only, strip WhatsApp body so Messaging does not attempt WA.
+            whatsapp_body = effectiveActionType == "EMAIL" ? string.Empty : step.WhatsAppBody,
             plan_name = product?.Name ?? string.Empty,
             amount = product?.Price ?? 0m,
             currency = product?.Currency ?? string.Empty,

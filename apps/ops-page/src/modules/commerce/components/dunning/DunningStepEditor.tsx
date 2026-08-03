@@ -147,11 +147,23 @@ export default function DunningStepEditor({
                   className="w-full h-9 px-3 border border-[#e5e5e5] text-[13px] rounded-sm focus:outline-none focus:border-[#09090b]"
                 >
                   <option value="EMAIL">Send Email</option>
-                  <option value="WHATSAPP">Send WhatsApp</option>
+                  <option value="WHATSAPP">Send WhatsApp (not connected)</option>
                   <option value="AUTO_CHARGE">Auto-Retry Card</option>
                 </select>
               </div>
             </div>
+
+            {step.action_type === "WHATSAPP" && (
+              <div className="p-4 bg-amber-50 border border-amber-200 flex items-start gap-3 rounded-sm">
+                <Smartphone size={18} className="text-amber-700 mt-0.5 shrink-0" />
+                <div className="text-[12px] text-amber-900 leading-relaxed space-y-1">
+                  <p className="font-bold">Email only until WhatsApp connected</p>
+                  <p>
+                    WhatsApp Business delivery is not connected yet. While disabled, WHATSAPP steps run as email when an email body is present; otherwise the step is skipped. Prefer <strong>Send Email</strong> for recovery until Meta Cloud is wired.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {step.action_type === "AUTO_CHARGE" && (
               <div className="p-4 bg-blue-50 border border-blue-200 flex items-start gap-3 rounded-sm">

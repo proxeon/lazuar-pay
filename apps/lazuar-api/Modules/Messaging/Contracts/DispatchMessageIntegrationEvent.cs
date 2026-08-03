@@ -15,7 +15,8 @@ public record DispatchMessageIntegrationEvent(
     string? HtmlEmailBody,
     string? PlainTextPhoneBody,
     string Channel = "EMAIL", // EMAIL, WHATSAPP, or ALL
-    Guid? CreditHoldId = null // When set (broadcast fan-out), the sender already reserved credits in a hold; the dispatch handler must not deduct from the wallet.
+    Guid? CreditHoldId = null, // When set (broadcast fan-out), the sender already reserved credits in a hold; the dispatch handler must not deduct from the wallet.
+    string? UnsubscribeUrl = null // Marketing/broadcast: List-Unsubscribe + footer link when set
 ) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

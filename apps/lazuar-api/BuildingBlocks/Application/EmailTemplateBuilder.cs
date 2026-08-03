@@ -2,7 +2,7 @@ namespace BuildingBlocks.Application;
 
 public static class EmailTemplateBuilder
 {
-    public static string WrapWithBrandHtml(string rawBody)
+    public static string WrapWithBrandHtml(string rawBody, string? unsubscribeUrl = null)
     {
         if (string.IsNullOrWhiteSpace(rawBody))
         {
@@ -10,6 +10,12 @@ public static class EmailTemplateBuilder
         }
 
         var formattedBody = rawBody.Replace("\n", "<br/>");
+
+        var unsubscribeFooter = string.IsNullOrWhiteSpace(unsubscribeUrl)
+            ? ""
+            : $@"<p style=""margin: 12px 0 0; font-size: 11px; color: #a1a1aa;"">
+                                <a href=""{unsubscribeUrl}"" style=""color: #71717a; text-decoration: underline;"">Unsubscribe</a>
+                            </p>";
 
         return $@"<!DOCTYPE html>
 <html>
@@ -32,6 +38,7 @@ public static class EmailTemplateBuilder
                             <p style=""margin: 0; font-size: 12px; color: #71717a;"">
                                 Powered by <strong>Lazuar</strong>
                             </p>
+                            {unsubscribeFooter}
                         </td>
                     </tr>
                 </table>

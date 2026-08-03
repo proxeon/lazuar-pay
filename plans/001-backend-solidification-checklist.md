@@ -207,11 +207,11 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Messaging, Communications, Program DI
 
-- [ ] Per **D2**: either
+- [x] Per **D2**: either
   - [ ] Implement real WhatsApp provider behind `IMessagingService`, **or**
-  - [ ] Feature-flag WHATSAPP steps off / label ops UI “Email only until WhatsApp connected”
-- [ ] Insufficient WhatsApp credits: surface failure to ops/dunning logs (no silent “dispatched”)
-- [ ] Wire List-Unsubscribe / `BuildUnsubscribeUrl` for marketing/broadcast emails (compliance)
+  - [x] Feature-flag WHATSAPP steps off / label ops UI “Email only until WhatsApp connected”
+- [x] Insufficient WhatsApp credits: surface failure to ops/dunning logs (no silent “dispatched”)
+- [x] Wire List-Unsubscribe / `BuildUnsubscribeUrl` for marketing/broadcast emails (compliance)
 
 ## A.10 Tests for Phase A
 

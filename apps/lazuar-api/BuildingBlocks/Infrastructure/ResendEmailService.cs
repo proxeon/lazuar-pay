@@ -23,7 +23,14 @@ public sealed class ResendEmailService : IEmailService
         _logger = logger;
     }
 
-    public async Task SendEmailAsync(string to, string subject, string body, Guid? organizationId = null, string? tenantApiKey = null, string? tenantSenderEmail = null)
+    public async Task SendEmailAsync(
+        string to,
+        string subject,
+        string body,
+        Guid? organizationId = null,
+        string? tenantApiKey = null,
+        string? tenantSenderEmail = null,
+        string? unsubscribeUrl = null)
     {
         string apiKey;
         string senderEmail;
@@ -57,6 +64,17 @@ public sealed class ResendEmailService : IEmailService
             var client = _httpClientFactory.CreateClient("Resend");
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
+            Dictionary<string, string>? headers = null;
+            if (!string.IsNullOrWhiteSpace(unsubscribeUrl))
+            {
+                headers = new Dictionary<string, string>
+                {
+                    // RFC 2369 List-Unsubscribe + RFC 8058 one-click
+                    ["List-Unsubscribe"] = $"<{unsubscribeUrl}>",
+                    ["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+                };
+            }
+
             var payload = new
             {
                 from = senderEmail,
@@ -65,7 +83,8 @@ public sealed class ResendEmailService : IEmailService
                 html = body,
                 tags = organizationId.HasValue
                     ? new[] { new { name = "org", value = organizationId.Value.ToString() } }
-                    : null
+                    : null,
+                headers
             };
 
             var response = await client.PostAsJsonAsync("emails", payload);
