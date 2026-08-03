@@ -364,15 +364,15 @@ Mark when decided; note outcome in PR/ADR.
 
 **Apps:** `developers-page`, `packages/api-spec`
 
-- [ ] Auth guide page: keys vs JWT; never embed user JWT in ERP
-- [ ] Re-curate public products: LHDN primary; Commerce public when ready; demote/gate Ops
-- [ ] Remove billing contamination from `docs-one` / `docs-ops` (or label internal)
-- [ ] Wire `docs-commerce.tsp` into build + Scalar route + landing card
-- [ ] Quickstart: first e-invoice (curl + TS/.NET); verify `X-Lazuar-Signature`
-- [ ] Surface LHDN SDK install links; fix Bearer/idempotency docs
-- [ ] Event catalog page for outbound webhooks
-- [ ] Align production server URLs with deploy (`hub.lazuar.com` / real API host)
-- [ ] Set real OpenAPI `info.version` (not `0.0.0`) for product docs
+- [x] Auth guide page: keys vs JWT; never embed user JWT in ERP
+- [x] Re-curate public products: LHDN primary; Commerce public when ready; demote/gate Ops
+- [x] Remove billing contamination from `docs-one` / `docs-ops` (or label internal)
+- [x] Wire `docs-commerce.tsp` into build + Scalar route + landing card
+- [x] Quickstart: first e-invoice (curl + TS/.NET); verify `X-Lazuar-Signature`
+- [x] Surface LHDN SDK install links; fix Bearer/idempotency docs
+- [x] Event catalog page for outbound webhooks
+- [x] Align production server URLs with deploy (`hub.lazuar.com` / real API host)
+- [x] Set real OpenAPI `info.version` (not `0.0.0`) for product docs
 
 ## B.7 Commerce integrator surface (per D5)
 
