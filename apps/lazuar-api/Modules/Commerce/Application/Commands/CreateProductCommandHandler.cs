@@ -5,7 +5,7 @@ using BuildingBlocks.Application;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.ValueObjects;
-using Modules.Communications.Application.Queries;
+using Modules.Communications.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 

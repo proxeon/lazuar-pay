@@ -9,7 +9,6 @@ using Modules.Commerce.Contracts.Events;
 using Modules.Billing.Contracts.Events;
 using Modules.One.Contracts;
 using Modules.Communications.Application;
-using Modules.Communications.Application.Queries;
 using Modules.Communications.Contracts;
 using Modules.Communications.Infrastructure.Repositories;
 using Modules.Communications.Infrastructure.Services;

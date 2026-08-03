@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
-using Modules.Communications.Application.Queries;
+using Modules.Communications.Contracts;
 using Lazuar.ApiTypes;
 
 namespace Modules.Communications.Infrastructure.Services;

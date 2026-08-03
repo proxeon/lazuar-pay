@@ -2,7 +2,7 @@ using System;
 using System.Text.Json.Serialization;
 using BuildingBlocks.Application;
 
-namespace Modules.Payments.Application.Commands;
+namespace Modules.Payments.Contracts.Commands;
 
 public record UpdatePaymentConfigCommand(
     Guid OrganizationId,

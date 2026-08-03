@@ -69,9 +69,9 @@ Mark when decided; note outcome in PR/ADR.
 
 ## 0.4 Test harness baseline
 
-- [ ] Expand `Taskfile.yml` `api:test` to include `Lazuar.ModuleTests`, `Modules.Billing.Tests`, `Modules.Ops.Tests`
-- [ ] Fix architecture tests to **fail** if expected module assemblies are not loaded (no silent skip)
-- [ ] Add smoke test: Lhdn outbox row drains after publish (integration or module test with hosted job or direct drain helper)
+- [x] Expand `Taskfile.yml` `api:test` to include `Lazuar.ModuleTests`, `Modules.Billing.Tests`, `Modules.Ops.Tests`
+- [x] Fix architecture tests to **fail** if expected module assemblies are not loaded (no silent skip)
+- [x] Add smoke test: Lhdn outbox row drains after publish (integration or module test with hosted job or direct drain helper)
 
 ## 0.5 Contract hygiene starter
 

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
-using Modules.Payments.Application.Commands;
+using Modules.Payments.Contracts.Commands;
 using Modules.Payments.Domain.Aggregates;
 
 namespace Modules.Payments.Infrastructure.Commands;

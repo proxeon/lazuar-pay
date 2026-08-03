@@ -7,8 +7,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
-using Modules.Payments.Application.Commands;
-using Modules.Payments.Application.Queries;
+using Modules.Payments.Contracts.Commands;
+using Modules.Payments.Contracts.Queries;
 
 namespace Modules.Commerce.Infrastructure;
 

@@ -18,8 +18,40 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Reference the main API project so tests can evaluate architectural boundaries -->
+    <!-- Host (optional convenience for full graph); explicit module layers ensure assembly load. -->
     <ProjectReference Include="..\..\src\Lazuar.Api\Lazuar.Api.csproj" />
+
+    <!-- Domain (all 9 modules) -->
+    <ProjectReference Include="..\..\Modules\One\Domain\Modules.One.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Domain\Modules.Payments.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Ops\Domain\Modules.Ops.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Billing\Domain\Modules.Billing.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Lhdn\Domain\Modules.Lhdn.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Commerce\Domain\Modules.Commerce.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Communications\Domain\Modules.Communications.Domain.csproj" />
+
+    <!-- Application (all modules except CRM) -->
+    <ProjectReference Include="..\..\Modules\One\Application\Modules.One.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Application\Modules.Payments.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Ops\Application\Modules.Ops.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Billing\Application\Modules.Billing.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Lhdn\Application\Modules.Lhdn.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Commerce\Application\Modules.Commerce.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Communications\Application\Modules.Communications.Application.csproj" />
+
+    <!-- Infrastructure (all 9 modules) -->
+    <ProjectReference Include="..\..\Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\CRM\Infrastructure\Modules.CRM.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Infrastructure\Modules.Payments.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Ops\Infrastructure\Modules.Ops.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Lhdn\Infrastructure\Modules.Lhdn.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Commerce\Infrastructure\Modules.Commerce.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Communications\Infrastructure\Modules.Communications.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

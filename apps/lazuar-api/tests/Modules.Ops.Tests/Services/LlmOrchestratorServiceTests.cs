@@ -50,7 +50,13 @@ public class LlmOrchestratorServiceTests
         _scopeFactory = Substitute.For<IServiceScopeFactory>();
         _oneQueryService = Substitute.For<IOneQueryService>();
         _promptProviders = Array.Empty<IAgentPromptProvider>();
-        _configuration = Substitute.For<IConfiguration>();
+        // Real config: NSubstitute returns "" for missing keys, which breaks GetValue<int>(..., default).
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Ai:MaxToolIterations"] = "7"
+            })
+            .Build();
         _logger = Substitute.For<ILogger<LlmOrchestratorService>>();
 
         // Inject the newly required dependencies into the service constructor
@@ -97,22 +103,18 @@ public class LlmOrchestratorServiceTests
     }
 
     [Test]
-    public async Task ExecuteReadToolAsync_WithMalformedJson_RecoversAndInjectsTenantId()
+    public async Task ExecuteReadToolAsync_WithMalformedJson_ReturnsErrorWithoutCallingMediator()
     {
         var tenantId = Guid.NewGuid();
         var toolDef = new AgentToolDefinition("DummyRead", "Desc", "low", typeof(DummyReadQuery), false, null!);
         var malformedArgs = "{ bad_json: unquoted, [ }";
 
-        _mediator.Send(Arg.Any<object>(), Arg.Any<CancellationToken>())
-            .Returns("RecoveredResponse");
-
         var result = await InvokeExecuteReadToolAsync(toolDef, malformedArgs, tenantId);
 
-        result.Should().Be("\"RecoveredResponse\"");
-        
-        await _mediator.Received(1).Send(
-            Arg.Is<object>(q => q is DummyReadQuery && ((DummyReadQuery)q).OrganizationId == tenantId), 
-            Arg.Any<CancellationToken>());
+        result.Should().StartWith("System Error: Tool DummyRead rejected your payload.");
+        result.Should().Contain("JSON structure was invalid");
+
+        await _mediator.DidNotReceive().Send(Arg.Any<object>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

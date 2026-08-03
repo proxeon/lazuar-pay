@@ -12,7 +12,7 @@ using Modules.Commerce.Domain.Aggregates;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts.Queries;
-using Modules.Communications.Application.Queries;
+using Modules.Communications.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 

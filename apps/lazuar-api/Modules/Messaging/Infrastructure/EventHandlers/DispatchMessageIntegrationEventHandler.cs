@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Contracts;
 using Modules.Communications.Contracts;
-using Modules.Communications.Application.Queries;
 using Modules.Messaging.Contracts;
 
 namespace Modules.Messaging.Infrastructure.EventHandlers;

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Modules.Payments.Application.Queries;
+using Modules.Payments.Contracts.Queries;
 using Modules.Payments.Application.Ports;
 using Lazuar.ApiTypes;
 

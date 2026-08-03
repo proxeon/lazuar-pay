@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\..\packages\api-types-dotnet\Lazuar.ApiContracts.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

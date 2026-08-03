@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using Modules.Communications.Application.Queries;
+using Modules.Communications.Contracts;
 using Modules.Communications.Contracts.Commands;
 
 namespace Modules.Communications.Infrastructure;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lazuar.ApiTypes;
 
-namespace Modules.Communications.Application.Queries;
+namespace Modules.Communications.Contracts;
 
 public interface ICommunicationsQueryService
 {

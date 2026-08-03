@@ -16,8 +16,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Modules.Payments.Application.Commands;
-using Modules.Payments.Application.Queries;
+using Modules.Payments.Contracts.Commands;
+using Modules.Payments.Contracts.Queries;
 
 namespace Modules.Payments.Infrastructure;
 

@@ -6,7 +6,7 @@ using MediatR;
 using Lazuar.ApiTypes;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Modules.Communications.Application.Queries;
+using Modules.Communications.Contracts;
 using Modules.Communications.Application.Commands;
 
 namespace Modules.Communications.Infrastructure;
