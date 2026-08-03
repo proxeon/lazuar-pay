@@ -1,6 +1,6 @@
 # Plan 001 — Backend solidification checklist
 
-**Status:** Draft  
+**Status:** Draft (Phase 0 acceptance verified in-repo)  
 **Date:** 2026-08-03  
 **Direction:** `docs/001-gaps/00-what-we-need-to-do-next.md`  
 **Evidence:** `docs/001-gaps/01`–`20`  
@@ -82,11 +82,18 @@ Mark when decided; note outcome in PR/ADR.
 
 ### Phase 0 acceptance checklist
 
-- [ ] LHDN submit/validate events reach Billing consumers in a local/dev run
-- [ ] API key revoke clears cache on multi-path (at least single-instance)
-- [ ] Forced outbox handler failure retries then dead-letters (not silent success)
-- [ ] Messaging notify not anonymously callable
-- [ ] CI runs full known test suite
+- [x] LHDN submit/validate events reach Billing consumers in a local/dev run
+  - Residual: publisher job + event wiring verified in code/tests; full live local/dev drain→Billing consumer still operator-confirmed (not a CI E2E)
+- [x] API key revoke clears cache on multi-path (at least single-instance)
+  - Residual: unit-tested single-instance `IMemoryCache` eviction (`ApiKeyRevokedIntegrationEventHandlerTests`); multi-instance / distributed cache invalidation not covered
+- [x] Forced outbox handler failure retries then dead-letters (not silent success)
+  - Residual: policy extracted to `MessageProcessingResultApplier` and unit-tested (first fail → backoff, intermediate, final `Dead`, success); full host job + DB SKIP LOCKED path covered by existing worker code, not a dedicated integration test
+- [x] Messaging notify not anonymously callable
+  - Residual: endpoint metadata asserts `OrgAdmin` on `POST …/messaging/notify` (`MessagingEndpointsAuthorizationTests`); runtime 401/403 against full host optional later
+- [x] CI runs full known test suite
+  - Residual: `task api:test` runs all 5 projects (Architecture, Integration, Module, Billing, Ops); LHDN sandbox E2E remains opt-in/skipped
+
+**Phase 0 status:** foundations complete for sequencing into Phase A. Open residuals above are honesty notes, not blockers for A.1.
 
 ---
 

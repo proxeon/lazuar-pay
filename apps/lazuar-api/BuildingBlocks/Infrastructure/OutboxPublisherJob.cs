@@ -78,26 +78,12 @@ public abstract class OutboxPublisherJob<TDbContext> : BackgroundService where T
                                 throw new InvalidOperationException($"Message {message.Id} is not a valid IIntegrationEvent.");
                             }
 
-                            message.ProcessedAt = DateTime.UtcNow;
-                            message.Error = null;
-                            message.NextAttemptAt = null;
+                            MessageProcessingResultApplier.ApplySuccess(message, DateTime.UtcNow);
                         }
                         catch (Exception ex)
                         {
-                            message.AttemptCount++;
-                            message.Error = ex.ToString();
+                            MessageProcessingResultApplier.ApplyFailure(message, ex, DateTime.UtcNow);
                             _logger.LogError(ex, "Failed to process outbox message {Id} (attempt {Attempt})", message.Id, message.AttemptCount);
-
-                            if (message.AttemptCount >= MessageRetryPolicy.MaxAttempts)
-                            {
-                                message.Status = MessageProcessingStatus.Dead;
-                                message.ProcessedAt = DateTime.UtcNow;
-                                message.NextAttemptAt = null;
-                            }
-                            else
-                            {
-                                message.NextAttemptAt = DateTime.UtcNow + MessageRetryPolicy.GetBackoff(message.AttemptCount);
-                            }
                         }
                     }
 

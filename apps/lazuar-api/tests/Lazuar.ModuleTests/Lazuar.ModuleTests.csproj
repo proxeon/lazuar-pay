@@ -15,8 +15,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- BuildingBlocks (MessageRetryPolicy unit tests) -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- BuildingBlocks (MessageRetryPolicy / MessageProcessingResultApplier unit tests) -->
     <ProjectReference Include="..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
+
+    <!-- Host: ApiKeyRevokedIntegrationEventHandler cache-eviction unit tests -->
+    <ProjectReference Include="..\..\src\Lazuar.Api\Lazuar.Api.csproj" />
+
+    <!-- Messaging: MapMessagingEndpoints authorization metadata -->
+    <ProjectReference Include="..\..\Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
 
     <!-- LHDN Module References -->
     <ProjectReference Include="..\..\Modules\Lhdn\Infrastructure\Modules.Lhdn.Infrastructure.csproj" />
@@ -34,10 +44,5 @@
     <ProjectReference Include="..\..\Modules\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Payments\Contracts\Modules.Payments.Contracts.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration" />
-  </ItemGroup>
-
 
 </Project>

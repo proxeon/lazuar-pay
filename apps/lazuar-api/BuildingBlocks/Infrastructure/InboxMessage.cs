@@ -1,6 +1,6 @@
 namespace BuildingBlocks.Infrastructure;
 
-public class InboxMessage
+public class InboxMessage : IMessageProcessingState
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public string Type { get; set; } = "";
