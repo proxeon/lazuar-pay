@@ -201,11 +201,27 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("SUPER_ADMIN", "ADMIN");
     });
 
-    // Integration clients (API keys) plus human admins for LHDN document submit/status/cancel.
-    options.AddPolicy("IntegrationLhdnDocuments", policy =>
+    // LHDN document write (submit / cancel): human admins bypass; API_CLIENT needs write scope.
+    options.AddPolicy("IntegrationLhdnDocumentsWrite", policy =>
     {
         policy.RequireAuthenticatedUser();
-        policy.RequireRole("SUPER_ADMIN", "ADMIN", "API_CLIENT");
+        policy.RequireAssertion(ctx =>
+            ctx.User.IsInRole("SUPER_ADMIN")
+            || ctx.User.IsInRole("ADMIN")
+            || (ctx.User.IsInRole("API_CLIENT")
+                && ctx.User.HasClaim("scope", Modules.Lhdn.Domain.ApiKeyScopes.LhdnDocumentsWrite)));
+    });
+
+    // LHDN document read (GET status): human admins bypass; API_CLIENT needs read or write (write implies read).
+    options.AddPolicy("IntegrationLhdnDocumentsRead", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(ctx =>
+            ctx.User.IsInRole("SUPER_ADMIN")
+            || ctx.User.IsInRole("ADMIN")
+            || (ctx.User.IsInRole("API_CLIENT")
+                && (ctx.User.HasClaim("scope", Modules.Lhdn.Domain.ApiKeyScopes.LhdnDocumentsRead)
+                    || ctx.User.HasClaim("scope", Modules.Lhdn.Domain.ApiKeyScopes.LhdnDocumentsWrite))));
     });
 });
 

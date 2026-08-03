@@ -7,6 +7,7 @@ using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
+using Modules.Lhdn.Domain;
 
 namespace Modules.Lhdn.Application.Queries;
 
@@ -70,6 +71,34 @@ public class ListWebhooksQueryHandler : IQueryHandler<ListWebhooksQuery, IEnumer
             Events = new List<string> { "invoice.validated", "invoice.rejected" },
             Is_active = w.IsActive,
             Created_at = new DateTimeOffset(w.CreatedAt)
+        });
+    }
+}
+
+public record ListApiKeysQuery(Guid OrganizationId) : IQuery<IEnumerable<ApiKeyDto>>;
+
+public class ListApiKeysQueryHandler : IQueryHandler<ListApiKeysQuery, IEnumerable<ApiKeyDto>>
+{
+    private readonly ILhdnRepository _repository;
+
+    public ListApiKeysQueryHandler(ILhdnRepository repository)
+    {
+        _repository = repository;
+    }
+
+    public async Task<IEnumerable<ApiKeyDto>> Handle(ListApiKeysQuery request, CancellationToken ct)
+    {
+        var keys = await _repository.ListDeveloperApiKeysAsync(request.OrganizationId, ct);
+
+        return keys.Select(k => new ApiKeyDto
+        {
+            Id = k.Id.ToString(),
+            Name = k.Name,
+            Prefix = k.Prefix,
+            Hint = k.KeyHint,
+            Is_active = k.IsActive,
+            Created_at = new DateTimeOffset(k.CreatedAt, TimeSpan.Zero),
+            Scopes = ApiKeyScopes.Split(k.Scopes).ToList()
         });
     }
 }

@@ -10,6 +10,10 @@ export interface ApiKeyDto extends AdditionalDataHolder, Parsable {
      */
     createdAt?: Date | null;
     /**
+     * Last 4 characters of the plain key for display (not secret).
+     */
+    hint?: string | null;
+    /**
      * The id property
      */
     id?: string | null;
@@ -25,6 +29,10 @@ export interface ApiKeyDto extends AdditionalDataHolder, Parsable {
      * The prefix property
      */
     prefix?: string | null;
+    /**
+     * The scopes property
+     */
+    scopes?: string[] | null;
 }
 export interface CancelDocumentRequestDto extends AdditionalDataHolder, Parsable {
     /**
@@ -158,10 +166,12 @@ export function createWebhookSubscriptionDtoFromDiscriminatorValue(parseNode: Pa
 export function deserializeIntoApiKeyDto(apiKeyDto: Partial<ApiKeyDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
     return {
         "created_at": n => { apiKeyDto.createdAt = n.getDateValue(); },
+        "hint": n => { apiKeyDto.hint = n.getStringValue(); },
         "id": n => { apiKeyDto.id = n.getStringValue(); },
         "is_active": n => { apiKeyDto.isActive = n.getBooleanValue(); },
         "name": n => { apiKeyDto.name = n.getStringValue(); },
         "prefix": n => { apiKeyDto.prefix = n.getStringValue(); },
+        "scopes": n => { apiKeyDto.scopes = n.getCollectionOfPrimitiveValues<string>("string"); },
     }
 }
 /**
@@ -195,7 +205,13 @@ export function deserializeIntoGenerateApiKeyRequestDto(generateApiKeyRequestDto
 // @ts-ignore
 export function deserializeIntoGenerateApiKeyResponseDto(generateApiKeyResponseDto: Partial<GenerateApiKeyResponseDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
     return {
+        "created_at": n => { generateApiKeyResponseDto.createdAt = n.getDateValue(); },
+        "hint": n => { generateApiKeyResponseDto.hint = n.getStringValue(); },
+        "id": n => { generateApiKeyResponseDto.id = n.getStringValue(); },
+        "name": n => { generateApiKeyResponseDto.name = n.getStringValue(); },
         "plain_key": n => { generateApiKeyResponseDto.plainKey = n.getStringValue(); },
+        "prefix": n => { generateApiKeyResponseDto.prefix = n.getStringValue(); },
+        "scopes": n => { generateApiKeyResponseDto.scopes = n.getCollectionOfPrimitiveValues<string>("string"); },
     }
 }
 /**
@@ -359,9 +375,33 @@ export interface GenerateApiKeyRequestDto extends AdditionalDataHolder, Parsable
 }
 export interface GenerateApiKeyResponseDto extends AdditionalDataHolder, Parsable {
     /**
-     * The plain_key property
+     * The created_at property
+     */
+    createdAt?: Date | null;
+    /**
+     * Last 4 characters of the plain key for display (not secret).
+     */
+    hint?: string | null;
+    /**
+     * The id property
+     */
+    id?: string | null;
+    /**
+     * The name property
+     */
+    name?: string | null;
+    /**
+     * Full secret — returned only once on create.
      */
     plainKey?: string | null;
+    /**
+     * The prefix property
+     */
+    prefix?: string | null;
+    /**
+     * The scopes property
+     */
+    scopes?: string[] | null;
 }
 export interface LhdnAddressDto extends AdditionalDataHolder, Parsable {
     /**
@@ -491,10 +531,12 @@ export interface RegisterWebhookRequestDto extends AdditionalDataHolder, Parsabl
 export function serializeApiKeyDto(writer: SerializationWriter, apiKeyDto: Partial<ApiKeyDto> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
     if (!apiKeyDto || isSerializingDerivedType) { return; }
     writer.writeDateValue("created_at", apiKeyDto.createdAt);
+    writer.writeStringValue("hint", apiKeyDto.hint);
     writer.writeStringValue("id", apiKeyDto.id);
     writer.writeBooleanValue("is_active", apiKeyDto.isActive);
     writer.writeStringValue("name", apiKeyDto.name);
     writer.writeStringValue("prefix", apiKeyDto.prefix);
+    writer.writeCollectionOfPrimitiveValues<string>("scopes", apiKeyDto.scopes);
     writer.writeAdditionalData(apiKeyDto.additionalData);
 }
 /**
@@ -531,7 +573,13 @@ export function serializeGenerateApiKeyRequestDto(writer: SerializationWriter, g
 // @ts-ignore
 export function serializeGenerateApiKeyResponseDto(writer: SerializationWriter, generateApiKeyResponseDto: Partial<GenerateApiKeyResponseDto> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
     if (!generateApiKeyResponseDto || isSerializingDerivedType) { return; }
+    writer.writeDateValue("created_at", generateApiKeyResponseDto.createdAt);
+    writer.writeStringValue("hint", generateApiKeyResponseDto.hint);
+    writer.writeStringValue("id", generateApiKeyResponseDto.id);
+    writer.writeStringValue("name", generateApiKeyResponseDto.name);
     writer.writeStringValue("plain_key", generateApiKeyResponseDto.plainKey);
+    writer.writeStringValue("prefix", generateApiKeyResponseDto.prefix);
+    writer.writeCollectionOfPrimitiveValues<string>("scopes", generateApiKeyResponseDto.scopes);
     writer.writeAdditionalData(generateApiKeyResponseDto.additionalData);
 }
 /**

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
@@ -12,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Queries;
+using Modules.Lhdn.Domain;
 
 namespace Modules.Lhdn.Infrastructure;
 
@@ -19,10 +21,10 @@ public static class Endpoints
 {
     public static IEndpointRouteBuilder MapLhdnEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        // SDK / integration surface: human admins + machine API_CLIENT principals.
-        var documents = endpoints.MapGroup("/lhdn").RequireAuthorization("IntegrationLhdnDocuments");
+        // Document write surface: submit + cancel.
+        var documentsWrite = endpoints.MapGroup("/lhdn").RequireAuthorization("IntegrationLhdnDocumentsWrite");
 
-        documents.MapPost("/documents", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+        documentsWrite.MapPost("/documents", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             [FromBody] SubmitDocumentRequestDto req,
             HttpRequest httpRequest,
             IExecutionContextAccessor ctx,
@@ -47,16 +49,7 @@ public static class Endpoints
             }
         });
 
-        documents.MapGet("/documents/{internalId}", async Task<Results<Ok<LhdnDocumentResponseDto>, NotFound>> (
-            string internalId,
-            IExecutionContextAccessor ctx,
-            IMediator mediator) =>
-        {
-            var result = await mediator.Send(new GetLhdnDocumentStatusQuery(ctx.TenantId, internalId));
-            return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
-        });
-
-        documents.MapPost("/documents/{internalId}/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+        documentsWrite.MapPost("/documents/{internalId}/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             string internalId,
             [FromBody] CancelDocumentRequestDto req,
             IExecutionContextAccessor ctx,
@@ -77,16 +70,45 @@ public static class Endpoints
             }
         });
 
+        // Document read surface: status GET (write scope also satisfies read policy).
+        var documentsRead = endpoints.MapGroup("/lhdn").RequireAuthorization("IntegrationLhdnDocumentsRead");
+
+        documentsRead.MapGet("/documents/{internalId}", async Task<Results<Ok<LhdnDocumentResponseDto>, NotFound>> (
+            string internalId,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var result = await mediator.Send(new GetLhdnDocumentStatusQuery(ctx.TenantId, internalId));
+            return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
+        });
+
         // Dashboard / org-admin surface: no API_CLIENT (key mint, webhooks, certificate).
         var admin = endpoints.MapGroup("/lhdn").RequireAuthorization("OrgAdmin");
+
+        admin.MapGet("/api-keys", async Task<Ok<ICollection<ApiKeyDto>>> (
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var result = await mediator.Send(new ListApiKeysQuery(ctx.TenantId));
+            return TypedResults.Ok((ICollection<ApiKeyDto>)result.ToList());
+        });
 
         admin.MapPost("/api-keys", async Task<Ok<GenerateApiKeyResponseDto>> (
             [FromBody] GenerateApiKeyRequestDto req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
-            var rawKey = await mediator.Send(new GenerateApiKeyCommand(ctx.TenantId, req.Name, req.Is_test_mode));
-            return TypedResults.Ok(new GenerateApiKeyResponseDto { Plain_key = rawKey });
+            var created = await mediator.Send(new GenerateApiKeyCommand(ctx.TenantId, req.Name, req.Is_test_mode));
+            return TypedResults.Ok(new GenerateApiKeyResponseDto
+            {
+                Id = created.Id.ToString(),
+                Name = created.Name,
+                Prefix = created.Prefix,
+                Hint = created.Hint,
+                Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero),
+                Plain_key = created.PlainKey,
+                Scopes = ApiKeyScopes.Split(created.Scopes).ToList()
+            });
         });
 
         admin.MapDelete("/api-keys/{id:guid}", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (

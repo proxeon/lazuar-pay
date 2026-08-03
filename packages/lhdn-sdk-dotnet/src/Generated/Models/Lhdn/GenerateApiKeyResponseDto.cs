@@ -14,13 +14,55 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
     {
         /// <summary>Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.</summary>
         public IDictionary<string, object> AdditionalData { get; set; }
-        /// <summary>The plain_key property</summary>
+        /// <summary>The created_at property</summary>
+        public DateTimeOffset? CreatedAt { get; set; }
+        /// <summary>Last 4 characters of the plain key for display (not secret).</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? Hint { get; set; }
+#nullable restore
+#else
+        public string Hint { get; set; }
+#endif
+        /// <summary>The id property</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? Id { get; set; }
+#nullable restore
+#else
+        public string Id { get; set; }
+#endif
+        /// <summary>The name property</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? Name { get; set; }
+#nullable restore
+#else
+        public string Name { get; set; }
+#endif
+        /// <summary>Full secret — returned only once on create.</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
         public string? PlainKey { get; set; }
 #nullable restore
 #else
         public string PlainKey { get; set; }
+#endif
+        /// <summary>The prefix property</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? Prefix { get; set; }
+#nullable restore
+#else
+        public string Prefix { get; set; }
+#endif
+        /// <summary>The scopes property</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public List<string>? Scopes { get; set; }
+#nullable restore
+#else
+        public List<string> Scopes { get; set; }
 #endif
         /// <summary>
         /// Instantiates a new <see cref="global::Lazuar.Lhdn.Sdk.Generated.Models.Lhdn.GenerateApiKeyResponseDto"/> and sets the default values.
@@ -47,7 +89,13 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
         {
             return new Dictionary<string, Action<IParseNode>>
             {
+                { "created_at", n => { CreatedAt = n.GetDateTimeOffsetValue(); } },
+                { "hint", n => { Hint = n.GetStringValue(); } },
+                { "id", n => { Id = n.GetStringValue(); } },
+                { "name", n => { Name = n.GetStringValue(); } },
                 { "plain_key", n => { PlainKey = n.GetStringValue(); } },
+                { "prefix", n => { Prefix = n.GetStringValue(); } },
+                { "scopes", n => { Scopes = n.GetCollectionOfPrimitiveValues<string>()?.AsList(); } },
             };
         }
         /// <summary>
@@ -57,7 +105,13 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
         public virtual void Serialize(ISerializationWriter writer)
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
+            writer.WriteDateTimeOffsetValue("created_at", CreatedAt);
+            writer.WriteStringValue("hint", Hint);
+            writer.WriteStringValue("id", Id);
+            writer.WriteStringValue("name", Name);
             writer.WriteStringValue("plain_key", PlainKey);
+            writer.WriteStringValue("prefix", Prefix);
+            writer.WriteCollectionOfPrimitiveValues<string>("scopes", Scopes);
             writer.WriteAdditionalData(AdditionalData);
         }
     }

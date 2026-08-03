@@ -28,9 +28,14 @@ public static class LhdnClientFactory
 {
     public static LhdnClient Create(string apiKey, string? baseUrl = null)
     {
+        // Always send Authorization: Bearer sk_* so raw keys and pre-prefixed values both work.
+        var authorizationValue = apiKey.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? apiKey
+            : $"Bearer {apiKey}";
+
         var authProvider = new ApiKeyAuthenticationProvider(
-            apiKey, 
-            "Authorization", 
+            authorizationValue,
+            "Authorization",
             ApiKeyAuthenticationProvider.KeyLocation.Header);
 
         // KiotaClientFactory.Create natively configures RetryHandler (Exponential Backoff)

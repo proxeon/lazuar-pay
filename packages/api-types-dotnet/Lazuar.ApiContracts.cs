@@ -1176,6 +1176,10 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_b2b_required")]
         public bool Is_b2b_required { get; set; } = default!;
 
+        /// <summary>
+        /// Preferred payment gateway (e.g. STRIPE, CHIP). Defaults to first configured tenant gateway.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
         public string? Gateway_name { get; set; } = default!;
 
@@ -3317,11 +3321,21 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("prefix")]
         public string Prefix { get; set; } = default!;
 
+        /// <summary>
+        /// Last 4 characters of the plain key for display (not secret).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("hint")]
+        public string Hint { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("scopes")]
+        public System.Collections.Generic.List<string> Scopes { get; set; } = new System.Collections.Generic.List<string>();
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -3428,8 +3442,34 @@ namespace Lazuar.ApiTypes
     public partial class GenerateApiKeyResponseDto
     {
 
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("prefix")]
+        public string Prefix { get; set; } = default!;
+
+        /// <summary>
+        /// Last 4 characters of the plain key for display (not secret).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("hint")]
+        public string Hint { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        /// <summary>
+        /// Full secret — returned only once on create.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("plain_key")]
         public string Plain_key { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("scopes")]
+        public System.Collections.Generic.List<string> Scopes { get; set; } = new System.Collections.Generic.List<string>();
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

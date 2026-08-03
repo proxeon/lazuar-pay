@@ -14,9 +14,13 @@ export interface LhdnClientOptions {
  * Initializes the Lazuar LHDN API Client.
  */
 export function initLhdnClient(options: LhdnClientOptions) {
-  // 1. Setup the API Key Authentication Provider
+  // 1. Setup the API Key Authentication Provider.
+  // Always send Authorization: Bearer sk_* so raw keys and pre-prefixed values both work.
+  const authorizationValue = options.apiKey.startsWith("Bearer ")
+    ? options.apiKey
+    : `Bearer ${options.apiKey}`;
   const authProvider = new ApiKeyAuthenticationProvider(
-    options.apiKey,
+    authorizationValue,
     "Authorization",
     ApiKeyLocation.Header
   );

@@ -1612,6 +1612,8 @@ export interface components {
             /** Format: date-time */
             expires_at?: string;
             is_b2b_required: boolean;
+            /** @description Preferred payment gateway (e.g. STRIPE, CHIP). Defaults to first configured tenant gateway. */
+            gateway_name?: string;
         };
         "Commerce.CreateDunningCampaignRequestDto": {
             name: string;
@@ -2012,9 +2014,12 @@ export interface components {
             id: string;
             name: string;
             prefix: string;
+            /** @description Last 4 characters of the plain key for display (not secret). */
+            hint: string;
             is_active: boolean;
             /** Format: date-time */
             created_at: string;
+            scopes: string[];
         };
         "Lhdn.CancelDocumentRequestDto": {
             reason: string;
@@ -2024,7 +2029,16 @@ export interface components {
             is_test_mode: boolean;
         };
         "Lhdn.GenerateApiKeyResponseDto": {
+            id: string;
+            name: string;
+            prefix: string;
+            /** @description Last 4 characters of the plain key for display (not secret). */
+            hint: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Full secret — returned only once on create. */
             plain_key: string;
+            scopes: string[];
         };
         "Lhdn.LhdnAddressDto": {
             line1: string;

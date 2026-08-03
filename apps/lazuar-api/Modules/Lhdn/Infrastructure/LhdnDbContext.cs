@@ -97,6 +97,8 @@ public class LhdnDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
             builder.HasIndex(x => x.KeyHash).IsUnique();
+            builder.Property(x => x.KeyHint).IsRequired().HasMaxLength(16);
+            builder.Property(x => x.Scopes).IsRequired();
         });
 
         modelBuilder.Entity<MsicCode>(builder =>

@@ -16,6 +16,14 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
         public IDictionary<string, object> AdditionalData { get; set; }
         /// <summary>The created_at property</summary>
         public DateTimeOffset? CreatedAt { get; set; }
+        /// <summary>Last 4 characters of the plain key for display (not secret).</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? Hint { get; set; }
+#nullable restore
+#else
+        public string Hint { get; set; }
+#endif
         /// <summary>The id property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -41,6 +49,14 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
 #nullable restore
 #else
         public string Prefix { get; set; }
+#endif
+        /// <summary>The scopes property</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public List<string>? Scopes { get; set; }
+#nullable restore
+#else
+        public List<string> Scopes { get; set; }
 #endif
         /// <summary>
         /// Instantiates a new <see cref="global::Lazuar.Lhdn.Sdk.Generated.Models.Lhdn.ApiKeyDto"/> and sets the default values.
@@ -68,10 +84,12 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "created_at", n => { CreatedAt = n.GetDateTimeOffsetValue(); } },
+                { "hint", n => { Hint = n.GetStringValue(); } },
                 { "id", n => { Id = n.GetStringValue(); } },
                 { "is_active", n => { IsActive = n.GetBoolValue(); } },
                 { "name", n => { Name = n.GetStringValue(); } },
                 { "prefix", n => { Prefix = n.GetStringValue(); } },
+                { "scopes", n => { Scopes = n.GetCollectionOfPrimitiveValues<string>()?.AsList(); } },
             };
         }
         /// <summary>
@@ -82,10 +100,12 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteDateTimeOffsetValue("created_at", CreatedAt);
+            writer.WriteStringValue("hint", Hint);
             writer.WriteStringValue("id", Id);
             writer.WriteBoolValue("is_active", IsActive);
             writer.WriteStringValue("name", Name);
             writer.WriteStringValue("prefix", Prefix);
+            writer.WriteCollectionOfPrimitiveValues<string>("scopes", Scopes);
             writer.WriteAdditionalData(AdditionalData);
         }
     }

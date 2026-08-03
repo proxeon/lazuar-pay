@@ -264,17 +264,17 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Host `Program.cs`, middleware, Lhdn endpoints
 
-- [ ] Policies: `Integration` / scope-based vs human `OrgAdmin`
-- [ ] API key middleware sets `CredentialId`, scopes, `IsTestMode`, tenant
-- [ ] Accept `Authorization: Bearer sk_*` and raw `sk_*` (normalize)
-- [ ] SDK factories always send correct Authorization format; document once
-- [ ] Scope matrix v1 minimum:
-  - [ ] `lhdn.documents:write|read`
+- [x] Policies: `Integration` / scope-based vs human `OrgAdmin`
+- [x] API key middleware sets `CredentialId`, scopes, `IsTestMode`, tenant
+- [x] Accept `Authorization: Bearer sk_*` and raw `sk_*` (normalize)
+- [x] SDK factories always send correct Authorization format; document once
+- [x] Scope matrix v1 minimum:
+  - [x] `lhdn.documents:write|read`
   - [ ] `lhdn.webhooks:manage` (optional later)
-  - [ ] Dashboard-only: keys, certs, payment config
-- [ ] Implement **GET `/lhdn/api-keys`** (list metadata, no secret)
-- [ ] Rich generate response: id, name, prefix/hint, created_at, plain_key once
-- [ ] Store public key hint / last4 for list UI
+  - [x] Dashboard-only: keys, certs, payment config
+- [x] Implement **GET `/lhdn/api-keys`** (list metadata, no secret)
+- [x] Rich generate response: id, name, prefix/hint, created_at, plain_key once
+- [x] Store public key hint / last4 for list UI
 
 ## B.2 Platform credentials ownership (per D3)
 

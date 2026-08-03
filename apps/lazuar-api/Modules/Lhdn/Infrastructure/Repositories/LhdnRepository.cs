@@ -57,6 +57,14 @@ public class LhdnRepository : ILhdnRepository
         return await _context.DeveloperApiKeys.FirstOrDefaultAsync(k => k.Id == id, ct);
     }
 
+    public async Task<IReadOnlyList<DeveloperApiKey>> ListDeveloperApiKeysAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.DeveloperApiKeys
+            .Where(k => k.OrganizationId == organizationId)
+            .OrderByDescending(k => k.CreatedAt)
+            .ToListAsync(ct);
+    }
+
     public void AddDeveloperApiKey(DeveloperApiKey key)
     {
         _context.DeveloperApiKeys.Add(key);

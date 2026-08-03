@@ -20,6 +20,7 @@ public interface ILhdnRepository
     void AddWebhookSubscription(WebhookSubscription subscription);
     
     Task<DeveloperApiKey?> GetDeveloperApiKeyAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<DeveloperApiKey>> ListDeveloperApiKeysAsync(Guid organizationId, CancellationToken ct = default);
     void AddDeveloperApiKey(DeveloperApiKey key);
 
     Task<IdempotencyLog?> GetIdempotencyLogAsync(Guid organizationId, string key, CancellationToken ct = default);
