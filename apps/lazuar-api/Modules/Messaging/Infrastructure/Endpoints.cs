@@ -16,7 +16,7 @@ public static class Endpoints
         {
             await mediator.Send(command);
             return Results.Accepted();
-        });
+        }).RequireAuthorization("OrgAdmin");
 
         return endpoints;
     }

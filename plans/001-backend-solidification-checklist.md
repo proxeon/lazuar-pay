@@ -58,14 +58,14 @@ Mark when decided; note outcome in PR/ADR.
 
 ## 0.3 Critical security gates
 
-- [ ] **Authenticate or remove** `POST /api/v1/messaging/notify` (`Modules/Messaging/Infrastructure/Endpoints.cs`)
-- [ ] **Split auth policies:** `OrgAdmin` = human `SUPER_ADMIN|ADMIN` only; machine principal uses scope/integration policies
-- [ ] **Deny `API_CLIENT`** on key mint/revoke, certificate upload, payment config, email config, member admin
-- [ ] **Fail production boot** if JWT secret is missing/default
-- [ ] **Resend webhook:** fail closed if `Resend:WebhookSecret` empty outside Development
-- [ ] **One workspace IDOR:** require membership (or system admin) on members/invites list
-- [ ] **Invite/remove member:** require workspace `ADMIN`, not mere membership
-- [ ] **OpsConversation EF filter:** combine soft-delete **and** tenant predicate (do not replace tenant filter)
+- [x] **Authenticate or remove** `POST /api/v1/messaging/notify` (`Modules/Messaging/Infrastructure/Endpoints.cs`)
+- [x] **Split auth policies:** `OrgAdmin` = human `SUPER_ADMIN|ADMIN` only; machine principal uses scope/integration policies
+- [x] **Deny `API_CLIENT`** on key mint/revoke, certificate upload, payment config, email config, member admin
+- [x] **Fail production boot** if JWT secret is missing/default
+- [x] **Resend webhook:** fail closed if `Resend:WebhookSecret` empty outside Development
+- [x] **One workspace IDOR:** require membership (or system admin) on members/invites list
+- [x] **Invite/remove member:** require workspace `ADMIN`, not mere membership
+- [x] **OpsConversation EF filter:** combine soft-delete **and** tenant predicate (do not replace tenant filter)
 
 ## 0.4 Test harness baseline
 

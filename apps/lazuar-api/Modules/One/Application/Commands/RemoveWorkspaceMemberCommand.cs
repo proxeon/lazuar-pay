@@ -23,8 +23,9 @@ public class RemoveWorkspaceMemberCommandHandler : ICommandHandler<RemoveWorkspa
 
     public async Task Handle(RemoveWorkspaceMemberCommand request, CancellationToken ct)
     {
-        var hasAdminAccess = await _repository.HasMembershipAsync(request.RequesterUserId, request.OrganizationId, ct);
-        if (!hasAdminAccess) throw new InvalidOperationException("Unauthorized to remove users.");
+        var requesterMembership = await _repository.GetMembershipAsync(request.RequesterUserId, request.OrganizationId, ct);
+        if (requesterMembership == null || requesterMembership.Role != "ADMIN")
+            throw new InvalidOperationException("Unauthorized to remove users.");
 
         var membership = await _repository.GetMembershipAsync(request.TargetUserId, request.OrganizationId, ct);
         if (membership == null) throw new InvalidOperationException("User is not a member of this workspace.");

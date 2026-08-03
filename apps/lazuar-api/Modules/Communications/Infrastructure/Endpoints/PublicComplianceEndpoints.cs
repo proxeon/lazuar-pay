@@ -6,9 +6,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Communications.Contracts;
 
@@ -61,6 +63,7 @@ public static class PublicComplianceEndpoints
         group.MapPost("/webhooks/resend", async (
             HttpRequest request,
             IConfiguration config,
+            IWebHostEnvironment env,
             ISuppressionService suppression,
             ILoggerFactory loggerFactory) =>
         {
@@ -71,9 +74,16 @@ public static class PublicComplianceEndpoints
             var rawBody = await reader.ReadToEndAsync();
             request.Body.Position = 0;
 
-            // If a webhook secret is configured, verify the Svix signature; otherwise accept
-            // (development). Set Resend:WebhookSecret in production to enforce verification.
-            if (!string.IsNullOrWhiteSpace(secret))
+            // Fail closed outside Development when secret is not configured.
+            // Only skip Svix verification in Development when secret is empty.
+            if (string.IsNullOrWhiteSpace(secret))
+            {
+                if (!env.IsDevelopment())
+                    return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+                logger.LogWarning("Resend webhook received with no WebhookSecret configured; skipping signature verification (development only).");
+            }
+            else
             {
                 if (!request.Headers.TryGetValue("svix-id", out var svixId)
                     || !request.Headers.TryGetValue("svix-timestamp", out var svixTimestamp)
@@ -95,10 +105,6 @@ public static class PublicComplianceEndpoints
                 {
                     return Results.BadRequest("Invalid webhook signature.");
                 }
-            }
-            else
-            {
-                logger.LogWarning("Resend webhook received with no WebhookSecret configured; skipping signature verification (development only).");
             }
 
             try

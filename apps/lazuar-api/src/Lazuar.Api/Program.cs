@@ -146,6 +146,19 @@ else
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
 
+const string defaultDevJwtSecret = "secure_development_key_minimum_32_characters_long";
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (builder.Environment.IsProduction())
+{
+    if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret == defaultDevJwtSecret)
+    {
+        throw new InvalidOperationException(
+            "Jwt:Secret must be configured to a non-default value in Production.");
+    }
+}
+
+var guardedJwtSecret = string.IsNullOrWhiteSpace(jwtSecret) ? defaultDevJwtSecret : jwtSecret;
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -153,7 +166,6 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    var secret = builder.Configuration["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -162,7 +174,7 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "lazuar-api",
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "lazuar-clients",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(guardedJwtSecret))
     };
     options.Events = new JwtBearerEvents
     {
@@ -182,7 +194,15 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
+    // Human org admins only — key mint/revoke, certs, payment/email config, member admin.
     options.AddPolicy("OrgAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("SUPER_ADMIN", "ADMIN");
+    });
+
+    // Integration clients (API keys) plus human admins for LHDN document submit/status/cancel.
+    options.AddPolicy("IntegrationLhdnDocuments", policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.RequireRole("SUPER_ADMIN", "ADMIN", "API_CLIENT");

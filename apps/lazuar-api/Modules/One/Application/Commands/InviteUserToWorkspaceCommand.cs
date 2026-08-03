@@ -23,8 +23,9 @@ public class InviteUserToWorkspaceCommandHandler : ICommandHandler<InviteUserToW
 
     public async Task<Guid> Handle(InviteUserToWorkspaceCommand request, CancellationToken ct)
     {
-        var hasAdminAccess = await _repository.HasMembershipAsync(request.InviterUserId, request.OrganizationId, ct);
-        if (!hasAdminAccess) throw new InvalidOperationException("Unauthorized to invite users.");
+        var membership = await _repository.GetMembershipAsync(request.InviterUserId, request.OrganizationId, ct);
+        if (membership == null || membership.Role != "ADMIN")
+            throw new InvalidOperationException("Unauthorized to invite users.");
 
         var existingMember = await _repository.GetUserByEmailAsync(request.Email, ct);
         if (existingMember != null)

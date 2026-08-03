@@ -194,6 +194,8 @@ public static class Endpoints
         group.MapGet("/workspaces/{id:guid}/members", async Task<Results<Ok<ICollection<WorkspaceMemberDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
             var members = await queryService.GetWorkspaceMembersAsync(id);
             var dtos = members.Select(m => new WorkspaceMemberDto { Id = m.Id.ToString(), Global_user_id = m.GlobalUserId.ToString(), Name = m.Name, Email = m.Email, Role = m.Role, Joined_at = new DateTimeOffset(m.JoinedAt) }).ToList();
             return TypedResults.Ok((ICollection<WorkspaceMemberDto>)dtos);
@@ -208,6 +210,8 @@ public static class Endpoints
         group.MapGet("/workspaces/{id:guid}/invites", async Task<Results<Ok<ICollection<WorkspaceInvitationDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
             var invites = await queryService.GetWorkspaceInvitationsAsync(id);
             var dtos = invites.Select(i => new WorkspaceInvitationDto { Id = i.Id.ToString(), Email = i.Email, Role = i.Role, Status = i.Status, Expires_at = new DateTimeOffset(i.ExpiresAt) }).ToList();
             return TypedResults.Ok((ICollection<WorkspaceInvitationDto>)dtos);
