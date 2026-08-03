@@ -590,6 +590,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Validate a taxpayer TIN against MyInvois (cached). Requires API key with lhdn.documents:read or write. */
         post: operations["LhdnOperations_validateTaxpayerTin"];
         delete?: never;
         options?: never;
@@ -638,6 +639,24 @@ export interface paths {
         };
         get?: never;
         put: operations["LhdnOperations_updateCertificate"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lhdn/workspaces/{id}/lhdn-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get tenant MyInvois / supplier config. Secrets masked (has_* flags only). OrgAdmin JWT. */
+        get: operations["LhdnOperations_getLhdnTenantConfig"];
+        /** @description Create or update tenant MyInvois / supplier config (TIN, BRN, MSIC, env, credentials, legal address). OrgAdmin JWT. */
+        put: operations["LhdnOperations_updateLhdnTenantConfig"];
         post?: never;
         delete?: never;
         options?: never;
@@ -981,22 +1000,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/one/workspaces/{id}/lhdn-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["OneOperations_getWorkspaceLhdnConfig"];
-        put: operations["OneOperations_updateWorkspaceLhdnConfig"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/one/workspaces/{id}/members": {
         parameters: {
             query?: never;
@@ -1299,6 +1302,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Initiate public checkout for a product (subscription or one-time). Primary integrator write path. */
         post: operations["PublicCommerceOperations_initiateCheckout"];
         delete?: never;
         options?: never;
@@ -1313,6 +1317,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Arrears summary for update-payment flows. */
         get: operations["PublicCommerceOperations_getArrearsSummary"];
         put?: never;
         post?: never;
@@ -1329,6 +1334,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Checkout status poller for client-side success pages. */
         get: operations["PublicCommerceOperations_getCheckoutStatus"];
         put?: never;
         post?: never;
@@ -1347,6 +1353,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Start update-payment / recovery checkout for a past-due subscription. */
         post: operations["PublicCommerceOperations_updatePayment"];
         delete?: never;
         options?: never;
@@ -1361,6 +1368,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Load a custom payment-link checkout session (high-ticket / manual links). */
         get: operations["PublicCommerceOperations_getCustomCheckout"];
         put?: never;
         post?: never;
@@ -1377,6 +1385,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Portal data for the customer holding the magic token. */
         get: operations["PublicCommerceOperations_getPortalData"];
         put?: never;
         post?: never;
@@ -1395,6 +1404,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Customer-initiated cancel via portal magic token. */
         post: operations["PublicCommerceOperations_cancelPortalSubscription"];
         delete?: never;
         options?: never;
@@ -1409,6 +1419,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Public product detail for buy links. tenantSlug is the workspace public slug. */
         get: operations["PublicCommerceOperations_getProductBySlug"];
         put?: never;
         post?: never;
@@ -1425,6 +1436,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Coupon preview for storefront checkout forms. */
         get: operations["PublicCommerceOperations_validateCoupon"];
         put?: never;
         post?: never;
@@ -2100,6 +2112,32 @@ export interface components {
             /** @enum {string} */
             tax_type_code: "01" | "02" | "03" | "04" | "05" | "06" | "E";
         };
+        /**
+         * @description Tenant MyInvois / supplier profile for OrgAdmin.
+         *     Secrets are never returned in full — only presence flags and optional last-4 hints.
+         */
+        "Lhdn.LhdnTenantConfigDto": {
+            supplier_tin: string;
+            id_type: string;
+            id_value: string;
+            /** @enum {string} */
+            environment: "PROD" | "SANDBOX";
+            msic_code?: string;
+            intermediary_mode: boolean;
+            myinvois_client_id?: string;
+            /** @description True when a client secret is stored (value never returned). */
+            has_client_secret: boolean;
+            /** @description Last 4 characters of the stored client secret when present. */
+            client_secret_hint?: string;
+            /** @description True when a signing certificate is stored. */
+            has_certificate: boolean;
+            legal_name?: string;
+            address_line1?: string;
+            city?: string;
+            state?: string;
+            postal?: string;
+            country?: string;
+        };
         "Lhdn.RegisterWebhookRequestDto": {
             url: string;
             secret: string;
@@ -2137,6 +2175,25 @@ export interface components {
         "Lhdn.UpdateLhdnCertificateRequestDto": {
             p12_base64_file: string;
             passphrase: string;
+        };
+        /** @description Create or replace tenant LHDN profile. Omit client secret / leave empty to keep existing secret. */
+        "Lhdn.UpdateLhdnTenantConfigRequestDto": {
+            supplier_tin: string;
+            id_type: string;
+            id_value: string;
+            /** @enum {string} */
+            environment: "PROD" | "SANDBOX";
+            msic_code?: string;
+            intermediary_mode?: boolean;
+            myinvois_client_id?: string;
+            /** @description When omitted or empty, existing secret is preserved. */
+            myinvois_client_secret?: string;
+            legal_name?: string;
+            address_line1?: string;
+            city?: string;
+            state?: string;
+            postal?: string;
+            country?: string;
         };
         "Lhdn.ValidateTinRequestDto": {
             tin: string;
@@ -2279,14 +2336,6 @@ export interface components {
             /** @description When provided, replaces the endpoint event filter (empty = all). */
             enabled_events?: string[];
         };
-        "One.UpdateWorkspaceLhdnConfigRequestDto": {
-            myinvois_client_id?: string;
-            myinvois_client_secret?: string;
-            /** @enum {string} */
-            myinvois_env: "PROD" | "SANDBOX";
-            supplier_tin?: string;
-            msic_code?: string;
-        };
         "One.UpdateWorkspaceRequestDto": {
             name: string;
             slug: string;
@@ -2335,14 +2384,6 @@ export interface components {
             status: string;
             /** Format: date-time */
             expires_at: string;
-        };
-        "One.WorkspaceLhdnConfigDto": {
-            myinvois_client_id?: string;
-            myinvois_client_secret?: string;
-            /** @enum {string} */
-            myinvois_env: "PROD" | "SANDBOX";
-            supplier_tin?: string;
-            msic_code?: string;
         };
         "One.WorkspaceMemberDto": {
             id: string;
@@ -6246,6 +6287,144 @@ export interface operations {
             };
         };
     };
+    LhdnOperations_getLhdnTenantConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lhdn.LhdnTenantConfigDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    LhdnOperations_updateLhdnTenantConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Lhdn.UpdateLhdnTenantConfigRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     OneOperations_listApiKeys: {
         parameters: {
             query?: never;
@@ -7892,144 +8071,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.StatusResponse"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    OneOperations_getWorkspaceLhdnConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["One.WorkspaceLhdnConfigDto"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    OneOperations_updateWorkspaceLhdnConfig: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["One.UpdateWorkspaceLhdnConfigRequestDto"];
-            };
-        };
         responses: {
             /** @description The request has succeeded. */
             200: {

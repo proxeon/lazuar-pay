@@ -6,62 +6,85 @@ using TypeSpec.Http;
 
 namespace LazuarApi.Commerce;
 
+/**
+ * Integrator-facing public commerce surface (D5).
+ * Unauthenticated buy links, checkout, and customer portal. Pair with workspace webhooks
+ * for subscription unlock/revoke — do not rely on key-authenticated M2M product admin in v1.
+ */
 @route("/public/commerce")
+@doc("Public checkout / portal routes for storefronts and customer self-service. No API key required. Use workspace webhooks for lifecycle unlock/revoke.")
 interface PublicCommerceOperations {
+  /** Resolve a sellable product by workspace slug + product slug (buy-link catalog). */
   @get
   @route("/{tenantSlug}/products/{slug}")
+  @doc("Public product detail for buy links. tenantSlug is the workspace public slug.")
   getProductBySlug(@path tenantSlug: string, @path slug: string):
     | ProductDto
     | LazuarApi.Core.ProblemDetailsResponse;
 
+  /** Validate a coupon against a product before checkout. */
   @get
   @route("/{tenantSlug}/validate-coupon")
+  @doc("Coupon preview for storefront checkout forms.")
   validateCoupon(
     @path tenantSlug: string,
     @query code: string,
     @query product_slug: string,
   ): ValidateCouponResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 
+  /** Start checkout; returns payment gateway redirect / session details. */
   @post
   @route("/checkout")
+  @doc("Initiate public checkout for a product (subscription or one-time). Primary integrator write path.")
   initiateCheckout(@body body: PublicCheckoutRequestDto):
     | CheckoutResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
+  /**
+   * Customer portal snapshot. `token` is a magic link token issued by the platform
+   * (email/billing link) — not an API key.
+   */
   @get
   @route("/{tenantSlug}/portal")
+  @doc("Portal data for the customer holding the magic token.")
   getPortalData(@path tenantSlug: string, @query token: string):
     | AggregatedPortalDataResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/{tenantSlug}/portal/cancel")
+  @doc("Customer-initiated cancel via portal magic token.")
   cancelPortalSubscription(
     @path tenantSlug: string,
     @query token: string,
     @body body: CancelPortalRequest,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  /** Poll checkout/subscription activation after payment redirect. */
   @get
   @route("/checkout/{subId}/status")
+  @doc("Checkout status poller for client-side success pages.")
   getCheckoutStatus(@path subId: string):
     | CheckoutStatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/{tenantSlug}/custom-checkouts/{sessionId}")
+  @doc("Load a custom payment-link checkout session (high-ticket / manual links).")
   getCustomCheckout(@path tenantSlug: string, @path sessionId: string):
     | CustomCheckoutDto
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/checkout/{subId}/arrears")
+  @doc("Arrears summary for update-payment flows.")
   getArrearsSummary(@path subId: string):
     | ArrearsSummaryDto
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
   @route("/checkout/{subId}/update-payment")
+  @doc("Start update-payment / recovery checkout for a past-due subscription.")
   updatePayment(@path subId: string):
     | CheckoutResponse
     | LazuarApi.Core.ProblemDetailsResponse;

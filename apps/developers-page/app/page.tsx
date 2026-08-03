@@ -39,7 +39,7 @@ const products = [
     href: "/commerce",
     title: "Commerce",
     blurb:
-      "Checkout, products, subscriptions, and public portal routes. Pair with workspace webhooks for unlock/revoke.",
+      "Integrator v1: public checkout/portal routes + workspace webhooks for unlock/revoke. Admin product CRUD is console-only (no M2M admin keys yet).",
     badge: "v1",
     audience: "external" as const,
   },

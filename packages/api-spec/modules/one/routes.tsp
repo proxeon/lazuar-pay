@@ -160,20 +160,7 @@ interface OneOperations {
     @body body: ToggleAppEntitlementRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  @useAuth(BearerAuth)
-  @get
-  @route("/workspaces/{id}/lhdn-config")
-  getWorkspaceLhdnConfig(@path id: string):
-    | WorkspaceLhdnConfigDto
-    | LazuarApi.Core.ProblemDetailsResponse;
-
-  @useAuth(BearerAuth)
-  @put
-  @route("/workspaces/{id}/lhdn-config")
-  updateWorkspaceLhdnConfig(
-    @path id: string,
-    @body body: UpdateWorkspaceLhdnConfigRequestDto,
-  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+  // LHDN MyInvois tenant config lives under /lhdn (GET/PUT /lhdn/workspaces/{id}/lhdn-config), not One.
 
   @useAuth(BearerAuth)
   @get

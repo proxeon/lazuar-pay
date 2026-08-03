@@ -24,6 +24,11 @@ public class LhdnRepository : ILhdnRepository
         return await _context.TenantConfigs.FirstOrDefaultAsync(c => c.OrganizationId == organizationId, ct);
     }
 
+    public void AddTenantConfig(LhdnTenantConfig config)
+    {
+        _context.TenantConfigs.Add(config);
+    }
+
     public async Task<TaxDocument?> GetTaxDocumentAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.TaxDocuments.FirstOrDefaultAsync(d => d.Id == id, ct);

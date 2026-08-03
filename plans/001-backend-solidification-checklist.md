@@ -21,7 +21,7 @@ Mark when decided; note outcome in PR/ADR.
 - [ ] **D2 — WhatsApp:** commit Meta Cloud near-term **vs** market email-first until provider ships
 - [x] **D3 — API key ownership:** platform keys in One (scopes include `lhdn.*`) — decided **One** (B.2); dual-read middleware keeps Lhdn `DeveloperApiKeys` fallback
 - [x] **D4 — Outbound webhooks:** workspace multi-endpoint fan-out (no exact-URL-match silent drop); product free-text URLs not required for delivery (B.4 MVP)
-- [ ] **D5 — Commerce integrator v1 surface:** webhooks + public checkout links only **vs** also key-authenticated M2M admin (products/subs/transactions)
+- [x] **D5 — Commerce integrator v1 surface:** **webhooks + public checkout first** (not full M2M). Admin commerce remains OrgAdmin console; no key-authenticated product/sub/transaction admin in v1.
 
 ---
 
@@ -378,12 +378,14 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Commerce, TypeSpec, optional new integration route group
 
-### If D5 = webhooks + public checkout first
+### If D5 = webhooks + public checkout first — **decided**
 
-- [ ] Document public commerce routes as integrator-facing (buy links, portal token rules)
-- [ ] Ensure webhook catalog covers unlock/revoke without M2M admin
+- [x] Document public commerce routes as integrator-facing (buy links, portal token rules)
+  - *Done:* `docs-commerce.tsp` service @doc + `@doc` on `public-routes.tsp`; developers hub Commerce card + webhooks callout for unlock/revoke.
+- [x] Ensure webhook catalog covers unlock/revoke without M2M admin
+  - *Done:* `/webhooks` catalogs `subscription.activated|resumed|suspended|canceled|past_due`, `order.completed`, `payment_link.paid`.
 
-### If D5 = include M2M
+### If D5 = include M2M — **deferred (not v1)**
 
 - [ ] Key-authenticated group for: list/create products (subset), create checkout session URL, get subscription status, cancel/pause dunning, list transactions
 - [ ] TypeSpec product docs for that group only
@@ -391,11 +393,16 @@ Mark when decided; note outcome in PR/ADR.
 
 ## B.8 LHDN integration completeness (keep gold standard)
 
-- [ ] Implement or remove TypeSpec ops: taxpayer validate, list keys (keys list shared with B.1)
-- [ ] Tenant LHDN config CRUD API (TIN, BRN, MSIC, env, client credentials) — not only cert PUT
-- [ ] Get document by internal id without “last 100” scan
-- [ ] Supplier legal name/address on tenant config bound into templates (stop hardcoded sample address)
-- [ ] Encrypt MyInvois secrets / PFX at rest (or explicit risk acceptance + follow-up)
+- [x] Implement or remove TypeSpec ops: taxpayer validate, list keys (keys list shared with B.1)
+  - *Done:* `POST /lhdn/taxpayer/validate` via gateway `ValidateTaxpayerTin` + cache; list keys already on `GET /lhdn/api-keys` (One credentials façade).
+- [x] Tenant LHDN config CRUD API (TIN, BRN, MSIC, env, client credentials) — not only cert PUT
+  - *Done:* `GET/PUT /lhdn/workspaces/{id}/lhdn-config` OrgAdmin; GET masks secrets (`has_client_secret` / hint). Phantom One `/one/.../lhdn-config` removed from TypeSpec.
+- [x] Get document by internal id without “last 100” scan
+  - *Done:* `GetLhdnDocumentStatusQuery` uses `GetTaxDocumentByInternalIdAsync`; returns `long_id`, `is_test_mode`, `validated_at`.
+- [x] Supplier legal name/address on tenant config bound into templates (stop hardcoded sample address)
+  - *Done:* `LegalName`, `AddressLine1`, `City`, `State`, `Postal`, `Country` on `LhdnTenantConfig`; `ViewModelMapper` binds config party.
+- [x] Encrypt MyInvois secrets / PFX at rest (or explicit risk acceptance + follow-up)
+  - ***Residual / risk acceptance (B.8):*** PFX *password* is AES-encrypted via `CertificateVaultService` + `Kms:MasterKey`. PFX *bytes* remain plain base64 in `EncryptedPfxBase64` (misnamed). MyInvois client secret stored **plaintext**. Accepted for current single-tenant/ops posture; follow-up: encrypt client secret + PFX payload with same vault, prefer KMS/HSM long-term.
 
 ## B.9 Tests for Phase B
 

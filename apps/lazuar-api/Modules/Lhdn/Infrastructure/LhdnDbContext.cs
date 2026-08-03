@@ -73,6 +73,7 @@ public class LhdnDbContext : PlatformDbContext
             builder.ToTable("TaxDocuments");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.ValidationStatus });
+            builder.HasIndex(x => new { x.OrganizationId, x.InternalReferenceId });
             builder.HasIndex(x => x.ValidationStatus);
             builder.HasIndex(x => x.IsTestMode);
         });

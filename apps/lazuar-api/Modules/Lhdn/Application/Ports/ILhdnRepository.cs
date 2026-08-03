@@ -10,6 +10,7 @@ namespace Modules.Lhdn.Application.Ports;
 public interface ILhdnRepository
 {
     Task<LhdnTenantConfig?> GetTenantConfigAsync(Guid organizationId, CancellationToken ct = default);
+    void AddTenantConfig(LhdnTenantConfig config);
     
     Task<TaxDocument?> GetTaxDocumentAsync(Guid id, CancellationToken ct = default);
     Task<TaxDocument?> GetTaxDocumentByInternalIdAsync(Guid organizationId, string internalReferenceId, CancellationToken ct = default);

@@ -112,6 +112,55 @@ model CancelDocumentRequestDto {
   reason: string;
 }
 
+alias LhdnEnvironmentType = "PROD" | "SANDBOX";
+
+/**
+ * Tenant MyInvois / supplier profile for OrgAdmin.
+ * Secrets are never returned in full — only presence flags and optional last-4 hints.
+ */
+model LhdnTenantConfigDto {
+  supplier_tin: string;
+  id_type: string;
+  id_value: string;
+  environment: LhdnEnvironmentType;
+  msic_code?: string;
+  intermediary_mode: boolean;
+  myinvois_client_id?: string;
+  /** True when a client secret is stored (value never returned). */
+  has_client_secret: boolean;
+  /** Last 4 characters of the stored client secret when present. */
+  client_secret_hint?: string;
+  /** True when a signing certificate is stored. */
+  has_certificate: boolean;
+  legal_name?: string;
+  address_line1?: string;
+  city?: string;
+  state?: string;
+  postal?: string;
+  country?: string;
+}
+
+/**
+ * Create or replace tenant LHDN profile. Omit client secret / leave empty to keep existing secret.
+ */
+model UpdateLhdnTenantConfigRequestDto {
+  supplier_tin: string;
+  id_type: string;
+  id_value: string;
+  environment: LhdnEnvironmentType;
+  msic_code?: string;
+  intermediary_mode?: boolean;
+  myinvois_client_id?: string;
+  /** When omitted or empty, existing secret is preserved. */
+  myinvois_client_secret?: string;
+  legal_name?: string;
+  address_line1?: string;
+  city?: string;
+  state?: string;
+  postal?: string;
+  country?: string;
+}
+
 // API key DTOs are defined on LazuarApi.One (platform ownership). Re-export aliases for LHDN product docs.
 alias GenerateApiKeyRequestDto = LazuarApi.One.GenerateApiKeyRequestDto;
 alias GenerateApiKeyResponseDto = LazuarApi.One.GenerateApiKeyResponseDto;

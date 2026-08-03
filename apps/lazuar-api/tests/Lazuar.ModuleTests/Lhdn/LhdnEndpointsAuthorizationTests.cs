@@ -118,4 +118,39 @@ public class LhdnEndpointsAuthorizationTests
         AssertPolicy(generateKeys, "OrgAdmin", "POST /lhdn/api-keys");
         AssertPolicy(revokeKeys, "OrgAdmin", "DELETE /lhdn/api-keys/{id}");
     }
+
+    [Test]
+    public void MapLhdnEndpoints_TaxpayerValidate_Requires_IntegrationLhdnDocumentsRead()
+    {
+        var (_, endpoints) = MapEndpoints();
+
+        var validate = endpoints.SingleOrDefault(e =>
+            e.RoutePattern.RawText is { } raw
+            && raw.Contains("taxpayer/validate", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "POST"));
+
+        Assert.That(validate, Is.Not.Null, $"POST taxpayer/validate not found. Routes: {Dump(endpoints)}");
+        AssertPolicy(validate, "IntegrationLhdnDocumentsRead", "POST /lhdn/taxpayer/validate");
+    }
+
+    [Test]
+    public void MapLhdnEndpoints_TenantConfig_Requires_OrgAdmin()
+    {
+        var (_, endpoints) = MapEndpoints();
+
+        var getConfig = endpoints.SingleOrDefault(e =>
+            e.RoutePattern.RawText is { } raw
+            && raw.Contains("lhdn-config", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "GET"));
+
+        var putConfig = endpoints.SingleOrDefault(e =>
+            e.RoutePattern.RawText is { } raw
+            && raw.Contains("lhdn-config", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "PUT"));
+
+        Assert.That(getConfig, Is.Not.Null, $"GET lhdn-config not found. Routes: {Dump(endpoints)}");
+        Assert.That(putConfig, Is.Not.Null, $"PUT lhdn-config not found. Routes: {Dump(endpoints)}");
+        AssertPolicy(getConfig, "OrgAdmin", "GET /lhdn/workspaces/{id}/lhdn-config");
+        AssertPolicy(putConfig, "OrgAdmin", "PUT /lhdn/workspaces/{id}/lhdn-config");
+    }
 }

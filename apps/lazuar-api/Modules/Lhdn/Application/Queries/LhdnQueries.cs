@@ -15,20 +15,18 @@ public record GetLhdnDocumentStatusQuery(Guid OrganizationId, string InternalId)
 
 public class GetLhdnDocumentStatusQueryHandler : IQueryHandler<GetLhdnDocumentStatusQuery, LhdnDocumentResponseDto?>
 {
-    private readonly ILhdnQueryService _queryService;
+    private readonly ILhdnRepository _repository;
     private readonly ILhdnLinkService _linkService;
 
-    public GetLhdnDocumentStatusQueryHandler(ILhdnQueryService queryService, ILhdnLinkService linkService)
+    public GetLhdnDocumentStatusQueryHandler(ILhdnRepository repository, ILhdnLinkService linkService)
     {
-        _queryService = queryService;
+        _repository = repository;
         _linkService = linkService;
     }
 
     public async Task<LhdnDocumentResponseDto?> Handle(GetLhdnDocumentStatusQuery request, CancellationToken ct)
     {
-        var submissions = await _queryService.GetRecentSubmissionsAsync(request.OrganizationId, 100, ct);
-        var doc = submissions.FirstOrDefault(d => d.InternalReference == request.InternalId);
-
+        var doc = await _repository.GetTaxDocumentByInternalIdAsync(request.OrganizationId, request.InternalId, ct);
         if (doc == null) return null;
 
         var portalUrl = _linkService.GetPortalUrl();
@@ -39,12 +37,66 @@ public class GetLhdnDocumentStatusQueryHandler : IQueryHandler<GetLhdnDocumentSt
 
         return new LhdnDocumentResponseDto
         {
-            Internal_id = doc.InternalReference,
+            Internal_id = doc.InternalReferenceId,
             Lhdn_uuid = doc.LhdnUuid,
-            Status = doc.Status,
+            Long_id = doc.LongId,
+            Status = doc.ValidationStatus,
             Qr_link = qrLink,
             Error_message = doc.ErrorMessage,
-            Submitted_at = DateTimeOffset.Parse(doc.CreatedAt)
+            Is_test_mode = doc.IsTestMode,
+            Submitted_at = new DateTimeOffset(doc.CreatedAt, TimeSpan.Zero),
+            Validated_at = doc.ValidatedAt.HasValue
+                ? new DateTimeOffset(doc.ValidatedAt.Value, TimeSpan.Zero)
+                : null
+        };
+    }
+}
+
+public record GetLhdnTenantConfigQuery(Guid OrganizationId) : IQuery<LhdnTenantConfigDto?>;
+
+public class GetLhdnTenantConfigQueryHandler : IQueryHandler<GetLhdnTenantConfigQuery, LhdnTenantConfigDto?>
+{
+    private readonly ILhdnRepository _repository;
+
+    public GetLhdnTenantConfigQueryHandler(ILhdnRepository repository)
+    {
+        _repository = repository;
+    }
+
+    public async Task<LhdnTenantConfigDto?> Handle(GetLhdnTenantConfigQuery request, CancellationToken ct)
+    {
+        var config = await _repository.GetTenantConfigAsync(request.OrganizationId, ct);
+        if (config == null) return null;
+
+        var hasSecret = !string.IsNullOrEmpty(config.MyInvoisClientSecret);
+        string? secretHint = null;
+        if (hasSecret && config.MyInvoisClientSecret!.Length >= 4)
+        {
+            secretHint = config.MyInvoisClientSecret[^4..];
+        }
+
+        var environment = string.Equals(config.Environment, "PROD", StringComparison.OrdinalIgnoreCase)
+            ? LhdnTenantConfigDtoEnvironment.PROD
+            : LhdnTenantConfigDtoEnvironment.SANDBOX;
+
+        return new LhdnTenantConfigDto
+        {
+            Supplier_tin = config.SupplierTin,
+            Id_type = config.IdType,
+            Id_value = config.IdValue,
+            Environment = environment,
+            Msic_code = config.MsicCode,
+            Intermediary_mode = config.IntermediaryMode,
+            Myinvois_client_id = config.MyInvoisClientId,
+            Has_client_secret = hasSecret,
+            Client_secret_hint = secretHint,
+            Has_certificate = !string.IsNullOrEmpty(config.EncryptedPfxBase64),
+            Legal_name = config.LegalName,
+            Address_line1 = config.AddressLine1,
+            City = config.City,
+            State = config.State,
+            Postal = config.Postal,
+            Country = config.Country
         };
     }
 }

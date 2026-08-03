@@ -20,6 +20,15 @@ public class LhdnTenantConfig : Entity, IAggregateRoot, IMustHaveTenant
     
     public string? EncryptedPfxBase64 { get; private set; }
     public string? PfxPasswordCiphertext { get; private set; }
+
+    /// <summary>Registered legal name used as UBL supplier/buyer party name.</summary>
+    public string? LegalName { get; private set; }
+    public string? AddressLine1 { get; private set; }
+    public string? City { get; private set; }
+    public string? State { get; private set; }
+    public string? Postal { get; private set; }
+    /// <summary>ISO country code, e.g. MYS.</summary>
+    public string? Country { get; private set; }
     
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
@@ -60,10 +69,50 @@ public class LhdnTenantConfig : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Updates legal address fields. Null args leave the existing value; empty/whitespace clears.
+    /// </summary>
+    public void UpdateLegalAddress(
+        string? legalName,
+        string? addressLine1,
+        string? city,
+        string? state,
+        string? postal,
+        string? country)
+    {
+        if (legalName != null) LegalName = NormalizeOptional(legalName);
+        if (addressLine1 != null) AddressLine1 = NormalizeOptional(addressLine1);
+        if (city != null) City = NormalizeOptional(city);
+        if (state != null) State = NormalizeOptional(state);
+        if (postal != null) Postal = NormalizeOptional(postal);
+        if (country != null)
+        {
+            Country = string.IsNullOrWhiteSpace(country) ? null : country.Trim().ToUpperInvariant();
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void UpdateApiCredentials(string clientId, string clientSecret)
     {
         MyInvoisClientId = clientId;
         MyInvoisClientSecret = clientSecret;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Update client id always; secret only when a non-empty value is provided.</summary>
+    public void UpdateApiCredentialsPreserveSecret(string? clientId, string? clientSecretOrNullToKeep)
+    {
+        if (!string.IsNullOrWhiteSpace(clientId))
+        {
+            MyInvoisClientId = clientId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(clientSecretOrNullToKeep))
+        {
+            MyInvoisClientSecret = clientSecretOrNullToKeep;
+        }
+
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -73,4 +122,7 @@ public class LhdnTenantConfig : Entity, IAggregateRoot, IMustHaveTenant
         PfxPasswordCiphertext = pfxPasswordCiphertext;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

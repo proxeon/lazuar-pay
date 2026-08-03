@@ -3513,6 +3513,103 @@ namespace Lazuar.ApiTypes
 
     }
 
+    /// <summary>
+    /// Tenant MyInvois / supplier profile for OrgAdmin.
+    /// <br/>Secrets are never returned in full — only presence flags and optional last-4 hints.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LhdnTenantConfigDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("supplier_tin")]
+        public string Supplier_tin { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id_type")]
+        public string Id_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id_value")]
+        public string Id_value { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("environment")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public LhdnTenantConfigDtoEnvironment Environment { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("msic_code")]
+        public string? Msic_code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("intermediary_mode")]
+        public bool Intermediary_mode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("myinvois_client_id")]
+        public string? Myinvois_client_id { get; set; } = default!;
+
+        /// <summary>
+        /// True when a client secret is stored (value never returned).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("has_client_secret")]
+        public bool Has_client_secret { get; set; } = default!;
+
+        /// <summary>
+        /// Last 4 characters of the stored client secret when present.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("client_secret_hint")]
+        public string? Client_secret_hint { get; set; } = default!;
+
+        /// <summary>
+        /// True when a signing certificate is stored.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("has_certificate")]
+        public bool Has_certificate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legal_name")]
+        public string? Legal_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("address_line1")]
+        public string? Address_line1 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("city")]
+        public string? City { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string? State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("postal")]
+        public string? Postal { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        public string? Country { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static LhdnTenantConfigDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<LhdnTenantConfigDto>(data, options);
+
+        }
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class RegisterWebhookRequestDto
     {
@@ -3678,6 +3775,88 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<UpdateLhdnCertificateRequestDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
+    /// Create or replace tenant LHDN profile. Omit client secret / leave empty to keep existing secret.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpdateLhdnTenantConfigRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("supplier_tin")]
+        public string Supplier_tin { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id_type")]
+        public string Id_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id_value")]
+        public string Id_value { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("environment")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public UpdateLhdnTenantConfigRequestDtoEnvironment Environment { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("msic_code")]
+        public string? Msic_code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("intermediary_mode")]
+        public bool? Intermediary_mode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("myinvois_client_id")]
+        public string? Myinvois_client_id { get; set; } = default!;
+
+        /// <summary>
+        /// When omitted or empty, existing secret is preserved.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("myinvois_client_secret")]
+        public string? Myinvois_client_secret { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legal_name")]
+        public string? Legal_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("address_line1")]
+        public string? Address_line1 { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("city")]
+        public string? City { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string? State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("postal")]
+        public string? Postal { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        public string? Country { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static UpdateLhdnTenantConfigRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<UpdateLhdnTenantConfigRequestDto>(data, options);
 
         }
 
@@ -4772,54 +4951,6 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UpdateWorkspaceLhdnConfigRequestDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("myinvois_client_id")]
-        public string? Myinvois_client_id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("myinvois_client_secret")]
-        public string? Myinvois_client_secret { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("myinvois_env")]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public UpdateWorkspaceLhdnConfigRequestDtoMyinvois_env Myinvois_env { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("supplier_tin")]
-        public string? Supplier_tin { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("msic_code")]
-        public string? Msic_code { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-        public string ToJson()
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Serialize(this, options);
-
-        }
-        public static UpdateWorkspaceLhdnConfigRequestDto FromJson(string data)
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Deserialize<UpdateWorkspaceLhdnConfigRequestDto>(data, options);
-
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UpdateWorkspaceRequestDto
     {
 
@@ -5130,54 +5261,6 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<WorkspaceInvitationDto>(data, options);
-
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class WorkspaceLhdnConfigDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("myinvois_client_id")]
-        public string? Myinvois_client_id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("myinvois_client_secret")]
-        public string? Myinvois_client_secret { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("myinvois_env")]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public WorkspaceLhdnConfigDtoMyinvois_env Myinvois_env { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("supplier_tin")]
-        public string? Supplier_tin { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("msic_code")]
-        public string? Msic_code { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-        public string ToJson()
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Serialize(this, options);
-
-        }
-        public static WorkspaceLhdnConfigDto FromJson(string data)
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Deserialize<WorkspaceLhdnConfigDto>(data, options);
 
         }
 
@@ -5893,6 +5976,18 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum LhdnTenantConfigDtoEnvironment
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PROD")]
+        PROD = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SANDBOX")]
+        SANDBOX = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum SubmitDocumentRequestDtoDocument_type
     {
 
@@ -5941,6 +6036,18 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum UpdateLhdnTenantConfigRequestDtoEnvironment
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PROD")]
+        PROD = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SANDBOX")]
+        SANDBOX = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum ValidateTinRequestDtoId_type
     {
 
@@ -5955,30 +6062,6 @@ namespace Lazuar.ApiTypes
 
         [System.Runtime.Serialization.EnumMember(Value = @"ARMY")]
         ARMY = 3,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum UpdateWorkspaceLhdnConfigRequestDtoMyinvois_env
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"PROD")]
-        PROD = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"SANDBOX")]
-        SANDBOX = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum WorkspaceLhdnConfigDtoMyinvois_env
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"PROD")]
-        PROD = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"SANDBOX")]
-        SANDBOX = 1,
 
     }
 

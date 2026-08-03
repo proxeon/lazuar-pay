@@ -110,6 +110,14 @@ export default function WebhooksCatalogPage() {
       </GuideSection>
 
       <GuideSection title="Commerce / workspace events">
+        <Callout>
+          Commerce integrator v1 (D5) is <strong>public checkout links + these webhooks</strong>.
+          Use <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">subscription.activated</code>{" "}
+          / <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">resumed</code> to unlock and{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">suspended</code> /{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">canceled</code> to revoke.
+          Key-authenticated M2M product/subscription admin is not in v1.
+        </Callout>
         <div className="border border-[#e5e5e5] bg-white overflow-hidden">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-[#f4f4f5] text-[10px] font-bold uppercase tracking-widest text-[#71717a]">

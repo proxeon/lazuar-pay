@@ -71,7 +71,7 @@ public static class Endpoints
             }
         });
 
-        // Document read surface: status GET (write scope also satisfies read policy).
+        // Document read surface: status GET + taxpayer validate (write scope also satisfies read policy).
         var documentsRead = endpoints.MapGroup("/lhdn").RequireAuthorization("IntegrationLhdnDocumentsRead");
 
         documentsRead.MapGet("/documents/{internalId}", async Task<Results<Ok<LhdnDocumentResponseDto>, NotFound>> (
@@ -83,7 +83,27 @@ public static class Endpoints
             return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
         });
 
-        // Dashboard / org-admin surface: no API_CLIENT (key mint, webhooks, certificate).
+        documentsRead.MapPost("/taxpayer/validate", async Task<Results<Ok<ValidateTinResponseDto>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            [FromBody] ValidateTinRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                var result = await mediator.Send(new ValidateTaxpayerTinCommand(
+                    ctx.TenantId,
+                    req.Tin,
+                    req.Id_type.ToString(),
+                    req.Id_value));
+                return TypedResults.Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
+
+        // Dashboard / org-admin surface: no API_CLIENT (key mint, webhooks, certificate, tenant config).
         var admin = endpoints.MapGroup("/lhdn").RequireAuthorization("OrgAdmin");
 
         // API keys are platform-owned (One). Lhdn routes remain as a product façade.
@@ -164,6 +184,36 @@ public static class Endpoints
         {
             await mediator.Send(new DeleteWebhookCommand(ctx.TenantId, id));
             return TypedResults.Ok(new StatusResponse { Status = "deleted" });
+        });
+
+        admin.MapGet("/workspaces/{id:guid}/lhdn-config", async Task<Results<Ok<LhdnTenantConfigDto>, NotFound, UnauthorizedHttpResult>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            if (ctx.TenantId != id && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            var result = await mediator.Send(new GetLhdnTenantConfigQuery(id));
+            return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
+        });
+
+        admin.MapPut("/workspaces/{id:guid}/lhdn-config", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>, UnauthorizedHttpResult>> (
+            Guid id,
+            [FromBody] UpdateLhdnTenantConfigRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            if (ctx.TenantId != id && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            try
+            {
+                await mediator.Send(new UpdateLhdnTenantConfigCommand(id, req));
+                return TypedResults.Ok(new StatusResponse { Status = "updated" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         });
 
         admin.MapPut("/workspaces/{id:guid}/lhdn-certificate", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (

@@ -9,6 +9,7 @@ namespace LazuarApi.Lhdn;
 @useAuth(BearerAuth)
 @route("/lhdn")
 interface LhdnOperations {
+  @doc("Validate a taxpayer TIN against MyInvois (cached). Requires API key with lhdn.documents:read or write.")
   @post
   @route("/taxpayer/validate")
   validateTaxpayerTin(
@@ -50,6 +51,21 @@ interface LhdnOperations {
   @route("/webhooks/{id}")
   deleteWebhook(
     @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @doc("Get tenant MyInvois / supplier config. Secrets masked (has_* flags only). OrgAdmin JWT.")
+  @get
+  @route("/workspaces/{id}/lhdn-config")
+  getLhdnTenantConfig(
+    @path id: string,
+  ): LhdnTenantConfigDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @doc("Create or update tenant MyInvois / supplier config (TIN, BRN, MSIC, env, credentials, legal address). OrgAdmin JWT.")
+  @put
+  @route("/workspaces/{id}/lhdn-config")
+  updateLhdnTenantConfig(
+    @path id: string,
+    @body body: UpdateLhdnTenantConfigRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @put

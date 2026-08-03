@@ -28,21 +28,21 @@ public static class ViewModelMapper
         
         var isSelfBilled = docTypeCodeString is "11" or "12" or "13" or "14";
 
+        // Supplier (or buyer on self-billed) legal profile comes from tenant config — never hardcode sample HQ.
         var configParty = new UblPartyViewModel
         {
-            Name = "Lazuar Tenant",
-            Tin = config.SupplierTin ?? "NA",
-            IdType = config.IdType ?? "BRN",
-            IdValue = config.IdValue ?? "NA",
-            MsicCode = config.MsicCode ?? "62010",
-            Phone = "+60123456789",
-            Email = "tenant@example.com",
-            
-            AddressLine1 = "Lazuar HQ",
-            City = "Kuala Lumpur",
-            PostalCode = "50000",
-            StateCode = "14",
-            CountryCode = "MYS"
+            Name = string.IsNullOrWhiteSpace(config.LegalName) ? "NA" : config.LegalName,
+            Tin = string.IsNullOrWhiteSpace(config.SupplierTin) ? "NA" : config.SupplierTin,
+            IdType = string.IsNullOrWhiteSpace(config.IdType) ? "BRN" : config.IdType,
+            IdValue = string.IsNullOrWhiteSpace(config.IdValue) ? "NA" : config.IdValue,
+            MsicCode = string.IsNullOrWhiteSpace(config.MsicCode) ? "00000" : config.MsicCode,
+            Phone = "+60000000000",
+            Email = "",
+            AddressLine1 = string.IsNullOrWhiteSpace(config.AddressLine1) ? "NA" : config.AddressLine1,
+            City = string.IsNullOrWhiteSpace(config.City) ? "NA" : config.City,
+            PostalCode = string.IsNullOrWhiteSpace(config.Postal) ? "00000" : config.Postal,
+            StateCode = string.IsNullOrWhiteSpace(config.State) ? "14" : config.State.TrimStart('_'),
+            CountryCode = string.IsNullOrWhiteSpace(config.Country) ? "MYS" : config.Country
         };
 
         var requestParty = new UblPartyViewModel
