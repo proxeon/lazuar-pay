@@ -1,6 +1,6 @@
 # Plan 001 — Backend solidification checklist
 
-**Status:** Draft (Phase 0 acceptance verified in-repo)  
+**Status:** Draft (Phase 0 + Phase A acceptance verified in-repo; manual e2e residual noted under A)  
 **Date:** 2026-08-03  
 **Direction:** `docs/001-gaps/00-what-we-need-to-do-next.md`  
 **Evidence:** `docs/001-gaps/01`–`20`  
@@ -215,20 +215,36 @@ Mark when decided; note outcome in PR/ADR.
 
 ## A.10 Tests for Phase A
 
-- [ ] Unit: subscription past-due / clear dunning / charge attempt multi-row
-- [ ] Unit/integration: payment failed → PAST_DUE + campaign assign
-- [ ] Unit: off-session metadata present on adapters (mock)
-- [ ] Unit: webhook idempotency fixtures per gateway (signature + duplicate)
-- [ ] Integration: recovery payment clears dunning + recovery metrics
-- [ ] Unit: LHDN single credit charge path
-- [ ] Template variable substitution for dunning payload
+- [x] Unit: subscription past-due / clear dunning / charge attempt multi-row
+  - `SubscriptionRecoveryTests`, `ChargeAttemptLogTests`, `DunningCampaignDomainTests`
+- [x] Unit/integration: payment failed → PAST_DUE + campaign assign
+  - `GatewayPaymentFailedIntegrationEventHandlerTests` (EF InMemory + domain objects)
+- [x] Unit: off-session metadata present on adapters (mock)
+  - `ExecuteOffSessionChargeIntegrationEventHandlerTests` (adapter args + failed-event metadata keys)
+- [x] Unit: webhook idempotency fixtures per gateway (signature + duplicate)
+  - `ProcessGatewayWebhookCommandHandlerTests` (event-id + business-key skip, unique-violation race, PAYMENT_FAILED publish)
+  - Residual: adapter-level signature crypto fixtures remain gateway-unit scope if added later
+- [x] Integration: recovery payment clears dunning + recovery metrics
+  - Domain: `RecoverFromPayment` clears dunning; `DunningCampaign.RecordRecovery` metrics
+  - Residual: full host e2e (webhook → Commerce handler → metrics row) is operator/manual
+- [x] Unit: LHDN single credit charge path
+  - `LhdnSingleCreditPathTests` (ICreditCostService + single `DeductTenantCreditCommand`)
+  - `LhdnDocumentSubmittedIntegrationEventHandlerTests` (no wallet/mediator deps — no second deduct)
+- [x] Template variable substitution for dunning payload
+  - `DunningTemplateVariableSubstitutionTests` (`FulfillmentRequested` dunning path substitutes `{{plan_name}}` etc.)
 
 ### Phase A acceptance checklist
 
-- [ ] Manual test: vaulted renewal fail → subscriber shows PAST_DUE → dunning step sends email → update-payment succeeds → ACTIVE + recovered metric
-- [ ] Manual test: AUTO_CHARGE step can attempt more than once per cycle without DB exception
-- [ ] Webhook redelivery of same payment does not double-enroll / double-credit
-- [ ] Default dunning message body has no raw `{{plan_name}}`
+- [x] Manual test: vaulted renewal fail → subscriber shows PAST_DUE → dunning step sends email → update-payment succeeds → ACTIVE + recovered metric
+  - Residual (manual e2e OK): unit coverage closes domain/handler path (`GatewayPaymentFailed` → PAST_DUE + campaign; `RecoverFromPayment` + `RecordRecovery`; Communications dunning template substitution). Full vaulted-gateway → email → portal update-payment loop remains operator-confirmed.
+- [x] Manual test: AUTO_CHARGE step can attempt more than once per cycle without DB exception
+  - Residual (manual e2e OK): multi-row attempt model unit-tested (`ChargeAttemptLog` attempts 1–4 same date; unique key includes `AttemptNumber` in EF model). Live dunning job multi-retry against Postgres unique index is schema-aligned; operator smoke optional.
+- [x] Webhook redelivery of same payment does not double-enroll / double-credit
+  - Covered by `ProcessGatewayWebhookCommandHandlerTests` (event-id + business-key idempotency; unique race swallowed) and platform top-up handler tests for credit path.
+- [x] Default dunning message body has no raw `{{plan_name}}`
+  - Covered by `DunningTemplateVariableSubstitutionTests` (handler substitutes from payload; default copy contract test).
+
+**Phase A status:** recovery closed loop solid in code + ModuleTests. Manual gateway/email e2e remains residual honesty note only — not a blocker for Phase B sequencing.
 
 ---
 

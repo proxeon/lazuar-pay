@@ -79,4 +79,95 @@ public class SubscriptionRecoveryTests
         sub.CurrentDunningCampaignId.Should().BeNull();
         sub.SuspendedAt.Should().BeNull();
     }
+
+    [Test]
+    public void MarkAsPastDue_FromActive_SetsPastDueStatus()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow.AddMonths(1), DateTime.UtcNow.AddMonths(1));
+
+        sub.MarkAsPastDue();
+
+        sub.Status.Should().Be("PAST_DUE");
+        sub.CurrentDunningCampaignId.Should().BeNull();
+    }
+
+    [Test]
+    public void AssignDunningCampaign_ResetsStepProgress()
+    {
+        var campaignA = Guid.CreateVersion7();
+        var campaignB = Guid.CreateVersion7();
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow);
+        sub.MarkAsPastDue();
+        sub.AssignDunningCampaign(campaignA);
+        sub.MarkDunningStepCompleted(3);
+        sub.PauseDunning(DateTime.UtcNow.AddDays(2));
+
+        sub.LastCompletedDayOffset.Should().Be(3);
+        sub.CurrentDunningStepIndex.Should().Be(3);
+        sub.DunningPausedUntil.Should().NotBeNull();
+
+        sub.AssignDunningCampaign(campaignB);
+
+        sub.CurrentDunningCampaignId.Should().Be(campaignB);
+        sub.LastCompletedDayOffset.Should().BeNull();
+        sub.CurrentDunningStepIndex.Should().Be(0);
+        // Pause is independent of reassignment (ClearDunning clears it; Assign does not).
+        sub.DunningPausedUntil.Should().NotBeNull();
+    }
+
+    [Test]
+    public void ClearDunning_RemovesCampaignProgressAndPause()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow);
+        sub.MarkAsPastDue();
+        sub.AssignDunningCampaign(Guid.CreateVersion7());
+        sub.MarkDunningStepCompleted(7);
+        sub.PauseDunning(DateTime.UtcNow.AddDays(1));
+
+        sub.ClearDunning();
+
+        sub.CurrentDunningCampaignId.Should().BeNull();
+        sub.CurrentDunningStepIndex.Should().Be(0);
+        sub.LastCompletedDayOffset.Should().BeNull();
+        sub.DunningPausedUntil.Should().BeNull();
+        // ClearDunning does not change arrears status — recovery methods do.
+        sub.Status.Should().Be("PAST_DUE");
+    }
+
+    [Test]
+    public void MarkDunningStepCompleted_TracksHighestDayOffset()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow);
+        sub.AssignDunningCampaign(Guid.CreateVersion7());
+
+        sub.MarkDunningStepCompleted(0);
+        sub.MarkDunningStepCompleted(3);
+        sub.MarkDunningStepCompleted(1); // lower than 3 — ignored for highest
+
+        sub.LastCompletedDayOffset.Should().Be(3);
+        sub.CurrentDunningStepIndex.Should().Be(3);
+    }
+
+    [Test]
+    public void RecoverFromPayment_ClearsDunningAndRecoversMetricsPathReady()
+    {
+        // Domain half of "recovery payment clears dunning + recovery metrics":
+        // RecoverFromPayment clears assignment; DunningCampaign.RecordRecovery is tested separately.
+        var campaignId = Guid.CreateVersion7();
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-10));
+        sub.MarkAsPastDue();
+        sub.AssignDunningCampaign(campaignId);
+        sub.MarkDunningStepCompleted(0);
+
+        sub.RecoverFromPayment(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
+
+        sub.Status.Should().Be("ACTIVE");
+        sub.CurrentDunningCampaignId.Should().BeNull();
+        sub.LastCompletedDayOffset.Should().BeNull();
+    }
 }
