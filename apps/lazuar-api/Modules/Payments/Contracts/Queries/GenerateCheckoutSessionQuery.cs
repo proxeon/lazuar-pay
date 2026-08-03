@@ -15,4 +15,8 @@ public record GenerateCheckoutSessionQuery(
     Dictionary<string, string> Metadata,
     bool SetupFutureUsage = false,
     int Quantity = 1,
-    string GatewayName = "BILLPLZ") : IQuery<string>;
+    /// <summary>
+    /// Preferred gateway (e.g. product.GatewayName). When null/empty, Payments resolves
+    /// the first configured gateway for the tenant, then BILLPLZ as last resort.
+    /// </summary>
+    string? GatewayName = null) : IQuery<string>;

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -22,11 +23,13 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
 
     public async Task<string> Handle(GenerateCheckoutSessionQuery request, CancellationToken cancellationToken)
     {
-        var config = await _configRepository.GetByTenantAndGatewayAsync(request.TenantId, request.GatewayName, cancellationToken);
+        var gatewayName = await ResolveGatewayNameAsync(request.TenantId, request.GatewayName, cancellationToken);
+
+        var config = await _configRepository.GetByTenantAndGatewayAsync(request.TenantId, gatewayName, cancellationToken);
 
         if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
-            throw new InvalidOperationException($"Payment gateway '{request.GatewayName}' is not configured for this workspace.");
+            throw new InvalidOperationException($"Payment gateway '{gatewayName}' is not configured for this workspace.");
         }
 
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
@@ -51,5 +54,28 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
         }
 
         return result.CheckoutUrl;
+    }
+
+    /// <summary>
+    /// product/request preference → first active tenant config → BILLPLZ last resort.
+    /// </summary>
+    private async Task<string> ResolveGatewayNameAsync(
+        Guid tenantId,
+        string? preferredGateway,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredGateway))
+        {
+            return preferredGateway.Trim().ToUpperInvariant();
+        }
+
+        var configs = await _configRepository.GetAllByTenantIdAsync(tenantId, cancellationToken);
+        var firstActive = configs.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.ApiKey));
+        if (firstActive != null && !string.IsNullOrWhiteSpace(firstActive.GatewayType))
+        {
+            return firstActive.GatewayType.Trim().ToUpperInvariant();
+        }
+
+        return "BILLPLZ";
     }
 }

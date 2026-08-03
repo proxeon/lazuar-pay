@@ -308,6 +308,8 @@ model CreateCustomCheckoutRequestDto {
   line_items: CustomLineItemDto[];
   expires_at?: utcDateTime;
   is_b2b_required: boolean;
+  /** Preferred payment gateway (e.g. STRIPE, CHIP). Defaults to first configured tenant gateway. */
+  gateway_name?: string;
 }
 
 model CustomCheckoutDto {

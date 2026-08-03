@@ -190,9 +190,9 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Commerce checkout / public update-payment
 
-- [ ] Custom payment links: do not hardcode BILLPLZ if product/config implies otherwise
-- [ ] Update-payment / arrears checkout: use subscription/product gateway, not default BILLPLZ
-- [ ] Document Billplz offline-only auto-charge limitation in product UX copy
+- [x] Custom payment links: do not hardcode BILLPLZ if product/config implies otherwise
+- [x] Update-payment / arrears checkout: use subscription/product gateway, not default BILLPLZ
+- [x] Document Billplz offline-only auto-charge limitation in product UX copy
 
 ## A.8 Billing money bugs tied to recovery/compliance
 

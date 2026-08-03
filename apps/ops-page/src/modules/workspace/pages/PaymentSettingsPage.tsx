@@ -146,6 +146,9 @@ export default function PaymentSettingsPage() {
 
                 {gatewayType === "BILLPLZ" && (
                   <>
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-none text-[12px] text-amber-900 leading-relaxed">
+                      <strong>Offline / hosted checkout only.</strong> Billplz cannot vault payment methods or run silent auto-charge (subscription renewals, dunning AUTO_CHARGE). Customers must complete each payment on Billplz’s hosted page. Use Stripe or CHIP Collect when you need recurring auto-charge.
+                    </div>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Collection ID</label>
                       <input type="text" value={collectionId} onChange={e => setCollectionId(e.target.value)} required placeholder="e.g. qigic0ou" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />

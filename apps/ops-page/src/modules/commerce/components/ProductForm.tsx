@@ -132,6 +132,11 @@ export default function ProductForm({
                 ))}
               </select>
               {configuredGateways?.length === 0 && <p className="text-[10px] text-rose-600">No gateways configured in Workspace Settings.</p>}
+              {gatewayName === "BILLPLZ" && (
+                <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5 mt-1.5 leading-relaxed">
+                  Billplz is online checkout only — it cannot vault cards or run silent auto-charge / dunning retries. Use Stripe or CHIP Collect for subscription auto-renewal and AUTO_CHARGE dunning steps.
+                </p>
+              )}
             </div>
           </div>
         </div>

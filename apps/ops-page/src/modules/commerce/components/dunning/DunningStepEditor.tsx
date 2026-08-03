@@ -156,10 +156,15 @@ export default function DunningStepEditor({
             {step.action_type === "AUTO_CHARGE" && (
               <div className="p-4 bg-blue-50 border border-blue-200 flex items-start gap-3 rounded-sm">
                 <CreditCard size={18} className="text-blue-600 mt-0.5 shrink-0" />
-                <p className="text-[12px] text-blue-800 leading-relaxed">
-                  The system will silently request the Payment Gateway (Stripe/CHIP) to charge the customer's vaulted card. 
-                  Lazuar limits retries to a maximum of 4 attempts per billing cycle to prevent gateway fraud flags.
-                </p>
+                <div className="text-[12px] text-blue-800 leading-relaxed space-y-1.5">
+                  <p>
+                    The system will silently request the Payment Gateway (Stripe/CHIP) to charge the customer's vaulted card.
+                    Lazuar limits retries to a maximum of 4 attempts per billing cycle to prevent gateway fraud flags.
+                  </p>
+                  <p className="text-amber-800 bg-amber-50/80 border border-amber-200 rounded-sm px-2 py-1.5">
+                    <strong>Billplz limitation:</strong> Billplz does not support off-session auto-charge. Products on Billplz will skip silent retries — use email/WhatsApp steps with an update-payment link, or switch the product gateway to Stripe/CHIP for vaulted renewals.
+                  </p>
+                </div>
               </div>
             )}
 

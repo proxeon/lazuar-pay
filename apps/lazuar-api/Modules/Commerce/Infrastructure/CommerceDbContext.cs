@@ -177,6 +177,8 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.Status);
 
+            builder.Property(x => x.GatewayName).HasMaxLength(100);
+
             builder.Property(x => x.AdHocLineItems)
                 .HasField("_adHocLineItems")
                 .UsePropertyAccessMode(PropertyAccessMode.Field)

@@ -12,7 +12,8 @@ public record CreateCustomCheckoutCommand(
     string ClientName,
     List<CustomLineItemData> LineItems,
     DateTime? ExpiresAt,
-    bool IsB2bRequired) : ICommand<Guid>
+    bool IsB2bRequired,
+    string? GatewayName = null) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

@@ -74,6 +74,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 { "tenant_id", tenantId.Value.ToString() }
             };
 
+            // Prefer gateway stored on the custom session; Payments falls back to first active → BILLPLZ.
             var customGatewayQuery = new GenerateCheckoutSessionQuery(
                 tenantId.Value,
                 customTotalAmount,
@@ -85,7 +86,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 customMetadata,
                 false,
                 1,
-                "BILLPLZ" // Default fallback for custom checkouts
+                existingSession.GatewayName
             );
 
             var customCheckoutUrl = await _mediator.Send(customGatewayQuery, ct);
@@ -174,6 +175,11 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 { "tenant_id", tenantId.Value.ToString() }
             };
 
+            // Product gateway when set; Payments resolves first active → BILLPLZ if blank (legacy rows).
+            var preferredGateway = string.IsNullOrWhiteSpace(product.GatewayName)
+                ? null
+                : product.GatewayName;
+
             var gatewayQuery = new GenerateCheckoutSessionQuery(
                 tenantId.Value,
                 netAmount,
@@ -185,7 +191,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 metadata,
                 product.Interval != "one_time",
                 request.Quantity,
-                product.GatewayName
+                preferredGateway
             );
 
             var checkoutUrl = await _mediator.Send(gatewayQuery, ct);

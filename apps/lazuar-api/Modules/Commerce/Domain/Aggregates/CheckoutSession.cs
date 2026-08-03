@@ -13,6 +13,12 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     
     public Guid? ProductId { get; private set; }
     public Guid? CouponId { get; private set; }
+
+    /// <summary>
+    /// Preferred payment gateway for custom (ad-hoc) checkout links.
+    /// Product checkouts resolve gateway from Product.GatewayName instead.
+    /// </summary>
+    public string? GatewayName { get; private set; }
     
     public string Status { get; private set; }
     public DateTime ExpiresAt { get; private set; }
@@ -35,6 +41,7 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         ClientProfileId = clientProfileId;
         ProductId = productId;
         CouponId = couponId;
+        GatewayName = null;
         Status = "OPEN";
         ExpiresAt = expiresAt;
         IsB2bRequired = false;
@@ -42,13 +49,22 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public CheckoutSession(Guid organizationId, Guid clientProfileId, IEnumerable<AdHocLineItem> lineItems, DateTime expiresAt, bool isB2bRequired)
+    public CheckoutSession(
+        Guid organizationId,
+        Guid clientProfileId,
+        IEnumerable<AdHocLineItem> lineItems,
+        DateTime expiresAt,
+        bool isB2bRequired,
+        string? gatewayName = null)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
         ClientProfileId = clientProfileId;
         ProductId = null;
         CouponId = null;
+        GatewayName = string.IsNullOrWhiteSpace(gatewayName)
+            ? null
+            : gatewayName.Trim().ToUpperInvariant();
         Status = "OPEN";
         ExpiresAt = expiresAt;
         IsB2bRequired = isB2bRequired;

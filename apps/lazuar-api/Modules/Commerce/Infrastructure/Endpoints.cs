@@ -45,7 +45,8 @@ public static class Endpoints
                 req.Client_name,
                 lineItems,
                 req.Expires_at?.UtcDateTime,
-                req.Is_b2b_required
+                req.Is_b2b_required,
+                string.IsNullOrWhiteSpace(req.Gateway_name) ? null : req.Gateway_name
             );
 
             var id = await mediator.Send(command);

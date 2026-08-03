@@ -1176,6 +1176,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_b2b_required")]
         public bool Is_b2b_required { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
+        public string? Gateway_name { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]

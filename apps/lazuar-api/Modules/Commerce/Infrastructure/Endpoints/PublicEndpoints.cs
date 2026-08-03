@@ -236,7 +236,7 @@ public static class PublicEndpoints
             using var connection = sqlFactory.CreateConnection();
             var query = @"
                 SELECT s.""OrganizationId"", s.""ProductId"", s.""Status"", s.""CurrentDunningCampaignId"",
-                       p.""Name"" as ProductName, p.""Price"", p.""Currency"",
+                       p.""Name"" as ProductName, p.""Price"", p.""Currency"", p.""GatewayName"" as ProductGatewayName,
                        cp.""Email"" as CustomerEmail,
                        org.""Slug"" as TenantSlug
                 FROM commerce.""Subscriptions"" s
@@ -266,6 +266,13 @@ public static class PublicEndpoints
                 metadata["dunning_campaign_id"] = sub.CurrentDunningCampaignId.ToString();
             }
 
+            // Use the subscription product's gateway (not default BILLPLZ).
+            string? productGateway = sub.ProductGatewayName as string;
+            if (string.IsNullOrWhiteSpace(productGateway))
+            {
+                productGateway = null;
+            }
+
             try
             {
                 var checkoutQuery = new GenerateCheckoutSessionQuery(
@@ -278,7 +285,8 @@ public static class PublicEndpoints
                     cancelUrl,
                     metadata,
                     true, 
-                    1
+                    1,
+                    productGateway
                 );
 
                 var checkoutUrl = await mediator.Send(checkoutQuery);
