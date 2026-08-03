@@ -142,11 +142,11 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Commerce domain/schema, DunningEngineJob, BillingEngineJob
 
-- [ ] Resolve unique index conflict on `ChargeAttemptLogs (SubscriptionId, TargetBillingDate)`
+- [x] Resolve unique index conflict on `ChargeAttemptLogs (SubscriptionId, TargetBillingDate)`
   - Prefer multi-row attempts: uniqueness includes attempt number **or** drop unique-on-date
-- [ ] Persist success/failure, gateway codes, timestamps per attempt
-- [ ] Align dunning `attemptCount < 4` (or campaign-configurable max) with schema
-- [ ] BillingEngineJob: first attempt of cycle; dunning owns subsequent retries (document ownership)
+- [x] Persist success/failure, gateway codes, timestamps per attempt
+- [x] Align dunning `attemptCount < 4` (or campaign-configurable max) with schema
+- [x] BillingEngineJob: first attempt of cycle; dunning owns subsequent retries (document ownership)
 
 ## A.4 Dunning engine correctness (before big redesign)
 

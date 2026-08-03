@@ -4,12 +4,13 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Modules.Commerce.Domain.Entities;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
 
 /// <summary>
-/// Bridges gateway payment failures into Commerce recovery: PAST_DUE + dunning campaign assignment.
+/// Bridges gateway payment failures into Commerce recovery: mark charge attempt failed, PAST_DUE + dunning campaign assignment.
 /// </summary>
 public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHandler<GatewayPaymentFailedIntegrationEvent>
 {
@@ -46,11 +47,14 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             return;
         }
 
+        await MarkChargeAttemptFailedAsync(@event, sub.Id);
+
         if (sub.Status is "CANCELED" or "SUSPENDED")
         {
             _logger.LogInformation(
-                "GatewayPaymentFailed {GatewayTxId}: subscription {SubscriptionId} is {Status}; skipping.",
+                "GatewayPaymentFailed {GatewayTxId}: subscription {SubscriptionId} is {Status}; charge attempt updated, skipping PAST_DUE.",
                 @event.GatewayTransactionId, sub.Id, sub.Status);
+            await _dbContext.SaveChangesAsync();
             return;
         }
 
@@ -94,6 +98,56 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         }
 
         await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task MarkChargeAttemptFailedAsync(GatewayPaymentFailedIntegrationEvent @event, Guid subscriptionId)
+    {
+        var attempt = await ResolveChargeAttemptAsync(@event, subscriptionId);
+        if (attempt == null)
+        {
+            _logger.LogDebug(
+                "GatewayPaymentFailed {GatewayTxId}: no PENDING ChargeAttemptLog for subscription {SubscriptionId}.",
+                @event.GatewayTransactionId, subscriptionId);
+            return;
+        }
+
+        string? failureReason = null;
+        string? gatewayName = null;
+        string? gatewayResponseCode = null;
+        if (@event.Metadata != null)
+        {
+            @event.Metadata.TryGetValue("failure_reason", out failureReason);
+            @event.Metadata.TryGetValue("gateway_name", out gatewayName);
+            @event.Metadata.TryGetValue("gateway_response_code", out gatewayResponseCode);
+        }
+
+        attempt.MarkFailed(failureReason, gatewayName, gatewayResponseCode);
+        _logger.LogInformation(
+            "Marked ChargeAttemptLog {AttemptId} FAILED for subscription {SubscriptionId} (attempt {AttemptNumber}).",
+            attempt.Id, subscriptionId, attempt.AttemptNumber);
+    }
+
+    private async Task<ChargeAttemptLog?> ResolveChargeAttemptAsync(
+        GatewayPaymentFailedIntegrationEvent @event,
+        Guid subscriptionId)
+    {
+        if (@event.Metadata != null
+            && @event.Metadata.TryGetValue("charge_attempt_id", out var attemptIdStr)
+            && Guid.TryParse(attemptIdStr, out var attemptId))
+        {
+            var byId = await _dbContext.ChargeAttemptLogs
+                .FirstOrDefaultAsync(l => l.Id == attemptId && l.SubscriptionId == subscriptionId);
+            if (byId != null)
+            {
+                return byId;
+            }
+        }
+
+        return await _dbContext.ChargeAttemptLogs
+            .Where(l => l.SubscriptionId == subscriptionId && l.Status == ChargeAttemptLog.StatusPending)
+            .OrderByDescending(l => l.AttemptNumber)
+            .ThenByDescending(l => l.AttemptedAt)
+            .FirstOrDefaultAsync();
     }
 
     private static bool TryResolveSubscriptionId(GatewayPaymentFailedIntegrationEvent @event, out Guid subscriptionId)

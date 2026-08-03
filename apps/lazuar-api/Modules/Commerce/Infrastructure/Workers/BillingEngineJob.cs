@@ -9,6 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain;
+using Modules.Commerce.Domain.Entities;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -69,13 +71,19 @@ public class BillingEngineJob : BackgroundService
             if (!string.IsNullOrEmpty(sub.VaultedTokenId) && !string.IsNullOrEmpty(sub.VaultedCustomerId))
             {
                 var targetDate = sub.NextBillingDate!.Value.Date;
-                var attemptExists = await db.ChargeAttemptLogs
-                    .AnyAsync(l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate, ct);
+                // Billing owns attempt 1 only; subsequent retries are owned by dunning AUTO_CHARGE.
+                var attemptCount = await db.ChargeAttemptLogs
+                    .CountAsync(l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate, ct);
 
-                if (!attemptExists)
+                if (attemptCount == 0)
                 {
-                    db.ChargeAttemptLogs.Add(new Domain.Entities.ChargeAttemptLog(sub.Id, targetDate));
-                    
+                    var attempt = new ChargeAttemptLog(
+                        sub.Id,
+                        targetDate,
+                        attemptNumber: 1,
+                        source: ChargeAttemptLog.SourceBilling);
+                    db.ChargeAttemptLogs.Add(attempt);
+
                     await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                         sub.OrganizationId,
                         sub.Id,
@@ -83,12 +91,15 @@ public class BillingEngineJob : BackgroundService
                         product.Currency,
                         sub.VaultedCustomerId,
                         sub.VaultedTokenId,
-                        null,
-                        product.GatewayName
+                        DunningCampaignId: null,
+                        GatewayName: product.GatewayName,
+                        ChargeAttemptId: attempt.Id
                     ));
-                    
+
                     requiresSave = true;
-                    _logger.LogInformation("Dispatched auto-debit request for subscription {Id}.", sub.Id);
+                    _logger.LogInformation(
+                        "Dispatched auto-debit request for subscription {Id} (attempt {AttemptNumber}/{Max}).",
+                        sub.Id, attempt.AttemptNumber, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
                 }
             }
             else

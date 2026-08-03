@@ -228,8 +228,44 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
             existingSub.StoreVaultedToken(@event.GatewayCustomerId, @event.GatewayTokenId);
         }
 
+        await MarkChargeAttemptSucceededAsync(@event, existingSub.Id);
+
         await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM");
         await _repository.SaveChangesAsync();
+    }
+
+    private async Task MarkChargeAttemptSucceededAsync(GatewayPaymentCompletedIntegrationEvent @event, Guid subscriptionId)
+    {
+        ChargeAttemptLog? attempt = null;
+
+        if (@event.Metadata != null
+            && @event.Metadata.TryGetValue("charge_attempt_id", out var attemptIdStr)
+            && Guid.TryParse(attemptIdStr, out var attemptId))
+        {
+            attempt = await _dbContext.ChargeAttemptLogs
+                .FirstOrDefaultAsync(l => l.Id == attemptId && l.SubscriptionId == subscriptionId);
+        }
+
+        attempt ??= await _dbContext.ChargeAttemptLogs
+            .Where(l => l.SubscriptionId == subscriptionId && l.Status == ChargeAttemptLog.StatusPending)
+            .OrderByDescending(l => l.AttemptNumber)
+            .ThenByDescending(l => l.AttemptedAt)
+            .FirstOrDefaultAsync();
+
+        if (attempt == null)
+        {
+            return;
+        }
+
+        string? gatewayName = null;
+        string? gatewayResponseCode = null;
+        if (@event.Metadata != null)
+        {
+            @event.Metadata.TryGetValue("gateway_name", out gatewayName);
+            @event.Metadata.TryGetValue("gateway_response_code", out gatewayResponseCode);
+        }
+
+        attempt.MarkSucceeded(gatewayName, gatewayResponseCode);
     }
 
     /// <summary>

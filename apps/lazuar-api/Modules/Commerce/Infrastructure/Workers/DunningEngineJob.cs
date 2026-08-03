@@ -9,6 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain;
+using Modules.Commerce.Domain.Entities;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -177,15 +179,33 @@ public class DunningEngineJob : BackgroundService
             {
                 if (step.ActionType == "AUTOCHARGE" || step.ActionType == "AUTO_CHARGE")
                 {
-                    var attemptCount = await db.ChargeAttemptLogs.CountAsync(l => l.SubscriptionId == sub.Id && l.TargetBillingDate == sub.NextBillingDate.Value.Date, ct);
-                    
-                    if (attemptCount < 4 && !string.IsNullOrEmpty(sub.VaultedCustomerId) && !string.IsNullOrEmpty(sub.VaultedTokenId))
+                    var targetDate = sub.NextBillingDate.Value.Date;
+                    var attemptCount = await db.ChargeAttemptLogs.CountAsync(
+                        l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate, ct);
+                    var nextAttempt = attemptCount + 1;
+
+                    if (nextAttempt > ChargeAttemptLimits.MaxAttemptsPerBillingCycle
+                        || string.IsNullOrEmpty(sub.VaultedCustomerId)
+                        || string.IsNullOrEmpty(sub.VaultedTokenId))
+                    {
+                        _logger.LogWarning(
+                            "Skipped auto-charge for Subscription {Id} (nextAttempt={NextAttempt}, max={Max}) due to limits or missing token. Falling back.",
+                            sub.Id, nextAttempt, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
+                    }
+                    else
                     {
                         var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
                         if (product != null)
                         {
-                            db.ChargeAttemptLogs.Add(new Domain.Entities.ChargeAttemptLog(sub.Id, sub.NextBillingDate.Value.Date));
-                            
+                            var attempt = new ChargeAttemptLog(
+                                sub.Id,
+                                targetDate,
+                                attemptNumber: nextAttempt,
+                                source: ChargeAttemptLog.SourceDunning,
+                                dunningCampaignId: campaign.Id,
+                                dunningStepId: step.Id);
+                            db.ChargeAttemptLogs.Add(attempt);
+
                             await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                                 sub.OrganizationId,
                                 sub.Id,
@@ -193,15 +213,14 @@ public class DunningEngineJob : BackgroundService
                                 product.Currency,
                                 sub.VaultedCustomerId,
                                 sub.VaultedTokenId,
-                                campaign.Id,
-                                product.GatewayName
+                                DunningCampaignId: campaign.Id,
+                                GatewayName: product.GatewayName,
+                                ChargeAttemptId: attempt.Id
                             ));
-                            _logger.LogInformation("Dispatched auto-charge dunning step for Subscription {Id}.", sub.Id);
+                            _logger.LogInformation(
+                                "Dispatched auto-charge dunning step for Subscription {Id} (attempt {AttemptNumber}/{Max}).",
+                                sub.Id, nextAttempt, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
                         }
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Skipped auto-charge for Subscription {Id} due to limits or missing token. Falling back.", sub.Id);
                     }
                 }
                 else

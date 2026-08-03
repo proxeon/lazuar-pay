@@ -79,6 +79,11 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
             metadata["dunning_campaign_id"] = @event.DunningCampaignId.Value.ToString();
         }
 
+        if (@event.ChargeAttemptId.HasValue)
+        {
+            metadata["charge_attempt_id"] = @event.ChargeAttemptId.Value.ToString();
+        }
+
         await _eventBus.PublishAsync(new GatewayPaymentFailedIntegrationEvent(
             OrganizationId: @event.TenantId,
             GatewayTransactionId: "off_session:" + @event.SubscriptionId,

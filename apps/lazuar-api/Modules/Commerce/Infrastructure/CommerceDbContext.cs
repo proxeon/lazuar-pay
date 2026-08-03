@@ -59,13 +59,7 @@ public class CommerceDbContext : PlatformDbContext
             }
         }
 
-        foreach (var entry in ChangeTracker.Entries<ChargeAttemptLog>())
-        {
-            if (entry.State == EntityState.Modified)
-            {
-                entry.State = EntityState.Added;
-            }
-        }
+        // ChargeAttemptLog supports status transitions (PENDING → SUCCEEDED/FAILED); do not coerce Modified → Added.
 
         return base.SaveChangesAsync(cancellationToken);
     }
@@ -194,7 +188,13 @@ public class CommerceDbContext : PlatformDbContext
         {
             builder.ToTable("ChargeAttemptLogs");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.SubscriptionId, x.TargetBillingDate }).IsUnique();
+            builder.HasIndex(x => new { x.SubscriptionId, x.TargetBillingDate, x.AttemptNumber }).IsUnique();
+            builder.Property(x => x.Status).HasMaxLength(50).HasDefaultValue(ChargeAttemptLog.StatusPending);
+            builder.Property(x => x.Source).HasMaxLength(50).HasDefaultValue(ChargeAttemptLog.SourceBilling);
+            builder.Property(x => x.GatewayName).HasMaxLength(100);
+            builder.Property(x => x.GatewayResponseCode).HasMaxLength(100);
+            builder.Property(x => x.FailureReason).HasMaxLength(500);
+            builder.Property(x => x.AttemptNumber).HasDefaultValue(1);
         });
 
         modelBuilder.Entity<DunningCampaign>(builder =>
