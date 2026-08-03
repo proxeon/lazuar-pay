@@ -152,7 +152,8 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var rawEventType = root.TryGetProperty("event_type", out var etProp) ? etProp.GetString() : null;
             var mappedEventType = "";
 
-            if (rawEventType == "purchase.paid" || rawEventType == "purchase.preauthorized")
+            // Only purchase.paid is settled money. purchase.preauthorized is an auth-hold — do not treat as paid.
+            if (rawEventType == "purchase.paid")
             {
                 mappedEventType = "PAYMENT_COMPLETED";
             }

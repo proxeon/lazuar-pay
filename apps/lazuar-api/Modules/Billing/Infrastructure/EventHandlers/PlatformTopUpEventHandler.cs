@@ -29,6 +29,18 @@ public class PlatformTopUpEventHandler : IIntegrationEventHandler<GatewayPayment
         if (!@event.Metadata.TryGetValue("tenant_id", out var tenantIdStr) || !Guid.TryParse(tenantIdStr, out var targetTenantId))
             return;
 
+        // No stable transaction id → cannot safely credit (risk of double-grant on redelivery).
+        if (string.IsNullOrWhiteSpace(@event.GatewayTransactionId))
+            return;
+
+        // Transaction-level idempotency: never double-credit the same gateway payment.
+        var alreadyToppedUp = await _dbContext.LedgerEntries
+            .IgnoreQueryFilters()
+            .AnyAsync(e => e.ReferenceType == "SYSTEM_CREDIT_TOPUP"
+                           && e.ReferenceId == @event.GatewayTransactionId);
+        if (alreadyToppedUp)
+            return;
+
         // Grant the highest package whose price threshold the tenant has met.
         var credits = _creditOptions.Packages
             .Where(p => p.AmountMyr <= @event.AmountPaid)

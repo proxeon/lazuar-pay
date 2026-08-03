@@ -51,6 +51,13 @@ public class PaymentWebhookLogRepository : IPaymentWebhookLogRepository
             .AnyAsync(l => l.EventId == eventId && l.Provider == provider, ct);
     }
 
+    public async Task<bool> HasBusinessKeyBeenProcessedAsync(string businessKey, string provider, CancellationToken ct = default)
+    {
+        return await _context.PaymentWebhookLogs
+            .IgnoreQueryFilters()
+            .AnyAsync(l => l.BusinessKey == businessKey && l.Provider == provider, ct);
+    }
+
     public void Add(PaymentWebhookLog log)
     {
         _context.PaymentWebhookLogs.Add(log);

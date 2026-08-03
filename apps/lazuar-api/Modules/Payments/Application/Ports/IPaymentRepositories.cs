@@ -16,6 +16,7 @@ public interface ITenantPaymentConfigRepository
 public interface IPaymentWebhookLogRepository
 {
     Task<bool> HasBeenProcessedAsync(string eventId, string provider, CancellationToken ct = default);
+    Task<bool> HasBusinessKeyBeenProcessedAsync(string businessKey, string provider, CancellationToken ct = default);
     void Add(PaymentWebhookLog log);
 
     /// <summary>

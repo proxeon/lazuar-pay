@@ -40,8 +40,8 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
         var parsedResult = await adapter.ParseWebhookAsync(
             config.ApiKey ?? "",
-            config.WebhookSecret, 
-            request.RawBody, 
+            config.WebhookSecret,
+            request.RawBody,
             request.Headers,
             0, // estimatedFeePercentage - removed from config
             0, // fixedFee - removed from config
@@ -65,7 +65,18 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             return;
         }
 
-        var log = new PaymentWebhookLog(parsedResult.EventId, config.GatewayType);
+        var businessKey = BuildBusinessKey(parsedResult.EventType, parsedResult.GatewayTransactionId);
+        if (businessKey is not null)
+        {
+            var businessKeyProcessed = await _logRepository.HasBusinessKeyBeenProcessedAsync(
+                businessKey, config.GatewayType, cancellationToken);
+            if (businessKeyProcessed)
+            {
+                return;
+            }
+        }
+
+        var log = new PaymentWebhookLog(parsedResult.EventId, config.GatewayType, businessKey);
         _logRepository.Add(log);
 
         if (parsedResult.EventType == "DISPUTE_CREATED")
@@ -76,7 +87,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
                 AmountDisputed: parsedResult.AmountPaid,
                 Currency: parsedResult.Currency,
                 Metadata: parsedResult.Metadata));
-            await _logRepository.SaveChangesAsync(cancellationToken);
+            await TrySaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -86,7 +97,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
                 OrganizationId: request.TenantId,
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
                 Metadata: parsedResult.Metadata ?? new Dictionary<string, string>()));
-            await _logRepository.SaveChangesAsync(cancellationToken);
+            await TrySaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -107,6 +118,56 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         );
 
         await _eventBus.PublishAsync(integrationEvent);
-        await _logRepository.SaveChangesAsync(cancellationToken);
+        await TrySaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Business key for payment-level idempotency across dual gateway events
+    /// (e.g. Stripe checkout.session.completed + payment_intent.succeeded).
+    /// </summary>
+    private static string? BuildBusinessKey(string eventType, string? gatewayTransactionId)
+    {
+        if (string.IsNullOrEmpty(gatewayTransactionId))
+        {
+            return null;
+        }
+
+        // Money events only (caller already filters to these)
+        return eventType + ":" + gatewayTransactionId;
+    }
+
+    private async Task TrySaveChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _logRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (IsUniqueConstraintViolation(ex))
+        {
+            // Concurrent delivery raced past the pre-checks; treat as successful duplicate (HTTP 200).
+            return;
+        }
+    }
+
+    /// <summary>
+    /// Detects PostgreSQL unique_violation (SQLSTATE 23505) without hard-depending on Npgsql in Application.
+    /// </summary>
+    public static bool IsUniqueConstraintViolation(Exception exception)
+    {
+        for (Exception? ex = exception; ex != null; ex = ex.InnerException)
+        {
+            var sqlState = ex.GetType().GetProperty("SqlState")?.GetValue(ex) as string;
+            if (sqlState == "23505")
+            {
+                return true;
+            }
+
+            if (ex.Message.Contains("23505", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

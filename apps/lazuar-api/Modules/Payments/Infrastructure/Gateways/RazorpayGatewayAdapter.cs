@@ -128,9 +128,27 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             }
 
             var paymentEntity = doc.RootElement.GetProperty("payload").GetProperty("payment").GetProperty("entity");
-            
+            var paymentId = paymentEntity.TryGetProperty("id", out var paymentIdEl) ? paymentIdEl.GetString() : null;
+
+            // Prefer Razorpay delivery id; fall back to payment id. Never invent a Guid — fail closed.
             var eventIdHeaderKey = headers.Keys.FirstOrDefault(k => k.Equals("X-Razorpay-Event-Id", StringComparison.OrdinalIgnoreCase));
-            var eventId = !string.IsNullOrEmpty(eventIdHeaderKey) ? headers[eventIdHeaderKey] : paymentEntity.GetProperty("id").GetString();
+            string? eventId = null;
+            if (!string.IsNullOrEmpty(eventIdHeaderKey) && headers.TryGetValue(eventIdHeaderKey, out var headerEventId))
+            {
+                eventId = headerEventId;
+            }
+
+            if (string.IsNullOrWhiteSpace(eventId))
+            {
+                eventId = paymentId;
+            }
+
+            if (string.IsNullOrWhiteSpace(eventId))
+            {
+                return Task.FromResult(new GatewayWebhookParsedResult(
+                    false, "", "", 0, "", null, new(), 0, 0, 0, 1, "",
+                    "Missing stable EventId: no X-Razorpay-Event-Id header and no payment id."));
+            }
 
             var amount = paymentEntity.GetProperty("amount").GetDecimal() / 100m;
             var fee = paymentEntity.TryGetProperty("fee", out var feeEl) && feeEl.ValueKind != JsonValueKind.Null ? feeEl.GetDecimal() / 100m : 0m;
@@ -153,10 +171,10 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             return Task.FromResult(new GatewayWebhookParsedResult(
                 Verified: true,
                 EventType: "PAYMENT_COMPLETED",
-                EventId: eventId ?? Guid.NewGuid().ToString(),
+                EventId: eventId,
                 AmountPaid: amount,
                 Currency: currency ?? "MYR",
-                GatewayTransactionId: paymentEntity.GetProperty("id").GetString(),
+                GatewayTransactionId: paymentId,
                 Metadata: meta,
                 GatewayFee: fee,
                 TaxAmount: tax,

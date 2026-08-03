@@ -10,6 +10,14 @@ namespace Modules.Payments.Infrastructure;
 
 public static class Endpoints
 {
+    private static readonly HashSet<string> AllowedGatewayTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "STRIPE",
+        "BILLPLZ",
+        "RAZORPAY",
+        "CHIP"
+    };
+
     public static IEndpointRouteBuilder MapPaymentsEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/webhooks/payments");
@@ -23,10 +31,15 @@ public static class Endpoints
         {
             var logger = loggerFactory.CreateLogger("PaymentWebhooks");
 
+            if (!AllowedGatewayTypes.Contains(gatewayType))
+            {
+                return Results.BadRequest(new { error = $"Unsupported payment gateway type '{gatewayType}'." });
+            }
+
             context.Request.EnableBuffering();
             using var reader = new StreamReader(context.Request.Body, Encoding.UTF8, leaveOpen: true);
             var rawBody = await reader.ReadToEndAsync();
-            context.Request.Body.Position = 0; 
+            context.Request.Body.Position = 0;
 
             if (string.IsNullOrEmpty(rawBody))
             {
@@ -34,7 +47,7 @@ public static class Endpoints
             }
 
             var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
+
             foreach (var header in context.Request.Headers)
             {
                 headers[header.Key] = header.Value.ToString();
@@ -58,10 +71,18 @@ public static class Endpoints
 
                 return Results.Ok(new { received = true });
             }
+            catch (Exception ex) when (ex is NotSupportedException
+                || (ex is InvalidOperationException ioe
+                    && ioe.Message.Contains("is not supported", StringComparison.OrdinalIgnoreCase)))
+            {
+                // Unknown gateway must not 500 (gateway retries forever). Allow-list is primary; this is defense-in-depth.
+                logger.LogWarning(ex, "Rejected unsupported gateway type {GatewayType} for tenant {TenantId}.", gatewayType, tenantId);
+                return Results.BadRequest(new { error = ex.Message });
+            }
             catch (Exception ex) when (ex is not InvalidOperationException && ex is not BuildingBlocks.Domain.BusinessRuleValidationException)
             {
                 logger.LogError(ex, "Unexpected critical error processing webhook for tenant {TenantId}.", tenantId);
-                throw; 
+                throw;
             }
         });
 

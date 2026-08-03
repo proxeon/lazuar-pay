@@ -18,7 +18,7 @@ public class PaymentGatewayFactory : IPaymentGatewayFactory
 
         if (adapter == null)
         {
-            throw new NotSupportedException($"Payment gateway type '{gatewayType}' is not supported.");
+            throw new InvalidOperationException($"Payment gateway type '{gatewayType}' is not supported.");
         }
 
         return adapter;

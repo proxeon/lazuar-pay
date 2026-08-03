@@ -168,13 +168,13 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Payments
 
-- [ ] Business-key / payment-level idempotency strategy (Stripe dual events, etc.)
-- [ ] Razorpay: never `Guid.NewGuid()` for EventId; fail closed if no stable id
-- [ ] CHIP: do not treat `purchase.preauthorized` as paid
-- [ ] Catch unique-violation races → HTTP 200 duplicate
-- [ ] Platform top-up: transaction-level idempotency (no double credit)
+- [x] Business-key / payment-level idempotency strategy (Stripe dual events, etc.)
+- [x] Razorpay: never `Guid.NewGuid()` for EventId; fail closed if no stable id
+- [x] CHIP: do not treat `purchase.preauthorized` as paid
+- [x] Catch unique-violation races → HTTP 200 duplicate
+- [x] Platform top-up: transaction-level idempotency (no double credit)
 - [ ] Prefer two-phase later if needed: persist raw webhook → async process (can start as P1 within A)
-- [ ] Unknown gateway type → 400 not endless 500 retries
+- [x] Unknown gateway type → 400 not endless 500 retries
 
 ## A.6 Refunds and disputes (minimum viable truth)
 
