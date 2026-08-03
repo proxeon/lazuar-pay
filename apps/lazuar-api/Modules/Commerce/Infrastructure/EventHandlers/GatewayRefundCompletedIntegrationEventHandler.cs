@@ -1,8 +1,6 @@
-using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
-using Modules.Commerce.Domain.Entities;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
@@ -18,10 +16,14 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
     public async Task HandleAsync(GatewayRefundCompletedIntegrationEvent @event)
     {
+        // Payment logs store GatewayTransactionId in ExternalReference (not PaymentRecordId).
+        var paymentRecordId = @event.PaymentRecordId.ToString();
         var existingLog = await _dbContext.TransactionLogs
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(l => l.OrganizationId == @event.OrganizationId 
-                && l.ExternalReference == @event.PaymentRecordId.ToString());
+            .FirstOrDefaultAsync(l => l.OrganizationId == @event.OrganizationId
+                && (l.ExternalReference == @event.GatewayTransactionId
+                    || l.ExternalReference == paymentRecordId
+                    || l.Id == @event.PaymentRecordId));
 
         if (existingLog != null)
         {

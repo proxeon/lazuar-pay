@@ -8,7 +8,10 @@ public record GatewayRefundRequestedIntegrationEvent(
     Guid SubscriptionId,
     Guid PaymentRecordId,
     string GatewayTransactionId,
-    string GatewayName = "STRIPE") : IIntegrationEvent
+    decimal Amount,
+    string Currency,
+    string GatewayName = "STRIPE",
+    decimal TaxAmount = 0m) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;

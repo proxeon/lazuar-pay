@@ -83,6 +83,13 @@ public class CommerceRepository : ICommerceRepository
         return await _context.Orders.FirstOrDefaultAsync(o => o.Id == id, ct);
     }
 
+    public async Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.TransactionLogs
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.Id == id, ct);
+    }
+
     public async Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default)
     {
         return await _context.ChargeAttemptLogs

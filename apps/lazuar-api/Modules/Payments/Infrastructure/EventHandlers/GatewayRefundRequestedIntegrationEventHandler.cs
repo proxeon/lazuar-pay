@@ -32,19 +32,31 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
             return;
         }
 
+        if (@event.Amount <= 0)
+        {
+            await _eventBus.PublishAsync(new GatewayRefundFailedIntegrationEvent(
+                @event.OrganizationId, @event.SubscriptionId, @event.PaymentRecordId, "Refund amount must be greater than zero."));
+            return;
+        }
+
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
-        
-        var success = await adapter.IssueRefundAsync(config.ApiKey, @event.GatewayTransactionId, 0);
+        var success = await adapter.IssueRefundAsync(config.ApiKey, @event.GatewayTransactionId, @event.Amount);
         if (success)
         {
+            // Gateway adapters currently do not return reclaimed fee; treat fee as 0 until webhook enrichment exists.
+            var refundedFee = 0m;
+            var netRefunded = @event.Amount - refundedFee;
+
             await _eventBus.PublishAsync(new GatewayRefundCompletedIntegrationEvent(
                 OrganizationId: @event.OrganizationId,
                 SubscriptionId: @event.SubscriptionId,
                 PaymentRecordId: @event.PaymentRecordId,
-                RefundedAmount: 0,
-                Currency: "MYR",
-                RefundedFee: 0m,
-                NetRefundedAmount: 0m
+                GatewayTransactionId: @event.GatewayTransactionId,
+                RefundedAmount: @event.Amount,
+                Currency: @event.Currency,
+                RefundedFee: refundedFee,
+                NetRefundedAmount: netRefunded,
+                TaxAmount: @event.TaxAmount
             ));
         }
         else

@@ -180,11 +180,11 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Payments, Commerce, Billing, Lhdn
 
-- [ ] Wire a real publisher for `GatewayRefundRequested` with amount + currency + gateway tx id
-- [ ] Stop hardcoding refund amount `0` / currency `MYR` in refund handler
-- [ ] Align Commerce refund transaction matching with gateway transaction id
-- [ ] Refund tax/ledger symmetry (Billing) for partial/full refunds as applicable
-- [ ] Dispute path: document scope (utility clawback only vs commerce suspension later)
+- [x] Wire a real publisher for `GatewayRefundRequested` with amount + currency + gateway tx id
+- [x] Stop hardcoding refund amount `0` / currency `MYR` in refund handler
+- [x] Align Commerce refund transaction matching with gateway transaction id
+- [x] Refund tax/ledger symmetry (Billing) for partial/full refunds as applicable
+- [x] Dispute path: document scope (utility clawback only vs commerce suspension later)
 
 ## A.7 Gateway selection correctness
 

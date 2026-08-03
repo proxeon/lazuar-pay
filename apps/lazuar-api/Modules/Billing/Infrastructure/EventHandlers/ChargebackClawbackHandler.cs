@@ -15,6 +15,11 @@ namespace Modules.Billing.Infrastructure.EventHandlers;
 /// Consumes gateway dispute events and claws back credits granted for a disputed utility-credit
 /// top-up. Recovers up to the tenant's remaining balance (spent credits are a loss). Idempotent
 /// via the webhook log (the Payments module deduplicates by Stripe event id before publishing).
+///
+/// Scope (A.6 / MVP): utility clawback only.
+/// - Handles only metadata.type == "utility_credit_topup" (platform credit purchases).
+/// - Does NOT suspend commerce subscriptions, reverse merchant GMV ledger entries, or reverse tax
+///   for disputed customer payments. Commerce dispute suspension / full chargeback ledger is later work.
 /// </summary>
 public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDisputeCreatedIntegrationEvent>
 {
@@ -34,6 +39,7 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
 
     public async Task HandleAsync(GatewayDisputeCreatedIntegrationEvent @event)
     {
+        // Utility-credit top-ups only — commerce chargebacks are intentionally out of scope for MVP.
         if (!@event.Metadata.TryGetValue("type", out var type) || type != "utility_credit_topup")
             return;
 
