@@ -175,18 +175,33 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt, Guid? dunningCampaignId = null)
+    public Task<bool> ChargeOffSessionAsync(
+        string apiKey, string customerId, string tokenId, decimal amount, string currency,
+        string description, string receipt, Guid tenantId, Guid? dunningCampaignId = null)
     {
         try
         {
             var client = GetClient(apiKey);
-            
+
+            var notes = new Dictionary<string, object>
+            {
+                ["type"] = "commerce_subscription",
+                ["subscription_id"] = receipt,
+                ["tenant_id"] = tenantId.ToString(),
+                ["receipt"] = receipt
+            };
+            if (dunningCampaignId.HasValue)
+            {
+                notes["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+            }
+
             var orderReq = new Dictionary<string, object>
             {
                 { "amount", (int)(amount * 100) },
                 { "currency", currency.ToUpperInvariant() },
                 { "receipt", receipt },
-                { "payment_capture", true }
+                { "payment_capture", true },
+                { "notes", notes }
             };
             var order = client.Order.Create(orderReq);
 
@@ -200,7 +215,8 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
                 { "customer_id", customerId },
                 { "token", tokenId },
                 { "recurring", true },
-                { "description", description }
+                { "description", description },
+                { "notes", notes }
             };
             
             var payment = client.Payment.CreateRecurringPayment(payReq);

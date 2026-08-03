@@ -51,6 +51,7 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
             @event.Currency,
             $"Auto-renewal for subscription {@event.SubscriptionId}",
             @event.SubscriptionId.ToString(),
+            @event.TenantId,
             @event.DunningCampaignId);
 
         if (!success)

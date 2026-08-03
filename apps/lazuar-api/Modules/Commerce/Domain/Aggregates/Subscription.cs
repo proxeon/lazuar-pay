@@ -96,6 +96,20 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Recover from successful payment while in PAST_DUE (or similar arrears).
+    /// Unlike <see cref="Activate"/>, this always advances period dates and clears dunning.
+    /// </summary>
+    public void RecoverFromPayment(DateTime periodEnd, DateTime nextBilling)
+    {
+        Status = "ACTIVE";
+        CurrentPeriodEnd = periodEnd;
+        NextBillingDate = nextBilling;
+        SuspendedAt = null;
+        ClearDunning();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void Cancel()
     {
         Status = "CANCELED";

@@ -153,6 +153,44 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 {
                     var amount = pi.AmountReceived / 100m;
                     var meta = pi.Metadata != null ? new Dictionary<string, string>(pi.Metadata) : new Dictionary<string, string>();
+
+                    // Mirror checkout.session.completed: expand latest_charge.balance_transaction for real fee.
+                    // If expand fails, leave GatewayFee=0 (gross-only) rather than blocking fulfillment.
+                    decimal gatewayFee = 0;
+                    decimal fxRate = 1;
+                    string baseCurrency = pi.Currency ?? "myr";
+
+                    try
+                    {
+                        var client = new StripeClient(apiKey);
+                        var piService = new PaymentIntentService(client);
+                        var expanded = await piService.GetAsync(pi.Id, new PaymentIntentGetOptions
+                        {
+                            Expand = new List<string> { "latest_charge.balance_transaction" }
+                        });
+
+                        var charge = expanded.LatestCharge as Charge;
+                        if (charge?.BalanceTransaction != null)
+                        {
+                            var bt = charge.BalanceTransaction;
+                            gatewayFee = Math.Abs(bt.Fee / 100m);
+
+                            if (bt.ExchangeRate.HasValue)
+                            {
+                                fxRate = bt.ExchangeRate.Value;
+                            }
+
+                            baseCurrency = bt.Currency ?? baseCurrency;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to expand Stripe PaymentIntent {PaymentIntentId} for fee extraction; GatewayFee=0.", pi.Id);
+                        gatewayFee = 0;
+                    }
+
+                    decimal netAmount = amount - gatewayFee;
+
                     return new GatewayWebhookParsedResult(
                         Verified: true,
                         EventType: "PAYMENT_COMPLETED",
@@ -161,11 +199,11 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         Currency: pi.Currency ?? "myr",
                         GatewayTransactionId: pi.Id,
                         Metadata: meta,
-                        GatewayFee: 0, 
+                        GatewayFee: gatewayFee,
                         TaxAmount: 0,
-                        NetAmount: amount,
-                        FxRate: 1,
-                        BaseCurrency: pi.Currency ?? "myr",
+                        NetAmount: netAmount,
+                        FxRate: fxRate,
+                        BaseCurrency: baseCurrency,
                         Error: null,
                         GatewayCustomerId: pi.CustomerId,
                         GatewayTokenId: pi.PaymentMethodId
@@ -221,15 +259,26 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         }
     }
 
-    public async Task<bool> ChargeOffSessionAsync(string apiKey, string customerId, string tokenId, decimal amount, string currency, string description, string receipt, Guid? dunningCampaignId = null)
+    public async Task<bool> ChargeOffSessionAsync(
+        string apiKey, string customerId, string tokenId, decimal amount, string currency,
+        string description, string receipt, Guid tenantId, Guid? dunningCampaignId = null)
     {
         try
         {
             var client = new StripeClient(apiKey);
             var service = new PaymentIntentService(client);
-            
-            var meta = new Dictionary<string, string> { { "receipt", receipt } };
-            if (dunningCampaignId.HasValue) meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+
+            var meta = new Dictionary<string, string>
+            {
+                ["type"] = "commerce_subscription",
+                ["subscription_id"] = receipt,
+                ["tenant_id"] = tenantId.ToString(),
+                ["receipt"] = receipt
+            };
+            if (dunningCampaignId.HasValue)
+            {
+                meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+            }
 
             var options = new PaymentIntentCreateOptions
             {

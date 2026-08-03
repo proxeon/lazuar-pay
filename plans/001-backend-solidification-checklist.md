@@ -127,16 +127,16 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Payments gateways, Commerce payment-completed handler
 
-- [ ] Always set off-session / PaymentIntent (or CHIP purchase) metadata:
-  - [ ] `type=commerce_subscription`
-  - [ ] `subscription_id`
-  - [ ] `tenant_id`
-  - [ ] `dunning_campaign_id` when in dunning
-- [ ] Commerce `GatewayPaymentCompletedIntegrationEventHandler`:
-  - [ ] Accept recovery for off-session path (not only checkout-session completion)
-  - [ ] Advance billing period / clear dunning / `RecordRecovery` when recovering from arrears
-  - [ ] Fallback parse of legacy `receipt` only if needed during migration
-- [ ] Stripe PI success path: improve fee extraction where feasible (or document gross-only limitation)
+- [x] Always set off-session / PaymentIntent (or CHIP purchase) metadata:
+  - [x] `type=commerce_subscription`
+  - [x] `subscription_id`
+  - [x] `tenant_id`
+  - [x] `dunning_campaign_id` when in dunning
+- [x] Commerce `GatewayPaymentCompletedIntegrationEventHandler`:
+  - [x] Accept recovery for off-session path (not only checkout-session completion)
+  - [x] Advance billing period / clear dunning / `RecordRecovery` when recovering from arrears
+  - [x] Fallback parse of legacy `receipt` only if needed during migration
+- [x] Stripe PI success path: improve fee extraction where feasible (or document gross-only limitation)
 
 ## A.3 Charge attempt model vs multi-retry
 

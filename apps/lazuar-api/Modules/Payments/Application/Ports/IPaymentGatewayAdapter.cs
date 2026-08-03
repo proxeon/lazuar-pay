@@ -69,6 +69,7 @@ public interface IPaymentGatewayAdapter
         string currency,
         string description,
         string receipt,
+        Guid tenantId,
         Guid? dunningCampaignId = null);
 }
 
