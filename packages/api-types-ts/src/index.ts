@@ -645,6 +645,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/one/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OneOperations_listApiKeys"];
+        put?: never;
+        post: operations["OneOperations_generateApiKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/one/api-keys/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["OneOperations_revokeApiKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/one/auth/forgot-password": {
         parameters: {
             query?: never;
@@ -2010,35 +2042,8 @@ export interface components {
             billing_address?: components["schemas"]["Crm.BillingAddressDto"];
             consented_to_marketing?: boolean;
         };
-        "Lhdn.ApiKeyDto": {
-            id: string;
-            name: string;
-            prefix: string;
-            /** @description Last 4 characters of the plain key for display (not secret). */
-            hint: string;
-            is_active: boolean;
-            /** Format: date-time */
-            created_at: string;
-            scopes: string[];
-        };
         "Lhdn.CancelDocumentRequestDto": {
             reason: string;
-        };
-        "Lhdn.GenerateApiKeyRequestDto": {
-            name: string;
-            is_test_mode: boolean;
-        };
-        "Lhdn.GenerateApiKeyResponseDto": {
-            id: string;
-            name: string;
-            prefix: string;
-            /** @description Last 4 characters of the plain key for display (not secret). */
-            hint: string;
-            /** Format: date-time */
-            created_at: string;
-            /** @description Full secret — returned only once on create. */
-            plain_key: string;
-            scopes: string[];
         };
         "Lhdn.LhdnAddressDto": {
             line1: string;
@@ -2139,6 +2144,17 @@ export interface components {
         "One.AcceptWorkspaceInvitationDto": {
             token: string;
         };
+        "One.ApiKeyDto": {
+            id: string;
+            name: string;
+            prefix: string;
+            /** @description Last 4 characters of the plain key for display (not secret). */
+            hint: string;
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            scopes: string[];
+        };
         "One.AuthUser": {
             email: string;
             name: string;
@@ -2166,6 +2182,22 @@ export interface components {
         };
         "One.ForgotPasswordRequestDto": {
             email: string;
+        };
+        "One.GenerateApiKeyRequestDto": {
+            name: string;
+            is_test_mode: boolean;
+        };
+        "One.GenerateApiKeyResponseDto": {
+            id: string;
+            name: string;
+            prefix: string;
+            /** @description Last 4 characters of the plain key for display (not secret). */
+            hint: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Full secret — returned only once on create. */
+            plain_key: string;
+            scopes: string[];
         };
         "One.GetPresignedUrlRequestDto": {
             file_name: string;
@@ -5433,7 +5465,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Lhdn.ApiKeyDto"][];
+                    "application/json": components["schemas"]["One.ApiKeyDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -5492,7 +5524,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Lhdn.GenerateApiKeyRequestDto"];
+                "application/json": components["schemas"]["One.GenerateApiKeyRequestDto"];
             };
         };
         responses: {
@@ -5502,7 +5534,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Lhdn.GenerateApiKeyResponseDto"];
+                    "application/json": components["schemas"]["One.GenerateApiKeyResponseDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -6112,6 +6144,207 @@ export interface operations {
                 "application/json": components["schemas"]["Lhdn.UpdateLhdnCertificateRequestDto"];
             };
         };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_listApiKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.ApiKeyDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_generateApiKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["One.GenerateApiKeyRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.GenerateApiKeyResponseDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_revokeApiKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description The request has succeeded. */
             200: {

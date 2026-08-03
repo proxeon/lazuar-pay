@@ -17,6 +17,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Modules.One.Application.Commands;
+using Modules.One.Application.Queries;
 using Modules.One.Contracts;
 using Modules.One.Domain;
 
@@ -331,6 +332,52 @@ public static class Endpoints
                 Final_url = finalUrl 
             }));
         }).RequireAuthorization();
+
+        // Platform API credentials (OrgAdmin JWT only — never API_CLIENT).
+        var orgAdmin = group.MapGroup("").RequireAuthorization("OrgAdmin");
+
+        orgAdmin.MapGet("/api-keys", async Task<Ok<ICollection<ApiKeyDto>>> (
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var result = await mediator.Send(new ListApiCredentialsQuery(ctx.TenantId));
+            return TypedResults.Ok((ICollection<ApiKeyDto>)result.ToList());
+        });
+
+        orgAdmin.MapPost("/api-keys", async Task<Ok<GenerateApiKeyResponseDto>> (
+            [FromBody] GenerateApiKeyRequestDto req,
+            IExecutionContextAccessor ctx,
+            [FromServices] IApiCredentialService credentials) =>
+        {
+            var createdBy = ctx.UserId == Guid.Empty ? (Guid?)null : ctx.UserId;
+            var created = await credentials.GenerateAsync(ctx.TenantId, req.Name, req.Is_test_mode, createdBy);
+            return TypedResults.Ok(new GenerateApiKeyResponseDto
+            {
+                Id = created.Id.ToString(),
+                Name = created.Name,
+                Prefix = created.Prefix,
+                Hint = created.Hint,
+                Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero),
+                Plain_key = created.PlainKey,
+                Scopes = PlatformApiScopes.Split(created.Scopes).ToList()
+            });
+        });
+
+        orgAdmin.MapDelete("/api-keys/{id:guid}", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            [FromServices] IApiCredentialService credentials) =>
+        {
+            try
+            {
+                await credentials.RevokeAsync(ctx.TenantId, id);
+                return TypedResults.Ok(new StatusResponse { Status = "revoked" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
+        });
 
         return endpoints;
     }

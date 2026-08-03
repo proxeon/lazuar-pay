@@ -2,47 +2,32 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Microsoft.Extensions.DependencyInjection;
-using Modules.Lhdn.Application.Ports;
-using Modules.Lhdn.Contracts.Events;
+using Modules.One.Contracts;
 
 namespace Modules.Lhdn.Application.Commands;
 
+/// <summary>
+/// Obsolete LHDN-local command. Prefer <see cref="IApiCredentialService"/> (One platform credentials).
+/// </summary>
+[Obsolete("Platform credentials live in One. Use IApiCredentialService.RevokeAsync instead.")]
 public record RevokeApiKeyCommand(Guid OrganizationId, Guid ApiKeyId) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
 
+#pragma warning disable CS0618 // Obsolete façade intentionally retained for callers not yet migrated
 public class RevokeApiKeyCommandHandler : ICommandHandler<RevokeApiKeyCommand>
 {
-    private readonly ILhdnRepository _repository;
-    private readonly IEventBus _eventBus;
+    private readonly IApiCredentialService _credentials;
 
-    public RevokeApiKeyCommandHandler(ILhdnRepository repository, [FromKeyedServices("LhdnEventBus")] IEventBus eventBus)
+    public RevokeApiKeyCommandHandler(IApiCredentialService credentials)
     {
-        _repository = repository;
-        _eventBus = eventBus;
+        _credentials = credentials;
     }
 
-    public async Task Handle(RevokeApiKeyCommand request, CancellationToken ct)
+    public Task Handle(RevokeApiKeyCommand request, CancellationToken ct)
     {
-        var apiKey = await _repository.GetDeveloperApiKeyAsync(request.ApiKeyId, ct);
-
-        if (apiKey == null || apiKey.OrganizationId != request.OrganizationId)
-        {
-            throw new InvalidOperationException("API Key not found or does not belong to this organization.");
-        }
-
-        if (!apiKey.IsActive)
-        {
-            return; // Already revoked
-        }
-
-        apiKey.Revoke();
-
-        // Publish event to trigger immediate cache eviction in the API authentication layer
-        await _eventBus.PublishAsync(new ApiKeyRevokedIntegrationEvent(apiKey.OrganizationId, apiKey.KeyHash));
-        
-        await _repository.SaveChangesAsync(ct);
+        return _credentials.RevokeAsync(request.OrganizationId, request.ApiKeyId, ct);
     }
 }
+#pragma warning restore CS0618

@@ -75,30 +75,36 @@ public class ListWebhooksQueryHandler : IQueryHandler<ListWebhooksQuery, IEnumer
     }
 }
 
+/// <summary>
+/// Obsolete LHDN-local query. Prefer <see cref="Modules.One.Contracts.IApiCredentialService"/>.
+/// </summary>
+[Obsolete("Platform credentials live in One. Use IApiCredentialService.ListAsync instead.")]
 public record ListApiKeysQuery(Guid OrganizationId) : IQuery<IEnumerable<ApiKeyDto>>;
 
+#pragma warning disable CS0618 // Obsolete façade intentionally retained for callers not yet migrated
 public class ListApiKeysQueryHandler : IQueryHandler<ListApiKeysQuery, IEnumerable<ApiKeyDto>>
 {
-    private readonly ILhdnRepository _repository;
+    private readonly Modules.One.Contracts.IApiCredentialService _credentials;
 
-    public ListApiKeysQueryHandler(ILhdnRepository repository)
+    public ListApiKeysQueryHandler(Modules.One.Contracts.IApiCredentialService credentials)
     {
-        _repository = repository;
+        _credentials = credentials;
     }
 
     public async Task<IEnumerable<ApiKeyDto>> Handle(ListApiKeysQuery request, CancellationToken ct)
     {
-        var keys = await _repository.ListDeveloperApiKeysAsync(request.OrganizationId, ct);
+        var keys = await _credentials.ListAsync(request.OrganizationId, ct);
 
         return keys.Select(k => new ApiKeyDto
         {
             Id = k.Id.ToString(),
             Name = k.Name,
             Prefix = k.Prefix,
-            Hint = k.KeyHint,
+            Hint = k.Hint,
             Is_active = k.IsActive,
             Created_at = new DateTimeOffset(k.CreatedAt, TimeSpan.Zero),
             Scopes = ApiKeyScopes.Split(k.Scopes).ToList()
         });
     }
 }
+#pragma warning restore CS0618

@@ -19,7 +19,7 @@ Mark when decided; note outcome in PR/ADR.
 
 - [ ] **D1 — Dunning model:** keep status+day engine with hard fixes **vs** introduce dunning-run + attempt/invoice abstraction
 - [ ] **D2 — WhatsApp:** commit Meta Cloud near-term **vs** market email-first until provider ships
-- [ ] **D3 — API key ownership:** platform keys in One (scopes include `lhdn.*`) **vs** product-local keys constrained by policy only
+- [x] **D3 — API key ownership:** platform keys in One (scopes include `lhdn.*`) — decided **One** (B.2); dual-read middleware keeps Lhdn `DeveloperApiKeys` fallback
 - [ ] **D4 — Outbound webhooks:** workspace event bus only **vs** workspace + optional per-product endpoints (never exact-URL-match silent drop)
 - [ ] **D5 — Commerce integrator v1 surface:** webhooks + public checkout links only **vs** also key-authenticated M2M admin (products/subs/transactions)
 
@@ -280,12 +280,12 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** One (preferred) or shared platform store; host middleware
 
-- [ ] Design `ApiCredential` (or equivalent) aggregate: org, name, hash, env, scopes, active, created_by, created_at
-- [ ] Migrate or dual-read from `lhdn.DeveloperApiKeys` → platform table
-- [ ] Middleware reads platform store (not hard-coded LHDN SQL forever)
-- [ ] Revocation event + cache eviction (prefer distributed cache plan for multi-instance)
-- [ ] TypeSpec routes for credential CRUD under product-appropriate path (`/one/.../api-keys` or `/platform/credentials` with tenant)
-- [ ] Management endpoints: JWT + ADMIN only
+- [x] Design `ApiCredential` (or equivalent) aggregate: org, name, hash, env, scopes, active, created_by, created_at
+- [x] Migrate or dual-read from `lhdn.DeveloperApiKeys` → platform table
+- [x] Middleware reads platform store (not hard-coded LHDN SQL forever)
+- [x] Revocation event + cache eviction (prefer distributed cache plan for multi-instance)
+- [x] TypeSpec routes for credential CRUD under product-appropriate path (`/one/.../api-keys` or `/platform/credentials` with tenant)
+- [x] Management endpoints: JWT + ADMIN only
 
 ## B.3 Ops Developer console — API keys
 

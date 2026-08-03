@@ -7,6 +7,7 @@
     <ProjectReference Include="..\Contracts\Modules.Lhdn.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\Billing\Contracts\Modules.Billing.Contracts.csproj" />
+    <ProjectReference Include="..\..\One\Contracts\Modules.One.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />

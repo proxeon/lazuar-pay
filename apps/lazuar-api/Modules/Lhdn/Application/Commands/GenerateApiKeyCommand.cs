@@ -2,9 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Modules.Lhdn.Application.Ports;
-using Modules.Lhdn.Domain;
-using Modules.Lhdn.Domain.Aggregates;
+using Modules.One.Contracts;
 
 namespace Modules.Lhdn.Application.Commands;
 
@@ -17,52 +15,42 @@ public record GenerateApiKeyResult(
     string PlainKey,
     string Scopes);
 
+/// <summary>
+/// Obsolete LHDN-local command. Prefer <see cref="IApiCredentialService"/> (One platform credentials).
+/// </summary>
+[Obsolete("Platform credentials live in One. Use IApiCredentialService.GenerateAsync instead.")]
 public record GenerateApiKeyCommand(Guid OrganizationId, string Name, bool IsTestMode) : ICommand<GenerateApiKeyResult>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
 
+#pragma warning disable CS0618 // Obsolete façade intentionally retained for callers not yet migrated
 public class GenerateApiKeyCommandHandler : ICommandHandler<GenerateApiKeyCommand, GenerateApiKeyResult>
 {
-    private readonly ILhdnRepository _repository;
-    private readonly ITokenGeneratorService _tokenGenerator;
+    private readonly IApiCredentialService _credentials;
 
-    public GenerateApiKeyCommandHandler(ILhdnRepository repository, ITokenGeneratorService tokenGenerator)
+    public GenerateApiKeyCommandHandler(IApiCredentialService credentials)
     {
-        _repository = repository;
-        _tokenGenerator = tokenGenerator;
+        _credentials = credentials;
     }
 
     public async Task<GenerateApiKeyResult> Handle(GenerateApiKeyCommand request, CancellationToken ct)
     {
-        var tokenPair = _tokenGenerator.GenerateSecureToken(40);
-        var prefix = request.IsTestMode ? "sk_test_" : "sk_live_";
-
-        var fullPlainToken = $"{prefix}{tokenPair.PlainToken}";
-        var fullHash = _tokenGenerator.HashToken(fullPlainToken);
-        var keyHint = fullPlainToken.Length >= 4
-            ? fullPlainToken[^4..]
-            : fullPlainToken;
-        var scopes = ApiKeyScopes.DefaultDocumentScopes;
-
-        var apiKey = new DeveloperApiKey(
+        var created = await _credentials.GenerateAsync(
             request.OrganizationId,
             request.Name,
-            prefix,
-            fullHash,
-            keyHint,
-            scopes);
-
-        _repository.AddDeveloperApiKey(apiKey);
-        await _repository.SaveChangesAsync(ct);
+            request.IsTestMode,
+            createdByUserId: null,
+            ct);
 
         return new GenerateApiKeyResult(
-            apiKey.Id,
-            apiKey.Name,
-            apiKey.Prefix,
-            apiKey.KeyHint,
-            apiKey.CreatedAt,
-            fullPlainToken,
-            apiKey.Scopes);
+            created.Id,
+            created.Name,
+            created.Prefix,
+            created.Hint,
+            created.CreatedAt,
+            created.PlainKey,
+            created.Scopes);
     }
 }
+#pragma warning restore CS0618

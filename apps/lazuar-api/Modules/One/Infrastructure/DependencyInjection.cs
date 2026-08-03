@@ -33,6 +33,7 @@ public static class DependencyInjection
 
         services.AddScoped<IOneQueryService, OneQueryService>();
         services.AddScoped<IOneRepository, OneRepository>();
+        services.AddScoped<IApiCredentialService, ApiCredentialService>();
 
         services.AddSingleton<ITokenGeneratorService, TokenGeneratorService>();
         services.AddSingleton<IOneLinkService, OneLinkService>();

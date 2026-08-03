@@ -1,5 +1,7 @@
 // apps/lazuar-api/Modules/One/Infrastructure/Repositories/OneRepository.cs
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -93,6 +95,24 @@ public class OneRepository : IOneRepository
     }
 
     public void AddWebhookEndpoint(TenantWebhookEndpoint endpoint) => _context.TenantWebhookEndpoints.Add(endpoint);
+
+    public async Task<ApiCredential?> GetApiCredentialAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.ApiCredentials
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(k => k.Id == id, ct);
+    }
+
+    public async Task<IReadOnlyList<ApiCredential>> ListApiCredentialsAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.ApiCredentials
+            .IgnoreQueryFilters()
+            .Where(k => k.OrganizationId == organizationId)
+            .OrderByDescending(k => k.CreatedAt)
+            .ToListAsync(ct);
+    }
+
+    public void AddApiCredential(ApiCredential credential) => _context.ApiCredentials.Add(credential);
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {

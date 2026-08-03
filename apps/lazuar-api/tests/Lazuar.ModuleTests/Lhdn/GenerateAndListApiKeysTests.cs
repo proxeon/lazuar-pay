@@ -3,82 +3,83 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using Lazuar.Api.Middleware;
 using Microsoft.AspNetCore.Http;
 using Modules.Lhdn.Application.Commands;
-using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Queries;
 using Modules.Lhdn.Domain;
-using Modules.Lhdn.Domain.Aggregates;
+using Modules.One.Contracts;
 using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Lhdn;
 
+/// <summary>
+/// Façade tests: Lhdn api-key commands/queries delegate to <see cref="IApiCredentialService"/>.
+/// Core generate/list coverage lives in One.GenerateAndListApiCredentialsTests.
+/// </summary>
 [TestFixture]
 public class GenerateAndListApiKeysTests
 {
+#pragma warning disable CS0618 // Obsolete Lhdn façades under test
     [Test]
-    public async Task GenerateApiKey_Returns_Rich_Result_With_Hint_And_Scopes()
+    public async Task GenerateApiKey_Delegates_To_Platform_Service()
     {
-        var repo = Substitute.For<ILhdnRepository>();
-        var tokens = Substitute.For<ITokenGeneratorService>();
-        tokens.GenerateSecureToken(40).Returns(new GeneratedToken("abcdefghij1234567890abcdefghij1234567890", "hash-of-random"));
-        tokens.HashToken(Arg.Any<string>()).Returns(ci => $"hash:{ci.Arg<string>()}");
-
-        DeveloperApiKey? saved = null;
-        repo.When(r => r.AddDeveloperApiKey(Arg.Any<DeveloperApiKey>()))
-            .Do(ci => saved = ci.Arg<DeveloperApiKey>());
-
-        var handler = new GenerateApiKeyCommandHandler(repo, tokens);
+        var service = Substitute.For<IApiCredentialService>();
         var orgId = Guid.CreateVersion7();
+        var expected = new ApiCredentialGenerateResult(
+            Guid.CreateVersion7(),
+            "Integration",
+            "sk_test_",
+            "7890",
+            DateTime.UtcNow,
+            "sk_test_abcdefghij1234567890abcdefghij1234567890",
+            ApiKeyScopes.DefaultDocumentScopes);
+
+        service.GenerateAsync(orgId, "Integration", true, null, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(expected));
+
+        var handler = new GenerateApiKeyCommandHandler(service);
         var result = await handler.Handle(new GenerateApiKeyCommand(orgId, "Integration", IsTestMode: true), CancellationToken.None);
 
-        Assert.That(result.Name, Is.EqualTo("Integration"));
-        Assert.That(result.Prefix, Is.EqualTo("sk_test_"));
-        Assert.That(result.PlainKey, Does.StartWith("sk_test_"));
-        Assert.That(result.Hint, Is.EqualTo(result.PlainKey[^4..]));
+        Assert.That(result.Id, Is.EqualTo(expected.Id));
+        Assert.That(result.PlainKey, Is.EqualTo(expected.PlainKey));
+        Assert.That(result.Hint, Is.EqualTo(expected.Hint));
         Assert.That(result.Scopes, Is.EqualTo(ApiKeyScopes.DefaultDocumentScopes));
-        Assert.That(result.Id, Is.Not.EqualTo(Guid.Empty));
-        Assert.That(saved, Is.Not.Null);
-        Assert.That(saved!.KeyHint, Is.EqualTo(result.Hint));
-        Assert.That(saved.Scopes, Is.EqualTo(ApiKeyScopes.DefaultDocumentScopes));
-        Assert.That(saved.OrganizationId, Is.EqualTo(orgId));
-        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await service.Received(1).GenerateAsync(orgId, "Integration", true, null, Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task ListApiKeys_Returns_Metadata_Without_Secret()
+    public async Task ListApiKeys_Delegates_To_Platform_Service()
     {
         var orgId = Guid.CreateVersion7();
-        var key = new DeveloperApiKey(
-            orgId,
+        var snapshot = new ApiCredentialSnapshot(
+            Guid.CreateVersion7(),
             "Prod",
             "sk_live_",
-            "hash",
             "wxyz",
+            IsActive: true,
+            DateTime.UtcNow,
             ApiKeyScopes.DefaultDocumentScopes);
 
-        var repo = Substitute.For<ILhdnRepository>();
-        repo.ListDeveloperApiKeysAsync(orgId, Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<DeveloperApiKey>>(new List<DeveloperApiKey> { key }));
+        var service = Substitute.For<IApiCredentialService>();
+        service.ListAsync(orgId, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ApiCredentialSnapshot>>(new List<ApiCredentialSnapshot> { snapshot }));
 
-        var handler = new ListApiKeysQueryHandler(repo);
+        var handler = new ListApiKeysQueryHandler(service);
         var list = (await handler.Handle(new ListApiKeysQuery(orgId), CancellationToken.None)).ToList();
 
         Assert.That(list, Has.Count.EqualTo(1));
-        Assert.That(list[0].Id, Is.EqualTo(key.Id.ToString()));
+        Assert.That(list[0].Id, Is.EqualTo(snapshot.Id.ToString()));
         Assert.That(list[0].Name, Is.EqualTo("Prod"));
-        Assert.That(list[0].Prefix, Is.EqualTo("sk_live_"));
         Assert.That(list[0].Hint, Is.EqualTo("wxyz"));
-        Assert.That(list[0].Is_active, Is.True);
         Assert.That(list[0].Scopes, Is.EquivalentTo(new[]
         {
             ApiKeyScopes.LhdnDocumentsWrite,
             ApiKeyScopes.LhdnDocumentsRead
         }));
     }
+#pragma warning restore CS0618
 
     [Test]
     public void TryGetApiKey_Accepts_Bearer_And_Raw_Prefix()

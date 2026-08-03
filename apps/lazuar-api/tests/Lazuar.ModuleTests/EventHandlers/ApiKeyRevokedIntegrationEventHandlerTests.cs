@@ -2,8 +2,9 @@ using System;
 using System.Threading.Tasks;
 using Lazuar.Api.EventHandlers;
 using Microsoft.Extensions.Caching.Memory;
-using Modules.Lhdn.Contracts.Events;
 using NUnit.Framework;
+using LhdnApiKeyRevoked = Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent;
+using OneApiKeyRevoked = Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent;
 
 namespace Lazuar.ModuleTests.EventHandlers;
 
@@ -11,7 +12,7 @@ namespace Lazuar.ModuleTests.EventHandlers;
 public class ApiKeyRevokedIntegrationEventHandlerTests
 {
     [Test]
-    public async Task HandleAsync_Removes_ApiKey_Cache_Entry_By_Hash()
+    public async Task HandleAsync_One_Event_Removes_ApiKey_Cache_Entry_By_Hash()
     {
         var cache = new MemoryCache(new MemoryCacheOptions());
         const string keyHash = "abc123hash";
@@ -21,7 +22,23 @@ public class ApiKeyRevokedIntegrationEventHandlerTests
         Assert.That(cache.TryGetValue(cacheKey, out _), Is.True);
 
         var handler = new ApiKeyRevokedIntegrationEventHandler(cache);
-        await handler.HandleAsync(new ApiKeyRevokedIntegrationEvent(Guid.CreateVersion7(), keyHash));
+        await handler.HandleAsync(new OneApiKeyRevoked(Guid.CreateVersion7(), keyHash));
+
+        Assert.That(cache.TryGetValue(cacheKey, out _), Is.False);
+    }
+
+    [Test]
+    public async Task HandleAsync_Lhdn_Event_Removes_ApiKey_Cache_Entry_By_Hash()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        const string keyHash = "legacyhash";
+        var cacheKey = $"ApiKey_{keyHash}";
+
+        cache.Set(cacheKey, new { TenantId = Guid.CreateVersion7() });
+        Assert.That(cache.TryGetValue(cacheKey, out _), Is.True);
+
+        var handler = new ApiKeyRevokedIntegrationEventHandler(cache);
+        await handler.HandleAsync(new LhdnApiKeyRevoked(Guid.CreateVersion7(), keyHash));
 
         Assert.That(cache.TryGetValue(cacheKey, out _), Is.False);
     }
@@ -34,7 +51,7 @@ public class ApiKeyRevokedIntegrationEventHandlerTests
         cache.Set("ApiKey_revoked", "drop-me");
 
         var handler = new ApiKeyRevokedIntegrationEventHandler(cache);
-        await handler.HandleAsync(new ApiKeyRevokedIntegrationEvent(Guid.CreateVersion7(), "revoked"));
+        await handler.HandleAsync(new OneApiKeyRevoked(Guid.CreateVersion7(), "revoked"));
 
         Assert.That(cache.TryGetValue("ApiKey_revoked", out _), Is.False);
         Assert.That(cache.TryGetValue("ApiKey_other", out var remaining), Is.True);

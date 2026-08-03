@@ -16,6 +16,7 @@ public class OneDbContext : PlatformDbContext
     public DbSet<WorkspaceInvitation> WorkspaceInvitations { get; set; } = null!;
     public DbSet<TenantWebhookEndpoint> TenantWebhookEndpoints { get; set; } = null!;
     public DbSet<WebhookDeliveryOutbox> WebhookDeliveryOutboxes { get; set; } = null!;
+    public DbSet<ApiCredential> ApiCredentials { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -84,6 +85,19 @@ public class OneDbContext : PlatformDbContext
             builder.ToTable("WebhookDeliveryOutboxes");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        });
+
+        modelBuilder.Entity<ApiCredential>(builder =>
+        {
+            builder.ToTable("ApiCredentials");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId);
+            builder.HasIndex(x => x.KeyHash).IsUnique();
+            builder.Property(x => x.KeyHint).IsRequired().HasMaxLength(16);
+            builder.Property(x => x.Scopes).IsRequired();
+            builder.Property(x => x.Name).IsRequired();
+            builder.Property(x => x.Prefix).IsRequired();
+            builder.Property(x => x.KeyHash).IsRequired();
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

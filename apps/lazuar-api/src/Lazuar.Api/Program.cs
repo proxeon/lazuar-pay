@@ -336,6 +336,8 @@ app.UseCommerceSubscriptions();
 app.UseCommunicationsSubscriptions();
 
 var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
+// Dual-subscribe: platform (One) credentials + legacy Lhdn keys during migration.
+eventBus.Subscribe<Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 eventBus.Subscribe<Modules.One.Contracts.WorkspaceUpdatedIntegrationEvent, Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
 

@@ -203,4 +203,24 @@ interface OneOperations {
   getPresignedUrl(@body body: GetPresignedUrlRequestDto):
     | GetPresignedUrlResponseDto
     | LazuarApi.Core.ProblemDetailsResponse;
+
+  // Platform API credentials — OrgAdmin JWT only
+  @useAuth(BearerAuth)
+  @get
+  @route("/api-keys")
+  listApiKeys(): ApiKeyDto[] | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @post
+  @route("/api-keys")
+  generateApiKey(
+    @body body: GenerateApiKeyRequestDto,
+  ): GenerateApiKeyResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @delete
+  @route("/api-keys/{id}")
+  revokeApiKey(
+    @path id: string,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 }

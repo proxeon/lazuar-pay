@@ -14,6 +14,20 @@ public class ApiKeyAuthenticationMiddleware
     private readonly IMemoryCache _cache;
     private readonly ITokenGeneratorService _tokenGenerator;
 
+    private const string OneLookupSql = """
+        SELECT "Id" AS "CredentialId", "OrganizationId", "Scopes"
+        FROM one."ApiCredentials"
+        WHERE "KeyHash" = @KeyHash AND "IsActive" = true
+        LIMIT 1
+        """;
+
+    private const string LhdnLookupSql = """
+        SELECT "Id" AS "CredentialId", "OrganizationId", "Scopes"
+        FROM lhdn."DeveloperApiKeys"
+        WHERE "KeyHash" = @KeyHash AND "IsActive" = true
+        LIMIT 1
+        """;
+
     public ApiKeyAuthenticationMiddleware(RequestDelegate next, IMemoryCache cache, ITokenGeneratorService tokenGenerator)
     {
         _next = next;
@@ -31,21 +45,9 @@ public class ApiKeyAuthenticationMiddleware
 
             if (!_cache.TryGetValue(cacheKey, out ApiKeyCacheEntry? entry) || entry is null)
             {
-                var connectionFactory = context.RequestServices.GetRequiredKeyedService<ISqlConnectionFactory>("LhdnSqlConnectionFactory");
-                using var connection = connectionFactory.CreateConnection();
+                entry = await LookupCredentialAsync(context.RequestServices, keyHash);
 
-                const string query = """
-                    SELECT "Id" AS "CredentialId", "OrganizationId", "Scopes"
-                    FROM lhdn."DeveloperApiKeys"
-                    WHERE "KeyHash" = @KeyHash AND "IsActive" = true
-                    LIMIT 1
-                    """;
-
-                var result = await connection.QuerySingleOrDefaultAsync<ApiKeyCacheEntry>(
-                    query,
-                    new { KeyHash = keyHash });
-
-                if (result is null || result.OrganizationId == Guid.Empty)
+                if (entry is null || entry.OrganizationId == Guid.Empty)
                 {
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                     context.Response.ContentType = "application/json";
@@ -53,7 +55,6 @@ public class ApiKeyAuthenticationMiddleware
                     return;
                 }
 
-                entry = result;
                 _cache.Set(cacheKey, entry, TimeSpan.FromMinutes(5));
 
                 var tenantKeysKey = $"TenantKeys_{entry.OrganizationId}";
@@ -95,6 +96,44 @@ public class ApiKeyAuthenticationMiddleware
         }
 
         await _next(context);
+    }
+
+    /// <summary>
+    /// Dual-read: platform keys in One first, then legacy Lhdn <c>DeveloperApiKeys</c>.
+    /// </summary>
+    internal static async Task<ApiKeyCacheEntry?> LookupCredentialAsync(IServiceProvider services, string keyHash)
+    {
+        // Prefer platform store (One)
+        var oneFactory = services.GetKeyedService<ISqlConnectionFactory>("OneSqlConnectionFactory");
+        if (oneFactory is not null)
+        {
+            using var oneConnection = oneFactory.CreateConnection();
+            var oneResult = await oneConnection.QuerySingleOrDefaultAsync<ApiKeyCacheEntry>(
+                OneLookupSql,
+                new { KeyHash = keyHash });
+
+            if (oneResult is not null && oneResult.OrganizationId != Guid.Empty)
+            {
+                return oneResult;
+            }
+        }
+
+        // Fallback: legacy LHDN-local keys during migration window
+        var lhdnFactory = services.GetKeyedService<ISqlConnectionFactory>("LhdnSqlConnectionFactory");
+        if (lhdnFactory is not null)
+        {
+            using var lhdnConnection = lhdnFactory.CreateConnection();
+            var lhdnResult = await lhdnConnection.QuerySingleOrDefaultAsync<ApiKeyCacheEntry>(
+                LhdnLookupSql,
+                new { KeyHash = keyHash });
+
+            if (lhdnResult is not null && lhdnResult.OrganizationId != Guid.Empty)
+            {
+                return lhdnResult;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

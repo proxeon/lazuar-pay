@@ -3,6 +3,7 @@ import "@typespec/openapi";
 import "@typespec/openapi3";
 
 import "./common/models.tsp";
+import "./modules/one/models.tsp"; // platform API key DTOs (aliased by LHDN models)
 import "./modules/lhdn/models.tsp";
 import "./modules/lhdn/routes.tsp";
 

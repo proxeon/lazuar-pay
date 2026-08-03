@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Routing;
 using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Queries;
 using Modules.Lhdn.Domain;
+using Modules.One.Contracts;
 
 namespace Modules.Lhdn.Infrastructure;
 
@@ -85,20 +86,32 @@ public static class Endpoints
         // Dashboard / org-admin surface: no API_CLIENT (key mint, webhooks, certificate).
         var admin = endpoints.MapGroup("/lhdn").RequireAuthorization("OrgAdmin");
 
+        // API keys are platform-owned (One). Lhdn routes remain as a product façade.
         admin.MapGet("/api-keys", async Task<Ok<ICollection<ApiKeyDto>>> (
             IExecutionContextAccessor ctx,
-            IMediator mediator) =>
+            [FromServices] IApiCredentialService credentials) =>
         {
-            var result = await mediator.Send(new ListApiKeysQuery(ctx.TenantId));
-            return TypedResults.Ok((ICollection<ApiKeyDto>)result.ToList());
+            var keys = await credentials.ListAsync(ctx.TenantId);
+            var dtos = keys.Select(k => new ApiKeyDto
+            {
+                Id = k.Id.ToString(),
+                Name = k.Name,
+                Prefix = k.Prefix,
+                Hint = k.Hint,
+                Is_active = k.IsActive,
+                Created_at = new DateTimeOffset(k.CreatedAt, TimeSpan.Zero),
+                Scopes = ApiKeyScopes.Split(k.Scopes).ToList()
+            }).ToList();
+            return TypedResults.Ok((ICollection<ApiKeyDto>)dtos);
         });
 
         admin.MapPost("/api-keys", async Task<Ok<GenerateApiKeyResponseDto>> (
             [FromBody] GenerateApiKeyRequestDto req,
             IExecutionContextAccessor ctx,
-            IMediator mediator) =>
+            [FromServices] IApiCredentialService credentials) =>
         {
-            var created = await mediator.Send(new GenerateApiKeyCommand(ctx.TenantId, req.Name, req.Is_test_mode));
+            var createdBy = ctx.UserId == Guid.Empty ? (Guid?)null : ctx.UserId;
+            var created = await credentials.GenerateAsync(ctx.TenantId, req.Name, req.Is_test_mode, createdBy);
             return TypedResults.Ok(new GenerateApiKeyResponseDto
             {
                 Id = created.Id.ToString(),
@@ -114,11 +127,11 @@ public static class Endpoints
         admin.MapDelete("/api-keys/{id:guid}", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             Guid id,
             IExecutionContextAccessor ctx,
-            IMediator mediator) =>
+            [FromServices] IApiCredentialService credentials) =>
         {
             try
             {
-                await mediator.Send(new RevokeApiKeyCommand(ctx.TenantId, id));
+                await credentials.RevokeAsync(ctx.TenantId, id);
                 return TypedResults.Ok(new StatusResponse { Status = "revoked" });
             }
             catch (InvalidOperationException ex)

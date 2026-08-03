@@ -112,30 +112,7 @@ model CancelDocumentRequestDto {
   reason: string;
 }
 
-model GenerateApiKeyRequestDto {
-  name: string;
-  is_test_mode: boolean;
-}
-
-model GenerateApiKeyResponseDto {
-  id: string; // GUID
-  name: string;
-  prefix: string;
-  /** Last 4 characters of the plain key for display (not secret). */
-  hint: string;
-  created_at: utcDateTime;
-  /** Full secret — returned only once on create. */
-  plain_key: string;
-  scopes: string[];
-}
-
-model ApiKeyDto {
-  id: string; // GUID
-  name: string;
-  prefix: string;
-  /** Last 4 characters of the plain key for display (not secret). */
-  hint: string;
-  is_active: boolean;
-  created_at: utcDateTime;
-  scopes: string[];
-}
+// API key DTOs are defined on LazuarApi.One (platform ownership). Re-export aliases for LHDN product docs.
+alias GenerateApiKeyRequestDto = LazuarApi.One.GenerateApiKeyRequestDto;
+alias GenerateApiKeyResponseDto = LazuarApi.One.GenerateApiKeyResponseDto;
+alias ApiKeyDto = LazuarApi.One.ApiKeyDto;

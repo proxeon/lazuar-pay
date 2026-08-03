@@ -1,5 +1,6 @@
 // apps/lazuar-api/Modules/One/Application/IOneRepository.cs
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Modules.One.Domain;
@@ -30,6 +31,10 @@ public interface IOneRepository
 
     Task<TenantWebhookEndpoint?> GetWebhookEndpointAsync(Guid organizationId, CancellationToken ct = default);
     void AddWebhookEndpoint(TenantWebhookEndpoint endpoint);
+
+    Task<ApiCredential?> GetApiCredentialAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<ApiCredential>> ListApiCredentialsAsync(Guid organizationId, CancellationToken ct = default);
+    void AddApiCredential(ApiCredential credential);
 
     Task SaveChangesAsync(CancellationToken ct = default);
 }
