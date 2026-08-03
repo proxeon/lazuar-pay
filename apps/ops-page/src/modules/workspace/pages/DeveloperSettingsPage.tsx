@@ -6,9 +6,21 @@ import { client, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
 import QuickCopy from "../../core/components/QuickCopy";
+import { cn } from "../../../lib/utils";
 
 type WebhookEndpointDto = components["schemas"]["One.WebhookEndpointDto"];
 type CreateWebhookEndpointResponseDto = components["schemas"]["One.CreateWebhookEndpointResponseDto"];
+
+/** Catalog of commerce outbound events currently emitted to workspace endpoints. Empty selection = all events. */
+const WEBHOOK_EVENT_OPTIONS = [
+  { value: "subscription.activated", label: "Subscription activated", hint: "New paid subscription" },
+  { value: "subscription.resumed", label: "Subscription resumed", hint: "Recovered from past due / suspend" },
+  { value: "subscription.suspended", label: "Subscription suspended", hint: "Dunning final action" },
+  { value: "subscription.canceled", label: "Subscription canceled", hint: "Cancel or dunning cancel" },
+  { value: "subscription.past_due", label: "Subscription past due", hint: "Renewal failed" },
+  { value: "order.completed", label: "Order completed", hint: "One-time purchase" },
+  { value: "payment_link.paid", label: "Payment link paid", hint: "Custom payment link settled" },
+] as const;
 
 export default function DeveloperSettingsPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string }>();
@@ -16,6 +28,8 @@ export default function DeveloperSettingsPage() {
 
   const [url, setUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
+  /** Empty = receive all event types (server contract). */
+  const [enabledEvents, setEnabledEvents] = useState<string[]>([]);
   /** Shown only once after create — never re-fetched from GET. */
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,7 +50,11 @@ export default function DeveloperSettingsPage() {
     mutationFn: async () => {
       const { data, error } = await client.POST("/one/workspaces/{id}/webhooks", {
         params: { path: { id: activeWorkspaceId } },
-        body: { url: url.trim(), is_active: isActive, enabled_events: [] },
+        body: {
+          url: url.trim(),
+          is_active: isActive,
+          enabled_events: enabledEvents,
+        },
       });
       if (error) throw new Error(error.detail);
       return data as CreateWebhookEndpointResponseDto;
@@ -46,6 +64,7 @@ export default function DeveloperSettingsPage() {
       setRevealedSecret(created.secret_key);
       setUrl("");
       setIsActive(true);
+      setEnabledEvents([]);
       setEditingId(null);
       queryClient.invalidateQueries({ queryKey: ["developer-webhooks", activeWorkspaceId] });
     },
@@ -57,7 +76,11 @@ export default function DeveloperSettingsPage() {
       if (!editingId) throw new Error("No endpoint selected.");
       const { error } = await client.PUT("/one/workspaces/{id}/webhooks/{endpointId}", {
         params: { path: { id: activeWorkspaceId, endpointId: editingId } },
-        body: { url: url.trim(), is_active: isActive },
+        body: {
+          url: url.trim(),
+          is_active: isActive,
+          enabled_events: enabledEvents,
+        },
       });
       if (error) throw new Error(error.detail);
     },
@@ -65,6 +88,7 @@ export default function DeveloperSettingsPage() {
       toast.success("Webhook endpoint updated.");
       setUrl("");
       setIsActive(true);
+      setEnabledEvents([]);
       setEditingId(null);
       setRevealedSecret(null);
       queryClient.invalidateQueries({ queryKey: ["developer-webhooks", activeWorkspaceId] });
@@ -87,6 +111,7 @@ export default function DeveloperSettingsPage() {
     setEditingId(ep.id);
     setUrl(ep.url);
     setIsActive(ep.is_active);
+    setEnabledEvents(ep.enabled_events ?? []);
     setRevealedSecret(null);
   };
 
@@ -94,8 +119,18 @@ export default function DeveloperSettingsPage() {
     setEditingId(null);
     setUrl("");
     setIsActive(true);
+    setEnabledEvents([]);
     setRevealedSecret(null);
   };
+
+  const toggleEvent = (eventValue: string) => {
+    setEnabledEvents((prev) =>
+      prev.includes(eventValue) ? prev.filter((e) => e !== eventValue) : [...prev, eventValue]
+    );
+  };
+
+  const selectAllEvents = () => setEnabledEvents(WEBHOOK_EVENT_OPTIONS.map((o) => o.value));
+  const clearEventFilter = () => setEnabledEvents([]);
 
   return (
     <PageLayout
@@ -131,7 +166,7 @@ export default function DeveloperSettingsPage() {
             ) : (
               <ul className="divide-y divide-[#f4f4f5]">
                 {endpoints.map((ep) => (
-                  <li key={ep.id} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <li key={ep.id} className="py-3 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="font-mono text-[13px] text-[#09090b] truncate">{ep.url}</div>
                       <div className="text-[11px] text-[#71717a] mt-0.5">
@@ -141,6 +176,18 @@ export default function DeveloperSettingsPage() {
                           ? ` · ${ep.enabled_events.length} event filter(s)`
                           : " · all events"}
                       </div>
+                      {ep.enabled_events?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {ep.enabled_events.map((ev) => (
+                            <span
+                              key={ev}
+                              className="text-[9px] font-mono font-semibold px-1.5 py-0.5 border border-[#e5e5e5] bg-[#fafafa] text-[#52525b]"
+                            >
+                              {ev}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -193,6 +240,66 @@ export default function DeveloperSettingsPage() {
                       <option value="false">Disabled</option>
                     </select>
                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-[#f4f4f5] pb-1.5 gap-3">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a]">
+                    Event subscriptions
+                  </label>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={selectAllEvents}
+                      disabled={isPending || isWebhookLoading}
+                      className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50"
+                    >
+                      Select all
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearEventFilter}
+                      disabled={isPending || isWebhookLoading}
+                      className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] hover:text-[#09090b] disabled:opacity-50"
+                    >
+                      All events
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[12px] text-[#71717a] leading-relaxed">
+                  Leave none selected to receive every event type. Selecting any box filters this endpoint to those
+                  events only.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {WEBHOOK_EVENT_OPTIONS.map((opt) => {
+                    const checked = enabledEvents.includes(opt.value);
+                    return (
+                      <label
+                        key={opt.value}
+                        className={cn(
+                          "flex items-start gap-2.5 p-3 border cursor-pointer transition-colors",
+                          checked
+                            ? "border-[#09090b] bg-[#fafafa]"
+                            : "border-[#e5e5e5] bg-white hover:border-[#d4d4d8]",
+                          (isPending || isWebhookLoading) && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleEvent(opt.value)}
+                          disabled={isPending || isWebhookLoading}
+                          className="mt-0.5 rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-[12px] font-semibold text-[#09090b]">{opt.label}</span>
+                          <span className="block font-mono text-[10px] text-[#71717a] mt-0.5">{opt.value}</span>
+                          <span className="block text-[10px] text-[#a1a1aa] mt-0.5">{opt.hint}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

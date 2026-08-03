@@ -307,7 +307,7 @@ Mark when decided; note outcome in PR/ADR.
 - [x] Product free-text URLs either:
   - [x] Become additional endpoints / optional filters, **or**
   - [x] Deliver with their own secrets without equality gate
-  - *MVP choice:* workspace multi-endpoints receive all commerce lifecycle events; product URL list no longer gates HTTP outbound (internal: targets unchanged). Product free-text → real multi-endpoint wiring remains B.5.
+  - *MVP choice:* workspace multi-endpoints receive all commerce lifecycle events; product URL list no longer gates HTTP outbound (internal: targets unchanged). Product form copy (B.5) redirects signed webhooks to Developer → Outbound Webhooks; free-text kept for legacy/internal targets only.
 - [x] Never no-op silently: log + delivery failure row or validate at product save
   - *MVP:* zero active endpoints → structured log (no silent URL-mismatch drop). Full failure-row for “no endpoint” deferred.
 - [x] Emit outbound for `custom_payment_link` paid if product claims webhooks
@@ -349,10 +349,16 @@ Mark when decided; note outcome in PR/ADR.
 
 **Apps:** `ops-page`
 
-- [ ] Multi-endpoint UI, event multi-select, secret rotate, test ping
-- [ ] Delivery detail + resend
-- [ ] Product form: remove misleading webhook textarea **or** wire to real multi-endpoint model
+- [x] Multi-endpoint UI, event multi-select, secret rotate, test ping
+  - *Done:* multi-endpoint create/list/edit (from B.4) + `enabled_events` multi-select on create/edit (commerce catalog: `subscription.*`, `order.completed`, `payment_link.paid`). Empty selection = all events.
+  - **Residual:** secret rotate endpoint + UI; test ping (`test.ping` enqueue) — no API yet; skip for MVP.
+- [x] Delivery detail + resend
+  - *Done:* Delivery Logs table shows event type, delivery id, attempt count, last error; expandable row for full error detail.
+  - **Residual:** redeliver/resend action (needs `POST …/webhooks/logs/{id}/redeliver` or equivalent); response HTTP status code not on list DTO yet.
+- [x] Product form: remove misleading webhook textarea **or** wire to real multi-endpoint model
+  - *MVP:* kept textarea for legacy/internal fulfillment targets; copy redirects signed events to **Developer → Outbound Webhooks**. Product HTTP URLs no longer gate workspace fan-out (B.4).
 - [ ] LHDN webhooks UI under Developer or Invoicing when LHDN UI un-lobotomized
+  - **Residual (optional):** still fire-and-forget LHDN path; wait for un-lobotomy + shared dispatcher converge.
 
 ## B.6 Developers-page as integration hub
 

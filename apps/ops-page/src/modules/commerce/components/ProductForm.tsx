@@ -177,18 +177,30 @@ export default function ProductForm({
         </div>
 
         <div className="space-y-4">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">4. Post-Purchase Webhooks (Optional)</label>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">External SaaS Integrations</label>
-            <textarea 
-              value={webhooksText} 
-              onChange={e => setWebhooksText(e.target.value)} 
-              disabled={isPending} 
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">4. Fulfillment targets (optional)</label>
+          <div className="space-y-2">
+            <div className="rounded-sm border border-[#e5e5e5] bg-[#fafafa] px-3 py-2.5 space-y-1">
+              <p className="text-[12px] text-[#09090b] font-medium leading-relaxed">
+                Signed outbound events (HMAC, multi-endpoint, delivery logs) are configured under{" "}
+                <span className="font-semibold">Developer → Outbound Webhooks</span> — not on this product form.
+              </p>
+              <p className="text-[11px] text-[#71717a] leading-relaxed">
+                Workspace webhooks receive commerce lifecycle events for the whole workspace. Product URLs below no longer gate those deliveries.
+              </p>
+            </div>
+            <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Legacy / internal targets</label>
+            <textarea
+              value={webhooksText}
+              onChange={e => setWebhooksText(e.target.value)}
+              disabled={isPending}
               rows={3}
-              placeholder="https://hooks.zapier.com/..." 
-              className="flex w-full rounded-sm border border-[#e5e5e5] bg-white p-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 font-mono resize-y" 
+              placeholder={"internal:your-app\n# optional legacy product-scoped URL"}
+              className="flex w-full rounded-sm border border-[#e5e5e5] bg-white p-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50 font-mono resize-y"
             />
-            <p className="text-[10px] text-[#71717a]">Enter one URL per line. We will send an HTTP POST request to these URLs when this specific product is purchased.</p>
+            <p className="text-[10px] text-[#71717a] leading-relaxed">
+              One target per line. Prefer <code className="bg-[#f4f4f5] px-1">internal:…</code> for in-platform fulfillment.
+              HTTP lines here are legacy product-scoped hooks only — use Developer settings for signed integrator webhooks.
+            </p>
           </div>
         </div>
 
