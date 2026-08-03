@@ -261,16 +261,8 @@ model CommerceStatsDto {
   payment_methods: PaymentMethodDto[];
 }
 
-model MagicLinkRequestDto {
-  email: string;
-}
-
 model CancelPortalRequest {
   subscription_id: string; // GUID
-}
-
-model BillingLinkResponseDto {
-  url: string;
 }
 
 model CheckoutResponse {

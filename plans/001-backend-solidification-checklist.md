@@ -75,10 +75,10 @@ Mark when decided; note outcome in PR/ADR.
 
 ## 0.5 Contract hygiene starter
 
-- [ ] Fix LHDN TypeSpec route: `@route("/lhdn")` not `/api/v1/lhdn` (eliminate double prefix)
-- [ ] Run `task gen`; verify Kiota/SDK paths hit `/api/v1/lhdn/...` once
-- [ ] Document or implement portal routes currently in TypeSpec: magic-link, cancel, billing-link (choose one path—no phantoms)
-- [ ] Align stale docs: `community_subscription` → `commerce_subscription` in payment webhook docs
+- [x] Fix LHDN TypeSpec route: `@route("/lhdn")` not `/api/v1/lhdn` (eliminate double prefix)
+- [x] Run `task gen`; verify Kiota/SDK paths hit `/api/v1/lhdn/...` once
+- [x] Document or implement portal routes currently in TypeSpec: magic-link, cancel, billing-link (choose one path—no phantoms)
+- [x] Align stale docs: `community_subscription` → `commerce_subscription` in payment webhook docs
 
 ### Phase 0 acceptance checklist
 

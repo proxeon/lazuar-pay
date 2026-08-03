@@ -35,24 +35,12 @@ interface PublicCommerceOperations {
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
-  @route("/{tenantSlug}/portal/magic-link")
-  requestMagicLink(@path tenantSlug: string, @body body: MagicLinkRequestDto):
-    | LazuarApi.Core.StatusResponse
-    | LazuarApi.Core.ProblemDetailsResponse;
-
-  @post
   @route("/{tenantSlug}/portal/cancel")
   cancelPortalSubscription(
     @path tenantSlug: string,
     @query token: string,
     @body body: CancelPortalRequest,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
-
-  @get
-  @route("/{tenantSlug}/portal/billing-link")
-  getBillingLink(@path tenantSlug: string, @query token: string):
-    | BillingLinkResponseDto
-    | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/checkout/{subId}/status")

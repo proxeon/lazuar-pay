@@ -61,7 +61,7 @@ When calling the Stripe API, the `SessionCreateOptions` must contain these metad
 ```json
 {
   "metadata": {
-    "type": "community_subscription",
+    "type": "commerce_subscription",
     "subscription_id": "00000000-0000-0000-0000-000000000000", // Target Subscription ID
     "tenant_id": "00000000-0000-0000-0000-000000000000"       // Organization ID
   }
@@ -71,7 +71,7 @@ When calling the Stripe API, the `SessionCreateOptions` must contain these metad
 ### B. Billplz Reference Mapping Requirements
 Because Billplz does not support arbitrary JSON metadata payloads, we map our identifiers to Billplz's native reference fields inside `BillplzGatewayAdapter.cs`:
 * **`reference_1`:** Must contain the target `SubscriptionId` Guid string.
-* **`reference_2`:** Must contain the hardcoded string `"community_subscription"`.
+* **`reference_2`:** Must contain the hardcoded string `"commerce_subscription"`.
 
 The webhook parser will reconstruct these fields back into standard metadata key-values upon receiving callbacks.
 ```

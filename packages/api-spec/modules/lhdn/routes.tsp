@@ -7,7 +7,7 @@ using TypeSpec.Http;
 namespace LazuarApi.Lhdn;
 
 @useAuth(BearerAuth)
-@route("/api/v1/lhdn")
+@route("/lhdn")
 interface LhdnOperations {
   @post
   @route("/taxpayer/validate")

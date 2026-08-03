@@ -92,6 +92,41 @@ public static class PublicEndpoints
             return TypedResults.Ok(portalData);
         });
 
+        group.MapPost("/{tenantSlug}/portal/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<string>, UnauthorizedHttpResult, NotFound>> (
+            string tenantSlug,
+            [FromQuery] string token,
+            [FromBody] CancelPortalRequest body,
+            IMediator mediator) =>
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (body == null || string.IsNullOrWhiteSpace(body.Subscription_id) || !Guid.TryParse(body.Subscription_id, out var subscriptionId))
+            {
+                return TypedResults.BadRequest("subscription_id is required and must be a valid GUID.");
+            }
+
+            try
+            {
+                await mediator.Send(new CancelPortalSubscriptionCommand(tenantSlug, token, subscriptionId));
+                return TypedResults.Ok(new StatusResponse { Status = "canceled" });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return TypedResults.Unauthorized();
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound();
+            }
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
+        });
+
         group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
             [FromBody] PublicCheckoutRequestDto req,
             IOneQueryService oneQueryService,

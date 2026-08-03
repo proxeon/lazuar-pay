@@ -501,7 +501,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/api-keys": {
+    "/lhdn/api-keys": {
         parameters: {
             query?: never;
             header?: never;
@@ -517,7 +517,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/api-keys/{id}": {
+    "/lhdn/api-keys/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -533,7 +533,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/documents": {
+    "/lhdn/documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -549,7 +549,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/documents/{internalId}": {
+    "/lhdn/documents/{internalId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -565,7 +565,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/documents/{internalId}/cancel": {
+    "/lhdn/documents/{internalId}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -581,7 +581,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/taxpayer/validate": {
+    "/lhdn/taxpayer/validate": {
         parameters: {
             query?: never;
             header?: never;
@@ -597,7 +597,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/webhooks": {
+    "/lhdn/webhooks": {
         parameters: {
             query?: never;
             header?: never;
@@ -613,7 +613,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/webhooks/{id}": {
+    "/lhdn/webhooks/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -629,7 +629,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/lhdn/workspaces/{id}/lhdn-certificate": {
+    "/lhdn/workspaces/{id}/lhdn-certificate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1338,22 +1338,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/public/commerce/{tenantSlug}/portal/billing-link": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["PublicCommerceOperations_getBillingLink"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/public/commerce/{tenantSlug}/portal/cancel": {
         parameters: {
             query?: never;
@@ -1364,22 +1348,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["PublicCommerceOperations_cancelPortalSubscription"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/public/commerce/{tenantSlug}/portal/magic-link": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["PublicCommerceOperations_requestMagicLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1536,9 +1504,6 @@ export interface components {
             amount: number;
             currency: string;
             status: string;
-        };
-        "Commerce.BillingLinkResponseDto": {
-            url: string;
         };
         "Commerce.CancelPortalRequest": {
             subscription_id: string;
@@ -1745,9 +1710,6 @@ export interface components {
             subject?: string;
             email_body?: string;
             whatsapp_body?: string;
-        };
-        "Commerce.MagicLinkRequestDto": {
-            email: string;
         };
         "Commerce.PauseDunningRequestDto": {
             /** Format: date-time */
@@ -9534,75 +9496,6 @@ export interface operations {
             };
         };
     };
-    PublicCommerceOperations_getBillingLink: {
-        parameters: {
-            query: {
-                token: string;
-            };
-            header?: never;
-            path: {
-                tenantSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Commerce.BillingLinkResponseDto"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-        };
-    };
     PublicCommerceOperations_cancelPortalSubscription: {
         parameters: {
             query: {
@@ -9617,77 +9510,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Commerce.CancelPortalRequest"];
-            };
-        };
-        responses: {
-            /** @description The request has succeeded. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.StatusResponse"];
-                };
-            };
-            /** @description The server could not understand the request due to invalid syntax. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is unauthorized. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Access is forbidden. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description The server cannot find the requested resource. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-            /** @description Server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Core.ProblemDetails"];
-                };
-            };
-        };
-    };
-    PublicCommerceOperations_requestMagicLink: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tenantSlug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Commerce.MagicLinkRequestDto"];
             };
         };
         responses: {
