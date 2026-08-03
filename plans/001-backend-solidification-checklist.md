@@ -198,10 +198,10 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Billing, Lhdn
 
-- [ ] **Eliminate double LHDN credit deduction** (command-side vs `LhdnDocumentSubmitted` handler)
-- [ ] Align LHDN cost to `ICreditCostService` / config (no hardcoded `1`)
-- [ ] Utility top-up: single economic story (skip merchant GMV path when `utility_credit_topup`)
-- [ ] Financial summary: reduce ABS-driven double-count under reversals (at least for net paths used in ops)
+- [x] **Eliminate double LHDN credit deduction** (command-side vs `LhdnDocumentSubmitted` handler)
+- [x] Align LHDN cost to `ICreditCostService` / config (no hardcoded `1`)
+- [x] Utility top-up: single economic story (skip merchant GMV path when `utility_credit_topup`)
+- [x] Financial summary: reduce ABS-driven double-count under reversals (at least for net paths used in ops)
 
 ## A.9 Messaging honesty for recovery channel
 

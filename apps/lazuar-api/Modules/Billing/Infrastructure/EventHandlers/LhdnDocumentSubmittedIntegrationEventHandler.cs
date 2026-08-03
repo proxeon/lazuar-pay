@@ -1,35 +1,33 @@
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
 
 /// <summary>
-/// Deducts an API credit from the tenant's wallet when a live document is successfully submitted.
-/// Sandbox submissions (IsTestMode = true) are ignored to allow free testing.
+/// Observability hook for successful MyInvois submissions.
+/// Utility credits are charged once on accept in <c>SubmitTaxDocumentCommand</c>
+/// via <c>ICreditCostService</c> / <c>DeductTenantCreditCommand</c> (idempotent key <c>lhdn:…</c>).
+/// This handler must not deduct wallet credits — a prior hard-coded deduct of 1 caused double charging.
 /// </summary>
 public class LhdnDocumentSubmittedIntegrationEventHandler : IIntegrationEventHandler<LhdnDocumentSubmittedIntegrationEvent>
 {
-    private readonly BillingDbContext _dbContext;
+    private readonly ILogger<LhdnDocumentSubmittedIntegrationEventHandler> _logger;
 
-    public LhdnDocumentSubmittedIntegrationEventHandler(BillingDbContext dbContext)
+    public LhdnDocumentSubmittedIntegrationEventHandler(ILogger<LhdnDocumentSubmittedIntegrationEventHandler> logger)
     {
-        _dbContext = dbContext;
+        _logger = logger;
     }
 
-    public async Task HandleAsync(LhdnDocumentSubmittedIntegrationEvent @event)
+    public Task HandleAsync(LhdnDocumentSubmittedIntegrationEvent @event)
     {
-        if (@event.IsTestMode) return;
+        _logger.LogDebug(
+            "LHDN document submitted for org {OrganizationId} ref {InternalReferenceId} (test={IsTestMode}); credit charge is owned by SubmitTaxDocumentCommand.",
+            @event.OrganizationId,
+            @event.InternalReferenceId,
+            @event.IsTestMode);
 
-        var wallet = await _dbContext.TenantCreditBalances
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(w => w.OrganizationId == @event.OrganizationId);
-
-        if (wallet != null)
-        {
-            wallet.Deduct(1, $"LHDN Submission: {@event.InternalReferenceId}");
-            await _dbContext.SaveChangesAsync();
-        }
+        return Task.CompletedTask;
     }
 }

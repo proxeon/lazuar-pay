@@ -22,6 +22,12 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
 
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
     {
+        // Platform utility credit top-ups are wallet + SYSTEM_CREDIT_TOPUP only
+        // (PlatformTopUpEventHandler). Skip merchant GMV / revenue ledger path so the
+        // same gateway txn is not dual-posted as creator sale revenue.
+        if (@event.Metadata.TryGetValue("type", out var paymentType) && paymentType == "utility_credit_topup")
+            return;
+
         var referenceType = "GATEWAY_PAYMENT";
         var referenceId = @event.GatewayTransactionId;
 

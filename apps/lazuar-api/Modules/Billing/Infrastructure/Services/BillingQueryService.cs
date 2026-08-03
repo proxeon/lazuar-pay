@@ -126,20 +126,26 @@ public class BillingQueryService : IBillingQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
+        // Signed double-entry (credits on revenue/liability are negative).
+        // Use signed sums so refunds/cancellations/recognition net correctly;
+        // ABS inflated gross/fees/tax and deferred under reversals.
+        // Display polarity:
+        //   revenue/tax/deferred/recognized (credit-normal) → -SUM
+        //   fees/discounts/contra-refunds (debit-normal)    → +SUM
         const string sql = @"
             SELECT 
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Gross_revenue"",
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Total_gateway_fees"",
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Total_tax_liabilities"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Gross_revenue"",
+                COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Total_gateway_fees"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Total_tax_liabilities"",
                 (
-                    COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
-                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'CONTRA_REVENUE_REFUNDS' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
-                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_DISCOUNT' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
-                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
-                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0)
+                    COALESCE(-SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'CONTRA_REVENUE_REFUNDS' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_DISCOUNT' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(-SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
                 ) as ""Net_revenue"",
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'LIABILITY_DEFERRED_REVENUE' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Deferred_revenue"",
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'REVENUE_RECOGNIZED' THEN ABS(""BaseCurrencyAmount"") ELSE 0 END), 0) as ""Recognized_revenue"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'LIABILITY_DEFERRED_REVENUE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Deferred_revenue"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'REVENUE_RECOGNIZED' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Recognized_revenue"",
                 'MYR' as ""Currency""
             FROM billing.""LedgerLines"" l
             JOIN billing.""LedgerEntries"" e ON l.""LedgerEntryId"" = e.""Id""
