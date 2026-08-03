@@ -36,6 +36,7 @@ public class SubscriptionRecoveryTests
         sub.NextBillingDate.Should().BeCloseTo(nextBilling, TimeSpan.FromSeconds(1));
         sub.CurrentDunningCampaignId.Should().BeNull();
         sub.CurrentDunningStepIndex.Should().Be(0);
+        sub.LastCompletedDayOffset.Should().BeNull();
         sub.DunningPausedUntil.Should().BeNull();
         sub.SuspendedAt.Should().BeNull();
     }

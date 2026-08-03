@@ -236,7 +236,8 @@ public class CommerceDbContext : PlatformDbContext
         {
             builder.ToTable("ReminderDispatchLogs");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.SubscriptionId, x.ScheduleId, x.TargetBillingDate }).IsUnique();
+            // Idempotency by DayOffset so campaign step ID regeneration does not re-fire or orphan logs.
+            builder.HasIndex(x => new { x.SubscriptionId, x.TargetBillingDate, x.DayOffset }).IsUnique();
         });
 
         modelBuilder.Entity<CommerceTransactionLog>(builder =>

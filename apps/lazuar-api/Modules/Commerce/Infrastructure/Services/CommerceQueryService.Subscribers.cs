@@ -25,6 +25,7 @@ public partial class CommerceQueryService
         string? VaultedTokenId,
         string? DunningCampaignName,
         int CurrentDunningStepIndex,
+        int? LastCompletedDayOffset,
         DateTime? DunningPausedUntil
     );
 
@@ -45,6 +46,7 @@ public partial class CommerceQueryService
                 s.""VaultedCustomerId"", s.""VaultedTokenId"",
                 d.""Name"" as DunningCampaignName,
                 s.""CurrentDunningStepIndex"",
+                s.""LastCompletedDayOffset"",
                 s.""DunningPausedUntil""
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
@@ -89,7 +91,8 @@ public partial class CommerceQueryService
                 Vaulted_customer_id = s.VaultedCustomerId,
                 Vaulted_token_id = s.VaultedTokenId,
                 Dunning_campaign_name = s.DunningCampaignName,
-                Current_dunning_step = s.CurrentDunningStepIndex,
+                // Prefer LastCompletedDayOffset (real progress); fall back to legacy index for pre-migration rows.
+                Current_dunning_step = s.LastCompletedDayOffset ?? s.CurrentDunningStepIndex,
                 Dunning_paused_until = s.DunningPausedUntil.HasValue ? new DateTimeOffset(s.DunningPausedUntil.Value) : null,
                 Created_at = new DateTimeOffset(s.CreatedAt)
             };

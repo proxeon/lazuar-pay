@@ -152,15 +152,17 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Commerce `DunningEngineJob`, domain, Communications hydrate
 
-- [ ] **Catch-up steps:** fire due steps where `DayOffset <= daysOverdue` and not yet logged (ordered), not only equality
-- [ ] **Campaign edit safety:** stop regenerating step IDs in a way that re-fires or orphans `ReminderDispatchLog` (immutable steps for in-flight runs **or** snapshot run instance — depends on D1)
-- [ ] Replace dead `CurrentDunningStepIndex` with real progress field used by ops UI (last completed offset / step id)
-- [ ] Block or reassign delete of campaign while `CurrentDunningCampaignId` references it; prefer archive
-- [ ] Idempotent “generate defaults” (no unbounded duplicates)
-- [ ] Publish typed `SubscriptionCanceled` / `SubscriptionSuspended` on final actions (so Communications lifecycle + outbound webhooks fire)
-- [ ] Pass **plan_name, amount, currency, days_overdue** into dunning fulfillment payload
-- [ ] Communications `FulfillmentRequestedIntegrationEventHandler`: substitute `{{plan_name}}` and amount vars; config-driven portal base URL
-- [ ] Fix portal/update-payment links (real tokens where product promises magic links)
+- [x] **Catch-up steps:** fire due steps where `DayOffset <= daysOverdue` and not yet logged (ordered), not only equality
+- [x] **Campaign edit safety:** stop regenerating step IDs in a way that re-fires or orphans `ReminderDispatchLog` (immutable steps for in-flight runs **or** snapshot run instance — depends on D1)
+  - Idempotency key is now `(SubscriptionId, TargetBillingDate, DayOffset)` so step GUID regeneration on campaign edit does not re-fire
+- [x] Replace dead `CurrentDunningStepIndex` with real progress field used by ops UI (last completed offset / step id)
+- [x] Block or reassign delete of campaign while `CurrentDunningCampaignId` references it; prefer archive
+- [x] Idempotent “generate defaults” (no unbounded duplicates)
+- [x] Publish typed `SubscriptionCanceled` / `SubscriptionSuspended` on final actions (so Communications lifecycle + outbound webhooks fire)
+  - Engine publishes typed events; HTTP webhooks via lifecycle handlers; engine still fans out `internal:` via `FulfillmentRequested` only (avoids double HTTP)
+- [x] Pass **plan_name, amount, currency, days_overdue** into dunning fulfillment payload
+- [x] Communications `FulfillmentRequestedIntegrationEventHandler`: substitute `{{plan_name}}` and amount vars; config-driven portal base URL
+- [x] Fix portal/update-payment links (real tokens where product promises magic links)
 
 ## A.5 Inbound payment webhook hardening (money safety)
 

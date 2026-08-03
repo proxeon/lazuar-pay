@@ -2,6 +2,7 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Events;
 using Modules.CRM.Contracts;
@@ -17,17 +18,23 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
     private readonly ICrmQueryService _crmQueryService;
     private readonly IOneQueryService _oneQueryService;
     private readonly IEventBus _eventBus;
+    private readonly IConfiguration _configuration;
+    private readonly IMagicLinkTokenService _tokenService;
 
     public FulfillmentRequestedIntegrationEventHandler(
         ICommunicationsRepository repository,
         ICrmQueryService crmQueryService,
         IOneQueryService oneQueryService,
-        [FromKeyedServices("CommunicationsEventBus")] IEventBus eventBus)
+        [FromKeyedServices("CommunicationsEventBus")] IEventBus eventBus,
+        IConfiguration configuration,
+        IMagicLinkTokenService tokenService)
     {
         _repository = repository;
         _crmQueryService = crmQueryService;
         _oneQueryService = oneQueryService;
         _eventBus = eventBus;
+        _configuration = configuration;
+        _tokenService = tokenService;
     }
 
     public async Task HandleAsync(FulfillmentRequestedIntegrationEvent @event)
@@ -51,10 +58,28 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
 
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(@event.OrganizationId);
         var workspaceSlug = workspace?.Slug ?? "";
-        
-        var portalLink = $"https://portal.lazuar.com/{workspaceSlug}/portal";
-        var subIdStr = root.TryGetProperty("subscription_id", out var sidProp) ? sidProp.GetString() : "";
-        var updatePaymentLink = $"https://portal.lazuar.com/{workspaceSlug}/update-payment/{subIdStr}";
+
+        var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
+        var subIdStr = root.TryGetProperty("subscription_id", out var sidProp) ? sidProp.GetString() ?? "" : "";
+        var portalLink = $"{portalBase}/{workspaceSlug}/portal";
+        var updatePaymentLink = $"{portalBase}/{workspaceSlug}/update-payment/{subIdStr}";
+
+        string portalMagicLink = portalLink;
+        if (Guid.TryParse(subIdStr, out var subscriptionId))
+        {
+            var token = _tokenService.GenerateToken(subscriptionId);
+            portalMagicLink = $"{portalBase}/{workspaceSlug}/portal?token={token}";
+        }
+
+        var planName = root.TryGetProperty("plan_name", out var planProp) ? planProp.GetString() ?? "" : "";
+        var amount = ReadNumericString(root, "amount");
+        var totalPrice = root.TryGetProperty("total_price", out var totalProp)
+            ? (totalProp.ValueKind == JsonValueKind.String ? totalProp.GetString() ?? amount : totalProp.ToString())
+            : amount;
+        var currency = root.TryGetProperty("currency", out var currProp) ? currProp.GetString() ?? "" : "";
+        var daysOverdue = root.TryGetProperty("days_overdue", out var daysProp)
+            ? (daysProp.ValueKind == JsonValueKind.String ? daysProp.GetString() ?? "0" : daysProp.ToString())
+            : "0";
         
         var channel = root.TryGetProperty("channel", out var channelProp) ? channelProp.GetString() ?? "EMAIL" : "EMAIL";
 
@@ -92,8 +117,13 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
                 .Replace("{{customer_email}}", profile.Email, StringComparison.OrdinalIgnoreCase)
                 .Replace("{{customer_phone}}", profile.Phone ?? "", StringComparison.OrdinalIgnoreCase)
                 .Replace("{{business_name}}", workspace?.Name ?? "Lazuar Merchant", StringComparison.OrdinalIgnoreCase)
+                .Replace("{{plan_name}}", planName, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{amount}}", amount, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{total_price}}", totalPrice, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{currency}}", currency, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{days_overdue}}", daysOverdue, StringComparison.OrdinalIgnoreCase)
                 .Replace("{{renewal_link}}", portalLink, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{portal_magic_link}}", portalLink, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{portal_magic_link}}", portalMagicLink, StringComparison.OrdinalIgnoreCase)
                 .Replace("{{update_payment_link}}", updatePaymentLink, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -108,5 +138,16 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         );
 
         await _eventBus.PublishAsync(dispatchEvent);
+    }
+
+    private static string ReadNumericString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var prop)) return "";
+        return prop.ValueKind switch
+        {
+            JsonValueKind.String => prop.GetString() ?? "",
+            JsonValueKind.Number => prop.GetRawText(),
+            _ => prop.ToString()
+        };
     }
 }

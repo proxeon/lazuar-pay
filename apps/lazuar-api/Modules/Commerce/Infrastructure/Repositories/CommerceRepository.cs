@@ -96,6 +96,18 @@ public class CommerceRepository : ICommerceRepository
             .FirstOrDefaultAsync(c => c.Id == id && c.OrganizationId == organizationId, ct);
     }
 
+    public async Task<bool> HasAnyDunningCampaignAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.DunningCampaigns
+            .AnyAsync(c => c.OrganizationId == organizationId, ct);
+    }
+
+    public async Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid campaignId, CancellationToken ct = default)
+    {
+        return await _context.Subscriptions
+            .AnyAsync(s => s.CurrentDunningCampaignId == campaignId, ct);
+    }
+
     public async Task<Dictionary<string, Guid>> GetDefaultTemplateIdsAsync(Guid organizationId, CancellationToken ct = default)
     {
         using var connection = _connectionFactory.CreateConnection();

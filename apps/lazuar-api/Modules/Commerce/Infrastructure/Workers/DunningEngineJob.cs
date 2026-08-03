@@ -79,15 +79,26 @@ public class DunningEngineJob : BackgroundService
             if (campaign == null) continue;
 
             int daysUntilDue = (sub.NextBillingDate!.Value.Date - now.Date).Days;
-            
-            var step = campaign.Steps.FirstOrDefault(s => s.DayOffset < 0 && Math.Abs(s.DayOffset) == daysUntilDue && (s.ActionType == "EMAIL" || s.ActionType == "WHATSAPP" || s.ActionType == "ALL"));
-            
-            if (step != null && !sub.ReminderLogs.Any(l => l.ScheduleId == step.Id && l.TargetBillingDate.Date == sub.NextBillingDate.Value.Date))
+            var targetDate = sub.NextBillingDate.Value.Date;
+
+            // Catch-up: all pre-due steps whose absolute offset is still within daysUntilDue.
+            var dueSteps = campaign.Steps
+                .Where(s => s.DayOffset < 0
+                    && Math.Abs(s.DayOffset) <= daysUntilDue
+                    && (s.ActionType == "EMAIL" || s.ActionType == "WHATSAPP" || s.ActionType == "ALL"))
+                .Where(s => !sub.ReminderLogs.Any(l =>
+                    l.DayOffset == s.DayOffset && l.TargetBillingDate.Date == targetDate))
+                .OrderBy(s => s.DayOffset)
+                .ToList();
+
+            foreach (var step in dueSteps)
             {
-                await DispatchCommunicationStepAsync(sub, step, eventBus);
-                sub.RecordReminderDispatched(step.Id, sub.NextBillingDate.Value.Date);
+                await DispatchCommunicationStepAsync(db, sub, step, daysOverdue: 0, eventBus, ct);
+                sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
                 requiresSave = true;
-                _logger.LogInformation("Dispatched pre-dunning step {StepId} for Subscription {SubId}.", step.Id, sub.Id);
+                _logger.LogInformation(
+                    "Dispatched pre-dunning step DayOffset={DayOffset} ({StepId}) for Subscription {SubId}.",
+                    step.DayOffset, step.Id, sub.Id);
             }
         }
 
@@ -101,6 +112,7 @@ public class DunningEngineJob : BackgroundService
         {
             var inferredPaymentMethod = string.IsNullOrEmpty(sub.VaultedTokenId) ? "MANUAL" : "ONLINE_GATEWAY";
             int daysOverdue = (now.Date - sub.NextBillingDate!.Value.Date).Days;
+            var targetDate = sub.NextBillingDate.Value.Date;
 
             if (sub.CurrentDunningCampaignId == null)
             {
@@ -128,9 +140,6 @@ public class DunningEngineJob : BackgroundService
             {
                 if (campaign.FinalAction == "CANCEL" || campaign.FinalAction == "SUSPEND")
                 {
-                    var statusString = campaign.FinalAction == "CANCEL" ? "CANCELED" : "SUSPENDED";
-                    var eventTypeString = campaign.FinalAction == "CANCEL" ? "subscription.canceled" : "subscription.suspended";
-
                     if (campaign.FinalAction == "CANCEL")
                     {
                         sub.Cancel();
@@ -144,17 +153,39 @@ public class DunningEngineJob : BackgroundService
                     }
 
                     var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
-                    
+                    var targets = product?.FulfillmentTargets.ToList() ?? new System.Collections.Generic.List<string>();
+
+                    // Typed lifecycle events: Communications templates + HTTP outbound via SubscriptionLifecycle handlers.
+                    // Engine only fans out internal: FulfillmentRequested to avoid double HTTP webhooks.
+                    if (campaign.FinalAction == "CANCEL")
+                    {
+                        await eventBus.PublishAsync(new SubscriptionCanceledIntegrationEvent(
+                            sub.OrganizationId,
+                            sub.Id,
+                            sub.ClientProfileId,
+                            sub.ProductId,
+                            targets));
+                    }
+                    else
+                    {
+                        await eventBus.PublishAsync(new SubscriptionSuspendedIntegrationEvent(
+                            sub.OrganizationId,
+                            sub.Id,
+                            sub.ClientProfileId,
+                            sub.ProductId,
+                            targets));
+                    }
+
+                    var eventTypeString = campaign.FinalAction == "CANCEL" ? "subscription.canceled" : "subscription.suspended";
                     var payloadObj = new
                     {
                         subscription_id = sub.Id.ToString(),
                         client_profile_id = sub.ClientProfileId.ToString(),
                         product_id = sub.ProductId.ToString(),
-                        status = statusString
+                        status = campaign.FinalAction == "CANCEL" ? "CANCELED" : "SUSPENDED"
                     };
                     var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
-                    var targets = product?.FulfillmentTargets.ToList() ?? new System.Collections.Generic.List<string>();
                     foreach (var target in targets)
                     {
                         if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
@@ -163,23 +194,27 @@ public class DunningEngineJob : BackgroundService
                             await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
                                 sub.OrganizationId, internalApp, eventTypeString, payloadElement));
                         }
-                        else if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                        {
-                            await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                                sub.OrganizationId, target, eventTypeString, payloadElement));
-                        }
+                        // HTTP targets intentionally omitted here: SubscriptionLifecycleIntegrationEventHandlers
+                        // publishes OutboundWebhookRequested from the typed cancel/suspend events above.
                     }
+
                     requiresSave = true;
                 }
                 continue; 
             }
 
-            var step = campaign.Steps.FirstOrDefault(s => s.DayOffset == daysOverdue);
-            if (step != null && !sub.ReminderLogs.Any(l => l.ScheduleId == step.Id && l.TargetBillingDate.Date == sub.NextBillingDate.Value.Date))
+            // Catch-up: all due steps with DayOffset in [0, daysOverdue] not yet logged, ordered.
+            var dueSteps = campaign.Steps
+                .Where(s => s.DayOffset >= 0 && s.DayOffset <= daysOverdue)
+                .Where(s => !sub.ReminderLogs.Any(l =>
+                    l.DayOffset == s.DayOffset && l.TargetBillingDate.Date == targetDate))
+                .OrderBy(s => s.DayOffset)
+                .ToList();
+
+            foreach (var step in dueSteps)
             {
                 if (step.ActionType == "AUTOCHARGE" || step.ActionType == "AUTO_CHARGE")
                 {
-                    var targetDate = sub.NextBillingDate.Value.Date;
                     var attemptCount = await db.ChargeAttemptLogs.CountAsync(
                         l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate, ct);
                     var nextAttempt = attemptCount + 1;
@@ -218,18 +253,20 @@ public class DunningEngineJob : BackgroundService
                                 ChargeAttemptId: attempt.Id
                             ));
                             _logger.LogInformation(
-                                "Dispatched auto-charge dunning step for Subscription {Id} (attempt {AttemptNumber}/{Max}).",
-                                sub.Id, nextAttempt, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
+                                "Dispatched auto-charge dunning step DayOffset={DayOffset} for Subscription {Id} (attempt {AttemptNumber}/{Max}).",
+                                step.DayOffset, sub.Id, nextAttempt, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
                         }
                     }
                 }
                 else
                 {
-                    await DispatchCommunicationStepAsync(sub, step, eventBus);
-                    _logger.LogInformation("Dispatched communication dunning step for Subscription {Id}.", sub.Id);
+                    await DispatchCommunicationStepAsync(db, sub, step, daysOverdue, eventBus, ct);
+                    _logger.LogInformation(
+                        "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id}.",
+                        step.DayOffset, sub.Id);
                 }
 
-                sub.RecordReminderDispatched(step.Id, sub.NextBillingDate.Value.Date);
+                sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
                 requiresSave = true;
             }
         }
@@ -240,8 +277,16 @@ public class DunningEngineJob : BackgroundService
         }
     }
 
-    private async Task DispatchCommunicationStepAsync(Domain.Aggregates.Subscription sub, Domain.Entities.DunningStep step, IEventBus eventBus)
+    private async Task DispatchCommunicationStepAsync(
+        CommerceDbContext db,
+        Domain.Aggregates.Subscription sub,
+        Domain.Entities.DunningStep step,
+        int daysOverdue,
+        IEventBus eventBus,
+        CancellationToken ct)
     {
+        var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+
         var payloadObj = new
         {
             subscription_id = sub.Id.ToString(),
@@ -250,7 +295,11 @@ public class DunningEngineJob : BackgroundService
             action_type = step.ActionType,
             subject = step.Subject,
             email_body = step.EmailBody,
-            whatsapp_body = step.WhatsAppBody
+            whatsapp_body = step.WhatsAppBody,
+            plan_name = product?.Name ?? string.Empty,
+            amount = product?.Price ?? 0m,
+            currency = product?.Currency ?? string.Empty,
+            days_overdue = daysOverdue
         };
         
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });

@@ -9,18 +9,20 @@ public class ReminderDispatchLog : Entity
     public Guid SubscriptionId { get; private set; }
     public Guid ScheduleId { get; private set; }
     public DateTime TargetBillingDate { get; private set; }
+    public int DayOffset { get; private set; }
     public DateTime DispatchedAt { get; private set; }
 
 #pragma warning disable CS8618
     private ReminderDispatchLog() { }
 #pragma warning restore CS8618
 
-    internal ReminderDispatchLog(Guid subscriptionId, Guid scheduleId, DateTime targetBillingDate)
+    internal ReminderDispatchLog(Guid subscriptionId, Guid scheduleId, DateTime targetBillingDate, int dayOffset)
     {
         Id = Guid.CreateVersion7();
         SubscriptionId = subscriptionId;
         ScheduleId = scheduleId;
         TargetBillingDate = targetBillingDate;
+        DayOffset = dayOffset;
         DispatchedAt = DateTime.UtcNow;
     }
 }

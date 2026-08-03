@@ -20,6 +20,8 @@ public interface ICommerceRepository
     Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default);
     
     Task<DunningCampaign?> GetDunningCampaignByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
+    Task<bool> HasAnyDunningCampaignAsync(Guid organizationId, CancellationToken ct = default);
+    Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid campaignId, CancellationToken ct = default);
     Task<Dictionary<string, Guid>> GetDefaultTemplateIdsAsync(Guid organizationId, CancellationToken ct = default);
 
     void AddProduct(Product product);

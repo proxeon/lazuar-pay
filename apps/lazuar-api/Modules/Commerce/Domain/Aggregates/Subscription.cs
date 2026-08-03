@@ -19,7 +19,10 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public bool IsReminderOnly { get; private set; }
     
     public Guid? CurrentDunningCampaignId { get; private set; }
+    /// <summary>Legacy progress field; kept in sync with <see cref="LastCompletedDayOffset"/> for compatibility.</summary>
     public int CurrentDunningStepIndex { get; private set; }
+    /// <summary>Highest DayOffset successfully dispatched for the current dunning run; null when not in dunning.</summary>
+    public int? LastCompletedDayOffset { get; private set; }
     public DateTime? DunningPausedUntil { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
@@ -42,6 +45,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         Status = "PENDING";
         IsReminderOnly = false;
         CurrentDunningStepIndex = 0;
+        LastCompletedDayOffset = null;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -116,21 +120,37 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void RecordReminderDispatched(Guid scheduleId, DateTime targetBillingDate)
+    public void RecordReminderDispatched(Guid scheduleId, DateTime targetBillingDate, int dayOffset)
     {
-        _reminderLogs.Add(new ReminderDispatchLog(Id, scheduleId, targetBillingDate));
+        _reminderLogs.Add(new ReminderDispatchLog(Id, scheduleId, targetBillingDate, dayOffset));
+        MarkDunningStepCompleted(dayOffset);
     }
 
     public void AssignDunningCampaign(Guid campaignId)
     {
         CurrentDunningCampaignId = campaignId;
         CurrentDunningStepIndex = 0;
+        LastCompletedDayOffset = null;
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void AdvanceDunningStep()
     {
         CurrentDunningStepIndex++;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Records the highest successfully completed dunning DayOffset for ops visibility.
+    /// </summary>
+    public void MarkDunningStepCompleted(int dayOffset)
+    {
+        if (LastCompletedDayOffset == null || dayOffset > LastCompletedDayOffset.Value)
+        {
+            LastCompletedDayOffset = dayOffset;
+        }
+
+        CurrentDunningStepIndex = LastCompletedDayOffset ?? 0;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -150,6 +170,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         CurrentDunningCampaignId = null;
         CurrentDunningStepIndex = 0;
+        LastCompletedDayOffset = null;
         DunningPausedUntil = null;
         UpdatedAt = DateTime.UtcNow;
     }

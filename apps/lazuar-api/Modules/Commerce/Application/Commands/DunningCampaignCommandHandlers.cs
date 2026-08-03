@@ -91,6 +91,12 @@ public class DeleteDunningCampaignCommandHandler : ICommandHandler<DeleteDunning
         var campaign = await _repository.GetDunningCampaignByIdAsync(request.OrganizationId, request.CampaignId, ct);
         if (campaign == null) throw new InvalidOperationException("Dunning campaign not found.");
 
+        if (await _repository.HasSubscriptionsAssignedToCampaignAsync(request.CampaignId, ct))
+        {
+            throw new InvalidOperationException(
+                "Cannot delete a dunning campaign while subscriptions are assigned to it. Archive the campaign instead.");
+        }
+
         _repository.RemoveDunningCampaign(campaign);
         await _repository.SaveChangesAsync(ct);
     }
@@ -107,6 +113,12 @@ public class GenerateDefaultDunningCampaignsCommandHandler : ICommandHandler<Gen
 
     public async Task Handle(GenerateDefaultDunningCampaignsCommand request, CancellationToken ct)
     {
+        // Idempotent seed: never create unbounded duplicate defaults.
+        if (await _repository.HasAnyDunningCampaignAsync(request.OrganizationId, ct))
+        {
+            return;
+        }
+
         var campaign = new DunningCampaign(
             request.OrganizationId,
             "Standard Recovery Strategy",
