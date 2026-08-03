@@ -11,11 +11,13 @@ export const client = createClient<paths>({
 client.use({
   onRequest({ request }) {
     const tenantId = localStorage.getItem("ops_active_workspace_id");
-    
-    if (tenantId && !request.url.includes("/one/")) {
+
+    // Always attach workspace context when selected. Required for platform
+    // credentials under /one/api-keys (and harmless for other One routes).
+    if (tenantId) {
       request.headers.set("X-Tenant-Id", tenantId);
     }
-    
+
     return request;
   }
 });

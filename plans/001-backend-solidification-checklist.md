@@ -291,10 +291,10 @@ Mark when decided; note outcome in PR/ADR.
 
 **Apps:** `ops-page`
 
-- [ ] Nav: Developer → API Keys (alongside Webhooks / Logs)
-- [ ] Create test/live key, one-time reveal, copy, revoke
-- [ ] List by name/prefix/created/active
-- [ ] Deep link to developers docs (`/docs/lhdn` etc.)
+- [x] Nav: Developer → API Keys (alongside Webhooks / Logs)
+- [x] Create test/live key, one-time reveal, copy, revoke
+- [x] List by name/prefix/created/active
+- [x] Deep link to developers docs (`/docs/lhdn` etc.)
 - [ ] Fix CreateManualSubscriber and other `as any` only if blocking this workstream (else Phase C contract pass)
 
 ## B.4 Outbound customer webhooks — product model (per D4)

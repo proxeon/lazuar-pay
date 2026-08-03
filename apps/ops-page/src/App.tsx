@@ -17,6 +17,7 @@ import TemplatesPage from "./modules/commerce/pages/TemplatesPage";
 import GeneralSettingsPage from "./modules/workspace/pages/GeneralSettingsPage";
 import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPage";
 import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
+import ApiKeysPage from "./modules/workspace/pages/ApiKeysPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
 import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 import PaymentSettingsPage from "./modules/workspace/pages/PaymentSettingsPage";
@@ -177,6 +178,7 @@ export default function App() {
         <Route path="/commerce/dunning-campaigns/:id" element={<CampaignBuilderPage />} />
         <Route path="/commerce/templates" element={<TemplatesPage />} />
 
+        <Route path="/developer/api-keys" element={<ApiKeysPage />} />
         <Route path="/developer/webhooks" element={<DeveloperSettingsPage />} />
         <Route path="/developer/logs" element={<DeliveryLogsPage />} />
         

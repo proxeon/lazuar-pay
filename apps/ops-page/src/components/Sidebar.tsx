@@ -254,6 +254,7 @@ export default function Sidebar({
                   { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" },
                   { label: "Notification Templates", href: "/commerce/templates" }
                 ] : mod.id === "developer" ? [
+                  { label: "API Keys", href: "/developer/api-keys" },
                   { label: "Outbound Webhooks", href: "/developer/webhooks" },
                   { label: "Delivery Logs", href: "/developer/logs" }
                 ] : [
