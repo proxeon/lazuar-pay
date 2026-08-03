@@ -38,6 +38,82 @@ public class OutboundWebhookTests
     }
 
     [Test]
+    public void Signature_TryVerify_Accepts_Valid_Header_Within_Tolerance()
+    {
+        const string secret = "whsec_receiver_secret";
+        const string body = """{"event_type":"subscription.activated","status":"ACTIVE"}""";
+        const long ts = 1_720_000_000L;
+
+        var header = OutboundWebhookSignature.ComputeHeaderValue(secret, body, ts);
+
+        Assert.That(
+            OutboundWebhookSignature.TryVerify(secret, body, header, toleranceSeconds: 300, nowUnixSeconds: ts),
+            Is.True);
+        Assert.That(
+            OutboundWebhookSignature.TryVerify(secret, body, header, toleranceSeconds: 300, nowUnixSeconds: ts + 60),
+            Is.True);
+    }
+
+    [Test]
+    public void Signature_TryVerify_Rejects_Tampered_Body_Wrong_Secret_Or_Stale_Timestamp()
+    {
+        const string secret = "whsec_receiver_secret";
+        const string body = """{"event_type":"order.completed"}""";
+        const long ts = 1_720_000_000L;
+        var header = OutboundWebhookSignature.ComputeHeaderValue(secret, body, ts);
+
+        Assert.That(
+            OutboundWebhookSignature.TryVerify(secret, """{"event_type":"tampered"}""", header, 300, ts),
+            Is.False);
+        Assert.That(
+            OutboundWebhookSignature.TryVerify("whsec_other", body, header, 300, ts),
+            Is.False);
+        Assert.That(
+            OutboundWebhookSignature.TryVerify(secret, body, header, toleranceSeconds: 30, nowUnixSeconds: ts + 120),
+            Is.False);
+        Assert.That(
+            OutboundWebhookSignature.TryVerify(secret, body, "not-a-header", 300, ts),
+            Is.False);
+        Assert.That(
+            OutboundWebhookSignature.TryVerify(secret, body, null, 300, ts),
+            Is.False);
+    }
+
+    [Test]
+    public async Task FanOut_SubscriptionActivated_Without_Product_Url_Match()
+    {
+        await using var db = CreateDb();
+        var orgId = Guid.CreateVersion7();
+
+        // Workspace endpoints only — product fulfillment URL must not gate delivery.
+        db.TenantWebhookEndpoints.Add(new TenantWebhookEndpoint(
+            orgId,
+            "https://customer.example/hooks/workspace",
+            "whsec_sub_a",
+            isActive: true));
+        await db.SaveChangesAsync();
+
+        var handler = new OutboundWebhookEventHandlers(db, NullLogger<OutboundWebhookEventHandlers>.Instance);
+        await handler.HandleAsync(new OutboundWebhookRequestedIntegrationEvent(
+            orgId,
+            TargetUrl: "https://legacy-product-form.example/fulfillment",
+            EventType: "subscription.activated",
+            Payload: JsonSerializer.SerializeToElement(new
+            {
+                subscription_id = Guid.CreateVersion7().ToString(),
+                status = "ACTIVE"
+            })));
+
+        var outboxes = await db.WebhookDeliveryOutboxes.IgnoreQueryFilters().ToListAsync();
+        Assert.That(outboxes, Has.Count.EqualTo(1));
+        Assert.That(outboxes[0].EventType, Is.EqualTo("subscription.activated"));
+
+        var endpoint = await db.TenantWebhookEndpoints.IgnoreQueryFilters()
+            .SingleAsync(e => e.Id == outboxes[0].EndpointId);
+        Assert.That(endpoint.Url, Is.EqualTo("https://customer.example/hooks/workspace"));
+    }
+
+    [Test]
     public async Task FanOut_Enqueues_All_Active_Endpoints_Without_Url_Match()
     {
         await using var db = CreateDb();

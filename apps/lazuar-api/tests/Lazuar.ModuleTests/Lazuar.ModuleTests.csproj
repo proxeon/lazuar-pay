@@ -48,7 +48,11 @@
 
     <!-- Commerce domain: subscription recovery unit tests -->
     <ProjectReference Include="..\..\Modules\Commerce\Domain\Modules.Commerce.Domain.csproj" />
-    
+    <!-- Commerce application: lifecycle → outbound webhook unit tests -->
+    <ProjectReference Include="..\..\Modules\Commerce\Application\Modules.Commerce.Application.csproj" />
+    <!-- Commerce infrastructure: admin payment-config OrgAdmin metadata -->
+    <ProjectReference Include="..\..\Modules\Commerce\Infrastructure\Modules.Commerce.Infrastructure.csproj" />
+
     <!-- External Module Contracts needed for Integration Events in Tests -->
     <ProjectReference Include="..\..\Modules\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Payments\Contracts\Modules.Payments.Contracts.csproj" />

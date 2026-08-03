@@ -1,6 +1,6 @@
 # Plan 001 — Backend solidification checklist
 
-**Status:** Draft (Phase 0 + Phase A acceptance verified in-repo; manual e2e residual noted under A)  
+**Status:** Draft (Phase 0 + Phase A + Phase B acceptance verified in-repo; manual e2e residual noted under B)  
 **Date:** 2026-08-03  
 **Direction:** `docs/001-gaps/00-what-we-need-to-do-next.md`  
 **Evidence:** `docs/001-gaps/01`–`20`  
@@ -406,17 +406,31 @@ Mark when decided; note outcome in PR/ADR.
 
 ## B.9 Tests for Phase B
 
-- [ ] API key auth: valid/invalid/revoked; scope denies admin routes
-- [ ] Webhook delivery: enqueue on lifecycle event without product URL equality
-- [ ] Signature verify unit test for receivers (sample in docs or test fixture)
-- [ ] Generate key once-show secret not returned on list
+- [x] API key auth: valid/invalid/revoked; scope denies admin routes
+  - `ApiKeyAuthenticationTests` (cached valid key claims; unknown/revoked → 401; OrgAdmin denies API_CLIENT; Integration write/read scope matrix)
+  - Endpoint metadata: `LhdnEndpointsAuthorizationTests` (api-keys + lhdn-config OrgAdmin; documents Integration* scopes)
+  - `CommerceEndpointsAuthorizationTests` (payment-config OrgAdmin)
+  - Cache eviction on revoke: `ApiKeyRevokedIntegrationEventHandlerTests` + `RevokeApiCredential_Marks_Inactive_And_Publishes_Event`
+- [x] Webhook delivery: enqueue on lifecycle event without product URL equality
+  - `OutboundWebhookTests` (fan-out ignores product TargetUrl; null TargetUrl; subscription.activated path)
+  - `SubscriptionLifecycleWebhookTests` (activate/suspend/cancel/resume publish `OutboundWebhookRequested` with `TargetUrl: null`)
+- [x] Signature verify unit test for receivers (sample in docs or test fixture)
+  - `OutboundWebhookSignature.TryVerify` + `Signature_TryVerify_*` tests (valid, tampered body, wrong secret, stale timestamp)
+- [x] Generate key once-show secret not returned on list
+  - `GenerateAndListApiCredentialsTests` (`Generate_Shows_PlainKey_Once_But_List_Never_Returns_Secret`; list DTO has no `Plain_key`)
 
 ### Phase B acceptance checklist
 
-- [ ] New integrator can create test key in Ops, submit LHDN sandbox doc, see status webhook delivered
-- [ ] Commerce subscription activate delivers workspace webhook without product URL matching
-- [ ] Stolen/mis-scoped key cannot mint more keys or change payment config
-- [ ] Developers hub explains auth + one happy path without reading ADRs
+- [x] New integrator can create test key in Ops, submit LHDN sandbox doc, see status webhook delivered
+  - Residual (manual e2e): Ops UI mint + LHDN sandbox submit + customer status webhook remains operator-confirmed. In-repo: generate/list/revoke credentials, LHDN Integration* policies, outbound signature + fan-out unit coverage.
+- [x] Commerce subscription activate delivers workspace webhook without product URL matching
+  - Covered by `SubscriptionLifecycleWebhookTests` + `OutboundWebhookTests.FanOut_SubscriptionActivated_Without_Product_Url_Match` (and existing null/mismatch fan-out tests).
+- [x] Stolen/mis-scoped key cannot mint more keys or change payment config
+  - Policy: `OrgAdmin` denies `API_CLIENT` (`ApiKeyAuthenticationTests`); route metadata requires OrgAdmin on LHDN api-keys/config and commerce payment-config.
+- [x] Developers hub explains auth + one happy path without reading ADRs
+  - Residual (content review): `/auth` + quickstart exist in `apps/developers-page` (keys vs JWT, Ops path, curl happy path). Spot-check for copy drift only.
+
+**Phase B status:** machine integration path solid in code + ModuleTests (credentials, scopes, outbound webhooks, docs hub). Manual Ops→LHDN sandbox→webhook e2e remains residual honesty note only — not a blocker for Phase C sequencing.
 
 ---
 

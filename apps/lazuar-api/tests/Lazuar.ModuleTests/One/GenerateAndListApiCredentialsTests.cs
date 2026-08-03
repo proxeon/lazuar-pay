@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.Api.Middleware;
+using Lazuar.ApiTypes;
 using Microsoft.AspNetCore.Http;
 using Modules.One.Application;
 using Modules.One.Application.Commands;
 using Modules.One.Application.Queries;
+using Modules.One.Contracts.Events;
 using Modules.One.Domain;
 using NSubstitute;
 using NUnit.Framework;
@@ -48,7 +52,51 @@ public class GenerateAndListApiCredentialsTests
         Assert.That(saved.Scopes, Is.EqualTo(PlatformApiScopes.DefaultDocumentScopes));
         Assert.That(saved.OrganizationId, Is.EqualTo(orgId));
         Assert.That(saved.CreatedByUserId, Is.EqualTo(userId));
+        // Persist hash of the full plain key only (no separate plaintext column on the aggregate).
+        Assert.That(saved.KeyHash, Is.EqualTo($"hash:{result.PlainKey}"));
         await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Generate_Shows_PlainKey_Once_But_List_Never_Returns_Secret()
+    {
+        var orgId = Guid.CreateVersion7();
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.GenerateSecureToken(40).Returns(new GeneratedToken("onceonlysecretabcdefghij1234567890ab", "unused"));
+        tokens.HashToken(Arg.Any<string>()).Returns(ci => $"hash:{ci.Arg<string>()}");
+
+        ApiCredential? saved = null;
+        var repo = Substitute.For<IOneRepository>();
+        repo.When(r => r.AddApiCredential(Arg.Any<ApiCredential>()))
+            .Do(ci => saved = ci.Arg<ApiCredential>());
+
+        var generate = new GenerateApiCredentialCommandHandler(repo, tokens);
+        var created = await generate.Handle(
+            new GenerateApiCredentialCommand(orgId, "Once", IsTestMode: false),
+            CancellationToken.None);
+
+        Assert.That(created.PlainKey, Does.StartWith("sk_live_"));
+        Assert.That(created.PlainKey.Length, Is.GreaterThan(20));
+
+        // List path only sees the stored aggregate (hash + hint), never PlainKey.
+        repo.ListApiCredentialsAsync(orgId, Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<IReadOnlyList<ApiCredential>>(new List<ApiCredential> { saved! }));
+
+        var listHandler = new ListApiCredentialsQueryHandler(repo);
+        var list = (await listHandler.Handle(new ListApiCredentialsQuery(orgId), CancellationToken.None)).ToList();
+
+        Assert.That(list, Has.Count.EqualTo(1));
+        Assert.That(list[0].Hint, Is.EqualTo(created.Hint));
+        Assert.That(list[0].Prefix, Is.EqualTo("sk_live_"));
+
+        // Contract DTO has no secret field.
+        Assert.That(typeof(ApiKeyDto).GetProperty("Plain_key", BindingFlags.Public | BindingFlags.Instance), Is.Null);
+        Assert.That(typeof(ApiKeyDto).GetProperty("PlainKey", BindingFlags.Public | BindingFlags.Instance), Is.Null);
+
+        var json = JsonSerializer.Serialize(list[0]);
+        Assert.That(json, Does.Not.Contain(created.PlainKey));
+        Assert.That(json, Does.Not.Contain("plain_key").IgnoreCase);
+        Assert.That(json, Does.Contain("hint"));
     }
 
     [Test]
@@ -82,6 +130,32 @@ public class GenerateAndListApiCredentialsTests
             PlatformApiScopes.LhdnDocumentsWrite,
             PlatformApiScopes.LhdnDocumentsRead
         }));
+    }
+
+    [Test]
+    public async Task RevokeApiCredential_Marks_Inactive_And_Publishes_Event()
+    {
+        var orgId = Guid.CreateVersion7();
+        var credential = new ApiCredential(
+            orgId,
+            "ToRevoke",
+            "sk_test_",
+            "hash-to-evict",
+            "ab12",
+            PlatformApiScopes.DefaultDocumentScopes);
+
+        var repo = Substitute.For<IOneRepository>();
+        repo.GetApiCredentialAsync(credential.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<ApiCredential?>(credential));
+
+        var bus = Substitute.For<IEventBus>();
+        var handler = new RevokeApiCredentialCommandHandler(repo, bus);
+        await handler.Handle(new RevokeApiCredentialCommand(orgId, credential.Id), CancellationToken.None);
+
+        Assert.That(credential.IsActive, Is.False);
+        await bus.Received(1).PublishAsync(Arg.Is<ApiKeyRevokedIntegrationEvent>(e =>
+            e.OrganizationId == orgId && e.KeyHash == "hash-to-evict"));
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]

@@ -3,6 +3,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Lazuar.ModuleTests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\CRM\Infrastructure\Modules.CRM.Infrastructure.csproj" />
