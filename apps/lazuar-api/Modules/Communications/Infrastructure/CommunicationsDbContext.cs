@@ -79,7 +79,7 @@ public class CommunicationsDbContext : PlatformDbContext
         {
             builder.ToTable("OutboxMessages");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.ProcessedAt, x.OccurredOn }).HasFilter("\"ProcessedAt\" IS NULL");
+            builder.HasIndex(x => new { x.NextAttemptAt, x.OccurredOn }).HasFilter("\"ProcessedAt\" IS NULL");
         });
 
         modelBuilder.Entity<SuppressionEntry>(builder =>
@@ -106,7 +106,7 @@ public class CommunicationsDbContext : PlatformDbContext
         {
             builder.ToTable("InboxMessages");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.ProcessedAt, x.ReceivedAt }).HasFilter("\"ProcessedAt\" IS NULL");
+            builder.HasIndex(x => new { x.NextAttemptAt, x.ReceivedAt }).HasFilter("\"ProcessedAt\" IS NULL");
         });
     }
 }

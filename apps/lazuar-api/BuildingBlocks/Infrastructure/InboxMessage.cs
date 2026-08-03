@@ -8,4 +8,7 @@ public class InboxMessage
     public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ProcessedAt { get; set; }
     public string? Error { get; set; }
+    public int AttemptCount { get; set; } = 0;
+    public DateTime? NextAttemptAt { get; set; }
+    public string Status { get; set; } = MessageProcessingStatus.Pending;
 }

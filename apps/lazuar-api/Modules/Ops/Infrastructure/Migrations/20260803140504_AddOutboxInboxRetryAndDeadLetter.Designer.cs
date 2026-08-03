@@ -2,22 +2,25 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Modules.Payments.Infrastructure;
+using Modules.Ops.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Modules.Payments.Infrastructure.Migrations
+namespace Modules.Ops.Infrastructure.Migrations
 {
-    [DbContext(typeof(PaymentsDbContext))]
-    partial class PaymentsDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(OpsDbContext))]
+    [Migration("20260803140504_AddOutboxInboxRetryAndDeadLetter")]
+    partial class AddOutboxInboxRetryAndDeadLetter
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("payments")
+                .HasDefaultSchema("ops")
                 .HasAnnotation("ProductVersion", "10.0.0-preview.1.25081.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -61,7 +64,7 @@ namespace Modules.Payments.Infrastructure.Migrations
                     b.HasIndex("NextAttemptAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("InboxMessages", "payments");
+                    b.ToTable("InboxMessages", "ops");
                 });
 
             modelBuilder.Entity("BuildingBlocks.Infrastructure.OutboxMessage", b =>
@@ -102,69 +105,81 @@ namespace Modules.Payments.Infrastructure.Migrations
                     b.HasIndex("NextAttemptAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages", "payments");
+                    b.ToTable("OutboxMessages", "ops");
                 });
 
-            modelBuilder.Entity("Modules.Payments.Domain.Aggregates.TenantPaymentConfiguration", b =>
+            modelBuilder.Entity("Modules.Ops.Domain.OpsConversation", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<string>("ApiKey")
-                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("GatewayType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("MerchantId")
-                        .HasColumnType("text");
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("WebhookSecret")
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "GatewayType")
-                        .IsUnique();
+                    b.HasIndex("OrganizationId");
 
-                    b.ToTable("TenantPaymentConfigurations", "payments");
+                    b.ToTable("Conversations", "ops");
                 });
 
-            modelBuilder.Entity("Modules.Payments.Domain.Entities.PaymentWebhookLog", b =>
+            modelBuilder.Entity("Modules.Ops.Domain.OpsMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("EventId")
+                    b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("ProcessedAt")
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Provider")
+                    b.Property<string>("ExecutedToolsJson")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ProposedActionJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UiRequestJson")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Provider", "EventId")
-                        .IsUnique();
+                    b.HasIndex("OrganizationId", "ConversationId");
 
-                    b.ToTable("PaymentWebhookLogs", "payments");
+                    b.ToTable("Messages", "ops");
                 });
 #pragma warning restore 612, 618
         }

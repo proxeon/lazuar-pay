@@ -50,11 +50,11 @@ Mark when decided; note outcome in PR/ADR.
 
 ## 0.2 Outbox failure / poison policy
 
-- [ ] Extend `OutboxMessage` / `InboxMessage` (or parallel table) with attempt count, next-visible-at, terminal dead-letter state
-- [ ] Change `OutboxPublisherJob` / `InboxConsumerJob` to **not** set `ProcessedAt` on first failure without retry budget
-- [ ] Define max attempts + backoff; mark `DEAD` after budget; keep `Error` for support
-- [ ] Add ops visibility path (SQL runbook minimum; API later): list dead outbox rows by schema
-- [ ] Document replay procedure for dead letters (manual reset or admin endpoint later)
+- [x] Extend `OutboxMessage` / `InboxMessage` (or parallel table) with attempt count, next-visible-at, terminal dead-letter state
+- [x] Change `OutboxPublisherJob` / `InboxConsumerJob` to **not** set `ProcessedAt` on first failure without retry budget
+- [x] Define max attempts + backoff; mark `DEAD` after budget; keep `Error` for support
+- [x] Add ops visibility path (SQL runbook minimum; API later): list dead outbox rows by schema
+- [x] Document replay procedure for dead letters (manual reset or admin endpoint later)
 
 ## 0.3 Critical security gates
 

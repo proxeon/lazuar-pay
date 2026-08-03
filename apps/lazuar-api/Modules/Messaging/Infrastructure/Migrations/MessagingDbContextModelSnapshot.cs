@@ -29,6 +29,9 @@ namespace Modules.Messaging.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Data")
                         .IsRequired()
                         .HasColumnType("text");
@@ -36,11 +39,18 @@ namespace Modules.Messaging.Infrastructure.Migrations
                     b.Property<string>("Error")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("ReceivedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -48,7 +58,7 @@ namespace Modules.Messaging.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProcessedAt", "ReceivedAt")
+                    b.HasIndex("NextAttemptAt", "ReceivedAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
                     b.ToTable("InboxMessages", "messaging");
@@ -60,6 +70,9 @@ namespace Modules.Messaging.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Data")
                         .IsRequired()
                         .HasColumnType("text");
@@ -67,11 +80,18 @@ namespace Modules.Messaging.Infrastructure.Migrations
                     b.Property<string>("Error")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("OccurredOn")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -79,7 +99,7 @@ namespace Modules.Messaging.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProcessedAt", "OccurredOn")
+                    b.HasIndex("NextAttemptAt", "OccurredOn")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
                     b.ToTable("OutboxMessages", "messaging");

@@ -46,6 +46,7 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                 var sql = $"""
                     SELECT * FROM "{schema}"."{tableName}"
                     WHERE "ProcessedAt" IS NULL
+                      AND ("NextAttemptAt" IS NULL OR "NextAttemptAt" <= NOW())
                     ORDER BY "ReceivedAt"
                     LIMIT 20
                     FOR UPDATE SKIP LOCKED;
@@ -71,16 +72,27 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                             {
                                 await mediator.Publish(notification, stoppingToken);
                             }
+
+                            message.ProcessedAt = DateTime.UtcNow;
+                            message.Error = null;
+                            message.NextAttemptAt = null;
                         }
                         catch (Exception ex)
                         {
+                            message.AttemptCount++;
                             message.Error = ex.ToString();
-                            _logger.LogError(ex, "Failed to process inbox message {Id}", message.Id);
-                        }
-                        finally
-                        {
-                            // CRITICAL FIX: Always mark as processed to prevent infinite CPU loops on poisoned messages
-                            message.ProcessedAt = DateTime.UtcNow;
+                            _logger.LogError(ex, "Failed to process inbox message {Id} (attempt {Attempt})", message.Id, message.AttemptCount);
+
+                            if (message.AttemptCount >= MessageRetryPolicy.MaxAttempts)
+                            {
+                                message.Status = MessageProcessingStatus.Dead;
+                                message.ProcessedAt = DateTime.UtcNow;
+                                message.NextAttemptAt = null;
+                            }
+                            else
+                            {
+                                message.NextAttemptAt = DateTime.UtcNow + MessageRetryPolicy.GetBackoff(message.AttemptCount);
+                            }
                         }
                     }
 
