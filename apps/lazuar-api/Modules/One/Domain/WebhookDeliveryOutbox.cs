@@ -34,6 +34,18 @@ public class WebhookDeliveryOutbox : Entity, IMustHaveTenant
         CreatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Temporarily push NextAttemptAt forward so concurrent workers skip this row
+    /// while HTTP is in flight (pair with FOR UPDATE SKIP LOCKED claim).
+    /// </summary>
+    public void ClaimLease(DateTime leaseUntilUtc)
+    {
+        if (Status == "PENDING")
+        {
+            NextAttemptAt = leaseUntilUtc;
+        }
+    }
+
     public void RecordSuccess()
     {
         Status = "SUCCESS";

@@ -120,14 +120,37 @@ public class OneQueryService : IOneQueryService
             .ToListAsync();
     }
 
-    public async Task<WebhookEndpointSnapshotDto?> GetWorkspaceWebhookAsync(Guid tenantId)
+    public async Task<IEnumerable<WebhookEndpointSnapshotDto>> GetWorkspaceWebhooksAsync(Guid tenantId)
     {
-        return await _context.TenantWebhookEndpoints
+        var rows = await _context.TenantWebhookEndpoints
             .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(e => e.OrganizationId == tenantId)
-            .Select(e => new WebhookEndpointSnapshotDto(e.Id, e.Url, e.SecretKey, e.IsActive, e.CreatedAt))
-            .FirstOrDefaultAsync();
+            .OrderByDescending(e => e.CreatedAt)
+            .ToListAsync();
+
+        return rows.Select(e =>
+        {
+            var hasSecret = !string.IsNullOrEmpty(e.SecretKey);
+            string? hint = null;
+            if (hasSecret && e.SecretKey.Length >= 4)
+            {
+                hint = e.SecretKey[^4..];
+            }
+            else if (hasSecret)
+            {
+                hint = e.SecretKey;
+            }
+
+            return new WebhookEndpointSnapshotDto(
+                e.Id,
+                e.Url,
+                e.IsActive,
+                e.CreatedAt,
+                e.EnabledEvents.ToList(),
+                hasSecret,
+                hint);
+        });
     }
 
     public async Task<IEnumerable<WebhookDeliveryLogSnapshotDto>> GetWorkspaceWebhookLogsAsync(Guid tenantId)

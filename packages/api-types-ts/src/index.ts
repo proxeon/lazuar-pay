@@ -1037,8 +1037,8 @@ export interface paths {
             cookie?: never;
         };
         get: operations["OneOperations_getWorkspaceWebhooks"];
-        put: operations["OneOperations_saveWorkspaceWebhook"];
-        post?: never;
+        put?: never;
+        post: operations["OneOperations_createWorkspaceWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1054,6 +1054,22 @@ export interface paths {
         };
         get: operations["OneOperations_getWorkspaceWebhookLogs"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/one/workspaces/{id}/webhooks/{endpointId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["OneOperations_updateWorkspaceWebhook"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2165,6 +2181,24 @@ export interface components {
             current_password: string;
             new_password: string;
         };
+        "One.CreateWebhookEndpointRequestDto": {
+            url: string;
+            /** @default true */
+            is_active: boolean;
+            /** @description Empty or omitted = all events. */
+            enabled_events?: string[];
+        };
+        /** @description Create response — includes full secret once. */
+        "One.CreateWebhookEndpointResponseDto": {
+            id: string;
+            url: string;
+            /** @description Full signing secret — returned only once on create. */
+            secret_key: string;
+            is_active: boolean;
+            enabled_events: string[];
+            /** Format: date-time */
+            created_at: string;
+        };
         "One.CreateWorkspaceInvitationDto": {
             email: string;
             role: string;
@@ -2239,6 +2273,12 @@ export interface components {
         "One.UpdateProfileRequestDto": {
             name: string;
         };
+        "One.UpdateWebhookEndpointRequestDto": {
+            url: string;
+            is_active: boolean;
+            /** @description When provided, replaces the endpoint event filter (empty = all). */
+            enabled_events?: string[];
+        };
         "One.UpdateWorkspaceLhdnConfigRequestDto": {
             myinvois_client_id?: string;
             myinvois_client_secret?: string;
@@ -2264,13 +2304,18 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description List/detail metadata — never includes full signing secret. */
         "One.WebhookEndpointDto": {
             id: string;
             url: string;
-            secret_key: string;
             is_active: boolean;
             /** Format: date-time */
             created_at: string;
+            /** @description Empty array means the endpoint receives all event types. */
+            enabled_events: string[];
+            has_secret: boolean;
+            /** @description Last 4 characters of the signing secret for display. */
+            secret_hint?: string;
         };
         "One.WorkspaceAppDto": {
             app_id: string;
@@ -8194,7 +8239,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["One.WebhookEndpointDto"];
+                    "application/json": components["schemas"]["One.WebhookEndpointDto"][];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -8244,7 +8289,7 @@ export interface operations {
             };
         };
     };
-    OneOperations_saveWorkspaceWebhook: {
+    OneOperations_createWorkspaceWebhook: {
         parameters: {
             query?: never;
             header?: never;
@@ -8255,7 +8300,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["One.SaveWebhookEndpointRequestDto"];
+                "application/json": components["schemas"]["One.CreateWebhookEndpointRequestDto"];
             };
         };
         responses: {
@@ -8265,7 +8310,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Core.StatusResponse"];
+                    "application/json": components["schemas"]["One.CreateWebhookEndpointResponseDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -8333,6 +8378,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["One.WebhookDeliveryLogDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_updateWorkspaceWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["One.UpdateWebhookEndpointRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

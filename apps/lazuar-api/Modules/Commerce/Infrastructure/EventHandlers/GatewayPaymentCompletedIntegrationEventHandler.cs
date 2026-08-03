@@ -72,6 +72,26 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
         if (type == "custom_payment_link")
         {
             await LogTransactionAsync(@event, session.ClientProfileId, "Custom Payment Request", "SYSTEM");
+
+            var payloadObj = new
+            {
+                amount = @event.AmountPaid,
+                currency = @event.Currency,
+                gateway_transaction_id = @event.GatewayTransactionId,
+                status = "PAID",
+                checkout_session_id = session.Id.ToString(),
+                client_profile_id = session.ClientProfileId.ToString()
+            };
+            var payloadElement = System.Text.Json.JsonSerializer.SerializeToElement(
+                payloadObj,
+                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower });
+
+            await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+                session.OrganizationId,
+                TargetUrl: null,
+                "payment_link.paid",
+                payloadElement));
+
             await _repository.SaveChangesAsync();
             return;
         }

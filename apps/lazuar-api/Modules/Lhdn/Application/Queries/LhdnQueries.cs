@@ -68,7 +68,7 @@ public class ListWebhooksQueryHandler : IQueryHandler<ListWebhooksQuery, IEnumer
         {
             Id = w.Id.ToString(),
             Url = w.Url,
-            Events = new List<string> { "invoice.validated", "invoice.rejected" },
+            Events = new List<string> { "invoice.valid", "invoice.invalid" },
             Is_active = w.IsActive,
             Created_at = new DateTimeOffset(w.CreatedAt)
         });

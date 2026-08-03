@@ -258,32 +258,95 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<EntitlementDto>)entitlements);
         }).RequireAuthorization();
 
-        group.MapGet("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<WebhookEndpointDto>, UnauthorizedHttpResult, NotFound>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        // Multi-endpoint workspace webhooks (GET list without full secret; POST create returns secret once; PUT by id).
+        group.MapGet("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<ICollection<WebhookEndpointDto>>, UnauthorizedHttpResult>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
             if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
 
-            var endpoint = await queryService.GetWorkspaceWebhookAsync(id);
-            if (endpoint == null) return TypedResults.NotFound();
+            var endpoints = await queryService.GetWorkspaceWebhooksAsync(id);
+            var dtos = endpoints.Select(e => new WebhookEndpointDto
+            {
+                Id = e.Id.ToString(),
+                Url = e.Url,
+                Is_active = e.IsActive,
+                Created_at = new DateTimeOffset(e.CreatedAt, TimeSpan.Zero),
+                Enabled_events = e.EnabledEvents.ToList(),
+                Has_secret = e.HasSecret,
+                Secret_hint = e.SecretHint
+            }).ToList();
 
-            return TypedResults.Ok(new WebhookEndpointDto {
-                Id = endpoint.Id.ToString(),
-                Url = endpoint.Url,
-                Secret_key = endpoint.SecretKey,
-                Is_active = endpoint.IsActive,
-                Created_at = new DateTimeOffset(endpoint.CreatedAt)
-            });
+            return TypedResults.Ok((ICollection<WebhookEndpointDto>)dtos);
         }).RequireAuthorization();
 
-        group.MapPut("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, SaveWebhookEndpointRequestDto req, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
+        group.MapPost("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<CreateWebhookEndpointResponseDto>, UnauthorizedHttpResult, BadRequest<string>>> (
+            Guid id,
+            CreateWebhookEndpointRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator,
+            IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
             var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
             if (role != "ADMIN" && role != "SUPER_ADMIN" && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
 
-            await mediator.Send(new SaveWebhookCommand(id, req.Url, req.Is_active));
-            return TypedResults.Ok(new StatusResponse { Status = "saved" });
+            if (string.IsNullOrWhiteSpace(req.Url))
+            {
+                return TypedResults.BadRequest("url is required.");
+            }
+
+            var created = await mediator.Send(new CreateWebhookEndpointCommand(
+                id,
+                req.Url.Trim(),
+                req.Is_active ?? true,
+                req.Enabled_events?.ToList()));
+
+            return TypedResults.Ok(new CreateWebhookEndpointResponseDto
+            {
+                Id = created.Id.ToString(),
+                Url = created.Url,
+                Secret_key = created.SecretKey,
+                Is_active = created.IsActive,
+                Enabled_events = created.EnabledEvents.ToList(),
+                Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero)
+            });
+        }).RequireAuthorization();
+
+        group.MapPut("/workspaces/{id:guid}/webhooks/{endpointId:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> (
+            Guid id,
+            Guid endpointId,
+            UpdateWebhookEndpointRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator,
+            IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
+            if (role != "ADMIN" && role != "SUPER_ADMIN" && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(req.Url))
+            {
+                return TypedResults.BadRequest("url is required.");
+            }
+
+            try
+            {
+                await mediator.Send(new UpdateWebhookEndpointCommand(
+                    id,
+                    endpointId,
+                    req.Url.Trim(),
+                    req.Is_active,
+                    req.Enabled_events?.ToList()));
+                return TypedResults.Ok(new StatusResponse { Status = "saved" });
+            }
+            catch (InvalidOperationException)
+            {
+                return TypedResults.NotFound();
+            }
         }).RequireAuthorization();
 
         group.MapGet("/workspaces/{id:guid}/webhooks/logs", async Task<Results<Ok<ICollection<WebhookDeliveryLogDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>

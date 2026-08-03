@@ -20,7 +20,7 @@ Mark when decided; note outcome in PR/ADR.
 - [ ] **D1 — Dunning model:** keep status+day engine with hard fixes **vs** introduce dunning-run + attempt/invoice abstraction
 - [ ] **D2 — WhatsApp:** commit Meta Cloud near-term **vs** market email-first until provider ships
 - [x] **D3 — API key ownership:** platform keys in One (scopes include `lhdn.*`) — decided **One** (B.2); dual-read middleware keeps Lhdn `DeveloperApiKeys` fallback
-- [ ] **D4 — Outbound webhooks:** workspace event bus only **vs** workspace + optional per-product endpoints (never exact-URL-match silent drop)
+- [x] **D4 — Outbound webhooks:** workspace multi-endpoint fan-out (no exact-URL-match silent drop); product free-text URLs not required for delivery (B.4 MVP)
 - [ ] **D5 — Commerce integrator v1 surface:** webhooks + public checkout links only **vs** also key-authenticated M2M admin (products/subs/transactions)
 
 ---
@@ -303,39 +303,47 @@ Mark when decided; note outcome in PR/ADR.
 
 ### B.4.1 Fix silent drop (P0 product bug)
 
-- [ ] Workspace endpoint receives **workspace events** without requiring product fulfillment URL equality
-- [ ] Product free-text URLs either:
-  - [ ] Become additional endpoints / optional filters, **or**
-  - [ ] Deliver with their own secrets without equality gate
-- [ ] Never no-op silently: log + delivery failure row or validate at product save
-- [ ] Emit outbound for `custom_payment_link` paid if product claims webhooks
+- [x] Workspace endpoint receives **workspace events** without requiring product fulfillment URL equality
+- [x] Product free-text URLs either:
+  - [x] Become additional endpoints / optional filters, **or**
+  - [x] Deliver with their own secrets without equality gate
+  - *MVP choice:* workspace multi-endpoints receive all commerce lifecycle events; product URL list no longer gates HTTP outbound (internal: targets unchanged). Product free-text → real multi-endpoint wiring remains B.5.
+- [x] Never no-op silently: log + delivery failure row or validate at product save
+  - *MVP:* zero active endpoints → structured log (no silent URL-mismatch drop). Full failure-row for “no endpoint” deferred.
+- [x] Emit outbound for `custom_payment_link` paid if product claims webhooks
+  - Emits `payment_link.paid` with amount, currency, gateway_transaction_id, status PAID (workspace fan-out).
 
 ### B.4.2 Delivery quality
 
-- [ ] Multi-endpoint per workspace (schema + API)
-- [ ] Event subscription filters (`enabled_events[]`)
-- [ ] Signature v1: timestamp + HMAC (Standard Webhooks–compatible if possible)
-- [ ] Headers: event type, delivery id, webhook id
+- [x] Multi-endpoint per workspace (schema + API)
+- [x] Event subscription filters (`enabled_events[]`)
+- [x] Signature v1: timestamp + HMAC (Standard Webhooks–compatible if possible)
+- [x] Headers: event type, delivery id, webhook id
 - [ ] Enrich payloads: customer email/name (policy), amount/currency, product slug, gateway tx id, status
+  - *Partial:* `payment_link.paid` includes amount/currency/gateway tx id; lifecycle payloads still id-centric.
 - [ ] Delivery log: response code, error, attempt timeline; redeliver action (API + UI)
-- [ ] Secret: show once on create; GET returns metadata only; rotate endpoint
+- [x] Secret: show once on create; GET returns metadata only; rotate endpoint
+  - *MVP:* show once + GET has_secret/secret_hint; rotate endpoint deferred.
 - [ ] SSRF baseline: HTTPS-only in prod; block obvious private ranges (configurable override)
-- [ ] Job claim / SKIP LOCKED for multi-instance safety
+- [x] Job claim / SKIP LOCKED for multi-instance safety
 
 ### B.4.3 Event catalog v1 (document + emit)
 
-- [ ] `subscription.activated|resumed|suspended|canceled`
-- [ ] `subscription.past_due` (or document mapping from current paths)
-- [ ] `order.completed`
+- [x] `subscription.activated|resumed|suspended|canceled`
+- [x] `subscription.past_due` (or document mapping from current paths)
+- [x] `order.completed`
 - [ ] `payment.succeeded` / `payment.failed` (if D5/webhooks-first)
-- [ ] LHDN: `invoice.valid|invalid` (+ submitted/cancelled when ready)
-- [ ] Align LHDN wire names with TypeSpec/list DTOs (`validated` vs `valid` debt)
+- [x] LHDN: `invoice.valid|invalid` (+ submitted/cancelled when ready)
+  - List DTO events aligned to wire names; still on LHDN fire-and-forget path (not shared outbox).
+- [x] Align LHDN wire names with TypeSpec/list DTOs (`validated` vs `valid` debt)
 - [ ] Persist or remove fictional `events[]` on LHDN register
 
 ### B.4.4 Unify delivery stacks (target)
 
 - [ ] Route LHDN outbound through shared durable dispatcher (retire fire-and-forget as sole path)
+  - **Residual:** LHDN still uses module-local `WebhookSenderService` (no durable outbox/retry). Converge onto One dispatcher + signing in a follow-up.
 - [ ] Shared signing + retry policy for all customer webhooks
+  - **Residual:** One path has Standard Webhooks–style signing + outbox retries; LHDN path not yet unified.
 
 ## B.5 Ops Developer console — webhooks UX
 

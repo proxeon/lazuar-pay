@@ -26,13 +26,8 @@ public class OrderCompletedIntegrationEventHandler : IIntegrationEventHandler<Or
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
-        foreach (var target in @event.FulfillmentTargets)
-        {
-            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
-            {
-                await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                    @event.OrganizationId, target, "order.completed", payloadElement));
-            }
-        }
+        // Workspace fan-out: One delivers to all active endpoints (no product-URL match).
+        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            @event.OrganizationId, TargetUrl: null, "order.completed", payloadElement));
     }
 }

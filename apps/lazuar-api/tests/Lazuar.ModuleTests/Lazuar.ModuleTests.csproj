@@ -28,10 +28,11 @@
     <!-- Messaging: MapMessagingEndpoints authorization metadata -->
     <ProjectReference Include="..\..\Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
 
-    <!-- One Module References (platform credentials) -->
+    <!-- One Module References (platform credentials + outbound webhooks) -->
     <ProjectReference Include="..\..\Modules\One\Application\Modules.One.Application.csproj" />
     <ProjectReference Include="..\..\Modules\One\Domain\Modules.One.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\One\Contracts\Modules.One.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
 
     <!-- LHDN Module References -->
     <ProjectReference Include="..\..\Modules\Lhdn\Infrastructure\Modules.Lhdn.Infrastructure.csproj" />

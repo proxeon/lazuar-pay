@@ -116,6 +116,7 @@ public class BillingEngineJob : BackgroundService
                 
                 var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
+                // internal: apps still routed via FulfillmentRequested; HTTP goes once to workspace endpoints.
                 foreach (var target in product.FulfillmentTargets)
                 {
                     if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
@@ -124,13 +125,11 @@ public class BillingEngineJob : BackgroundService
                         await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
                             sub.OrganizationId, internalApp, "subscription.past_due", payloadElement));
                     }
-                    else if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                    {
-                        await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                            sub.OrganizationId, target, "subscription.past_due", payloadElement));
-                    }
                 }
-                
+
+                await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+                    sub.OrganizationId, TargetUrl: null, "subscription.past_due", payloadElement));
+
                 requiresSave = true;
                 _logger.LogInformation("Subscription {Id} lacks payment method. Marked as PAST_DUE.", sub.Id);
             }

@@ -30,6 +30,8 @@ public interface IOneRepository
     Task<WorkspaceInvitation?> GetInvitationByIdAsync(Guid id, CancellationToken ct = default);
 
     Task<TenantWebhookEndpoint?> GetWebhookEndpointAsync(Guid organizationId, CancellationToken ct = default);
+    Task<TenantWebhookEndpoint?> GetWebhookEndpointByIdAsync(Guid endpointId, CancellationToken ct = default);
+    Task<IReadOnlyList<TenantWebhookEndpoint>> ListWebhookEndpointsAsync(Guid organizationId, CancellationToken ct = default);
     void AddWebhookEndpoint(TenantWebhookEndpoint endpoint);
 
     Task<ApiCredential?> GetApiCredentialAsync(Guid id, CancellationToken ct = default);

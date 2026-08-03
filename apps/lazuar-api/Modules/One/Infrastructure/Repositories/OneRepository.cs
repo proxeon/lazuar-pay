@@ -94,6 +94,22 @@ public class OneRepository : IOneRepository
             .FirstOrDefaultAsync(e => e.OrganizationId == organizationId, ct);
     }
 
+    public async Task<TenantWebhookEndpoint?> GetWebhookEndpointByIdAsync(Guid endpointId, CancellationToken ct = default)
+    {
+        return await _context.TenantWebhookEndpoints
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.Id == endpointId, ct);
+    }
+
+    public async Task<IReadOnlyList<TenantWebhookEndpoint>> ListWebhookEndpointsAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.TenantWebhookEndpoints
+            .IgnoreQueryFilters()
+            .Where(e => e.OrganizationId == organizationId)
+            .OrderByDescending(e => e.CreatedAt)
+            .ToListAsync(ct);
+    }
+
     public void AddWebhookEndpoint(TenantWebhookEndpoint endpoint) => _context.TenantWebhookEndpoints.Add(endpoint);
 
     public async Task<ApiCredential?> GetApiCredentialAsync(Guid id, CancellationToken ct = default)

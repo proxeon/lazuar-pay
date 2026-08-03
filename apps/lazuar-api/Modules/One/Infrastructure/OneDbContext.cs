@@ -1,6 +1,12 @@
 // apps/lazuar-api/Modules/One/Infrastructure/OneDbContext.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.One.Domain;
@@ -73,11 +79,34 @@ public class OneDbContext : PlatformDbContext
             builder.HasIndex(x => new { x.OrganizationId, x.Email }).HasFilter("\"Status\" = 'PENDING'");
         });
 
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        };
+
+        var stringListConverter = new ValueConverter<IReadOnlyCollection<string>, string>(
+            v => JsonSerializer.Serialize(v, jsonOptions),
+            v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
+        );
+
+        var stringListComparer = new ValueComparer<IReadOnlyCollection<string>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c == null ? new List<string>() : c.ToList()
+        );
+
         modelBuilder.Entity<TenantWebhookEndpoint>(builder =>
         {
             builder.ToTable("TenantWebhookEndpoints");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
+            builder.Property(x => x.EnabledEvents)
+                .HasField("_enabledEvents")
+                .UsePropertyAccessMode(PropertyAccessMode.Field)
+                .HasConversion(stringListConverter, stringListComparer)
+                .HasColumnType("jsonb")
+                .HasDefaultValueSql("'[]'::jsonb");
         });
 
         modelBuilder.Entity<WebhookDeliveryOutbox>(builder =>

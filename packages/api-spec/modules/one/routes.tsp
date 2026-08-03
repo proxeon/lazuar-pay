@@ -179,15 +179,24 @@ interface OneOperations {
   @get
   @route("/workspaces/{id}/webhooks")
   getWorkspaceWebhooks(@path id: string):
-    | WebhookEndpointDto
+    | WebhookEndpointDto[]
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
-  @put
+  @post
   @route("/workspaces/{id}/webhooks")
-  saveWorkspaceWebhook(
+  createWorkspaceWebhook(
     @path id: string,
-    @body body: SaveWebhookEndpointRequestDto,
+    @body body: CreateWebhookEndpointRequestDto,
+  ): CreateWebhookEndpointResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @put
+  @route("/workspaces/{id}/webhooks/{endpointId}")
+  updateWorkspaceWebhook(
+    @path id: string,
+    @path endpointId: string,
+    @body body: UpdateWebhookEndpointRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)

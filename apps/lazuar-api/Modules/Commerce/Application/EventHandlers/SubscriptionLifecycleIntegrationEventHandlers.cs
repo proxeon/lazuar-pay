@@ -6,7 +6,7 @@ using Modules.Commerce.Contracts.Events;
 
 namespace Modules.Commerce.Application.EventHandlers;
 
-public class SubscriptionLifecycleIntegrationEventHandlers : 
+public class SubscriptionLifecycleIntegrationEventHandlers :
     IIntegrationEventHandler<SubscriptionActivatedIntegrationEvent>,
     IIntegrationEventHandler<SubscriptionSuspendedIntegrationEvent>,
     IIntegrationEventHandler<SubscriptionCanceledIntegrationEvent>,
@@ -31,14 +31,8 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
-        foreach (var target in @event.FulfillmentTargets)
-        {
-            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
-            {
-                await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                    @event.OrganizationId, target, "subscription.activated", payloadElement));
-            }
-        }
+        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            @event.OrganizationId, TargetUrl: null, "subscription.activated", payloadElement));
     }
 
     public async Task HandleAsync(SubscriptionSuspendedIntegrationEvent @event)
@@ -52,14 +46,8 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
-        foreach (var target in @event.FulfillmentTargets)
-        {
-            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
-            {
-                await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                    @event.OrganizationId, target, "subscription.suspended", payloadElement));
-            }
-        }
+        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            @event.OrganizationId, TargetUrl: null, "subscription.suspended", payloadElement));
     }
 
     public async Task HandleAsync(SubscriptionCanceledIntegrationEvent @event)
@@ -73,14 +61,8 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
-        foreach (var target in @event.FulfillmentTargets)
-        {
-            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
-            {
-                await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                    @event.OrganizationId, target, "subscription.canceled", payloadElement));
-            }
-        }
+        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            @event.OrganizationId, TargetUrl: null, "subscription.canceled", payloadElement));
     }
 
     public async Task HandleAsync(SubscriptionResumedIntegrationEvent @event)
@@ -94,13 +76,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
-        foreach (var target in @event.FulfillmentTargets)
-        {
-            if (target.StartsWith("http://", System.StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", System.StringComparison.OrdinalIgnoreCase))
-            {
-                await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                    @event.OrganizationId, target, "subscription.resumed", payloadElement));
-            }
-        }
+        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            @event.OrganizationId, TargetUrl: null, "subscription.resumed", payloadElement));
     }
 }

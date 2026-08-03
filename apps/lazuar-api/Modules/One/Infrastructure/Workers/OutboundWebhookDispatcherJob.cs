@@ -2,7 +2,6 @@
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,14 +53,37 @@ public class OutboundWebhookDispatcherJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<OneDbContext>();
 
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+        // Claim pending rows with SKIP LOCKED so multi-instance workers do not double-deliver.
+        var sql = """
+            SELECT * FROM "one"."WebhookDeliveryOutboxes"
+            WHERE "Status" = 'PENDING'
+              AND "NextAttemptAt" <= NOW()
+            ORDER BY "NextAttemptAt"
+            LIMIT 50
+            FOR UPDATE SKIP LOCKED;
+            """;
+
         var pendingDeliveries = await db.WebhookDeliveryOutboxes
+            .FromSqlRaw(sql)
             .IgnoreQueryFilters()
-            .Where(w => w.Status == "PENDING" && w.NextAttemptAt <= DateTime.UtcNow)
-            .OrderBy(w => w.NextAttemptAt)
-            .Take(50)
             .ToListAsync(ct);
 
-        if (!pendingDeliveries.Any()) return;
+        if (pendingDeliveries.Count == 0)
+        {
+            await transaction.RollbackAsync(ct);
+            return;
+        }
+
+        // Lease: bump NextAttemptAt so a crash mid-HTTP does not re-claim immediately.
+        var leaseUntil = DateTime.UtcNow.AddMinutes(2);
+        foreach (var delivery in pendingDeliveries)
+        {
+            delivery.ClaimLease(leaseUntil);
+        }
+
+        await db.SaveChangesAsync(ct);
 
         var client = _httpClientFactory.CreateClient("DeveloperWebhooks");
 
@@ -70,19 +92,30 @@ public class OutboundWebhookDispatcherJob : BackgroundService
             var endpoint = await db.TenantWebhookEndpoints
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(e => e.Id == delivery.EndpointId, ct);
-                
+
             if (endpoint == null || !endpoint.IsActive)
             {
                 delivery.RecordFailure("Endpoint not found or inactive.");
+                _logger.LogWarning(
+                    "Webhook delivery {DeliveryId} failed: endpoint {EndpointId} not found or inactive.",
+                    delivery.Id,
+                    delivery.EndpointId);
                 continue;
             }
 
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint.Url);
-                var signature = ComputeHmacSha256(delivery.Payload, endpoint.SecretKey);
-                
-                request.Headers.Add("X-Lazuar-Signature", signature);
+                var unixTs = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var signature = OutboundWebhookSignature.ComputeHeaderValue(
+                    endpoint.SecretKey,
+                    delivery.Payload,
+                    unixTs);
+
+                request.Headers.TryAddWithoutValidation("X-Lazuar-Signature", signature);
+                request.Headers.TryAddWithoutValidation("X-Lazuar-Event", delivery.EventType);
+                request.Headers.TryAddWithoutValidation("X-Lazuar-Delivery-Id", delivery.Id.ToString());
+                request.Headers.TryAddWithoutValidation("X-Lazuar-Webhook-Id", endpoint.Id.ToString());
                 request.Content = new StringContent(delivery.Payload, Encoding.UTF8, "application/json");
 
                 var response = await client.SendAsync(request, ct);
@@ -93,25 +126,29 @@ public class OutboundWebhookDispatcherJob : BackgroundService
                 }
                 else
                 {
-                    var error = $"HTTP {response.StatusCode}";
+                    var error = $"HTTP {(int)response.StatusCode} {response.StatusCode}";
                     delivery.RecordFailure(error);
+                    _logger.LogWarning(
+                        "Webhook delivery {DeliveryId} to {Url} failed: {Error} (attempt {Attempt}).",
+                        delivery.Id,
+                        endpoint.Url,
+                        error,
+                        delivery.AttemptCount);
                 }
             }
             catch (Exception ex)
             {
                 delivery.RecordFailure(ex.Message);
+                _logger.LogError(
+                    ex,
+                    "Webhook delivery {DeliveryId} to endpoint {EndpointId} threw (attempt {Attempt}).",
+                    delivery.Id,
+                    delivery.EndpointId,
+                    delivery.AttemptCount);
             }
         }
 
         await db.SaveChangesAsync(ct);
-    }
-
-    private static string ComputeHmacSha256(string payload, string secret)
-    {
-        var keyBytes = Encoding.UTF8.GetBytes(secret);
-        var payloadBytes = Encoding.UTF8.GetBytes(payload);
-        using var hmac = new HMACSHA256(keyBytes);
-        var hash = hmac.ComputeHash(payloadBytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        await transaction.CommitAsync(ct);
     }
 }
