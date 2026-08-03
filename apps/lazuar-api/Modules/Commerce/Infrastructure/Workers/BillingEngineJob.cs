@@ -111,12 +111,12 @@ public class BillingEngineJob : BackgroundService
                     {
                         var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
                         await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                            sub.OrganizationId, internalApp, "subscription.suspended", payloadElement));
+                            sub.OrganizationId, internalApp, "subscription.past_due", payloadElement));
                     }
                     else if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
                         await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                            sub.OrganizationId, target, "subscription.suspended", payloadElement));
+                            sub.OrganizationId, target, "subscription.past_due", payloadElement));
                     }
                 }
                 

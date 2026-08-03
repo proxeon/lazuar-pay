@@ -113,15 +113,15 @@ Mark when decided; note outcome in PR/ADR.
 
 **Modules:** Payments, Commerce
 
-- [ ] Publish **`GatewayPaymentFailedIntegrationEvent`** from:
-  - [ ] `ProcessGatewayWebhookCommandHandler` when adapters map `PAYMENT_FAILED` (do not silent-return only)
-  - [ ] `ExecuteOffSessionChargeIntegrationEventHandler` on failed charge (structured reason if available)
-- [ ] Commerce handler (or command) on payment failed for subscription renewals:
-  - [ ] `MarkAsPastDue` (if not already)
-  - [ ] Assign dunning campaign (same priority/product/payment-method rules as engine)
-  - [ ] Optionally fire day-0 step immediately or leave to engine catch-up
-- [ ] Fix `BillingEngineJob` no-token path event name: use past-due semantics, not mislabeled `subscription.suspended`
-- [ ] Stop treating failed vaulted renewals as “ACTIVE forever with past NextBillingDate”
+- [x] Publish **`GatewayPaymentFailedIntegrationEvent`** from:
+  - [x] `ProcessGatewayWebhookCommandHandler` when adapters map `PAYMENT_FAILED` (do not silent-return only)
+  - [x] `ExecuteOffSessionChargeIntegrationEventHandler` on failed charge (structured reason if available)
+- [x] Commerce handler (or command) on payment failed for subscription renewals:
+  - [x] `MarkAsPastDue` (if not already)
+  - [x] Assign dunning campaign (same priority/product/payment-method rules as engine)
+  - [x] Optionally fire day-0 step immediately or leave to engine catch-up
+- [x] Fix `BillingEngineJob` no-token path event name: use past-due semantics, not mislabeled `subscription.suspended`
+- [x] Stop treating failed vaulted renewals as “ACTIVE forever with past NextBillingDate”
 
 ## A.2 Off-session charge correlation (success path)
 

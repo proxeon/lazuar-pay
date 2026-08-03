@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Events;
@@ -10,25 +12,32 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
 {
     private readonly ITenantPaymentConfigRepository _configRepository;
     private readonly IPaymentGatewayFactory _gatewayFactory;
+    private readonly IEventBus _eventBus;
     private readonly ILogger<ExecuteOffSessionChargeIntegrationEventHandler> _logger;
 
     public ExecuteOffSessionChargeIntegrationEventHandler(
         ITenantPaymentConfigRepository configRepository,
         IPaymentGatewayFactory gatewayFactory,
+        [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus,
         ILogger<ExecuteOffSessionChargeIntegrationEventHandler> logger)
     {
         _configRepository = configRepository;
         _gatewayFactory = gatewayFactory;
+        _eventBus = eventBus;
         _logger = logger;
     }
 
     public async Task HandleAsync(ExecuteOffSessionChargeIntegrationEvent @event)
     {
         var config = await _configRepository.GetByTenantAndGatewayAsync(@event.TenantId, @event.GatewayName);
-        
+
         if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
-            _logger.LogWarning("Cannot execute off-session charge for subscription {SubscriptionId}. Gateway {GatewayName} not configured for tenant {TenantId}.", @event.SubscriptionId, @event.GatewayName, @event.TenantId);
+            _logger.LogWarning(
+                "Cannot execute off-session charge for subscription {SubscriptionId}. Gateway {GatewayName} not configured for tenant {TenantId}.",
+                @event.SubscriptionId, @event.GatewayName, @event.TenantId);
+
+            await PublishPaymentFailedAsync(@event, failureReason: "gateway_not_configured");
             return;
         }
 
@@ -47,6 +56,31 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
         if (!success)
         {
             _logger.LogError("Off-session charge failed at gateway level for subscription {SubscriptionId}.", @event.SubscriptionId);
+            await PublishPaymentFailedAsync(@event, failureReason: "charge_declined");
         }
+    }
+
+    private async Task PublishPaymentFailedAsync(ExecuteOffSessionChargeIntegrationEvent @event, string failureReason)
+    {
+        var metadata = new Dictionary<string, string>
+        {
+            ["type"] = "commerce_subscription",
+            ["subscription_id"] = @event.SubscriptionId.ToString(),
+            ["tenant_id"] = @event.TenantId.ToString(),
+            ["receipt"] = @event.SubscriptionId.ToString(),
+            ["failure_source"] = "off_session",
+            ["failure_reason"] = failureReason,
+            ["gateway_name"] = @event.GatewayName
+        };
+
+        if (@event.DunningCampaignId.HasValue)
+        {
+            metadata["dunning_campaign_id"] = @event.DunningCampaignId.Value.ToString();
+        }
+
+        await _eventBus.PublishAsync(new GatewayPaymentFailedIntegrationEvent(
+            OrganizationId: @event.TenantId,
+            GatewayTransactionId: "off_session:" + @event.SubscriptionId,
+            Metadata: metadata));
     }
 }

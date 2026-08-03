@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddHostedService<DunningEngineJob>();
 
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
+        services.AddTransient<GatewayPaymentFailedIntegrationEventHandler>();
         services.AddTransient<GatewayRefundCompletedIntegrationEventHandler>();
         services.AddTransient<OrderCompletedIntegrationEventHandler>();
         services.AddTransient<SubscriptionLifecycleIntegrationEventHandlers>();
@@ -61,6 +62,7 @@ public static class DependencyInjection
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<GatewayPaymentFailedIntegrationEvent, GatewayPaymentFailedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedIntegrationEventHandler>();
         eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedIntegrationEventHandler>();
         eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();

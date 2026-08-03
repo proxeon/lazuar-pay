@@ -52,7 +52,9 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             throw new InvalidOperationException($"Webhook signature verification failed: {parsedResult.Error}");
         }
 
-        if (parsedResult.EventType != "PAYMENT_COMPLETED" && parsedResult.EventType != "DISPUTE_CREATED")
+        if (parsedResult.EventType != "PAYMENT_COMPLETED"
+            && parsedResult.EventType != "DISPUTE_CREATED"
+            && parsedResult.EventType != "PAYMENT_FAILED")
         {
             return;
         }
@@ -74,6 +76,16 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
                 AmountDisputed: parsedResult.AmountPaid,
                 Currency: parsedResult.Currency,
                 Metadata: parsedResult.Metadata));
+            await _logRepository.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        if (parsedResult.EventType == "PAYMENT_FAILED")
+        {
+            await _eventBus.PublishAsync(new GatewayPaymentFailedIntegrationEvent(
+                OrganizationId: request.TenantId,
+                GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
+                Metadata: parsedResult.Metadata ?? new Dictionary<string, string>()));
             await _logRepository.SaveChangesAsync(cancellationToken);
             return;
         }
