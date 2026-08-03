@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Ports;
+using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Contracts.Events;
 
 namespace Modules.Lhdn.Infrastructure.Workers;
@@ -49,6 +50,7 @@ public class LhdnStatusPollingJob : BackgroundService
         var gateway = scope.ServiceProvider.GetRequiredService<ILhdnGatewayAdapter>();
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("LhdnEventBus");
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var linkService = scope.ServiceProvider.GetRequiredService<ILhdnLinkService>();
 
         var now = DateTime.UtcNow;
 
@@ -78,9 +80,14 @@ public class LhdnStatusPollingJob : BackgroundService
                     if (result.Status == "VALID")
                     {
                         doc.MarkAsValid(result.LongId!);
-                        
+
+                        var portalUrl = linkService.GetPortalUrl();
+                        var qrLink = (!string.IsNullOrEmpty(result.Uuid) && !string.IsNullOrEmpty(result.LongId))
+                            ? $"{portalUrl}/{result.Uuid}/share/{result.LongId}"
+                            : null;
+
                         await eventBus.PublishAsync(new LhdnDocumentValidatedIntegrationEvent(
-                            doc.OrganizationId, doc.InternalReferenceId, result.Uuid!, result.LongId!, "VALID"));
+                            doc.OrganizationId, doc.InternalReferenceId, result.Uuid!, "VALID", qrLink));
 
                         await mediator.Send(new DispatchExternalWebhookCommand(
                             doc.OrganizationId, doc.InternalReferenceId, "VALID", result.Uuid, result.LongId, null), ct);

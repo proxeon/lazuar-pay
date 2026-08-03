@@ -77,7 +77,7 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
             CompanyLogo = logoBytes,
             CustomerName = customerName,
             CustomerEmail = customerEmail,
-            LhdnUuid = entry.LhdnValidationStatus == "VALIDATED" ? entry.TaxInvoiceId : null, // Uses actual UUID stored in TaxInvoiceId when validated
+            LhdnUuid = entry.LhdnValidationStatus == "VALID" ? entry.TaxInvoiceId : null, // Uses actual UUID stored in TaxInvoiceId when validated
             LhdnQrLink = request.LhdnQrLink
         };
 

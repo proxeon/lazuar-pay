@@ -32,10 +32,12 @@ public class AnonymizeClientProfileCommandHandler : ICommandHandler<AnonymizeCli
         }
 
         profile.Anonymize();
-        await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Publish into outbox first so a single SaveChanges persists domain + outbox atomically.
         await _eventBus.PublishAsync(new ClientProfileAnonymizedIntegrationEvent(
             request.OrganizationId,
             request.ClientProfileId));
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

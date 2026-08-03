@@ -38,15 +38,15 @@ Mark when decided; note outcome in PR/ADR.
 
 ## 0.1 Outbox / event pipeline completeness
 
-- [ ] **Register Lhdn outbox publisher** (and inbox consumer if keeping inbox tables) in `Modules/Lhdn/Infrastructure/DependencyInjection.cs`
+- [x] **Register Lhdn outbox publisher** (and inbox consumer if keeping inbox tables) in `Modules/Lhdn/Infrastructure/DependencyInjection.cs`
   - Confirm `LhdnDocumentSubmitted|Validated|Cancelled` and `ApiKeyRevoked` leave `lhdn.OutboxMessages`
-- [ ] **Register CRM outbox publisher** (and inbox if needed) in `Modules/CRM/Infrastructure/DependencyInjection.cs`
+- [x] **Register CRM outbox publisher** (and inbox if needed) in `Modules/CRM/Infrastructure/DependencyInjection.cs`
   - Confirm `ClientProfileAnonymizedIntegrationEvent` can fan out
-- [ ] **Architecture/smoke check:** module with OutboxEventBus ⇒ hosted `*OutboxPublisherJob` (document exception list if any)
-- [ ] **Fix `LhdnDocumentValidatedIntegrationEvent` argument order / status vocabulary**
+- [x] **Architecture/smoke check:** module with OutboxEventBus ⇒ hosted `*OutboxPublisherJob` (document exception list if any)
+- [x] **Fix `LhdnDocumentValidatedIntegrationEvent` argument order / status vocabulary**
   - Align poller publish args with event ctor
   - Align Billing + ops UI on `VALID` vs `VALIDATED` (one canonical status)
-- [ ] **Decide inbox strategy** (docs vs code): implement store-and-ack for state-mutating handlers **or** update `apps/lazuar-api/docs/001-cross-module-communication.md` to official hybrid model
+- [x] **Decide inbox strategy** (docs vs code): implement store-and-ack for state-mutating handlers **or** update `apps/lazuar-api/docs/001-cross-module-communication.md` to official hybrid model
 
 ## 0.2 Outbox failure / poison policy
 

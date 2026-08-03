@@ -61,29 +61,40 @@ var checkoutUrl = await _mediator.Send(query, ct);
 ## 3. Asynchronous Integration Events (The Default)
 When a state change in one module must trigger a state mutation, processing, or notification in another module, the communication **must** be asynchronous.
 
+Lazuar uses a **hybrid outbox model**: every publisher persists events to its module outbox; dispatch is primarily inline via the in-process bus; inbox is an **opt-in** durability pattern for handlers that need store-and-ack semantics.
+
 ```
 ┌───────────────────────────┐                ┌───────────────────────────┐
-│      Payments Module      │                │     Community Module      │
+│      Payments Module      │                │     Commerce Module       │
 └─────────────┬─────────────┘                └─────────────▲─────────────┘
               │                                            │
-              │ 1. Save event to DB Outbox                 │ 4. Consume from Inbox
+              │ 1. Save event to DB Outbox                 │
+              │    (same transaction as domain write)      │
               ▼                                            │
 ┌───────────────────────────┐                              │
 │       Outbox Table        │                              │
 └─────────────┬─────────────┘                              │
               │                                            │
-              │ 2. Read by Outbox Job                      │
+              │ 2. OutboxPublisherJob drains outbox        │
               ▼                                            │
 ┌───────────────────────────┐                              │
-│       InMemoryBus         ├──────────────────────────────┘
-│       (Publisher)         │ 3. Dispatch to local Inbox
-└───────────────────────────┘
+│     InMemoryEventBus      │ 3. Default: invoke           │
+│       (Publisher)         ├──────────────────────────────┤
+└───────────────────────────┘    IIntegrationEventHandler  │
+                                 inline (must be           │
+                                 idempotent)               │
+                                                           │
+                        Optional (Messaging pattern):      │
+                        write InboxMessages → ack →        │
+                        InboxConsumerJob processes later   │
 ```
 
 ### Rules for Asynchronous Integration Events:
-1. **Outbox-Backed:** The publishing module must write the integration event to its local `OutboxMessages` table within the active transaction boundary.
-2. **Inbox-Backed:** The receiving module must capture the incoming integration event, write it directly to its local `InboxMessages` table, and return an acknowledgment immediately.
-3. **Asynchronous Fulfillment:** Background workers (`OutboxPublisherJob` and `InboxConsumerJob`) process the message queues out-of-process, guaranteeing eventual consistency and mitigating dual-write failures.
+1. **Outbox-Backed (required):** The publishing module must write the integration event to its local `OutboxMessages` table within the active transaction boundary (`PublishAsync` then a single `SaveChanges` that covers domain + outbox).
+2. **OutboxPublisherJob (required):** Every module that registers `OutboxEventBus<TDbContext>` **must** host an `*OutboxPublisherJob` so rows leave `OutboxMessages`. Without it, events are stuck forever.
+3. **Default dispatch — InMemoryEventBus → handlers inline:** After the outbox job deserializes a message, `InMemoryEventBus` resolves and runs each subscribed `IIntegrationEventHandler<T>` **in process**. Handlers **must be idempotent** (retries and multi-instance drains will re-deliver).
+4. **Inbox is opt-in:** Writing to `InboxMessages` and processing via `InboxConsumerJob` is the **Messaging** (and similar) pattern for store-and-ack / deferred work. It is **not** required for every module or every handler. Modules may keep inbox tables and register an empty inbox consumer; that is OK.
+5. **Registering an empty inbox consumer is OK:** Hosting `*InboxConsumerJob` when nothing writes inbox rows is harmless and keeps the module symmetric with other Outbox/Inbox-equipped modules.
 
 ### Code Example (From `GatewayPaymentCompletedIntegrationEventHandler.cs`):
 ```csharp
@@ -99,7 +110,8 @@ public class GatewayPaymentCompletedIntegrationEventHandler
 
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
     {
-        if (!@event.Metadata.TryGetValue("type", out var type) || type != "community_subscription")
+        // Handlers run inline via InMemoryEventBus; keep them idempotent.
+        if (!@event.Metadata.TryGetValue("type", out var type) || type != "commerce_subscription")
         {
             return; 
         }
@@ -110,7 +122,7 @@ public class GatewayPaymentCompletedIntegrationEventHandler
             throw new InvalidOperationException("Missing valid subscription_id in metadata.");
         }
 
-        // Dispatch local command to alter write-model state within community transaction
+        // Dispatch local command to alter write-model state within commerce transaction
         var command = new RecordSubscriptionPaymentCommand(
             OrganizationId: @event.OrganizationId,
             SubscriptionId: subscriptionId,

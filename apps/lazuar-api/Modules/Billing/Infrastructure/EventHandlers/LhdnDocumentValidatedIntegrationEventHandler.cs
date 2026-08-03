@@ -29,7 +29,7 @@ public class LhdnDocumentValidatedIntegrationEventHandler : IIntegrationEventHan
             ledgerEntry.UpdateLhdnStatus(@event.LhdnUuid, @event.Status);
             await _dbContext.SaveChangesAsync();
 
-            if (@event.Status == "VALIDATED")
+            if (@event.Status == "VALID")
             {
                 var docType = ledgerEntry.ReferenceType.Contains("REFUND") ? "Credit Note" : "Tax Invoice";
 

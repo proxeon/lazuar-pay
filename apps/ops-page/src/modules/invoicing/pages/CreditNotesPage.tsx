@@ -82,7 +82,7 @@ export default function CreditNotesPage() {
 
   const getLhdnBadgeClasses = (status?: string) => {
     switch (status) {
-      case "VALIDATED":
+      case "VALID":
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
       case "SUBMITTED":
       case "PENDING":

@@ -7,6 +7,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.CRM.Contracts;
 using Modules.CRM.Infrastructure.EventHandlers;
+using Modules.CRM.Infrastructure.Workers;
 using Modules.One.Contracts;
 
 namespace Modules.CRM.Infrastructure;
@@ -28,6 +29,9 @@ public static class DependencyInjection
         services.AddScoped<ICrmQueryService, CrmQueryService>();
 
         services.AddTransient<GlobalUserProfileUpdatedIntegrationEventHandler>();
+
+        services.AddHostedService<CrmOutboxPublisherJob>();
+        services.AddHostedService<CrmInboxConsumerJob>();
 
         return services;
     }

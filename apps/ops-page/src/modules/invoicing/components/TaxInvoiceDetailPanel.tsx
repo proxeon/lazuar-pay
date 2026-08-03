@@ -96,13 +96,13 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
   if (!invoice) return null;
 
   const displayId = invoice.tax_invoice_id || invoice.id.substring(0, 8).toUpperCase();
-  const isLhdnValidated = invoice.lhdn_validation_status === "VALIDATED";
+  const isLhdnValidated = invoice.lhdn_validation_status === "VALID";
   const hoursSinceIssue = (Date.now() - new Date(invoice.timestamp).getTime()) / (1000 * 60 * 60);
   const isCancelable = isLhdnValidated && hoursSinceIssue < 72;
 
   const getLhdnBadgeClasses = (status?: string) => {
     switch (status) {
-      case "VALIDATED": return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case "VALID": return "bg-emerald-50 text-emerald-700 border-emerald-200";
       case "SUBMITTED":
       case "PENDING": return "bg-amber-50 text-amber-700 border-amber-200 animate-pulse";
       case "B2C_RECEIPT":
