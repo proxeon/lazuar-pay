@@ -19,6 +19,7 @@ public class TenantSecurityMiddleware
 
     public async Task InvokeAsync(HttpContext context, IOneQueryService oneQueryService)
     {
+        // API keys already bind TenantId in ApiKeyAuthenticationMiddleware.
         if (context.User.Identity?.AuthenticationType == "ApiKey")
         {
             await _next(context);
@@ -47,7 +48,13 @@ public class TenantSecurityMiddleware
             resolvedTenantId = await oneQueryService.GetTenantIdBySlugAsync(routeSlug!.ToString()!);
         }
 
-        if (context.Request.Path.StartsWithSegments("/api/v1/admin/") && (!resolvedTenantId.HasValue || resolvedTenantId.Value == Guid.Empty))
+        // Public / webhook / auth: still bind ambient tenant when slug/header is present (EF fail-closed),
+        // but never require it and never inject membership roles for anonymous storefronts.
+        var isExempt = IsTenantExemptPath(context.Request.Path);
+
+        if (!isExempt
+            && RequiresTenantContext(context.Request.Path)
+            && (!resolvedTenantId.HasValue || resolvedTenantId.Value == Guid.Empty))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/problem+json";
@@ -67,7 +74,7 @@ public class TenantSecurityMiddleware
         {
             context.Items["TenantId"] = resolvedTenantId.Value;
 
-            if (context.User.Identity?.IsAuthenticated == true)
+            if (!isExempt && context.User.Identity?.IsAuthenticated == true)
             {
                 var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -100,5 +107,60 @@ public class TenantSecurityMiddleware
         }
 
         await _next(context);
+    }
+
+    /// <summary>
+    /// Paths that must not require X-Tenant-Id (public storefronts, auth, inbound webhooks).
+    /// </summary>
+    public static bool IsTenantExemptPath(PathString path)
+    {
+        if (path.StartsWithSegments("/health"))
+        {
+            return true;
+        }
+
+        if (path.StartsWithSegments("/api/v1/public"))
+        {
+            return true;
+        }
+
+        if (path.StartsWithSegments("/api/v1/webhooks"))
+        {
+            return true;
+        }
+
+        // One: public register + auth + workspace list/create (no ambient tenant yet).
+        if (path.StartsWithSegments("/api/v1/one/public")
+            || path.StartsWithSegments("/api/v1/one/auth")
+            || path.StartsWithSegments("/api/v1/one/me")
+            || path.StartsWithSegments("/api/v1/one/workspaces"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Org-scoped modules and One surfaces that require ambient tenant (JWT header/slug).
+    /// </summary>
+    public static bool RequiresTenantContext(PathString path)
+    {
+        if (path.StartsWithSegments("/api/v1/admin")
+            || path.StartsWithSegments("/api/v1/lhdn")
+            || path.StartsWithSegments("/api/v1/ops")
+            || path.StartsWithSegments("/api/v1/messaging"))
+        {
+            return true;
+        }
+
+        // One tenant-scoped (storage vault keys, platform API credentials).
+        if (path.StartsWithSegments("/api/v1/one/storage")
+            || path.StartsWithSegments("/api/v1/one/api-keys"))
+        {
+            return true;
+        }
+
+        return false;
     }
 }

@@ -17,7 +17,9 @@ public class LedgerRepository : ILedgerRepository
 
     public async Task<bool> HasEntryBeenProcessedAsync(string referenceType, string referenceId, CancellationToken ct = default)
     {
+        // Workers/event handlers run with empty ambient TenantId (fail-closed filter).
         return await _context.LedgerEntries
+            .IgnoreQueryFilters()
             .AnyAsync(e => e.ReferenceType == referenceType && e.ReferenceId == referenceId, ct);
     }
 

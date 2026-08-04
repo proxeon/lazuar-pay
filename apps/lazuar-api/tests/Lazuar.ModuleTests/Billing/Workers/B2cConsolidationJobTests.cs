@@ -102,7 +102,7 @@ public class B2cConsolidationJobTests
 
         await _job.RunOnceAsync(CancellationToken.None);
 
-        var entry = await _db.LedgerEntries.SingleAsync(e => e.ReferenceId == "tx_eligible");
+        var entry = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_eligible");
         Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
         Assert.That(entry.LhdnValidationStatus, Is.EqualTo(LhdnValidationStatuses.ConsolidatedPending));
         Assert.That(entry.CustomerDocumentNumber, Does.StartWith("RCPT-"));
@@ -123,7 +123,7 @@ public class B2cConsolidationJobTests
 
         await _job.RunOnceAsync(CancellationToken.None);
 
-        var reloaded = await _db.LedgerEntries.SingleAsync(e => e.ReferenceId == "tx_done");
+        var reloaded = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_done");
         Assert.That(reloaded.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
         Assert.That(reloaded.TaxInvoiceId, Is.EqualTo(priorTax));
         Assert.That(reloaded.LhdnValidationStatus, Is.EqualTo(priorStatus));
@@ -143,7 +143,8 @@ public class B2cConsolidationJobTests
 
         await _eventBus.Received(1).PublishAsync(Arg.Any<ConsolidatedInvoiceIssuedIntegrationEvent>());
         Assert.That(
-            await _db.LedgerEntries.CountAsync(e => e.ConsolidationStatus == ConsolidationStatuses.Consolidated),
+            await _db.LedgerEntries.IgnoreQueryFilters()
+                .CountAsync(e => e.ConsolidationStatus == ConsolidationStatuses.Consolidated),
             Is.EqualTo(1));
     }
 }

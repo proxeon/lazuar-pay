@@ -86,7 +86,9 @@ public class B2cConsolidationJob : BackgroundService
 
         // Eligible: B2C receipts pending consolidation (plus legacy null status for backfill).
         // Exclude already consolidated / not required / ignored via ConsolidationStatus when present.
+        // Worker has no ambient TenantId — fail-closed global filter would hide all rows.
         var uninvoicedEntries = await db.LedgerEntries
+            .IgnoreQueryFilters()
             .Include(e => e.Lines)
             .Where(e => e.CustomerType == "B2C"
                 && e.Timestamp >= periodStartUtc

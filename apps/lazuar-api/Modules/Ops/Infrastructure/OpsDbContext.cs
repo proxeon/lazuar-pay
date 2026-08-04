@@ -33,10 +33,10 @@ public class OpsDbContext : PlatformDbContext
             builder.ToTable("Conversations");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
-            // Combine soft-delete with tenant isolation (replacing PlatformDbContext tenant-only filter).
+            // Soft-delete AND tenant isolation (fail-closed; replaces PlatformDbContext tenant-only filter).
             builder.HasQueryFilter(x =>
                 !x.IsDeleted &&
-                (ExecutionContext.TenantId == Guid.Empty || x.OrganizationId == ExecutionContext.TenantId));
+                x.OrganizationId == ExecutionContext.TenantId);
         });
 
         modelBuilder.Entity<OpsMessage>(builder =>

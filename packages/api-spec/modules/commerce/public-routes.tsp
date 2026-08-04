@@ -60,13 +60,22 @@ interface PublicCommerceOperations {
     @body body: CancelPortalRequest,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
-  /** Poll checkout/subscription activation after payment redirect. */
+  /** Poll checkout session activation after payment redirect (tenant-bound; no magic token). */
   @get
-  @route("/checkout/{subId}/status")
-  @doc("Checkout status poller for client-side success pages.")
-  getCheckoutStatus(@path subId: string):
+  @route("/{tenantSlug}/checkout/{sessionId}/status")
+  @doc("Checkout status poller for client-side success pages. Bound to workspace slug; does not mint portal tokens.")
+  getCheckoutStatus(@path tenantSlug: string, @path sessionId: string):
     | CheckoutStatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;
+
+  /** Legacy status poll: requires tenant_slug query; never mints portal tokens. Prefer path with tenantSlug. */
+  @get
+  @route("/checkout/{subId}/status")
+  @doc("Legacy checkout status poller. Requires tenant_slug query parameter.")
+  getCheckoutStatusLegacy(
+    @path subId: string,
+    @query tenant_slug: string,
+  ): CheckoutStatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
   @route("/{tenantSlug}/custom-checkouts/{sessionId}")

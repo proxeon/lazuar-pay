@@ -31,7 +31,7 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
       attempts++;
 
       try {
-        const response = await getCheckoutStatus(subId);
+        const response = await getCheckoutStatus(tenantSlug, subId);
 
         if (response.status === "ACTIVE" || response.status === "COMPLETED") {
           if (response.token) setAccessToken(response.token);
@@ -51,7 +51,7 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
     verifyPayment();
 
     return () => clearTimeout(timeoutId);
-  }, [subId]);
+  }, [subId, tenantSlug]);
 
   if (status === "ERROR") {
     return (

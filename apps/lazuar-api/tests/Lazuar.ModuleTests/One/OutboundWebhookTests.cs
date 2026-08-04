@@ -177,7 +177,7 @@ public class OutboundWebhookTests
             EventType: "subscription.past_due",
             Payload: JsonSerializer.SerializeToElement(new { status = "PAST_DUE" })));
 
-        Assert.That(await db.WebhookDeliveryOutboxes.CountAsync(), Is.EqualTo(1));
+        Assert.That(await db.WebhookDeliveryOutboxes.IgnoreQueryFilters().CountAsync(), Is.EqualTo(1));
     }
 
     [Test]

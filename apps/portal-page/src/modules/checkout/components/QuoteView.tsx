@@ -53,8 +53,8 @@ export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteV
     }
   };
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
-  const downloadDraftUrl = `${API_URL}/public/billing/${tenantSlug}/documents/draft/${checkout.id}`;
+  // Prefer HMAC-signed draft URL from API; unsigned path is rejected server-side.
+  const downloadDraftUrl = checkout.draft_pdf_url;
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -169,14 +169,16 @@ export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteV
       </div>
 
       <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 pt-4">
-        <a 
-          href={downloadDraftUrl} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="w-full sm:w-auto h-12 px-6 border border-border/60 bg-card hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
-        >
-          <Download size={14} /> Download PDF Quote
-        </a>
+        {downloadDraftUrl && (
+          <a
+            href={downloadDraftUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto h-12 px-6 border border-border/60 bg-card hover:bg-secondary text-foreground text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+          >
+            <Download size={14} /> Download PDF Quote
+          </a>
+        )}
         
         {!isCompleted && (
           <button 

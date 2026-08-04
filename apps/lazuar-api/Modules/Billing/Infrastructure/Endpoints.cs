@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -171,26 +169,19 @@ public static class Endpoints
         publicGroup.MapGet("/{tenantSlug}/documents/{ledgerEntryId:guid}", async Task<IResult> (
             string tenantSlug,
             Guid ledgerEntryId,
-            [FromQuery] string sig,
+            [FromQuery] string? sig,
             [FromQuery] long exp,
             IConfiguration config,
             IOneQueryService oneQueryService,
             IR2StorageService r2Service) =>
         {
-            if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > exp)
+            var secret = DocumentLinkSigner.ResolveSecret(config["Jwt:Secret"]);
+            var payload = DocumentLinkSigner.FinalDocumentPayload(tenantSlug, ledgerEntryId, exp);
+            if (!DocumentLinkSigner.TryValidate(secret, payload, sig, exp, out var linkError))
             {
-                return TypedResults.BadRequest("This secure document link has expired.");
-            }
-
-            var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
-            var payload = $"{tenantSlug}:{ledgerEntryId}:{exp}";
-            var keyBytes = Encoding.UTF8.GetBytes(secret);
-            var payloadBytes = Encoding.UTF8.GetBytes(payload);
-            var expectedSig = Convert.ToHexString(HMACSHA256.HashData(keyBytes, payloadBytes)).ToLowerInvariant();
-
-            if (sig.ToLowerInvariant() != expectedSig)
-            {
-                return TypedResults.Unauthorized();
+                return linkError is "This secure document link has expired."
+                    ? TypedResults.BadRequest(linkError)
+                    : TypedResults.Unauthorized();
             }
 
             var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
@@ -207,11 +198,28 @@ public static class Endpoints
         publicGroup.MapGet("/{tenantSlug}/documents/draft/{sessionId:guid}", async Task<IResult> (
             string tenantSlug,
             Guid sessionId,
+            [FromQuery] string? sig,
+            [FromQuery] long exp,
+            IConfiguration config,
             IOneQueryService oneQueryService,
-            IMediator mediator) =>
+            IMediator mediator,
+            HttpContext httpContext) =>
         {
+            var secret = DocumentLinkSigner.ResolveSecret(config["Jwt:Secret"]);
+            var payload = DocumentLinkSigner.DraftDocumentPayload(tenantSlug, sessionId, exp);
+            if (!DocumentLinkSigner.TryValidate(secret, payload, sig, exp, out var linkError))
+            {
+                return linkError is "This secure document link has expired."
+                    ? TypedResults.BadRequest(linkError)
+                    : Results.Json(new { status = 401, title = "Unauthorized", detail = linkError ?? "Invalid document signature." },
+                        statusCode: StatusCodes.Status401Unauthorized);
+            }
+
             var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
             if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            // Ensure ambient tenant for fail-closed EF filters (also set by middleware from route slug).
+            httpContext.Items["TenantId"] = tenantId.Value;
 
             try
             {

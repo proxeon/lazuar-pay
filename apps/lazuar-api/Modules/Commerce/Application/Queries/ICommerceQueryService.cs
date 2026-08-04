@@ -20,7 +20,10 @@ public interface ICommerceQueryService
     Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, string? searchTerm = null);
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
     Task<CommerceStatsDto> GetStatsAsync(Guid organizationId);
-    Task<CheckoutStatusDto?> GetCheckoutStatusAsync(Guid sessionId, CancellationToken ct = default);
+    /// <summary>
+    /// Poll checkout session status for a tenant. Does not mint portal magic tokens.
+    /// </summary>
+    Task<CheckoutStatusDto?> GetCheckoutStatusAsync(Guid organizationId, Guid sessionId, CancellationToken ct = default);
 
     Task<PaginatedResponse<CustomCheckoutDto>> GetCustomCheckoutsAsync(Guid organizationId, int page, int limit);
     Task<CustomCheckoutDto?> GetCustomCheckoutBySessionIdAsync(Guid organizationId, Guid sessionId);

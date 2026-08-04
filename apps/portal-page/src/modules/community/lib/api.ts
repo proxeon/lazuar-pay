@@ -44,12 +44,15 @@ export async function submitCheckout(payload: PublicCheckoutRequestDto) {
   return data;
 }
 
-export async function getCheckoutStatus(subId: string) {
-  const { data, error } = await browserClient.GET("/public/commerce/checkout/{subId}/status", {
-    params: {
-      path: { subId },
+export async function getCheckoutStatus(tenantSlug: string, sessionId: string) {
+  const { data, error } = await browserClient.GET(
+    "/public/commerce/{tenantSlug}/checkout/{sessionId}/status",
+    {
+      params: {
+        path: { tenantSlug, sessionId },
+      },
     },
-  });
+  );
 
   if (error || !data) {
     throw new Error("Status check failed.");

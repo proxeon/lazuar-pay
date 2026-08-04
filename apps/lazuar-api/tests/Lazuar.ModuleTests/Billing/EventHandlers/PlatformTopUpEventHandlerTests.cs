@@ -86,8 +86,8 @@ public class PlatformTopUpEventHandlerTests
     {
         await _handler.HandleAsync(CreateEvent(_tenantId, gatewayTransactionId: ""));
 
-        Assert.That(await _dbContext.LedgerEntries.CountAsync(), Is.EqualTo(0));
-        Assert.That(await _dbContext.TenantCreditBalances.CountAsync(), Is.EqualTo(0));
+        Assert.That(await _dbContext.LedgerEntries.IgnoreQueryFilters().CountAsync(), Is.EqualTo(0));
+        Assert.That(await _dbContext.TenantCreditBalances.IgnoreQueryFilters().CountAsync(), Is.EqualTo(0));
     }
 
     [Test]
@@ -107,8 +107,8 @@ public class PlatformTopUpEventHandlerTests
 
         await _handler.HandleAsync(CreateEvent(_tenantId, "txn_already"));
 
-        Assert.That(await _dbContext.LedgerEntries.CountAsync(), Is.EqualTo(1));
-        Assert.That(await _dbContext.TenantCreditBalances.CountAsync(), Is.EqualTo(0));
+        Assert.That(await _dbContext.LedgerEntries.IgnoreQueryFilters().CountAsync(), Is.EqualTo(1));
+        Assert.That(await _dbContext.TenantCreditBalances.IgnoreQueryFilters().CountAsync(), Is.EqualTo(0));
     }
 
     [Test]
@@ -158,6 +158,6 @@ public class PlatformTopUpEventHandlerTests
 
         await _handler.HandleAsync(@event);
 
-        Assert.That(await _dbContext.LedgerEntries.CountAsync(), Is.EqualTo(0));
+        Assert.That(await _dbContext.LedgerEntries.IgnoreQueryFilters().CountAsync(), Is.EqualTo(0));
     }
 }

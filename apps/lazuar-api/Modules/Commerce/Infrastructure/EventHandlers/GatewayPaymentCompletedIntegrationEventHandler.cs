@@ -40,20 +40,27 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
             return;
         }
 
+        // Optional metadata tenant_id must match event OrganizationId when present.
+        if (@event.Metadata.TryGetValue("tenant_id", out var metaTenantStr)
+            && Guid.TryParse(metaTenantStr, out var metaTenantId)
+            && metaTenantId != @event.OrganizationId)
+        {
+            return;
+        }
+
         if (!TryResolveCorrelationId(@event, out var correlationId))
         {
             return;
         }
 
         // Session path: open checkout session (initial subscribe / custom payment link).
-        var session = await _repository.GetCheckoutSessionByIdAsync(correlationId);
+        // Org-scoped load under fail-closed global filter (workers have empty ambient TenantId).
+        var session = await _dbContext.CheckoutSessions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == correlationId && s.OrganizationId == @event.OrganizationId);
+
         if (session != null && session.Status == "OPEN")
         {
-            if (session.OrganizationId != @event.OrganizationId)
-            {
-                return;
-            }
-
             await HandleOpenCheckoutSessionAsync(@event, session, type!);
             return;
         }
@@ -96,10 +103,21 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
             return;
         }
 
-        var product = await _repository.GetProductByIdAsync(session.ProductId ?? Guid.Empty);
+        var product = await _dbContext.Products
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p =>
+                p.Id == (session.ProductId ?? Guid.Empty)
+                && p.OrganizationId == session.OrganizationId);
+
         if (product == null)
         {
             throw new InvalidOperationException($"Product associated with session {session.Id} not found.");
+        }
+
+        // Resource ownership: product must belong to the same org as the checkout session / event.
+        if (product.OrganizationId != @event.OrganizationId)
+        {
+            return;
         }
 
         if (product.Interval != "one_time")
@@ -159,13 +177,20 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
         GatewayPaymentCompletedIntegrationEvent @event,
         Guid subscriptionId)
     {
-        var existingSub = await _repository.GetSubscriptionByIdAsync(subscriptionId);
-        if (existingSub == null || existingSub.OrganizationId != @event.OrganizationId)
+        var existingSub = await _dbContext.Subscriptions
+            .IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.OrganizationId == @event.OrganizationId);
+
+        if (existingSub == null)
         {
             return;
         }
 
-        var productInfo = await _repository.GetProductByIdAsync(existingSub.ProductId);
+        var productInfo = await _dbContext.Products
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == existingSub.ProductId && p.OrganizationId == @event.OrganizationId);
+
         if (productInfo == null || productInfo.Interval == "one_time")
         {
             return;

@@ -1,8 +1,7 @@
 using System;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -64,13 +63,12 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
 
         if (template == null) return;
 
-        var exp = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeSeconds();
-        var payload = $"{data.TenantSlug}:{@event.LedgerEntryId}:{exp}";
-        var secret = _config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
-        
-        var sig = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+        var exp = DocumentLinkSigner.ExpiryUnixSeconds(TimeSpan.FromDays(30));
+        var secret = DocumentLinkSigner.ResolveSecret(_config["Jwt:Secret"]);
+        var payload = DocumentLinkSigner.FinalDocumentPayload(data.TenantSlug, @event.LedgerEntryId, exp);
+        var sig = DocumentLinkSigner.Sign(secret, payload);
         var apiBaseUrl = _config["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
-        
+
         var documentLink = $"{apiBaseUrl}/public/billing/{data.TenantSlug}/documents/{@event.LedgerEntryId}?sig={sig}&exp={exp}";
 
         var customerName = data.CustomerName ?? "Customer";

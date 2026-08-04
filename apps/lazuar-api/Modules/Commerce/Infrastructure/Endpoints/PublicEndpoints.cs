@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
+using BuildingBlocks.Infrastructure;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -130,12 +131,20 @@ public static class PublicEndpoints
         group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
             [FromBody] PublicCheckoutRequestDto req,
             IOneQueryService oneQueryService,
-            IMediator mediator) =>
+            IMediator mediator,
+            HttpContext httpContext) =>
         {
             Guid? parsedSessionId = null;
             if (!string.IsNullOrWhiteSpace(req.Session_id) && Guid.TryParse(req.Session_id, out var sid))
             {
                 parsedSessionId = sid;
+            }
+
+            // Bind ambient tenant before EF (fail-closed) — no tenantSlug route value on this path.
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(req.Tenant_slug);
+            if (tenantId.HasValue)
+            {
+                httpContext.Items["TenantId"] = tenantId.Value;
             }
 
             var command = new InitiateCheckoutCommand(
@@ -175,16 +184,25 @@ public static class PublicEndpoints
             }
         });
 
-        group.MapGet("/checkout/{subId}/status", async Task<Results<Ok<CheckoutStatusResponse>, NotFound>> (
-            string subId,
-            ICommerceQueryService queryService) =>
+        // Preferred: tenant-bound checkout status (no magic token mint).
+        group.MapGet("/{tenantSlug}/checkout/{sessionId}/status", async Task<Results<Ok<CheckoutStatusResponse>, NotFound>> (
+            string tenantSlug,
+            string sessionId,
+            IOneQueryService oneQueryService,
+            ICommerceQueryService queryService,
+            HttpContext httpContext) =>
         {
-            if (!Guid.TryParse(subId, out var parsedSessionId))
+            if (!Guid.TryParse(sessionId, out var parsedSessionId))
             {
                 return TypedResults.NotFound();
             }
 
-            var result = await queryService.GetCheckoutStatusAsync(parsedSessionId);
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            httpContext.Items["TenantId"] = tenantId.Value;
+
+            var result = await queryService.GetCheckoutStatusAsync(tenantId.Value, parsedSessionId);
             if (result == null)
             {
                 return TypedResults.NotFound();
@@ -193,7 +211,45 @@ public static class PublicEndpoints
             var response = new CheckoutStatusResponse
             {
                 Status = result.Status,
-                Token = result.Token
+                Token = null
+            };
+
+            return TypedResults.Ok(response);
+        });
+
+        // Legacy path: still requires tenant_slug query; never mints portal tokens.
+        group.MapGet("/checkout/{subId}/status", async Task<Results<Ok<CheckoutStatusResponse>, NotFound, BadRequest<string>>> (
+            string subId,
+            [FromQuery] string? tenant_slug,
+            IOneQueryService oneQueryService,
+            ICommerceQueryService queryService,
+            HttpContext httpContext) =>
+        {
+            if (!Guid.TryParse(subId, out var parsedSessionId))
+            {
+                return TypedResults.NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(tenant_slug))
+            {
+                return TypedResults.BadRequest("tenant_slug query parameter is required.");
+            }
+
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenant_slug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            httpContext.Items["TenantId"] = tenantId.Value;
+
+            var result = await queryService.GetCheckoutStatusAsync(tenantId.Value, parsedSessionId);
+            if (result == null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            var response = new CheckoutStatusResponse
+            {
+                Status = result.Status,
+                Token = null
             };
 
             return TypedResults.Ok(response);
@@ -203,13 +259,26 @@ public static class PublicEndpoints
             string tenantSlug,
             Guid sessionId,
             IOneQueryService oneQueryService,
-            ICommerceQueryService queryService) =>
+            ICommerceQueryService queryService,
+            IConfiguration config,
+            HttpContext httpContext) =>
         {
             var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
             if (!tenantId.HasValue) return TypedResults.NotFound();
 
+            httpContext.Items["TenantId"] = tenantId.Value;
+
             var checkout = await queryService.GetCustomCheckoutBySessionIdAsync(tenantId.Value, sessionId);
-            return checkout != null ? TypedResults.Ok(checkout) : TypedResults.NotFound();
+            if (checkout == null) return TypedResults.NotFound();
+
+            var secret = DocumentLinkSigner.ResolveSecret(config["Jwt:Secret"]);
+            var exp = DocumentLinkSigner.ExpiryUnixSeconds(TimeSpan.FromDays(7));
+            var payload = DocumentLinkSigner.DraftDocumentPayload(tenantSlug, sessionId, exp);
+            var sig = DocumentLinkSigner.Sign(secret, payload);
+            var apiBaseUrl = config["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
+            checkout.Draft_pdf_url = $"{apiBaseUrl}/public/billing/{tenantSlug}/documents/draft/{sessionId}?sig={sig}&exp={exp}";
+
+            return TypedResults.Ok(checkout);
         });
 
         group.MapGet("/checkout/{subId:guid}/arrears", async Task<Results<Ok<ArrearsSummaryDto>, NotFound>> (

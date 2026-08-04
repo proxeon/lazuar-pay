@@ -78,7 +78,7 @@ public class GatewayRefundCompletedHandlerTests
 
         await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 108m, tax: 0m));
 
-        var refund = await _db.LedgerEntries.Include(e => e.Lines)
+        var refund = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
             .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund);
 
         var taxLine = refund.Lines.Single(l => l.AccountType == AccountTypes.LiabilityTaxPayable);
@@ -97,7 +97,7 @@ public class GatewayRefundCompletedHandlerTests
         // 50% of 108 = 54 → tax = 4
         await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 54m, tax: 0m));
 
-        var refund = await _db.LedgerEntries.Include(e => e.Lines)
+        var refund = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
             .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund);
 
         var taxLine = refund.Lines.Single(l => l.AccountType == AccountTypes.LiabilityTaxPayable);
@@ -111,7 +111,7 @@ public class GatewayRefundCompletedHandlerTests
 
         await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, "txn_missing", amount: 50m, tax: 0m));
 
-        var refund = await _db.LedgerEntries.Include(e => e.Lines)
+        var refund = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
             .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund);
 
         Assert.That(refund.Lines.Any(l => l.AccountType == AccountTypes.LiabilityTaxPayable), Is.False);
@@ -128,7 +128,7 @@ public class GatewayRefundCompletedHandlerTests
 
         await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 54m, tax: 2m));
 
-        var refund = await _db.LedgerEntries.Include(e => e.Lines)
+        var refund = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
             .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund);
 
         var taxLine = refund.Lines.Single(l => l.AccountType == AccountTypes.LiabilityTaxPayable);
@@ -147,7 +147,8 @@ public class GatewayRefundCompletedHandlerTests
         await _handler.HandleAsync(evt);
 
         Assert.That(
-            await _db.LedgerEntries.CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
+            await _db.LedgerEntries.IgnoreQueryFilters()
+                .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
             Is.EqualTo(1));
     }
 }

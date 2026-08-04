@@ -279,6 +279,10 @@ model ValidateCouponResponseDto {
 
 model CheckoutStatusResponse {
   status: string;
+  /**
+   * Deprecated: anonymous status poll no longer mints portal magic tokens.
+   * Use email magic links or authenticated portal access instead.
+   */
   token?: string;
 }
 
@@ -323,6 +327,8 @@ model CustomCheckoutDto {
   line_items: CustomLineItemDto[];
   total_amount: float64;
   created_at: utcDateTime;
+  /** HMAC-signed public URL for draft proforma PDF (sig+exp). */
+  draft_pdf_url?: string;
 }
 
 model ArrearsSummaryDto {

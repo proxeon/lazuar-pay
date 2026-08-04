@@ -380,6 +380,12 @@ public static class Endpoints
             }
 
             var tenantId = ctx.TenantId;
+            if (tenantId == Guid.Empty)
+            {
+                return Task.FromResult<Results<Ok<GetPresignedUrlResponseDto>, BadRequest<string>>>(
+                    TypedResults.BadRequest("Tenant context is required to create a presigned storage URL."));
+            }
+
             var bucket = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
             var publicUrlBase = config["R2_PUBLIC_DEV_URL"]?.TrimEnd('/');
 

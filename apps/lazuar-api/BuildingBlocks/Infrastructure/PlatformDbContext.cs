@@ -40,8 +40,9 @@ public abstract class PlatformDbContext : DbContext
 
     private void ConfigureGlobalFilter<TEntity>(ModelBuilder modelBuilder) where TEntity : class, IMustHaveTenant
     {
+        // Fail-closed: empty ambient TenantId matches no rows (workers must IgnoreQueryFilters + explicit org).
         modelBuilder.Entity<TEntity>().HasQueryFilter(e =>
-            ExecutionContext.TenantId == Guid.Empty || e.OrganizationId == ExecutionContext.TenantId);
+            e.OrganizationId == ExecutionContext.TenantId);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -55,6 +56,22 @@ public abstract class PlatformDbContext : DbContext
                 {
                     tenantEntity.OrganizationId = ExecutionContext.TenantId;
                 }
+            }
+        }
+
+        // 1b. Write guard: never persist IMustHaveTenant without an organization after stamp.
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.State is not (EntityState.Added or EntityState.Modified))
+            {
+                continue;
+            }
+
+            if (entry.Entity is IMustHaveTenant tenantEntity && tenantEntity.OrganizationId == Guid.Empty)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot save {entry.Entity.GetType().Name} with empty OrganizationId. " +
+                    "Set OrganizationId explicitly or ensure ambient TenantId is present for stamp.");
             }
         }
 

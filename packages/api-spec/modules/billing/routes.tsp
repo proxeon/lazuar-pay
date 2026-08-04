@@ -83,7 +83,11 @@ interface PublicBillingOperations {
 
   @get
   @route("/{tenantSlug}/documents/draft/{sessionId}")
-  getDraftDocument(@path tenantSlug: string, @path sessionId: string):
-    | bytes
-    | LazuarApi.Core.ProblemDetailsResponse;
+  @doc("Draft proforma PDF. Requires HMAC sig + exp (payload tenantSlug:draft:sessionId:exp).")
+  getDraftDocument(
+    @path tenantSlug: string,
+    @path sessionId: string,
+    @query sig: string,
+    @query exp: int64,
+  ): bytes | LazuarApi.Core.ProblemDetailsResponse;
 }

@@ -96,7 +96,7 @@ public class ChargebackClawbackHandlerTests
 
         await _handler.HandleAsync(Dispute(tx));
 
-        var reverse = await _db.LedgerEntries.Include(e => e.Lines)
+        var reverse = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
             .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback);
 
         Assert.That(reverse.ReferenceId, Is.EqualTo(tx));
@@ -121,7 +121,8 @@ public class ChargebackClawbackHandlerTests
         await _handler.HandleAsync(Dispute(tx));
 
         Assert.That(
-            await _db.LedgerEntries.CountAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback),
+            await _db.LedgerEntries.IgnoreQueryFilters()
+                .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback),
             Is.EqualTo(1));
     }
 
@@ -141,7 +142,7 @@ public class ChargebackClawbackHandlerTests
 
         await _handler.HandleAsync(@event);
 
-        Assert.That(await _db.LedgerEntries.CountAsync(), Is.EqualTo(0));
+        Assert.That(await _db.LedgerEntries.IgnoreQueryFilters().CountAsync(), Is.EqualTo(0));
         await _mediator.DidNotReceive().Send(Arg.Any<ClawbackCreditsCommand>(), Arg.Any<CancellationToken>());
     }
 }

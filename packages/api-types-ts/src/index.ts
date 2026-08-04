@@ -1327,6 +1327,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/commerce/{tenantSlug}/checkout/{sessionId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Checkout status poller for client-side success pages. Bound to workspace slug; does not mint portal tokens. */
+        get: operations["PublicCommerceOperations_getCheckoutStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/commerce/checkout/{subId}/status": {
         parameters: {
             query?: never;
@@ -1334,8 +1351,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Checkout status poller for client-side success pages. */
-        get: operations["PublicCommerceOperations_getCheckoutStatus"];
+        /** @description Legacy checkout status poller. Requires tenant_slug query parameter. */
+        get: operations["PublicCommerceOperations_getCheckoutStatusLegacy"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1736,6 +1753,8 @@ export interface components {
             total_amount: number;
             /** Format: date-time */
             created_at: string;
+            /** HMAC-signed public URL for draft proforma PDF (sig+exp). */
+            draft_pdf_url?: string;
         };
         "Commerce.CustomLineItemDto": {
             description: string;
@@ -9361,7 +9380,11 @@ export interface operations {
     };
     PublicBillingOperations_getDraftDocument: {
         parameters: {
-            query?: never;
+            query: {
+                sig: string;
+                /** Format: int64 */
+                exp: number;
+            };
             header?: never;
             path: {
                 tenantSlug: string;
@@ -9635,7 +9658,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                subId: string;
+                tenantSlug: string;
+                sessionId: string;
             };
             cookie?: never;
         };
@@ -9670,6 +9694,57 @@ export interface operations {
             };
             /** @description Access is forbidden. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicCommerceOperations_getCheckoutStatusLegacy: {
+        parameters: {
+            query: {
+                tenant_slug: string;
+            };
+            header?: never;
+            path: {
+                subId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Commerce.CheckoutStatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1428,6 +1428,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("draft_pdf_url")]
+        public string? Draft_pdf_url { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]

@@ -465,13 +465,19 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.2 Tenant isolation hardening
 
-- [ ] Fail-closed global filter strategy for HTTP request scopes (no “empty tenant = all rows”)
-- [ ] Expand mandatory tenant middleware beyond `/admin/` to `/lhdn`, `/ops`, and other OrgAdmin modules
-- [ ] Webhook resource ownership: session/subscription `OrganizationId` must match path tenant
-- [ ] Public commerce: bind checkout status / magic token mint to safer proof (slug + sig / email OTP)
-- [ ] Draft PDF public route: require HMAC like final documents
-- [ ] Presigned storage: reject empty TenantId
-- [ ] Architecture tests: no second `HasQueryFilter` without tenant clause; allowlist anonymous routes
+- [x] Fail-closed global filter strategy for HTTP request scopes (no “empty tenant = all rows”)
+  - Residual: workers/event handlers must keep `IgnoreQueryFilters` + explicit `OrganizationId`; public routes bind ambient tenant via slug/middleware when possible
+- [x] Expand mandatory tenant middleware beyond `/admin/` to `/lhdn`, `/ops`, and other OrgAdmin modules
+  - Residual: One workspaces/auth/me remain exempt (no ambient tenant yet); only `/one/storage` + `/one/api-keys` require tenant among One routes
+- [x] Webhook resource ownership: session/subscription `OrganizationId` must match path tenant
+  - Residual: GatewayPaymentCompleted uses org-scoped IgnoreQueryFilters; optional metadata `tenant_id` mismatch is no-op; GatewayPaymentFailed already org-scoped
+- [x] Public commerce: bind checkout status / magic token mint to safer proof (slug + sig / email OTP)
+  - Residual: preferred path `GET /public/commerce/{tenantSlug}/checkout/{sessionId}/status`; legacy path requires `tenant_slug` query; **no magic token mint** on status poll (portal uses email magic links)
+- [x] Draft PDF public route: require HMAC like final documents
+  - Residual: payload `tenantSlug:draft:{sessionId}:{exp}`; custom checkout returns signed `draft_pdf_url`; OpenAPI dist not recompiled via full `task gen` in this pass (TypeSpec + hand-synced clients updated)
+- [x] Presigned storage: reject empty TenantId
+- [x] Architecture tests: no second `HasQueryFilter` without tenant clause; allowlist anonymous routes
+  - Residual: full anonymous route matrix is smoke via `IsTenantExemptPath` / `RequiresTenantContext`, not a complete Minimal API enumeration
 
 ## C.3 Commerce product completeness (ops/portal truth)
 
