@@ -18,6 +18,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
     private readonly IPaymentWebhookLogRepository _logRepository;
     private readonly IPaymentGatewayFactory _gatewayFactory;
     private readonly IEventBus _eventBus;
+    private readonly ISecretVault _secretVault;
     private readonly ILogger<ProcessGatewayWebhookCommandHandler> _logger;
 
     public ProcessGatewayWebhookCommandHandler(
@@ -25,12 +26,14 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         IPaymentWebhookLogRepository logRepository,
         IPaymentGatewayFactory gatewayFactory,
         [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus,
+        ISecretVault secretVault,
         ILogger<ProcessGatewayWebhookCommandHandler> logger)
     {
         _configRepository = configRepository;
         _logRepository = logRepository;
         _gatewayFactory = gatewayFactory;
         _eventBus = eventBus;
+        _secretVault = secretVault;
         _logger = logger;
     }
 
@@ -55,10 +58,14 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             throw new InvalidOperationException("Webhook secret not configured for this tenant gateway.");
         }
 
+        // Webhooks still process when gateway is soft-disabled (credentials retained).
+        var plainApiKey = _secretVault.DecryptOrPlaintextNullable(config.ApiKey) ?? "";
+        var plainWebhookSecret = _secretVault.DecryptOrPlaintext(config.WebhookSecret!);
+
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
         var parsedResult = await adapter.ParseWebhookAsync(
-            config.ApiKey ?? "",
-            config.WebhookSecret,
+            plainApiKey,
+            plainWebhookSecret,
             request.RawBody,
             request.Headers,
             0, // estimatedFeePercentage - removed from config

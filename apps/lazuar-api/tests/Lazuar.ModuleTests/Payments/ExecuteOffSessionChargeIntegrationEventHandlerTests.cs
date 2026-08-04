@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Events;
@@ -16,6 +18,14 @@ namespace Lazuar.ModuleTests.Payments;
 [TestFixture]
 public class ExecuteOffSessionChargeIntegrationEventHandlerTests
 {
+    private static ISecretVault CreateVault() =>
+        new AesSecretVault(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Kms:MasterKey"] = "test-master-key-for-unit-tests-32"
+            })
+            .Build());
+
     [Test]
     public async Task HandleAsync_PassesCorrelationArgsToChargeOffSession()
     {
@@ -60,6 +70,7 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
             configRepo,
             factory,
             eventBus,
+            CreateVault(),
             Substitute.For<ILogger<ExecuteOffSessionChargeIntegrationEventHandler>>());
 
         await handler.HandleAsync(new ExecuteOffSessionChargeIntegrationEvent(
@@ -109,6 +120,7 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
             configRepo,
             factory,
             eventBus,
+            CreateVault(),
             Substitute.For<ILogger<ExecuteOffSessionChargeIntegrationEventHandler>>());
 
         await handler.HandleAsync(new ExecuteOffSessionChargeIntegrationEvent(
@@ -151,6 +163,7 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
             configRepo,
             factory,
             eventBus,
+            CreateVault(),
             Substitute.For<ILogger<ExecuteOffSessionChargeIntegrationEventHandler>>());
 
         await handler.HandleAsync(new ExecuteOffSessionChargeIntegrationEvent(

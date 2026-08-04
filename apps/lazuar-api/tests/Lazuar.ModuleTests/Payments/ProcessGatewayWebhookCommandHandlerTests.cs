@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Payments.Application.Commands;
 using Modules.Payments.Application.Ports;
@@ -17,12 +19,20 @@ namespace Lazuar.ModuleTests.Payments;
 [TestFixture]
 public class ProcessGatewayWebhookCommandHandlerTests
 {
+    private static ISecretVault CreateVault() =>
+        new AesSecretVault(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Kms:MasterKey"] = "test-master-key-for-unit-tests-32"
+            })
+            .Build());
+
     private static ProcessGatewayWebhookCommandHandler CreateHandler(
         ITenantPaymentConfigRepository configRepo,
         IPaymentWebhookLogRepository logRepo,
         IPaymentGatewayFactory gatewayFactory,
         IEventBus eventBus)
-        => new(configRepo, logRepo, gatewayFactory, eventBus, NullLogger<ProcessGatewayWebhookCommandHandler>.Instance);
+        => new(configRepo, logRepo, gatewayFactory, eventBus, CreateVault(), NullLogger<ProcessGatewayWebhookCommandHandler>.Instance);
 
     [Test]
     public async Task Handle_PaymentFailed_Publishes_GatewayPaymentFailedIntegrationEvent()

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -12,13 +11,16 @@ public class GenerateCustomerPortalQueryHandler : IQueryHandler<GenerateCustomer
 {
     private readonly ITenantPaymentConfigRepository _configRepository;
     private readonly IPaymentGatewayFactory _gatewayFactory;
+    private readonly ISecretVault _secretVault;
 
     public GenerateCustomerPortalQueryHandler(
         ITenantPaymentConfigRepository configRepository,
-        IPaymentGatewayFactory gatewayFactory)
+        IPaymentGatewayFactory gatewayFactory,
+        ISecretVault secretVault)
     {
         _configRepository = configRepository;
         _gatewayFactory = gatewayFactory;
+        _secretVault = secretVault;
     }
 
     public async Task<string> Handle(GenerateCustomerPortalQuery request, CancellationToken cancellationToken)
@@ -31,10 +33,16 @@ public class GenerateCustomerPortalQueryHandler : IQueryHandler<GenerateCustomer
             throw new InvalidOperationException("Stripe is not configured for this tenant (required for Customer Portal).");
         }
 
+        if (!config.IsActive)
+        {
+            throw new InvalidOperationException("Stripe is disabled for this tenant.");
+        }
+
+        var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
         return await adapter.GenerateCustomerPortalAsync(
-            config.ApiKey,
+            plainApiKey,
             request.CustomerEmail,
             request.ReturnUrl);
     }

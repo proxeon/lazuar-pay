@@ -12,13 +12,16 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
 {
     private readonly ITenantPaymentConfigRepository _configRepository;
     private readonly IPaymentGatewayFactory _gatewayFactory;
+    private readonly ISecretVault _secretVault;
 
     public GenerateCheckoutSessionQueryHandler(
         ITenantPaymentConfigRepository configRepository,
-        IPaymentGatewayFactory gatewayFactory)
+        IPaymentGatewayFactory gatewayFactory,
+        ISecretVault secretVault)
     {
         _configRepository = configRepository;
         _gatewayFactory = gatewayFactory;
+        _secretVault = secretVault;
     }
 
     public async Task<string> Handle(GenerateCheckoutSessionQuery request, CancellationToken cancellationToken)
@@ -32,10 +35,16 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
             throw new InvalidOperationException($"Payment gateway '{gatewayName}' is not configured for this workspace.");
         }
 
+        if (!config.IsActive)
+        {
+            throw new InvalidOperationException($"Payment gateway '{gatewayName}' is disabled for this workspace.");
+        }
+
+        var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
         var result = await adapter.GenerateCheckoutAsync(
-            config.ApiKey,
+            plainApiKey,
             request.TenantId,
             request.Amount,
             request.Currency,
@@ -70,7 +79,7 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
         }
 
         var configs = await _configRepository.GetAllByTenantIdAsync(tenantId, cancellationToken);
-        var firstActive = configs.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.ApiKey));
+        var firstActive = configs.FirstOrDefault(c => c.IsActive && !string.IsNullOrWhiteSpace(c.ApiKey));
         if (firstActive != null && !string.IsNullOrWhiteSpace(firstActive.GatewayType))
         {
             return firstActive.GatewayType.Trim().ToUpperInvariant();

@@ -72,7 +72,7 @@ export default function DashboardPage() {
   ];
 
   // FIX: Check if the array is empty or if no gateways have a valid API key
-  const showGatewayWarning = paymentConfigError || !paymentConfigs || paymentConfigs.length === 0 || !paymentConfigs.some(c => c.api_key || c.secret_key);
+  const showGatewayWarning = paymentConfigError || !paymentConfigs || paymentConfigs.length === 0 || !paymentConfigs.some(c => c.is_active && (c.has_api_key || c.has_secret_key));
   const showEmailWarning = emailConfigError || !emailConfig || !emailConfig.is_active || emailConfig.has_api_key === false;
 
   return (

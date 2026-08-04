@@ -64,6 +64,9 @@
     <!-- External Module Contracts needed for Integration Events in Tests -->
     <ProjectReference Include="..\..\Modules\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Payments\Contracts\Modules.Payments.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Domain\Modules.Payments.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Application\Modules.Payments.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Infrastructure\Modules.Payments.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

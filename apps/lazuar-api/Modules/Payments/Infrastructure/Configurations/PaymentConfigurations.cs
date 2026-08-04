@@ -15,6 +15,7 @@ public class TenantPaymentConfigurationConfig : IEntityTypeConfiguration<TenantP
         builder.HasIndex(x => new { x.OrganizationId, x.GatewayType }).IsUnique();
 
         builder.Property(x => x.GatewayType).HasMaxLength(50);
+        builder.Property(x => x.IsActive).HasDefaultValue(true);
     }
 }
 

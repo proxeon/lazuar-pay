@@ -25,7 +25,10 @@ public class GetPaymentConfigAgentQueryHandler : IQueryHandler<GetPaymentConfigA
     public async Task<AgentPaymentConfigResult> Handle(GetPaymentConfigAgentQuery request, CancellationToken cancellationToken)
     {
         var configs = await _repository.GetAllByTenantIdAsync(request.OrganizationId, cancellationToken);
-        var gateways = configs.Where(c => !string.IsNullOrEmpty(c.ApiKey)).Select(c => c.GatewayType).ToArray();
+        var gateways = configs
+            .Where(c => c.IsActive && !string.IsNullOrEmpty(c.ApiKey))
+            .Select(c => c.GatewayType)
+            .ToArray();
 
         return new AgentPaymentConfigResult(gateways);
     }

@@ -19,17 +19,20 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
     private readonly ILhdnRepository _repository;
     private readonly ILhdnGatewayAdapter _gateway;
     private readonly IDocumentStrategyFactory _strategyFactory;
+    private readonly ISecretVault _secretVault;
     private readonly ILogger<GatewayRefundCompletedIntegrationEventHandler> _logger;
 
     public GatewayRefundCompletedIntegrationEventHandler(
         ILhdnRepository repository,
         ILhdnGatewayAdapter gateway,
         IDocumentStrategyFactory strategyFactory,
+        ISecretVault secretVault,
         ILogger<GatewayRefundCompletedIntegrationEventHandler> logger)
     {
         _repository = repository;
         _gateway = gateway;
         _strategyFactory = strategyFactory;
+        _secretVault = secretVault;
         _logger = logger;
     }
 
@@ -54,7 +57,8 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
         if (hoursSinceValidation <= 72)
         {
-            var token = await _gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin);
+            var clientSecret = _secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
+            var token = await _gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin);
             var cancelResult = await _gateway.CancelDocumentAsync(config.MyInvoisClientId, token, originalDocument.LhdnUuid, "Customer requested refund", config.IntermediaryMode, config.SupplierTin);
 
             if (cancelResult.Success)

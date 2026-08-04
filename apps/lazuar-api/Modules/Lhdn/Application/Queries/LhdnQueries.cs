@@ -57,10 +57,12 @@ public record GetLhdnTenantConfigQuery(Guid OrganizationId) : IQuery<LhdnTenantC
 public class GetLhdnTenantConfigQueryHandler : IQueryHandler<GetLhdnTenantConfigQuery, LhdnTenantConfigDto?>
 {
     private readonly ILhdnRepository _repository;
+    private readonly ISecretVault _secretVault;
 
-    public GetLhdnTenantConfigQueryHandler(ILhdnRepository repository)
+    public GetLhdnTenantConfigQueryHandler(ILhdnRepository repository, ISecretVault secretVault)
     {
         _repository = repository;
+        _secretVault = secretVault;
     }
 
     public async Task<LhdnTenantConfigDto?> Handle(GetLhdnTenantConfigQuery request, CancellationToken ct)
@@ -69,11 +71,7 @@ public class GetLhdnTenantConfigQueryHandler : IQueryHandler<GetLhdnTenantConfig
         if (config == null) return null;
 
         var hasSecret = !string.IsNullOrEmpty(config.MyInvoisClientSecret);
-        string? secretHint = null;
-        if (hasSecret && config.MyInvoisClientSecret!.Length >= 4)
-        {
-            secretHint = config.MyInvoisClientSecret[^4..];
-        }
+        var secretHint = _secretVault.HintLast4(config.MyInvoisClientSecret);
 
         var environment = string.Equals(config.Environment, "PROD", StringComparison.OrdinalIgnoreCase)
             ? LhdnTenantConfigDtoEnvironment.PROD

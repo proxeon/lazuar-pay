@@ -121,7 +121,7 @@ public static class PlatformEndpoints
             IMediator mediator) =>
         {
             var command = new UpdatePaymentConfigCommand(
-                ctx.TenantId, req.Gateway_type, req.Api_key, req.Collection_id, req.Webhook_secret, req.Secret_key);
+                ctx.TenantId, req.Gateway_type, req.Api_key, req.Collection_id, req.Webhook_secret, req.Secret_key, req.Is_active);
             
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "saved" });

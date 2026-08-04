@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Modules.Lhdn.Application.Ports;
@@ -15,12 +16,18 @@ public class TaxpayerValidationService : ITaxpayerValidationService
 {
     private readonly LhdnDbContext _context;
     private readonly ILhdnGatewayAdapter _gatewayAdapter;
+    private readonly ISecretVault _secretVault;
     private readonly string _hashSalt;
 
-    public TaxpayerValidationService(LhdnDbContext context, ILhdnGatewayAdapter gatewayAdapter, IConfiguration configuration)
+    public TaxpayerValidationService(
+        LhdnDbContext context,
+        ILhdnGatewayAdapter gatewayAdapter,
+        IConfiguration configuration,
+        ISecretVault secretVault)
     {
         _context = context;
         _gatewayAdapter = gatewayAdapter;
+        _secretVault = secretVault;
         _hashSalt = configuration["Lhdn:TinHashSalt"] ?? "default_local_salt_replace_in_prod";
     }
 
@@ -51,7 +58,8 @@ public class TaxpayerValidationService : ITaxpayerValidationService
             throw new InvalidOperationException("LHDN Tenant configuration missing or incomplete.");
         }
 
-        var token = await _gatewayAdapter.GetTokenAsync(organizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+        var clientSecret = _secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
+        var token = await _gatewayAdapter.GetTokenAsync(organizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct);
         
         var validationResult = await _gatewayAdapter.ValidateTaxpayerTinAsync(config.MyInvoisClientId, token, normalizedTin, normalizedIdType, normalizedIdValue, config.IntermediaryMode, config.SupplierTin, ct);
 

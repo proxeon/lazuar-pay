@@ -567,10 +567,23 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.7 Secrets and BYOK
 
-- [ ] Encrypt payment gateway secrets at rest (or KMS plan)
-- [ ] Encrypt LHDN client secrets / PFX
-- [ ] Remove committed secrets from appsettings; Key Vault / user secrets only
-- [ ] Payment config: soft-disable gateway without delete (IsActive or equivalent)
+- [x] Encrypt payment gateway secrets at rest (or KMS plan)
+  - `ISecretVault` / `AesSecretVault` on save for ApiKey + WebhookSecret; decrypt only in adapters/handlers
+  - GET returns `has_*` + last-4 hints + `is_active` (never ciphertext/plaintext)
+- [x] Encrypt LHDN client secrets / PFX
+  - MyInvois client secret encrypted via `ISecretVault` on update; decrypt at token call sites
+  - `CertificateVaultService` now AES-encrypts PFX bytes + password (legacy plaintext PFX still loads)
+- [x] Remove committed secrets from appsettings; Key Vault / user secrets only
+  - Base `appsettings.json` cleared; Dev JWT/KMS only; UserSecretsId + README / deploy docs
+- [x] Payment config: soft-disable gateway without delete (IsActive or equivalent)
+  - `TenantPaymentConfiguration.IsActive` + migration; inactive blocks checkout/off-session/portal; webhooks/refunds keep credentials
+
+### C.7 residuals
+- Existing payment/LHDN rows may still hold plaintext until re-saved (legacy decrypt fallback)
+- No bulk re-encrypt migration for historical TenantPaymentConfigurations / LhdnTenantConfig secrets
+- OpenAPI `task gen` / CI exit-code honesty deferred to C.8 (contracts patched manually here)
+- Superadmin/ops payment UI uses has_* UX; TypeSpec-generated OpenAPI dist patched but full regen is C.8
+- Production must set `Kms__MasterKey` (or rely on Jwt) — empty base appsettings will fail vault construction if neither env nor Development config is present
 
 ## C.8 Contract & frontend honesty pass
 

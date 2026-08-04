@@ -58,3 +58,34 @@ Configurable intervals: `Workers` section in appsettings (see `BackgroundWorkerO
 ## Secrets (GitHub Actions)
 
 `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, optional `HUB_ENV_FILE`, `GHCR_PULL_TOKEN`.
+
+## Secrets & BYOK (Phase C.7)
+
+**Never commit real secrets** into `appsettings*.json`. Production injects env vars via `.env` on the VPS
+(see `env.example`). Local API uses:
+
+| Source | Use |
+|--------|-----|
+| `dotnet user-secrets` (`UserSecretsId` on Lazuar.Api) | Local Jwt/Kms/Resend/AI keys |
+| Environment variables (`Jwt__Secret`, `Kms__MasterKey`, …) | Docker / CI / prod |
+| Azure Key Vault (optional `KeyVault:Uri` in config) | Production secret store |
+| Tenant BYOK rows (encrypted at rest) | Payment gateways, LHDN client secret/PFX, Resend |
+
+### Required platform secrets
+
+| Key | Purpose |
+|-----|---------|
+| `Jwt__Secret` | Auth tokens (min 32 chars) |
+| `Kms__MasterKey` | AES master key for tenant secrets at rest (falls back to Jwt if unset) |
+| `ConnectionStrings__*` | Postgres |
+| `Resend__ApiKey` | Optional platform email |
+
+### Tenant secrets (BYOK)
+
+Stored in DB encrypted with `AesSecretVault` / LHDN `CertificateVaultService` (AES-256-CBC, IV prepended).
+
+- Payments: API key + webhook secret encrypted; soft-disable via `IsActive` without deleting credentials
+- LHDN: MyInvois client secret encrypted; PFX bytes + password encrypted
+- Communications: Resend API key encrypted (Phase C.4)
+
+GET endpoints return `has_*` flags and last-4 hints only — never ciphertext or plaintext secrets.

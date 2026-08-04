@@ -16,10 +16,12 @@ public record UpdateLhdnTenantConfigCommand(Guid OrganizationId, UpdateLhdnTenan
 public class UpdateLhdnTenantConfigCommandHandler : ICommandHandler<UpdateLhdnTenantConfigCommand>
 {
     private readonly ILhdnRepository _repository;
+    private readonly ISecretVault _secretVault;
 
-    public UpdateLhdnTenantConfigCommandHandler(ILhdnRepository repository)
+    public UpdateLhdnTenantConfigCommandHandler(ILhdnRepository repository, ISecretVault secretVault)
     {
         _repository = repository;
+        _secretVault = secretVault;
     }
 
     public async Task Handle(UpdateLhdnTenantConfigCommand request, CancellationToken ct)
@@ -60,7 +62,13 @@ public class UpdateLhdnTenantConfigCommandHandler : ICommandHandler<UpdateLhdnTe
             body.Postal,
             body.Country);
 
-        config.UpdateApiCredentialsPreserveSecret(body.Myinvois_client_id, body.Myinvois_client_secret);
+        string? secretToStore = null;
+        if (!SecretVaultExtensions.IsKeepExistingSecret(body.Myinvois_client_secret))
+        {
+            secretToStore = _secretVault.Encrypt(body.Myinvois_client_secret!.Trim());
+        }
+
+        config.UpdateApiCredentialsPreserveSecret(body.Myinvois_client_id, secretToStore);
 
         await _repository.SaveChangesAsync(ct);
     }

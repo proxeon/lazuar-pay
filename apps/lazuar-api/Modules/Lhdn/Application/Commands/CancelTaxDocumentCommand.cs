@@ -18,15 +18,18 @@ public class CancelTaxDocumentCommandHandler : ICommandHandler<CancelTaxDocument
     private readonly ILhdnRepository _repository;
     private readonly ILhdnGatewayAdapter _gatewayAdapter;
     private readonly IEventBus _eventBus;
+    private readonly ISecretVault _secretVault;
 
     public CancelTaxDocumentCommandHandler(
-        ILhdnRepository repository, 
-        ILhdnGatewayAdapter gatewayAdapter, 
-        [FromKeyedServices("LhdnEventBus")] IEventBus eventBus)
+        ILhdnRepository repository,
+        ILhdnGatewayAdapter gatewayAdapter,
+        [FromKeyedServices("LhdnEventBus")] IEventBus eventBus,
+        ISecretVault secretVault)
     {
         _repository = repository;
         _gatewayAdapter = gatewayAdapter;
         _eventBus = eventBus;
+        _secretVault = secretVault;
     }
 
     public async Task Handle(CancelTaxDocumentCommand request, CancellationToken ct)
@@ -46,7 +49,8 @@ public class CancelTaxDocumentCommandHandler : ICommandHandler<CancelTaxDocument
         // Apply domain rule enforcement in-memory (e.g., the 72-hour window limit).
         doc.Cancel();
 
-        var token = await _gatewayAdapter.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+        var clientSecret = _secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
+        var token = await _gatewayAdapter.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct);
         var result = await _gatewayAdapter.CancelDocumentAsync(config.MyInvoisClientId, token, doc.LhdnUuid, request.Reason, config.IntermediaryMode, config.SupplierTin, ct);
 
         if (!result.Success)

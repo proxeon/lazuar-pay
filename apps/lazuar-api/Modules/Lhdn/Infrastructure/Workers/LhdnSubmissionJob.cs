@@ -60,6 +60,7 @@ public class LhdnSubmissionJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<LhdnDbContext>();
         var gateway = scope.ServiceProvider.GetRequiredService<ILhdnGatewayAdapter>();
+        var secretVault = scope.ServiceProvider.GetRequiredService<ISecretVault>();
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("LhdnEventBus");
 
         var leaseUntil = DateTime.UtcNow.Add(_options.ClaimLeaseDuration);
@@ -95,7 +96,8 @@ public class LhdnSubmissionJob : BackgroundService
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
 
-                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, config.MyInvoisClientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+                var clientSecret = secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
+                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct);
                 var result = await gateway.SubmitDocumentAsync(config.MyInvoisClientId, token, jsonPayload, config.IntermediaryMode, config.SupplierTin, ct);
 
                 if (result.Success && !string.IsNullOrEmpty(result.SubmissionUid))

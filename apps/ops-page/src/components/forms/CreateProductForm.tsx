@@ -12,7 +12,7 @@ export default function CreateProductForm({ prefillData, onSubmit, onCancel }: C
     queryFn: async () => {
       const { data, error } = await client.GET("/admin/commerce/payment-config");
       if (error) throw new Error(error.detail);
-      return data.filter(c => c.api_key || c.secret_key); 
+      return data.filter(c => c.is_active && (c.has_api_key || c.has_secret_key)); 
     }
   });
 

@@ -73,7 +73,7 @@ public class CreateCustomCheckoutCommandHandler : ICommandHandler<CreateCustomCh
 
         var configs = await _mediator.Send(new GetPaymentConfigQuery(organizationId), ct);
         var firstActive = configs.FirstOrDefault(c =>
-            !string.IsNullOrWhiteSpace(c.Api_key) || !string.IsNullOrWhiteSpace(c.Secret_key));
+            c.Is_active && (c.Has_api_key || c.Has_secret_key));
 
         return string.IsNullOrWhiteSpace(firstActive?.Gateway_type)
             ? null

@@ -13,17 +13,20 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
     private readonly ITenantPaymentConfigRepository _configRepository;
     private readonly IPaymentGatewayFactory _gatewayFactory;
     private readonly IEventBus _eventBus;
+    private readonly ISecretVault _secretVault;
     private readonly ILogger<ExecuteOffSessionChargeIntegrationEventHandler> _logger;
 
     public ExecuteOffSessionChargeIntegrationEventHandler(
         ITenantPaymentConfigRepository configRepository,
         IPaymentGatewayFactory gatewayFactory,
         [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus,
+        ISecretVault secretVault,
         ILogger<ExecuteOffSessionChargeIntegrationEventHandler> logger)
     {
         _configRepository = configRepository;
         _gatewayFactory = gatewayFactory;
         _eventBus = eventBus;
+        _secretVault = secretVault;
         _logger = logger;
     }
 
@@ -31,20 +34,21 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
     {
         var config = await _configRepository.GetByTenantAndGatewayAsync(@event.TenantId, @event.GatewayName);
 
-        if (config == null || string.IsNullOrEmpty(config.ApiKey))
+        if (config == null || string.IsNullOrEmpty(config.ApiKey) || !config.IsActive)
         {
             _logger.LogWarning(
-                "Cannot execute off-session charge for subscription {SubscriptionId}. Gateway {GatewayName} not configured for tenant {TenantId}.",
+                "Cannot execute off-session charge for subscription {SubscriptionId}. Gateway {GatewayName} not configured or inactive for tenant {TenantId}.",
                 @event.SubscriptionId, @event.GatewayName, @event.TenantId);
 
             await PublishPaymentFailedAsync(@event, failureReason: "gateway_not_configured");
             return;
         }
 
+        var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
         var success = await adapter.ChargeOffSessionAsync(
-            config.ApiKey,
+            plainApiKey,
             @event.GatewayCustomerId,
             @event.GatewayTokenId,
             @event.Amount,

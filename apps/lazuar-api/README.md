@@ -42,6 +42,23 @@ dotnet test tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj
 dotnet format
 ```
 
+### Local secrets (do not commit)
+
+Base `appsettings.json` has empty placeholders for secrets. Development defaults live in
+`appsettings.Development.json` (JWT + KMS only). For anything sensitive (Resend, AI, prod-like JWT):
+
+```bash
+cd src/Lazuar.Api
+dotnet user-secrets set "Jwt:Secret" "your-local-jwt-secret-min-32-chars"
+dotnet user-secrets set "Kms:MasterKey" "your-local-kms-master-key-min-32"
+dotnet user-secrets set "Resend:ApiKey" "re_..."
+dotnet user-secrets set "Ai:ProviderKeys:OPENROUTER" "sk-or-..."
+```
+
+Production: set `Jwt__Secret`, `Kms__MasterKey`, connection strings, and optional Resend via env
+(see `deploy/prod/env.example`). Optional Azure Key Vault when `KeyVault:Uri` is configured.
+Tenant payment/LHDN/email credentials are BYOK and encrypted at rest (`ISecretVault` / certificate vault).
+
 ---
 
 ## 2. Shared Foundations: BuildingBlocks vs. SharedKernel

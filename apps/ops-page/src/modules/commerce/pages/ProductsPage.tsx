@@ -61,7 +61,7 @@ export default function ProductsPage() {
   const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
   
   // FIX: Check if the array is empty or if no gateways have a valid API key
-  const showGatewayWarning = paymentConfigError || !paymentConfigs || paymentConfigs.length === 0 || !paymentConfigs.some(c => c.api_key || c.secret_key);
+  const showGatewayWarning = paymentConfigError || !paymentConfigs || paymentConfigs.length === 0 || !paymentConfigs.some(c => c.is_active && (c.has_api_key || c.has_secret_key));
   const hasValidEmailConfig = !emailConfigError && emailConfig && emailConfig.is_active && (emailConfig.has_api_key ?? true);
 
   const renderFulfillmentBadges = (targets: string[] | undefined) => {

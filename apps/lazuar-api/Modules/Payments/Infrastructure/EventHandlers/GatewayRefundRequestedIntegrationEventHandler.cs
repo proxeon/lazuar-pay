@@ -11,19 +11,23 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
     private readonly ITenantPaymentConfigRepository _configRepository;
     private readonly IPaymentGatewayFactory _gatewayFactory;
     private readonly IEventBus _eventBus;
+    private readonly ISecretVault _secretVault;
 
     public GatewayRefundRequestedIntegrationEventHandler(
         ITenantPaymentConfigRepository configRepository,
         IPaymentGatewayFactory gatewayFactory,
-        [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus)
+        [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus,
+        ISecretVault secretVault)
     {
         _configRepository = configRepository;
         _gatewayFactory = gatewayFactory;
         _eventBus = eventBus;
+        _secretVault = secretVault;
     }
 
     public async Task HandleAsync(GatewayRefundRequestedIntegrationEvent @event)
     {
+        // Refunds still allowed when soft-disabled (historical payment obligations).
         var config = await _configRepository.GetByTenantAndGatewayAsync(@event.OrganizationId, @event.GatewayName);
         if (config == null || string.IsNullOrEmpty(config.ApiKey))
         {
@@ -39,8 +43,9 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
             return;
         }
 
+        var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
-        var success = await adapter.IssueRefundAsync(config.ApiKey, @event.GatewayTransactionId, @event.Amount);
+        var success = await adapter.IssueRefundAsync(plainApiKey, @event.GatewayTransactionId, @event.Amount);
         if (success)
         {
             // Gateway adapters currently do not return reclaimed fee; treat fee as 0 until webhook enrichment exists.

@@ -29,7 +29,7 @@ export default function ProductForm({
     queryFn: async () => {
       const { data, error } = await client.GET("/admin/commerce/payment-config");
       if (error) throw new Error(error.detail);
-      return data.filter(c => c.api_key || c.secret_key); // Only return gateways with saved credentials
+      return data.filter(c => c.is_active && (c.has_api_key || c.has_secret_key)); // Active gateways with saved credentials
     }
   });
 

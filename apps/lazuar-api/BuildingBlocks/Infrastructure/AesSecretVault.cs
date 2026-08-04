@@ -17,8 +17,7 @@ public sealed class AesSecretVault : ISecretVault
 
     public AesSecretVault(IConfiguration configuration)
     {
-        var keyString = configuration["Kms:MasterKey"]
-            ?? configuration["Jwt:Secret"]
+        var keyString = FirstNonEmpty(configuration["Kms:MasterKey"], configuration["Jwt:Secret"])
             ?? throw new InvalidOperationException("Kms:MasterKey (or Jwt:Secret fallback) configuration missing.");
 
         _masterKey = Encoding.UTF8.GetBytes(keyString.PadRight(32, '0')[..32]);
@@ -62,5 +61,18 @@ public sealed class AesSecretVault : ISecretVault
         using var reader = new StreamReader(cs);
 
         return reader.ReadToEnd();
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var v in values)
+        {
+            if (!string.IsNullOrWhiteSpace(v))
+            {
+                return v;
+            }
+        }
+
+        return null;
     }
 }
