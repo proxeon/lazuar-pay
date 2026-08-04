@@ -31,6 +31,7 @@ public interface ICommerceRepository
     void AddChargeAttempt(ChargeAttemptLog log);
     void AddCheckoutSession(CheckoutSession session);
     void AddCoupon(Coupon coupon);
+    void AddTransactionLog(CommerceTransactionLog log);
     
     void AddDunningCampaign(DunningCampaign campaign);
     void RemoveDunningCampaign(DunningCampaign campaign);

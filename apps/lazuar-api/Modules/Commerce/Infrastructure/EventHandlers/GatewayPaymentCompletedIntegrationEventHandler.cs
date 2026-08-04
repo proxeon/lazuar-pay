@@ -74,6 +74,19 @@ public class GatewayPaymentCompletedIntegrationEventHandler : IIntegrationEventH
         CheckoutSession session,
         string type)
     {
+        // Confirm coupon reservation when payment completes for a product checkout.
+        if (session.CouponId.HasValue)
+        {
+            var coupon = await _dbContext.Coupons
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == session.CouponId.Value && c.OrganizationId == session.OrganizationId);
+
+            if (coupon != null && coupon.ReservedCount > 0)
+            {
+                coupon.ConfirmReservation();
+            }
+        }
+
         session.Complete();
 
         if (type == "custom_payment_link")

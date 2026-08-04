@@ -40,7 +40,7 @@ export function CommunityPortalView({ tenantSlug, subscription: initialSubscript
 
       if (apiError) throw new Error(apiError.detail || "Failed to cancel subscription.");
 
-      setSub(prev => ({ ...prev, status: "CANCELLED" }));
+      setSub(prev => ({ ...prev, status: "CANCELED" }));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -48,9 +48,9 @@ export function CommunityPortalView({ tenantSlug, subscription: initialSubscript
     }
   };
 
-  const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
-  const isCancelled = sub.status === "CANCELLED" || sub.status === "CANCELED";
-  const isPastDue = sub.status === "PAST_DUE" || sub.status === "GRACE_PERIOD";
+  const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE" || sub.status === "SUSPENDED";
+  const isCancelled = sub.status === "CANCELED";
+  const isPastDue = sub.status === "PAST_DUE";
   const nextDateStr = sub.current_period_end
     ? new Date(sub.current_period_end).toLocaleDateString("en-MY", { year: "numeric", month: "short", day: "numeric" })
     : "N/A";

@@ -481,14 +481,31 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.3 Commerce product completeness (ops/portal truth)
 
-- [ ] Implement or remove ops UI actions: cancel, ban, record-payment, refund, export
-- [ ] Portal cancel / magic-link / billing-link vs TypeSpec (implement or remove from portal UI)
-- [ ] Coupon: confirm reservation on paid completion; release on session expiry worker
-- [ ] Checkout session expiry worker
-- [ ] Offline mark-paid / custom checkout: define entitlement outcome (Order/Sub/tx log consistency)
-- [ ] Enforce CheckoutConfiguration flags at initiate (or remove from UI)
-- [ ] Stats stubs: fill or hide zeroed KPIs
-- [ ] Admin portal-link: add to TypeSpec; optional ops button
+- [x] Implement or remove ops UI actions: cancel, ban, record-payment, refund, export
+  - Cancel: `POST /admin/commerce/subscribers/{id}/cancel` + `CancelAdminSubscriptionCommand` (status `CANCELED`)
+  - Ban: removed from ops UI (no domain status)
+  - Record-payment: `POST …/record-payment` advances period / clears dunning, MANUAL tx log, ledger + lifecycle events
+  - Refund: ops TransactionDetailPanel + Subscribers wired to `POST /admin/commerce/transactions/{id}/refund`
+  - Export: `GET /admin/commerce/subscribers/export` CSV + ops button (`credentials: include`)
+- [x] Portal cancel / magic-link / billing-link vs TypeSpec (implement or remove from portal UI)
+  - Portal cancel kept; magic-link/billing-link stay removed; status vocabulary `CANCELED` in portal + ops
+- [x] Coupon: confirm reservation on paid completion; release on session expiry worker
+- [x] Checkout session expiry worker (`CheckoutSessionExpiryJob`, 5m interval, DI registered)
+- [x] Offline mark-paid / custom checkout: define entitlement outcome (Order/Sub/tx log consistency)
+  - Product: Sub/Order + coupon confirm + tx log + fulfillment/ledger events
+  - Custom: COMPLETED + tx log + ledger only (no fake product sub)
+- [x] Enforce CheckoutConfiguration flags at initiate (phone / address / tax id)
+- [x] Stats stubs: fill or hide zeroed KPIs
+  - `total_revenue_collected`, `cash_flow_trend` (6 months), `payment_methods` from TransactionLogs; dashboard chart wired
+- [x] Admin portal-link: add to TypeSpec; optional ops button (Copy Portal Link → Stripe)
+
+### C.3 residuals
+- Manual/offline tx refunds still go through gateway refund path and need `ExternalReference`; true offline refund-without-gateway not implemented
+- Portal-link requires Stripe tenant config; non-Stripe tenants get a clear error toast
+- Export capped at 10k rows; no streaming/chunked export
+- Subscriber payment ledger UI still filters transactions by email search (not hard FK to subscription)
+- `payment_methods` KPI groups by `RecordedByName` (SYSTEM / BANK_TRANSFER / etc.), not card brand / FPX code
+- CreateManualSubscriber still always creates a Subscription even for `one_time` products (pre-existing)
 
 ## C.4 Communications / CRM maturity
 

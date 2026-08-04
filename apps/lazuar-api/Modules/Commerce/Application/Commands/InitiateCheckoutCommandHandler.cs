@@ -99,6 +99,8 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             throw new InvalidOperationException($"Product with slug '{request.ProductSlug}' not found or is inactive.");
         }
 
+        EnforceCheckoutConfiguration(product, request);
+
         BillingAddressDto? billingAddress = null;
         if (!string.IsNullOrEmpty(request.AddressLine1))
         {
@@ -197,6 +199,36 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             var checkoutUrl = await _mediator.Send(gatewayQuery, ct);
 
             return new CheckoutResultDto(checkoutUrl, false);
+        }
+    }
+
+    private static void EnforceCheckoutConfiguration(Domain.Aggregates.Product product, InitiateCheckoutCommand request)
+    {
+        var config = product.CheckoutConfiguration;
+        if (config == null)
+        {
+            return;
+        }
+
+        if (config.RequiresPhone && string.IsNullOrWhiteSpace(request.Phone))
+        {
+            throw new InvalidOperationException("This product requires a phone number at checkout.");
+        }
+
+        if (config.RequiresTaxId && string.IsNullOrWhiteSpace(request.TaxId))
+        {
+            throw new InvalidOperationException("This product requires a tax ID at checkout.");
+        }
+
+        if (config.RequiresAddress)
+        {
+            if (string.IsNullOrWhiteSpace(request.AddressLine1)
+                || string.IsNullOrWhiteSpace(request.City)
+                || string.IsNullOrWhiteSpace(request.PostalCode)
+                || string.IsNullOrWhiteSpace(request.StateCode))
+            {
+                throw new InvalidOperationException("This product requires a complete billing address at checkout.");
+            }
         }
     }
 }

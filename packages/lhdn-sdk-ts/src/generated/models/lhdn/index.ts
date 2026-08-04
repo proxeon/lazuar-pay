@@ -4,36 +4,6 @@
 // @ts-ignore
 import { type AdditionalDataHolder, type Parsable, type ParseNode, type SerializationWriter } from '@microsoft/kiota-abstractions';
 
-export interface ApiKeyDto extends AdditionalDataHolder, Parsable {
-    /**
-     * The created_at property
-     */
-    createdAt?: Date | null;
-    /**
-     * Last 4 characters of the plain key for display (not secret).
-     */
-    hint?: string | null;
-    /**
-     * The id property
-     */
-    id?: string | null;
-    /**
-     * The is_active property
-     */
-    isActive?: boolean | null;
-    /**
-     * The name property
-     */
-    name?: string | null;
-    /**
-     * The prefix property
-     */
-    prefix?: string | null;
-    /**
-     * The scopes property
-     */
-    scopes?: string[] | null;
-}
 export interface CancelDocumentRequestDto extends AdditionalDataHolder, Parsable {
     /**
      * The reason property
@@ -43,38 +13,11 @@ export interface CancelDocumentRequestDto extends AdditionalDataHolder, Parsable
 /**
  * Creates a new instance of the appropriate class based on discriminator value
  * @param parseNode The parse node to use to read the discriminator value and create the object
- * @returns {ApiKeyDto}
- */
-// @ts-ignore
-export function createApiKeyDtoFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
-    return deserializeIntoApiKeyDto;
-}
-/**
- * Creates a new instance of the appropriate class based on discriminator value
- * @param parseNode The parse node to use to read the discriminator value and create the object
  * @returns {CancelDocumentRequestDto}
  */
 // @ts-ignore
 export function createCancelDocumentRequestDtoFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
     return deserializeIntoCancelDocumentRequestDto;
-}
-/**
- * Creates a new instance of the appropriate class based on discriminator value
- * @param parseNode The parse node to use to read the discriminator value and create the object
- * @returns {GenerateApiKeyRequestDto}
- */
-// @ts-ignore
-export function createGenerateApiKeyRequestDtoFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
-    return deserializeIntoGenerateApiKeyRequestDto;
-}
-/**
- * Creates a new instance of the appropriate class based on discriminator value
- * @param parseNode The parse node to use to read the discriminator value and create the object
- * @returns {GenerateApiKeyResponseDto}
- */
-// @ts-ignore
-export function createGenerateApiKeyResponseDtoFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
-    return deserializeIntoGenerateApiKeyResponseDto;
 }
 /**
  * Creates a new instance of the appropriate class based on discriminator value
@@ -106,6 +49,15 @@ export function createLhdnItemDtoFromDiscriminatorValue(parseNode: ParseNode | u
 /**
  * Creates a new instance of the appropriate class based on discriminator value
  * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {LhdnTenantConfigDto}
+ */
+// @ts-ignore
+export function createLhdnTenantConfigDtoFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoLhdnTenantConfigDto;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
  * @returns {RegisterWebhookRequestDto}
  */
 // @ts-ignore
@@ -129,6 +81,15 @@ export function createSubmitDocumentRequestDtoFromDiscriminatorValue(parseNode: 
 // @ts-ignore
 export function createUpdateLhdnCertificateRequestDtoFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
     return deserializeIntoUpdateLhdnCertificateRequestDto;
+}
+/**
+ * Creates a new instance of the appropriate class based on discriminator value
+ * @param parseNode The parse node to use to read the discriminator value and create the object
+ * @returns {UpdateLhdnTenantConfigRequestDto}
+ */
+// @ts-ignore
+export function createUpdateLhdnTenantConfigRequestDtoFromDiscriminatorValue(parseNode: ParseNode | undefined) : ((instance?: Parsable) => Record<string, (node: ParseNode) => void>) {
+    return deserializeIntoUpdateLhdnTenantConfigRequestDto;
 }
 /**
  * Creates a new instance of the appropriate class based on discriminator value
@@ -159,23 +120,6 @@ export function createWebhookSubscriptionDtoFromDiscriminatorValue(parseNode: Pa
 }
 /**
  * The deserialization information for the current model
- * @param ApiKeyDto The instance to deserialize into.
- * @returns {Record<string, (node: ParseNode) => void>}
- */
-// @ts-ignore
-export function deserializeIntoApiKeyDto(apiKeyDto: Partial<ApiKeyDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
-    return {
-        "created_at": n => { apiKeyDto.createdAt = n.getDateValue(); },
-        "hint": n => { apiKeyDto.hint = n.getStringValue(); },
-        "id": n => { apiKeyDto.id = n.getStringValue(); },
-        "is_active": n => { apiKeyDto.isActive = n.getBooleanValue(); },
-        "name": n => { apiKeyDto.name = n.getStringValue(); },
-        "prefix": n => { apiKeyDto.prefix = n.getStringValue(); },
-        "scopes": n => { apiKeyDto.scopes = n.getCollectionOfPrimitiveValues<string>("string"); },
-    }
-}
-/**
- * The deserialization information for the current model
  * @param CancelDocumentRequestDto The instance to deserialize into.
  * @returns {Record<string, (node: ParseNode) => void>}
  */
@@ -183,35 +127,6 @@ export function deserializeIntoApiKeyDto(apiKeyDto: Partial<ApiKeyDto> | undefin
 export function deserializeIntoCancelDocumentRequestDto(cancelDocumentRequestDto: Partial<CancelDocumentRequestDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
     return {
         "reason": n => { cancelDocumentRequestDto.reason = n.getStringValue(); },
-    }
-}
-/**
- * The deserialization information for the current model
- * @param GenerateApiKeyRequestDto The instance to deserialize into.
- * @returns {Record<string, (node: ParseNode) => void>}
- */
-// @ts-ignore
-export function deserializeIntoGenerateApiKeyRequestDto(generateApiKeyRequestDto: Partial<GenerateApiKeyRequestDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
-    return {
-        "is_test_mode": n => { generateApiKeyRequestDto.isTestMode = n.getBooleanValue(); },
-        "name": n => { generateApiKeyRequestDto.name = n.getStringValue(); },
-    }
-}
-/**
- * The deserialization information for the current model
- * @param GenerateApiKeyResponseDto The instance to deserialize into.
- * @returns {Record<string, (node: ParseNode) => void>}
- */
-// @ts-ignore
-export function deserializeIntoGenerateApiKeyResponseDto(generateApiKeyResponseDto: Partial<GenerateApiKeyResponseDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
-    return {
-        "created_at": n => { generateApiKeyResponseDto.createdAt = n.getDateValue(); },
-        "hint": n => { generateApiKeyResponseDto.hint = n.getStringValue(); },
-        "id": n => { generateApiKeyResponseDto.id = n.getStringValue(); },
-        "name": n => { generateApiKeyResponseDto.name = n.getStringValue(); },
-        "plain_key": n => { generateApiKeyResponseDto.plainKey = n.getStringValue(); },
-        "prefix": n => { generateApiKeyResponseDto.prefix = n.getStringValue(); },
-        "scopes": n => { generateApiKeyResponseDto.scopes = n.getCollectionOfPrimitiveValues<string>("string"); },
     }
 }
 /**
@@ -270,6 +185,32 @@ export function deserializeIntoLhdnItemDto(lhdnItemDto: Partial<LhdnItemDto> | u
 }
 /**
  * The deserialization information for the current model
+ * @param LhdnTenantConfigDto The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoLhdnTenantConfigDto(lhdnTenantConfigDto: Partial<LhdnTenantConfigDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "address_line1": n => { lhdnTenantConfigDto.addressLine1 = n.getStringValue(); },
+        "city": n => { lhdnTenantConfigDto.city = n.getStringValue(); },
+        "client_secret_hint": n => { lhdnTenantConfigDto.clientSecretHint = n.getStringValue(); },
+        "country": n => { lhdnTenantConfigDto.country = n.getStringValue(); },
+        "environment": n => { lhdnTenantConfigDto.environment = n.getEnumValue<LhdnTenantConfigDto_environment>(LhdnTenantConfigDto_environmentObject); },
+        "has_certificate": n => { lhdnTenantConfigDto.hasCertificate = n.getBooleanValue(); },
+        "has_client_secret": n => { lhdnTenantConfigDto.hasClientSecret = n.getBooleanValue(); },
+        "id_type": n => { lhdnTenantConfigDto.idType = n.getStringValue(); },
+        "id_value": n => { lhdnTenantConfigDto.idValue = n.getStringValue(); },
+        "intermediary_mode": n => { lhdnTenantConfigDto.intermediaryMode = n.getBooleanValue(); },
+        "legal_name": n => { lhdnTenantConfigDto.legalName = n.getStringValue(); },
+        "msic_code": n => { lhdnTenantConfigDto.msicCode = n.getStringValue(); },
+        "myinvois_client_id": n => { lhdnTenantConfigDto.myinvoisClientId = n.getStringValue(); },
+        "postal": n => { lhdnTenantConfigDto.postal = n.getStringValue(); },
+        "state": n => { lhdnTenantConfigDto.state = n.getStringValue(); },
+        "supplier_tin": n => { lhdnTenantConfigDto.supplierTin = n.getStringValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
  * @param RegisterWebhookRequestDto The instance to deserialize into.
  * @returns {Record<string, (node: ParseNode) => void>}
  */
@@ -324,6 +265,30 @@ export function deserializeIntoUpdateLhdnCertificateRequestDto(updateLhdnCertifi
 }
 /**
  * The deserialization information for the current model
+ * @param UpdateLhdnTenantConfigRequestDto The instance to deserialize into.
+ * @returns {Record<string, (node: ParseNode) => void>}
+ */
+// @ts-ignore
+export function deserializeIntoUpdateLhdnTenantConfigRequestDto(updateLhdnTenantConfigRequestDto: Partial<UpdateLhdnTenantConfigRequestDto> | undefined = {}) : Record<string, (node: ParseNode) => void> {
+    return {
+        "address_line1": n => { updateLhdnTenantConfigRequestDto.addressLine1 = n.getStringValue(); },
+        "city": n => { updateLhdnTenantConfigRequestDto.city = n.getStringValue(); },
+        "country": n => { updateLhdnTenantConfigRequestDto.country = n.getStringValue(); },
+        "environment": n => { updateLhdnTenantConfigRequestDto.environment = n.getEnumValue<UpdateLhdnTenantConfigRequestDto_environment>(UpdateLhdnTenantConfigRequestDto_environmentObject); },
+        "id_type": n => { updateLhdnTenantConfigRequestDto.idType = n.getStringValue(); },
+        "id_value": n => { updateLhdnTenantConfigRequestDto.idValue = n.getStringValue(); },
+        "intermediary_mode": n => { updateLhdnTenantConfigRequestDto.intermediaryMode = n.getBooleanValue(); },
+        "legal_name": n => { updateLhdnTenantConfigRequestDto.legalName = n.getStringValue(); },
+        "msic_code": n => { updateLhdnTenantConfigRequestDto.msicCode = n.getStringValue(); },
+        "myinvois_client_id": n => { updateLhdnTenantConfigRequestDto.myinvoisClientId = n.getStringValue(); },
+        "myinvois_client_secret": n => { updateLhdnTenantConfigRequestDto.myinvoisClientSecret = n.getStringValue(); },
+        "postal": n => { updateLhdnTenantConfigRequestDto.postal = n.getStringValue(); },
+        "state": n => { updateLhdnTenantConfigRequestDto.state = n.getStringValue(); },
+        "supplier_tin": n => { updateLhdnTenantConfigRequestDto.supplierTin = n.getStringValue(); },
+    }
+}
+/**
+ * The deserialization information for the current model
  * @param ValidateTinRequestDto The instance to deserialize into.
  * @returns {Record<string, (node: ParseNode) => void>}
  */
@@ -362,46 +327,6 @@ export function deserializeIntoWebhookSubscriptionDto(webhookSubscriptionDto: Pa
         "is_active": n => { webhookSubscriptionDto.isActive = n.getBooleanValue(); },
         "url": n => { webhookSubscriptionDto.url = n.getStringValue(); },
     }
-}
-export interface GenerateApiKeyRequestDto extends AdditionalDataHolder, Parsable {
-    /**
-     * The is_test_mode property
-     */
-    isTestMode?: boolean | null;
-    /**
-     * The name property
-     */
-    name?: string | null;
-}
-export interface GenerateApiKeyResponseDto extends AdditionalDataHolder, Parsable {
-    /**
-     * The created_at property
-     */
-    createdAt?: Date | null;
-    /**
-     * Last 4 characters of the plain key for display (not secret).
-     */
-    hint?: string | null;
-    /**
-     * The id property
-     */
-    id?: string | null;
-    /**
-     * The name property
-     */
-    name?: string | null;
-    /**
-     * Full secret — returned only once on create.
-     */
-    plainKey?: string | null;
-    /**
-     * The prefix property
-     */
-    prefix?: string | null;
-    /**
-     * The scopes property
-     */
-    scopes?: string[] | null;
 }
 export interface LhdnAddressDto extends AdditionalDataHolder, Parsable {
     /**
@@ -507,6 +432,76 @@ export interface LhdnItemDto extends AdditionalDataHolder, Parsable {
     unitPrice?: number | null;
 }
 export type LhdnItemDto_tax_type_code = (typeof LhdnItemDto_tax_type_codeObject)[keyof typeof LhdnItemDto_tax_type_codeObject];
+/**
+ * Tenant MyInvois / supplier profile for OrgAdmin.Secrets are never returned in full — only presence flags and optional last-4 hints.
+ */
+export interface LhdnTenantConfigDto extends AdditionalDataHolder, Parsable {
+    /**
+     * The address_line1 property
+     */
+    addressLine1?: string | null;
+    /**
+     * The city property
+     */
+    city?: string | null;
+    /**
+     * Last 4 characters of the stored client secret when present.
+     */
+    clientSecretHint?: string | null;
+    /**
+     * The country property
+     */
+    country?: string | null;
+    /**
+     * The environment property
+     */
+    environment?: LhdnTenantConfigDto_environment | null;
+    /**
+     * True when a signing certificate is stored.
+     */
+    hasCertificate?: boolean | null;
+    /**
+     * True when a client secret is stored (value never returned).
+     */
+    hasClientSecret?: boolean | null;
+    /**
+     * The id_type property
+     */
+    idType?: string | null;
+    /**
+     * The id_value property
+     */
+    idValue?: string | null;
+    /**
+     * The intermediary_mode property
+     */
+    intermediaryMode?: boolean | null;
+    /**
+     * The legal_name property
+     */
+    legalName?: string | null;
+    /**
+     * The msic_code property
+     */
+    msicCode?: string | null;
+    /**
+     * The myinvois_client_id property
+     */
+    myinvoisClientId?: string | null;
+    /**
+     * The postal property
+     */
+    postal?: string | null;
+    /**
+     * The state property
+     */
+    state?: string | null;
+    /**
+     * The supplier_tin property
+     */
+    supplierTin?: string | null;
+}
+export type LhdnTenantConfigDto_environment = (typeof LhdnTenantConfigDto_environmentObject)[keyof typeof LhdnTenantConfigDto_environmentObject];
 export interface RegisterWebhookRequestDto extends AdditionalDataHolder, Parsable {
     /**
      * The events property
@@ -523,24 +518,6 @@ export interface RegisterWebhookRequestDto extends AdditionalDataHolder, Parsabl
 }
 /**
  * Serializes information the current object
- * @param ApiKeyDto The instance to serialize from.
- * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
- * @param writer Serialization writer to use to serialize this model
- */
-// @ts-ignore
-export function serializeApiKeyDto(writer: SerializationWriter, apiKeyDto: Partial<ApiKeyDto> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
-    if (!apiKeyDto || isSerializingDerivedType) { return; }
-    writer.writeDateValue("created_at", apiKeyDto.createdAt);
-    writer.writeStringValue("hint", apiKeyDto.hint);
-    writer.writeStringValue("id", apiKeyDto.id);
-    writer.writeBooleanValue("is_active", apiKeyDto.isActive);
-    writer.writeStringValue("name", apiKeyDto.name);
-    writer.writeStringValue("prefix", apiKeyDto.prefix);
-    writer.writeCollectionOfPrimitiveValues<string>("scopes", apiKeyDto.scopes);
-    writer.writeAdditionalData(apiKeyDto.additionalData);
-}
-/**
- * Serializes information the current object
  * @param CancelDocumentRequestDto The instance to serialize from.
  * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
  * @param writer Serialization writer to use to serialize this model
@@ -550,37 +527,6 @@ export function serializeCancelDocumentRequestDto(writer: SerializationWriter, c
     if (!cancelDocumentRequestDto || isSerializingDerivedType) { return; }
     writer.writeStringValue("reason", cancelDocumentRequestDto.reason);
     writer.writeAdditionalData(cancelDocumentRequestDto.additionalData);
-}
-/**
- * Serializes information the current object
- * @param GenerateApiKeyRequestDto The instance to serialize from.
- * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
- * @param writer Serialization writer to use to serialize this model
- */
-// @ts-ignore
-export function serializeGenerateApiKeyRequestDto(writer: SerializationWriter, generateApiKeyRequestDto: Partial<GenerateApiKeyRequestDto> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
-    if (!generateApiKeyRequestDto || isSerializingDerivedType) { return; }
-    writer.writeBooleanValue("is_test_mode", generateApiKeyRequestDto.isTestMode);
-    writer.writeStringValue("name", generateApiKeyRequestDto.name);
-    writer.writeAdditionalData(generateApiKeyRequestDto.additionalData);
-}
-/**
- * Serializes information the current object
- * @param GenerateApiKeyResponseDto The instance to serialize from.
- * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
- * @param writer Serialization writer to use to serialize this model
- */
-// @ts-ignore
-export function serializeGenerateApiKeyResponseDto(writer: SerializationWriter, generateApiKeyResponseDto: Partial<GenerateApiKeyResponseDto> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
-    if (!generateApiKeyResponseDto || isSerializingDerivedType) { return; }
-    writer.writeDateValue("created_at", generateApiKeyResponseDto.createdAt);
-    writer.writeStringValue("hint", generateApiKeyResponseDto.hint);
-    writer.writeStringValue("id", generateApiKeyResponseDto.id);
-    writer.writeStringValue("name", generateApiKeyResponseDto.name);
-    writer.writeStringValue("plain_key", generateApiKeyResponseDto.plainKey);
-    writer.writeStringValue("prefix", generateApiKeyResponseDto.prefix);
-    writer.writeCollectionOfPrimitiveValues<string>("scopes", generateApiKeyResponseDto.scopes);
-    writer.writeAdditionalData(generateApiKeyResponseDto.additionalData);
 }
 /**
  * Serializes information the current object
@@ -642,6 +588,33 @@ export function serializeLhdnItemDto(writer: SerializationWriter, lhdnItemDto: P
 /**
  * Serializes information the current object
  * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param LhdnTenantConfigDto The instance to serialize from.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeLhdnTenantConfigDto(writer: SerializationWriter, lhdnTenantConfigDto: Partial<LhdnTenantConfigDto> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!lhdnTenantConfigDto || isSerializingDerivedType) { return; }
+    writer.writeStringValue("address_line1", lhdnTenantConfigDto.addressLine1);
+    writer.writeStringValue("city", lhdnTenantConfigDto.city);
+    writer.writeStringValue("client_secret_hint", lhdnTenantConfigDto.clientSecretHint);
+    writer.writeStringValue("country", lhdnTenantConfigDto.country);
+    writer.writeEnumValue<LhdnTenantConfigDto_environment>("environment", lhdnTenantConfigDto.environment);
+    writer.writeBooleanValue("has_certificate", lhdnTenantConfigDto.hasCertificate);
+    writer.writeBooleanValue("has_client_secret", lhdnTenantConfigDto.hasClientSecret);
+    writer.writeStringValue("id_type", lhdnTenantConfigDto.idType);
+    writer.writeStringValue("id_value", lhdnTenantConfigDto.idValue);
+    writer.writeBooleanValue("intermediary_mode", lhdnTenantConfigDto.intermediaryMode);
+    writer.writeStringValue("legal_name", lhdnTenantConfigDto.legalName);
+    writer.writeStringValue("msic_code", lhdnTenantConfigDto.msicCode);
+    writer.writeStringValue("myinvois_client_id", lhdnTenantConfigDto.myinvoisClientId);
+    writer.writeStringValue("postal", lhdnTenantConfigDto.postal);
+    writer.writeStringValue("state", lhdnTenantConfigDto.state);
+    writer.writeStringValue("supplier_tin", lhdnTenantConfigDto.supplierTin);
+    writer.writeAdditionalData(lhdnTenantConfigDto.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
  * @param RegisterWebhookRequestDto The instance to serialize from.
  * @param writer Serialization writer to use to serialize this model
  */
@@ -695,6 +668,31 @@ export function serializeUpdateLhdnCertificateRequestDto(writer: SerializationWr
     writer.writeStringValue("p12_base64_file", updateLhdnCertificateRequestDto.p12Base64File);
     writer.writeStringValue("passphrase", updateLhdnCertificateRequestDto.passphrase);
     writer.writeAdditionalData(updateLhdnCertificateRequestDto.additionalData);
+}
+/**
+ * Serializes information the current object
+ * @param isSerializingDerivedType A boolean indicating whether the serialization is for a derived type.
+ * @param UpdateLhdnTenantConfigRequestDto The instance to serialize from.
+ * @param writer Serialization writer to use to serialize this model
+ */
+// @ts-ignore
+export function serializeUpdateLhdnTenantConfigRequestDto(writer: SerializationWriter, updateLhdnTenantConfigRequestDto: Partial<UpdateLhdnTenantConfigRequestDto> | undefined | null = {}, isSerializingDerivedType: boolean = false) : void {
+    if (!updateLhdnTenantConfigRequestDto || isSerializingDerivedType) { return; }
+    writer.writeStringValue("address_line1", updateLhdnTenantConfigRequestDto.addressLine1);
+    writer.writeStringValue("city", updateLhdnTenantConfigRequestDto.city);
+    writer.writeStringValue("country", updateLhdnTenantConfigRequestDto.country);
+    writer.writeEnumValue<UpdateLhdnTenantConfigRequestDto_environment>("environment", updateLhdnTenantConfigRequestDto.environment);
+    writer.writeStringValue("id_type", updateLhdnTenantConfigRequestDto.idType);
+    writer.writeStringValue("id_value", updateLhdnTenantConfigRequestDto.idValue);
+    writer.writeBooleanValue("intermediary_mode", updateLhdnTenantConfigRequestDto.intermediaryMode);
+    writer.writeStringValue("legal_name", updateLhdnTenantConfigRequestDto.legalName);
+    writer.writeStringValue("msic_code", updateLhdnTenantConfigRequestDto.msicCode);
+    writer.writeStringValue("myinvois_client_id", updateLhdnTenantConfigRequestDto.myinvoisClientId);
+    writer.writeStringValue("myinvois_client_secret", updateLhdnTenantConfigRequestDto.myinvoisClientSecret);
+    writer.writeStringValue("postal", updateLhdnTenantConfigRequestDto.postal);
+    writer.writeStringValue("state", updateLhdnTenantConfigRequestDto.state);
+    writer.writeStringValue("supplier_tin", updateLhdnTenantConfigRequestDto.supplierTin);
+    writer.writeAdditionalData(updateLhdnTenantConfigRequestDto.additionalData);
 }
 /**
  * Serializes information the current object
@@ -830,6 +828,68 @@ export interface UpdateLhdnCertificateRequestDto extends AdditionalDataHolder, P
      */
     passphrase?: string | null;
 }
+/**
+ * Create or replace tenant LHDN profile. Omit client secret / leave empty to keep existing secret.
+ */
+export interface UpdateLhdnTenantConfigRequestDto extends AdditionalDataHolder, Parsable {
+    /**
+     * The address_line1 property
+     */
+    addressLine1?: string | null;
+    /**
+     * The city property
+     */
+    city?: string | null;
+    /**
+     * The country property
+     */
+    country?: string | null;
+    /**
+     * The environment property
+     */
+    environment?: UpdateLhdnTenantConfigRequestDto_environment | null;
+    /**
+     * The id_type property
+     */
+    idType?: string | null;
+    /**
+     * The id_value property
+     */
+    idValue?: string | null;
+    /**
+     * The intermediary_mode property
+     */
+    intermediaryMode?: boolean | null;
+    /**
+     * The legal_name property
+     */
+    legalName?: string | null;
+    /**
+     * The msic_code property
+     */
+    msicCode?: string | null;
+    /**
+     * The myinvois_client_id property
+     */
+    myinvoisClientId?: string | null;
+    /**
+     * When omitted or empty, existing secret is preserved.
+     */
+    myinvoisClientSecret?: string | null;
+    /**
+     * The postal property
+     */
+    postal?: string | null;
+    /**
+     * The state property
+     */
+    state?: string | null;
+    /**
+     * The supplier_tin property
+     */
+    supplierTin?: string | null;
+}
+export type UpdateLhdnTenantConfigRequestDto_environment = (typeof UpdateLhdnTenantConfigRequestDto_environmentObject)[keyof typeof UpdateLhdnTenantConfigRequestDto_environmentObject];
 export interface ValidateTinRequestDto extends AdditionalDataHolder, Parsable {
     /**
      * The id_type property
@@ -909,6 +969,10 @@ export const LhdnItemDto_tax_type_codeObject = {
     ZeroSix: "06",
     E: "E",
 } as const;
+export const LhdnTenantConfigDto_environmentObject = {
+    PROD: "PROD",
+    SANDBOX: "SANDBOX",
+} as const;
 export const SubmitDocumentRequestDto_buyer_id_typeObject = {
     BRN: "BRN",
     NRIC: "NRIC",
@@ -924,6 +988,10 @@ export const SubmitDocumentRequestDto_document_typeObject = {
     OneTwo: "12",
     OneThree: "13",
     OneFour: "14",
+} as const;
+export const UpdateLhdnTenantConfigRequestDto_environmentObject = {
+    PROD: "PROD",
+    SANDBOX: "SANDBOX",
 } as const;
 export const ValidateTinRequestDto_id_typeObject = {
     BRN: "BRN",

@@ -62,7 +62,9 @@ export default function SubscribersPage() {
     try {
       const response = await fetch(`${API_URL}/admin/commerce/subscribers/export`, {
         headers: { "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "" },
+        credentials: "include",
       });
+      if (!response.ok) throw new Error("Export request failed");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -71,6 +73,7 @@ export default function SubscribersPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.URL.revokeObjectURL(url);
     } catch {
       toast.error("Failed to export data.");
     } finally {
@@ -81,12 +84,43 @@ export default function SubscribersPage() {
   const actionMutation = useMutation({
     mutationFn: async ({ action, payload }: { action: string, payload?: any }) => {
       if (!selectedSub) throw new Error("No subscriber selected.");
-      const endpoint = `/admin/commerce/subscribers/{id}/${action}` as any; 
+
+      if (action === "refund") {
+        const { error } = await client.POST("/admin/commerce/transactions/{id}/refund", {
+          params: { path: { id: payload.payment_record_id } },
+          body: { subscription_id: selectedSub.id },
+        });
+        if (error) throw new Error((error as any).detail || "Refund failed");
+        return;
+      }
+
+      if (action === "cancel") {
+        const { error } = await client.POST("/admin/commerce/subscribers/{id}/cancel", {
+          params: { path: { id: selectedSub.id } },
+        });
+        if (error) throw new Error((error as any).detail || "Cancel failed");
+        return;
+      }
+
+      if (action === "record-payment") {
+        const { error } = await client.POST("/admin/commerce/subscribers/{id}/record-payment", {
+          params: { path: { id: selectedSub.id } },
+          body: {
+            amount: payload.amount,
+            payment_method: payload.payment_method,
+            reference_number: payload.reference_number || undefined,
+          },
+        });
+        if (error) throw new Error((error as any).detail || "Record payment failed");
+        return;
+      }
+
+      const endpoint = `/admin/commerce/subscribers/{id}/${action}` as any;
       const { error } = await client.POST(endpoint, {
         params: { path: { id: selectedSub.id } },
         body: payload
       });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error((error as any).detail || "Action failed");
     },
     onMutate: (variables) => {
       const actionKey = variables.action === "refund" ? `refund-${variables.payload.payment_record_id}` : variables.action;
@@ -99,6 +133,7 @@ export default function SubscribersPage() {
       toast.success(`Action successfully executed.`);
       queryClient.invalidateQueries({ queryKey: ["commerce-subscribers"] });
       queryClient.invalidateQueries({ queryKey: ["commerce-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["commerce-stats"] });
       
       if (variables.action === "record-payment") {
         setIsPaymentModalOpen(false);
@@ -113,9 +148,7 @@ export default function SubscribersPage() {
       } else if (variables.action === "dunning/resume") {
         setSelectedSub(prev => prev ? { ...prev, dunning_paused_until: undefined } : null);
       } else if (variables.action === "cancel") {
-        setSelectedSub(prev => prev ? { ...prev, status: "CANCELLED" } : null);
-      } else if (variables.action === "ban") {
-        setSelectedSub(prev => prev ? { ...prev, status: "BANNED" } : null);
+        setSelectedSub(prev => prev ? { ...prev, status: "CANCELED" } : null);
       }
     },
     onError: (err: any) => toast.error("Action Failed", { description: err.message })
@@ -167,7 +200,8 @@ export default function SubscribersPage() {
             <option value="ALL">ALL STATUSES</option>
             <option value="ACTIVE">ACTIVE</option>
             <option value="PAST_DUE">PAST DUE</option>
-            <option value="CANCELLED">CANCELLED</option>
+            <option value="CANCELED">CANCELED</option>
+            <option value="SUSPENDED">SUSPENDED</option>
           </select>
         </div>
 
@@ -330,12 +364,34 @@ export default function SubscribersPage() {
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
-                <button onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }} disabled={activeAction !== null} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
+                <button onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                   {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
                 </button>
-                <button onClick={() => { if (window.confirm("CRITICAL: Ban user and revoke all access immediately?")) actionMutation.mutate({ action: "ban" }); }} disabled={activeAction !== null} className="h-8 col-span-2 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
-                  {activeAction === "ban" ? <Loader2 size={12} className="animate-spin" /> : <AlertTriangle size={12} />} Ban User
+                <button
+                  onClick={async () => {
+                    if (!selectedSub) return;
+                    setActiveAction("portal-link");
+                    try {
+                      const returnUrl = window.location.origin;
+                      const { data, error } = await client.POST("/admin/commerce/subscribers/portal-link", {
+                        body: { customer_email: selectedSub.customer_email, return_url: returnUrl },
+                      });
+                      if (error) throw new Error((error as any).detail || "Failed to generate portal link");
+                      if (data?.url) {
+                        await navigator.clipboard.writeText(data.url);
+                        toast.success("Stripe portal link copied to clipboard");
+                      }
+                    } catch (err: any) {
+                      toast.error("Portal link failed", { description: err.message });
+                    } finally {
+                      setActiveAction(null);
+                    }
+                  }}
+                  disabled={activeAction !== null || !selectedSub.customer_email}
+                  className="h-8 col-span-2 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {activeAction === "portal-link" && <Loader2 size={12} className="animate-spin" />} Copy Portal Link
                 </button>
               </div>
             </div>
@@ -351,7 +407,7 @@ export default function SubscribersPage() {
                     return (
                       <div key={payment.id} className="p-3 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between rounded-sm">
                         <div className="flex flex-col gap-1">
-                          <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.payment_method}</span></p>
+                          <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.recorded_by_name || "GATEWAY"}</span></p>
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold text-[#09090b]">{payment.id.substring(0,8)}</span>
                           </div>

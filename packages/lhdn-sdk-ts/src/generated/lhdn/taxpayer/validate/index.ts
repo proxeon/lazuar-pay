@@ -13,6 +13,7 @@ import { type BaseRequestBuilder, type Parsable, type ParsableFactory, type Requ
  */
 export interface ValidateRequestBuilder extends BaseRequestBuilder<ValidateRequestBuilder> {
     /**
+     * Validate a taxpayer TIN against MyInvois (cached). Requires API key with lhdn.documents:read or write.
      * @param body The request body
      * @param requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @returns {Promise<ValidateTinResponseDto>}
@@ -24,6 +25,7 @@ export interface ValidateRequestBuilder extends BaseRequestBuilder<ValidateReque
      */
      post(body: ValidateTinRequestDto, requestConfiguration?: RequestConfiguration<object> | undefined) : Promise<ValidateTinResponseDto | undefined>;
     /**
+     * Validate a taxpayer TIN against MyInvois (cached). Requires API key with lhdn.documents:read or write.
      * @param body The request body
      * @param requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @returns {RequestInformation}

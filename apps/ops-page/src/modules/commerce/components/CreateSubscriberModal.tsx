@@ -45,21 +45,19 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
         throw new Error("Amount paid must be greater than RM 0 unless Comped is selected.");
       }
 
-      const { error } = await client.POST("/admin/commerce/subscribers" as any, {
+      const { error } = await client.POST("/admin/commerce/subscribers", {
         body: {
           name: name.trim(),
           email: email.trim().toLowerCase(),
           phone: phone.trim(),
-          plan_id: productId, 
-          source: "MANUAL_ENTRY",
-          is_reminder_only: true,
+          product_id: productId,
           amount_paid: finalAmount,
           payment_method: paymentMethod,
           reference_number: referenceNumber.trim() || undefined,
           send_welcome_email: sendWelcomeEmail,
           start_date: startDate ? new Date(startDate).toISOString() : undefined,
           next_billing_date: nextBillingDate ? new Date(nextBillingDate).toISOString() : undefined
-        } as any
+        }
       });
 
       if (error) throw new Error(error.detail || "Failed to create subscriber.");

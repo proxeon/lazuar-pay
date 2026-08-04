@@ -48,6 +48,7 @@ public static class DependencyInjection
         
         services.AddHostedService<BillingEngineJob>();
         services.AddHostedService<DunningEngineJob>();
+        services.AddHostedService<CheckoutSessionExpiryJob>();
 
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<GatewayPaymentFailedIntegrationEventHandler>();

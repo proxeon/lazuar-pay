@@ -1,4 +1,7 @@
 using System;
+using System.Globalization;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
@@ -30,6 +33,11 @@ public record CreateManualSubscriberRequest(
     DateTimeOffset? Next_billing_date
 );
 
+public record RecordSubscriberPaymentRequest(
+    decimal Amount,
+    string Payment_method,
+    string? Reference_number = null);
+
 public static class SubscriberEndpoints
 {
     public static RouteGroupBuilder MapSubscriberEndpoints(this RouteGroupBuilder group)
@@ -45,6 +53,18 @@ public static class SubscriberEndpoints
               var l = limit ?? 50;
               var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l, search);
               return TypedResults.Ok(response);
+          });
+
+        group.MapGet("/subscribers/export", async (
+            [FromQuery] string? search,
+            IExecutionContextAccessor ctx,
+            ICommerceQueryService queryService) =>
+          {
+              // Cap export size; matches ops CSV bulk download use-case.
+              var response = await queryService.GetSubscribersAsync(ctx.TenantId, page: 1, limit: 10_000, search);
+              var csv = BuildSubscribersCsv(response.Data);
+              var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv)).ToArray();
+              return Results.File(bytes, "text/csv", $"subscribers_export_{DateTime.UtcNow:yyyyMMdd}.csv");
           });
 
         group.MapPost("/subscribers", async (
@@ -80,6 +100,44 @@ public static class SubscriberEndpoints
               return TypedResults.Ok(new GenerateCustomerPortalResponse(url));
           });
 
+        group.MapPost("/subscribers/{id:guid}/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new CancelAdminSubscriptionCommand(ctx.TenantId, id));
+                return TypedResults.Ok(new StatusResponse { Status = "CANCELED" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+            }
+        });
+
+        group.MapPost("/subscribers/{id:guid}/record-payment", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
+            Guid id,
+            RecordSubscriberPaymentRequest req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new RecordSubscriberPaymentCommand(
+                    ctx.TenantId,
+                    id,
+                    req.Amount,
+                    req.Payment_method,
+                    req.Reference_number));
+                return TypedResults.Ok(new StatusResponse { Status = "payment_recorded" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+            }
+        });
+
         group.MapPost("/subscribers/{id:guid}/dunning/pause", async Task<Ok<StatusResponse>> (
             Guid id,
             PauseDunningRequestDto req,
@@ -100,5 +158,36 @@ public static class SubscriberEndpoints
         });
 
         return group;
+    }
+
+    private static string BuildSubscribersCsv(System.Collections.Generic.IEnumerable<CommerceSubscriptionDto> subscribers)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("id,customer_name,customer_email,customer_phone,product_name,product_price,status,current_period_end,next_billing_date,created_at");
+
+        foreach (var s in subscribers)
+        {
+            static string Esc(string? v)
+            {
+                if (string.IsNullOrEmpty(v)) return "";
+                if (v.Contains('"') || v.Contains(',') || v.Contains('\n'))
+                    return $"\"{v.Replace("\"", "\"\"")}\"";
+                return v;
+            }
+
+            sb.Append(Esc(s.Id)).Append(',')
+              .Append(Esc(s.Customer_name)).Append(',')
+              .Append(Esc(s.Customer_email)).Append(',')
+              .Append(Esc(s.Customer_phone)).Append(',')
+              .Append(Esc(s.Product_name)).Append(',')
+              .Append(s.Product_price.ToString(CultureInfo.InvariantCulture)).Append(',')
+              .Append(Esc(s.Status)).Append(',')
+              .Append(s.Current_period_end?.UtcDateTime.ToString("o", CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(s.Next_billing_date?.UtcDateTime.ToString("o", CultureInfo.InvariantCulture) ?? "").Append(',')
+              .Append(s.Created_at.UtcDateTime.ToString("o", CultureInfo.InvariantCulture))
+              .AppendLine();
+        }
+
+        return sb.ToString();
     }
 }

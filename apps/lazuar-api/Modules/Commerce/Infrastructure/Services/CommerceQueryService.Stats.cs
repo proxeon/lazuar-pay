@@ -12,6 +12,8 @@ public partial class CommerceQueryService
 {
     private record SubStatsDto(string Status, DateTime CreatedAt, DateTime UpdatedAt, decimal Price, string Interval);
 
+    private record TxRevenueDto(decimal Amount, string Status, DateTime CreatedAt, string RecordedByName);
+
     public async Task<CommerceStatsDto> GetStatsAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
@@ -39,6 +41,51 @@ public partial class CommerceQueryService
         double churnRate = active30DaysAgo > 0 ? Math.Round((double)cancelledLast30 / active30DaysAgo * 100, 2) : 0;
         double arpu = activeSubs.Count > 0 ? (double)(mrr / activeSubs.Count) : 0;
 
+        // Revenue KPIs from TransactionLogs (honest ops dashboard — not stubbed zeros).
+        const string txSql = @"
+            SELECT t.""Amount"" as Amount, t.""Status"" as Status, t.""CreatedAt"" as CreatedAt, t.""RecordedByName"" as RecordedByName
+            FROM commerce.""TransactionLogs"" t
+            WHERE t.""OrganizationId"" = @OrgId";
+
+        var txs = (await connection.QueryAsync<TxRevenueDto>(txSql, new { OrgId = organizationId })).ToList();
+        var confirmed = txs.Where(t => string.Equals(t.Status, "CONFIRMED", StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var totalRevenue = confirmed.Sum(t => t.Amount);
+
+        var sixMonthsAgo = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-5);
+        var cashFlowTrend = confirmed
+            .Where(t => t.CreatedAt >= sixMonthsAgo)
+            .GroupBy(t => new DateTime(t.CreatedAt.Year, t.CreatedAt.Month, 1, 0, 0, 0, DateTimeKind.Utc))
+            .OrderBy(g => g.Key)
+            .Select(g => new CashFlowTrendDto
+            {
+                Month = g.Key.ToString("yyyy-MM"),
+                Amount = (double)g.Sum(x => x.Amount)
+            })
+            .ToList();
+
+        // Fill missing months so charts don't look broken with sparse data.
+        for (var i = 0; i < 6; i++)
+        {
+            var month = sixMonthsAgo.AddMonths(i).ToString("yyyy-MM");
+            if (cashFlowTrend.All(c => c.Month != month))
+            {
+                cashFlowTrend.Add(new CashFlowTrendDto { Month = month, Amount = 0 });
+            }
+        }
+        cashFlowTrend = cashFlowTrend.OrderBy(c => c.Month).ToList();
+
+        var paymentMethods = confirmed
+            .GroupBy(t => string.IsNullOrWhiteSpace(t.RecordedByName) ? "UNKNOWN" : t.RecordedByName.ToUpperInvariant())
+            .Select(g => new PaymentMethodDto
+            {
+                Method = g.Key,
+                Count = g.Count(),
+                Total_amount = (double)g.Sum(x => x.Amount)
+            })
+            .OrderByDescending(p => p.Total_amount)
+            .ToList();
+
         return new CommerceStatsDto
         {
             Mrr = (double)mrr,
@@ -48,9 +95,9 @@ public partial class CommerceQueryService
             Net_new_last_30_days = newActiveLast30 - cancelledLast30,
             Churn_rate_percentage = churnRate,
             Average_revenue_per_user = arpu,
-            Total_revenue_collected = 0, 
-            Cash_flow_trend = new List<CashFlowTrendDto>(),
-            Payment_methods = new List<PaymentMethodDto>()
+            Total_revenue_collected = (double)totalRevenue,
+            Cash_flow_trend = cashFlowTrend,
+            Payment_methods = paymentMethods
         };
     }
 }

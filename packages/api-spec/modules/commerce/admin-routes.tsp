@@ -102,6 +102,32 @@ interface AdminCommerceOperations {
     | LazuarApi.Core.StatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
+  @get
+  @route("/subscribers/export")
+  @doc("CSV export of subscribers for the active workspace.")
+  exportSubscribers(@query search?: string):
+    | string
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/portal-link")
+  @doc("Generate a Stripe Customer Portal link for a customer email (requires Stripe).")
+  generateCustomerPortalLink(@body body: GenerateCustomerPortalRequestDto):
+    | GenerateCustomerPortalResponseDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/cancel")
+  cancelSubscriber(@path id: string):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/record-payment")
+  recordSubscriberPayment(@path id: string, @body body: RecordPaymentRequestDto):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
   @post
   @route("/subscribers/{id}/dunning/pause")
   pauseSubscriberDunning(@path id: string, @body body: PauseDunningRequestDto):
@@ -124,6 +150,12 @@ interface AdminCommerceOperations {
     @query payment_method?: string,
   ):
     | LazuarApi.Core.PaginatedResponse<TransactionLogDto>
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/transactions/{id}/refund")
+  refundTransaction(@path id: string, @body body?: RecordRefundRequestDto):
+    | LazuarApi.Core.StatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @get

@@ -341,6 +341,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/commerce/subscribers/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description CSV export of subscribers for the active workspace. */
+        get: operations["AdminCommerceOperations_exportSubscribers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/commerce/subscribers/portal-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Generate a Stripe Customer Portal link for a customer email (requires Stripe). */
+        post: operations["AdminCommerceOperations_generateCustomerPortalLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/commerce/subscribers/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminCommerceOperations_cancelSubscriber"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/commerce/subscribers/{id}/dunning/pause": {
         parameters: {
             query?: never;
@@ -373,6 +423,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/commerce/subscribers/{id}/record-payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminCommerceOperations_recordSubscriberPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/commerce/transactions": {
         parameters: {
             query?: never;
@@ -383,6 +449,22 @@ export interface paths {
         get: operations["AdminCommerceOperations_getTransactions"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/commerce/transactions/{id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminCommerceOperations_refundTransaction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1268,6 +1350,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Draft proforma PDF. Requires HMAC sig + exp (payload tenantSlug:draft:sessionId:exp). */
         get: operations["PublicBillingOperations_getDraftDocument"];
         put?: never;
         post?: never;
@@ -1327,23 +1410,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/public/commerce/{tenantSlug}/checkout/{sessionId}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Checkout status poller for client-side success pages. Bound to workspace slug; does not mint portal tokens. */
-        get: operations["PublicCommerceOperations_getCheckoutStatus"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/public/commerce/checkout/{subId}/status": {
         parameters: {
             query?: never;
@@ -1372,6 +1438,23 @@ export interface paths {
         put?: never;
         /** @description Start update-payment / recovery checkout for a past-due subscription. */
         post: operations["PublicCommerceOperations_updatePayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/commerce/{tenantSlug}/checkout/{sessionId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Checkout status poller for client-side success pages. Bound to workspace slug; does not mint portal tokens. */
+        get: operations["PublicCommerceOperations_getCheckoutStatus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1601,6 +1684,10 @@ export interface components {
         };
         "Commerce.CheckoutStatusResponse": {
             status: string;
+            /**
+             * @description Deprecated: anonymous status poll no longer mints portal magic tokens.
+             *     Use email magic links or authenticated portal access instead.
+             */
             token?: string;
         };
         "Commerce.CommerceStatsDto": {
@@ -1753,7 +1840,7 @@ export interface components {
             total_amount: number;
             /** Format: date-time */
             created_at: string;
-            /** HMAC-signed public URL for draft proforma PDF (sig+exp). */
+            /** @description HMAC-signed public URL for draft proforma PDF (sig+exp). */
             draft_pdf_url?: string;
         };
         "Commerce.CustomLineItemDto": {
@@ -1791,6 +1878,13 @@ export interface components {
             subject?: string;
             email_body?: string;
             whatsapp_body?: string;
+        };
+        "Commerce.GenerateCustomerPortalRequestDto": {
+            customer_email: string;
+            return_url: string;
+        };
+        "Commerce.GenerateCustomerPortalResponseDto": {
+            url: string;
         };
         "Commerce.PauseDunningRequestDto": {
             /** Format: date-time */
@@ -1870,6 +1964,21 @@ export interface components {
             quantity?: number;
             is_guest_checkout?: boolean;
             coupon_code?: string;
+        };
+        /** Ops offline payment against an existing subscriber. */
+        "Commerce.RecordPaymentRequestDto": {
+            /** Format: double */
+            amount: number;
+            payment_method: string;
+            reference_number?: string;
+        };
+        "Commerce.RecordRefundRequestDto": {
+            /** Format: double */
+            amount?: number;
+            gateway_name?: string;
+            subscription_id?: string;
+            /** Format: double */
+            tax_amount?: number;
         };
         "Commerce.SavePaymentConfigRequestDto": {
             gateway_type: string;
@@ -4660,6 +4769,209 @@ export interface operations {
             };
         };
     };
+    AdminCommerceOperations_exportSubscribers: {
+        parameters: {
+            query?: {
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommerceOperations_generateCustomerPortalLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Commerce.GenerateCustomerPortalRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Commerce.GenerateCustomerPortalResponseDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommerceOperations_cancelSubscriber: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     AdminCommerceOperations_pauseSubscriberDunning: {
         parameters: {
             query?: never;
@@ -4798,6 +5110,77 @@ export interface operations {
             };
         };
     };
+    AdminCommerceOperations_recordSubscriberPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Commerce.RecordPaymentRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     AdminCommerceOperations_getTransactions: {
         parameters: {
             query?: {
@@ -4828,6 +5211,77 @@ export interface operations {
                         /** Format: int32 */
                         total_pages: number;
                     };
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommerceOperations_refundTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Commerce.RecordRefundRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -9382,7 +9836,6 @@ export interface operations {
         parameters: {
             query: {
                 sig: string;
-                /** Format: int64 */
                 exp: number;
             };
             header?: never;
@@ -9653,13 +10106,14 @@ export interface operations {
             };
         };
     };
-    PublicCommerceOperations_getCheckoutStatus: {
+    PublicCommerceOperations_getCheckoutStatusLegacy: {
         parameters: {
-            query?: never;
+            query: {
+                tenant_slug: string;
+            };
             header?: never;
             path: {
-                tenantSlug: string;
-                sessionId: string;
+                subId: string;
             };
             cookie?: never;
         };
@@ -9721,11 +10175,9 @@ export interface operations {
             };
         };
     };
-    PublicCommerceOperations_getCheckoutStatusLegacy: {
+    PublicCommerceOperations_updatePayment: {
         parameters: {
-            query: {
-                tenant_slug: string;
-            };
+            query?: never;
             header?: never;
             path: {
                 subId: string;
@@ -9740,11 +10192,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Commerce.CheckoutStatusResponse"];
+                    "application/json": components["schemas"]["Commerce.CheckoutResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9772,12 +10242,13 @@ export interface operations {
             };
         };
     };
-    PublicCommerceOperations_updatePayment: {
+    PublicCommerceOperations_getCheckoutStatus: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                subId: string;
+                tenantSlug: string;
+                sessionId: string;
             };
             cookie?: never;
         };
@@ -9789,7 +10260,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Commerce.CheckoutResponse"];
+                    "application/json": components["schemas"]["Commerce.CheckoutStatusResponse"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

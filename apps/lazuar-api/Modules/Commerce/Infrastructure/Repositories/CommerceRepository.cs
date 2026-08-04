@@ -144,6 +144,7 @@ public class CommerceRepository : ICommerceRepository
     public void AddChargeAttempt(ChargeAttemptLog log) => _context.ChargeAttemptLogs.Add(log);
     public void AddCheckoutSession(CheckoutSession session) => _context.CheckoutSessions.Add(session);
     public void AddCoupon(Coupon coupon) => _context.Coupons.Add(coupon);
+    public void AddTransactionLog(CommerceTransactionLog log) => _context.TransactionLogs.Add(log);
     
     public void AddDunningCampaign(DunningCampaign campaign) => _context.DunningCampaigns.Add(campaign);
     public void RemoveDunningCampaign(DunningCampaign campaign) => _context.DunningCampaigns.Remove(campaign);

@@ -141,6 +141,29 @@ model PauseDunningRequestDto {
   pause_until: utcDateTime;
 }
 
+@summary("Ops offline payment against an existing subscriber.")
+model RecordPaymentRequestDto {
+  amount: float64;
+  payment_method: string;
+  reference_number?: string;
+}
+
+model GenerateCustomerPortalRequestDto {
+  customer_email: string;
+  return_url: string;
+}
+
+model GenerateCustomerPortalResponseDto {
+  url: string;
+}
+
+model RecordRefundRequestDto {
+  amount?: float64;
+  gateway_name?: string;
+  subscription_id?: string;
+  tax_amount?: float64;
+}
+
 model PaymentConfigDto {
   gateway_type: string;
   api_key?: string;

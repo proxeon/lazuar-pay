@@ -135,12 +135,41 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 bg-white border border-[#e5e5e5] p-5 flex flex-col h-[320px]">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] mb-6">Revenue Trend</h3>
-            <div className="flex-1 w-full relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                 <span className="text-[11px] text-[#a1a1aa]">Not enough data to graph</span>
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Revenue Trend</h3>
+              <span className="text-[10px] font-mono text-[#71717a]">
+                Total {formatMYR(stats?.total_revenue_collected || 0)}
+              </span>
             </div>
+            <div className="flex-1 w-full relative min-h-0">
+              {(stats?.cash_flow_trend?.length ?? 0) > 0 && (stats?.cash_flow_trend?.some(p => (p.amount ?? 0) > 0)) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats?.cash_flow_trend || []} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} stroke="#a1a1aa" />
+                    <Tooltip
+                      formatter={(value: number | string) => formatMYR(Number(value))}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Bar dataKey="amount" fill="#09090b" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-[11px] text-[#a1a1aa]">No confirmed payments yet</span>
+                </div>
+              )}
+            </div>
+            {(stats?.payment_methods?.length ?? 0) > 0 && (
+              <div className="mt-3 pt-3 border-t border-[#f4f4f5] space-y-1">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[#71717a]">By source</p>
+                {stats!.payment_methods!.slice(0, 3).map((pm) => (
+                  <div key={pm.method} className="flex justify-between text-[11px]">
+                    <span className="text-[#52525b] font-mono">{pm.method}</span>
+                    <span className="font-mono text-[#09090b]">{formatMYR(pm.total_amount || 0)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-2 bg-white border border-[#e5e5e5] flex flex-col h-[320px]">

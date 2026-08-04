@@ -4,6 +4,8 @@
 // @ts-ignore
 import { LhdnCertificateRequestBuilderRequestsMetadata, type LhdnCertificateRequestBuilder } from './lhdnCertificate/index.js';
 // @ts-ignore
+import { LhdnConfigRequestBuilderRequestsMetadata, type LhdnConfigRequestBuilder } from './lhdnConfig/index.js';
+// @ts-ignore
 import { type BaseRequestBuilder, type KeysToExcludeForNavigationMetadata, type NavigationMetadata } from '@microsoft/kiota-abstractions';
 
 /**
@@ -14,6 +16,10 @@ export interface WorkspacesItemRequestBuilder extends BaseRequestBuilder<Workspa
      * The lhdnCertificate property
      */
     get lhdnCertificate(): LhdnCertificateRequestBuilder;
+    /**
+     * The lhdnConfig property
+     */
+    get lhdnConfig(): LhdnConfigRequestBuilder;
 }
 /**
  * Uri template for the request builder.
@@ -25,6 +31,9 @@ export const WorkspacesItemRequestBuilderUriTemplate = "{+baseurl}/lhdn/workspac
 export const WorkspacesItemRequestBuilderNavigationMetadata: Record<Exclude<keyof WorkspacesItemRequestBuilder, KeysToExcludeForNavigationMetadata>, NavigationMetadata> = {
     lhdnCertificate: {
         requestsMetadata: LhdnCertificateRequestBuilderRequestsMetadata,
+    },
+    lhdnConfig: {
+        requestsMetadata: LhdnConfigRequestBuilderRequestsMetadata,
     },
 };
 /* tslint:enable */

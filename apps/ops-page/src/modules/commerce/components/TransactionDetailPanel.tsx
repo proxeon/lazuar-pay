@@ -22,35 +22,24 @@ export default function TransactionDetailPanel({ transaction, onClose, onUpdate 
 
   const refundMutation = useMutation({
     mutationFn: async () => {
-      // NOTE: Using the existing /community/subscribers endpoint logic for refunds 
-      // since the Payments module doesn't currently expose a standalone refund endpoint.
-      // This assumes the transaction external_reference is the payment_record_id.
-      if (!transaction?.external_reference) throw new Error("Missing payment record reference for refund.");
+      if (!transaction?.id) throw new Error("Missing transaction id for refund.");
 
-      // For this to work flawlessly without a SubId, the backend would need a generic 
-      // POST /admin/commerce/transactions/{id}/refund endpoint. 
-      // As a fallback to the current architecture, we hit the community refund route
-      // which requires a subscription ID. Since the UI here only has the transaction, 
-      // if the backend doesn't support generic refunds yet, this will fail gracefully.
-      
-      // Temporary stub matching the SubscribersPage refund logic:
-      const { error } = await client.POST("/admin/community/subscribers/{id}/refund" as any, {
-        params: { path: { id: "00000000-0000-0000-0000-000000000000" } }, // Dummy ID since we don't have the sub
-        body: { payment_record_id: transaction.external_reference, reason: refundReason }
+      const { error } = await client.POST("/admin/commerce/transactions/{id}/refund", {
+        params: { path: { id: transaction.id } },
+        body: {},
       });
-      if (error) throw new Error(error.detail);
+      if (error) throw new Error((error as any).detail || "Refund failed");
     },
     onSuccess: () => {
-      toast.success("Refund processed successfully");
+      toast.success("Refund requested successfully");
       queryClient.invalidateQueries({ queryKey: ["commerce-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["financial-summary"] });
       setIsRefundModalOpen(false);
+      // Status flips to REFUNDED when GatewayRefundCompleted is processed; optimistically mark requested.
       onUpdate(transaction ? { ...transaction, status: "REFUNDED" } : null);
     },
     onError: (err: any) => {
-      // toast.error("Failed to process refund", { description: err.message });
-      // Temporary UX fallback for the missing standalone refund endpoint
-      toast.error("Refund failed", { description: "Direct ledger refunds are currently restricted. Please issue the refund via the Subscribers page." });
+      toast.error("Refund failed", { description: err.message });
       setIsRefundModalOpen(false);
     }
   });

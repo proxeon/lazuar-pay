@@ -52,7 +52,7 @@ public partial class CommerceQueryService
                 t.""CustomerName"",
                 t.""CustomerEmail"",
                 t.""ProductName"",
-                'GATEWAY' as ""PaymentMethod"",
+                COALESCE(NULLIF(t.""RecordedByName"", ''), 'GATEWAY') as ""PaymentMethod"",
                 t.""ExternalReference"",
                 (COUNT(*) OVER())::int AS ""TotalCount""
             FROM commerce.""TransactionLogs"" t
@@ -89,7 +89,7 @@ public partial class CommerceQueryService
             Customer_name = t.CustomerName,
             Customer_email = t.CustomerEmail,
             Product_name = t.ProductName,
-            Recorded_by_name = "SYSTEM",
+            Recorded_by_name = t.PaymentMethod,
             External_reference = t.ExternalReference
         });
 

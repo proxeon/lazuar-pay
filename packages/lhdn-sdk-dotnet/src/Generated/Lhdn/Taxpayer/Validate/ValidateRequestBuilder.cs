@@ -34,6 +34,9 @@ namespace Lazuar.Lhdn.Sdk.Generated.Lhdn.Taxpayer.Validate
         public ValidateRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/lhdn/taxpayer/validate", rawUrl)
         {
         }
+        /// <summary>
+        /// Validate a taxpayer TIN against MyInvois (cached). Requires API key with lhdn.documents:read or write.
+        /// </summary>
         /// <returns>A <see cref="global::Lazuar.Lhdn.Sdk.Generated.Models.Lhdn.ValidateTinResponseDto"/></returns>
         /// <param name="body">The request body</param>
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
@@ -64,6 +67,9 @@ namespace Lazuar.Lhdn.Sdk.Generated.Lhdn.Taxpayer.Validate
             };
             return await RequestAdapter.SendAsync<global::Lazuar.Lhdn.Sdk.Generated.Models.Lhdn.ValidateTinResponseDto>(requestInfo, global::Lazuar.Lhdn.Sdk.Generated.Models.Lhdn.ValidateTinResponseDto.CreateFromDiscriminatorValue, errorMapping, cancellationToken).ConfigureAwait(false);
         }
+        /// <summary>
+        /// Validate a taxpayer TIN against MyInvois (cached). Requires API key with lhdn.documents:read or write.
+        /// </summary>
         /// <returns>A <see cref="RequestInformation"/></returns>
         /// <param name="body">The request body</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
