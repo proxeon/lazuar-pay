@@ -113,4 +113,95 @@ public class BillingQueryServiceTests
             await cmd.ExecuteNonQueryAsync();
         }
     }
+
+    [Test]
+    public async Task GetFinancialSummaryAsync_AfterPartialRefund_NetsContraRevenueCorrectly()
+    {
+        // C.9 / Phase C acceptance: ops financial summary believable on refund scenario.
+        var orgId = Guid.NewGuid();
+        var sqlFactory = Substitute.For<ISqlConnectionFactory>();
+        sqlFactory.CreateConnection().Returns(new NpgsqlConnection(_connectionString));
+
+        await using var connection = new NpgsqlConnection(_connectionString);
+        try
+        {
+            await connection.OpenAsync();
+        }
+        catch (Exception ex)
+        {
+            Assert.Ignore($"Postgres unavailable ({ex.GetType().Name}). Start docker-compose db or set LAZUAR_TEST_PG.");
+            return;
+        }
+
+        await using (var setup = new NpgsqlCommand(@"
+            CREATE SCHEMA IF NOT EXISTS billing;
+            CREATE TABLE IF NOT EXISTS billing.""LedgerEntries"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""OrganizationId"" uuid NOT NULL,
+                ""Timestamp"" timestamptz NOT NULL,
+                ""ReferenceType"" text NOT NULL,
+                ""ReferenceId"" text NOT NULL,
+                ""CustomerType"" text NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS billing.""LedgerLines"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""LedgerEntryId"" uuid NOT NULL,
+                ""AccountType"" text NOT NULL,
+                ""Amount"" numeric NOT NULL,
+                ""Currency"" text NOT NULL,
+                ""BaseCurrencyAmount"" numeric NOT NULL,
+                ""BaseCurrency"" text NOT NULL,
+                ""TaxTypeCode"" text NULL,
+                ""MsicCode"" text NULL
+            );
+        ", connection))
+        {
+            await setup.ExecuteNonQueryAsync();
+        }
+
+        try
+        {
+            var saleId = Guid.CreateVersion7();
+            var refundId = Guid.CreateVersion7();
+
+            // Sale: gross 100, fee 5, tax 10 → paid 110 cash lines simplified for summary accounts.
+            // Refund half: contra 50, tax reverse 5.
+            await using (var cmd = new NpgsqlCommand(@"
+                INSERT INTO billing.""LedgerEntries"" (""Id"", ""OrganizationId"", ""Timestamp"", ""ReferenceType"", ""ReferenceId"", ""CustomerType"")
+                VALUES
+                (@SaleId, @OrgId, NOW(), 'GATEWAY_PAYMENT', 'refund_scenario_sale', 'B2C'),
+                (@RefundId, @OrgId, NOW(), 'GATEWAY_REFUND', 'refund_scenario_ref', 'B2C');
+
+                INSERT INTO billing.""LedgerLines"" (""Id"", ""LedgerEntryId"", ""AccountType"", ""Amount"", ""Currency"", ""BaseCurrencyAmount"", ""BaseCurrency"", ""TaxTypeCode"", ""MsicCode"")
+                VALUES
+                (gen_random_uuid(), @SaleId, 'REVENUE_GROSS', -100, 'MYR', -100, 'MYR', '06', '004'),
+                (gen_random_uuid(), @SaleId, 'EXPENSE_GATEWAY_FEE', 5, 'MYR', 5, 'MYR', '06', '004'),
+                (gen_random_uuid(), @SaleId, 'LIABILITY_TAX_PAYABLE', -10, 'MYR', -10, 'MYR', '06', '004'),
+                (gen_random_uuid(), @RefundId, 'CONTRA_REVENUE_REFUNDS', 50, 'MYR', 50, 'MYR', '06', '004'),
+                (gen_random_uuid(), @RefundId, 'LIABILITY_TAX_PAYABLE', 5, 'MYR', 5, 'MYR', '06', '004');
+            ", connection))
+            {
+                cmd.Parameters.AddWithValue("SaleId", saleId);
+                cmd.Parameters.AddWithValue("RefundId", refundId);
+                cmd.Parameters.AddWithValue("OrgId", orgId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            var service = new BillingQueryService(sqlFactory);
+            var summary = await service.GetFinancialSummaryAsync(orgId);
+
+            summary.Gross_revenue.Should().Be(100);
+            summary.Total_gateway_fees.Should().Be(5);
+            // Tax liability nets: -(-10) + -(+5) via signed formula → tax display 5 remaining
+            summary.Total_tax_liabilities.Should().Be(5);
+            // Net = gross 100 - contra 50 - fee 5 - tax remaining 5 = 40
+            summary.Net_revenue.Should().Be(40);
+        }
+        finally
+        {
+            await using var cmd = new NpgsqlCommand(@"DELETE FROM billing.""LedgerEntries"" WHERE ""OrganizationId"" = @OrgId;", connection);
+            cmd.Parameters.AddWithValue("OrgId", orgId);
+            await cmd.ExecuteNonQueryAsync();
+        }
+    }
 }

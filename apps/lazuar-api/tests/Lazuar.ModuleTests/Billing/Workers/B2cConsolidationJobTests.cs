@@ -172,4 +172,65 @@ public class B2cConsolidationJobTests
         var mid = new DateTime(nowMyt.Year, nowMyt.Month, 15, 12, 0, 0, DateTimeKind.Unspecified).AddMonths(-monthsAgo);
         return TimeZoneInfo.ConvertTimeToUtc(mid, myt);
     }
+
+    [Test]
+    public async Task Eligibility_Includes_LegacyNullStatus_B2cReceiptAndPending()
+    {
+        var ts = PriorMonthUtcMid();
+        SeedSale("tx_legacy_null", status: null, consolidationStatus: null, ts);
+        SeedSale("tx_receipt", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, ts);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var legacy = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_legacy_null");
+        var receipt = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_receipt");
+        Assert.That(legacy.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
+        Assert.That(receipt.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
+    }
+
+    [Test]
+    public async Task Eligibility_Excludes_B2b_And_NotRequired_And_CurrentMonth()
+    {
+        var prior = PriorMonthUtcMid();
+        var myt = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "Singapore Standard Time" : "Asia/Kuala_Lumpur");
+        var nowMyt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, myt);
+        var currentMidMyt = new DateTime(nowMyt.Year, nowMyt.Month, 10, 12, 0, 0, DateTimeKind.Unspecified);
+        var currentUtc = TimeZoneInfo.ConvertTimeToUtc(currentMidMyt, myt);
+
+        // B2B
+        var b2b = new LedgerEntry(_orgId, LedgerReferenceTypes.GatewayPayment, "tx_b2b", "b2b", "B2B");
+        b2b.AddLine(AccountTypes.AssetCash, 100m, "MYR", 100m, "MYR");
+        b2b.AddLine(AccountTypes.RevenueGross, -100m, "MYR", -100m, "MYR");
+        b2b.ValidateBalanced();
+        b2b.MarkConsolidationNotRequired();
+        typeof(LedgerEntry).GetProperty(nameof(LedgerEntry.Timestamp))!.SetValue(b2b, prior);
+        _db.LedgerEntries.Add(b2b);
+
+        // B2C NOT_REQUIRED
+        var notReq = SeedSale("tx_notreq", null, null, prior);
+        notReq.MarkConsolidationNotRequired();
+
+        // Current month B2C pending — closed-month catch-up must skip open month
+        SeedSale("tx_current", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, currentUtc);
+
+        // Eligible control row
+        SeedSale("tx_ok", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, prior);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloadedB2b = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_b2b");
+        var reloadedNotReq = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_notreq");
+        var reloadedCurrent = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_current");
+        var reloadedOk = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_ok");
+
+        Assert.That(reloadedB2b.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.NotRequired));
+        Assert.That(reloadedNotReq.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.NotRequired));
+        Assert.That(reloadedCurrent.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Pending));
+        Assert.That(reloadedOk.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
+
+        await _eventBus.Received(1).PublishAsync(Arg.Any<ConsolidatedInvoiceIssuedIntegrationEvent>());
+    }
 }

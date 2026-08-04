@@ -96,8 +96,12 @@ public class BillingDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId).IsUnique();
 
-            // xmin system column provides optimistic concurrency for the wallet.
-            builder.Property<byte[]>("xmin").IsRowVersion();
+            // PostgreSQL system xmin (xid) as optimistic concurrency token.
+            // Must be uint/xid — Npgsql 10 rejects reading xid as byte[] (IsRowVersion).
+            builder.Property<uint>("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsConcurrencyToken();
 
             builder.HasMany(x => x.Transactions)
                    .WithOne()
@@ -112,7 +116,10 @@ public class BillingDbContext : PlatformDbContext
             builder.ToTable("CreditHolds");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.CorrelationId });
-            builder.Property<byte[]>("xmin").IsRowVersion();
+            builder.Property<uint>("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsConcurrencyToken();
             builder.Property(x => x.Status).HasMaxLength(20);
             builder.Property(x => x.CorrelationId).HasMaxLength(100);
             builder.Property(x => x.Reference).HasMaxLength(300);

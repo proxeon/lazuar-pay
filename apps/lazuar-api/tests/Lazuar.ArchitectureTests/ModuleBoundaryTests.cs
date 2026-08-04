@@ -10,6 +10,16 @@ namespace Lazuar.ArchitectureTests;
 [TestFixture]
 public class ModuleBoundaryTests
 {
+    // Anchors for BuildingBlocks / SharedKernel (C.9 architecture expansion).
+    private static readonly Assembly BuildingBlocksDomainAssembly =
+        typeof(BuildingBlocks.Domain.Entity).Assembly;
+    private static readonly Assembly BuildingBlocksApplicationAssembly =
+        typeof(BuildingBlocks.Application.ICommand).Assembly;
+    private static readonly Assembly BuildingBlocksInfrastructureAssembly =
+        typeof(BuildingBlocks.Infrastructure.PlatformDbContext).Assembly;
+    private static readonly Assembly SharedKernelAssembly =
+        typeof(SharedKernel.SharedKernelMarker).Assembly;
+
     private static readonly string[] ModuleNamespaces =
     [
         "Modules.One",
@@ -222,5 +232,88 @@ public class ModuleBoundaryTests
         }
 
         return string.Join(", ", result.FailingTypeNames);
+    }
+
+    /// <summary>
+    /// C.9 — BuildingBlocks must remain free of module business assemblies (domain-agnostic technical core).
+    /// </summary>
+    [Test]
+    public void BuildingBlocks_Must_Not_Reference_Module_Assemblies()
+    {
+        var forbidden = ModuleNamespaces
+            .SelectMany(m => new[] { m, $"{m}.Domain", $"{m}.Application", $"{m}.Infrastructure", $"{m}.Contracts" })
+            .Distinct()
+            .ToArray();
+
+        foreach (var assembly in new[]
+                 {
+                     BuildingBlocksDomainAssembly,
+                     BuildingBlocksApplicationAssembly,
+                     BuildingBlocksInfrastructureAssembly
+                 })
+        {
+            var result = Types.InAssembly(assembly)
+                .ShouldNot()
+                .HaveDependencyOnAny(forbidden)
+                .GetResult();
+
+            Assert.That(result.IsSuccessful, Is.True,
+                $"BuildingBlocks assembly '{assembly.GetName().Name}' must not reference Modules.*. " +
+                $"Failing types: {FormatFailingTypes(result)}");
+        }
+    }
+
+    /// <summary>
+    /// C.9 — SharedKernel stays free of write-model business entities and module layers.
+    /// </summary>
+    [Test]
+    public void SharedKernel_Must_Not_Reference_Modules_Or_Contain_Entity_Types()
+    {
+        var forbidden = ModuleNamespaces
+            .SelectMany(m => new[] { m, $"{m}.Domain", $"{m}.Application", $"{m}.Infrastructure", $"{m}.Contracts" })
+            .Concat(["BuildingBlocks.Application", "BuildingBlocks.Infrastructure"])
+            .Distinct()
+            .ToArray();
+
+        var result = Types.InAssembly(SharedKernelAssembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(forbidden)
+            .GetResult();
+
+        Assert.That(result.IsSuccessful, Is.True,
+            $"SharedKernel must not reference Modules.* or BuildingBlocks Application/Infrastructure. " +
+            $"Failing types: {FormatFailingTypes(result)}");
+
+        // No Entity / AggregateRoot subclasses — SharedKernel is marker / pure types only.
+        var entitySubtypes = SharedKernelAssembly.GetTypes()
+            .Where(t => !t.IsAbstract
+                        && (typeof(BuildingBlocks.Domain.Entity).IsAssignableFrom(t)
+                            || typeof(BuildingBlocks.Domain.IAggregateRoot).IsAssignableFrom(t)))
+            .Select(t => t.FullName)
+            .ToList();
+
+        Assert.That(entitySubtypes, Is.Empty,
+            "SharedKernel must not host Entity/IAggregateRoot write models: " + string.Join(", ", entitySubtypes));
+    }
+
+    /// <summary>
+    /// C.9 — Module Domain layers may depend on BuildingBlocks.Domain only (not Application/Infrastructure).
+    /// </summary>
+    [Test]
+    public void Module_Domain_Should_Not_Reference_BuildingBlocks_Application_Or_Infrastructure()
+    {
+        foreach (var module in ModuleNamespaces)
+        {
+            var domainAssembly = GetRequiredAssembly($"{module}.Domain");
+
+            var result = Types.InAssembly(domainAssembly)
+                .ShouldNot()
+                .HaveDependencyOnAny("BuildingBlocks.Application", "BuildingBlocks.Infrastructure")
+                .GetResult();
+
+            Assert.That(result.IsSuccessful, Is.True,
+                $"Domain layer in {module} must not reference BuildingBlocks.Application or BuildingBlocks.Infrastructure. " +
+                $"Failing types: {FormatFailingTypes(result)}");
+        }
     }
 }

@@ -1,7 +1,8 @@
 # Plan 001 — Backend solidification checklist
 
-**Status:** Draft (Phase 0 + Phase A + Phase B acceptance verified in-repo; manual e2e residual noted under B)  
+**Status:** Draft (Phase 0 + Phase A + Phase B + Phase C acceptance verified in-repo with residuals)  
 **Date:** 2026-08-03  
+
 **Direction:** `docs/001-gaps/00-what-we-need-to-do-next.md`  
 **Evidence:** `docs/001-gaps/01`–`20`  
 
@@ -608,19 +609,51 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.9 Tests for Phase C
 
-- [ ] Postgres concurrent credit deduct + idempotency
-- [ ] Ledger balance matrix payment/refund/top-up
-- [ ] B2C consolidation eligibility
-- [ ] Tenant isolation: cross-tenant IDOR negative tests
-- [ ] Coupon reserve/confirm/expire
-- [ ] Expand architecture boundary tests (BuildingBlocks/SharedKernel rules as needed)
+- [x] **Postgres concurrent credit deduct + idempotency**
+  - Integration: `tests/Lazuar.IntegrationTests/CreditDeductionConcurrencyTests.cs` (Testcontainers Postgres)
+    - same idempotency key concurrent → single deduct; distinct keys cannot overdraw
+  - Module: `tests/Lazuar.ModuleTests/Billing/Commands/DeductTenantCreditIdempotencyTests.cs` (sequential InMemory)
+  - Fix: wallet `xmin` concurrency token as `uint`/`xid` (Npgsql 10 rejects `byte[]`); handler treats unique-key races as idempotent success
+  - Residual: InMemory cannot exercise real `xmin` races; concurrent path requires Docker/Testcontainers
+- [x] **Ledger balance matrix payment/refund/top-up**
+  - `LedgerBalanceMatrixTests` — balanced double-entry + signed net-revenue matrix; top-up excluded from merchant GMV
+  - Existing: `GatewayRefundCompletedHandlerTests`, `PlatformTopUpEventHandlerTests`, `GatewayPaymentCompletedHandlerTests`
+  - Integration: `BillingQueryServiceTests.GetFinancialSummaryAsync_AfterPartialRefund_NetsContraRevenueCorrectly` (Postgres optional)
+- [x] **B2C consolidation eligibility**
+  - `B2cConsolidationJobTests` — B2C_RECEIPT/PENDING, legacy null, catch-up, idempotent re-run; excludes B2B/NOT_REQUIRED/current month
+- [x] **Tenant isolation: cross-tenant IDOR negative tests**
+  - `CrossTenantIdorTests` — cancel sub / refund / coupon update|delete foreign org → not found; billing ledger ambient filter
+  - Existing C.2: `TenantIsolationHardeningTests` (EF fail-closed, middleware, cross-tenant webhook no-op)
+- [x] **Coupon reserve/confirm/expire**
+  - Domain: `CouponLifecycleTests` (reserve/confirm/release/max-uses/expiry)
+  - Integration path: `CommerceProductCompletenessTests` confirm-on-paid + `CheckoutSessionExpiryJob` release
+- [x] **Expand architecture boundary tests (BuildingBlocks/SharedKernel)**
+  - `ModuleBoundaryTests`: BuildingBlocks ↛ Modules.*; SharedKernel ↛ modules/entities; Domain ↛ BB Application/Infrastructure
+  - Existing: tenant filter + middleware architecture tests (C.2)
 
 ### Phase C acceptance checklist
 
-- [ ] Support can answer “was this payment fulfilled?” from logs/tables
-- [ ] Ops UI actions either work end-to-end or are gone
-- [ ] Horizontal scale plan documented; no silent double dunning cancel under two replicas without claims
-- [ ] Financial summary on refund scenario is believable for ops dashboard
+- [x] **Support can answer “was this payment fulfilled?” from logs/tables**
+  - Structured success log: `ProcessGatewayWebhookCommandHandler.LogProcessed` — EventId, Provider, GatewayTransactionId, TenantId, EventType
+  - Tables: payments webhook/business-key logs; `billing.LedgerEntries` (`GATEWAY_PAYMENT` / `GATEWAY_REFUND` / `SYSTEM_CREDIT_TOPUP` by `ReferenceId`); `commerce.TransactionLogs.ExternalReference`
+  - Residual: no single support UI “payment timeline”; answer is SQL/logs join across payments → commerce → billing
+- [x] **Ops UI actions either work end-to-end or are gone**
+  - C.3: cancel, record-payment, refund, export implemented; ban removed; portal cancel kept; magic/billing-link removed from UI
+  - Residual: offline refund without gateway ExternalReference still blocked; export 10k cap; ban intentionally gone
+- [x] **Horizontal scale plan documented; no silent double dunning cancel under two replicas without claims**
+  - `deploy/prod/README.md` C.5: replica=1 rule + claimed-safe worker table (dunning/billing SKIP LOCKED + per-sub save)
+  - Residual: true concurrent SKIP LOCKED not asserted under InMemory; B2C calendar job still prefers single replica
+- [x] **Financial summary on refund scenario is believable for ops dashboard**
+  - Signed sums in `BillingQueryService.GetFinancialSummaryAsync` (contra refunds + proportional tax reverse)
+  - Tests: `LedgerBalanceMatrixTests.PaymentThenFullRefund_*`, integration partial-refund net=40 case
+  - Residual: deferred revenue still not product-driven (C.1); ops invoicing UI remains unrouted floating island (C.8)
+
+### C.9 residuals
+- Concurrent credit tests skip when Docker/Testcontainers unavailable (CI should provide Docker)
+- Historical migration still *describes* bytea xmin; runtime model uses system `xid` — no new EF migration required for token type; deploy DBs already use system xmin
+- Full host HTTP IDOR matrix (401/403 against Minimal API) not added; command-level org checks + EF filters are the gate
+
+**Phase C status:** operate-and-trust bar met in-repo (money paths, isolation, workers claims, observability, secrets, contracts honesty, C.9 test gates). Residuals above are honesty notes, not blockers for Phase D sequencing.
 
 ---
 

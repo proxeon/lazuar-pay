@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Domain.Entities;
+using Npgsql;
 
 namespace Modules.Billing.Infrastructure.Commands;
 
@@ -65,6 +66,26 @@ public class DeductTenantCreditCommandHandler : ICommandHandler<DeductTenantCred
                 _dbContext.ChangeTracker.Clear();
                 if (attempt == MaxAttempts - 1) throw;
             }
+            catch (DbUpdateException ex) when (
+                !string.IsNullOrEmpty(request.IdempotencyKey)
+                && IsUniqueViolation(ex))
+            {
+                // Concurrent same-key race: peer already inserted the idempotency log.
+                // Treat as success (no double charge). Unique index is the safety net.
+                _dbContext.ChangeTracker.Clear();
+                return;
+            }
         }
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex)
+    {
+        for (Exception? e = ex; e != null; e = e.InnerException)
+        {
+            if (e is PostgresException pg && pg.SqlState == PostgresErrorCodes.UniqueViolation)
+                return true;
+        }
+
+        return false;
     }
 }
