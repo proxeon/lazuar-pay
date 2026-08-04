@@ -1,6 +1,8 @@
 
 # Master Integration Roadmap: Lazuar Platform (CaaS)
 
+> **⚠️ Watermark (2026):** Long-range integration wishlist. **Shipping truth** is ADR 021/023 Pure CaaS MVP (checkout + ledger + dunning email path; LHDN UI lobotomized). Phase 2/3 items (escrow, e-sign, community DRM, Wise, etc.) are not Phase C scope. Prefer `plans/001-backend-solidification-checklist.md` for implementation order.
+
 ## Phase 1: The "Un-Fireable" Core
 *The foundation of the platform. These integrations solve immediate, critical pain points that prevent businesses from operating legally or efficiently.*
 

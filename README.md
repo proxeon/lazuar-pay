@@ -7,6 +7,16 @@ Lazuar is an API-first, Headless Commerce platform built on a strict .NET 10 Mod
 
 We actively avoid the "CMS Trap." We don't build website builders, and we don't force you to migrate your domains. You build your beautiful landing pages on Framer, Webflow, Astro, or custom Next.js apps. We simply power the "Buy Now" button.
 
+### Product truth watermark (read before ADR archaeology)
+
+| Layer | Source of truth | Notes |
+|-------|-----------------|--------|
+| **Shipping product (MVP)** | **ADR 021** (Compliance CaaS pivot) + **ADR 023** (Pure CaaS UI lobotomy) | Ops UI ships checkout/commerce/dunning/credits first; LHDN B2B UX is intentionally unrouted until Phase D.3. Community/Vault modules removed (**ADR 022**). |
+| **Historical ambition** | ADR 014 (apps catalog), ADR 020 (integration roadmap) | Useful roadmap context only. Do not implement “15 apps,” community DRM, or link-in-bio from those docs without an explicit reverse of ADR 021/023. |
+| **API contracts** | `packages/api-spec` + `task gen` | OpenAPI clients must match Minimal API; see `docs/contracts/openapi-vs-minimal-api.md`. |
+
+**Honest capability today:** BYOK gateways + commerce subscriptions + double-entry billing ledger + email dunning templates + LHDN **backend** pipeline. WhatsApp dunning and full compliance UI are roadmap (Phase D), not guaranteed demoable surfaces on every deploy.
+
 ---
 
 ## 🏗 Headless Architecture

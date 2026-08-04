@@ -3,6 +3,8 @@
 
 > **Purpose:** Comprehensive reference for each module in the Lazuar superapp. Use this as the single source of truth for scope, features, and strategic role.
 
+> **⚠️ Watermark (2026):** This document reflects the **historical multi-app superapp catalog**. Product direction is **ADR 021** (Compliance CaaS) + **ADR 023** (Pure CaaS MVP UI). Community/Vault were removed (**ADR 022**). Do not treat every module listed here as shipping scope. Root `README.md` product watermark + `docs/contracts/openapi-vs-minimal-api.md` are authoritative for current honesty.
+
 ---
 
 ## Architecture Taxonomy

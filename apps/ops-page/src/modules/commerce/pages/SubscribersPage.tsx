@@ -90,7 +90,7 @@ export default function SubscribersPage() {
           params: { path: { id: payload.payment_record_id } },
           body: { subscription_id: selectedSub.id },
         });
-        if (error) throw new Error((error as any).detail || "Refund failed");
+        if (error) throw new Error(error.detail || "Refund failed");
         return;
       }
 
@@ -98,7 +98,7 @@ export default function SubscribersPage() {
         const { error } = await client.POST("/admin/commerce/subscribers/{id}/cancel", {
           params: { path: { id: selectedSub.id } },
         });
-        if (error) throw new Error((error as any).detail || "Cancel failed");
+        if (error) throw new Error(error.detail || "Cancel failed");
         return;
       }
 
@@ -111,16 +111,28 @@ export default function SubscribersPage() {
             reference_number: payload.reference_number || undefined,
           },
         });
-        if (error) throw new Error((error as any).detail || "Record payment failed");
+        if (error) throw new Error(error.detail || "Record payment failed");
         return;
       }
 
-      const endpoint = `/admin/commerce/subscribers/{id}/${action}` as any;
-      const { error } = await client.POST(endpoint, {
-        params: { path: { id: selectedSub.id } },
-        body: payload
-      });
-      if (error) throw new Error((error as any).detail || "Action failed");
+      if (action === "dunning/pause") {
+        const { error } = await client.POST("/admin/commerce/subscribers/{id}/dunning/pause", {
+          params: { path: { id: selectedSub.id } },
+          body: { pause_until: payload.pause_until },
+        });
+        if (error) throw new Error(error.detail || "Pause dunning failed");
+        return;
+      }
+
+      if (action === "dunning/resume") {
+        const { error } = await client.POST("/admin/commerce/subscribers/{id}/dunning/resume", {
+          params: { path: { id: selectedSub.id } },
+        });
+        if (error) throw new Error(error.detail || "Resume dunning failed");
+        return;
+      }
+
+      throw new Error(`Unknown subscriber action: ${action}`);
     },
     onMutate: (variables) => {
       const actionKey = variables.action === "refund" ? `refund-${variables.payload.payment_record_id}` : variables.action;
@@ -377,7 +389,7 @@ export default function SubscribersPage() {
                       const { data, error } = await client.POST("/admin/commerce/subscribers/portal-link", {
                         body: { customer_email: selectedSub.customer_email, return_url: returnUrl },
                       });
-                      if (error) throw new Error((error as any).detail || "Failed to generate portal link");
+                      if (error) throw new Error(error.detail || "Failed to generate portal link");
                       if (data?.url) {
                         await navigator.clipboard.writeText(data.url);
                         toast.success("Stripe portal link copied to clipboard");

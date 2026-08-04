@@ -28,7 +28,7 @@ export default function TransactionDetailPanel({ transaction, onClose, onUpdate 
         params: { path: { id: transaction.id } },
         body: {},
       });
-      if (error) throw new Error((error as any).detail || "Refund failed");
+      if (error) throw new Error(error.detail || "Refund failed");
     },
     onSuccess: () => {
       toast.success("Refund requested successfully");

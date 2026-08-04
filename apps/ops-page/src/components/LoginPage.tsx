@@ -86,7 +86,7 @@ export default function LoginPage() {
       if (returnUrl) {
         window.location.href = returnUrl;
       } else {
-        window.location.href = "/community/dashboard";
+        window.location.href = "/commerce/dashboard";
       }
     } catch (err: any) {
       setError(err.message || "Invalid credentials.");
@@ -138,7 +138,7 @@ export default function LoginPage() {
       if (returnUrl) {
         window.location.href = returnUrl;
       } else {
-        window.location.href = "/community/dashboard";
+        window.location.href = "/commerce/dashboard";
       }
     } catch (err: any) {
       setError(err.message || "Registration failed.");

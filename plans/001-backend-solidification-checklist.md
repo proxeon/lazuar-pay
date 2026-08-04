@@ -581,20 +581,30 @@ Mark when decided; note outcome in PR/ADR.
 ### C.7 residuals
 - Existing payment/LHDN rows may still hold plaintext until re-saved (legacy decrypt fallback)
 - No bulk re-encrypt migration for historical TenantPaymentConfigurations / LhdnTenantConfig secrets
-- OpenAPI `task gen` / CI exit-code honesty deferred to C.8 (contracts patched manually here)
-- Superadmin/ops payment UI uses has_* UX; TypeSpec-generated OpenAPI dist patched but full regen is C.8
+- ~~OpenAPI `task gen` / CI exit-code honesty deferred to C.8~~ → **done in C.8**
+- Superadmin/ops payment UI uses has_* UX; full regen run in C.8
 - Production must set `Kms__MasterKey` (or rely on Jwt) — empty base appsettings will fail vault construction if neither env nor Development config is present
 
 ## C.8 Contract & frontend honesty pass
 
-- [ ] `task gen` + CI `git diff --exit-code` on generated clients
-- [ ] Enumerate Minimal API vs OpenAPI paths; allowlist intentional internal routes
-- [ ] Ops: remove `as any` phantom routes; fix CreateManualSubscriber DTO
-- [ ] Fix LHDN cancel path double-prefix in ops invoicing UI
-- [ ] OpenAPI for ops stream / system-message or stop untyped fetch
-- [ ] Route or delete unrouted modules (billing profile, invoicing, chat)
-- [ ] Login default path fix (`/commerce/dashboard`)
-- [ ] README / ADR watermark: 014/020 vs 021/023 truth; update Billing README golden rule
+- [x] `task gen` + CI `git diff --exit-code` on generated clients
+- [x] Enumerate Minimal API vs OpenAPI paths; allowlist intentional internal routes
+- [x] Ops: remove `as any` phantom routes; fix CreateManualSubscriber DTO
+- [x] Fix LHDN cancel path double-prefix in ops invoicing UI
+- [x] OpenAPI for ops stream / system-message or stop untyped fetch
+- [x] Route or delete unrouted modules (billing profile, invoicing, chat)
+- [x] Login default path fix (`/commerce/dashboard`)
+- [x] README / ADR watermark: 014/020 vs 021/023 truth; update Billing README golden rule
+
+### C.8 residuals
+- `packages/api-spec/dist/` remains gitignored; CI gates committed clients only (`api-types-ts`, `api-types-dotnet`, LHDN Kiota SDKs)
+- Superadmin `/api/v1/platform/*` TypeSpec coverage still thin
+- Ops chat UI / invoicing / billing profile stay **unrouted** (ADR 023 floating islands) — API + OpenAPI for stream/system-message exist; re-mount in D.3
+- `use-product-associations` is a no-op stub (Community/Vault removed, ADR 022)
+- Residual `as any` only on dynamic JSON schema in `UiRequestCard` (not HTTP paths)
+- CSV export still raw `fetch` (binary blob); path comment documented
+- `tsc --noEmit` / project-reference build still hits pre-existing `ignoreDeprecations` tsconfig issue; `vite build` succeeds
+- Architecture test that auto-diffs Minimal API reflection vs OpenAPI paths not added (doc allowlist is the C.8 gate)
 
 ## C.9 Tests for Phase C
 

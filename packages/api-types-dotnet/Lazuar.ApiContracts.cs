@@ -1742,45 +1742,64 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("gateway_type")]
         public string Gateway_type { get; set; } = default!;
 
-        /// <summary>Deprecated: never populated; use Has_api_key + Api_key_hint.</summary>
         [System.Text.Json.Serialization.JsonPropertyName("api_key")]
         public string? Api_key { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("merchant_id")]
         public string? Merchant_id { get; set; } = default!;
 
-        /// <summary>Deprecated: never populated; use Has_webhook_secret + Webhook_secret_hint.</summary>
         [System.Text.Json.Serialization.JsonPropertyName("webhook_secret")]
         public string? Webhook_secret { get; set; } = default!;
 
-        /// <summary>Deprecated: never populated; use Has_secret_key + Secret_key_hint.</summary>
         [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
         public string? Secret_key { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
-        public bool Is_active { get; set; } = true;
+        /// <summary>
+        /// When false, credentials are retained but gateway is not used for new checkouts/charges.
+        /// </summary>
 
-        /// <summary>True when an API key is stored (encrypted). Full key is never returned.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool Is_active { get; set; } = default!;
+
+        /// <summary>
+        /// True when an API key is stored (encrypted). Full key is never returned.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("has_api_key")]
         public bool Has_api_key { get; set; } = default!;
 
-        /// <summary>Masked hint, e.g. last 4 characters of the plaintext key.</summary>
+        /// <summary>
+        /// Masked hint, e.g. last 4 characters of the plaintext key.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("api_key_hint")]
         public string? Api_key_hint { get; set; } = default!;
 
-        /// <summary>True when a webhook secret is stored (encrypted).</summary>
+        /// <summary>
+        /// True when a webhook secret is stored (encrypted).
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("has_webhook_secret")]
         public bool Has_webhook_secret { get; set; } = default!;
 
-        /// <summary>Masked hint for the webhook secret.</summary>
+        /// <summary>
+        /// Masked hint for the webhook secret.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("webhook_secret_hint")]
         public string? Webhook_secret_hint { get; set; } = default!;
 
-        /// <summary>True when a Stripe-style secret key is stored (same column as api_key).</summary>
+        /// <summary>
+        /// True when a Stripe-style secret key is stored (same column as api_key).
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("has_secret_key")]
         public bool Has_secret_key { get; set; } = default!;
 
-        /// <summary>Masked hint for the secret key.</summary>
+        /// <summary>
+        /// Masked hint for the secret key.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("secret_key_hint")]
         public string? Secret_key_hint { get; set; } = default!;
 
@@ -2237,19 +2256,34 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("gateway_type")]
         public string Gateway_type { get; set; } = default!;
 
+        /// <summary>
+        /// Omit or empty to keep existing encrypted key.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("api_key")]
         public string? Api_key { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("collection_id")]
         public string? Collection_id { get; set; } = default!;
 
+        /// <summary>
+        /// Omit or empty to keep existing webhook secret.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("webhook_secret")]
         public string? Webhook_secret { get; set; } = default!;
+
+        /// <summary>
+        /// Stripe secret key; omit or empty to keep existing.
+        /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
         public string? Secret_key { get; set; } = default!;
 
-        /// <summary>Soft-disable without deleting credentials. Defaults to true on create when omitted.</summary>
+        /// <summary>
+        /// Soft-disable without deleting credentials. Defaults to true on create.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool? Is_active { get; set; } = default!;
 

@@ -7,6 +7,45 @@ on:
     branches: [main]
 
 jobs:
+  # Phase C.8: generated OpenAPI clients must match TypeSpec (no silent drift).
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Install go-task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+      - name: Restore local .NET tools (Kiota / NSwag)
+        run: dotnet tool restore
+      - name: Generate contracts
+        run: task gen --force
+      - name: Fail if generated clients are dirty
+        # note: packages/api-spec/dist is gitignored (dist/); honesty gate is on committed clients.
+        run: |
+          git diff --exit-code -- \
+            packages/api-types-ts/src \
+            packages/api-types-dotnet/Generated \
+            packages/api-types-dotnet/Lazuar.ApiContracts.cs \
+            packages/lhdn-sdk-ts/src/generated \
+            packages/lhdn-sdk-dotnet/src/Generated \
+          || {
+            echo "::error::Generated API clients are out of date. Run 'task gen' and commit the result."
+            git status --short
+            exit 1
+          }
+
   dotnet:
     runs-on: ubuntu-latest
     defaults:

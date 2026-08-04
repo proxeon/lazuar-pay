@@ -1226,6 +1226,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ops/chat/conversations/{id}/system-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Persist a system-role message on an existing conversation (e.g. tool execution feedback). */
+        post: operations["OpsOperations_postSystemMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ops/chat/conversations/{id}/title": {
         parameters: {
             query?: never;
@@ -1252,6 +1269,23 @@ export interface paths {
         get?: never;
         put: operations["OpsOperations_resolveUiRequest"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ops/chat/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description SSE stream of ChatStreamChunkDto frames (data: {json}\n\n). Terminal frame is data: [DONE]. Prefer this over POST /ops/chat for interactive UI. Clients should use raw fetch/EventSource — not openapi-fetch. */
+        post: operations["OpsOperations_chatStream"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1892,26 +1926,23 @@ export interface components {
         };
         "Commerce.PaymentConfigDto": {
             gateway_type: string;
-            /** @deprecated Never populated; use has_api_key + api_key_hint. */
             api_key?: string;
             merchant_id?: string;
-            /** @deprecated Never populated; use has_webhook_secret + webhook_secret_hint. */
             webhook_secret?: string;
-            /** @deprecated Never populated; use has_secret_key + secret_key_hint. */
             secret_key?: string;
-            /** When false, credentials are retained but gateway is not used for new checkouts/charges. */
+            /** @description When false, credentials are retained but gateway is not used for new checkouts/charges. */
             is_active: boolean;
-            /** True when an API key is stored (encrypted). Full key is never returned. */
+            /** @description True when an API key is stored (encrypted). Full key is never returned. */
             has_api_key: boolean;
-            /** Masked hint, e.g. last 4 characters of the plaintext key. */
+            /** @description Masked hint, e.g. last 4 characters of the plaintext key. */
             api_key_hint?: string;
-            /** True when a webhook secret is stored (encrypted). */
+            /** @description True when a webhook secret is stored (encrypted). */
             has_webhook_secret: boolean;
-            /** Masked hint for the webhook secret. */
+            /** @description Masked hint for the webhook secret. */
             webhook_secret_hint?: string;
-            /** True when a Stripe-style secret key is stored (same column as api_key). */
+            /** @description True when a Stripe-style secret key is stored (same column as api_key). */
             has_secret_key: boolean;
-            /** Masked hint for the secret key. */
+            /** @description Masked hint for the secret key. */
             secret_key_hint?: string;
         };
         "Commerce.PaymentMethodDto": {
@@ -1999,14 +2030,14 @@ export interface components {
         };
         "Commerce.SavePaymentConfigRequestDto": {
             gateway_type: string;
-            /** Omit or empty to keep existing encrypted key. */
+            /** @description Omit or empty to keep existing encrypted key. */
             api_key?: string;
             collection_id?: string;
-            /** Omit or empty to keep existing webhook secret. */
+            /** @description Omit or empty to keep existing webhook secret. */
             webhook_secret?: string;
-            /** Stripe secret key; omit or empty to keep existing. */
+            /** @description Stripe secret key; omit or empty to keep existing. */
             secret_key?: string;
-            /** Soft-disable without deleting credentials. Defaults to true on create when omitted. */
+            /** @description Soft-disable without deleting credentials. Defaults to true on create. */
             is_active?: boolean;
         };
         "Commerce.TransactionLogDto": {
@@ -9318,6 +9349,77 @@ export interface operations {
             };
         };
     };
+    OpsOperations_postSystemMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Ops.ChatRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     OpsOperations_renameConversation: {
         parameters: {
             query?: never;
@@ -9407,6 +9509,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OpsOperations_chatStream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Ops.ChatRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

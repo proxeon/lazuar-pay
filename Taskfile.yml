@@ -142,9 +142,12 @@ tasks:
       - task: gen:types-dotnet
       - task: gen:sdk-lhdn
     sources:
-      - "packages/api-spec/*.tsp"
+      - "packages/api-spec/**/*.tsp"
+      - "packages/api-spec/tspconfig.yaml"
     generates:
       - "packages/api-spec/dist/openapi.yaml"
+      - "packages/api-types-ts/src/index.ts"
+      - "packages/api-types-dotnet/Lazuar.ApiContracts.cs"
 
   gen:spec:
     desc: Compile TypeSpec to OpenAPI.yaml

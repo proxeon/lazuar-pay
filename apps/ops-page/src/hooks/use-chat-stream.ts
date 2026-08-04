@@ -1,7 +1,19 @@
 // apps/ops-page/src/hooks/use-chat-stream.ts
+// SSE cannot use openapi-fetch streaming; paths match TypeSpec OpsOperations
+// (POST /ops/chat/stream, POST /ops/chat/conversations/{id}/system-message, PUT resolve).
 import { useState } from "react";
 import { API_URL, type ChatStreamChunkDto, type ProposedActionDto } from "../lib/api-client";
+import type { components } from "@repo/api-types-ts";
 import type { Message } from "../types/chat";
+
+type ChatRequestDto = components["schemas"]["Ops.ChatRequestDto"];
+
+/** OpenAPI: POST /ops/chat/stream (text/event-stream). */
+const OPS_CHAT_STREAM_PATH = "/ops/chat/stream" as const;
+/** OpenAPI: POST /ops/chat/conversations/{id}/system-message. */
+const opsSystemMessagePath = (id: string) => `/ops/chat/conversations/${id}/system-message` as const;
+/** OpenAPI: PUT /ops/chat/messages/{id}/resolve. */
+const opsResolveMessagePath = (id: string) => `/ops/chat/messages/${id}/resolve` as const;
 
 export function useChatStream(
   activeConversationId: string | null | undefined,
@@ -16,16 +28,17 @@ export function useChatStream(
     const tenantId = localStorage.getItem("ops_active_workspace_id") || "";
 
     try {
-      const response = await fetch(`${API_URL}/ops/chat/stream`, {
+      const body: ChatRequestDto = {
+        message: payloadMessage,
+        conversation_id: isNew ? undefined : activeConversationId ?? undefined,
+      };
+      const response = await fetch(`${API_URL}${OPS_CHAT_STREAM_PATH}`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "X-Tenant-Id": tenantId 
         },
-        body: JSON.stringify({ 
-          message: payloadMessage,
-          conversation_id: isNew ? undefined : activeConversationId 
-        }),
+        body: JSON.stringify(body),
         credentials: "include"
       });
 
@@ -108,13 +121,14 @@ export function useChatStream(
 
     if (activeConversationId && activeConversationId !== "new") {
       try {
-        await fetch(`${API_URL}/ops/chat/conversations/${activeConversationId}/system-message`, {
+        const body: ChatRequestDto = { message: systemFeedback };
+        await fetch(`${API_URL}${opsSystemMessagePath(activeConversationId)}`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
             "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || ""
           },
-          body: JSON.stringify({ message: systemFeedback }),
+          body: JSON.stringify(body),
           credentials: "include"
         });
       } catch (e) {
@@ -143,7 +157,7 @@ export function useChatStream(
 
     if (activeConversationId && activeConversationId !== "new") {
       try {
-        await fetch(`${API_URL}/ops/chat/messages/${messageId}/resolve`, {
+        await fetch(`${API_URL}${opsResolveMessagePath(messageId)}`, {
           method: "PUT",
           headers: { "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "" },
           credentials: "include"

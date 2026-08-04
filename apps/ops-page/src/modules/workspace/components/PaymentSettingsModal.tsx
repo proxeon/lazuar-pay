@@ -11,7 +11,12 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP">("BILLPLZ");
+  type GatewayType = "STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP";
+  const GATEWAYS: GatewayType[] = ["STRIPE", "BILLPLZ", "RAZORPAY", "CHIP"];
+  const parseGateway = (value: string | undefined | null): GatewayType =>
+    GATEWAYS.includes(value as GatewayType) ? (value as GatewayType) : "BILLPLZ";
+
+  const [gatewayType, setGatewayType] = useState<GatewayType>("BILLPLZ");
   const [isActive, setIsActive] = useState(true);
   
   const [apiKey, setApiKey] = useState("");
@@ -28,7 +33,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
       try {
         const { data, error } = await client.GET("/admin/commerce/payment-config");
         if (!error && data) {
-          setGatewayType(data.gateway_type as any || "BILLPLZ");
+          setGatewayType(parseGateway(data.gateway_type));
           setIsActive(data.is_active ?? true);
           setApiKey(data.api_key || "");
           setWebhookSecret(data.webhook_secret || "");
@@ -125,7 +130,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#09090b]">Gateway Type</label>
-                    <select value={gatewayType} onChange={e => setGatewayType(e.target.value as any)} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
+                    <select value={gatewayType} onChange={e => setGatewayType(parseGateway(e.target.value))} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]">
                       <option value="CHIP">CHIP Collect (Malaysia)</option>
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>

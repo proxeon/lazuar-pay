@@ -49,5 +49,12 @@ All tables reside in the isolated `billing` schema.
 * `billing.InboxMessages`
 
 ## 8. The Golden Rule of Financial Flow
-**The `Payments` module is a dumb pipe. The `Community/Vault` modules manage Access. The `Billing` module manages Truth.**
-Never attempt to calculate MRR or Net Profit by querying the `community.PaymentRecords` or `payments` tables. Always query the `billing.LedgerLines` via the `IBillingQueryService` to ensure gateway fees, taxes, and refunds are accurately accounted for.
+**The `Payments` module is a dumb pipe. `Commerce` manages subscriptions/checkout access state. The `Billing` module manages Truth.**
+
+- **Payments** = gateway adapters + webhook ingress only (no MRR math).
+- **Commerce** = products, subscriptions, dunning, offline payments, portal links (access/lifecycle).
+- **Billing** = double-entry ledger, tax liability, LHDN document linkage, credits wallet.
+
+Never calculate MRR, net cash, or tax payable by querying gateway tables or Commerce payment-log rows alone. Always query `billing.LedgerLines` / `IBillingQueryService` so gateway fees, discounts, refunds, and tax are balanced.
+
+> Historical note: ADR 014/020 era copy referred to Community/Vault as access owners. Those modules were removed (ADR 022); Pure CaaS MVP hides LHDN-heavy UI (ADR 023) but Billing still records truth for every cleared payment.

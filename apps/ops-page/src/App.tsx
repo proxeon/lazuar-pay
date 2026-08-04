@@ -161,6 +161,17 @@ function OpsLayout() {
   );
 }
 
+/**
+ * Ops routes (Pure CaaS MVP — ADR 023).
+ *
+ * Intentionally unrouted "floating islands" (code retained for Phase 2 / D.3):
+ * - modules/invoicing/* (quotes, tax invoices, credit notes)
+ * - modules/workspace/pages/BillingProfilePage (legal/TIN profile)
+ * - components/OpsChatWorkspace + ConversationsDirectory (ops AI chat)
+ *
+ * Re-mount by adding Route entries + Sidebar links; do not delete backends.
+ * See docs/contracts/openapi-vs-minimal-api.md and ADR 023.
+ */
 export default function App() {
   return (
     <Routes>
@@ -187,6 +198,14 @@ export default function App() {
         <Route path="/workspace/email" element={<EmailSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
         <Route path="/workspace/ledger" element={<UtilityLedgerPage />} />
+
+        {/* [MVP-HIDE] ADR 023 — re-enable for Compliance CaaS resurface (Phase D.3)
+        <Route path="/workspace/billing-profile" element={<BillingProfilePage />} />
+        <Route path="/invoicing/quotes" element={<QuotesPage />} />
+        <Route path="/invoicing/tax-invoices" element={<TaxInvoicesPage />} />
+        <Route path="/invoicing/credit-notes" element={<CreditNotesPage />} />
+        <Route path="/ops/chat" element={<OpsChatWorkspace />} />
+        */}
       </Route>
       
       <Route path="*" element={<Navigate to="/commerce/dashboard" replace />} />

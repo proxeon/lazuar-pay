@@ -31,11 +31,12 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
       if (!invoice?.tax_invoice_id) throw new Error("Cannot cancel an invoice without an LHDN UUID.");
       if (!cancelReason.trim()) throw new Error("A reason is required by LHDN for cancellation.");
 
-      const { error } = await client.POST("/api/v1/lhdn/documents/{internalId}/cancel" as any, {
+      // Client baseUrl is already .../api/v1 — path must be relative (/lhdn/...), not /api/v1/lhdn/...
+      const { error } = await client.POST("/lhdn/documents/{internalId}/cancel", {
         params: { path: { internalId: invoice.id } },
-        body: { reason: cancelReason.trim() } as any
+        body: { reason: cancelReason.trim() },
       });
-      
+
       if (error) throw new Error(error.detail || "LHDN cancellation failed.");
     },
     onSuccess: () => {
