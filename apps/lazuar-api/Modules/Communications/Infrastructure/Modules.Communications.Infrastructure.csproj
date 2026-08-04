@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\Billing\Contracts\Modules.Billing.Contracts.csproj" />
     <ProjectReference Include="..\Application\Modules.Communications.Application.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Lazuar.ModuleTests" />
+  </ItemGroup>
 </Project>

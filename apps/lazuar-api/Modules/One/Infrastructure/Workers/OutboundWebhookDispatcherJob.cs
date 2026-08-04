@@ -1,14 +1,17 @@
 // apps/lazuar-api/Modules/One/Infrastructure/Workers/OutboundWebhookDispatcherJob.cs
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Modules.One.Domain;
 
 namespace Modules.One.Infrastructure.Workers;
@@ -18,15 +21,18 @@ public class OutboundWebhookDispatcherJob : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OutboundWebhookDispatcherJob> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly BackgroundWorkerOptions _options;
 
     public OutboundWebhookDispatcherJob(
         IServiceScopeFactory scopeFactory,
         ILogger<OutboundWebhookDispatcherJob> logger,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IOptions<BackgroundWorkerOptions> options)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _options = options.Value;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -44,46 +50,21 @@ public class OutboundWebhookDispatcherJob : BackgroundService
                 _logger.LogError(ex, "Error processing outbound webhooks.");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+            await Task.Delay(_options.OutboundWebhookInterval, stoppingToken);
         }
     }
+
+    /// <summary>One poll cycle (hosted loop and module tests).</summary>
+    internal Task RunOnceAsync(CancellationToken ct = default) => ProcessWebhooksAsync(ct);
 
     private async Task ProcessWebhooksAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<OneDbContext>();
 
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
-
-        // Claim pending rows with SKIP LOCKED so multi-instance workers do not double-deliver.
-        var sql = """
-            SELECT * FROM "one"."WebhookDeliveryOutboxes"
-            WHERE "Status" = 'PENDING'
-              AND "NextAttemptAt" <= NOW()
-            ORDER BY "NextAttemptAt"
-            LIMIT 50
-            FOR UPDATE SKIP LOCKED;
-            """;
-
-        var pendingDeliveries = await db.WebhookDeliveryOutboxes
-            .FromSqlRaw(sql)
-            .IgnoreQueryFilters()
-            .ToListAsync(ct);
-
-        if (pendingDeliveries.Count == 0)
-        {
-            await transaction.RollbackAsync(ct);
-            return;
-        }
-
-        // Lease: bump NextAttemptAt so a crash mid-HTTP does not re-claim immediately.
-        var leaseUntil = DateTime.UtcNow.AddMinutes(2);
-        foreach (var delivery in pendingDeliveries)
-        {
-            delivery.ClaimLease(leaseUntil);
-        }
-
-        await db.SaveChangesAsync(ct);
+        var leaseUntil = DateTime.UtcNow.Add(_options.ClaimLeaseDuration);
+        var pendingDeliveries = await ClaimPendingDeliveriesAsync(db, leaseUntil, ct);
+        if (pendingDeliveries.Count == 0) return;
 
         var client = _httpClientFactory.CreateClient("DeveloperWebhooks");
 
@@ -149,6 +130,70 @@ public class OutboundWebhookDispatcherJob : BackgroundService
         }
 
         await db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
+    }
+
+    /// <summary>
+    /// Claims PENDING deliveries with FOR UPDATE SKIP LOCKED and bumps NextAttemptAt lease before HTTP.
+    /// </summary>
+    internal static async Task<List<WebhookDeliveryOutbox>> ClaimPendingDeliveriesAsync(
+        OneDbContext db,
+        DateTime leaseUntilUtc,
+        CancellationToken ct)
+    {
+        List<WebhookDeliveryOutbox> pendingDeliveries;
+
+        if (db.Database.IsRelational())
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+            const string sql = """
+                SELECT * FROM "one"."WebhookDeliveryOutboxes"
+                WHERE "Status" = 'PENDING'
+                  AND "NextAttemptAt" <= NOW()
+                ORDER BY "NextAttemptAt"
+                LIMIT 50
+                FOR UPDATE SKIP LOCKED;
+                """;
+
+            pendingDeliveries = await db.WebhookDeliveryOutboxes
+                .FromSqlRaw(sql)
+                .IgnoreQueryFilters()
+                .ToListAsync(ct);
+
+            if (pendingDeliveries.Count == 0)
+            {
+                await transaction.RollbackAsync(ct);
+                return pendingDeliveries;
+            }
+
+            foreach (var delivery in pendingDeliveries)
+            {
+                delivery.ClaimLease(leaseUntilUtc);
+            }
+
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+        else
+        {
+            var now = DateTime.UtcNow;
+            pendingDeliveries = await db.WebhookDeliveryOutboxes
+                .IgnoreQueryFilters()
+                .Where(d => d.Status == "PENDING" && d.NextAttemptAt <= now)
+                .OrderBy(d => d.NextAttemptAt)
+                .Take(50)
+                .ToListAsync(ct);
+
+            if (pendingDeliveries.Count == 0) return pendingDeliveries;
+
+            foreach (var delivery in pendingDeliveries)
+            {
+                delivery.ClaimLease(leaseUntilUtc);
+            }
+
+            await db.SaveChangesAsync(ct);
+        }
+
+        return pendingDeliveries;
     }
 }

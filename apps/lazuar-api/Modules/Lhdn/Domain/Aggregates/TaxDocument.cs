@@ -63,6 +63,16 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Temporarily push <see cref="NextPollAt"/> forward so concurrent workers skip this row
+    /// while gateway I/O is in flight (pair with FOR UPDATE SKIP LOCKED claim).
+    /// </summary>
+    public void ClaimProcessingLease(DateTime leaseUntilUtc)
+    {
+        NextPollAt = leaseUntilUtc;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void ScheduleNextPoll(int? explicitDelaySeconds = null)
     {
         PollAttempts++;

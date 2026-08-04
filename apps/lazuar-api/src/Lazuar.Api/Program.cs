@@ -87,6 +87,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.AddOptions<ResendOptions>().BindConfiguration(ResendOptions.SectionName);
+builder.Services.AddOptions<BackgroundWorkerOptions>().BindConfiguration(BackgroundWorkerOptions.SectionName);
 builder.Services.AddOptions<PlatformAdminSettings>().Configure<IConfiguration>((settings, configuration) =>
 {
     settings.Emails = configuration["PLATFORM_ADMIN_EMAILS"] ?? string.Empty;

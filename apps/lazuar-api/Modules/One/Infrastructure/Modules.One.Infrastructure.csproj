@@ -12,4 +12,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Lazuar.ModuleTests" />
+  </ItemGroup>
 </Project>

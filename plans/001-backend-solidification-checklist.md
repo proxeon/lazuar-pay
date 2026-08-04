@@ -533,11 +533,24 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.5 Background workers multi-instance
 
-- [ ] Document deploy rule: single API replica **or** worker process replica=1 until claims exist
-- [ ] Add SKIP LOCKED / lease claims for: BillingEngine, DunningEngine, BroadcastFanout, OutboundWebhook, Lhdn submission/poll
-- [ ] Per-subscription transaction batches in dunning/billing (avoid all-tenant single SaveChanges failure)
-- [ ] B2cConsolidation: catch-up if instance was down on the 28th
-- [ ] Configurable intervals via options (optional)
+- [x] Document deploy rule: single API replica **or** worker process replica=1 until claims exist
+  - `deploy/prod/README.md` + `docker-compose` api service comment; claimed-safe workers listed
+- [x] Add SKIP LOCKED / lease claims for: BillingEngine, DunningEngine, BroadcastFanout, OutboundWebhook, Lhdn submission/poll
+  - OutboundWebhook: SKIP LOCKED + `ClaimLease` on `NextAttemptAt` (verified; InMemory fallback)
+  - LHDN submit/poll: SKIP LOCKED + `TaxDocument.ClaimProcessingLease` on `NextPollAt`; lease committed before gateway I/O
+  - BroadcastFanout: SKIP LOCKED then `MarkSending`
+  - Billing/Dunning: SKIP LOCKED claim per sub + per-subscription save isolation
+- [x] Per-subscription transaction batches in dunning/billing (avoid all-tenant single SaveChanges failure)
+- [x] B2cConsolidation: catch-up if instance was down on the 28th
+  - `CatchUpClosedPeriodsAsync` + `ProcessPeriodAsync`; delay still targets next 28th MYT; per-org SaveChanges
+- [x] Configurable intervals via options (optional)
+  - `BackgroundWorkerOptions` (`Workers` section) injected into domain pollers
+
+### C.5 residuals
+- True concurrent `FOR UPDATE SKIP LOCKED` isolation is not exercised under EF InMemory (no SQL locks); module tests cover lease domain, claim mark-sending, billing multi-sub processing, and B2C multi-month catch-up
+- Subscriptions have no dedicated lease column — multi-instance safety relies on row locks during per-sub transactions (Postgres path)
+- `B2cConsolidationJob` remains calendar-driven; catch-up covers missed closed months but does not claim rows with SKIP LOCKED
+- Outbox/inbox already SKIP LOCKED (Phase 0); not re-tested here
 
 ## C.6 Observability
 

@@ -45,6 +45,7 @@
 
     <!-- Communications Module References -->
     <ProjectReference Include="..\..\Modules\Communications\Domain\Modules.Communications.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Communications\Infrastructure\Modules.Communications.Infrastructure.csproj" />
 
     <!-- CRM domain/contracts: anonymize + consent unit tests -->
     <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />

@@ -147,4 +147,29 @@ public class B2cConsolidationJobTests
                 .CountAsync(e => e.ConsolidationStatus == ConsolidationStatuses.Consolidated),
             Is.EqualTo(1));
     }
+
+    [Test]
+    public async Task CatchUp_ProcessesOlderClosedMonth_NotOnlyPriorMonth()
+    {
+        var ts = MonthsAgoUtcMid(2);
+        SeedSale("tx_old_month", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, ts);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var entry = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_old_month");
+        Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
+        Assert.That(entry.TaxInvoiceId, Does.StartWith("B2C-CONS-"));
+
+        await _eventBus.Received(1).PublishAsync(Arg.Any<ConsolidatedInvoiceIssuedIntegrationEvent>());
+    }
+
+    private static DateTime MonthsAgoUtcMid(int monthsAgo)
+    {
+        var myt = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "Singapore Standard Time" : "Asia/Kuala_Lumpur");
+        var nowMyt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, myt);
+        var mid = new DateTime(nowMyt.Year, nowMyt.Month, 15, 12, 0, 0, DateTimeKind.Unspecified).AddMonths(-monthsAgo);
+        return TimeZoneInfo.ConvertTimeToUtc(mid, myt);
+    }
 }

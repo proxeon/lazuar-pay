@@ -34,6 +34,9 @@ services:
       - superadmin
       - developers
 
+  # Hosts HTTP + domain background workers. Keep a single replica (container_name / no deploy.replicas)
+  # until all workers are claim-safe — see deploy/prod/README.md "Background workers / multi-instance".
+  # Claimed-safe: OutboundWebhook, Lhdn submit/poll, BroadcastFanout, BillingEngine, DunningEngine, outbox/inbox.
   api:
     image: ghcr.io/proxeon/lazuar-hub-api:${VERSION:-latest}
     container_name: hub-api

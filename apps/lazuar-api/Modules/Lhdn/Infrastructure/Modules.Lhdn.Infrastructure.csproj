@@ -21,4 +21,8 @@
     <EmbeddedResource Include="Templates\*.xml" />
     <EmbeddedResource Include="Schemas\**\*.xsd" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Lazuar.ModuleTests" />
+  </ItemGroup>
 </Project>
