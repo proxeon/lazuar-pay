@@ -4,6 +4,7 @@ using BuildingBlocks.Application;
 using MediatR;
 using Modules.Billing.Application;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Commerce.Contracts.Events;
 
@@ -22,7 +23,7 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
 
     public async Task HandleAsync(ManualSubscriberEnrolledIntegrationEvent @event)
     {
-        var referenceType = "MANUAL_ENROLLMENT";
+        var referenceType = LedgerReferenceTypes.ManualEnrollment;
         var referenceId = @event.SubscriptionId.ToString();
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
@@ -35,16 +36,16 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
             $"Manual subscription logged for customer: {@event.ClientProfileId}",
             "B2C");
 
-        entry.AddLine("ASSET_CASH", @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
-        entry.AddLine("REVENUE_GROSS", -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
+        entry.AddLine(AccountTypes.AssetCash, @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
+        entry.AddLine(AccountTypes.RevenueGross, -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
 
         entry.ValidateBalanced();
         _repository.Add(entry);
 
         var seqCommand = new GenerateNextSequenceNumberCommand(@event.OrganizationId, $"RCPT-{DateTime.UtcNow:yyyy}");
         var receiptNumber = await _mediator.Send(seqCommand);
-            
-        entry.UpdateLhdnStatus(receiptNumber, "B2C_RECEIPT");
+
+        entry.AssignB2cReceipt(receiptNumber);
 
         await _repository.SaveChangesAsync();
 

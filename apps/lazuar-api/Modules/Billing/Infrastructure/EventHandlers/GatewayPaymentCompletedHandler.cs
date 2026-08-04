@@ -4,6 +4,7 @@ using BuildingBlocks.Application;
 using MediatR;
 using Modules.Billing.Application;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Payments.Contracts.Events;
 
@@ -28,7 +29,7 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
         if (@event.Metadata.TryGetValue("type", out var paymentType) && paymentType == "utility_credit_topup")
             return;
 
-        var referenceType = "GATEWAY_PAYMENT";
+        var referenceType = LedgerReferenceTypes.GatewayPayment;
         var referenceId = @event.GatewayTransactionId;
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
@@ -50,18 +51,18 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
         var fxRate = @event.FxRate;
         var grossRevenue = @event.AmountPaid - @event.TaxAmount;
 
-        entry.AddLine("ASSET_CASH", @event.NetAmount, @event.Currency, @event.NetAmount * fxRate, baseCurrency);
-        
+        entry.AddLine(AccountTypes.AssetCash, @event.NetAmount, @event.Currency, @event.NetAmount * fxRate, baseCurrency);
+
         if (@event.GatewayFee > 0)
         {
-            entry.AddLine("EXPENSE_GATEWAY_FEE", @event.GatewayFee, @event.Currency, @event.GatewayFee * fxRate, baseCurrency);
+            entry.AddLine(AccountTypes.ExpenseGatewayFee, @event.GatewayFee, @event.Currency, @event.GatewayFee * fxRate, baseCurrency);
         }
 
-        entry.AddLine("REVENUE_GROSS", -grossRevenue, @event.Currency, -grossRevenue * fxRate, baseCurrency);
+        entry.AddLine(AccountTypes.RevenueGross, -grossRevenue, @event.Currency, -grossRevenue * fxRate, baseCurrency);
 
         if (@event.TaxAmount > 0)
         {
-            entry.AddLine("LIABILITY_TAX_PAYABLE", -@event.TaxAmount, @event.Currency, -@event.TaxAmount * fxRate, baseCurrency);
+            entry.AddLine(AccountTypes.LiabilityTaxPayable, -@event.TaxAmount, @event.Currency, -@event.TaxAmount * fxRate, baseCurrency);
         }
 
         entry.ValidateBalanced();
@@ -71,8 +72,11 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
         {
             var seqCommand = new GenerateNextSequenceNumberCommand(@event.OrganizationId, $"RCPT-{DateTime.UtcNow:yyyy}");
             var receiptNumber = await _mediator.Send(seqCommand);
-            
-            entry.UpdateLhdnStatus(receiptNumber, "B2C_RECEIPT");
+            entry.AssignB2cReceipt(receiptNumber);
+        }
+        else
+        {
+            entry.MarkConsolidationNotRequired();
         }
 
         await _repository.SaveChangesAsync();

@@ -5,11 +5,10 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Dapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Application.Queries;
 using Modules.Billing.Infrastructure.Documents;
+using Modules.Commerce.Contracts;
 using QuestPDF.Fluent;
 
 namespace Modules.Billing.Infrastructure.Queries;
@@ -17,14 +16,14 @@ namespace Modules.Billing.Infrastructure.Queries;
 public class GenerateDraftDocumentQueryHandler : IQueryHandler<GenerateDraftDocumentQuery, byte[]>
 {
     private readonly BillingDbContext _dbContext;
-    private readonly ISqlConnectionFactory _sqlFactory;
+    private readonly ICommerceDocumentLookup _commerceDocumentLookup;
 
     public GenerateDraftDocumentQueryHandler(
         BillingDbContext dbContext,
-        [FromKeyedServices("BillingSqlConnectionFactory")] ISqlConnectionFactory sqlFactory)
+        ICommerceDocumentLookup commerceDocumentLookup)
     {
         _dbContext = dbContext;
-        _sqlFactory = sqlFactory;
+        _commerceDocumentLookup = commerceDocumentLookup;
     }
 
     private class AdHocLineItemStub
@@ -39,22 +38,14 @@ public class GenerateDraftDocumentQueryHandler : IQueryHandler<GenerateDraftDocu
         var profile = await _dbContext.TenantBillingProfiles
             .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId, ct);
 
-        using var connection = _sqlFactory.CreateConnection();
-        if (connection.State != System.Data.ConnectionState.Open) connection.Open();
-        
-        var sessionSql = @"
-            SELECT c.""ClientProfileId"", c.""AdHocLineItems"", cp.""FullName"" AS CustomerName, cp.""Email"" AS CustomerEmail
-            FROM commerce.""CheckoutSessions"" c
-            LEFT JOIN crm.""ClientProfiles"" cp ON c.""ClientProfileId"" = cp.""Id""
-            WHERE c.""Id"" = @SessionId AND c.""OrganizationId"" = @OrgId LIMIT 1";
-
-        var sessionData = await connection.QuerySingleOrDefaultAsync(sessionSql, new { SessionId = request.SessionId, OrgId = request.OrganizationId });
+        var sessionData = await _commerceDocumentLookup.GetDraftCheckoutSessionAsync(
+            request.OrganizationId, request.SessionId, ct);
 
         if (sessionData == null) throw new InvalidOperationException("Custom checkout session not found.");
 
-        var lineItemsJson = (string)sessionData.AdHocLineItems;
-        var lineItems = string.IsNullOrWhiteSpace(lineItemsJson) 
-            ? new List<AdHocLineItemStub>() 
+        var lineItemsJson = sessionData.AdHocLineItemsJson;
+        var lineItems = string.IsNullOrWhiteSpace(lineItemsJson)
+            ? new List<AdHocLineItemStub>()
             : JsonSerializer.Deserialize<List<AdHocLineItemStub>>(lineItemsJson, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }) ?? new List<AdHocLineItemStub>();
 
         var model = new InvoiceDocumentModel

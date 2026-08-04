@@ -8,11 +8,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Billing.Contracts.Events;
+using Modules.Billing.Domain;
 
 namespace Modules.Billing.Infrastructure.Workers;
 
 public class B2cConsolidationJob : BackgroundService
 {
+    private static readonly TimeZoneInfo MalaysiaTimeZone = ResolveMalaysiaTimeZone();
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<B2cConsolidationJob> _logger;
 
@@ -29,7 +32,7 @@ public class B2cConsolidationJob : BackgroundService
             try
             {
                 var timeUntilExecution = CalculateTimeToNextConsolidation();
-                
+
                 _logger.LogInformation("Next B2C Consolidation scheduled in {DelayHours:F2} hours.", timeUntilExecution.TotalHours);
 
                 await Task.Delay(timeUntilExecution, stoppingToken);
@@ -51,7 +54,7 @@ public class B2cConsolidationJob : BackgroundService
     private TimeSpan CalculateTimeToNextConsolidation()
     {
         var nowUtc = DateTime.UtcNow;
-        var mytNow = nowUtc.AddHours(8);
+        var mytNow = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, MalaysiaTimeZone);
 
         var targetMyt = new DateTime(mytNow.Year, mytNow.Month, 28, 2, 0, 0, DateTimeKind.Unspecified);
 
@@ -60,9 +63,12 @@ public class B2cConsolidationJob : BackgroundService
             targetMyt = targetMyt.AddMonths(1);
         }
 
-        var targetUtc = targetMyt.AddHours(-8);
+        var targetUtc = TimeZoneInfo.ConvertTimeToUtc(targetMyt, MalaysiaTimeZone);
         return targetUtc - nowUtc;
     }
+
+    /// <summary>Runs one consolidation pass (used by hosted loop and module tests).</summary>
+    internal Task RunOnceAsync(CancellationToken ct = default) => ProcessB2cConsolidationAsync(ct);
 
     private async Task ProcessB2cConsolidationAsync(CancellationToken ct)
     {
@@ -70,17 +76,25 @@ public class B2cConsolidationJob : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("BillingEventBus");
 
-        var today = DateTime.UtcNow.Date;
-        bool alreadyRan = await db.LedgerEntries.AnyAsync(e => 
-            e.TaxInvoiceId != null && 
-            e.TaxInvoiceId.StartsWith("B2C-CONS-") && 
-            e.Timestamp.Date == today, ct);
+        // Prior calendar month in Asia/Kuala_Lumpur.
+        var nowMyt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MalaysiaTimeZone);
+        var periodStartMyt = new DateTime(nowMyt.Year, nowMyt.Month, 1, 0, 0, 0, DateTimeKind.Unspecified).AddMonths(-1);
+        var periodEndMyt = periodStartMyt.AddMonths(1);
+        var periodStartUtc = TimeZoneInfo.ConvertTimeToUtc(periodStartMyt, MalaysiaTimeZone);
+        var periodEndUtc = TimeZoneInfo.ConvertTimeToUtc(periodEndMyt, MalaysiaTimeZone);
+        var periodKey = periodStartMyt.ToString("yyyyMM");
 
-        if (alreadyRan) return;
-
+        // Eligible: B2C receipts pending consolidation (plus legacy null status for backfill).
+        // Exclude already consolidated / not required / ignored via ConsolidationStatus when present.
         var uninvoicedEntries = await db.LedgerEntries
             .Include(e => e.Lines)
-            .Where(e => e.CustomerType == "B2C" && e.LhdnValidationStatus == null)
+            .Where(e => e.CustomerType == "B2C"
+                && e.Timestamp >= periodStartUtc
+                && e.Timestamp < periodEndUtc
+                && (e.ConsolidationStatus == ConsolidationStatuses.Pending
+                    || (e.ConsolidationStatus == null
+                        && (e.LhdnValidationStatus == LhdnValidationStatuses.B2cReceipt
+                            || e.LhdnValidationStatus == null))))
             .ToListAsync(ct);
 
         if (!uninvoicedEntries.Any()) return;
@@ -92,15 +106,31 @@ public class B2cConsolidationJob : BackgroundService
             var orgId = orgGroup.Key;
             var entries = orgGroup.ToList();
 
+            // Per-org/month idempotency key — not "any B2C-CONS today".
+            var consolidationRef = $"B2C-CONS-{periodKey}-{orgId:N}";
+            var alreadyConsolidated = await db.LedgerEntries.AnyAsync(e =>
+                e.OrganizationId == orgId
+                && e.TaxInvoiceId == consolidationRef, ct);
+
+            if (alreadyConsolidated)
+            {
+                _logger.LogInformation(
+                    "Skipping B2C consolidation for Org {OrgId} period {Period} — already issued ({Ref}).",
+                    orgId, periodKey, consolidationRef);
+                continue;
+            }
+
             var revenueLines = entries.SelectMany(e => e.Lines)
-                                      .Where(l => l.AccountType == "REVENUE_GROSS" || l.AccountType == "LIABILITY_TAX_PAYABLE")
-                                      .ToList();
+                .Where(l => l.AccountType == AccountTypes.RevenueGross
+                            || l.AccountType == AccountTypes.LiabilityTaxPayable
+                            || l.AccountType == AccountTypes.ContraRevenueRefunds)
+                .ToList();
 
             if (!revenueLines.Any())
             {
                 foreach (var entry in entries)
                 {
-                    entry.UpdateLhdnStatus(null, "IGNORED_NO_REVENUE");
+                    entry.MarkConsolidationIgnored();
                 }
                 continue;
             }
@@ -112,11 +142,24 @@ public class B2cConsolidationJob : BackgroundService
 
             foreach (var group in groupedLines)
             {
-                var grossRevenue = group.Where(l => l.AccountType == "REVENUE_GROSS").Sum(l => Math.Abs(l.BaseCurrencyAmount));
-                var taxAmount = group.Where(l => l.AccountType == "LIABILITY_TAX_PAYABLE").Sum(l => Math.Abs(l.BaseCurrencyAmount));
+                // Signed double-entry: revenue credits are negative; flip for display.
+                // Refunds (contra revenue positive debit, or negative gross reversals) net correctly.
+                var grossRevenue = -group
+                    .Where(l => l.AccountType == AccountTypes.RevenueGross)
+                    .Sum(l => l.BaseCurrencyAmount)
+                    - group
+                    .Where(l => l.AccountType == AccountTypes.ContraRevenueRefunds)
+                    .Sum(l => l.BaseCurrencyAmount);
 
+                var taxAmount = -group
+                    .Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable)
+                    .Sum(l => l.BaseCurrencyAmount);
+
+                // Only emit lines with net positive sales after refunds.
                 if (grossRevenue > 0)
                 {
+                    if (taxAmount < 0) taxAmount = 0;
+
                     items.Add(new ConsolidatedLineItemDto(
                         Description: "Consolidated B2C Sales",
                         ClassificationCode: group.Key.MsicCode,
@@ -133,7 +176,14 @@ public class B2cConsolidationJob : BackgroundService
                 }
             }
 
-            var consolidationRef = $"B2C-CONS-{DateTime.UtcNow:yyyyMMddHHmmss}-{orgId.ToString()[..8]}";
+            if (!items.Any() || totalExcludingTax <= 0)
+            {
+                foreach (var entry in entries)
+                {
+                    entry.MarkConsolidationIgnored();
+                }
+                continue;
+            }
 
             var consolidationEvent = new ConsolidatedInvoiceIssuedIntegrationEvent(
                 OrganizationId: orgId,
@@ -149,12 +199,27 @@ public class B2cConsolidationJob : BackgroundService
 
             foreach (var entry in entries)
             {
-                entry.UpdateLhdnStatus(consolidationRef, "CONSOLIDATED_PENDING");
+                entry.MarkConsolidatedPending(consolidationRef);
             }
 
-            _logger.LogInformation("Consolidated {Count} B2C entries for Org {OrgId}. Ref: {Ref}", entries.Count, orgId, consolidationRef);
+            _logger.LogInformation(
+                "Consolidated {Count} B2C entries for Org {OrgId} period {Period}. Ref: {Ref}",
+                entries.Count, orgId, periodKey, consolidationRef);
         }
 
         await db.SaveChangesAsync(ct);
+    }
+
+    private static TimeZoneInfo ResolveMalaysiaTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            // Windows fallback
+            return TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
+        }
     }
 }

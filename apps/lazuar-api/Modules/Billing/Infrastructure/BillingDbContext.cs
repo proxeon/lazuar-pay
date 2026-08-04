@@ -64,7 +64,11 @@ public class BillingDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.ReferenceType, x.ReferenceId }).IsUnique();
             builder.Property(x => x.TaxInvoiceId).HasMaxLength(100);
+            builder.Property(x => x.CustomerDocumentNumber).HasMaxLength(100);
+            builder.Property(x => x.LhdnDocumentUuid).HasMaxLength(100);
             builder.Property(x => x.LhdnValidationStatus).HasMaxLength(50);
+            builder.Property(x => x.ConsolidationStatus).HasMaxLength(30);
+            builder.HasIndex(x => new { x.OrganizationId, x.ConsolidationStatus, x.Timestamp });
             builder.HasMany(x => x.Lines).WithOne().HasForeignKey("LedgerEntryId").OnDelete(DeleteBehavior.Cascade);
             builder.Metadata.FindNavigation("Lines")?.SetPropertyAccessMode(PropertyAccessMode.Field);
         });

@@ -6,13 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
-using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Contracts.Events;
+using Modules.Billing.Domain;
 using Modules.Billing.Infrastructure.Documents;
+using Modules.Commerce.Contracts;
 using QuestPDF.Fluent;
 
 namespace Modules.Billing.Infrastructure.Commands;
@@ -21,7 +21,7 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
 {
     private readonly BillingDbContext _dbContext;
     private readonly IR2StorageService _r2Service;
-    private readonly ISqlConnectionFactory _sqlFactory;
+    private readonly ICommerceDocumentLookup _commerceDocumentLookup;
     private readonly IEventBus _eventBus;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
@@ -29,14 +29,14 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
     public GenerateAndStoreDocumentCommandHandler(
         BillingDbContext dbContext,
         IR2StorageService r2Service,
-        [FromKeyedServices("BillingSqlConnectionFactory")] ISqlConnectionFactory sqlFactory,
-        [FromKeyedServices("BillingEventBus")] IEventBus eventBus,
+        ICommerceDocumentLookup commerceDocumentLookup,
+        [Microsoft.Extensions.DependencyInjection.FromKeyedServices("BillingEventBus")] IEventBus eventBus,
         IHttpClientFactory httpClientFactory,
         IConfiguration config)
     {
         _dbContext = dbContext;
         _r2Service = r2Service;
-        _sqlFactory = sqlFactory;
+        _commerceDocumentLookup = commerceDocumentLookup;
         _eventBus = eventBus;
         _httpClientFactory = httpClientFactory;
         _bucketName = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
@@ -53,7 +53,10 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         var profile = await _dbContext.TenantBillingProfiles
             .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId, ct);
 
-        var (customerName, customerEmail) = await GetCustomerDetailsAsync(request.OrganizationId, entry.ReferenceId);
+        var customer = await _commerceDocumentLookup.GetCustomerByGatewayTransactionAsync(
+            request.OrganizationId, entry.ReferenceId, ct);
+        var customerName = customer?.Name ?? "Customer";
+        var customerEmail = customer?.Email ?? "";
 
         byte[]? logoBytes = null;
         if (!string.IsNullOrEmpty(profile?.LogoUrl))
@@ -69,7 +72,10 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         var model = new InvoiceDocumentModel
         {
             DocumentType = request.DocumentType,
-            InvoiceNumber = entry.TaxInvoiceId ?? entry.Id.ToString()[..8].ToUpperInvariant(),
+            // Customer-facing receipt # is immutable; never use LHDN UUID as invoice number.
+            InvoiceNumber = entry.CustomerDocumentNumber
+                ?? entry.TaxInvoiceId
+                ?? entry.Id.ToString()[..8].ToUpperInvariant(),
             IssueDate = entry.Timestamp,
             CompanyName = profile?.LegalName ?? "Lazuar Merchant",
             CompanyTin = profile?.Tin ?? "N/A",
@@ -77,11 +83,15 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
             CompanyLogo = logoBytes,
             CustomerName = customerName,
             CustomerEmail = customerEmail,
-            LhdnUuid = entry.LhdnValidationStatus == "VALID" ? entry.TaxInvoiceId : null, // Uses actual UUID stored in TaxInvoiceId when validated
+            LhdnUuid = entry.LhdnValidationStatus == LhdnValidationStatuses.Valid
+                ? (entry.LhdnDocumentUuid ?? entry.TaxInvoiceId)
+                : null,
             LhdnQrLink = request.LhdnQrLink
         };
 
-        var revenueLines = entry.Lines.Where(l => l.AccountType == "REVENUE_GROSS" || l.AccountType == "REVENUE_RECOGNIZED").ToList();
+        var revenueLines = entry.Lines
+            .Where(l => l.AccountType == AccountTypes.RevenueGross || l.AccountType == AccountTypes.RevenueRecognized)
+            .ToList();
         foreach (var line in revenueLines)
         {
             model.LineItems.Add(new InvoiceLineItemModel
@@ -93,8 +103,8 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         }
 
         model.Subtotal = model.LineItems.Sum(x => x.Amount);
-        model.Discount = entry.Lines.Where(l => l.AccountType == "EXPENSE_DISCOUNT").Sum(l => Math.Abs(l.Amount));
-        model.Tax = entry.Lines.Where(l => l.AccountType == "LIABILITY_TAX_PAYABLE").Sum(l => Math.Abs(l.Amount));
+        model.Discount = entry.Lines.Where(l => l.AccountType == AccountTypes.ExpenseDiscount).Sum(l => Math.Abs(l.Amount));
+        model.Tax = entry.Lines.Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable).Sum(l => Math.Abs(l.Amount));
         model.Total = model.Subtotal - model.Discount + model.Tax;
 
         var pdfDocument = new BaseInvoiceDocument(model);
@@ -110,23 +120,5 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
             request.DocumentType,
             storageKey
         ));
-    }
-
-    private async Task<(string Name, string Email)> GetCustomerDetailsAsync(Guid orgId, string referenceId)
-    {
-        using var connection = _sqlFactory.CreateConnection();
-        if (connection.State != System.Data.ConnectionState.Open) connection.Open();
-
-        const string sql = @"
-            SELECT ""CustomerName"", ""CustomerEmail"" 
-            FROM commerce.""TransactionLogs"" 
-            WHERE ""OrganizationId"" = @OrgId AND (""ExternalReference"" = @RefId OR ""Id""::text = @RefId) 
-            LIMIT 1";
-
-        var result = await connection.QuerySingleOrDefaultAsync(sql, new { OrgId = orgId, RefId = referenceId });
-        
-        return result != null 
-            ? ((string)result.CustomerName, (string)result.CustomerEmail) 
-            : ("Customer", "");
     }
 }

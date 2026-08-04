@@ -59,11 +59,22 @@ public static class Endpoints
         });
         
         admin.MapGet("/summary", async Task<Ok<FinancialSummaryDto>> (
+            [FromQuery] DateTime? from_date,
+            [FromQuery] DateTime? to_date,
             IExecutionContextAccessor ctx,
             IBillingQueryService queryService) =>
         {
-            var summary = await queryService.GetFinancialSummaryAsync(ctx.TenantId);
+            var summary = await queryService.GetFinancialSummaryAsync(ctx.TenantId, from_date, to_date);
             return TypedResults.Ok(summary);
+        });
+
+        admin.MapGet("/net-profit", async Task<Ok<IReadOnlyList<NetProfitDto>>> (
+            [FromQuery] string? period,
+            IExecutionContextAccessor ctx,
+            IBillingQueryService queryService) =>
+        {
+            var rows = await queryService.GetNetProfitAsync(ctx.TenantId, period ?? "monthly");
+            return TypedResults.Ok(rows);
         });
 
         admin.MapGet("/credits", async Task<Ok<CreditBalanceDto>> (

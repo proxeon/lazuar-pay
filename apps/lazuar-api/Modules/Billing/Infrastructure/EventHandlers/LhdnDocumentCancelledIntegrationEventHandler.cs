@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Application;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Lhdn.Contracts.Events;
 
@@ -24,7 +25,7 @@ public class LhdnDocumentCancelledIntegrationEventHandler : IIntegrationEventHan
 
     public async Task HandleAsync(LhdnDocumentCancelledIntegrationEvent @event)
     {
-        if (await _repository.HasEntryBeenProcessedAsync("LHDN_CANCELLATION", @event.InternalReferenceId)) 
+        if (await _repository.HasEntryBeenProcessedAsync(LedgerReferenceTypes.LhdnCancellation, @event.InternalReferenceId))
             return;
 
         var originalEntry = await _dbContext.LedgerEntries
@@ -32,13 +33,13 @@ public class LhdnDocumentCancelledIntegrationEventHandler : IIntegrationEventHan
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.OrganizationId == @event.OrganizationId && e.ReferenceId == @event.InternalReferenceId);
 
-        if (originalEntry == null) 
+        if (originalEntry == null)
             return;
 
         // Apply contra entries dynamically based on original invoice lines
         var cancelEntry = new LedgerEntry(
             @event.OrganizationId,
-            "LHDN_CANCELLATION",
+            LedgerReferenceTypes.LhdnCancellation,
             @event.InternalReferenceId,
             $"Reversal of cancelled LHDN invoice {@event.LhdnUuid} - Reason: {@event.Reason}",
             originalEntry.CustomerType);
@@ -46,19 +47,20 @@ public class LhdnDocumentCancelledIntegrationEventHandler : IIntegrationEventHan
         foreach (var line in originalEntry.Lines)
         {
             cancelEntry.AddLine(
-                line.AccountType, 
-                -line.Amount, 
-                line.Currency, 
-                -line.BaseCurrencyAmount, 
-                line.BaseCurrency, 
-                line.TaxTypeCode, 
+                line.AccountType,
+                -line.Amount,
+                line.Currency,
+                -line.BaseCurrencyAmount,
+                line.BaseCurrency,
+                line.TaxTypeCode,
                 line.MsicCode);
         }
 
         cancelEntry.ValidateBalanced();
         _repository.Add(cancelEntry);
-        
-        originalEntry.UpdateLhdnStatus(@event.LhdnUuid, "CANCELLED");
+
+        // LHDN fields only — never overwrite CustomerDocumentNumber.
+        originalEntry.UpdateLhdnStatus(@event.LhdnUuid, LhdnValidationStatuses.Cancelled);
 
         await _repository.SaveChangesAsync();
     }

@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Billing.Application;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Commerce.Contracts.Events;
 
@@ -17,7 +18,7 @@ public class ZeroAmountCheckoutHandler : IIntegrationEventHandler<ZeroAmountChec
 
     public async Task HandleAsync(ZeroAmountCheckoutCompletedIntegrationEvent @event)
     {
-        var referenceType = "ZERO_AMOUNT_CHECKOUT";
+        var referenceType = LedgerReferenceTypes.ZeroAmountCheckout;
         var referenceId = @event.CheckoutSessionId.ToString();
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
@@ -31,11 +32,12 @@ public class ZeroAmountCheckoutHandler : IIntegrationEventHandler<ZeroAmountChec
 
         if (@event.OriginalAmount > 0)
         {
-            entry.AddLine("EXPENSE_DISCOUNT", @event.DiscountAmount, @event.Currency, @event.DiscountAmount, @event.Currency);
-            entry.AddLine("REVENUE_GROSS", -@event.OriginalAmount, @event.Currency, -@event.OriginalAmount, @event.Currency);
+            entry.AddLine(AccountTypes.ExpenseDiscount, @event.DiscountAmount, @event.Currency, @event.DiscountAmount, @event.Currency);
+            entry.AddLine(AccountTypes.RevenueGross, -@event.OriginalAmount, @event.Currency, -@event.OriginalAmount, @event.Currency);
         }
 
         entry.ValidateBalanced();
+        entry.MarkConsolidationNotRequired();
         _repository.Add(entry);
         await _repository.SaveChangesAsync();
     }

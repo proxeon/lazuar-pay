@@ -448,14 +448,20 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.1 Financial truth (Billing)
 
-- [ ] B2C consolidation selection: fix filter so normal `B2C_RECEIPT` sales can consolidate (or dedicated consolidation state field)
-- [ ] Separate receipt number vs LHDN consolidation status if dual-use field is the root cause
-- [ ] Refunds reverse tax liability proportionally where applicable
-- [ ] Deferred revenue: create schedules when booking deferred **or** delete dead job/entity to reduce lie surface
-- [ ] Implement or remove TypeSpec `net-profit` and summary date filters
-- [ ] Chargeback: reverse ledger where required, not only wallet units for utility
-- [ ] Account type constants/enums (reduce magic strings)
-- [ ] Stop or formalize cross-schema Dapper joins (Billing ↔ commerce/crm)
+- [x] B2C consolidation selection: fix filter so normal `B2C_RECEIPT` sales can consolidate (or dedicated consolidation state field)
+  - Residual: catch-up if instance down on 28th is C.5; period window is prior MYT month; signed nets refunds
+- [x] Separate receipt number vs LHDN consolidation status if dual-use field is the root cause
+  - Residual: `TaxInvoiceId` kept for legacy/back-compat correlation; new writers use CustomerDocumentNumber / LhdnDocumentUuid / ConsolidationStatus
+- [x] Refunds reverse tax liability proportionally where applicable
+  - Residual: core handler already correct; module tests cover full/partial/missing/idempotent matrix
+- [x] Deferred revenue: create schedules when booking deferred **or** delete dead job/entity to reduce lie surface
+  - Residual: `RevenueRecognitionJob` unregistered; table/entity kept; schedules still not created from product periods
+- [x] Implement or remove TypeSpec `net-profit` and summary date filters
+- [x] Chargeback: reverse ledger where required, not only wallet units for utility
+  - Residual: utility `SYSTEM_CREDIT_CHARGEBACK` only; commerce GMV dispute ledger still out of scope
+- [x] Account type constants/enums (reduce magic strings)
+- [x] Stop or formalize cross-schema Dapper joins (Billing ↔ commerce/crm)
+  - Residual: CRM join lives inside Commerce `ICommerceDocumentLookup` impl (Billing no longer embeds commerce/crm SQL)
 
 ## C.2 Tenant isolation hardening
 

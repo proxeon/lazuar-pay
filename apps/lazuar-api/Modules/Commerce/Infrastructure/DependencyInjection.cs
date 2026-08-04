@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ICommerceRepository, CommerceRepository>();
         services.AddScoped<ICommerceQueryService, CommerceQueryService>();
         services.AddScoped<ISubscriberQueryService, SubscriberQueryService>();
+        services.AddScoped<ICommerceDocumentLookup, CommerceDocumentLookup>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommerceDbContext>>("CommerceEventBus");
 

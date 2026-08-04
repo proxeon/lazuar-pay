@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Billing.Application;
 using Modules.Billing.Contracts.Events;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
@@ -17,7 +18,7 @@ public class CommissionAccruedHandler : IIntegrationEventHandler<CommissionAccru
 
     public async Task HandleAsync(CommissionAccruedIntegrationEvent @event)
     {
-        var referenceType = "COMMISSION_ACCRUED";
+        var referenceType = LedgerReferenceTypes.CommissionAccrued;
         var referenceId = @event.CommissionId;
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
@@ -29,10 +30,11 @@ public class CommissionAccruedHandler : IIntegrationEventHandler<CommissionAccru
             referenceId,
             $"Affiliate commission accrued for Partner: {@event.AffiliateId}");
 
-        entry.AddLine("EXPENSE_COMMISSION", @event.Amount, @event.Currency, @event.Amount, @event.Currency);
-        entry.AddLine("LIABILITY_AFFILIATE_PAYABLE", -@event.Amount, @event.Currency, -@event.Amount, @event.Currency);
+        entry.AddLine(AccountTypes.ExpenseCommission, @event.Amount, @event.Currency, @event.Amount, @event.Currency);
+        entry.AddLine(AccountTypes.LiabilityAffiliatePayable, -@event.Amount, @event.Currency, -@event.Amount, @event.Currency);
 
         entry.ValidateBalanced();
+        entry.MarkConsolidationNotRequired();
         _repository.Add(entry);
         await _repository.SaveChangesAsync();
     }

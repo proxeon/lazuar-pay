@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Application;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Payments.Contracts.Events;
 
@@ -25,7 +26,7 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         if (@event.RefundedAmount <= 0)
             return;
 
-        var referenceType = "GATEWAY_REFUND";
+        var referenceType = LedgerReferenceTypes.GatewayRefund;
         var referenceId = @event.PaymentRecordId.ToString();
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
@@ -43,19 +44,19 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         var grossRefund = @event.RefundedAmount - taxRefund;
 
         // Mirror GatewayPaymentCompletedHandler: cash/fee/revenue/tax symmetry with opposite signs.
-        entry.AddLine("ASSET_CASH", -cashOutflow, @event.Currency, -cashOutflow, @event.Currency);
+        entry.AddLine(AccountTypes.AssetCash, -cashOutflow, @event.Currency, -cashOutflow, @event.Currency);
 
         if (@event.RefundedFee > 0)
         {
-            entry.AddLine("EXPENSE_GATEWAY_FEE", -@event.RefundedFee, @event.Currency, -@event.RefundedFee, @event.Currency);
+            entry.AddLine(AccountTypes.ExpenseGatewayFee, -@event.RefundedFee, @event.Currency, -@event.RefundedFee, @event.Currency);
         }
 
-        entry.AddLine("CONTRA_REVENUE_REFUNDS", grossRefund, @event.Currency, grossRefund, @event.Currency);
+        entry.AddLine(AccountTypes.ContraRevenueRefunds, grossRefund, @event.Currency, grossRefund, @event.Currency);
 
         if (taxRefund > 0)
         {
             // Original payment credits LIABILITY_TAX_PAYABLE (negative); reverse with a debit (positive).
-            entry.AddLine("LIABILITY_TAX_PAYABLE", taxRefund, @event.Currency, taxRefund, @event.Currency);
+            entry.AddLine(AccountTypes.LiabilityTaxPayable, taxRefund, @event.Currency, taxRefund, @event.Currency);
         }
 
         entry.ValidateBalanced();
@@ -80,21 +81,21 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e =>
                 e.OrganizationId == @event.OrganizationId
-                && e.ReferenceType == "GATEWAY_PAYMENT"
+                && e.ReferenceType == LedgerReferenceTypes.GatewayPayment
                 && e.ReferenceId == @event.GatewayTransactionId);
 
         if (originalEntry == null)
             return 0m;
 
         var originalTax = Math.Abs(originalEntry.Lines
-            .Where(l => l.AccountType == "LIABILITY_TAX_PAYABLE")
+            .Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable)
             .Sum(l => l.Amount));
 
         if (originalTax <= 0)
             return 0m;
 
         var originalGross = Math.Abs(originalEntry.Lines
-            .Where(l => l.AccountType == "REVENUE_GROSS")
+            .Where(l => l.AccountType == AccountTypes.RevenueGross)
             .Sum(l => l.Amount));
         var originalPaid = originalGross + originalTax;
 

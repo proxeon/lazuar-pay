@@ -64,7 +64,9 @@ public static class DependencyInjection
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
-        services.AddHostedService<RevenueRecognitionJob>();
+        // RevenueRecognitionJob intentionally unregistered (C.1): deferred schedules are not
+        // created from product periods yet. Keep entity/table; re-enable when amortization is wired.
+        // services.AddHostedService<RevenueRecognitionJob>();
         services.AddHostedService<B2cConsolidationJob>();
 
         services.AddSingleton<IAgentPromptProvider, BillingPromptProvider>();

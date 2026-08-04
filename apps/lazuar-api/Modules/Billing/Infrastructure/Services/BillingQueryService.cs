@@ -9,6 +9,7 @@ using Dapper;
 using Lazuar.ApiTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Contracts;
+using Modules.Billing.Domain;
 
 namespace Modules.Billing.Infrastructure.Services;
 
@@ -17,12 +18,12 @@ public class BillingQueryService : IBillingQueryService
     private readonly ISqlConnectionFactory _connectionFactory;
 
     private record RawLedgerEntryDto(
-        Guid Id, DateTime Timestamp, string ReferenceType, string ReferenceId, 
-        string? Description, string CustomerType, string? TaxInvoiceId, 
+        Guid Id, DateTime Timestamp, string ReferenceType, string ReferenceId,
+        string? Description, string CustomerType, string? TaxInvoiceId,
         string? LhdnValidationStatus, int TotalCount);
 
     private record RawLedgerLineDto(
-        Guid Id, Guid LedgerEntryId, string AccountType, decimal Amount, 
+        Guid Id, Guid LedgerEntryId, string AccountType, decimal Amount,
         string Currency, decimal BaseCurrencyAmount, string BaseCurrency);
 
     public BillingQueryService([FromKeyedServices("BillingSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
@@ -49,16 +50,16 @@ public class BillingQueryService : IBillingQueryService
 
         if (!string.IsNullOrWhiteSpace(searchPattern))
         {
-            sqlBuilder.Append(@" AND (e.""ReferenceId"" ILIKE @Search OR e.""TaxInvoiceId"" ILIKE @Search)");
+            sqlBuilder.Append(@" AND (e.""ReferenceId"" ILIKE @Search OR e.""TaxInvoiceId"" ILIKE @Search OR e.""CustomerDocumentNumber"" ILIKE @Search)");
         }
 
         if (typeFilter == "sales")
         {
-            sqlBuilder.Append(@" AND e.""ReferenceType"" NOT IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION')");
+            sqlBuilder.Append($@" AND e.""ReferenceType"" NOT IN ('{LedgerReferenceTypes.GatewayRefund}', '{LedgerReferenceTypes.LhdnCancellation}')");
         }
         else if (typeFilter == "reversals")
         {
-            sqlBuilder.Append(@" AND e.""ReferenceType"" IN ('GATEWAY_REFUND', 'LHDN_CANCELLATION')");
+            sqlBuilder.Append($@" AND e.""ReferenceType"" IN ('{LedgerReferenceTypes.GatewayRefund}', '{LedgerReferenceTypes.LhdnCancellation}')");
         }
 
         if (fromDate.HasValue)
@@ -73,16 +74,16 @@ public class BillingQueryService : IBillingQueryService
 
         sqlBuilder.Append(@" ORDER BY e.""Timestamp"" DESC LIMIT @Limit OFFSET @Offset;");
 
-        var entries = (await connection.QueryAsync<RawLedgerEntryDto>(sqlBuilder.ToString(), new { 
-            OrgId = organizationId, 
-            Limit = limit, 
-            Offset = offset, 
+        var entries = (await connection.QueryAsync<RawLedgerEntryDto>(sqlBuilder.ToString(), new {
+            OrgId = organizationId,
+            Limit = limit,
+            Offset = offset,
             Search = searchPattern,
             FromDate = fromDate,
             ToDate = toDate
         })).ToList();
 
-        if (!entries.Any()) 
+        if (!entries.Any())
             return new PaginatedResponse<LedgerEntryDto>(Enumerable.Empty<LedgerEntryDto>(), 0, page, limit);
 
         int totalCount = entries.First().TotalCount;
@@ -121,7 +122,7 @@ public class BillingQueryService : IBillingQueryService
         return new PaginatedResponse<LedgerEntryDto>(dtos, totalCount, page, limit);
     }
 
-    public async Task<FinancialSummaryDto> GetFinancialSummaryAsync(Guid organizationId)
+    public async Task<FinancialSummaryDto> GetFinancialSummaryAsync(Guid organizationId, DateTime? fromDate = null, DateTime? toDate = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
@@ -132,27 +133,37 @@ public class BillingQueryService : IBillingQueryService
         // Display polarity:
         //   revenue/tax/deferred/recognized (credit-normal) → -SUM
         //   fees/discounts/contra-refunds (debit-normal)    → +SUM
-        const string sql = @"
+        var sqlBuilder = new StringBuilder($@"
             SELECT 
-                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Gross_revenue"",
-                COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Total_gateway_fees"",
-                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Total_tax_liabilities"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = '{AccountTypes.RevenueGross}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Gross_revenue"",
+                COALESCE(SUM(CASE WHEN ""AccountType"" = '{AccountTypes.ExpenseGatewayFee}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Total_gateway_fees"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = '{AccountTypes.LiabilityTaxPayable}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Total_tax_liabilities"",
                 (
-                    COALESCE(-SUM(CASE WHEN ""AccountType"" = 'REVENUE_GROSS' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
-                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'CONTRA_REVENUE_REFUNDS' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
-                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_DISCOUNT' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
-                  - COALESCE(SUM(CASE WHEN ""AccountType"" = 'EXPENSE_GATEWAY_FEE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
-                  - COALESCE(-SUM(CASE WHEN ""AccountType"" = 'LIABILITY_TAX_PAYABLE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                    COALESCE(-SUM(CASE WHEN ""AccountType"" = '{AccountTypes.RevenueGross}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = '{AccountTypes.ContraRevenueRefunds}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = '{AccountTypes.ExpenseDiscount}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN ""AccountType"" = '{AccountTypes.ExpenseGatewayFee}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(-SUM(CASE WHEN ""AccountType"" = '{AccountTypes.LiabilityTaxPayable}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0)
                 ) as ""Net_revenue"",
-                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'LIABILITY_DEFERRED_REVENUE' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Deferred_revenue"",
-                COALESCE(-SUM(CASE WHEN ""AccountType"" = 'REVENUE_RECOGNIZED' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Recognized_revenue"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = '{AccountTypes.LiabilityDeferredRevenue}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Deferred_revenue"",
+                COALESCE(-SUM(CASE WHEN ""AccountType"" = '{AccountTypes.RevenueRecognized}' THEN ""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Recognized_revenue"",
                 'MYR' as ""Currency""
             FROM billing.""LedgerLines"" l
             JOIN billing.""LedgerEntries"" e ON l.""LedgerEntryId"" = e.""Id""
-            WHERE e.""OrganizationId"" = @OrgId";
+            WHERE e.""OrganizationId"" = @OrgId");
 
-        var result = await connection.QuerySingleOrDefaultAsync<FinancialSummaryDto>(sql, new { OrgId = organizationId });
-        
+        if (fromDate.HasValue)
+            sqlBuilder.Append(@" AND e.""Timestamp"" >= @FromDate");
+        if (toDate.HasValue)
+            sqlBuilder.Append(@" AND e.""Timestamp"" <= @ToDate");
+
+        var result = await connection.QuerySingleOrDefaultAsync<FinancialSummaryDto>(sqlBuilder.ToString(), new
+        {
+            OrgId = organizationId,
+            FromDate = fromDate,
+            ToDate = toDate
+        });
+
         return result ?? new FinancialSummaryDto
         {
             Gross_revenue = 0,
@@ -163,6 +174,39 @@ public class BillingQueryService : IBillingQueryService
             Recognized_revenue = 0,
             Currency = "MYR"
         };
+    }
+
+    public async Task<IReadOnlyList<NetProfitDto>> GetNetProfitAsync(Guid organizationId, string period = "monthly")
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        var periodExpr = string.Equals(period, "yearly", StringComparison.OrdinalIgnoreCase)
+            ? @"to_char(e.""Timestamp"" AT TIME ZONE 'UTC', 'YYYY')"
+            : @"to_char(e.""Timestamp"" AT TIME ZONE 'UTC', 'YYYY-MM')";
+
+        var sql = $@"
+            SELECT
+                {periodExpr} as ""Period"",
+                COALESCE(-SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.RevenueGross}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Gross_revenue"",
+                COALESCE(SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.ExpenseGatewayFee}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Gateway_fees"",
+                COALESCE(SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.ContraRevenueRefunds}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0) as ""Refunds_issued"",
+                (
+                    COALESCE(-SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.RevenueGross}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.ContraRevenueRefunds}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.ExpenseGatewayFee}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.ExpenseDiscount}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0)
+                  - COALESCE(SUM(CASE WHEN l.""AccountType"" = '{AccountTypes.ExpenseCommission}' THEN l.""BaseCurrencyAmount"" ELSE 0 END), 0)
+                ) as ""Net_profit"",
+                'MYR' as ""Currency""
+            FROM billing.""LedgerLines"" l
+            JOIN billing.""LedgerEntries"" e ON l.""LedgerEntryId"" = e.""Id""
+            WHERE e.""OrganizationId"" = @OrgId
+            GROUP BY 1
+            ORDER BY 1 DESC";
+
+        var rows = await connection.QueryAsync<NetProfitDto>(sql, new { OrgId = organizationId });
+        return rows.ToList();
     }
 
     public async Task<bool> HasPositiveCreditBalanceAsync(Guid organizationId)
@@ -177,7 +221,7 @@ public class BillingQueryService : IBillingQueryService
             LIMIT 1";
 
         var credits = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { OrgId = organizationId });
-        
+
         return credits.HasValue && credits.Value > 0;
     }
 

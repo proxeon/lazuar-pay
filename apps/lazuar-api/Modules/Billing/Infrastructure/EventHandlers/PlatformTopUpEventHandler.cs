@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure.Services;
 using Modules.Payments.Contracts.Events;
@@ -36,7 +37,7 @@ public class PlatformTopUpEventHandler : IIntegrationEventHandler<GatewayPayment
         // Transaction-level idempotency: never double-credit the same gateway payment.
         var alreadyToppedUp = await _dbContext.LedgerEntries
             .IgnoreQueryFilters()
-            .AnyAsync(e => e.ReferenceType == "SYSTEM_CREDIT_TOPUP"
+            .AnyAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemCreditTopup
                            && e.ReferenceId == @event.GatewayTransactionId);
         if (alreadyToppedUp)
             return;
@@ -65,15 +66,16 @@ public class PlatformTopUpEventHandler : IIntegrationEventHandler<GatewayPayment
 
             var ledgerEntry = new LedgerEntry(
                 targetTenantId,
-                "SYSTEM_CREDIT_TOPUP",
+                LedgerReferenceTypes.SystemCreditTopup,
                 @event.GatewayTransactionId,
                 $"Purchased {credits} Utility Credits via Lazuar Platform",
                 "B2B");
 
-            ledgerEntry.AddLine("EXPENSE_SOFTWARE_SUBSCRIPTION", @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
-            ledgerEntry.AddLine("ASSET_CASH", -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
+            ledgerEntry.AddLine(AccountTypes.ExpenseSoftwareSubscription, @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
+            ledgerEntry.AddLine(AccountTypes.AssetCash, -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
 
             ledgerEntry.ValidateBalanced();
+            ledgerEntry.MarkConsolidationNotRequired();
             _dbContext.LedgerEntries.Add(ledgerEntry);
 
             await _dbContext.SaveChangesAsync();

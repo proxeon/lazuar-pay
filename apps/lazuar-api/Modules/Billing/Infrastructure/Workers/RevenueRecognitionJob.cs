@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 
 namespace Modules.Billing.Infrastructure.Workers;
@@ -64,8 +65,8 @@ public class RevenueRecognitionJob : BackgroundService
                     $"{schedule.LedgerEntryId}_{now:yyyyMMddHH}",
                     $"Automated revenue recognition for deferred schedule {schedule.Id}");
 
-                entry.AddLine("LIABILITY_DEFERRED_REVENUE", amountToRecognize, schedule.Currency, amountToRecognize, schedule.Currency);
-                entry.AddLine("REVENUE_RECOGNIZED", -amountToRecognize, schedule.Currency, -amountToRecognize, schedule.Currency);
+                entry.AddLine(AccountTypes.LiabilityDeferredRevenue, amountToRecognize, schedule.Currency, amountToRecognize, schedule.Currency);
+                entry.AddLine(AccountTypes.RevenueRecognized, -amountToRecognize, schedule.Currency, -amountToRecognize, schedule.Currency);
                 
                 entry.ValidateBalanced();
                 db.LedgerEntries.Add(entry);

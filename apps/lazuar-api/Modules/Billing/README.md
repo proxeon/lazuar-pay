@@ -5,33 +5,40 @@ The `Billing` module is the **Core Domain for Financial Truth**. It acts as the 
 
 ## 2. Core Responsibilities
 * **Double-Entry Bookkeeping:** Recording every financial event as balanced `LedgerEntry` and `LedgerLine` records (Assets, Liabilities, Revenue, Expenses).
-* **Revenue Recognition:** Amortizing upfront annual payments or event tickets into realized MRR over time via `DeferredRevenueSchedule`.
-* **Net Profit Calculation:** Deducting exact Gateway Fees (Stripe/Billplz) and Affiliate Commissions from Gross Revenue to calculate actual cash in the bank.
+* **Revenue Recognition:** Amortizing upfront annual payments or event tickets into realized MRR over time via `DeferredRevenueSchedule` (**not live** until schedules are created from product periods — see §6).
+* **Net Profit Calculation:** Deducting exact Gateway Fees (Stripe/Billplz) and Affiliate Commissions from Gross Revenue to calculate actual cash in the bank (`GET /admin/billing/net-profit`).
 * **Tax Liability Tracking:** Separating collected SST/VAT into liability accounts so it is never miscounted as platform profit.
 * **Accounts Receivable (AR) & Payable (AP):** Tracking unpaid B2B invoices and accrued affiliate payouts.
-* **LHDN e-Invoice Prep:** Maintaining tax invoice IDs and validation statuses for Malaysian LHDN compliance.
+* **LHDN e-Invoice Prep:** Maintaining customer receipt numbers, consolidation eligibility, and LHDN document UUIDs/statuses for Malaysian compliance.
 
 ## 3. Architectural Boundaries (What this module is NOT)
 * **Not a Gateway Integrator:** It does not hold Stripe API keys, generate checkout URLs, or parse raw webhook JSON.
 * **Not an Access Control System:** It does not know if a user has access to a Telegram group or a Video Vault. It only knows the financial contract.
-* **No Cross-Schema Joins:** It queries its own `billing` schema. To get customer names or plan details for reporting, it relies on cross-module read models (e.g., `IBillingQueryService` using Dapper) or event payloads.
+* **No Cross-Schema Joins:** Billing does not query `commerce` / `crm` tables directly. Customer display for final receipts and proforma drafts is resolved via Commerce ports (`ICommerceDocumentLookup`).
 
 ## 4. Key Domain Aggregates & Entities
-* **`LedgerEntry`**: The aggregate root representing a single financial transaction (e.g., a completed payment, a refund, an issued invoice). Contains `TaxInvoiceId` and `LhdnValidationStatus`.
-* **`LedgerLine`**: Child entity representing a single debit or credit line. Tracks `AccountType` (e.g., `ASSET_CASH`, `REVENUE_GROSS`, `EXPENSE_GATEWAY_FEE`, `LIABILITY_TAX_PAYABLE`), `Amount`, and `BaseCurrencyAmount` (normalized to MYR).
-* **`DeferredRevenueSchedule`**: Tracks the amortization schedule for upfront payments, moving funds from `LIABILITY_DEFERRED_REVENUE` to `REVENUE_RECOGNIZED` over time.
+* **`LedgerEntry`**: Aggregate root for a single financial transaction.
+  * **`CustomerDocumentNumber`**: Immutable customer-facing receipt # (never overwritten by LHDN).
+  * **`LhdnDocumentUuid`**: MyInvois UUID after submit/validate.
+  * **`ConsolidationStatus`**: `PENDING` / `CONSOLIDATED` / `NOT_REQUIRED` / `IGNORED` (B2C monthly consolidation eligibility).
+  * **`LhdnValidationStatus`**: LHDN lifecycle (`B2C_RECEIPT`, `CONSOLIDATED_PENDING`, `VALID`, `CANCELLED`, …).
+  * **`TaxInvoiceId`**: Legacy dual-use field kept for back-compat; new writers prefer the fields above.
+* **`LedgerLine`**: Debit/credit line with `AccountType` constants from `Modules.Billing.Domain.AccountTypes` (e.g. `ASSET_CASH`, `REVENUE_GROSS`, `EXPENSE_GATEWAY_FEE`, `LIABILITY_TAX_PAYABLE`).
+* **`DeferredRevenueSchedule`**: Table/entity retained for future amortization; recognition job is **not registered** until product-period schedules are created.
 
 ## 5. Integration Events (Consumed)
 The Billing module listens to the global event bus to build the ledger. It does *not* publish events that trigger side-effects; it is the terminal sink for financial data.
-* **From Payments:** `GatewayPaymentCompletedIntegrationEvent`, `GatewayRefundCompletedIntegrationEvent`.
+* **From Payments:** `GatewayPaymentCompletedIntegrationEvent`, `GatewayRefundCompletedIntegrationEvent`, `GatewayDisputeCreatedIntegrationEvent` (utility chargeback).
 * **From Community:** `ZeroAmountCheckoutCompletedIntegrationEvent` (Records 100% coupon discounts for ROI tracking).
 * **From B2B/Invoicing:** `InvoiceIssuedIntegrationEvent`, `ManualPaymentRecordedIntegrationEvent`.
 * **From Affiliates:** `CommissionAccruedIntegrationEvent`.
+* **From LHDN:** `LhdnDocumentValidated|Cancelled` (touch LHDN fields only; never overwrite `CustomerDocumentNumber`).
 
 ## 6. Background Workers
 * **`BillingInboxConsumerJob`**: Processes incoming integration events and writes them to the ledger transactionally.
 * **`BillingOutboxPublisherJob`**: Standard outbox dispatcher.
-* **`RevenueRecognitionJob`**: Runs periodically (e.g., hourly) to scan `DeferredRevenueSchedule` records, calculate elapsed time, and generate new `LedgerEntry` records to recognize deferred revenue.
+* **`B2cConsolidationJob`**: Monthly (28th MYT) consolidates prior-calendar-month `B2C_RECEIPT` / `PENDING` sales into a consolidated LHDN invoice. Idempotent per org/month (`B2C-CONS-{yyyyMM}-{orgId}`).
+* **`RevenueRecognitionJob`**: **Not registered.** Recognition is not live until deferred schedules are created from product periods. Entity/table kept; re-enable in DI when amortization is wired.
 
 ## 7. Database Schema
 All tables reside in the isolated `billing` schema.
@@ -42,5 +49,5 @@ All tables reside in the isolated `billing` schema.
 * `billing.InboxMessages`
 
 ## 8. The Golden Rule of Financial Flow
-**The `Payments` module is a dumb pipe. The `Community/Vault` modules manage Access. The `Billing` module manages Truth.** 
+**The `Payments` module is a dumb pipe. The `Community/Vault` modules manage Access. The `Billing` module manages Truth.**
 Never attempt to calculate MRR or Net Profit by querying the `community.PaymentRecords` or `payments` tables. Always query the `billing.LedgerLines` via the `IBillingQueryService` to ensure gateway fees, taxes, and refunds are accurately accounted for.
