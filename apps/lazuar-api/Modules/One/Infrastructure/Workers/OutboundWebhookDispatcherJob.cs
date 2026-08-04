@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application.Observability;
 using BuildingBlocks.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,6 +78,7 @@ public class OutboundWebhookDispatcherJob : BackgroundService
             if (endpoint == null || !endpoint.IsActive)
             {
                 delivery.RecordFailure("Endpoint not found or inactive.");
+                LazuarMetrics.RecordWebhookFailed("outbound");
                 _logger.LogWarning(
                     "Webhook delivery {DeliveryId} failed: endpoint {EndpointId} not found or inactive.",
                     delivery.Id,
@@ -109,6 +111,7 @@ public class OutboundWebhookDispatcherJob : BackgroundService
                 {
                     var error = $"HTTP {(int)response.StatusCode} {response.StatusCode}";
                     delivery.RecordFailure(error);
+                    LazuarMetrics.RecordWebhookFailed("outbound");
                     _logger.LogWarning(
                         "Webhook delivery {DeliveryId} to {Url} failed: {Error} (attempt {Attempt}).",
                         delivery.Id,
@@ -120,6 +123,7 @@ public class OutboundWebhookDispatcherJob : BackgroundService
             catch (Exception ex)
             {
                 delivery.RecordFailure(ex.Message);
+                LazuarMetrics.RecordWebhookFailed("outbound");
                 _logger.LogError(
                     ex,
                     "Webhook delivery {DeliveryId} to endpoint {EndpointId} threw (attempt {Attempt}).",

@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Application.Observability;
 using BuildingBlocks.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -326,6 +327,7 @@ public class DunningEngineJob : BackgroundService
                 if (campaign.FinalAction == "CANCEL")
                 {
                     sub.Cancel();
+                    LazuarMetrics.RecordDunningCancel();
                     // Campaign is AsNoTracking snapshot — reload for RecordChurn if needed.
                     var trackedCampaign = await db.DunningCampaigns
                         .IgnoreQueryFilters()

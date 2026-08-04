@@ -554,10 +554,16 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.6 Observability
 
-- [ ] Metrics: outbox lag, dead letters, webhook failed, LHDN stuck PENDING/SUBMITTED, dunning cancels
-- [ ] Correlation id middleware + log enrichment
-- [ ] Health readiness: DB; optional outbox lag threshold
-- [ ] Structured success logs on payment webhook process (event id, provider, tx id)
+- [x] Metrics: outbox lag, dead letters, webhook failed, LHDN stuck PENDING/SUBMITTED, dunning cancels
+  - `BuildingBlocks.Application.Observability.LazuarMetrics` counters + `PlatformMetricsCollector` gauges
+  - `GET /health/metrics` on-demand snapshot; `PlatformMetricsRefreshJob` refreshes gauges
+  - Residual: no Prometheus scrape endpoint (System.Diagnostics.Metrics only); inbox dead letters share outbox.dead_letters counter name
+- [x] Correlation id middleware + log enrichment
+  - `CorrelationIdMiddleware`: accept/generate `X-Correlation-Id`, Items + response header + `ILogger.BeginScope`
+- [x] Health readiness: DB; optional outbox lag threshold
+  - `GET /health/ready` via `HealthReadiness` + `Observability:OutboxLagReadyThreshold` (null = DB only)
+- [x] Structured success logs on payment webhook process (event id, provider, tx id)
+  - `ProcessGatewayWebhookCommandHandler` LogInformation with EventId, Provider, GatewayTransactionId, TenantId, EventType
 
 ## C.7 Secrets and BYOK
 

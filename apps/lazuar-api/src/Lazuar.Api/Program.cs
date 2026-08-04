@@ -18,6 +18,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
 using BuildingBlocks.Infrastructure.Llm;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.One.Infrastructure;
 using Modules.One.Infrastructure.Configuration;
 using Modules.Messaging.Infrastructure;
@@ -88,11 +89,23 @@ builder.Host.UseSerilog();
 
 builder.Services.AddOptions<ResendOptions>().BindConfiguration(ResendOptions.SectionName);
 builder.Services.AddOptions<BackgroundWorkerOptions>().BindConfiguration(BackgroundWorkerOptions.SectionName);
+builder.Services.AddOptions<ObservabilityOptions>().BindConfiguration(ObservabilityOptions.SectionName);
 builder.Services.AddOptions<PlatformAdminSettings>().Configure<IConfiguration>((settings, configuration) =>
 {
     settings.Emails = configuration["PLATFORM_ADMIN_EMAILS"] ?? string.Empty;
     settings.Password = configuration["PLATFORM_ADMIN_PASSWORD"] ?? string.Empty;
 });
+
+// C.6 Observability: metrics collector + gauge refresh (outbox lag, dead letters, LHDN stuck)
+var defaultConnectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("Default connection string was not found.");
+LazuarMetricsGauges.EnsureRegistered();
+builder.Services.AddSingleton<IPlatformMetricsCollector>(sp =>
+    new PlatformMetricsCollector(
+        defaultConnectionString,
+        sp.GetRequiredService<IOptions<ObservabilityOptions>>(),
+        sp.GetRequiredService<ILogger<PlatformMetricsCollector>>()));
+builder.Services.AddHostedService<PlatformMetricsRefreshJob>();
 
 builder.Services.AddHttpClient("Resend", (sp, client) =>
 {
@@ -321,6 +334,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.UseExceptionHandler();
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseCors();
 app.UseAuthentication();
 app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
@@ -345,6 +359,48 @@ eventBus.Subscribe<Modules.One.Contracts.WorkspaceUpdatedIntegrationEvent, Lazua
 
 // Liveness for deploy health-gates / Caddy (no auth, no CORS requirement)
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+// Readiness: DB connectivity; optional outbox lag threshold (Observability:OutboxLagReadyThreshold)
+app.MapGet("/health/ready", async (
+    IPlatformMetricsCollector collector,
+    IOptions<ObservabilityOptions> observabilityOptions,
+    CancellationToken ct) =>
+{
+    var result = await HealthReadiness.EvaluateAsync(collector, observabilityOptions, ct);
+    var body = new
+    {
+        status = result.Status,
+        database = result.DatabaseReachable ? "up" : "down",
+        outbox_lag_seconds = result.OutboxLagSeconds,
+        reason = result.Reason
+    };
+    return result.IsReady
+        ? Results.Ok(body)
+        : Results.Json(body, statusCode: StatusCodes.Status503ServiceUnavailable);
+});
+
+// Lightweight metrics snapshot (process counters + on-demand DB gauges)
+app.MapGet("/health/metrics", async (IPlatformMetricsCollector collector, CancellationToken ct) =>
+{
+    var snapshot = await collector.CollectAsync(ct);
+    return Results.Ok(new
+    {
+        collected_at_utc = snapshot.CollectedAtUtc,
+        database_reachable = snapshot.DatabaseReachable,
+        error = snapshot.Error,
+        outbox_lag_seconds = snapshot.OutboxLagSeconds,
+        outbox_pending_count = snapshot.OutboxPendingCount,
+        dead_letter_count = snapshot.DeadLetterCount,
+        lhdn_stuck_count = snapshot.LhdnStuckCount,
+        counters = new
+        {
+            dead_letters_since_start = snapshot.DeadLettersSinceStart,
+            webhook_failed_since_start = snapshot.WebhookFailedSinceStart,
+            dunning_cancels_since_start = snapshot.DunningCancelsSinceStart
+        },
+        schemas = snapshot.Schemas
+    });
+});
 
 var apiGroup = app.MapGroup("/api/v1").RequireCors();
 

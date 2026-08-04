@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Application.Observability;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Events;
 using Modules.Payments.Domain.Entities;
@@ -16,20 +18,36 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
     private readonly IPaymentWebhookLogRepository _logRepository;
     private readonly IPaymentGatewayFactory _gatewayFactory;
     private readonly IEventBus _eventBus;
+    private readonly ILogger<ProcessGatewayWebhookCommandHandler> _logger;
 
     public ProcessGatewayWebhookCommandHandler(
         ITenantPaymentConfigRepository configRepository,
         IPaymentWebhookLogRepository logRepository,
         IPaymentGatewayFactory gatewayFactory,
-        [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus)
+        [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus,
+        ILogger<ProcessGatewayWebhookCommandHandler> logger)
     {
         _configRepository = configRepository;
         _logRepository = logRepository;
         _gatewayFactory = gatewayFactory;
         _eventBus = eventBus;
+        _logger = logger;
     }
 
     public async Task Handle(ProcessGatewayWebhookCommand request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await HandleCoreAsync(request, cancellationToken);
+        }
+        catch
+        {
+            LazuarMetrics.RecordWebhookFailed("payment");
+            throw;
+        }
+    }
+
+    private async Task HandleCoreAsync(ProcessGatewayWebhookCommand request, CancellationToken cancellationToken)
     {
         var config = await _configRepository.GetByTenantAndGatewayAsync(request.TenantId, request.GatewayType, cancellationToken);
         if (config == null || string.IsNullOrEmpty(config.WebhookSecret))
@@ -88,6 +106,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
                 Currency: parsedResult.Currency,
                 Metadata: parsedResult.Metadata));
             await TrySaveChangesAsync(cancellationToken);
+            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType);
             return;
         }
 
@@ -98,6 +117,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
                 Metadata: parsedResult.Metadata ?? new Dictionary<string, string>()));
             await TrySaveChangesAsync(cancellationToken);
+            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType);
             return;
         }
 
@@ -119,6 +139,23 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
 
         await _eventBus.PublishAsync(integrationEvent);
         await TrySaveChangesAsync(cancellationToken);
+        LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType);
+    }
+
+    private void LogProcessed(
+        ProcessGatewayWebhookCommand request,
+        string eventId,
+        string provider,
+        string? gatewayTransactionId,
+        string eventType)
+    {
+        _logger.LogInformation(
+            "Payment webhook processed successfully. EventId={EventId} Provider={Provider} GatewayTransactionId={GatewayTransactionId} TenantId={TenantId} EventType={EventType}",
+            eventId,
+            provider,
+            gatewayTransactionId ?? eventId,
+            request.TenantId,
+            eventType);
     }
 
     /// <summary>

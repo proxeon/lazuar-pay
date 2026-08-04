@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Payments.Application.Commands;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Events;
@@ -16,6 +17,13 @@ namespace Lazuar.ModuleTests.Payments;
 [TestFixture]
 public class ProcessGatewayWebhookCommandHandlerTests
 {
+    private static ProcessGatewayWebhookCommandHandler CreateHandler(
+        ITenantPaymentConfigRepository configRepo,
+        IPaymentWebhookLogRepository logRepo,
+        IPaymentGatewayFactory gatewayFactory,
+        IEventBus eventBus)
+        => new(configRepo, logRepo, gatewayFactory, eventBus, NullLogger<ProcessGatewayWebhookCommandHandler>.Instance);
+
     [Test]
     public async Task Handle_PaymentFailed_Publishes_GatewayPaymentFailedIntegrationEvent()
     {
@@ -62,7 +70,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
 
         var eventBus = Substitute.For<IEventBus>();
 
-        var handler = new ProcessGatewayWebhookCommandHandler(configRepo, logRepo, gatewayFactory, eventBus);
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
 
         await handler.Handle(
             new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
@@ -118,7 +126,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
         gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
 
         var eventBus = Substitute.For<IEventBus>();
-        var handler = new ProcessGatewayWebhookCommandHandler(configRepo, logRepo, gatewayFactory, eventBus);
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
 
         await handler.Handle(
             new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
@@ -156,7 +164,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
         gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
         var eventBus = Substitute.For<IEventBus>();
 
-        var handler = new ProcessGatewayWebhookCommandHandler(configRepo, logRepo, gatewayFactory, eventBus);
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
         await handler.Handle(
             new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
             CancellationToken.None);
@@ -193,7 +201,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
         gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
         var eventBus = Substitute.For<IEventBus>();
 
-        var handler = new ProcessGatewayWebhookCommandHandler(configRepo, logRepo, gatewayFactory, eventBus);
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
         await handler.Handle(
             new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
             CancellationToken.None);
@@ -232,7 +240,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
         gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
         var eventBus = Substitute.For<IEventBus>();
 
-        var handler = new ProcessGatewayWebhookCommandHandler(configRepo, logRepo, gatewayFactory, eventBus);
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
 
         Assert.DoesNotThrowAsync(async () => await handler.Handle(
             new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),

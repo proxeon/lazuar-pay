@@ -1,3 +1,5 @@
+using BuildingBlocks.Application.Observability;
+
 namespace BuildingBlocks.Infrastructure;
 
 /// <summary>
@@ -23,6 +25,7 @@ public static class MessageProcessingResultApplier
             msg.Status = MessageProcessingStatus.Dead;
             msg.ProcessedAt = utcNow;
             msg.NextAttemptAt = null;
+            LazuarMetrics.RecordDeadLetter();
         }
         else
         {
