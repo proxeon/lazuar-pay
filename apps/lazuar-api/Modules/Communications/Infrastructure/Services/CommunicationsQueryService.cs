@@ -15,12 +15,17 @@ namespace Modules.Communications.Infrastructure.Services;
 public class CommunicationsQueryService : ICommunicationsQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly ISecretVault _secretVault;
 
     private record RawMessageTemplate(Guid Id, string Name, string Channel, string Subject, string EmailBody, string WhatsAppBody, bool IsDefault, string? RequiredVariables, string? OptionalVariables, DateTime UpdatedAt);
+    private record RawEmailConfig(string ApiKey, string SenderEmail, bool IsActive);
 
-    public CommunicationsQueryService([FromKeyedServices("CommunicationsSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
+    public CommunicationsQueryService(
+        [FromKeyedServices("CommunicationsSqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
+        ISecretVault secretVault)
     {
         _connectionFactory = connectionFactory;
+        _secretVault = secretVault;
     }
 
     public async Task<IEnumerable<MessageTemplateDto>> GetAllTemplatesAsync(Guid organizationId)
@@ -134,15 +139,60 @@ public class CommunicationsQueryService : ICommunicationsQueryService
             WHERE ""OrganizationId"" = @TenantId 
             LIMIT 1";
 
-        var result = await connection.QuerySingleOrDefaultAsync<dynamic>(sql, new { TenantId = tenantId });
-        
+        var result = await connection.QuerySingleOrDefaultAsync<RawEmailConfig>(sql, new { TenantId = tenantId });
+
         if (result == null) return null;
+
+        var hasKey = !string.IsNullOrWhiteSpace(result.ApiKey);
+        string? hint = null;
+        if (hasKey)
+        {
+            // Prefer decrypting to show last-4 of the real key; fall back to ciphertext suffix.
+            try
+            {
+                var plain = _secretVault.Decrypt(result.ApiKey);
+                hint = plain.Length <= 4 ? "****" : $"…{plain[^4..]}";
+            }
+            catch
+            {
+                hint = result.ApiKey.Length <= 4 ? "****" : $"…{result.ApiKey[^4..]}";
+            }
+        }
 
         return new EmailConfigDto
         {
-            Api_key = result.ApiKey,
+            Has_api_key = hasKey,
+            Api_key_hint = hint,
             Sender_email = result.SenderEmail,
             Is_active = result.IsActive
         };
+    }
+
+    public async Task<TenantEmailCredentials?> GetEmailConfigCredentialsAsync(Guid tenantId)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""ApiKey"", ""SenderEmail"", ""IsActive""
+            FROM communications.""TenantEmailConfigurations"" 
+            WHERE ""OrganizationId"" = @TenantId 
+            LIMIT 1";
+
+        var result = await connection.QuerySingleOrDefaultAsync<RawEmailConfig>(sql, new { TenantId = tenantId });
+        if (result == null || string.IsNullOrWhiteSpace(result.ApiKey)) return null;
+
+        string plainKey;
+        try
+        {
+            plainKey = _secretVault.Decrypt(result.ApiKey);
+        }
+        catch
+        {
+            // Backward-compat: treat unencrypted legacy rows as plaintext until re-saved.
+            plainKey = result.ApiKey;
+        }
+
+        return new TenantEmailCredentials(plainKey, result.SenderEmail, result.IsActive);
     }
 }

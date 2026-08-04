@@ -21,7 +21,7 @@ public class ClientProfileConfiguration : IEntityTypeConfiguration<ClientProfile
         builder.Property(x => x.Tin).HasMaxLength(20);
         builder.Property(x => x.IdType).HasMaxLength(10);
         builder.Property(x => x.IdValue).HasMaxLength(50);
-        builder.Property(x => x.ConsentedToMarketing).HasDefaultValue(true);
+        builder.Property(x => x.ConsentedToMarketing).HasDefaultValue(false);
 
         builder.OwnsOne(x => x.Address, a =>
         {

@@ -2078,7 +2078,10 @@ export interface components {
             optional_variables: string[];
         };
         "Communications.EmailConfigDto": {
-            api_key?: string;
+            /** @description True when a Resend API key is stored (encrypted). Full key is never returned. */
+            has_api_key: boolean;
+            /** @description Masked hint, e.g. last 4 characters of the plaintext key. */
+            api_key_hint?: string;
             sender_email?: string;
             is_active: boolean;
         };
@@ -2096,7 +2099,8 @@ export interface components {
             updated_at: string;
         };
         "Communications.SaveEmailConfigRequestDto": {
-            api_key: string;
+            /** @description Omit or leave empty to keep the existing encrypted key. Required on first save. */
+            api_key?: string;
             sender_email: string;
             is_active: boolean;
         };

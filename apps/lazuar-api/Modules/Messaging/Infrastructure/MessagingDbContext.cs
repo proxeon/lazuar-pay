@@ -9,6 +9,7 @@ namespace Modules.Messaging.Infrastructure;
 public class MessagingDbContext : PlatformDbContext
 {
     public DbSet<TenantReplica> TenantReplicas { get; set; } = null!;
+    public DbSet<MessageDeliveryLog> MessageDeliveryLogs { get; set; } = null!;
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
 
@@ -29,6 +30,19 @@ public class MessagingDbContext : PlatformDbContext
         {
             builder.ToTable("TenantReplicas");
             builder.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<MessageDeliveryLog>(builder =>
+        {
+            builder.ToTable("MessageDeliveryLogs");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.Channel).HasMaxLength(32).IsRequired();
+            builder.Property(x => x.Recipient).HasMaxLength(320).IsRequired();
+            builder.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            builder.Property(x => x.ProviderMessageId).HasMaxLength(128);
+            builder.Property(x => x.Error).HasMaxLength(2000);
+            builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
+            builder.HasIndex(x => x.CorrelationEventId);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

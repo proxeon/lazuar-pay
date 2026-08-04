@@ -7,7 +7,8 @@ public interface IEmailService
     /// <param name="tenantApiKey">The BYOK Resend API key for the specific tenant.</param>
     /// <param name="tenantSenderEmail">The verified sender email address for the specific tenant.</param>
     /// <param name="unsubscribeUrl">When set (marketing/broadcast), adds List-Unsubscribe headers.</param>
-    Task SendEmailAsync(
+    /// <returns>Provider message id when available (e.g. Resend email id); null if not returned.</returns>
+    Task<string?> SendEmailAsync(
         string to,
         string subject,
         string body,

@@ -72,13 +72,17 @@ model CreateBroadcastRequestDto {
 }
 
 model EmailConfigDto {
-  api_key?: string;
+  /** True when a Resend API key is stored (encrypted). Full key is never returned. */
+  has_api_key: boolean;
+  /** Masked hint, e.g. last 4 characters of the plaintext key. */
+  api_key_hint?: string;
   sender_email?: string;
   is_active: boolean;
 }
 
 model SaveEmailConfigRequestDto {
-  api_key: string;
+  /** Omit or leave empty to keep the existing encrypted key. Required on first save. */
+  api_key?: string;
   sender_email: string;
   is_active: boolean;
 }

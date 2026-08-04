@@ -509,12 +509,27 @@ Mark when decided; note outcome in PR/ADR.
 
 ## C.4 Communications / CRM maturity
 
-- [ ] CRM outbox consumers for anonymize (Commerce cancel/suppress as required)
-- [ ] Consent default false; explicit opt-in
-- [ ] Wire or delete orphan templates (welcome, abandoned cart) vs fulfillment events
-- [ ] Message delivery log aggregate (channel, status, provider id) — minimum for support
-- [ ] Encrypt Resend API keys; mask on GET
-- [ ] Fix template “reset” to re-seed defaults, not blank
+- [x] CRM outbox consumers for anonymize (Commerce cancel/suppress as required)
+  - Event carries pre-wipe Email/Phone; Commerce cancels non-canceled subs + `SubscriptionCanceled`; Communications suppresses email
+- [x] Consent default false; explicit opt-in
+  - EF default false; Create/Resolve `ConsentedToMarketing` param default false; broadcast recipients require consent
+- [x] Wire or delete orphan templates (welcome, abandoned cart) vs fulfillment events
+  - Shared `DefaultMessageTemplates` catalog; seed only lifecycle/document/digital-delivery; orphan cleanup endpoint; Digital Product Delivery on `OrderCompleted`
+- [x] Message delivery log aggregate (channel, status, provider id) — minimum for support
+  - `MessageDeliveryLog` + SENT/FAILED/SKIPPED from dispatch; optional `GET /messaging/delivery-logs`
+- [x] Encrypt Resend API keys; mask on GET
+  - `AesSecretVault` (Kms:MasterKey / Jwt:Secret); encrypt on save; GET `has_api_key` + hint; decrypt for dispatch only; keep-existing key UX
+- [x] Fix template “reset” to re-seed defaults, not blank
+  - `RestoreFromDefault` from catalog; custom templates return business rule error
+
+### C.4 residuals
+- Existing tenants may still have orphan templates until `DELETE …/templates/legacy-cleanup` is run (or re-seed path)
+- Existing plaintext Resend keys are accepted until re-saved (legacy decrypt fallback)
+- Digital Product Delivery uses portal URL as `fulfillment_url` (no product asset URL field yet)
+- Consent is not collected on public checkout UI (defaults false) — no marketing opt-in checkbox yet
+- `MessageDeliveryLog` admin UI not wired in ops-page (API only)
+- Broadcast audience still ignores plan/status filters beyond marketing consent
+- No migration to re-encrypt existing TenantEmailConfiguration rows in bulk
 
 ## C.5 Background workers multi-instance
 

@@ -7,10 +7,12 @@ import PageLayout from "../../core/components/PageLayout";
 export default function EmailSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [isActive, setIsActive] = useState(true);
   const [apiKey, setApiKey] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
+  const [hasExistingKey, setHasExistingKey] = useState(false);
+  const [apiKeyHint, setApiKeyHint] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadConfig() {
@@ -20,8 +22,11 @@ export default function EmailSettingsPage() {
         if (error) throw new Error(error.detail);
         if (data) {
           setIsActive(data.is_active ?? true);
-          setApiKey(data.api_key || "");
           setSenderEmail(data.sender_email || "");
+          setHasExistingKey(Boolean(data.has_api_key));
+          setApiKeyHint(data.api_key_hint ?? null);
+          // Never populate password field with a stored key (masked GET).
+          setApiKey("");
         }
       } catch (err) {
         toast.error("Failed to load email configuration.");
@@ -34,9 +39,14 @@ export default function EmailSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!apiKey.trim() || !senderEmail.trim()) {
-      toast.error("API Key and Sender Email are required.");
+
+    if (!senderEmail.trim()) {
+      toast.error("Sender Email is required.");
+      return;
+    }
+
+    if (!hasExistingKey && !apiKey.trim()) {
+      toast.error("API Key is required for first-time configuration.");
       return;
     }
 
@@ -44,14 +54,17 @@ export default function EmailSettingsPage() {
     try {
       const { error } = await client.PUT("/admin/communications/email-config", {
         body: {
-          api_key: apiKey.trim(),
+          // Empty string / omit keeps existing encrypted key on the server.
+          api_key: apiKey.trim() || undefined,
           sender_email: senderEmail.trim(),
           is_active: isActive
         }
       });
 
       if (error) throw new Error(error.detail || "Failed to save configuration");
-      
+
+      setHasExistingKey(true);
+      setApiKey("");
       toast.success("Email configuration verified and saved securely.");
     } catch (err: any) {
       toast.error(err.message);
@@ -72,7 +85,7 @@ export default function EmailSettingsPage() {
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col">
             <div className="p-6 md:p-8 space-y-8">
-              
+
               <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200">
                 <AlertTriangle size={18} className="text-blue-600 mt-0.5" />
                 <div>
@@ -104,13 +117,27 @@ export default function EmailSettingsPage() {
 
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">Secure Credentials</label>
-                
+
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-[#09090b]">Resend API Key *</label>
-                  <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} required placeholder="re_..." className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />
-                  <p className="text-[10px] text-[#a1a1aa] mt-1">Lazuar will instantly verify this key against the Resend API before saving.</p>
+                  <label className="text-[11px] font-semibold text-[#09090b]">
+                    Resend API Key {hasExistingKey ? "" : "*"}
+                  </label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={e => setApiKey(e.target.value)}
+                    required={!hasExistingKey}
+                    placeholder={hasExistingKey ? `Stored key${apiKeyHint ? ` (${apiKeyHint})` : ""} — leave blank to keep` : "re_..."}
+                    className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]"
+                    autoComplete="new-password"
+                  />
+                  <p className="text-[10px] text-[#a1a1aa] mt-1">
+                    {hasExistingKey
+                      ? "Leave blank to keep the existing encrypted key. Lazuar never returns the full key after save."
+                      : "Lazuar will verify this key against the Resend API, then store it encrypted."}
+                  </p>
                 </div>
-                
+
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold text-[#09090b]">Sender Email Address *</label>
                   <input type="email" value={senderEmail} onChange={e => setSenderEmail(e.target.value)} required placeholder="receipts@yourdomain.com" className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]" />

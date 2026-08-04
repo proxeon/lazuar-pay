@@ -13,7 +13,8 @@ public record CreateClientProfileCommand(
     string? IdType = null,
     string? IdValue = null,
     BillingAddressDto? BillingAddress = null,
-    Guid? GlobalUserId = null) : ICommand<Guid>
+    Guid? GlobalUserId = null,
+    bool ConsentedToMarketing = false) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

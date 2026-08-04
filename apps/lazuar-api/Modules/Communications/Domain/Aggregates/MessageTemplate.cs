@@ -57,4 +57,28 @@ public class MessageTemplate : Entity, IAggregateRoot, IMustHaveTenant
         IsDefault = false;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Restore content from the shared default catalog and mark as default again.
+    /// </summary>
+    public void RestoreFromDefault(
+        string subject,
+        string emailBody,
+        string whatsappBody,
+        string channel,
+        IEnumerable<string>? requiredVariables = null,
+        IEnumerable<string>? optionalVariables = null)
+    {
+        Subject = subject;
+        EmailBody = emailBody;
+        WhatsAppBody = whatsappBody;
+        Channel = channel;
+        IsDefault = true;
+        _requiredVariables.Clear();
+        _optionalVariables.Clear();
+        if (requiredVariables != null) _requiredVariables.AddRange(requiredVariables);
+        if (optionalVariables != null) _optionalVariables.AddRange(optionalVariables);
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
+

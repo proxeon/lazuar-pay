@@ -46,6 +46,13 @@
     <!-- Communications Module References -->
     <ProjectReference Include="..\..\Modules\Communications\Domain\Modules.Communications.Domain.csproj" />
 
+    <!-- CRM domain/contracts: anonymize + consent unit tests -->
+    <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\CRM\Contracts\Modules.CRM.Contracts.csproj" />
+
+    <!-- Messaging domain: delivery log unit tests -->
+    <ProjectReference Include="..\..\Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
+
     <!-- Commerce domain: subscription recovery unit tests -->
     <ProjectReference Include="..\..\Modules\Commerce\Domain\Modules.Commerce.Domain.csproj" />
     <!-- Commerce application: lifecycle → outbound webhook unit tests -->

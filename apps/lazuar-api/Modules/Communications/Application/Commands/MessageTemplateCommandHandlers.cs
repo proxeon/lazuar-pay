@@ -8,6 +8,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Communications.Contracts.Commands;
+using Modules.Communications.Domain;
 using Modules.Communications.Domain.Aggregates;
 using Modules.Messaging.Contracts;
 
@@ -122,7 +123,20 @@ public class ResetMessageTemplateCommandHandler : ICommandHandler<ResetMessageTe
 
         if (template == null) throw new InvalidOperationException("Template not found.");
 
-        template.UpdateContent("", "", "");
+        var definition = DefaultMessageTemplates.GetByName(template.Name);
+        if (definition == null)
+        {
+            throw new BusinessRuleValidationException(new GenericBusinessRule(
+                $"Template '{template.Name}' is a custom template and cannot be reset to a platform default. Delete and recreate it instead."));
+        }
+
+        template.RestoreFromDefault(
+            definition.Subject,
+            definition.EmailBody,
+            definition.WhatsAppBody,
+            definition.Channel,
+            definition.RequiredVariables,
+            definition.OptionalVariables);
 
         await _repository.SaveChangesAsync(cancellationToken);
     }

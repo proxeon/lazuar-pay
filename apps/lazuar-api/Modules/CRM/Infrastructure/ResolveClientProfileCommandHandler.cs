@@ -99,7 +99,7 @@ public class ResolveClientProfileCommandHandler : ICommandHandler<ResolveClientP
             IdType = request.IdType,
             IdValue = request.IdValue,
             Address = address,
-            ConsentedToMarketing = true
+            ConsentedToMarketing = request.ConsentedToMarketing
         };
 
         await _dbContext.ClientProfiles.AddAsync(profile, cancellationToken);

@@ -33,9 +33,10 @@ public static class Endpoints
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
+            // Empty/null api_key means "keep existing encrypted key" (ops UX).
             var command = new SaveEmailConfigCommand(
                 ctx.TenantId,
-                req.Api_key,
+                string.IsNullOrWhiteSpace(req.Api_key) ? null : req.Api_key,
                 req.Sender_email,
                 req.Is_active
             );

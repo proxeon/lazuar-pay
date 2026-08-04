@@ -64,7 +64,10 @@ public class SubscriberQueryService : ISubscriberQueryService
         var result = new List<SubscriberRecipient>(rows.Count);
         foreach (var row in rows)
         {
-            if (profiles.TryGetValue(row.ClientProfileId, out var profile) && !string.IsNullOrWhiteSpace(profile.Email))
+            // Marketing broadcasts require explicit marketing consent (PDPA).
+            if (profiles.TryGetValue(row.ClientProfileId, out var profile)
+                && !string.IsNullOrWhiteSpace(profile.Email)
+                && profile.Consented_to_marketing)
             {
                 result.Add(new SubscriberRecipient(row.Id, profile.Email, profile.Phone, profile.Full_name));
             }

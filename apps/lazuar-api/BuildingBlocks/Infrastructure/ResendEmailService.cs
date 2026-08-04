@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.Configuration;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ public sealed class ResendEmailService : IEmailService
         _logger = logger;
     }
 
-    public async Task SendEmailAsync(
+    public async Task<string?> SendEmailAsync(
         string to,
         string subject,
         string body,
@@ -35,8 +36,8 @@ public sealed class ResendEmailService : IEmailService
         string apiKey;
         string senderEmail;
 
-        var isSystemTenant = organizationId == null || 
-                             organizationId == Guid.Empty || 
+        var isSystemTenant = organizationId == null ||
+                             organizationId == Guid.Empty ||
                              organizationId.ToString() == "00000000-0000-0000-0000-000000000001";
 
         if (!string.IsNullOrWhiteSpace(tenantApiKey) && !string.IsNullOrWhiteSpace(tenantSenderEmail))
@@ -49,7 +50,7 @@ public sealed class ResendEmailService : IEmailService
             if (string.IsNullOrWhiteSpace(_options.ApiKey))
             {
                 _logger.LogWarning("[Resend] Platform API Key is missing. Falling back to console log.\nTo: {To}\nSubject: {Subject}\nBody: {Body}", to, subject, body);
-                return;
+                return null;
             }
             apiKey = _options.ApiKey;
             senderEmail = _options.SenderEmail;
@@ -97,7 +98,23 @@ public sealed class ResendEmailService : IEmailService
                 throw new InvalidOperationException($"Failed to send email via Resend: {error}");
             }
 
-            _logger.LogInformation("[Resend] Successfully sent email to {To} with subject '{Subject}'", to, subject);
+            string? providerId = null;
+            try
+            {
+                await using var stream = await response.Content.ReadAsStreamAsync();
+                using var doc = await JsonDocument.ParseAsync(stream);
+                if (doc.RootElement.TryGetProperty("id", out var idProp))
+                {
+                    providerId = idProp.GetString();
+                }
+            }
+            catch (Exception parseEx)
+            {
+                _logger.LogWarning(parseEx, "[Resend] Sent email to {To} but could not parse provider id.", to);
+            }
+
+            _logger.LogInformation("[Resend] Successfully sent email to {To} with subject '{Subject}' (providerId={ProviderId})", to, subject, providerId);
+            return providerId;
         }
         catch (Exception ex)
         {

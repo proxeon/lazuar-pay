@@ -8,6 +8,7 @@ using BuildingBlocks.Infrastructure;
 using Modules.Commerce.Contracts.Events;
 using Modules.Billing.Contracts.Events;
 using Modules.One.Contracts;
+using Modules.CRM.Contracts;
 using Modules.Communications.Application;
 using Modules.Communications.Contracts;
 using Modules.Communications.Infrastructure.Repositories;
@@ -47,6 +48,8 @@ public static class DependencyInjection
         services.AddTransient<LifecycleEventHandlers>();
         services.AddTransient<FulfillmentRequestedIntegrationEventHandler>();
         services.AddTransient<DocumentPublishedIntegrationEventHandler>();
+        services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
+        services.AddTransient<OrderCompletedDigitalDeliveryHandler>();
 
         return services;
     }
@@ -59,6 +62,8 @@ public static class DependencyInjection
         eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, LifecycleEventHandlers>();
         eventBus.Subscribe<FulfillmentRequestedIntegrationEvent, FulfillmentRequestedIntegrationEventHandler>();
         eventBus.Subscribe<DocumentPublishedIntegrationEvent, DocumentPublishedIntegrationEventHandler>();
+        eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
+        eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedDigitalDeliveryHandler>();
         return app;
     }
 }

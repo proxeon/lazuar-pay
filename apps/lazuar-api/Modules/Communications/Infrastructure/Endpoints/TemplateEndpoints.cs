@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Modules.Communications.Contracts;
 using Modules.Communications.Contracts.Commands;
+using Modules.Communications.Domain;
 
 namespace Modules.Communications.Infrastructure;
 
@@ -105,21 +106,15 @@ public static class TemplateEndpoints
             return TypedResults.Ok(new StatusResponse { Status = "reset" });
         });
 
-        // Utility endpoint to clean up legacy Dunning templates
+        // Utility: remove orphan/abandoned templates only. Never deletes lifecycle catalog templates.
         group.MapDelete("/templates/legacy-cleanup", async Task<Ok<StatusResponse>> (
             IExecutionContextAccessor ctx,
             CommunicationsDbContext dbContext) =>
         {
-            var legacyNames = new[] 
-            { 
-                "Payment Failed", 
-                "Subscription Renewal (3 Days)", 
-                "Subscription Renewal Due Today", 
-                "Subscription Renewal Overdue" 
-            };
+            var orphanNames = DefaultMessageTemplates.OrphanNames;
 
             var templatesToDelete = await dbContext.MessageTemplates
-                .Where(t => t.OrganizationId == ctx.TenantId && legacyNames.Contains(t.Name))
+                .Where(t => t.OrganizationId == ctx.TenantId && orphanNames.Contains(t.Name))
                 .ToListAsync();
 
             if (templatesToDelete.Any())

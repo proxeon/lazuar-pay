@@ -2651,9 +2651,19 @@ namespace Lazuar.ApiTypes
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class EmailConfigDto
     {
+        /// <summary>
+        /// True when a Resend API key is stored (encrypted). Full key is never returned.
+        /// </summary>
 
-        [System.Text.Json.Serialization.JsonPropertyName("api_key")]
-        public string? Api_key { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("has_api_key")]
+        public bool Has_api_key { get; set; } = default!;
+
+        /// <summary>
+        /// Masked hint, e.g. last 4 characters of the plaintext key.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("api_key_hint")]
+        public string? Api_key_hint { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("sender_email")]
         public string? Sender_email { get; set; } = default!;
@@ -2754,9 +2764,12 @@ namespace Lazuar.ApiTypes
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SaveEmailConfigRequestDto
     {
+        /// <summary>
+        /// Omit or leave empty to keep the existing encrypted key. Required on first save.
+        /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("api_key")]
-        public string Api_key { get; set; } = default!;
+        public string? Api_key { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("sender_email")]
         public string Sender_email { get; set; } = default!;

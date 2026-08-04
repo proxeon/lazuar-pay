@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
@@ -7,6 +8,7 @@ using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Contracts;
 using Modules.Communications.Contracts;
 using Modules.Messaging.Contracts;
+using Modules.Messaging.Domain;
 
 namespace Modules.Messaging.Infrastructure.EventHandlers;
 
@@ -18,6 +20,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
     private readonly ICreditCostService _creditCostService;
     private readonly ISuppressionService _suppressionService;
     private readonly ICommunicationsQueryService _communicationsQueryService;
+    private readonly MessagingDbContext _dbContext;
     private readonly IMediator _mediator;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DispatchMessageIntegrationEventHandler> _logger;
@@ -29,6 +32,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         ICreditCostService creditCostService,
         ISuppressionService suppressionService,
         ICommunicationsQueryService communicationsQueryService,
+        MessagingDbContext dbContext,
         IMediator mediator,
         IConfiguration configuration,
         ILogger<DispatchMessageIntegrationEventHandler> logger)
@@ -39,6 +43,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         _creditCostService = creditCostService;
         _suppressionService = suppressionService;
         _communicationsQueryService = communicationsQueryService;
+        _dbContext = dbContext;
         _mediator = mediator;
         _configuration = configuration;
         _logger = logger;
@@ -63,12 +68,14 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
             _logger.LogInformation(
                 "WhatsApp channel disabled (Messaging:WhatsAppEnabled=false). Skipping WhatsApp for Organization {OrganizationId}, Channel {Channel}, Event {EventId}.",
                 @event.OrganizationId, @event.Channel, @event.Id);
+            await LogDeliveryAsync(@event.OrganizationId, "WHATSAPP", @event.ToPhone ?? "", "SKIPPED", null, "WhatsApp channel disabled", @event.Id);
             wantsWhatsApp = false;
         }
 
         if (wantsEmail && !isSystemTenant && await _suppressionService.IsSuppressedAsync(@event.OrganizationId, @event.ToEmail))
         {
             _logger.LogInformation("Skipping email to {Email} for tenant {OrganizationId}: address is suppressed.", @event.ToEmail, @event.OrganizationId);
+            await LogDeliveryAsync(@event.OrganizationId, "EMAIL", @event.ToEmail!, "SKIPPED", null, "Address suppressed", @event.Id);
             wantsEmail = false;
         }
 
@@ -86,6 +93,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
                     _logger.LogError(
                         "Tenant {OrganizationId} has insufficient credits ({PlannedCost}) for WhatsApp message dispatch. WhatsApp delivery aborted (Channel={Channel}, Event={EventId}).",
                         @event.OrganizationId, whatsappCost, @event.Channel, @event.Id);
+                    await LogDeliveryAsync(@event.OrganizationId, "WHATSAPP", @event.ToPhone ?? "", "SKIPPED", null, "Insufficient credits", @event.Id);
                     wantsWhatsApp = false;
                     whatsAppBlockedByCredits = true;
                 }
@@ -102,31 +110,48 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
 
             if (!isSystemTenant)
             {
-                var emailConfig = await _communicationsQueryService.GetEmailConfigAsync(@event.OrganizationId);
-                // Fix: Use NSwag generated C# PascalCase properties
-                if (emailConfig != null && emailConfig.Is_active && !string.IsNullOrWhiteSpace(emailConfig.Api_key) && !string.IsNullOrWhiteSpace(emailConfig.Sender_email))
+                var credentials = await _communicationsQueryService.GetEmailConfigCredentialsAsync(@event.OrganizationId);
+                if (credentials != null && credentials.IsActive && !string.IsNullOrWhiteSpace(credentials.ApiKey) && !string.IsNullOrWhiteSpace(credentials.SenderEmail))
                 {
-                    tenantApiKey = emailConfig.Api_key;
-                    tenantSenderEmail = emailConfig.Sender_email;
+                    tenantApiKey = credentials.ApiKey;
+                    tenantSenderEmail = credentials.SenderEmail;
                 }
             }
 
-            var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlEmailBody!, @event.UnsubscribeUrl);
-            await _emailService.SendEmailAsync(
-                @event.ToEmail,
-                @event.Subject,
-                htmlPayload,
-                @event.OrganizationId,
-                tenantApiKey,
-                tenantSenderEmail,
-                @event.UnsubscribeUrl);
-            emailSent = true;
+            try
+            {
+                var htmlPayload = EmailTemplateBuilder.WrapWithBrandHtml(@event.HtmlEmailBody!, @event.UnsubscribeUrl);
+                var providerId = await _emailService.SendEmailAsync(
+                    @event.ToEmail,
+                    @event.Subject,
+                    htmlPayload,
+                    @event.OrganizationId,
+                    tenantApiKey,
+                    tenantSenderEmail,
+                    @event.UnsubscribeUrl);
+                emailSent = true;
+                await LogDeliveryAsync(@event.OrganizationId, "EMAIL", @event.ToEmail!, "SENT", providerId, null, @event.Id);
+            }
+            catch (Exception ex)
+            {
+                await LogDeliveryAsync(@event.OrganizationId, "EMAIL", @event.ToEmail!, "FAILED", null, ex.Message, @event.Id);
+                throw;
+            }
         }
 
         if (wantsWhatsApp)
         {
-            await _messagingService.SendMessageAsync(@event.ToPhone!, @event.PlainTextPhoneBody!);
-            actualCost += whatsappCost;
+            try
+            {
+                await _messagingService.SendMessageAsync(@event.ToPhone!, @event.PlainTextPhoneBody!);
+                actualCost += whatsappCost;
+                await LogDeliveryAsync(@event.OrganizationId, "WHATSAPP", @event.ToPhone!, "SENT", null, null, @event.Id);
+            }
+            catch (Exception ex)
+            {
+                await LogDeliveryAsync(@event.OrganizationId, "WHATSAPP", @event.ToPhone!, "FAILED", null, ex.Message, @event.Id);
+                throw;
+            }
         }
 
         if (actualCost > 0 && !isSystemTenant && !billedViaHold)
@@ -151,6 +176,33 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         {
             throw new InvalidOperationException(
                 $"Insufficient WhatsApp credits for organization {@event.OrganizationId}; channel={@event.Channel}, event={@event.Id}.");
+        }
+    }
+
+    private async Task LogDeliveryAsync(
+        Guid organizationId,
+        string channel,
+        string recipient,
+        string status,
+        string? providerMessageId,
+        string? error,
+        Guid correlationEventId)
+    {
+        try
+        {
+            _dbContext.MessageDeliveryLogs.Add(new MessageDeliveryLog(
+                organizationId,
+                channel,
+                recipient,
+                status,
+                providerMessageId,
+                error,
+                correlationEventId));
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist MessageDeliveryLog for {Channel}/{Recipient}/{Status}", channel, recipient, status);
         }
     }
 }

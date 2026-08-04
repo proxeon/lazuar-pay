@@ -112,6 +112,7 @@ builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
+builder.Services.AddSingleton<ISecretVault, AesSecretVault>();
 builder.Services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
 builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();

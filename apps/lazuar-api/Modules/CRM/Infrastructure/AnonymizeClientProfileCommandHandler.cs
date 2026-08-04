@@ -31,12 +31,18 @@ public class AnonymizeClientProfileCommandHandler : ICommandHandler<AnonymizeCli
             throw new InvalidOperationException("Client profile not found.");
         }
 
+        // Capture contact details before wipe so downstream consumers can suppress/cancel.
+        var preWipeEmail = profile.Email;
+        var preWipePhone = profile.Phone;
+
         profile.Anonymize();
 
         // Publish into outbox first so a single SaveChanges persists domain + outbox atomically.
         await _eventBus.PublishAsync(new ClientProfileAnonymizedIntegrationEvent(
             request.OrganizationId,
-            request.ClientProfileId));
+            request.ClientProfileId,
+            preWipeEmail,
+            preWipePhone));
 
         await _dbContext.SaveChangesAsync(cancellationToken);
     }

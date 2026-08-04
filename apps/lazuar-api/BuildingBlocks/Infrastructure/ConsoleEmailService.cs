@@ -12,7 +12,7 @@ public sealed class ConsoleEmailService : IEmailService
         _logger = logger;
     }
 
-    public Task SendEmailAsync(
+    public Task<string?> SendEmailAsync(
         string to,
         string subject,
         string body,
@@ -22,9 +22,10 @@ public sealed class ConsoleEmailService : IEmailService
         string? unsubscribeUrl = null)
     {
         var authMethod = string.IsNullOrWhiteSpace(tenantApiKey) ? "Platform Fallback" : "BYOK Context";
+        var providerId = $"console_{Guid.CreateVersion7():N}";
         _logger.LogInformation(
-            "[Local Dispatch] [EMAIL] Auth: {Auth} | Org: {Org} | To: {To} | Subject: {Subject} | Unsubscribe: {Unsubscribe} | Body: {Body}",
-            authMethod, organizationId, to, subject, unsubscribeUrl ?? "(none)", body);
-        return Task.CompletedTask;
+            "[Local Dispatch] [EMAIL] Auth: {Auth} | Org: {Org} | To: {To} | Subject: {Subject} | ProviderId: {ProviderId} | Unsubscribe: {Unsubscribe} | Body: {Body}",
+            authMethod, organizationId, to, subject, providerId, unsubscribeUrl ?? "(none)", body);
+        return Task.FromResult<string?>(providerId);
     }
 }
