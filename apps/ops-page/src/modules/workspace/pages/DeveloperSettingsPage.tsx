@@ -11,7 +11,7 @@ import { cn } from "../../../lib/utils";
 type WebhookEndpointDto = components["schemas"]["One.WebhookEndpointDto"];
 type CreateWebhookEndpointResponseDto = components["schemas"]["One.CreateWebhookEndpointResponseDto"];
 
-/** Catalog of commerce outbound events currently emitted to workspace endpoints. Empty selection = all events. */
+/** Catalog of outbound events currently emitted to workspace endpoints. Empty selection = all events. */
 const WEBHOOK_EVENT_OPTIONS = [
   { value: "subscription.activated", label: "Subscription activated", hint: "New paid subscription" },
   { value: "subscription.resumed", label: "Subscription resumed", hint: "Recovered from past due / suspend" },
@@ -20,6 +20,8 @@ const WEBHOOK_EVENT_OPTIONS = [
   { value: "subscription.past_due", label: "Subscription past due", hint: "Renewal failed" },
   { value: "order.completed", label: "Order completed", hint: "One-time purchase" },
   { value: "payment_link.paid", label: "Payment link paid", hint: "Custom payment link settled" },
+  { value: "payment.completed", label: "Payment completed", hint: "M2M / integrator checkout paid" },
+  { value: "payment.failed", label: "Payment failed", hint: "M2M / integrator checkout failed at gateway" },
 ] as const;
 
 export default function DeveloperSettingsPage() {

@@ -43,6 +43,7 @@ public static class DependencyInjection
 
         services.AddTransient<GatewayRefundRequestedIntegrationEventHandler>();
         services.AddTransient<ExecuteOffSessionChargeIntegrationEventHandler>();
+        services.AddTransient<IntegrationCheckoutGatewayEventsHandler>();
 
         return services;
     }
@@ -53,6 +54,8 @@ public static class DependencyInjection
 
         eventBus.Subscribe<GatewayRefundRequestedIntegrationEvent, GatewayRefundRequestedIntegrationEventHandler>();
         eventBus.Subscribe<ExecuteOffSessionChargeIntegrationEvent, ExecuteOffSessionChargeIntegrationEventHandler>();
+        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, IntegrationCheckoutGatewayEventsHandler>();
+        eventBus.Subscribe<GatewayPaymentFailedIntegrationEvent, IntegrationCheckoutGatewayEventsHandler>();
 
         return app;
     }

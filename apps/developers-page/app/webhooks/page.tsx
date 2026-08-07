@@ -3,7 +3,7 @@ import { Callout, CodeBlock, GuideSection, HubShell } from "../components/HubShe
 
 export const metadata = {
   title: "Event catalog — Lazuar Developer Hub",
-  description: "Outbound webhook events and X-Lazuar-Signature verification",
+  description: "Outbound webhook events (commerce, payment, LHDN) and X-Lazuar-Signature verification",
 };
 
 const COMMERCE_EVENTS = [
@@ -44,6 +44,19 @@ const COMMERCE_EVENTS = [
   },
 ] as const;
 
+const PAYMENT_EVENTS = [
+  {
+    type: "payment.completed",
+    label: "Payment completed",
+    hint: "M2M / integrator checkout paid (POST /integrations/payments/checkouts)",
+  },
+  {
+    type: "payment.failed",
+    label: "Payment failed",
+    hint: "M2M / integrator checkout failed at gateway",
+  },
+] as const;
+
 const LHDN_EVENTS = [
   {
     type: "invoice.valid",
@@ -71,7 +84,7 @@ export default function WebhooksCatalogPage() {
   return (
     <HubShell
       title="Event catalog"
-      description="Outbound webhooks notify your systems when commerce lifecycle or e-invoice status changes. Configure endpoints in Ops → Developer → Webhooks."
+      description="Outbound webhooks notify your systems when payments, commerce lifecycle, or e-invoice status changes. Configure endpoints in Ops → Developer → Webhooks."
     >
       <GuideSection title="Delivery model">
         <ul className="list-disc pl-5 space-y-2">
@@ -139,6 +152,69 @@ export default function WebhooksCatalogPage() {
             </tbody>
           </table>
         </div>
+      </GuideSection>
+
+      <GuideSection title="Payment / integrator events">
+        <Callout>
+          Key-authenticated M2M checkouts (
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">
+            POST /api/v1/integrations/payments/checkouts
+          </code>
+          ) emit <strong>payment-first</strong> events after the gateway webhook. No Commerce product
+          or fulfillment URL is required. Prefer{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">data.gateway_transaction_id</code>{" "}
+          + <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">data.checkout_id</code> for
+          money-level idempotency; use{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">X-Lazuar-Delivery-Id</code> for
+          delivery-level dedupe. Workspace signing is Standard Webhooks–style{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">t=,v1=</code> (same as Commerce).
+        </Callout>
+        <div className="border border-[#e5e5e5] bg-white overflow-hidden">
+          <table className="w-full text-left text-[13px]">
+            <thead className="bg-[#f4f4f5] text-[10px] font-bold uppercase tracking-widest text-[#71717a]">
+              <tr>
+                <th className="px-4 py-2">Event type</th>
+                <th className="px-4 py-2">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PAYMENT_EVENTS.map((e) => (
+                <tr key={e.type} className="border-t border-[#e5e5e5]">
+                  <td className="px-4 py-3 font-mono text-[12px] text-[#09090b]">{e.type}</td>
+                  <td className="px-4 py-3 text-[#71717a]">
+                    <span className="text-[#09090b] font-medium">{e.label}</span>
+                    <span className="block text-[12px] mt-0.5">{e.hint}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-4 text-[13px] text-[#71717a]">
+          Example <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">data</code> for{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">payment.completed</code>:
+        </p>
+        <CodeBlock>{`{
+  "event_id": "019…",
+  "checkout_id": "019…",
+  "gateway": "STRIPE",
+  "gateway_transaction_id": "pi_…",
+  "provider_session_id": "cs_…",
+  "amount": 50.00,
+  "currency": "MYR",
+  "status": "completed",
+  "metadata": {
+    "integrator": "aura",
+    "type": "booking_payment",
+    "booking_id": "b-1",
+    "checkout_id": "019…",
+    "hub_workspace_id": "…",
+    "tenant_id": "…",
+    "hub_checkout_kind": "integration"
+  },
+  "description": "Booking deposit #1",
+  "customer_email": "guest@example.com"
+}`}</CodeBlock>
       </GuideSection>
 
       <GuideSection title="LHDN document events">

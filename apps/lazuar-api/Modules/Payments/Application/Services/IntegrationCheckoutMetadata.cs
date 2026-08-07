@@ -73,7 +73,7 @@ public static class IntegrationCheckoutMetadata
     }
 
     /// <summary>
-    /// Stamps hub_workspace_id, checkout_id, tenant_id (overwrite client values).
+    /// Stamps hub_workspace_id, checkout_id, tenant_id, hub_checkout_kind (overwrite client values).
     /// Preserves all client keys including reserved Aura keys.
     /// </summary>
     public static Dictionary<string, string> Stamp(
@@ -86,7 +86,8 @@ public static class IntegrationCheckoutMetadata
         {
             ["hub_workspace_id"] = organizationId.ToString(),
             ["checkout_id"] = checkoutId.ToString(),
-            ["tenant_id"] = organizationId.ToString()
+            ["tenant_id"] = organizationId.ToString(),
+            ["hub_checkout_kind"] = "integration"
         };
 
         if (!string.IsNullOrWhiteSpace(customerName) && !stamped.ContainsKey("customer_name"))
@@ -94,7 +95,7 @@ public static class IntegrationCheckoutMetadata
 
         // Hub stamps count toward key budget only loosely; reject if total exceeds MaxKeys + stamps headroom.
         // Stamps are always applied even if client already filled reserved slots (overwrite).
-        if (stamped.Count > MaxKeys + 3)
+        if (stamped.Count > MaxKeys + 4)
         {
             throw PaymentIntegrationException.MetadataInvalid(
                 $"Metadata may contain at most {MaxKeys} client keys (hub stamps excluded).");
