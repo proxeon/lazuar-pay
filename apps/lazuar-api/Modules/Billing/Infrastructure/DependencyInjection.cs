@@ -34,10 +34,15 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Default connection string was not found.");
 
         services.AddDbContext<BillingDbContext>(options =>
+        {
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "billing");
-            }));
+            });
+            // Model drift vs last snapshot must not block MigrateAsync on empty local DBs.
+            options.ConfigureWarnings(w =>
+                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        });
 
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("BillingSqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));

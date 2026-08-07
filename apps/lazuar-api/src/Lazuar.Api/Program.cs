@@ -380,10 +380,15 @@ await using (var scope = app.Services.CreateAsyncScope())
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("PendingModelChanges", StringComparison.Ordinal))
         {
-            // Local/dev: allow boot when a module model drifted without a new migration snapshot.
-            // Do not use this as a substitute for adding migrations in production.
-            migratorLog.LogWarning(ex,
-                "Skipping MigrateAsync for {DbContext} due to pending model changes (dev only).", name);
+            // Should be rare after ConfigureWarnings(Ignore PendingModelChanges). Log and continue boot;
+            // operator must add a migration for that module.
+            migratorLog.LogError(ex,
+                "MigrateAsync blocked for {DbContext} by pending model changes. Module tables may be missing.", name);
+        }
+        catch (Exception ex)
+        {
+            migratorLog.LogError(ex, "MigrateAsync failed for {DbContext}", name);
+            throw;
         }
     }
 }
