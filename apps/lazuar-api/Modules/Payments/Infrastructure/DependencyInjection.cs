@@ -27,6 +27,8 @@ public static class DependencyInjection
 
         services.AddScoped<ITenantPaymentConfigRepository, TenantPaymentConfigRepository>();
         services.AddScoped<IPaymentWebhookLogRepository, PaymentWebhookLogRepository>();
+        services.AddScoped<IIntegrationCheckoutSessionRepository, IntegrationCheckoutSessionRepository>();
+        services.AddScoped<Modules.Payments.Application.Services.CheckoutSessionCashier>();
 
         services.AddScoped<IPaymentGatewayAdapter, StripeGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();

@@ -452,6 +452,7 @@ var apiGroup = app.MapGroup("/api/v1").RequireCors();
 apiGroup.MapOneEndpoints();
 apiGroup.MapMessagingEndpoints();
 apiGroup.MapPaymentsEndpoints();
+apiGroup.MapPaymentsIntegrationEndpoints();
 apiGroup.MapOpsEndpoints();
 apiGroup.MapBillingEndpoints();
 apiGroup.MapLhdnEndpoints();

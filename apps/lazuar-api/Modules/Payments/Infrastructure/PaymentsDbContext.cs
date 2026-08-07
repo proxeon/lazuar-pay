@@ -11,6 +11,7 @@ public class PaymentsDbContext : PlatformDbContext
 {
     public DbSet<TenantPaymentConfiguration> TenantPaymentConfigurations { get; set; } = null!;
     public DbSet<PaymentWebhookLog> PaymentWebhookLogs { get; set; } = null!;
+    public DbSet<IntegrationCheckoutSession> IntegrationCheckoutSessions { get; set; } = null!;
 
     // Platform Box pattern tables
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;

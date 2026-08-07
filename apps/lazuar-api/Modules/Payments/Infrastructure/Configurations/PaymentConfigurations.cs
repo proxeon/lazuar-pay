@@ -34,3 +34,40 @@ public class PaymentWebhookLogConfig : IEntityTypeConfiguration<PaymentWebhookLo
             .HasFilter("\"BusinessKey\" IS NOT NULL");
     }
 }
+
+public class IntegrationCheckoutSessionConfig : IEntityTypeConfiguration<IntegrationCheckoutSession>
+{
+    public void Configure(EntityTypeBuilder<IntegrationCheckoutSession> builder)
+    {
+        builder.ToTable("IntegrationCheckoutSessions");
+        builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.IdempotencyKey).HasMaxLength(200);
+        builder.Property(x => x.RequestFingerprint).HasMaxLength(128);
+        builder.Property(x => x.Amount).HasPrecision(18, 4);
+        builder.Property(x => x.Currency).HasMaxLength(3).IsRequired();
+        builder.Property(x => x.Description).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.CustomerEmail).HasMaxLength(320).IsRequired();
+        builder.Property(x => x.CustomerName).HasMaxLength(120);
+        builder.Property(x => x.SuccessUrl).IsRequired();
+        builder.Property(x => x.CancelUrl).IsRequired();
+        builder.Property(x => x.GatewayName).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.ProviderSessionId).HasMaxLength(200);
+        builder.Property(x => x.GatewayTransactionId).HasMaxLength(200);
+        builder.Property(x => x.CheckoutUrl);
+        builder.Property(x => x.Status).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.MetadataJson).HasColumnType("jsonb").IsRequired();
+
+        builder.HasIndex(x => new { x.OrganizationId, x.IdempotencyKey })
+            .IsUnique()
+            .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+        builder.HasIndex(x => new { x.OrganizationId, x.Id });
+
+        builder.HasIndex(x => new { x.OrganizationId, x.ProviderSessionId })
+            .HasFilter("\"ProviderSessionId\" IS NOT NULL");
+
+        builder.HasIndex(x => x.ExpiresAt)
+            .HasFilter("\"Status\" = 'open'");
+    }
+}

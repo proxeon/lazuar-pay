@@ -3,25 +3,24 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Services;
 using Modules.Payments.Contracts.Queries;
+using Modules.Payments.Contracts.Results;
 
 namespace Modules.Payments.Application.Queries;
 
-/// <summary>
-/// Thin wrapper over the rich cashier for existing Commerce / update-payment callers.
-/// Preserves <c>IQuery&lt;string&gt;</c> and legacy BILLPLZ fallback behaviour.
-/// </summary>
-public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckoutSessionQuery, string>
+public class GenerateCheckoutSessionDetailedQueryHandler
+    : IQueryHandler<GenerateCheckoutSessionDetailedQuery, GenerateCheckoutSessionResult>
 {
     private readonly CheckoutSessionCashier _cashier;
 
-    public GenerateCheckoutSessionQueryHandler(CheckoutSessionCashier cashier)
+    public GenerateCheckoutSessionDetailedQueryHandler(CheckoutSessionCashier cashier)
     {
         _cashier = cashier;
     }
 
-    public async Task<string> Handle(GenerateCheckoutSessionQuery request, CancellationToken cancellationToken)
-    {
-        var result = await _cashier.GenerateAsync(
+    public Task<GenerateCheckoutSessionResult> Handle(
+        GenerateCheckoutSessionDetailedQuery request,
+        CancellationToken cancellationToken) =>
+        _cashier.GenerateAsync(
             request.TenantId,
             request.Amount,
             request.Currency,
@@ -33,9 +32,6 @@ public class GenerateCheckoutSessionQueryHandler : IQueryHandler<GenerateCheckou
             request.SetupFutureUsage,
             request.Quantity,
             request.GatewayName,
-            requireActiveGateway: false,
+            request.RequireActiveGateway,
             cancellationToken);
-
-        return result.CheckoutUrl;
-    }
 }
