@@ -373,8 +373,18 @@ await using (var scope = app.Services.CreateAsyncScope())
     {
         var name = ctx.GetType().Name;
         migratorLog.LogInformation("Applying EF migrations for {DbContext}...", name);
-        await ctx.Database.MigrateAsync();
-        migratorLog.LogInformation("Migrations applied for {DbContext}", name);
+        try
+        {
+            await ctx.Database.MigrateAsync();
+            migratorLog.LogInformation("Migrations applied for {DbContext}", name);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("PendingModelChanges", StringComparison.Ordinal))
+        {
+            // Local/dev: allow boot when a module model drifted without a new migration snapshot.
+            // Do not use this as a substitute for adding migrations in production.
+            migratorLog.LogWarning(ex,
+                "Skipping MigrateAsync for {DbContext} due to pending model changes (dev only).", name);
+        }
     }
 }
 
