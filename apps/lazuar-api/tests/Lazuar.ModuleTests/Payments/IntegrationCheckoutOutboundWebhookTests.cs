@@ -47,7 +47,10 @@ public class IntegrationCheckoutOutboundWebhookTests
         Guid? orgId = null,
         decimal amount = 50m,
         string currency = "MYR",
-        Dictionary<string, string>? clientMetadata = null)
+        Dictionary<string, string>? clientMetadata = null,
+        string gatewayName = "STRIPE",
+        string? providerSessionId = "cs_test_123",
+        string? checkoutUrl = null)
     {
         var sessionId = id ?? Guid.CreateVersion7();
         var organizationId = orgId ?? OrgId;
@@ -67,12 +70,14 @@ public class IntegrationCheckoutOutboundWebhookTests
             "guest@example.com",
             "https://app.aura.example/ok",
             "https://app.aura.example/cancel",
-            "STRIPE",
+            gatewayName,
             IntegrationCheckoutMetadata.Serialize(stamped),
             setupFutureUsage: false,
             customerName: "Aina",
             id: sessionId);
-        session.MarkProviderIssued("https://checkout.stripe.com/c/pay/cs_test", "cs_test_123");
+        session.MarkProviderIssued(
+            checkoutUrl ?? $"https://checkout.example/{providerSessionId ?? "none"}",
+            providerSessionId);
         _sessions.Add(session);
         return session;
     }
@@ -302,6 +307,66 @@ public class IntegrationCheckoutOutboundWebhookTests
         await _eventBus.DidNotReceive().PublishAsync(Arg.Any<OutboundWebhookRequestedIntegrationEvent>());
     }
 
+    [Test]
+    public async Task Completed_StrippedMetadata_ResolvesByProviderSessionId_AndPublishesOnce()
+    {
+        // Billplz-like: callback body has bill id only; no checkout_id in event metadata.
+        const string billId = "bill_stripped_xyz";
+        var session = AddOpenSession(
+            gatewayName: "BILLPLZ",
+            providerSessionId: billId,
+            checkoutUrl: $"https://www.billplz.com/bills/{billId}");
+
+        var @event = new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: OrgId,
+            GatewayTransactionId: billId,
+            AmountPaid: 50m,
+            Currency: "MYR",
+            GatewayFee: 0,
+            TaxAmount: 0,
+            NetAmount: 50m,
+            FxRate: 1,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string> { ["type"] = "booking_payment" });
+
+        OutboundWebhookRequestedIntegrationEvent? published = null;
+        _eventBus.When(x => x.PublishAsync(Arg.Any<OutboundWebhookRequestedIntegrationEvent>()))
+            .Do(ci => published = ci.Arg<OutboundWebhookRequestedIntegrationEvent>());
+
+        await _handler.HandleAsync(@event);
+
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusCompleted);
+        session.GatewayTransactionId.Should().Be(billId);
+
+        published.Should().NotBeNull();
+        published!.EventType.Should().Be(IntegrationCheckoutGatewayEventsHandler.EventTypeCompleted);
+        published.Payload.GetProperty("checkout_id").GetString().Should().Be(session.Id.ToString());
+        published.Payload.GetProperty("gateway_transaction_id").GetString().Should().Be(billId);
+        published.Payload.GetProperty("metadata").GetProperty("booking_id").GetString().Should().Be("b-42");
+        published.Payload.GetProperty("metadata").GetProperty("checkout_id").GetString().Should().Be(session.Id.ToString());
+
+        // Dual-event / replay: same bill id after complete → no second outbound.
+        _eventBus.ClearReceivedCalls();
+        await _handler.HandleAsync(@event);
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<OutboundWebhookRequestedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task Completed_DualEvents_SameSession_SingleOutbound()
+    {
+        var session = AddOpenSession();
+        var first = CompletedEvent(OrgId, session.Id, gatewayTxId: "pi_shared");
+        var second = CompletedEvent(OrgId, session.Id, gatewayTxId: "pi_shared");
+
+        await _handler.HandleAsync(first);
+        await _handler.HandleAsync(second);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == IntegrationCheckoutGatewayEventsHandler.EventTypeCompleted));
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusCompleted);
+    }
+
     private sealed class InMemorySessionRepo : IIntegrationCheckoutSessionRepository
     {
         public List<IntegrationCheckoutSession> Items { get; } = new();
@@ -316,6 +381,13 @@ public class IntegrationCheckoutOutboundWebhookTests
             CancellationToken ct = default)
             => Task.FromResult(Items.FirstOrDefault(s =>
                 s.OrganizationId == organizationId && s.IdempotencyKey == idempotencyKey));
+
+        public Task<IntegrationCheckoutSession?> GetByProviderSessionIdAsync(
+            Guid organizationId,
+            string providerSessionId,
+            CancellationToken ct = default)
+            => Task.FromResult(Items.FirstOrDefault(s =>
+                s.OrganizationId == organizationId && s.ProviderSessionId == providerSessionId));
 
         public void Add(IntegrationCheckoutSession session) => Items.Add(session);
 

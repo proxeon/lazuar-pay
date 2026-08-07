@@ -337,6 +337,14 @@ public class CreateIntegrationCheckoutTests
             return Task.FromResult(s);
         }
 
+        public Task<IntegrationCheckoutSession?> GetByProviderSessionIdAsync(
+            Guid organizationId, string providerSessionId, CancellationToken ct = default)
+        {
+            var s = Items.FirstOrDefault(x =>
+                x.OrganizationId == organizationId && x.ProviderSessionId == providerSessionId);
+            return Task.FromResult(s);
+        }
+
         public void Add(IntegrationCheckoutSession session) => Items.Add(session);
 
         public Task SaveChangesAsync(CancellationToken ct = default) => Task.CompletedTask;

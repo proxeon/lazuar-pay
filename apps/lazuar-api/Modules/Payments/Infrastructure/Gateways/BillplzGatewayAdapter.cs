@@ -77,6 +77,14 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
         webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&reference_1={Uri.EscapeDataString(ref1)}";
 
+        // M2M / integration checkouts: preserve checkout_id on callback query (Billplz strips body metadata).
+        // Server-side session merge by bill id remains the safety net if this query param is lost.
+        if (metadata.TryGetValue("checkout_id", out var checkoutId)
+            && !string.IsNullOrWhiteSpace(checkoutId))
+        {
+            webhookUrl = $"{webhookUrl}&checkout_id={Uri.EscapeDataString(checkoutId)}";
+        }
+
         var totalAmountCents = (int)(amount * quantity * 100);
         var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : (string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName);
 
@@ -192,6 +200,18 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
                     metadata["tenant_id"] = reference1;
                 else
                     metadata["subscription_id"] = reference1;
+            }
+
+            // Callback query checkout_id (set at GenerateCheckout for M2M).
+            if (headers.TryGetValue("Query-checkout_id", out var qsCheckoutId)
+                && !string.IsNullOrWhiteSpace(qsCheckoutId))
+            {
+                metadata["checkout_id"] = qsCheckoutId;
+            }
+            else if (formData.TryGetValue("checkout_id", out var bodyCheckoutId)
+                     && !string.IsNullOrWhiteSpace(bodyCheckoutId))
+            {
+                metadata["checkout_id"] = bodyCheckoutId;
             }
 
             decimal gatewayFee = (paidAmountMyr * (estimatedFeePercentage / 100m)) + fixedFee;

@@ -7,6 +7,7 @@ using BuildingBlocks.Application.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
+using Modules.Payments.Application.Services;
 using Modules.Payments.Contracts.Events;
 using Modules.Payments.Domain.Entities;
 
@@ -19,6 +20,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
     private readonly IPaymentGatewayFactory _gatewayFactory;
     private readonly IEventBus _eventBus;
     private readonly ISecretVault _secretVault;
+    private readonly IIntegrationCheckoutSessionRepository _sessions;
     private readonly ILogger<ProcessGatewayWebhookCommandHandler> _logger;
 
     public ProcessGatewayWebhookCommandHandler(
@@ -27,6 +29,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         IPaymentGatewayFactory gatewayFactory,
         [FromKeyedServices("PaymentsEventBus")] IEventBus eventBus,
         ISecretVault secretVault,
+        IIntegrationCheckoutSessionRepository sessions,
         ILogger<ProcessGatewayWebhookCommandHandler> logger)
     {
         _configRepository = configRepository;
@@ -34,6 +37,7 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         _gatewayFactory = gatewayFactory;
         _eventBus = eventBus;
         _secretVault = secretVault;
+        _sessions = sessions;
         _logger = logger;
     }
 
@@ -101,6 +105,13 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             }
         }
 
+        // Rehydrate stripped gateway metadata from IntegrationCheckoutSession (Billplz bill id, etc.).
+        var metadata = await MergeSessionMetadataAsync(
+            request.TenantId,
+            parsedResult.GatewayTransactionId,
+            parsedResult.Metadata,
+            cancellationToken);
+
         var log = new PaymentWebhookLog(parsedResult.EventId, config.GatewayType, businessKey);
         _logRepository.Add(log);
 
@@ -111,9 +122,9 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
                 AmountDisputed: parsedResult.AmountPaid,
                 Currency: parsedResult.Currency,
-                Metadata: parsedResult.Metadata));
+                Metadata: metadata));
             await TrySaveChangesAsync(cancellationToken);
-            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType);
+            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
             return;
         }
 
@@ -122,9 +133,9 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             await _eventBus.PublishAsync(new GatewayPaymentFailedIntegrationEvent(
                 OrganizationId: request.TenantId,
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
-                Metadata: parsedResult.Metadata ?? new Dictionary<string, string>()));
+                Metadata: metadata));
             await TrySaveChangesAsync(cancellationToken);
-            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType);
+            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
             return;
         }
 
@@ -139,14 +150,82 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
             FxRate: parsedResult.FxRate,
             BaseCurrency: parsedResult.BaseCurrency,
             LineItems: new List<LineItemDto>(),
-            Metadata: parsedResult.Metadata,
+            Metadata: metadata,
             GatewayCustomerId: parsedResult.GatewayCustomerId,
             GatewayTokenId: parsedResult.GatewayTokenId
         );
 
         await _eventBus.PublishAsync(integrationEvent);
         await TrySaveChangesAsync(cancellationToken);
-        LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType);
+        LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
+    }
+
+    /// <summary>
+    /// Gap-fill merge: adapter metadata wins; session fills missing keys; force checkout_id from session.
+    /// Lookup key is ProviderSessionId == GatewayTransactionId (Billplz bill id).
+    /// </summary>
+    private async Task<Dictionary<string, string>> MergeSessionMetadataAsync(
+        Guid tenantId,
+        string? gatewayTransactionId,
+        Dictionary<string, string>? adapterMetadata,
+        CancellationToken cancellationToken)
+    {
+        var metadata = adapterMetadata is { Count: > 0 }
+            ? new Dictionary<string, string>(adapterMetadata, StringComparer.Ordinal)
+            : new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (string.IsNullOrWhiteSpace(gatewayTransactionId))
+        {
+            return metadata;
+        }
+
+        try
+        {
+            var session = await _sessions.GetByProviderSessionIdAsync(
+                tenantId, gatewayTransactionId, cancellationToken);
+            if (session is null)
+            {
+                return metadata;
+            }
+
+            var sessionMeta = IntegrationCheckoutMetadata.Deserialize(session.MetadataJson);
+            foreach (var (key, value) in sessionMeta)
+            {
+                if (!metadata.ContainsKey(key))
+                {
+                    metadata[key] = value;
+                }
+            }
+
+            // Always stamp correlation ids from the authoritative session row.
+            metadata["checkout_id"] = session.Id.ToString();
+            if (!metadata.ContainsKey("hub_workspace_id"))
+            {
+                metadata["hub_workspace_id"] = tenantId.ToString();
+            }
+
+            if (!metadata.ContainsKey("tenant_id"))
+            {
+                metadata["tenant_id"] = tenantId.ToString();
+            }
+
+            _logger.LogDebug(
+                "Merged IntegrationCheckoutSession metadata for ProviderSessionId={ProviderSessionId} CheckoutId={CheckoutId} TenantId={TenantId}",
+                gatewayTransactionId,
+                session.Id,
+                tenantId);
+        }
+        catch (Exception ex)
+        {
+            // Never fail money path on merge lookup errors — adapter metadata still publishes.
+            _logger.LogWarning(
+                ex,
+                "Failed to merge IntegrationCheckoutSession metadata for GatewayTransactionId={GatewayTransactionId} TenantId={TenantId}",
+                gatewayTransactionId,
+                tenantId);
+        }
+
+        return metadata;
     }
 
     private void LogProcessed(
@@ -154,15 +233,25 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         string eventId,
         string provider,
         string? gatewayTransactionId,
-        string eventType)
+        string eventType,
+        Dictionary<string, string>? metadata)
     {
+        string? checkoutId = null;
+        if (metadata is not null
+            && metadata.TryGetValue("checkout_id", out var rawCheckoutId)
+            && !string.IsNullOrWhiteSpace(rawCheckoutId))
+        {
+            checkoutId = rawCheckoutId;
+        }
+
         _logger.LogInformation(
-            "Payment webhook processed successfully. EventId={EventId} Provider={Provider} GatewayTransactionId={GatewayTransactionId} TenantId={TenantId} EventType={EventType}",
+            "Payment webhook processed successfully. EventId={EventId} Provider={Provider} GatewayTransactionId={GatewayTransactionId} TenantId={TenantId} EventType={EventType} CheckoutId={CheckoutId}",
             eventId,
             provider,
             gatewayTransactionId ?? eventId,
             request.TenantId,
-            eventType);
+            eventType,
+            checkoutId);
     }
 
     /// <summary>

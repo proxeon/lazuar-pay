@@ -47,17 +47,12 @@ public class IntegrationCheckoutGatewayEventsHandler :
 
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
     {
-        if (!TryResolveCheckoutId(@event.Metadata, out var checkoutId))
-        {
-            return;
-        }
-
-        var session = await _sessions.GetByIdAsync(@event.OrganizationId, checkoutId);
+        var session = await ResolveSessionAsync(
+            @event.OrganizationId,
+            @event.Metadata,
+            @event.GatewayTransactionId);
         if (session is null)
         {
-            _logger.LogDebug(
-                "Integration checkout {CheckoutId} not found for org {OrganizationId}; skipping payment.completed outbound.",
-                checkoutId, @event.OrganizationId);
             return;
         }
 
@@ -66,7 +61,7 @@ public class IntegrationCheckoutGatewayEventsHandler :
         {
             _logger.LogDebug(
                 "Integration checkout {CheckoutId} status is {Status}; skipping duplicate payment.completed outbound.",
-                checkoutId, session.Status);
+                session.Id, session.Status);
             return;
         }
 
@@ -93,17 +88,12 @@ public class IntegrationCheckoutGatewayEventsHandler :
 
     public async Task HandleAsync(GatewayPaymentFailedIntegrationEvent @event)
     {
-        if (!TryResolveCheckoutId(@event.Metadata, out var checkoutId))
-        {
-            return;
-        }
-
-        var session = await _sessions.GetByIdAsync(@event.OrganizationId, checkoutId);
+        var session = await ResolveSessionAsync(
+            @event.OrganizationId,
+            @event.Metadata,
+            @event.GatewayTransactionId);
         if (session is null)
         {
-            _logger.LogDebug(
-                "Integration checkout {CheckoutId} not found for org {OrganizationId}; skipping payment.failed outbound.",
-                checkoutId, @event.OrganizationId);
             return;
         }
 
@@ -111,7 +101,7 @@ public class IntegrationCheckoutGatewayEventsHandler :
         {
             _logger.LogDebug(
                 "Integration checkout {CheckoutId} status is {Status}; skipping duplicate payment.failed outbound.",
-                checkoutId, session.Status);
+                session.Id, session.Status);
             return;
         }
 
@@ -135,6 +125,44 @@ public class IntegrationCheckoutGatewayEventsHandler :
             payload));
 
         await _sessions.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Prefer metadata.checkout_id; if missing (Billplz stripped body), resolve by
+    /// ProviderSessionId == GatewayTransactionId (bill id).
+    /// </summary>
+    private async Task<IntegrationCheckoutSession?> ResolveSessionAsync(
+        Guid organizationId,
+        Dictionary<string, string>? metadata,
+        string? gatewayTransactionId)
+    {
+        if (TryResolveCheckoutId(metadata, out var checkoutId))
+        {
+            var byId = await _sessions.GetByIdAsync(organizationId, checkoutId);
+            if (byId is not null)
+            {
+                return byId;
+            }
+
+            _logger.LogDebug(
+                "Integration checkout {CheckoutId} not found for org {OrganizationId}; trying ProviderSessionId fallback.",
+                checkoutId, organizationId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(gatewayTransactionId))
+        {
+            var byProvider = await _sessions.GetByProviderSessionIdAsync(
+                organizationId, gatewayTransactionId);
+            if (byProvider is not null)
+            {
+                _logger.LogDebug(
+                    "Resolved IntegrationCheckoutSession {CheckoutId} via ProviderSessionId={ProviderSessionId} for org {OrganizationId}.",
+                    byProvider.Id, gatewayTransactionId, organizationId);
+                return byProvider;
+            }
+        }
+
+        return null;
     }
 
     private static bool TryResolveCheckoutId(Dictionary<string, string>? metadata, out Guid checkoutId)

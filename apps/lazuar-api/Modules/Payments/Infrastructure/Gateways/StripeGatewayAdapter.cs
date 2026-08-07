@@ -50,13 +50,19 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     }
                 },
                 Metadata = metadata,
+                // Copy session metadata onto the PaymentIntent so payment_intent.succeeded
+                // carries checkout_id / M2M keys even when that event arrives first.
+                PaymentIntentData = new SessionPaymentIntentDataOptions
+                {
+                    Metadata = metadata
+                },
                 SuccessUrl = successUrl,
                 CancelUrl = cancelUrl,
             };
 
             if (setupFutureUsage)
             {
-                options.PaymentIntentData = new SessionPaymentIntentDataOptions { SetupFutureUsage = "off_session" };
+                options.PaymentIntentData.SetupFutureUsage = "off_session";
             }
 
             var session = await service.CreateAsync(options);

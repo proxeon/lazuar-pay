@@ -38,6 +38,23 @@ public class IntegrationCheckoutSessionRepository : IIntegrationCheckoutSessionR
                 ct);
     }
 
+    public async Task<IntegrationCheckoutSession?> GetByProviderSessionIdAsync(
+        Guid organizationId,
+        string providerSessionId,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerSessionId))
+        {
+            return null;
+        }
+
+        return await _context.IntegrationCheckoutSessions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                s => s.OrganizationId == organizationId && s.ProviderSessionId == providerSessionId,
+                ct);
+    }
+
     public void Add(IntegrationCheckoutSession session)
     {
         _context.IntegrationCheckoutSessions.Add(session);
