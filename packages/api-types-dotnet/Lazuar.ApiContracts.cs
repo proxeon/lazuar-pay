@@ -4687,6 +4687,13 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_test_mode")]
         public bool Is_test_mode { get; set; } = default!;
 
+        /// <summary>
+        /// Optional closed-catalog scopes (e.g. payments.checkouts:write, lhdn.documents:read).
+        /// Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("scopes")]
+        public System.Collections.Generic.ICollection<string>? Scopes { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]

@@ -41,6 +41,7 @@ public class GenerateApiKeyCommandHandler : ICommandHandler<GenerateApiKeyComman
             request.Name,
             request.IsTestMode,
             createdByUserId: null,
+            scopes: null,
             ct);
 
         return new GenerateApiKeyResult(

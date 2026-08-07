@@ -224,7 +224,7 @@ builder.Services.AddAuthorization(options =>
             ctx.User.IsInRole("SUPER_ADMIN")
             || ctx.User.IsInRole("ADMIN")
             || (ctx.User.IsInRole("API_CLIENT")
-                && ctx.User.HasClaim("scope", Modules.Lhdn.Domain.ApiKeyScopes.LhdnDocumentsWrite)));
+                && ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.LhdnDocumentsWrite)));
     });
 
     // LHDN document read (GET status): human admins bypass; API_CLIENT needs read or write (write implies read).
@@ -235,8 +235,53 @@ builder.Services.AddAuthorization(options =>
             ctx.User.IsInRole("SUPER_ADMIN")
             || ctx.User.IsInRole("ADMIN")
             || (ctx.User.IsInRole("API_CLIENT")
-                && (ctx.User.HasClaim("scope", Modules.Lhdn.Domain.ApiKeyScopes.LhdnDocumentsRead)
-                    || ctx.User.HasClaim("scope", Modules.Lhdn.Domain.ApiKeyScopes.LhdnDocumentsWrite))));
+                && (ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.LhdnDocumentsRead)
+                    || ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.LhdnDocumentsWrite))));
+    });
+
+    // Payments checkouts write (M2M ad-hoc checkout create — Phase 2 routes attach this policy).
+    options.AddPolicy("IntegrationPaymentsCheckoutsWrite", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(ctx =>
+            ctx.User.IsInRole("SUPER_ADMIN")
+            || ctx.User.IsInRole("ADMIN")
+            || (ctx.User.IsInRole("API_CLIENT")
+                && ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.PaymentsCheckoutsWrite)));
+    });
+
+    // Payments checkouts read (poll status): write implies read.
+    options.AddPolicy("IntegrationPaymentsCheckoutsRead", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(ctx =>
+            ctx.User.IsInRole("SUPER_ADMIN")
+            || ctx.User.IsInRole("ADMIN")
+            || (ctx.User.IsInRole("API_CLIENT")
+                && (ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.PaymentsCheckoutsRead)
+                    || ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.PaymentsCheckoutsWrite))));
+    });
+
+    // Optional: payment connection status (no secrets). Do NOT attach to payment-config write.
+    options.AddPolicy("IntegrationPaymentsConfigRead", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(ctx =>
+            ctx.User.IsInRole("SUPER_ADMIN")
+            || ctx.User.IsInRole("ADMIN")
+            || (ctx.User.IsInRole("API_CLIENT")
+                && ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.PaymentsConfigRead)));
+    });
+
+    // Optional: manage outbound webhook endpoints via API (console/OrgAdmin remains primary v1).
+    options.AddPolicy("IntegrationWebhooksEndpointsManage", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(ctx =>
+            ctx.User.IsInRole("SUPER_ADMIN")
+            || ctx.User.IsInRole("ADMIN")
+            || (ctx.User.IsInRole("API_CLIENT")
+                && ctx.User.HasClaim("scope", Modules.One.Domain.PlatformApiScopes.WebhooksEndpointsManage)));
     });
 });
 

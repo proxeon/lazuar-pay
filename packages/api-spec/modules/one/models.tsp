@@ -179,6 +179,11 @@ model GetPresignedUrlResponseDto {
 model GenerateApiKeyRequestDto {
   name: string;
   is_test_mode: boolean;
+  /**
+   * Optional closed-catalog scopes (e.g. payments.checkouts:write, lhdn.documents:read).
+   * Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.
+   */
+  scopes?: string[];
 }
 
 model GenerateApiKeyResponseDto {

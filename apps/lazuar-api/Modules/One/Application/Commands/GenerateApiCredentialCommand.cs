@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -19,7 +20,8 @@ public record GenerateApiCredentialCommand(
     Guid OrganizationId,
     string Name,
     bool IsTestMode,
-    Guid? CreatedByUserId = null) : ICommand<GenerateApiCredentialResult>
+    Guid? CreatedByUserId = null,
+    IReadOnlyList<string>? Scopes = null) : ICommand<GenerateApiCredentialResult>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -45,7 +47,8 @@ public class GenerateApiCredentialCommandHandler : ICommandHandler<GenerateApiCr
         var keyHint = fullPlainToken.Length >= 4
             ? fullPlainToken[^4..]
             : fullPlainToken;
-        var scopes = PlatformApiScopes.DefaultDocumentScopes;
+        // null scopes → LHDN document default; empty/unknown → InvalidOperationException (400).
+        var scopes = PlatformApiScopes.NormalizeAndValidate(request.Scopes);
 
         var credential = new ApiCredential(
             request.OrganizationId,

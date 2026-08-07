@@ -4,7 +4,7 @@ using Dapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
-using Modules.Lhdn.Domain;
+using Modules.One.Domain;
 
 namespace Lazuar.Api.Middleware;
 
@@ -83,7 +83,7 @@ public class ApiKeyAuthenticationMiddleware
                 new(ClaimTypes.Role, "API_CLIENT")
             };
 
-            foreach (var scope in ApiKeyScopes.Split(entry.Scopes))
+            foreach (var scope in PlatformApiScopes.Split(entry.Scopes))
             {
                 claims.Add(new Claim("scope", scope));
             }

@@ -175,4 +175,127 @@ public class GenerateAndListApiCredentialsTests
         jwtCtx.Request.Headers.Authorization = "Bearer eyJhbGciOiJIUzI1NiJ9.e30.sig";
         Assert.That(ApiKeyAuthenticationMiddleware.TryGetApiKey(jwtCtx.Request, out _), Is.False);
     }
+
+    [Test]
+    public async Task GenerateApiCredential_With_Payments_Scopes_Only_Persists_Those_Scopes()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.GenerateSecureToken(40).Returns(new GeneratedToken("payonlysecretabcdefghij1234567890ab", "hash-of-random"));
+        tokens.HashToken(Arg.Any<string>()).Returns(ci => $"hash:{ci.Arg<string>()}");
+
+        ApiCredential? saved = null;
+        repo.When(r => r.AddApiCredential(Arg.Any<ApiCredential>()))
+            .Do(ci => saved = ci.Arg<ApiCredential>());
+
+        var handler = new GenerateApiCredentialCommandHandler(repo, tokens);
+        var orgId = Guid.CreateVersion7();
+        var requested = new[]
+        {
+            PlatformApiScopes.PaymentsCheckoutsWrite,
+            PlatformApiScopes.PaymentsCheckoutsRead
+        };
+
+        var result = await handler.Handle(
+            new GenerateApiCredentialCommand(
+                orgId,
+                "Aura integrator",
+                IsTestMode: true,
+                CreatedByUserId: null,
+                Scopes: requested),
+            CancellationToken.None);
+
+        Assert.That(result.Scopes, Is.EqualTo(PlatformApiScopes.DefaultAuraIntegratorScopes));
+        Assert.That(saved, Is.Not.Null);
+        Assert.That(saved!.Scopes, Is.EqualTo(PlatformApiScopes.DefaultAuraIntegratorScopes));
+        Assert.That(PlatformApiScopes.Split(saved.Scopes), Is.EquivalentTo(requested));
+        Assert.That(saved.Scopes, Does.Not.Contain("lhdn."));
+    }
+
+    [Test]
+    public void GenerateApiCredential_Unknown_Scope_Throws()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.GenerateSecureToken(40).Returns(new GeneratedToken("abcdefghij1234567890abcdefghij1234567890", "hash"));
+        tokens.HashToken(Arg.Any<string>()).Returns("hash");
+
+        var handler = new GenerateApiCredentialCommandHandler(repo, tokens);
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await handler.Handle(
+                new GenerateApiCredentialCommand(
+                    Guid.CreateVersion7(),
+                    "Bad",
+                    IsTestMode: true,
+                    Scopes: ["payments.checkouts:write", "not.a.real:scope"]),
+                CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("Unknown API scope").And.Contain("not.a.real:scope"));
+        repo.DidNotReceive().AddApiCredential(Arg.Any<ApiCredential>());
+    }
+
+    [Test]
+    public void GenerateApiCredential_Empty_Scopes_Array_Throws()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.GenerateSecureToken(40).Returns(new GeneratedToken("abcdefghij1234567890abcdefghij1234567890", "hash"));
+        tokens.HashToken(Arg.Any<string>()).Returns("hash");
+
+        var handler = new GenerateApiCredentialCommandHandler(repo, tokens);
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await handler.Handle(
+                new GenerateApiCredentialCommand(
+                    Guid.CreateVersion7(),
+                    "Empty",
+                    IsTestMode: true,
+                    Scopes: Array.Empty<string>()),
+                CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("At least one scope"));
+    }
+
+    [Test]
+    public async Task GenerateApiCredential_Omit_Scopes_Uses_Lhdn_Document_Default()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.GenerateSecureToken(40).Returns(new GeneratedToken("defaultscopesabcdefghij1234567890ab", "hash"));
+        tokens.HashToken(Arg.Any<string>()).Returns(ci => $"hash:{ci.Arg<string>()}");
+
+        ApiCredential? saved = null;
+        repo.When(r => r.AddApiCredential(Arg.Any<ApiCredential>()))
+            .Do(ci => saved = ci.Arg<ApiCredential>());
+
+        var handler = new GenerateApiCredentialCommandHandler(repo, tokens);
+        var result = await handler.Handle(
+            new GenerateApiCredentialCommand(Guid.CreateVersion7(), "Compat", IsTestMode: true, Scopes: null),
+            CancellationToken.None);
+
+        Assert.That(result.Scopes, Is.EqualTo(PlatformApiScopes.DefaultDocumentScopes));
+        Assert.That(saved!.Scopes, Is.EqualTo(PlatformApiScopes.DefaultDocumentScopes));
+    }
+
+    [Test]
+    public void NormalizeAndValidate_Rejects_Unknown_And_Accepts_Catalog()
+    {
+        Assert.That(
+            PlatformApiScopes.NormalizeAndValidate(null),
+            Is.EqualTo(PlatformApiScopes.DefaultDocumentScopes));
+
+        Assert.That(
+            PlatformApiScopes.NormalizeAndValidate(
+            [
+                PlatformApiScopes.PaymentsCheckoutsWrite,
+                PlatformApiScopes.PaymentsCheckoutsWrite, // dedupe
+                PlatformApiScopes.PaymentsCheckoutsRead
+            ]),
+            Is.EqualTo(PlatformApiScopes.DefaultAuraIntegratorScopes));
+
+        Assert.That(
+            () => PlatformApiScopes.NormalizeAndValidate(["evil.admin:*"]),
+            Throws.TypeOf<InvalidOperationException>());
+    }
 }

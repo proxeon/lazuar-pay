@@ -125,23 +125,37 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<ApiKeyDto>)dtos);
         });
 
-        admin.MapPost("/api-keys", async Task<Ok<GenerateApiKeyResponseDto>> (
+        admin.MapPost("/api-keys", async Task<Results<Ok<GenerateApiKeyResponseDto>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             [FromBody] GenerateApiKeyRequestDto req,
             IExecutionContextAccessor ctx,
             [FromServices] IApiCredentialService credentials) =>
         {
-            var createdBy = ctx.UserId == Guid.Empty ? (Guid?)null : ctx.UserId;
-            var created = await credentials.GenerateAsync(ctx.TenantId, req.Name, req.Is_test_mode, createdBy);
-            return TypedResults.Ok(new GenerateApiKeyResponseDto
+            try
             {
-                Id = created.Id.ToString(),
-                Name = created.Name,
-                Prefix = created.Prefix,
-                Hint = created.Hint,
-                Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero),
-                Plain_key = created.PlainKey,
-                Scopes = ApiKeyScopes.Split(created.Scopes).ToList()
-            });
+                var createdBy = ctx.UserId == Guid.Empty ? (Guid?)null : ctx.UserId;
+                // Null/omitted scopes → LHDN document defaults (product façade compat).
+                IReadOnlyList<string>? scopes = req.Scopes is null ? null : req.Scopes.ToList();
+                var created = await credentials.GenerateAsync(
+                    ctx.TenantId,
+                    req.Name,
+                    req.Is_test_mode,
+                    createdBy,
+                    scopes);
+                return TypedResults.Ok(new GenerateApiKeyResponseDto
+                {
+                    Id = created.Id.ToString(),
+                    Name = created.Name,
+                    Prefix = created.Prefix,
+                    Hint = created.Hint,
+                    Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero),
+                    Plain_key = created.PlainKey,
+                    Scopes = ApiKeyScopes.Split(created.Scopes).ToList()
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         });
 
         admin.MapDelete("/api-keys/{id:guid}", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (

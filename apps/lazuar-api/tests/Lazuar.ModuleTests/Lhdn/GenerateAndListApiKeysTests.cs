@@ -36,7 +36,13 @@ public class GenerateAndListApiKeysTests
             "sk_test_abcdefghij1234567890abcdefghij1234567890",
             ApiKeyScopes.DefaultDocumentScopes);
 
-        service.GenerateAsync(orgId, "Integration", true, null, Arg.Any<CancellationToken>())
+        service.GenerateAsync(
+                orgId,
+                "Integration",
+                true,
+                createdByUserId: null,
+                scopes: null,
+                Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(expected));
 
         var handler = new GenerateApiKeyCommandHandler(service);
@@ -46,7 +52,13 @@ public class GenerateAndListApiKeysTests
         Assert.That(result.PlainKey, Is.EqualTo(expected.PlainKey));
         Assert.That(result.Hint, Is.EqualTo(expected.Hint));
         Assert.That(result.Scopes, Is.EqualTo(ApiKeyScopes.DefaultDocumentScopes));
-        await service.Received(1).GenerateAsync(orgId, "Integration", true, null, Arg.Any<CancellationToken>());
+        await service.Received(1).GenerateAsync(
+            orgId,
+            "Integration",
+            true,
+            createdByUserId: null,
+            scopes: null,
+            Arg.Any<CancellationToken>());
     }
 
     [Test]

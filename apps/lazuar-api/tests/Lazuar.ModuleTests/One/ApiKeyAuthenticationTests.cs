@@ -8,14 +8,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
-using Modules.Lhdn.Domain;
+using Modules.One.Domain;
 using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.One;
 
 /// <summary>
-/// B.9: API key auth — valid / invalid / revoked paths and scope policy vs OrgAdmin.
+/// B.9 / Phase 1: API key auth — valid / invalid / revoked paths and scope policy vs OrgAdmin.
 /// </summary>
 [TestFixture]
 public class ApiKeyAuthenticationTests
@@ -36,7 +36,7 @@ public class ApiKeyAuthenticationTests
         {
             CredentialId = credentialId,
             OrganizationId = orgId,
-            Scopes = ApiKeyScopes.DefaultDocumentScopes
+            Scopes = PlatformApiScopes.DefaultDocumentScopes
         });
 
         var context = new DefaultHttpContext
@@ -63,10 +63,50 @@ public class ApiKeyAuthenticationTests
         Assert.That(context.User.FindFirstValue("CredentialId"), Is.EqualTo(credentialId.ToString()));
         Assert.That(context.User.FindFirstValue("TenantId"), Is.EqualTo(orgId.ToString()));
         Assert.That(context.User.FindFirstValue("IsTestMode"), Is.EqualTo("true"));
-        Assert.That(context.User.HasClaim("scope", ApiKeyScopes.LhdnDocumentsWrite), Is.True);
-        Assert.That(context.User.HasClaim("scope", ApiKeyScopes.LhdnDocumentsRead), Is.True);
+        Assert.That(context.User.HasClaim("scope", PlatformApiScopes.LhdnDocumentsWrite), Is.True);
+        Assert.That(context.User.HasClaim("scope", PlatformApiScopes.LhdnDocumentsRead), Is.True);
         Assert.That(context.Items["TenantId"], Is.EqualTo(orgId));
         Assert.That(context.Items["CredentialId"], Is.EqualTo(credentialId));
+    }
+
+    [Test]
+    public async Task Valid_Cached_Key_With_Payment_Scopes_Sets_Scope_Claims()
+    {
+        // Checklist 1.6.1 stand-in until Phase 2 checkout routes exist: auth materializes scope claims.
+        var orgId = Guid.CreateVersion7();
+        var credentialId = Guid.CreateVersion7();
+        const string plainKey = "sk_test_paymentonlyabcdefghijklmn";
+        const string keyHash = "hash:pay";
+
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.HashToken(plainKey).Returns(keyHash);
+
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        cache.Set($"ApiKey_{keyHash}", new ApiKeyAuthenticationMiddleware.ApiKeyCacheEntry
+        {
+            CredentialId = credentialId,
+            OrganizationId = orgId,
+            Scopes = PlatformApiScopes.DefaultAuraIntegratorScopes
+        });
+
+        var context = new DefaultHttpContext
+        {
+            RequestServices = new ServiceCollection().BuildServiceProvider()
+        };
+        context.Request.Headers.Authorization = $"Bearer {plainKey}";
+
+        var middleware = new ApiKeyAuthenticationMiddleware(
+            _ => Task.CompletedTask,
+            cache,
+            tokens);
+        await middleware.InvokeAsync(context);
+
+        Assert.That(context.User.Identity?.IsAuthenticated, Is.True);
+        Assert.That(context.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite), Is.True);
+        Assert.That(context.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead), Is.True);
+        Assert.That(context.User.HasClaim("scope", PlatformApiScopes.LhdnDocumentsWrite), Is.False);
+        Assert.That(context.User.FindFirstValue("TenantId"), Is.EqualTo(orgId.ToString()));
+        Assert.That(context.Items["TenantId"], Is.EqualTo(orgId));
     }
 
     [Test]
@@ -139,12 +179,30 @@ public class ApiKeyAuthenticationTests
         var auth = BuildAuthorizationService();
         var apiClient = Principal(
             role: "API_CLIENT",
-            scopes: [ApiKeyScopes.LhdnDocumentsWrite, ApiKeyScopes.LhdnDocumentsRead]);
+            scopes: [PlatformApiScopes.LhdnDocumentsWrite, PlatformApiScopes.LhdnDocumentsRead]);
 
         var result = await auth.AuthorizeAsync(apiClient, resource: null, policyName: "OrgAdmin");
 
         Assert.That(result.Succeeded, Is.False,
             "Stolen/mis-scoped keys must not pass OrgAdmin (key mint, payment config, certs).");
+    }
+
+    [Test]
+    public async Task OrgAdmin_Policy_Denies_ApiClient_With_Payment_Scopes()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes:
+            [
+                PlatformApiScopes.PaymentsCheckoutsWrite,
+                PlatformApiScopes.PaymentsCheckoutsRead
+            ]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "OrgAdmin");
+
+        Assert.That(result.Succeeded, Is.False,
+            "Payment-scoped machine keys must not mint keys or write payment-config.");
     }
 
     [Test]
@@ -162,7 +220,7 @@ public class ApiKeyAuthenticationTests
     public async Task IntegrationWrite_Policy_Allows_ApiClient_With_Write_Scope()
     {
         var auth = BuildAuthorizationService();
-        var apiClient = Principal(role: "API_CLIENT", scopes: [ApiKeyScopes.LhdnDocumentsWrite]);
+        var apiClient = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.LhdnDocumentsWrite]);
 
         var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationLhdnDocumentsWrite");
 
@@ -173,7 +231,7 @@ public class ApiKeyAuthenticationTests
     public async Task IntegrationWrite_Policy_Denies_ApiClient_With_Only_Read_Scope()
     {
         var auth = BuildAuthorizationService();
-        var apiClient = Principal(role: "API_CLIENT", scopes: [ApiKeyScopes.LhdnDocumentsRead]);
+        var apiClient = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.LhdnDocumentsRead]);
 
         var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationLhdnDocumentsWrite");
 
@@ -184,7 +242,7 @@ public class ApiKeyAuthenticationTests
     public async Task IntegrationRead_Policy_Allows_Write_Scope_As_Read()
     {
         var auth = BuildAuthorizationService();
-        var apiClient = Principal(role: "API_CLIENT", scopes: [ApiKeyScopes.LhdnDocumentsWrite]);
+        var apiClient = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.LhdnDocumentsWrite]);
 
         var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationLhdnDocumentsRead");
 
@@ -200,6 +258,102 @@ public class ApiKeyAuthenticationTests
         var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationLhdnDocumentsRead");
 
         Assert.That(result.Succeeded, Is.False);
+    }
+
+    [Test]
+    public async Task Payments_Write_Policy_Allows_ApiClient_With_Write_Scope()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.PaymentsCheckoutsWrite]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsCheckoutsWrite");
+
+        Assert.That(result.Succeeded, Is.True);
+    }
+
+    [Test]
+    public async Task Payments_Write_Policy_Denies_Read_Only_Payment_Scope()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.PaymentsCheckoutsRead]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsCheckoutsWrite");
+
+        Assert.That(result.Succeeded, Is.False);
+    }
+
+    [Test]
+    public async Task Payments_Read_Policy_Allows_Write_Scope_As_Read()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.PaymentsCheckoutsWrite]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsCheckoutsRead");
+
+        Assert.That(result.Succeeded, Is.True);
+    }
+
+    [Test]
+    public async Task Payment_Only_Key_Denied_On_Lhdn_Write_Policy()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes:
+            [
+                PlatformApiScopes.PaymentsCheckoutsWrite,
+                PlatformApiScopes.PaymentsCheckoutsRead
+            ]);
+
+        var lhdnWrite = await auth.AuthorizeAsync(apiClient, null, "IntegrationLhdnDocumentsWrite");
+        var lhdnRead = await auth.AuthorizeAsync(apiClient, null, "IntegrationLhdnDocumentsRead");
+        var paymentsWrite = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsCheckoutsWrite");
+
+        Assert.That(lhdnWrite.Succeeded, Is.False, "Cross-product isolation: payments ≠ LHDN write");
+        Assert.That(lhdnRead.Succeeded, Is.False, "Cross-product isolation: payments ≠ LHDN read");
+        Assert.That(paymentsWrite.Succeeded, Is.True);
+    }
+
+    [Test]
+    public async Task Lhdn_Only_Key_Denied_On_Payments_Write_Policy()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes:
+            [
+                PlatformApiScopes.LhdnDocumentsWrite,
+                PlatformApiScopes.LhdnDocumentsRead
+            ]);
+
+        var paymentsWrite = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsCheckoutsWrite");
+        var paymentsRead = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsCheckoutsRead");
+
+        Assert.That(paymentsWrite.Succeeded, Is.False);
+        Assert.That(paymentsRead.Succeeded, Is.False);
+    }
+
+    [Test]
+    public async Task Payments_Config_Read_Policy_Allows_Scoped_Client_Only()
+    {
+        var auth = BuildAuthorizationService();
+        var withScope = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.PaymentsConfigRead]);
+        var without = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.PaymentsCheckoutsWrite]);
+
+        Assert.That(
+            (await auth.AuthorizeAsync(withScope, null, "IntegrationPaymentsConfigRead")).Succeeded,
+            Is.True);
+        Assert.That(
+            (await auth.AuthorizeAsync(without, null, "IntegrationPaymentsConfigRead")).Succeeded,
+            Is.False);
     }
 
     /// <summary>Mirrors host policies in Program.cs (OrgAdmin vs Integration*).</summary>
@@ -222,7 +376,7 @@ public class ApiKeyAuthenticationTests
                     ctx.User.IsInRole("SUPER_ADMIN")
                     || ctx.User.IsInRole("ADMIN")
                     || (ctx.User.IsInRole("API_CLIENT")
-                        && ctx.User.HasClaim("scope", ApiKeyScopes.LhdnDocumentsWrite)));
+                        && ctx.User.HasClaim("scope", PlatformApiScopes.LhdnDocumentsWrite)));
             });
 
             options.AddPolicy("IntegrationLhdnDocumentsRead", policy =>
@@ -232,8 +386,49 @@ public class ApiKeyAuthenticationTests
                     ctx.User.IsInRole("SUPER_ADMIN")
                     || ctx.User.IsInRole("ADMIN")
                     || (ctx.User.IsInRole("API_CLIENT")
-                        && (ctx.User.HasClaim("scope", ApiKeyScopes.LhdnDocumentsRead)
-                            || ctx.User.HasClaim("scope", ApiKeyScopes.LhdnDocumentsWrite))));
+                        && (ctx.User.HasClaim("scope", PlatformApiScopes.LhdnDocumentsRead)
+                            || ctx.User.HasClaim("scope", PlatformApiScopes.LhdnDocumentsWrite))));
+            });
+
+            options.AddPolicy("IntegrationPaymentsCheckoutsWrite", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite)));
+            });
+
+            options.AddPolicy("IntegrationPaymentsCheckoutsRead", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && (ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead)
+                            || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite))));
+            });
+
+            options.AddPolicy("IntegrationPaymentsConfigRead", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsConfigRead)));
+            });
+
+            options.AddPolicy("IntegrationWebhooksEndpointsManage", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && ctx.User.HasClaim("scope", PlatformApiScopes.WebhooksEndpointsManage)));
             });
         });
         services.AddSingleton<IAuthorizationHandler, PassThroughHandler>();

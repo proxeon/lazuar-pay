@@ -26,10 +26,11 @@ public class ApiCredentialService : IApiCredentialService
         string name,
         bool isTestMode,
         Guid? createdByUserId = null,
+        IReadOnlyList<string>? scopes = null,
         CancellationToken ct = default)
     {
         var result = await _mediator.Send(
-            new GenerateApiCredentialCommand(organizationId, name, isTestMode, createdByUserId),
+            new GenerateApiCredentialCommand(organizationId, name, isTestMode, createdByUserId, scopes),
             ct);
 
         return new ApiCredentialGenerateResult(

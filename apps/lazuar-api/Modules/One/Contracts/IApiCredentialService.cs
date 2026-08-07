@@ -29,11 +29,16 @@ public record ApiCredentialSnapshot(
 /// </summary>
 public interface IApiCredentialService
 {
+    /// <param name="scopes">
+    /// Optional scope list from the closed platform catalog.
+    /// Null/omitted uses LHDN document defaults; empty or unknown values are rejected.
+    /// </param>
     Task<ApiCredentialGenerateResult> GenerateAsync(
         Guid organizationId,
         string name,
         bool isTestMode,
         Guid? createdByUserId = null,
+        IReadOnlyList<string>? scopes = null,
         CancellationToken ct = default);
 
     Task<IReadOnlyList<ApiCredentialSnapshot>> ListAsync(

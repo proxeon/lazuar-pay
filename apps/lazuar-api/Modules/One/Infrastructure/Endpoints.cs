@@ -1,4 +1,6 @@
 // apps/lazuar-api/Modules/One/Infrastructure/Endpoints.cs
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.IO;
 using System.Threading.Tasks;
@@ -413,23 +415,37 @@ public static class Endpoints
             return TypedResults.Ok((ICollection<ApiKeyDto>)result.ToList());
         });
 
-        orgAdmin.MapPost("/api-keys", async Task<Ok<GenerateApiKeyResponseDto>> (
+        orgAdmin.MapPost("/api-keys", async Task<Results<Ok<GenerateApiKeyResponseDto>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             [FromBody] GenerateApiKeyRequestDto req,
             IExecutionContextAccessor ctx,
             [FromServices] IApiCredentialService credentials) =>
         {
-            var createdBy = ctx.UserId == Guid.Empty ? (Guid?)null : ctx.UserId;
-            var created = await credentials.GenerateAsync(ctx.TenantId, req.Name, req.Is_test_mode, createdBy);
-            return TypedResults.Ok(new GenerateApiKeyResponseDto
+            try
             {
-                Id = created.Id.ToString(),
-                Name = created.Name,
-                Prefix = created.Prefix,
-                Hint = created.Hint,
-                Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero),
-                Plain_key = created.PlainKey,
-                Scopes = PlatformApiScopes.Split(created.Scopes).ToList()
-            });
+                var createdBy = ctx.UserId == Guid.Empty ? (Guid?)null : ctx.UserId;
+                // Null/omitted scopes → LHDN document defaults; empty/unknown → 400.
+                IReadOnlyList<string>? scopes = req.Scopes is null ? null : req.Scopes.ToList();
+                var created = await credentials.GenerateAsync(
+                    ctx.TenantId,
+                    req.Name,
+                    req.Is_test_mode,
+                    createdBy,
+                    scopes);
+                return TypedResults.Ok(new GenerateApiKeyResponseDto
+                {
+                    Id = created.Id.ToString(),
+                    Name = created.Name,
+                    Prefix = created.Prefix,
+                    Hint = created.Hint,
+                    Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero),
+                    Plain_key = created.PlainKey,
+                    Scopes = PlatformApiScopes.Split(created.Scopes).ToList()
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
+            }
         });
 
         orgAdmin.MapDelete("/api-keys/{id:guid}", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
@@ -447,6 +463,13 @@ public static class Endpoints
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = ex.Message });
             }
         });
+
+        // Phase 1 policy probe for IntegrationPaymentsCheckoutsWrite (real M2M checkout routes land in Phase 2).
+        // Authenticated API clients with payments.checkouts:write (or human admins) receive 200; others 403.
+        endpoints.MapGet("/one/integrations/payments/checkouts/_scope-probe", () =>
+                TypedResults.Ok(new StatusResponse { Status = "payments.checkouts:write" }))
+            .RequireAuthorization("IntegrationPaymentsCheckoutsWrite")
+            .RequireCors();
 
         return endpoints;
     }

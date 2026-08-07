@@ -22,6 +22,34 @@ type GenerateApiKeyResponseDto = components["schemas"]["One.GenerateApiKeyRespon
 
 const DOCS_BASE = import.meta.env.VITE_DOCS_URL || "/docs";
 
+/** Closed platform scope catalog (must match Modules.One.Domain.PlatformApiScopes). */
+const SCOPE_CATALOG = [
+  {
+    group: "LHDN documents",
+    scopes: [
+      { id: "lhdn.documents:write", label: "Write", hint: "Submit / cancel documents" },
+      { id: "lhdn.documents:read", label: "Read", hint: "Status & TIN validate" },
+    ],
+  },
+  {
+    group: "Payments (checkouts)",
+    scopes: [
+      { id: "payments.checkouts:write", label: "Write", hint: "Create M2M checkouts" },
+      { id: "payments.checkouts:read", label: "Read", hint: "Poll checkout status" },
+      { id: "payments.config:read", label: "Config read", hint: "Connection status only" },
+    ],
+  },
+  {
+    group: "Webhooks",
+    scopes: [
+      { id: "webhooks.endpoints:manage", label: "Manage endpoints", hint: "Register URLs via API" },
+    ],
+  },
+] as const;
+
+const PRESET_LHDN = ["lhdn.documents:write", "lhdn.documents:read"] as const;
+const PRESET_AURA = ["payments.checkouts:write", "payments.checkouts:read"] as const;
+
 export default function ApiKeysPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string }>();
   const queryClient = useQueryClient();
@@ -29,6 +57,7 @@ export default function ApiKeysPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [isTestMode, setIsTestMode] = useState(true);
+  const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
   const [createdKey, setCreatedKey] = useState<GenerateApiKeyResponseDto | null>(null);
 
   const { data: keys, isLoading } = useQuery({
@@ -47,6 +76,7 @@ export default function ApiKeysPage() {
         body: {
           name: name.trim(),
           is_test_mode: isTestMode,
+          scopes: selectedScopes,
         },
       });
       if (error) throw new Error(error.detail);
@@ -56,6 +86,7 @@ export default function ApiKeysPage() {
       setCreatedKey(data);
       setName("");
       setIsTestMode(true);
+      setSelectedScopes([]);
       queryClient.invalidateQueries({ queryKey: ["developer-api-keys", activeWorkspaceId] });
       toast.success("API key created. Copy it now — it will not be shown again.");
     },
@@ -76,10 +107,24 @@ export default function ApiKeysPage() {
     onError: (err: Error) => toast.error(err.message || "Failed to revoke API key."),
   });
 
+  const toggleScope = (scopeId: string) => {
+    setSelectedScopes((prev) =>
+      prev.includes(scopeId) ? prev.filter((s) => s !== scopeId) : [...prev, scopeId]
+    );
+  };
+
+  const applyPreset = (preset: readonly string[]) => {
+    setSelectedScopes([...preset]);
+  };
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       toast.error("Name is required.");
+      return;
+    }
+    if (selectedScopes.length === 0) {
+      toast.error("Select at least one scope (or use a preset).");
       return;
     }
     createMutation.mutate();
@@ -91,6 +136,7 @@ export default function ApiKeysPage() {
     setCreatedKey(null);
     setName("");
     setIsTestMode(true);
+    setSelectedScopes([]);
   };
 
   const handleRevoke = (key: ApiKeyDto) => {
@@ -109,7 +155,7 @@ export default function ApiKeysPage() {
   return (
     <PageLayout
       title="API Keys"
-      description="Create and manage secret keys for server-to-server access (LHDN, platform scopes). Keys are shown in full only once at creation."
+      description="Create and manage secret keys for server-to-server access (LHDN, payments, webhooks). Keys are shown in full only once at creation. Prefer least privilege."
       breadcrumbs={[{ label: "Developer" }, { label: "API Keys" }]}
       actionButton={
         <button
@@ -147,18 +193,30 @@ export default function ApiKeysPage() {
           >
             Platform (One) docs <ExternalLink size={12} className="text-[#a1a1aa]" />
           </a>
+          <span className="text-[#d4d4d8]">·</span>
+          <a
+            href={`${DOCS_BASE}/auth`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#09090b] hover:underline"
+          >
+            Auth &amp; scopes <ExternalLink size={12} className="text-[#a1a1aa]" />
+          </a>
         </div>
 
         <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full min-h-[400px]">
           <div className="w-full overflow-x-auto">
-            <table className="w-full text-left text-[13px] min-w-[720px]">
+            <table className="w-full text-left text-[13px] min-w-[880px]">
               <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
                 <tr>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">
                     Name
                   </th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">
-                    Prefix
+                    Prefix / Env
+                  </th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">
+                    Scopes
                   </th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">
                     Status
@@ -174,13 +232,13 @@ export default function ApiKeysPage() {
               <tbody className="divide-y divide-[#f4f4f5]">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-[#a1a1aa]">
+                    <td colSpan={6} className="py-12 text-center text-[#a1a1aa]">
                       <Loader2 className="animate-spin mx-auto" size={20} />
                     </td>
                   </tr>
                 ) : !keys || keys.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-[#71717a] text-[13px]">
+                    <td colSpan={6} className="py-12 text-center text-[#71717a] text-[13px]">
                       No API keys yet. Create a test or live key to authenticate integrations.
                     </td>
                   </tr>
@@ -213,6 +271,23 @@ export default function ApiKeysPage() {
                             Live
                           </span>
                         )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-1 max-w-[280px]">
+                          {(key.scopes ?? []).length === 0 ? (
+                            <span className="text-[11px] text-[#a1a1aa]">—</span>
+                          ) : (
+                            (key.scopes ?? []).map((scope) => (
+                              <span
+                                key={scope}
+                                className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono font-medium bg-[#f4f4f5] text-[#3f3f46] border border-[#e4e4e7]"
+                                title={scope}
+                              >
+                                {scope}
+                              </span>
+                            ))
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-4">
                         {key.is_active ? (
@@ -281,7 +356,7 @@ export default function ApiKeysPage() {
             </div>
 
             {createdKey ? (
-              <div className="p-6 space-y-6">
+              <div className="p-6 space-y-6 overflow-y-auto">
                 <div className="flex items-start gap-3 p-3 border border-amber-200 bg-amber-50">
                   <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-[13px] text-amber-900 leading-relaxed">
@@ -319,6 +394,24 @@ export default function ApiKeysPage() {
                   </div>
                 </div>
 
+                {(createdKey.scopes ?? []).length > 0 && (
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block mb-2">
+                      Scopes
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {(createdKey.scopes ?? []).map((scope) => (
+                        <span
+                          key={scope}
+                          className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono font-medium bg-[#f4f4f5] text-[#3f3f46] border border-[#e4e4e7]"
+                        >
+                          {scope}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-end pt-2 border-t border-[#f4f4f5]">
                   <button
                     type="button"
@@ -330,8 +423,8 @@ export default function ApiKeysPage() {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleCreate}>
-                <div className="p-6 space-y-6">
+              <form onSubmit={handleCreate} className="flex flex-col min-h-0">
+                <div className="p-6 space-y-6 overflow-y-auto">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-[#09090b]">Name *</label>
                     <input
@@ -340,7 +433,7 @@ export default function ApiKeysPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       disabled={createMutation.isPending}
-                      placeholder="e.g. Production backend, CI sandbox"
+                      placeholder="e.g. Aura integrator, CI sandbox"
                       className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
                     />
                   </div>
@@ -357,13 +450,82 @@ export default function ApiKeysPage() {
                       <option value="live">Live (sk_live_…)</option>
                     </select>
                     <p className="text-[12px] text-[#71717a] leading-relaxed pt-1">
-                      Test keys are for sandbox integrations. Live keys can affect real documents and
-                      data — protect them like passwords.
+                      Test keys are for sandbox integrations. Live keys can affect real data —
+                      protect them like passwords.
                     </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="text-[11px] font-semibold text-[#09090b]">Scopes *</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => applyPreset(PRESET_LHDN)}
+                          disabled={createMutation.isPending}
+                          className="h-7 px-2.5 text-[9px] font-bold uppercase tracking-widest border border-[#e5e5e5] bg-white text-[#09090b] hover:bg-[#fafafa] disabled:opacity-50"
+                        >
+                          LHDN documents
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset(PRESET_AURA)}
+                          disabled={createMutation.isPending}
+                          className="h-7 px-2.5 text-[9px] font-bold uppercase tracking-widest border border-[#e5e5e5] bg-white text-[#09090b] hover:bg-[#fafafa] disabled:opacity-50"
+                        >
+                          Aura payments
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[12px] text-[#71717a] leading-relaxed">
+                      Keys never mint other keys or write payment-config secrets. Choose the minimum
+                      product scopes your integration needs.
+                    </p>
+                    <div className="space-y-3 border border-[#e5e5e5] p-3 bg-[#fafafa]/40">
+                      {SCOPE_CATALOG.map((group) => (
+                        <div key={group.group}>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] mb-1.5">
+                            {group.group}
+                          </p>
+                          <div className="space-y-1.5">
+                            {group.scopes.map((scope) => {
+                              const checked = selectedScopes.includes(scope.id);
+                              return (
+                                <label
+                                  key={scope.id}
+                                  className={cn(
+                                    "flex items-start gap-2.5 p-2 border cursor-pointer transition-colors",
+                                    checked
+                                      ? "border-[#09090b] bg-white"
+                                      : "border-transparent hover:bg-white/80"
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleScope(scope.id)}
+                                    disabled={createMutation.isPending}
+                                    className="mt-0.5"
+                                  />
+                                  <span className="min-w-0">
+                                    <span className="block font-mono text-[11px] text-[#09090b]">
+                                      {scope.id}
+                                    </span>
+                                    <span className="block text-[11px] text-[#71717a]">
+                                      {scope.label} — {scope.hint}
+                                    </span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50">
+                <div className="flex items-center justify-end gap-3 p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50 shrink-0">
                   <button
                     type="button"
                     onClick={handleCloseCreate}
@@ -374,7 +536,9 @@ export default function ApiKeysPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={createMutation.isPending || !name.trim()}
+                    disabled={
+                      createMutation.isPending || !name.trim() || selectedScopes.length === 0
+                    }
                     className="h-10 px-8 bg-[#09090b] text-white text-[11px] font-bold tracking-widest uppercase rounded-none hover:bg-[#27272a] disabled:opacity-50 transition-colors flex items-center gap-2"
                   >
                     {createMutation.isPending ? (
