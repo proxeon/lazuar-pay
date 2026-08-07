@@ -208,3 +208,36 @@ model ApiKeyDto {
   created_at: utcDateTime;
   scopes: string[];
 }
+
+// Phase 5 — integrator workspace provision (Aura → Hub)
+model ProvisionWorkspaceRequestDto {
+  /** Aura org id (GUID). Idempotency key for provision. */
+  aura_org_id: string;
+  /** Display name for the Hub workspace (used on first create only). */
+  display_name: string;
+  /** Optional slug; if omitted Hub generates aura-{compact}. */
+  slug?: string;
+  /** Optional: if user exists, grant ADMIN membership. Does not create users. */
+  owner_email?: string;
+  /** Default true → sk_test_ bootstrap key. */
+  is_test_mode?: boolean;
+  /** Default "Aura bootstrap". */
+  key_name?: string;
+}
+
+model ProvisionWorkspaceApiKeyDto {
+  id?: string;
+  prefix?: string;
+  hint?: string;
+  scopes: string[];
+  /** Full secret — only on first create; null on idempotent re-call. */
+  plain_key?: string;
+}
+
+model ProvisionWorkspaceResponseDto {
+  workspace_id: string;
+  slug: string;
+  aura_org_id: string;
+  created: boolean;
+  api_key: ProvisionWorkspaceApiKeyDto;
+}

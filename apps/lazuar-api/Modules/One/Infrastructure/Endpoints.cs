@@ -18,10 +18,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Modules.One.Application.Commands;
 using Modules.One.Application.Queries;
 using Modules.One.Contracts;
 using Modules.One.Domain;
+using Modules.One.Infrastructure.Configuration;
+using Modules.One.Infrastructure.Services;
 
 namespace Modules.One.Infrastructure;
 
@@ -470,6 +474,112 @@ public static class Endpoints
                 TypedResults.Ok(new StatusResponse { Status = "payments.checkouts:write" }))
             .RequireAuthorization("IntegrationPaymentsCheckoutsWrite")
             .RequireCors();
+
+        // Phase 5: Aura (or other integrators) provision Hub workspace + bootstrap key.
+        // Auth: X-Lazuar-Provision-Key / Bearer provision secret OR SUPER_ADMIN JWT. Tenant-exempt.
+        group.MapPost("/integrations/workspaces/provision", async Task<IResult> (
+            [FromBody] ProvisionWorkspaceRequestDto req,
+            HttpContext http,
+            IMediator mediator,
+            IOptions<IntegratorProvisionSettings> provisionOptions,
+            IntegratorProvisionRateLimiter rateLimiter,
+            ILoggerFactory loggerFactory) =>
+        {
+            var settings = provisionOptions.Value;
+            var auth = IntegratorProvisionAuth.Evaluate(http, settings);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = auth.StatusCode,
+                        Title = auth.StatusCode == 403 ? "Forbidden" : "Unauthorized",
+                        Detail = auth.FailureReason
+                    },
+                    statusCode: auth.StatusCode);
+            }
+
+            var auraOrgIdRaw = req.Aura_org_id?.Trim() ?? string.Empty;
+            if (!await rateLimiter.TryAcquireAsync("secret:global", settings.RateLimitPerMinute, http.RequestAborted))
+            {
+                http.Response.Headers.RetryAfter = "60";
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status429TooManyRequests,
+                        Title = "Too Many Requests",
+                        Detail = "Provision rate limit exceeded. Retry later."
+                    },
+                    statusCode: StatusCodes.Status429TooManyRequests);
+            }
+
+            if (!string.IsNullOrEmpty(auraOrgIdRaw)
+                && !await rateLimiter.TryAcquireAsync($"org:{auraOrgIdRaw.ToLowerInvariant()}", settings.RateLimitPerAuraOrgPerMinute, http.RequestAborted))
+            {
+                http.Response.Headers.RetryAfter = "60";
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status429TooManyRequests,
+                        Title = "Too Many Requests",
+                        Detail = "Provision rate limit exceeded for this aura_org_id. Retry later."
+                    },
+                    statusCode: StatusCodes.Status429TooManyRequests);
+            }
+
+            try
+            {
+                var result = await mediator.Send(new ProvisionAuraWorkspaceCommand(
+                    req.Aura_org_id ?? string.Empty,
+                    req.Display_name ?? string.Empty,
+                    req.Slug,
+                    req.Owner_email,
+                    req.Is_test_mode ?? true,
+                    req.Key_name,
+                    auth.ActorUserId));
+
+                var log = loggerFactory.CreateLogger("Modules.One.WorkspaceProvision");
+                log.LogInformation(
+                    "WorkspaceProvisioned workspace_id={WorkspaceId} aura_org_id={AuraOrgId} created={Created} key_id={KeyId} prefix={Prefix} hint={Hint}",
+                    result.WorkspaceId,
+                    result.AuraOrgId,
+                    result.Created,
+                    result.ApiKeyId,
+                    result.Prefix,
+                    result.Hint);
+                // Never log result.PlainKey.
+
+                return TypedResults.Ok(new ProvisionWorkspaceResponseDto
+                {
+                    Workspace_id = result.WorkspaceId.ToString(),
+                    Slug = result.Slug,
+                    Aura_org_id = result.AuraOrgId,
+                    Created = result.Created,
+                    Api_key = new ProvisionWorkspaceApiKeyDto
+                    {
+                        Id = result.ApiKeyId?.ToString(),
+                        Prefix = result.Prefix,
+                        Hint = result.Hint,
+                        Scopes = result.Scopes.ToList(),
+                        Plain_key = result.PlainKey
+                    }
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                var status = ex.Message.Contains("already taken", StringComparison.OrdinalIgnoreCase)
+                    ? StatusCodes.Status409Conflict
+                    : StatusCodes.Status400BadRequest;
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = status,
+                        Title = status == 409 ? "Conflict" : "Bad Request",
+                        Detail = ex.Message
+                    },
+                    statusCode: status);
+            }
+        });
 
         return endpoints;
     }

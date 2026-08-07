@@ -130,10 +130,12 @@ public class TenantSecurityMiddleware
         }
 
         // One: public register + auth + workspace list/create (no ambient tenant yet).
+        // Integrator provision creates a tenant — must not require X-Tenant-Id.
         if (path.StartsWithSegments("/api/v1/one/public")
             || path.StartsWithSegments("/api/v1/one/auth")
             || path.StartsWithSegments("/api/v1/one/me")
-            || path.StartsWithSegments("/api/v1/one/workspaces"))
+            || path.StartsWithSegments("/api/v1/one/workspaces")
+            || path.StartsWithSegments("/api/v1/one/integrations/workspaces"))
         {
             return true;
         }

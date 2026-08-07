@@ -219,4 +219,15 @@ interface OneOperations {
   revokeApiKey(
     @path id: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  /**
+   * Integrator provision: create Hub workspace + Aura-scoped bootstrap key for an aura_org_id.
+   * Auth: X-Lazuar-Provision-Key / Bearer provision secret, or SUPER_ADMIN JWT (not OrgAdmin / sk_*).
+   * Idempotent on aura_org_id — plain_key only on first create.
+   */
+  @post
+  @route("/integrations/workspaces/provision")
+  provisionWorkspace(@body body: ProvisionWorkspaceRequestDto):
+    | ProvisionWorkspaceResponseDto
+    | LazuarApi.Core.ProblemDetailsResponse;
 }

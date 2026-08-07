@@ -7,6 +7,12 @@ namespace Modules.One.Domain;
 
 public class Organization : Entity, IAggregateRoot
 {
+    /// <summary>Product tag for external org mapping (e.g. <c>aura</c>). Null when not provisioned by an integrator.</summary>
+    public string? ExternalProduct { get; private set; }
+
+    /// <summary>External product's org id (normalized). Unique with <see cref="ExternalProduct"/>.</summary>
+    public string? ExternalOrgId { get; private set; }
+
     public Guid Id { get; private set; }
     public string Name { get; private set; }
     public string Slug { get; private set; }
@@ -47,6 +53,42 @@ public class Organization : Entity, IAggregateRoot
         UpdatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new OrganizationUpdatedDomainEvent(Id, Name, Slug));
+    }
+
+    /// <summary>
+    /// Bind once to an external product org id. Idempotent if the same pair is re-applied;
+    /// throws if already bound to a different product/id.
+    /// </summary>
+    public void BindExternalRef(string product, string externalOrgId)
+    {
+        if (string.IsNullOrWhiteSpace(product))
+        {
+            throw new InvalidOperationException("External product is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(externalOrgId))
+        {
+            throw new InvalidOperationException("External org id is required.");
+        }
+
+        var cleanProduct = product.Trim().ToLowerInvariant();
+        var cleanExternalOrgId = externalOrgId.Trim().ToLowerInvariant();
+
+        if (ExternalProduct is not null || ExternalOrgId is not null)
+        {
+            if (string.Equals(ExternalProduct, cleanProduct, StringComparison.Ordinal)
+                && string.Equals(ExternalOrgId, cleanExternalOrgId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Organization is already bound to external ref ({ExternalProduct}, {ExternalOrgId}).");
+        }
+
+        ExternalProduct = cleanProduct;
+        ExternalOrgId = cleanExternalOrgId;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void Archive()

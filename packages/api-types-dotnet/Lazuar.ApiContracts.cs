@@ -4933,6 +4933,67 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProvisionWorkspaceApiKeyDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string? Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("prefix")]
+        public string? Prefix { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("hint")]
+        public string? Hint { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("scopes")]
+        public System.Collections.Generic.List<string> Scopes { get; set; } = new System.Collections.Generic.List<string>();
+
+        /// <summary>Full secret — only on first create; null on idempotent re-call.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("plain_key")]
+        public string? Plain_key { get; set; }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProvisionWorkspaceRequestDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
+        public string Aura_org_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("display_name")]
+        public string Display_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("slug")]
+        public string? Slug { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("owner_email")]
+        public string? Owner_email { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_test_mode")]
+        public bool? Is_test_mode { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("key_name")]
+        public string? Key_name { get; set; }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProvisionWorkspaceResponseDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("workspace_id")]
+        public string Workspace_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("slug")]
+        public string Slug { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
+        public string Aura_org_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created")]
+        public bool Created { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("api_key")]
+        public ProvisionWorkspaceApiKeyDto Api_key { get; set; } = default!;
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PublicRegisterRequestDto
     {
 

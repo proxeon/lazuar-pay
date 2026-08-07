@@ -26,6 +26,16 @@ public class OneRepository : IOneRepository
         return await _context.Organizations.FirstOrDefaultAsync(o => o.Id == id, ct);
     }
 
+    public async Task<Organization?> GetByExternalRefAsync(string product, string externalOrgId, CancellationToken ct = default)
+    {
+        var cleanProduct = product.Trim().ToLowerInvariant();
+        var cleanExternalOrgId = externalOrgId.Trim().ToLowerInvariant();
+        return await _context.Organizations
+            .FirstOrDefaultAsync(
+                o => o.ExternalProduct == cleanProduct && o.ExternalOrgId == cleanExternalOrgId,
+                ct);
+    }
+
     public async Task<bool> IsSlugUniqueAsync(string slug, CancellationToken ct = default)
     {
         return !await _context.Organizations.AnyAsync(o => o.Slug == slug, ct);

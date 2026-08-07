@@ -5,6 +5,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.One.Application;
 using Modules.One.Contracts;
+using Modules.One.Infrastructure.Configuration;
 using Modules.One.Infrastructure.Services;
 using Modules.One.Infrastructure.Repositories;
 using Modules.One.Infrastructure.Workers;
@@ -30,6 +31,25 @@ public static class DependencyInjection
 
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("OneSqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
+
+        services.Configure<IntegratorProvisionSettings>(options =>
+        {
+            // Env INTEGRATOR_PROVISION_SECRET or IntegratorProvision:Secret
+            options.Secret =
+                configuration["INTEGRATOR_PROVISION_SECRET"]
+                ?? configuration["IntegratorProvision:Secret"]
+                ?? string.Empty;
+            if (int.TryParse(configuration["IntegratorProvision:RateLimitPerMinute"], out var rpm))
+            {
+                options.RateLimitPerMinute = rpm;
+            }
+
+            if (int.TryParse(configuration["IntegratorProvision:RateLimitPerAuraOrgPerMinute"], out var orgRpm))
+            {
+                options.RateLimitPerAuraOrgPerMinute = orgRpm;
+            }
+        });
+        services.AddSingleton<IntegratorProvisionRateLimiter>();
 
         services.AddScoped<IOneQueryService, OneQueryService>();
         services.AddScoped<IOneRepository, OneRepository>();

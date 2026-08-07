@@ -46,6 +46,12 @@ public class OneDbContext : PlatformDbContext
             builder.ToTable("Organizations");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.Slug).IsUnique();
+            // One workspace per (product, external org). Filtered so human-created orgs stay unbound.
+            builder.HasIndex(x => new { x.ExternalProduct, x.ExternalOrgId })
+                .IsUnique()
+                .HasFilter("\"ExternalProduct\" IS NOT NULL AND \"ExternalOrgId\" IS NOT NULL");
+            builder.Property(x => x.ExternalProduct).HasMaxLength(64);
+            builder.Property(x => x.ExternalOrgId).HasMaxLength(128);
         });
 
         modelBuilder.Entity<GlobalUser>(builder =>

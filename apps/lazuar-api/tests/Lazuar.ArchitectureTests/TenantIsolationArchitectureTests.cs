@@ -101,6 +101,7 @@ public class TenantIsolationArchitectureTests
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/public/register")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/workspaces")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/me/entitlements")), Is.True);
+        Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/integrations/workspaces/provision")), Is.True);
 
         // Tenant-scoped One routes are not exempt from require-tenant when not listed above.
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/storage/presigned-url")), Is.False);
