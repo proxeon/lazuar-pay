@@ -78,6 +78,18 @@ public class SystemGenesisBootstrapperJob : IHostedService
                             "UPDATE one.\"GlobalUsers\" SET \"IsSystemAdmin\" = true WHERE \"Id\" = {0}", user.Id);
                     }
                 }
+
+                // Ensure superadmin can open ops-page (memberships drive /me/entitlements for non-global paths).
+                await db.SaveChangesAsync(cancellationToken);
+                user = await db.GlobalUsers.FirstAsync(u => u.Email == normalizedEmail, cancellationToken);
+                var systemOrgId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+                var hasMembership = await db.TenantMemberships.IgnoreQueryFilters()
+                    .AnyAsync(m => m.GlobalUserId == user.Id && m.OrganizationId == systemOrgId, cancellationToken);
+                if (!hasMembership)
+                {
+                    db.TenantMemberships.Add(new TenantMembership(user.Id, systemOrgId, "SUPER_ADMIN"));
+                    _logger.LogInformation("Granted system workspace membership to Superadmin: {Email}", normalizedEmail);
+                }
             }
 
             await db.SaveChangesAsync(cancellationToken);

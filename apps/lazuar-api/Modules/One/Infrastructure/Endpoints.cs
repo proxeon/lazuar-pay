@@ -259,6 +259,24 @@ public static class Endpoints
         group.MapGet("/me/entitlements", async Task<Results<Ok<ICollection<EntitlementDto>>, UnauthorizedHttpResult>> (IExecutionContextAccessor ctx, OneDbContext db) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+
+            // Platform superadmins can operate any active workspace (ops-page requires ≥1 entitlement).
+            if (ctx.IsSystemAdmin)
+            {
+                var allWorkspaces = await db.Organizations.IgnoreQueryFilters()
+                    .Where(o => o.IsActive)
+                    .OrderBy(o => o.Name)
+                    .Select(o => new EntitlementDto
+                    {
+                        Workspace_id = o.Id.ToString(),
+                        Workspace_name = o.Name,
+                        Workspace_slug = o.Slug,
+                        Role = "SUPER_ADMIN"
+                    })
+                    .ToListAsync();
+                return TypedResults.Ok((ICollection<EntitlementDto>)allWorkspaces);
+            }
+
             var entitlements = await db.TenantMemberships.IgnoreQueryFilters().Where(m => m.GlobalUserId == ctx.UserId)
                 .Join(db.Organizations.IgnoreQueryFilters(), m => m.OrganizationId, o => o.Id, (m, o) => new EntitlementDto { Workspace_id = o.Id.ToString(), Workspace_name = o.Name, Workspace_slug = o.Slug, Role = m.Role }).ToListAsync();
             return TypedResults.Ok((ICollection<EntitlementDto>)entitlements);
