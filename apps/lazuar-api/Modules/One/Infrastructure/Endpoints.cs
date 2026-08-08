@@ -260,7 +260,7 @@ public static class Endpoints
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
 
-            // Platform superadmins can operate any active workspace (ops-page requires ≥1 entitlement).
+            // Platform superadmins can operate any active workspace (lazuar-ops requires ≥1 entitlement).
             if (ctx.IsSystemAdmin)
             {
                 var allWorkspaces = await db.Organizations.IgnoreQueryFilters()

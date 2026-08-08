@@ -78,47 +78,47 @@
 
 ### 1.1 Directory moves (preserve history)
 
-- [ ] `git mv apps/developers-page apps/lazuar-developers`
-- [ ] `git mv apps/ops-page apps/lazuar-ops`
-- [ ] `git mv apps/portal-page apps/lazuar-portal`
-- [ ] `git mv apps/superadmin-page apps/lazuar-admin`
-- [ ] Verify: `ls apps/` shows `lazuar-api`, `lazuar-docs`, `lazuar-developers`, `lazuar-ops`, `lazuar-portal`, `lazuar-admin` (and no `*-page` frontends)
+- [x] `git mv apps/developers-page apps/lazuar-developers`
+- [x] `git mv apps/ops-page apps/lazuar-ops`
+- [x] `git mv apps/portal-page apps/lazuar-portal`
+- [x] `git mv apps/superadmin-page apps/lazuar-admin`
+- [x] Verify: `ls apps/` shows `lazuar-api`, `lazuar-docs`, `lazuar-developers`, `lazuar-ops`, `lazuar-portal`, `lazuar-admin` (and no `*-page` frontends)
 
 ### 1.2 Package `"name"` fields
 
 Update each app’s `package.json` `"name"` to match the folder:
 
-- [ ] `apps/lazuar-developers/package.json` → `"name": "lazuar-developers"`
-- [ ] `apps/lazuar-ops/package.json` → `"name": "lazuar-ops"`
-- [ ] `apps/lazuar-portal/package.json` → `"name": "lazuar-portal"`
-- [ ] `apps/lazuar-admin/package.json` → `"name": "lazuar-admin"`
+- [x] `apps/lazuar-developers/package.json` → `"name": "lazuar-developers"`
+- [x] `apps/lazuar-ops/package.json` → `"name": "lazuar-ops"`
+- [x] `apps/lazuar-portal/package.json` → `"name": "lazuar-portal"`
+- [x] `apps/lazuar-admin/package.json` → `"name": "lazuar-admin"`
 
 ### 1.3 Do **not** change (unless a real filter breaks)
 
-- [ ] Leave `pnpm-workspace.yaml` as `apps/*` / `packages/*` (no edit expected)
-- [ ] Leave `turbo.json` task graph generic (no app names expected)
-- [ ] Leave root `package.json` scripts that only filter `lazuar-docs` (no edit expected for these four apps)
-- [ ] Leave workspace deps on `@repo/api-types-ts` / `@repo/api-spec` as-is (package **names** of shared libs unchanged)
+- [x] Leave `pnpm-workspace.yaml` as `apps/*` / `packages/*` (no edit expected)
+- [x] Leave `turbo.json` task graph generic (no app names expected)
+- [x] Leave root `package.json` scripts that only filter `lazuar-docs` (no edit expected for these four apps)
+- [x] Leave workspace deps on `@repo/api-types-ts` / `@repo/api-spec` as-is (package **names** of shared libs unchanged)
 
 ### 1.4 Path-header / source comments (optional in Phase 1, cheap)
 
 Some files under ops/portal/admin only mention old paths in banner comments. Prefer updating when you touch the file, or do a careful replace of the full old path string only:
 
-- [ ] Optional: replace `apps/ops-page` → `apps/lazuar-ops` (and siblings) in comment headers only
-- [ ] Do **not** rename runtime keys, cookies, or UI strings here
+- [x] Optional: replace `apps/ops-page` → `apps/lazuar-ops` (and siblings) in comment headers only
+- [x] Do **not** rename runtime keys, cookies, or UI strings here
 
 ### 1.5 Backend comments (optional)
 
 Known comment-only mentions (not runtime):
 
-- [ ] Optional: `apps/lazuar-api/Modules/One/Infrastructure/Endpoints.cs` if it says “ops-page”
-- [ ] Optional: `apps/lazuar-api/Modules/One/Infrastructure/Workers/SystemGenesisBootstrapperJob.cs` if it says “ops-page”
+- [x] Optional: `apps/lazuar-api/Modules/One/Infrastructure/Endpoints.cs` if it says “ops-page”
+- [x] Optional: `apps/lazuar-api/Modules/One/Infrastructure/Workers/SystemGenesisBootstrapperJob.cs` if it says “ops-page”
 
 ### 1.6 Phase 1 exit criteria
 
-- [ ] Four new directories exist; old `*-page` frontend dirs gone
-- [ ] Four package names updated
-- [ ] No broken `workspace:` reverse deps (apps are leaves — should be fine)
+- [x] Four new directories exist; old `*-page` frontend dirs gone
+- [x] Four package names updated
+- [x] No broken `workspace:` reverse deps (apps are leaves — should be fine)
 
 ---
 
