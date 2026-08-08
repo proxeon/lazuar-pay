@@ -28,6 +28,16 @@ tasks:
       # - task: api:db:migrate
       - pnpm --filter lazuar-api dev
 
+  docs:
+    desc: VitePress Hub integrator guides (apps/lazuar-docs) at http://localhost:5180
+    cmds:
+      - pnpm docs:dev
+
+  docs:build:
+    desc: Build static Hub docs site
+    cmds:
+      - pnpm docs:build
+
   fe:
     desc: Full dev stack (Docker infra + mprocs for frontends and tunnels)
     cmds:
