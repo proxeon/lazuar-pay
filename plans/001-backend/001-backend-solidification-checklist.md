@@ -290,7 +290,7 @@ Mark when decided; note outcome in PR/ADR.
 
 ## B.3 Ops Developer console — API keys
 
-**Apps:** `ops-page`
+**Apps:** `lazuar-ops`
 
 - [x] Nav: Developer → API Keys (alongside Webhooks / Logs)
 - [x] Create test/live key, one-time reveal, copy, revoke
@@ -348,7 +348,7 @@ Mark when decided; note outcome in PR/ADR.
 
 ## B.5 Ops Developer console — webhooks UX
 
-**Apps:** `ops-page`
+**Apps:** `lazuar-ops`
 
 - [x] Multi-endpoint UI, event multi-select, secret rotate, test ping
   - *Done:* multi-endpoint create/list/edit (from B.4) + `enabled_events` multi-select on create/edit (commerce catalog: `subscription.*`, `order.completed`, `payment_link.paid`). Empty selection = all events.
@@ -363,7 +363,7 @@ Mark when decided; note outcome in PR/ADR.
 
 ## B.6 Developers-page as integration hub
 
-**Apps:** `developers-page`, `packages/api-spec`
+**Apps:** `lazuar-developers`, `packages/api-spec`
 
 - [x] Auth guide page: keys vs JWT; never embed user JWT in ERP
 - [x] Re-curate public products: LHDN primary; Commerce public when ready; demote/gate Ops
@@ -429,7 +429,7 @@ Mark when decided; note outcome in PR/ADR.
 - [x] Stolen/mis-scoped key cannot mint more keys or change payment config
   - Policy: `OrgAdmin` denies `API_CLIENT` (`ApiKeyAuthenticationTests`); route metadata requires OrgAdmin on LHDN api-keys/config and commerce payment-config.
 - [x] Developers hub explains auth + one happy path without reading ADRs
-  - Residual (content review): `/auth` + quickstart exist in `apps/developers-page` (keys vs JWT, Ops path, curl happy path). Spot-check for copy drift only.
+  - Residual (content review): `/auth` + quickstart exist in `apps/lazuar-developers` (keys vs JWT, Ops path, curl happy path). Spot-check for copy drift only.
 
 **Phase B status:** machine integration path solid in code + ModuleTests (credentials, scopes, outbound webhooks, docs hub). Manual Ops→LHDN sandbox→webhook e2e remains residual honesty note only — not a blocker for Phase C sequencing.
 
@@ -528,7 +528,7 @@ Mark when decided; note outcome in PR/ADR.
 - Existing plaintext Resend keys are accepted until re-saved (legacy decrypt fallback)
 - Digital Product Delivery uses portal URL as `fulfillment_url` (no product asset URL field yet)
 - Consent is not collected on public checkout UI (defaults false) — no marketing opt-in checkbox yet
-- `MessageDeliveryLog` admin UI not wired in ops-page (API only)
+- `MessageDeliveryLog` admin UI not wired in lazuar-ops (API only)
 - Broadcast audience still ignores plan/status filters beyond marketing consent
 - No migration to re-encrypt existing TenantEmailConfiguration rows in bulk
 
@@ -727,8 +727,8 @@ These appear in multiple phases; owners can track once.
 | API credentials | 0, B | One + Host + Lhdn |
 | Outbound webhooks | B, C | One + Commerce |
 | Billing credits/ledger | A, C | Billing |
-| TypeSpec / gen / docs | 0, B, C | api-spec + developers-page |
-| Ops / portal UI | B, C | ops-page + portal-page |
+| TypeSpec / gen / docs | 0, B, C | api-spec + lazuar-developers |
+| Ops / portal UI | B, C | lazuar-ops + lazuar-portal |
 | Tests / CI | 0, A, B, C | all |
 | WhatsApp | A (honesty), D (product) | Messaging + Communications |
 

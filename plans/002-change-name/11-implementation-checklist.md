@@ -247,37 +247,37 @@ Services today: `ops-page`, `portal-page`, `superadmin-page` (developers often *
 
 ### 4.1 Lockfile regeneration
 
-- [ ] From repo root: remove stale app `node_modules` if needed, then:
+- [x] From repo root: remove stale app `node_modules` if needed, then:
 
   ```bash
   pnpm install
   ```
 
-- [ ] Confirm `pnpm-lock.yaml` importers use `apps/lazuar-ops:` (etc.), not `apps/ops-page:`
-- [ ] Commit lockfile with the rename (do **not** hand-edit importer keys)
+- [x] Confirm `pnpm-lock.yaml` importers use `apps/lazuar-ops:` (etc.), not `apps/ops-page:`
+- [x] Commit lockfile with the rename (do **not** hand-edit importer keys)
 
 ### 4.2 Living documentation (must update)
 
 **Root**
 
-- [ ] `README.md` — architecture tree, port table, product bullets that say `ops-page` / `portal-page` / `superadmin-page` / developers hub
-- [ ] Align domain examples if README still says `ops.lazuar.com` vs current `hub.lazuar.com` paths (only if you’re already editing those lines; don’t expand into full docs rewrite)
+- [x] `README.md` — architecture tree, port table, product bullets that say `ops-page` / `portal-page` / `superadmin-page` / developers hub
+- [x] Align domain examples if README still says `ops.lazuar.com` vs current `hub.lazuar.com` paths (only if you’re already editing those lines; don’t expand into full docs rewrite)
 
 **Docs site / contracts**
 
-- [ ] `apps/lazuar-docs/docs/reference/openapi.md` — any `pnpm --filter developers-page` → `lazuar-developers`
-- [ ] `apps/lazuar-docs/docs/index.md` — path/name mentions if present
-- [ ] `apps/lazuar-docs/docs/guide/how-to-maintain.md` — path/name mentions if present
-- [ ] `apps/lazuar-docs/README.md` — path/name mentions if present
-- [ ] `docs/contracts/openapi-vs-minimal-api.md` — monorepo path references
+- [x] `apps/lazuar-docs/docs/reference/openapi.md` — any `pnpm --filter developers-page` → `lazuar-developers`
+- [x] `apps/lazuar-docs/docs/index.md` — path/name mentions if present
+- [x] `apps/lazuar-docs/docs/guide/how-to-maintain.md` — path/name mentions if present
+- [x] `apps/lazuar-docs/README.md` — path/name mentions if present
+- [x] `docs/contracts/openapi-vs-minimal-api.md` — monorepo path references
 
 **Plans that people still execute**
 
-- [ ] `plans/001-backend/001-backend-solidification-checklist.md` — if it still says `*-page` paths
+- [x] `plans/001-backend/001-backend-solidification-checklist.md` — if it still says `*-page` paths
 
 ### 4.3 Glossary blurb (short, living)
 
-- [ ] In root README or `docs/` intro, one sentence:
+- [x] In root README or `docs/` intro, one sentence:
   - monorepo apps: `lazuar-ops` / `lazuar-portal` / `lazuar-admin` / `lazuar-developers`
   - TypeSpec SSoT remains `packages/api-spec`
   - GHCR remains `lazuar-hub-*`
@@ -285,9 +285,9 @@ Services today: `ops-page`, `portal-page`, `superadmin-page` (developers often *
 
 ### 4.4 Phase 4 exit criteria
 
-- [ ] `pnpm install` clean
-- [ ] New contributor can find apps by new names in README
-- [ ] No living command still uses `--filter developers-page` (etc.)
+- [x] `pnpm install` clean
+- [x] New contributor can find apps by new names in README
+- [x] No living command still uses `--filter developers-page` (etc.)
 
 ---
 

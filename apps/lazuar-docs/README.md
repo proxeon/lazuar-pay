@@ -41,7 +41,7 @@ docs/
 |----------|----------|
 | **This app** | Product + integrator guides (refine → publish) |
 | `docs/*.md` (repo root) | Engineering ADRs, gap analysis, quickstarts |
-| `apps/developers-page` | Live Scalar OpenAPI |
+| `apps/lazuar-developers` | Live Scalar OpenAPI |
 | Aura `apps/aura-docs` | Salon **product how-to** (not Hub integrator) |
 
 ## Status
