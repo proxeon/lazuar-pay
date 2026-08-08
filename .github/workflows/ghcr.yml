@@ -65,23 +65,23 @@ jobs:
             dockerfile: apps/lazuar-api/Dockerfile
             build_args: ""
           - name: lazuar-hub-portal
-            dockerfile: apps/portal-page/Dockerfile
+            dockerfile: apps/lazuar-portal/Dockerfile
             build_args: |
               NEXT_PUBLIC_API_URL=https://hub.lazuar.com/api/v1
               NEXT_BASE_PATH=/portal
           - name: lazuar-hub-ops
-            dockerfile: apps/ops-page/Dockerfile
+            dockerfile: apps/lazuar-ops/Dockerfile
             build_args: |
               VITE_API_URL=https://hub.lazuar.com/api/v1
               VITE_PORTAL_URL=https://hub.lazuar.com/portal
               VITE_BASE_PATH=/
           - name: lazuar-hub-superadmin
-            dockerfile: apps/superadmin-page/Dockerfile
+            dockerfile: apps/lazuar-admin/Dockerfile
             build_args: |
               VITE_API_URL=https://hub.lazuar.com/api/v1
               VITE_BASE_PATH=/admin/
           - name: lazuar-hub-developers
-            dockerfile: apps/developers-page/Dockerfile
+            dockerfile: apps/lazuar-developers/Dockerfile
             build_args: |
               NEXT_BASE_PATH=/docs
     steps:

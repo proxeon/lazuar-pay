@@ -137,72 +137,72 @@ For **each** of:
 
 Update every occurrence of the old monorepo path / filter:
 
-- [ ] `COPY apps/<old>/package.json …` → new path
-- [ ] `pnpm install --filter ./apps/<old>…` → new path (or package name if used)
-- [ ] `COPY apps/<old> apps/<old>` → new path both sides
-- [ ] `pnpm --filter ./apps/<old> build` → new path
-- [ ] Runtime `COPY … /app/apps/<old>/…` static/public paths → new path
-- [ ] **Next only (developers + portal):**  
-  - [ ] `CMD ["node", "apps/<old>/server.js"]` → `apps/<new>/server.js`  
-  - [ ] Standalone static copy destinations under `./apps/<new>/.next/static` and `./apps/<new>/public`
-- [ ] **Do not** change HEALTHCHECK URL paths (`/docs`, `/portal`, etc.)
-- [ ] **Do not** change image titles that say `lazuar-hub-*` unless they literally embed `*-page` paths
+- [x] `COPY apps/<old>/package.json …` → new path
+- [x] `pnpm install --filter ./apps/<old>…` → new path (or package name if used)
+- [x] `COPY apps/<old> apps/<old>` → new path both sides
+- [x] `pnpm --filter ./apps/<old> build` → new path
+- [x] Runtime `COPY … /app/apps/<old>/…` static/public paths → new path
+- [x] **Next only (developers + portal):**  
+  - [x] `CMD ["node", "apps/<old>/server.js"]` → `apps/<new>/server.js`  
+  - [x] Standalone static copy destinations under `./apps/<new>/.next/static` and `./apps/<new>/public`
+- [x] **Do not** change HEALTHCHECK URL paths (`/docs`, `/portal`, etc.)
+- [x] **Do not** change image titles that say `lazuar-hub-*` unless they literally embed `*-page` paths
 
 ### 2.2 `docker-bake.hcl`
 
-- [ ] Update comment block that lists app roles if it still says folder-style names (optional clarity)
-- [ ] `group "default"` targets: rename bake targets from `*-page` to new basenames **or** keep target aliases — prefer renaming targets to match folders for consistency:
-  - [ ] `portal-page` → `lazuar-portal` (or `portal` — pick one scheme; recommend **match folder basename**)
-  - [ ] `ops-page` → `lazuar-ops`
-  - [ ] `superadmin-page` → `lazuar-admin`
-  - [ ] `developers-page` → `lazuar-developers`
-- [ ] Each target: `dockerfile = "apps/<new>/Dockerfile"`
-- [ ] Keep `tags` as `${REGISTRY}/lazuar-hub-ops:…` etc. (**no image rename**)
-- [ ] Keep build `args` / base paths (`NEXT_BASE_PATH`, `VITE_BASE_PATH`, …) unchanged
-- [ ] Keep `api` target unchanged
+- [x] Update comment block that lists app roles if it still says folder-style names (optional clarity)
+- [x] `group "default"` targets: rename bake targets from `*-page` to new basenames **or** keep target aliases — prefer renaming targets to match folders for consistency:
+  - [x] `portal-page` → `lazuar-portal` (or `portal` — pick one scheme; recommend **match folder basename**)
+  - [x] `ops-page` → `lazuar-ops`
+  - [x] `superadmin-page` → `lazuar-admin`
+  - [x] `developers-page` → `lazuar-developers`
+- [x] Each target: `dockerfile = "apps/<new>/Dockerfile"`
+- [x] Keep `tags` as `${REGISTRY}/lazuar-hub-ops:…` etc. (**no image rename**)
+- [x] Keep build `args` / base paths (`NEXT_BASE_PATH`, `VITE_BASE_PATH`, …) unchanged
+- [x] Keep `api` target unchanged
 
 ### 2.3 `docker-compose.yml` (local build)
 
 Services today: `ops-page`, `portal-page`, `superadmin-page` (developers often **missing**).
 
-- [ ] Rename service keys to new basenames (e.g. `lazuar-ops`) **or** short names — recommend **align with bake targets / folder basenames** for local DX
-- [ ] Update `dockerfile: apps/<new>/Dockerfile` for each
-- [ ] Keep `image: ghcr.io/proxeon/lazuar-hub-*:local` unchanged
-- [ ] Keep `container_name: lazuar-ops` / `lazuar-portal` / `lazuar-superadmin` unless you have a reason (optional; not required)
-- [ ] Keep host ports `3003`/`3004`/`3005` and profiles
-- [ ] **Optional hygiene (same PR or follow-up):** add `lazuar-developers` service mirroring prod (port 3002, image `lazuar-hub-developers:local`, dockerfile new path) so local compose matches bake/prod
+- [x] Rename service keys to new basenames (e.g. `lazuar-ops`) **or** short names — recommend **align with bake targets / folder basenames** for local DX
+- [x] Update `dockerfile: apps/<new>/Dockerfile` for each
+- [x] Keep `image: ghcr.io/proxeon/lazuar-hub-*:local` unchanged
+- [x] Keep `container_name: lazuar-ops` / `lazuar-portal` / `lazuar-superadmin` unless you have a reason (optional; not required)
+- [x] Keep host ports `3003`/`3004`/`3005` and profiles
+- [x] **Optional hygiene (same PR or follow-up):** add `lazuar-developers` service mirroring prod (port 3002, image `lazuar-hub-developers:local`, dockerfile new path) so local compose matches bake/prod
 
 ### 2.4 `docker-compose.ghcr.yml`
 
-- [ ] Same service key + image path discipline as local compose
-- [ ] Keep pulling `ghcr.io/proxeon/lazuar-hub-*`
-- [ ] Note: developers may also be missing here — optional add as above
+- [x] Same service key + image path discipline as local compose
+- [x] Keep pulling `ghcr.io/proxeon/lazuar-hub-*`
+- [x] Note: developers may also be missing here — optional add as above
 
 ### 2.5 `.github/workflows/ghcr.yml`
 
-- [ ] Matrix entries: update **only** `dockerfile:` paths:
-  - [ ] `apps/portal-page/Dockerfile` → `apps/lazuar-portal/Dockerfile`
-  - [ ] `apps/ops-page/Dockerfile` → `apps/lazuar-ops/Dockerfile`
-  - [ ] `apps/superadmin-page/Dockerfile` → `apps/lazuar-admin/Dockerfile`
-  - [ ] `apps/developers-page/Dockerfile` → `apps/lazuar-developers/Dockerfile`
-- [ ] Keep matrix `name:` values as `lazuar-hub-portal`, `lazuar-hub-ops`, `lazuar-hub-superadmin`, `lazuar-hub-developers`
-- [ ] Keep build-args (API URLs, base paths) unchanged
-- [ ] Keep path filters as broad `apps/**` (no change required)
-- [ ] Keep cache scopes on image names (no change required)
-- [ ] Confirm `ci.yml` needs **no** frontend path edits (contracts + dotnet only)
+- [x] Matrix entries: update **only** `dockerfile:` paths:
+  - [x] `apps/portal-page/Dockerfile` → `apps/lazuar-portal/Dockerfile`
+  - [x] `apps/ops-page/Dockerfile` → `apps/lazuar-ops/Dockerfile`
+  - [x] `apps/superadmin-page/Dockerfile` → `apps/lazuar-admin/Dockerfile`
+  - [x] `apps/developers-page/Dockerfile` → `apps/lazuar-developers/Dockerfile`
+- [x] Keep matrix `name:` values as `lazuar-hub-portal`, `lazuar-hub-ops`, `lazuar-hub-superadmin`, `lazuar-hub-developers`
+- [x] Keep build-args (API URLs, base paths) unchanged
+- [x] Keep path filters as broad `apps/**` (no change required)
+- [x] Keep cache scopes on image names (no change required)
+- [x] Confirm `ci.yml` needs **no** frontend path edits (contracts + dotnet only)
 
 ### 2.6 Explicitly leave production deploy alone
 
-- [ ] Confirm no edits to `deploy/prod/docker-compose.yml`
-- [ ] Confirm no edits to `deploy/prod/Caddyfile`
-- [ ] Confirm no edits to `deploy/prod/env.example` for app folder names
-- [ ] Confirm `scripts/remote-deploy.sh` still gates `hub-api`, `hub-ops`, `hub-portal`, `hub-superadmin`, `hub-developers`, `hub-caddy`
+- [x] Confirm no edits to `deploy/prod/docker-compose.yml`
+- [x] Confirm no edits to `deploy/prod/Caddyfile`
+- [x] Confirm no edits to `deploy/prod/env.example` for app folder names
+- [x] Confirm `scripts/remote-deploy.sh` still gates `hub-api`, `hub-ops`, `hub-portal`, `hub-superadmin`, `hub-developers`, `hub-caddy`
 
 ### 2.7 Phase 2 exit criteria
 
-- [ ] `rg 'apps/(developers|ops|portal|superadmin)-page'` returns **zero** hits in Docker/CI/compose/bake (excluding historical docs and this plans folder if you keep old names in analyses)
-- [ ] Every GHCR matrix dockerfile path resolves on disk
-- [ ] Next `CMD` paths match new folders
+- [x] `rg 'apps/(developers|ops|portal|superadmin)-page'` returns **zero** hits in Docker/CI/compose/bake (excluding historical docs and this plans folder if you keep old names in analyses)
+- [x] Every GHCR matrix dockerfile path resolves on disk
+- [x] Next `CMD` paths match new folders
 
 ---
 

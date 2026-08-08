@@ -46,7 +46,7 @@ variable "PLATFORMS" {
 }
 
 group "default" {
-  targets = ["api", "portal-page", "ops-page", "superadmin-page", "developers-page"]
+  targets = ["api", "lazuar-portal", "lazuar-ops", "lazuar-admin", "lazuar-developers"]
 }
 
 target "docker-metadata-action" {}
@@ -73,10 +73,10 @@ target "api" {
   }
 }
 
-target "portal-page" {
+target "lazuar-portal" {
   inherits   = ["_common"]
   context    = "."
-  dockerfile = "apps/portal-page/Dockerfile"
+  dockerfile = "apps/lazuar-portal/Dockerfile"
   tags = [
     "${REGISTRY}/lazuar-hub-portal:${TAG}",
     "${REGISTRY}/lazuar-hub-portal:latest",
@@ -90,10 +90,10 @@ target "portal-page" {
   }
 }
 
-target "ops-page" {
+target "lazuar-ops" {
   inherits   = ["_common"]
   context    = "."
-  dockerfile = "apps/ops-page/Dockerfile"
+  dockerfile = "apps/lazuar-ops/Dockerfile"
   tags = [
     "${REGISTRY}/lazuar-hub-ops:${TAG}",
     "${REGISTRY}/lazuar-hub-ops:latest",
@@ -108,10 +108,10 @@ target "ops-page" {
   }
 }
 
-target "superadmin-page" {
+target "lazuar-admin" {
   inherits   = ["_common"]
   context    = "."
-  dockerfile = "apps/superadmin-page/Dockerfile"
+  dockerfile = "apps/lazuar-admin/Dockerfile"
   tags = [
     "${REGISTRY}/lazuar-hub-superadmin:${TAG}",
     "${REGISTRY}/lazuar-hub-superadmin:latest",
@@ -125,10 +125,10 @@ target "superadmin-page" {
   }
 }
 
-target "developers-page" {
+target "lazuar-developers" {
   inherits   = ["_common"]
   context    = "."
-  dockerfile = "apps/developers-page/Dockerfile"
+  dockerfile = "apps/lazuar-developers/Dockerfile"
   tags = [
     "${REGISTRY}/lazuar-hub-developers:${TAG}",
     "${REGISTRY}/lazuar-hub-developers:latest",
