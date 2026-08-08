@@ -212,31 +212,31 @@ Services today: `ops-page`, `portal-page`, `superadmin-page` (developers often *
 
 ### 3.1 `mprocs-dev.yaml` (**P0 for local FE**)
 
-- [ ] Process keys: `developers-page` → `lazuar-developers` (etc.)
-- [ ] Shell cwd: `cd apps/<new> && pnpm dev` for all four
-- [ ] Keep `autostart` flags as today
-- [ ] Leave ngrok / tunnel procs alone unless they hardcode old FE paths (today they call Taskfile)
+- [x] Process keys: `developers-page` → `lazuar-developers` (etc.)
+- [x] Shell cwd: `cd apps/<new> && pnpm dev` for all four
+- [x] Keep `autostart` flags as today
+- [x] Leave ngrok / tunnel procs alone unless they hardcode old FE paths (today they call Taskfile)
 
 ### 3.2 `Taskfile.yml`
 
-- [ ] Grep for `*-page` and old folder paths — update any remaining references
-- [ ] Confirm `task fe` still only launches mprocs config (path to yaml unchanged)
-- [ ] Confirm Docker-related tasks still call bake/compose correctly after Phase 2 target renames (if Taskfile passes bake target names, update those strings)
-- [ ] **Do not** “fix” `tunnel:fe` legacy community-page ports unless you intentionally expand scope (known stale; optional follow-up)
+- [x] Grep for `*-page` and old folder paths — update any remaining references
+- [x] Confirm `task fe` still only launches mprocs config (path to yaml unchanged)
+- [x] Confirm Docker-related tasks still call bake/compose correctly after Phase 2 target renames (if Taskfile passes bake target names, update those strings)
+- [x] **Do not** “fix” `tunnel:fe` legacy community-page ports unless you intentionally expand scope (known stale; optional follow-up)
 
 ### 3.3 Root / package filters
 
-- [ ] Search for `pnpm --filter developers-page` (and siblings); update to new package names
-- [ ] Search for turbo `--filter=ops-page` style usage in scripts/docs; update if any
+- [x] Search for `pnpm --filter developers-page` (and siblings); update to new package names
+- [x] Search for turbo `--filter=ops-page` style usage in scripts/docs; update if any
 
 ### 3.4 App-local README / AGENTS / CLAUDE
 
-- [ ] `apps/lazuar-developers/README.md` (and siblings): folder/package name strings
-- [ ] `AGENTS.md` / `CLAUDE.md` under developers: only if they mention the folder path (generic Next rules can move as-is with `git mv`)
+- [x] `apps/lazuar-developers/README.md` (and siblings): folder/package name strings
+- [x] `AGENTS.md` / `CLAUDE.md` under developers: only if they mention the folder path (generic Next rules can move as-is with `git mv`)
 
 ### 3.5 Phase 3 exit criteria
 
-- [ ] `mprocs-dev.yaml` has no `*-page` paths
+- [x] `mprocs-dev.yaml` has no `*-page` paths
 - [ ] Living “how to run FE” docs use new package names
 
 ---
