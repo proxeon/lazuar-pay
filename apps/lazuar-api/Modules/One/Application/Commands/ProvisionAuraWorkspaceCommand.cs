@@ -19,15 +19,29 @@ public record ProvisionAuraWorkspaceResult(
     string? Prefix,
     string? Hint,
     string? PlainKey,
-    IReadOnlyList<string> Scopes);
+    IReadOnlyList<string> Scopes,
+    // Webhook (null id when never registered / not requested and none exist)
+    Guid? WebhookEndpointId,
+    string? WebhookUrl,
+    bool? WebhookIsActive,
+    IReadOnlyList<string> WebhookEnabledEvents,
+    string? WebhookSecretKey,
+    string? WebhookSecretHint,
+    // Owner
+    bool OwnerAttached,
+    string OwnerStatus,
+    string? OwnerRole);
 
 public record ProvisionAuraWorkspaceCommand(
     string AuraOrgId,
     string DisplayName,
     string? Slug,
     string? OwnerEmail,
+    string? OwnerRole,
     bool IsTestMode,
     string? KeyName,
+    string? WebhookUrl,
+    IReadOnlyList<string>? WebhookEnabledEvents,
     Guid? ActorUserId) : ICommand<ProvisionAuraWorkspaceResult>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
@@ -39,6 +53,23 @@ public class ProvisionAuraWorkspaceCommandHandler
     public const string ExternalProduct = "aura";
     public const string PaymentsAppId = "PAYMENTS";
     public const string DefaultKeyName = "Aura bootstrap";
+    public const string OwnerStatusAttached = "attached";
+    public const string OwnerStatusUserNotFound = "user_not_found";
+    public const string OwnerStatusNotRequested = "not_requested";
+    public const string DefaultOwnerRole = "ADMIN";
+
+    /// <summary>Default Connect event filter when provision creates a webhook without explicit events.</summary>
+    public static readonly IReadOnlyList<string> DefaultConnectWebhookEvents =
+    [
+        "payment.completed",
+        "payment.failed"
+    ];
+
+    private static readonly HashSet<string> AllowedOwnerRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ADMIN",
+        "SUPER_ADMIN"
+    };
 
     private readonly IOneRepository _repository;
     private readonly ITokenGeneratorService _tokenGenerator;
@@ -65,10 +96,21 @@ public class ProvisionAuraWorkspaceCommandHandler
             throw new InvalidOperationException("display_name is required.");
         }
 
+        var ownerRole = NormalizeOwnerRole(request.OwnerRole);
+        var webhookUrl = NormalizeOptionalWebhookUrl(request.WebhookUrl);
+        var webhookEvents = ResolveWebhookEnabledEvents(request.WebhookEnabledEvents);
+
         var existing = await _repository.GetByExternalRefAsync(ExternalProduct, auraOrgId, ct);
         if (existing is not null)
         {
-            return await BuildExistingResultAsync(existing, auraOrgId, ct);
+            return await EnsureAndBuildExistingAsync(
+                existing,
+                auraOrgId,
+                request.OwnerEmail,
+                ownerRole,
+                webhookUrl,
+                webhookEvents,
+                ct);
         }
 
         var slug = await ResolveSlugAsync(request.Slug, auraOrgId, ct);
@@ -80,16 +122,11 @@ public class ProvisionAuraWorkspaceCommandHandler
         organization.BindExternalRef(ExternalProduct, auraOrgId);
         _repository.AddOrganization(organization);
 
-        // Optional: attach existing GlobalUser as ADMIN (do not create users).
-        if (!string.IsNullOrWhiteSpace(request.OwnerEmail))
-        {
-            var owner = await _repository.GetUserByEmailAsync(request.OwnerEmail, ct);
-            if (owner is not null)
-            {
-                _repository.AddTenantMembership(
-                    new TenantMembership(owner.Id, organization.Id, "ADMIN"));
-            }
-        }
+        var (ownerAttached, ownerStatus, attachedRole) = await TryAttachOwnerAsync(
+            organization.Id,
+            request.OwnerEmail,
+            ownerRole,
+            ct);
 
         var entitlement = new TenantAppEntitlement(organization.Id, PaymentsAppId);
         _repository.AddEntitlement(entitlement);
@@ -115,20 +152,41 @@ public class ProvisionAuraWorkspaceCommandHandler
             request.ActorUserId);
         _repository.AddApiCredential(credential);
 
+        string? webhookSecret = null;
+        TenantWebhookEndpoint? webhookEndpoint = null;
+        if (webhookUrl is not null)
+        {
+            webhookSecret = MintWebhookSecret();
+            webhookEndpoint = new TenantWebhookEndpoint(
+                organization.Id,
+                webhookUrl,
+                webhookSecret,
+                isActive: true,
+                webhookEvents);
+            _repository.AddWebhookEndpoint(webhookEndpoint);
+        }
+
         try
         {
             await _repository.SaveChangesAsync(ct);
         }
         catch (Exception ex) when (IsUniqueViolation(ex))
         {
-            // Concurrent first provision for same aura_org_id: re-read and return idempotent.
+            // Concurrent first provision for same aura_org_id: re-read and return idempotent + ensure.
             var winner = await _repository.GetByExternalRefAsync(ExternalProduct, auraOrgId, ct);
             if (winner is null)
             {
                 throw;
             }
 
-            return await BuildExistingResultAsync(winner, auraOrgId, ct);
+            return await EnsureAndBuildExistingAsync(
+                winner,
+                auraOrgId,
+                request.OwnerEmail,
+                ownerRole,
+                webhookUrl,
+                webhookEvents,
+                ct);
         }
 
         return new ProvisionAuraWorkspaceResult(
@@ -140,12 +198,27 @@ public class ProvisionAuraWorkspaceCommandHandler
             credential.Prefix,
             credential.KeyHint,
             plainKey,
-            PlatformApiScopes.Split(scopes));
+            PlatformApiScopes.Split(scopes),
+            webhookEndpoint?.Id,
+            webhookEndpoint?.Url,
+            webhookEndpoint?.IsActive,
+            webhookEndpoint is null
+                ? Array.Empty<string>()
+                : webhookEndpoint.EnabledEvents.ToList(),
+            webhookSecret,
+            webhookSecret is null ? null : SecretHint(webhookSecret),
+            ownerAttached,
+            ownerStatus,
+            attachedRole);
     }
 
-    private async Task<ProvisionAuraWorkspaceResult> BuildExistingResultAsync(
+    private async Task<ProvisionAuraWorkspaceResult> EnsureAndBuildExistingAsync(
         Organization organization,
         string auraOrgId,
+        string? ownerEmail,
+        string ownerRole,
+        string? webhookUrl,
+        IReadOnlyList<string> webhookEvents,
         CancellationToken ct)
     {
         var keys = await _repository.ListApiCredentialsAsync(organization.Id, ct);
@@ -155,6 +228,64 @@ public class ProvisionAuraWorkspaceCommandHandler
             .FirstOrDefault(k =>
                 string.Equals(k.Name, DefaultKeyName, StringComparison.OrdinalIgnoreCase)
                 || PlatformApiScopes.HasScope(k.Scopes, PlatformApiScopes.PaymentsCheckoutsWrite));
+
+        // Owner heal: attach if requested and user exists and not already a member.
+        var (ownerAttached, ownerStatus, attachedRole) = await EnsureOwnerAsync(
+            organization.Id,
+            ownerEmail,
+            ownerRole,
+            ct);
+
+        // Webhook: exact URL match → metadata no secret; missing + URL given → create once.
+        Guid? webhookId = null;
+        string? webhookUrlOut = null;
+        bool? webhookActive = null;
+        IReadOnlyList<string> webhookEnabled = Array.Empty<string>();
+        string? webhookSecret = null;
+        string? webhookHint = null;
+        var needsSave = false;
+
+        var endpoints = await _repository.ListWebhookEndpointsAsync(organization.Id, ct);
+
+        if (webhookUrl is not null)
+        {
+            var match = endpoints.FirstOrDefault(e =>
+                string.Equals(e.Url, webhookUrl, StringComparison.Ordinal));
+
+            if (match is not null)
+            {
+                webhookId = match.Id;
+                webhookUrlOut = match.Url;
+                webhookActive = match.IsActive;
+                webhookEnabled = match.EnabledEvents.ToList();
+                webhookHint = string.IsNullOrEmpty(match.SecretKey) ? null : SecretHint(match.SecretKey);
+                // secret once only — never remint
+            }
+            else
+            {
+                webhookSecret = MintWebhookSecret();
+                var created = new TenantWebhookEndpoint(
+                    organization.Id,
+                    webhookUrl,
+                    webhookSecret,
+                    isActive: true,
+                    webhookEvents);
+                _repository.AddWebhookEndpoint(created);
+                needsSave = true;
+
+                webhookId = created.Id;
+                webhookUrlOut = created.Url;
+                webhookActive = created.IsActive;
+                webhookEnabled = created.EnabledEvents.ToList();
+                webhookHint = SecretHint(webhookSecret);
+            }
+        }
+
+        // Owner ensure saves immediately when membership is added. Webhook heal saves here.
+        if (needsSave)
+        {
+            await _repository.SaveChangesAsync(ct);
+        }
 
         return new ProvisionAuraWorkspaceResult(
             organization.Id,
@@ -167,7 +298,116 @@ public class ProvisionAuraWorkspaceCommandHandler
             PlainKey: null,
             bootstrap is null
                 ? PlatformApiScopes.Split(PlatformApiScopes.DefaultAuraIntegratorScopes)
-                : PlatformApiScopes.Split(bootstrap.Scopes));
+                : PlatformApiScopes.Split(bootstrap.Scopes),
+            webhookId,
+            webhookUrlOut,
+            webhookActive,
+            webhookEnabled,
+            webhookSecret,
+            webhookHint,
+            ownerAttached,
+            ownerStatus,
+            attachedRole);
+    }
+
+    private async Task<(bool Attached, string Status, string? Role)> TryAttachOwnerAsync(
+        Guid organizationId,
+        string? ownerEmail,
+        string ownerRole,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(ownerEmail))
+        {
+            return (false, OwnerStatusNotRequested, null);
+        }
+
+        var owner = await _repository.GetUserByEmailAsync(ownerEmail.Trim(), ct);
+        if (owner is null)
+        {
+            return (false, OwnerStatusUserNotFound, null);
+        }
+
+        // Create path: org is new so membership cannot exist yet.
+        _repository.AddTenantMembership(new TenantMembership(owner.Id, organizationId, ownerRole));
+        return (true, OwnerStatusAttached, ownerRole);
+    }
+
+    private async Task<(bool Attached, string Status, string? Role)> EnsureOwnerAsync(
+        Guid organizationId,
+        string? ownerEmail,
+        string ownerRole,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(ownerEmail))
+        {
+            return (false, OwnerStatusNotRequested, null);
+        }
+
+        var owner = await _repository.GetUserByEmailAsync(ownerEmail.Trim(), ct);
+        if (owner is null)
+        {
+            return (false, OwnerStatusUserNotFound, null);
+        }
+
+        var existing = await _repository.GetMembershipAsync(owner.Id, organizationId, ct);
+        if (existing is not null)
+        {
+            return (true, OwnerStatusAttached, existing.Role);
+        }
+
+        _repository.AddTenantMembership(new TenantMembership(owner.Id, organizationId, ownerRole));
+        await _repository.SaveChangesAsync(ct);
+        return (true, OwnerStatusAttached, ownerRole);
+    }
+
+    private string MintWebhookSecret() =>
+        "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
+
+    private static string SecretHint(string secret) =>
+        secret.Length >= 4 ? secret[^4..] : secret;
+
+    public static string NormalizeOwnerRole(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return DefaultOwnerRole;
+        }
+
+        var role = raw.Trim().ToUpperInvariant();
+        if (!AllowedOwnerRoles.Contains(role))
+        {
+            throw new InvalidOperationException(
+                "owner_role must be ADMIN or SUPER_ADMIN (workspace membership, not global system admin).");
+        }
+
+        return role;
+    }
+
+    public static string? NormalizeOptionalWebhookUrl(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        return WebhookUrlValidator.NormalizeAndValidate(raw, allowHttpLoopback: true);
+    }
+
+    /// <summary>
+    /// null/empty → Connect payment defaults; non-empty → caller filter.
+    /// </summary>
+    public static IReadOnlyList<string> ResolveWebhookEnabledEvents(IReadOnlyList<string>? events)
+    {
+        if (events is null || events.Count == 0)
+        {
+            return DefaultConnectWebhookEvents.ToList();
+        }
+
+        return events
+            .Where(e => !string.IsNullOrWhiteSpace(e))
+            .Select(e => e.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public static string NormalizeAuraOrgId(string? raw)

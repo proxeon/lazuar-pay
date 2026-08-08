@@ -4967,11 +4967,67 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("owner_email")]
         public string? Owner_email { get; set; }
 
+        /// <summary>Default ADMIN. Allowed: ADMIN | SUPER_ADMIN (workspace membership, not global).</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("owner_role")]
+        public string? Owner_role { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("is_test_mode")]
         public bool? Is_test_mode { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("key_name")]
         public string? Key_name { get; set; }
+
+        /// <summary>Absolute HTTPS URL of integrator webhook receiver.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("webhook_url")]
+        public string? Webhook_url { get; set; }
+
+        /// <summary>Optional event filter; omit/empty → payment.completed + payment.failed defaults.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("webhook_enabled_events")]
+        public System.Collections.Generic.List<string>? Webhook_enabled_events { get; set; }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProvisionWorkspaceWebhookDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string? Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string? Url { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool? Is_active { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("enabled_events")]
+        public System.Collections.Generic.List<string> Enabled_events { get; set; } = new System.Collections.Generic.List<string>();
+
+        /// <summary>Full signing secret — only when newly created this call.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
+        public string? Secret_key { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("has_secret")]
+        public bool? Has_secret { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret_hint")]
+        public string? Secret_hint { get; set; }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProvisionWorkspaceOwnerDto
+    {
+        /// <summary>true if membership exists after this call (created or pre-existing).</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("attached")]
+        public bool Attached { get; set; }
+
+        /// <summary>attached | user_not_found | not_requested</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("role")]
+        public string? Role { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+        public string? Email { get; set; }
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -4991,6 +5047,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("api_key")]
         public ProvisionWorkspaceApiKeyDto Api_key { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhook")]
+        public ProvisionWorkspaceWebhookDto? Webhook { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("owner")]
+        public ProvisionWorkspaceOwnerDto? Owner { get; set; }
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]

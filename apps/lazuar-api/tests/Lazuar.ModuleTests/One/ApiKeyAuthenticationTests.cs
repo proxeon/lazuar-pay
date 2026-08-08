@@ -104,9 +104,34 @@ public class ApiKeyAuthenticationTests
         Assert.That(context.User.Identity?.IsAuthenticated, Is.True);
         Assert.That(context.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite), Is.True);
         Assert.That(context.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead), Is.True);
+        Assert.That(context.User.HasClaim("scope", PlatformApiScopes.WebhooksEndpointsManage), Is.True);
         Assert.That(context.User.HasClaim("scope", PlatformApiScopes.LhdnDocumentsWrite), Is.False);
         Assert.That(context.User.FindFirstValue("TenantId"), Is.EqualTo(orgId.ToString()));
         Assert.That(context.Items["TenantId"], Is.EqualTo(orgId));
+    }
+
+    [Test]
+    public async Task Webhooks_Manage_Policy_Allows_ApiClient_With_Scope()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.WebhooksEndpointsManage]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationWebhooksEndpointsManage");
+        Assert.That(result.Succeeded, Is.True);
+    }
+
+    [Test]
+    public async Task Webhooks_Manage_Policy_Denies_ApiClient_Without_Scope()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.PaymentsCheckoutsWrite]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationWebhooksEndpointsManage");
+        Assert.That(result.Succeeded, Is.False);
     }
 
     [Test]

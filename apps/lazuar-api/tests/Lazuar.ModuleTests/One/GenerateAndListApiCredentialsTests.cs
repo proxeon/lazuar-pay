@@ -205,11 +205,13 @@ public class GenerateAndListApiCredentialsTests
                 Scopes: requested),
             CancellationToken.None);
 
-        Assert.That(result.Scopes, Is.EqualTo(PlatformApiScopes.DefaultAuraIntegratorScopes));
+        var expected = PlatformApiScopes.NormalizeAndValidate(requested);
+        Assert.That(result.Scopes, Is.EqualTo(expected));
         Assert.That(saved, Is.Not.Null);
-        Assert.That(saved!.Scopes, Is.EqualTo(PlatformApiScopes.DefaultAuraIntegratorScopes));
+        Assert.That(saved!.Scopes, Is.EqualTo(expected));
         Assert.That(PlatformApiScopes.Split(saved.Scopes), Is.EquivalentTo(requested));
         Assert.That(saved.Scopes, Does.Not.Contain("lhdn."));
+        Assert.That(saved.Scopes, Does.Not.Contain(PlatformApiScopes.WebhooksEndpointsManage));
     }
 
     [Test]
@@ -292,7 +294,16 @@ public class GenerateAndListApiCredentialsTests
                 PlatformApiScopes.PaymentsCheckoutsWrite, // dedupe
                 PlatformApiScopes.PaymentsCheckoutsRead
             ]),
+            Is.EqualTo(PlatformApiScopes.PaymentsCheckoutsWrite + " " + PlatformApiScopes.PaymentsCheckoutsRead));
+
+        Assert.That(
+            PlatformApiScopes.NormalizeAndValidate(
+                PlatformApiScopes.Split(PlatformApiScopes.DefaultAuraIntegratorScopes)),
             Is.EqualTo(PlatformApiScopes.DefaultAuraIntegratorScopes));
+
+        Assert.That(
+            PlatformApiScopes.DefaultAuraIntegratorScopes,
+            Does.Contain(PlatformApiScopes.WebhooksEndpointsManage));
 
         Assert.That(
             () => PlatformApiScopes.NormalizeAndValidate(["evil.admin:*"]),

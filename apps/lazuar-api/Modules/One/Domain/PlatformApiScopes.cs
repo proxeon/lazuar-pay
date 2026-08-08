@@ -30,8 +30,10 @@ public static class PlatformApiScopes
 
     /// <summary>
     /// Suggested least-privilege bundle for Aura integrator keys (no LHDN).
+    /// Includes webhook endpoint management so companion API works without remint.
     /// </summary>
-    public const string DefaultAuraIntegratorScopes = PaymentsCheckoutsWrite + " " + PaymentsCheckoutsRead;
+    public const string DefaultAuraIntegratorScopes =
+        PaymentsCheckoutsWrite + " " + PaymentsCheckoutsRead + " " + WebhooksEndpointsManage;
 
     /// <summary>
     /// Closed allowlist of mintable scopes (union of platform product scopes).

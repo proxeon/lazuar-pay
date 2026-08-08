@@ -39,10 +39,11 @@ public class CreateWebhookEndpointCommandHandler : ICommandHandler<CreateWebhook
 
     public async Task<CreateWebhookEndpointResult> Handle(CreateWebhookEndpointCommand request, CancellationToken ct)
     {
+        var url = WebhookUrlValidator.NormalizeAndValidate(request.Url, allowHttpLoopback: true);
         var secret = "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
         var endpoint = new TenantWebhookEndpoint(
             request.OrganizationId,
-            request.Url,
+            url,
             secret,
             request.IsActive,
             request.EnabledEvents);
@@ -89,7 +90,8 @@ public class UpdateWebhookEndpointCommandHandler : ICommandHandler<UpdateWebhook
             throw new InvalidOperationException("Webhook endpoint not found.");
         }
 
-        endpoint.Update(request.Url, request.IsActive, request.EnabledEvents);
+        var url = WebhookUrlValidator.NormalizeAndValidate(request.Url, allowHttpLoopback: true);
+        endpoint.Update(url, request.IsActive, request.EnabledEvents);
         await _repository.SaveChangesAsync(ct);
     }
 }

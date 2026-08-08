@@ -222,8 +222,9 @@ interface OneOperations {
 
   /**
    * Integrator provision: create Hub workspace + Aura-scoped bootstrap key for an aura_org_id.
+   * Optional Connect: webhook_url registers outbound endpoint (secret_key once); owner_email attaches membership.
    * Auth: X-Lazuar-Provision-Key / Bearer provision secret, or SUPER_ADMIN JWT (not OrgAdmin / sk_*).
-   * Idempotent on aura_org_id — plain_key only on first create.
+   * Idempotent on aura_org_id — plain_key and webhook secret_key only on first materialization.
    */
   @post
   @route("/integrations/workspaces/provision")

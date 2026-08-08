@@ -209,7 +209,7 @@ model ApiKeyDto {
   scopes: string[];
 }
 
-// Phase 5 — integrator workspace provision (Aura → Hub)
+// Phase 5 / P2 — integrator workspace provision (Aura → Hub Connect-ready)
 model ProvisionWorkspaceRequestDto {
   /** Aura org id (GUID). Idempotency key for provision. */
   aura_org_id: string;
@@ -217,12 +217,24 @@ model ProvisionWorkspaceRequestDto {
   display_name: string;
   /** Optional slug; if omitted Hub generates aura-{compact}. */
   slug?: string;
-  /** Optional: if user exists, grant ADMIN membership. Does not create users. */
+  /** Optional: if user exists, grant workspace membership. Does not create users. */
   owner_email?: string;
+  /**
+   * Workspace membership role when owner_email matches an existing GlobalUser.
+   * Default ADMIN. Allowed: ADMIN | SUPER_ADMIN (never grants global system admin).
+   */
+  owner_role?: string;
   /** Default true → sk_test_ bootstrap key. */
   is_test_mode?: boolean;
   /** Default "Aura bootstrap". */
   key_name?: string;
+  /** Absolute HTTPS URL of integrator webhook receiver (Connect inline path). */
+  webhook_url?: string;
+  /**
+   * Optional event filter for the provisioned webhook endpoint.
+   * Omit/empty → payment.completed + payment.failed defaults.
+   */
+  webhook_enabled_events?: string[];
 }
 
 model ProvisionWorkspaceApiKeyDto {
@@ -234,10 +246,35 @@ model ProvisionWorkspaceApiKeyDto {
   plain_key?: string;
 }
 
+/** Outbound webhook registered at provision (or healed on re-provision). */
+model ProvisionWorkspaceWebhookDto {
+  id?: string;
+  url?: string;
+  is_active?: boolean;
+  enabled_events: string[];
+  /** Full signing secret — only when newly created this call. */
+  secret_key?: string;
+  has_secret?: boolean;
+  secret_hint?: string;
+}
+
+model ProvisionWorkspaceOwnerDto {
+  /** true if membership exists after this call (created or pre-existing). */
+  attached: boolean;
+  /** attached | user_not_found | not_requested */
+  status: string;
+  /** ADMIN | SUPER_ADMIN when attached */
+  role?: string;
+  email?: string;
+}
+
 model ProvisionWorkspaceResponseDto {
   workspace_id: string;
   slug: string;
   aura_org_id: string;
   created: boolean;
   api_key: ProvisionWorkspaceApiKeyDto;
+  /** Present when a webhook endpoint was registered (create or prior). */
+  webhook?: ProvisionWorkspaceWebhookDto;
+  owner?: ProvisionWorkspaceOwnerDto;
 }

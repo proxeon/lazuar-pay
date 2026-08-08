@@ -283,14 +283,18 @@ public static class Endpoints
         }).RequireAuthorization();
 
         // Multi-endpoint workspace webhooks (GET list without full secret; POST create returns secret once; PUT by id).
+        // Auth: workspace ADMIN/SUPER_ADMIN membership | system admin | API_CLIENT + webhooks.endpoints:manage
+        // IDOR: path workspace id must match membership (human) or API key TenantId (machine).
         group.MapGet("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<ICollection<WebhookEndpointDto>>, UnauthorizedHttpResult>> (
             Guid id,
+            HttpContext http,
             IExecutionContextAccessor ctx,
             IOneQueryService queryService) =>
         {
-            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
-            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
-            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            if (!await CanAccessWorkspaceWebhooksAsync(id, http, ctx, queryService, manageRequired: false))
+            {
+                return TypedResults.Unauthorized();
+            }
 
             var endpoints = await queryService.GetWorkspaceWebhooksAsync(id);
             var dtos = endpoints.Select(e => new WebhookEndpointDto
@@ -310,47 +314,58 @@ public static class Endpoints
         group.MapPost("/workspaces/{id:guid}/webhooks", async Task<Results<Ok<CreateWebhookEndpointResponseDto>, UnauthorizedHttpResult, BadRequest<string>>> (
             Guid id,
             CreateWebhookEndpointRequestDto req,
+            HttpContext http,
             IExecutionContextAccessor ctx,
             IMediator mediator,
             IOneQueryService queryService) =>
         {
-            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
-            var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
-            if (role != "ADMIN" && role != "SUPER_ADMIN" && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            if (!await CanAccessWorkspaceWebhooksAsync(id, http, ctx, queryService, manageRequired: true))
+            {
+                return TypedResults.Unauthorized();
+            }
 
             if (string.IsNullOrWhiteSpace(req.Url))
             {
                 return TypedResults.BadRequest("url is required.");
             }
 
-            var created = await mediator.Send(new CreateWebhookEndpointCommand(
-                id,
-                req.Url.Trim(),
-                req.Is_active ?? true,
-                req.Enabled_events?.ToList()));
-
-            return TypedResults.Ok(new CreateWebhookEndpointResponseDto
+            try
             {
-                Id = created.Id.ToString(),
-                Url = created.Url,
-                Secret_key = created.SecretKey,
-                Is_active = created.IsActive,
-                Enabled_events = created.EnabledEvents.ToList(),
-                Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero)
-            });
+                var created = await mediator.Send(new CreateWebhookEndpointCommand(
+                    id,
+                    req.Url.Trim(),
+                    req.Is_active ?? true,
+                    req.Enabled_events?.ToList()));
+
+                return TypedResults.Ok(new CreateWebhookEndpointResponseDto
+                {
+                    Id = created.Id.ToString(),
+                    Url = created.Url,
+                    Secret_key = created.SecretKey,
+                    Is_active = created.IsActive,
+                    Enabled_events = created.EnabledEvents.ToList(),
+                    Created_at = new DateTimeOffset(created.CreatedAt, TimeSpan.Zero)
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(ex.Message);
+            }
         }).RequireAuthorization();
 
         group.MapPut("/workspaces/{id:guid}/webhooks/{endpointId:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> (
             Guid id,
             Guid endpointId,
             UpdateWebhookEndpointRequestDto req,
+            HttpContext http,
             IExecutionContextAccessor ctx,
             IMediator mediator,
             IOneQueryService queryService) =>
         {
-            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
-            var role = await queryService.GetTenantRoleAsync(ctx.UserId, id);
-            if (role != "ADMIN" && role != "SUPER_ADMIN" && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            if (!await CanAccessWorkspaceWebhooksAsync(id, http, ctx, queryService, manageRequired: true))
+            {
+                return TypedResults.Unauthorized();
+            }
 
             if (string.IsNullOrWhiteSpace(req.Url))
             {
@@ -367,17 +382,27 @@ public static class Endpoints
                     req.Enabled_events?.ToList()));
                 return TypedResults.Ok(new StatusResponse { Status = "saved" });
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException ex) when (
+                ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
             {
                 return TypedResults.NotFound();
             }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(ex.Message);
+            }
         }).RequireAuthorization();
 
-        group.MapGet("/workspaces/{id:guid}/webhooks/logs", async Task<Results<Ok<ICollection<WebhookDeliveryLogDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        group.MapGet("/workspaces/{id:guid}/webhooks/logs", async Task<Results<Ok<ICollection<WebhookDeliveryLogDto>>, UnauthorizedHttpResult>> (
+            Guid id,
+            HttpContext http,
+            IExecutionContextAccessor ctx,
+            IOneQueryService queryService) =>
         {
-            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
-            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
-            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+            if (!await CanAccessWorkspaceWebhooksAsync(id, http, ctx, queryService, manageRequired: false))
+            {
+                return TypedResults.Unauthorized();
+            }
 
             var logs = await queryService.GetWorkspaceWebhookLogsAsync(id);
             var dtos = logs.Select(l => new WebhookDeliveryLogDto {
@@ -552,20 +577,26 @@ public static class Endpoints
                     req.Display_name ?? string.Empty,
                     req.Slug,
                     req.Owner_email,
+                    req.Owner_role,
                     req.Is_test_mode ?? true,
                     req.Key_name,
+                    req.Webhook_url,
+                    req.Webhook_enabled_events,
                     auth.ActorUserId));
 
                 var log = loggerFactory.CreateLogger("Modules.One.WorkspaceProvision");
                 log.LogInformation(
-                    "WorkspaceProvisioned workspace_id={WorkspaceId} aura_org_id={AuraOrgId} created={Created} key_id={KeyId} prefix={Prefix} hint={Hint}",
+                    "WorkspaceProvisioned workspace_id={WorkspaceId} aura_org_id={AuraOrgId} created={Created} key_id={KeyId} prefix={Prefix} hint={Hint} webhook_endpoint_id={WebhookId} owner_attached={OwnerAttached} owner_status={OwnerStatus}",
                     result.WorkspaceId,
                     result.AuraOrgId,
                     result.Created,
                     result.ApiKeyId,
                     result.Prefix,
-                    result.Hint);
-                // Never log result.PlainKey.
+                    result.Hint,
+                    result.WebhookEndpointId,
+                    result.OwnerAttached,
+                    result.OwnerStatus);
+                // Never log result.PlainKey or result.WebhookSecretKey.
 
                 return TypedResults.Ok(new ProvisionWorkspaceResponseDto
                 {
@@ -580,6 +611,28 @@ public static class Endpoints
                         Hint = result.Hint,
                         Scopes = result.Scopes.ToList(),
                         Plain_key = result.PlainKey
+                    },
+                    Webhook = result.WebhookEndpointId is null
+                        ? null
+                        : new ProvisionWorkspaceWebhookDto
+                        {
+                            Id = result.WebhookEndpointId?.ToString(),
+                            Url = result.WebhookUrl,
+                            Is_active = result.WebhookIsActive,
+                            Enabled_events = result.WebhookEnabledEvents.ToList(),
+                            Secret_key = result.WebhookSecretKey,
+                            Has_secret = !string.IsNullOrEmpty(result.WebhookSecretKey)
+                                || !string.IsNullOrEmpty(result.WebhookSecretHint),
+                            Secret_hint = result.WebhookSecretHint
+                        },
+                    Owner = new ProvisionWorkspaceOwnerDto
+                    {
+                        Attached = result.OwnerAttached,
+                        Status = result.OwnerStatus,
+                        Role = result.OwnerRole,
+                        Email = string.IsNullOrWhiteSpace(req.Owner_email)
+                            ? null
+                            : req.Owner_email.Trim()
                     }
                 });
             }
@@ -600,6 +653,56 @@ public static class Endpoints
         });
 
         return endpoints;
+    }
+
+    /// <summary>
+    /// Workspace webhook authZ:
+    /// - System admin: allow
+    /// - API_CLIENT with webhooks.endpoints:manage: allow only when path id == key TenantId (IDOR fail-closed)
+    /// - Human: membership ADMIN/SUPER_ADMIN for path id (manage) or any membership (read)
+    /// </summary>
+    internal static async Task<bool> CanAccessWorkspaceWebhooksAsync(
+        Guid workspaceId,
+        HttpContext http,
+        IExecutionContextAccessor ctx,
+        IOneQueryService queryService,
+        bool manageRequired)
+    {
+        if (ctx.IsSystemAdmin)
+        {
+            return true;
+        }
+
+        var user = http.User;
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        if (user.IsInRole("API_CLIENT"))
+        {
+            if (ctx.TenantId == Guid.Empty || ctx.TenantId != workspaceId)
+            {
+                return false;
+            }
+
+            // Manage (and list for companion) require the manage scope for machine clients.
+            return user.HasClaim("scope", PlatformApiScopes.WebhooksEndpointsManage);
+        }
+
+        if (ctx.UserId == Guid.Empty)
+        {
+            return false;
+        }
+
+        if (manageRequired)
+        {
+            var role = await queryService.GetTenantRoleAsync(ctx.UserId, workspaceId);
+            return role is "ADMIN" or "SUPER_ADMIN";
+        }
+
+        var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, workspaceId);
+        return hasAccess;
     }
 
     private static void IssueCookie(HttpContext ctx, GlobalUser user, IConfiguration config)
