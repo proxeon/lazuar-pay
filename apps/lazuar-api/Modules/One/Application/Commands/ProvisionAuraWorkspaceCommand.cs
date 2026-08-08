@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -13,6 +14,7 @@ namespace Modules.One.Application.Commands;
 public record ProvisionAuraWorkspaceResult(
     Guid WorkspaceId,
     string Slug,
+    /// <summary>Normalized external org id (same as <see cref="ExternalOrgId"/>; kept for Aura clients).</summary>
     string AuraOrgId,
     bool Created,
     Guid? ApiKeyId,
@@ -30,7 +32,11 @@ public record ProvisionAuraWorkspaceResult(
     // Owner
     bool OwnerAttached,
     string OwnerStatus,
-    string? OwnerRole);
+    string? OwnerRole,
+    /// <summary>Integrator product slug (e.g. aura, demo-app). Default aura.</summary>
+    string ExternalProduct = "aura",
+    /// <summary>External org / tenant id for that product (alias of AuraOrgId).</summary>
+    string? ExternalOrgId = null);
 
 public record ProvisionAuraWorkspaceCommand(
     string AuraOrgId,
@@ -42,7 +48,9 @@ public record ProvisionAuraWorkspaceCommand(
     string? KeyName,
     string? WebhookUrl,
     IReadOnlyList<string>? WebhookEnabledEvents,
-    Guid? ActorUserId) : ICommand<ProvisionAuraWorkspaceResult>
+    Guid? ActorUserId,
+    /// <summary>External product slug. Default <c>aura</c> for backward compatibility.</summary>
+    string? ExternalProduct = null) : ICommand<ProvisionAuraWorkspaceResult>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -50,13 +58,17 @@ public record ProvisionAuraWorkspaceCommand(
 public class ProvisionAuraWorkspaceCommandHandler
     : ICommandHandler<ProvisionAuraWorkspaceCommand, ProvisionAuraWorkspaceResult>
 {
+    /// <summary>Default / Aura product slug (backward compatible). Prefer <see cref="ProductAura"/>.</summary>
     public const string ExternalProduct = "aura";
+    public const string ProductAura = "aura";
     public const string PaymentsAppId = "PAYMENTS";
     public const string DefaultKeyName = "Aura bootstrap";
     public const string OwnerStatusAttached = "attached";
     public const string OwnerStatusUserNotFound = "user_not_found";
     public const string OwnerStatusNotRequested = "not_requested";
     public const string DefaultOwnerRole = "ADMIN";
+    public const int MaxExternalOrgIdLength = 128;
+    public const int MaxExternalProductLength = 64;
 
     /// <summary>Default Connect event filter when provision creates a webhook without explicit events.</summary>
     public static readonly IReadOnlyList<string> DefaultConnectWebhookEvents =
@@ -70,6 +82,10 @@ public class ProvisionAuraWorkspaceCommandHandler
         "ADMIN",
         "SUPER_ADMIN"
     };
+
+    private static readonly Regex ProductSlugPattern = new(
+        @"^[a-z][a-z0-9_-]{0,62}$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly IOneRepository _repository;
     private readonly ITokenGeneratorService _tokenGenerator;
@@ -89,7 +105,8 @@ public class ProvisionAuraWorkspaceCommandHandler
         ProvisionAuraWorkspaceCommand request,
         CancellationToken ct)
     {
-        var auraOrgId = NormalizeAuraOrgId(request.AuraOrgId);
+        var product = NormalizeExternalProduct(request.ExternalProduct);
+        var externalOrgId = NormalizeExternalOrgId(request.AuraOrgId, product);
         var displayName = (request.DisplayName ?? string.Empty).Trim();
         if (string.IsNullOrEmpty(displayName))
         {
@@ -100,12 +117,13 @@ public class ProvisionAuraWorkspaceCommandHandler
         var webhookUrl = NormalizeOptionalWebhookUrl(request.WebhookUrl);
         var webhookEvents = ResolveWebhookEnabledEvents(request.WebhookEnabledEvents);
 
-        var existing = await _repository.GetByExternalRefAsync(ExternalProduct, auraOrgId, ct);
+        var existing = await _repository.GetByExternalRefAsync(product, externalOrgId, ct);
         if (existing is not null)
         {
             return await EnsureAndBuildExistingAsync(
                 existing,
-                auraOrgId,
+                product,
+                externalOrgId,
                 request.OwnerEmail,
                 ownerRole,
                 webhookUrl,
@@ -113,13 +131,13 @@ public class ProvisionAuraWorkspaceCommandHandler
                 ct);
         }
 
-        var slug = await ResolveSlugAsync(request.Slug, auraOrgId, ct);
+        var slug = await ResolveSlugAsync(request.Slug, product, externalOrgId, ct);
         var keyName = string.IsNullOrWhiteSpace(request.KeyName)
-            ? DefaultKeyName
+            ? DefaultKeyNameFor(product)
             : request.KeyName.Trim();
 
         var organization = new Organization(displayName, slug);
-        organization.BindExternalRef(ExternalProduct, auraOrgId);
+        organization.BindExternalRef(product, externalOrgId);
         _repository.AddOrganization(organization);
 
         var (ownerAttached, ownerStatus, attachedRole) = await TryAttachOwnerAsync(
@@ -133,7 +151,7 @@ public class ProvisionAuraWorkspaceCommandHandler
         await _eventBus.PublishAsync(
             new AppEntitlementGrantedIntegrationEvent(organization.Id, PaymentsAppId));
 
-        // Mint Aura default scopes inline so org + entitlement + credential share one SaveChanges.
+        // Mint integrator default scopes so org + entitlement + credential share one SaveChanges.
         var scopes = PlatformApiScopes.NormalizeAndValidate(
             PlatformApiScopes.Split(PlatformApiScopes.DefaultAuraIntegratorScopes));
         var tokenPair = _tokenGenerator.GenerateSecureToken(40);
@@ -172,8 +190,8 @@ public class ProvisionAuraWorkspaceCommandHandler
         }
         catch (Exception ex) when (IsUniqueViolation(ex))
         {
-            // Concurrent first provision for same aura_org_id: re-read and return idempotent + ensure.
-            var winner = await _repository.GetByExternalRefAsync(ExternalProduct, auraOrgId, ct);
+            // Concurrent first provision for same (product, org_id): re-read and return idempotent + ensure.
+            var winner = await _repository.GetByExternalRefAsync(product, externalOrgId, ct);
             if (winner is null)
             {
                 throw;
@@ -181,7 +199,8 @@ public class ProvisionAuraWorkspaceCommandHandler
 
             return await EnsureAndBuildExistingAsync(
                 winner,
-                auraOrgId,
+                product,
+                externalOrgId,
                 request.OwnerEmail,
                 ownerRole,
                 webhookUrl,
@@ -189,11 +208,12 @@ public class ProvisionAuraWorkspaceCommandHandler
                 ct);
         }
 
-        return new ProvisionAuraWorkspaceResult(
+        return BuildResult(
             organization.Id,
             organization.Slug,
-            auraOrgId,
-            Created: true,
+            product,
+            externalOrgId,
+            created: true,
             credential.Id,
             credential.Prefix,
             credential.KeyHint,
@@ -214,7 +234,8 @@ public class ProvisionAuraWorkspaceCommandHandler
 
     private async Task<ProvisionAuraWorkspaceResult> EnsureAndBuildExistingAsync(
         Organization organization,
-        string auraOrgId,
+        string product,
+        string externalOrgId,
         string? ownerEmail,
         string ownerRole,
         string? webhookUrl,
@@ -222,11 +243,13 @@ public class ProvisionAuraWorkspaceCommandHandler
         CancellationToken ct)
     {
         var keys = await _repository.ListApiCredentialsAsync(organization.Id, ct);
+        var defaultKeyName = DefaultKeyNameFor(product);
         var bootstrap = keys
             .Where(k => k.IsActive)
             .OrderBy(k => k.CreatedAt)
             .FirstOrDefault(k =>
-                string.Equals(k.Name, DefaultKeyName, StringComparison.OrdinalIgnoreCase)
+                string.Equals(k.Name, defaultKeyName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(k.Name, DefaultKeyName, StringComparison.OrdinalIgnoreCase)
                 || PlatformApiScopes.HasScope(k.Scopes, PlatformApiScopes.PaymentsCheckoutsWrite));
 
         // Owner heal: attach if requested and user exists and not already a member.
@@ -287,15 +310,16 @@ public class ProvisionAuraWorkspaceCommandHandler
             await _repository.SaveChangesAsync(ct);
         }
 
-        return new ProvisionAuraWorkspaceResult(
+        return BuildResult(
             organization.Id,
             organization.Slug,
-            auraOrgId,
-            Created: false,
+            product,
+            externalOrgId,
+            created: false,
             bootstrap?.Id,
             bootstrap?.Prefix,
             bootstrap?.KeyHint,
-            PlainKey: null,
+            plainKey: null,
             bootstrap is null
                 ? PlatformApiScopes.Split(PlatformApiScopes.DefaultAuraIntegratorScopes)
                 : PlatformApiScopes.Split(bootstrap.Scopes),
@@ -309,6 +333,48 @@ public class ProvisionAuraWorkspaceCommandHandler
             ownerStatus,
             attachedRole);
     }
+
+    private static ProvisionAuraWorkspaceResult BuildResult(
+        Guid workspaceId,
+        string slug,
+        string product,
+        string externalOrgId,
+        bool created,
+        Guid? apiKeyId,
+        string? prefix,
+        string? hint,
+        string? plainKey,
+        IReadOnlyList<string> scopes,
+        Guid? webhookEndpointId,
+        string? webhookUrl,
+        bool? webhookIsActive,
+        IReadOnlyList<string> webhookEnabledEvents,
+        string? webhookSecretKey,
+        string? webhookSecretHint,
+        bool ownerAttached,
+        string ownerStatus,
+        string? ownerRole) =>
+        new(
+            workspaceId,
+            slug,
+            AuraOrgId: externalOrgId,
+            Created: created,
+            apiKeyId,
+            prefix,
+            hint,
+            plainKey,
+            scopes,
+            webhookEndpointId,
+            webhookUrl,
+            webhookIsActive,
+            webhookEnabledEvents,
+            webhookSecretKey,
+            webhookSecretHint,
+            ownerAttached,
+            ownerStatus,
+            ownerRole,
+            ExternalProduct: product,
+            ExternalOrgId: externalOrgId);
 
     private async Task<(bool Attached, string Status, string? Role)> TryAttachOwnerAsync(
         Guid organizationId,
@@ -366,6 +432,11 @@ public class ProvisionAuraWorkspaceCommandHandler
     private static string SecretHint(string secret) =>
         secret.Length >= 4 ? secret[^4..] : secret;
 
+    public static string DefaultKeyNameFor(string product) =>
+        string.Equals(product, ProductAura, StringComparison.Ordinal)
+            ? DefaultKeyName
+            : $"{product} bootstrap";
+
     public static string NormalizeOwnerRole(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -410,6 +481,60 @@ public class ProvisionAuraWorkspaceCommandHandler
             .ToList();
     }
 
+    /// <summary>
+    /// Product slug: lower-case [a-z][a-z0-9_-]* , default <see cref="ProductAura"/>.
+    /// </summary>
+    public static string NormalizeExternalProduct(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return ProductAura;
+        }
+
+        var product = raw.Trim().ToLowerInvariant();
+        if (product.Length > MaxExternalProductLength)
+        {
+            throw new InvalidOperationException(
+                $"external_product must be at most {MaxExternalProductLength} characters.");
+        }
+
+        if (!ProductSlugPattern.IsMatch(product))
+        {
+            throw new InvalidOperationException(
+                "external_product must start with a letter and contain only a-z, 0-9, _ or -.");
+        }
+
+        return product;
+    }
+
+    /// <summary>
+    /// Resolves external org id. For product <c>aura</c>, requires a GUID (legacy contract).
+    /// Other products accept any non-empty stable string (max 128), lowercased.
+    /// </summary>
+    public static string NormalizeExternalOrgId(string? raw, string product)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            throw new InvalidOperationException(
+                "external_org_id (or aura_org_id) is required.");
+        }
+
+        var trimmed = raw.Trim();
+        if (string.Equals(product, ProductAura, StringComparison.Ordinal))
+        {
+            return NormalizeAuraOrgId(trimmed);
+        }
+
+        if (trimmed.Length > MaxExternalOrgIdLength)
+        {
+            throw new InvalidOperationException(
+                $"external_org_id must be at most {MaxExternalOrgIdLength} characters.");
+        }
+
+        return trimmed.ToLowerInvariant();
+    }
+
+    /// <summary>Aura-only GUID normalizer (legacy name kept for tests / callers).</summary>
     public static string NormalizeAuraOrgId(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -426,7 +551,11 @@ public class ProvisionAuraWorkspaceCommandHandler
         return guid.ToString("D").ToLowerInvariant();
     }
 
-    private async Task<string> ResolveSlugAsync(string? requestedSlug, string auraOrgId, CancellationToken ct)
+    private async Task<string> ResolveSlugAsync(
+        string? requestedSlug,
+        string product,
+        string externalOrgId,
+        CancellationToken ct)
     {
         if (!string.IsNullOrWhiteSpace(requestedSlug))
         {
@@ -440,9 +569,20 @@ public class ProvisionAuraWorkspaceCommandHandler
             return clean;
         }
 
-        // aura-{first 10 hex of guid without dashes} — compact, valid slug charset.
-        var compact = auraOrgId.Replace("-", "", StringComparison.Ordinal);
-        var baseSlug = "aura-" + compact[..Math.Min(12, compact.Length)];
+        // {product}-{compact id} — compact, valid slug charset.
+        var compact = externalOrgId.Replace("-", "", StringComparison.Ordinal);
+        // Keep only slug-safe chars for non-guid ids.
+        compact = Regex.Replace(compact, @"[^a-z0-9]", "", RegexOptions.IgnoreCase);
+        if (compact.Length == 0)
+        {
+            compact = Guid.CreateVersion7().ToString("N")[..12];
+        }
+
+        var baseSlug = $"{product}-{compact[..Math.Min(12, compact.Length)]}";
+        if (baseSlug.Length > 63)
+        {
+            baseSlug = baseSlug[..63].TrimEnd('-');
+        }
 
         if (await _repository.IsSlugUniqueAsync(baseSlug, ct))
         {
@@ -464,7 +604,7 @@ public class ProvisionAuraWorkspaceCommandHandler
         }
 
         // Extremely unlikely: append short random hex.
-        var fallback = $"aura-{Guid.CreateVersion7():N}"[..20];
+        var fallback = $"{product}-{Guid.CreateVersion7():N}"[..Math.Min(20, product.Length + 17)];
         if (!await _repository.IsSlugUniqueAsync(fallback, ct))
         {
             throw new InvalidOperationException("Unable to allocate a unique workspace slug.");

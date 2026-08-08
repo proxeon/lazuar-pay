@@ -137,7 +137,8 @@ public class ProvisionAuraWorkspaceTests
         string? keyName = null,
         string? webhookUrl = null,
         IReadOnlyList<string>? webhookEvents = null,
-        Guid? actorUserId = null) =>
+        Guid? actorUserId = null,
+        string? externalProduct = null) =>
         new(
             auraOrgId,
             displayName,
@@ -148,7 +149,8 @@ public class ProvisionAuraWorkspaceTests
             keyName,
             webhookUrl,
             webhookEvents,
-            actorUserId);
+            actorUserId,
+            externalProduct);
 
     [Test]
     public async Task Provision_Create_Returns_Workspace_And_PlainKey_With_Aura_Scopes()
@@ -170,6 +172,8 @@ public class ProvisionAuraWorkspaceTests
         Assert.That(result.Scopes, Does.Contain(PlatformApiScopes.WebhooksEndpointsManage));
         Assert.That(result.Scopes, Does.Not.Contain(PlatformApiScopes.LhdnDocumentsWrite));
         Assert.That(result.Slug, Does.StartWith("aura-"));
+        Assert.That(result.ExternalProduct, Is.EqualTo("aura"));
+        Assert.That(result.ExternalOrgId, Is.EqualTo(result.AuraOrgId));
         Assert.That(result.WebhookEndpointId, Is.Null);
         Assert.That(result.WebhookSecretKey, Is.Null);
         Assert.That(result.OwnerAttached, Is.False);
@@ -444,6 +448,73 @@ public class ProvisionAuraWorkspaceTests
         Assert.Throws<InvalidOperationException>(() => ProvisionAuraWorkspaceCommandHandler.NormalizeAuraOrgId(null));
         Assert.Throws<InvalidOperationException>(() => ProvisionAuraWorkspaceCommandHandler.NormalizeAuraOrgId(""));
         Assert.Throws<InvalidOperationException>(() => ProvisionAuraWorkspaceCommandHandler.NormalizeAuraOrgId("not-a-guid"));
+    }
+
+    [Test]
+    public async Task Provision_SecondProduct_NonGuidOrgId_Works()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var handler = CreateHandler(repo, out var orgs, out var credentials, out _, out _, out _, out _);
+
+        var result = await handler.Handle(
+            Cmd("Tenant-001", displayName: "Demo Tenant", externalProduct: "demo-app"),
+            CancellationToken.None);
+
+        Assert.That(result.Created, Is.True);
+        Assert.That(result.ExternalProduct, Is.EqualTo("demo-app"));
+        Assert.That(result.ExternalOrgId, Is.EqualTo("tenant-001"));
+        Assert.That(result.AuraOrgId, Is.EqualTo("tenant-001"));
+        Assert.That(result.Slug, Does.StartWith("demo-app-"));
+        Assert.That(result.PlainKey, Does.StartWith("sk_test_"));
+        Assert.That(orgs[0].ExternalProduct, Is.EqualTo("demo-app"));
+        Assert.That(orgs[0].ExternalOrgId, Is.EqualTo("tenant-001"));
+        Assert.That(credentials[0].Name, Is.EqualTo("demo-app bootstrap"));
+        Assert.That(credentials[0].Scopes, Is.EqualTo(PlatformApiScopes.DefaultAuraIntegratorScopes));
+    }
+
+    [Test]
+    public async Task Provision_SecondProduct_Idempotent_On_Product_And_Org()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var handler = CreateHandler(repo, out _, out _, out _, out _, out _, out _);
+
+        var first = await handler.Handle(
+            Cmd("acme-9", displayName: "Acme", externalProduct: "demo-app"),
+            CancellationToken.None);
+        var second = await handler.Handle(
+            Cmd("ACME-9", displayName: "Ignored", externalProduct: "demo-app"),
+            CancellationToken.None);
+
+        Assert.That(first.Created, Is.True);
+        Assert.That(second.Created, Is.False);
+        Assert.That(second.WorkspaceId, Is.EqualTo(first.WorkspaceId));
+        Assert.That(second.PlainKey, Is.Null);
+        Assert.That(second.ExternalProduct, Is.EqualTo("demo-app"));
+    }
+
+    [Test]
+    public void NormalizeExternalProduct_Defaults_And_Validates()
+    {
+        Assert.That(ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct(null), Is.EqualTo("aura"));
+        Assert.That(ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct("Demo-App"), Is.EqualTo("demo-app"));
+        Assert.Throws<InvalidOperationException>(() =>
+            ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct("1bad"));
+        Assert.Throws<InvalidOperationException>(() =>
+            ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct("has space"));
+    }
+
+    [Test]
+    public void NormalizeExternalOrgId_Aura_Requires_Guid_Other_Allows_String()
+    {
+        var guid = Guid.CreateVersion7().ToString("D");
+        Assert.That(
+            ProvisionAuraWorkspaceCommandHandler.NormalizeExternalOrgId(guid, "aura"),
+            Is.EqualTo(guid.ToLowerInvariant()));
+        Assert.Throws<InvalidOperationException>(() =>
+            ProvisionAuraWorkspaceCommandHandler.NormalizeExternalOrgId("not-guid", "aura"));
+        Assert.That(
+            ProvisionAuraWorkspaceCommandHandler.NormalizeExternalOrgId("Tenant-X", "demo-app"),
+            Is.EqualTo("tenant-x"));
     }
 
     [Test]

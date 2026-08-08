@@ -17,7 +17,7 @@ const SCOPE_ROWS = [
   },
   {
     scope: "payments.checkouts:write",
-    purpose: "Create M2M ad-hoc checkout sessions (Aura cashier)",
+    purpose: "Create M2M ad-hoc checkout sessions (any integrator cashier)",
   },
   {
     scope: "payments.checkouts:read",

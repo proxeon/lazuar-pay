@@ -518,8 +518,9 @@ public static class Endpoints
             .RequireAuthorization("IntegrationPaymentsCheckoutsWrite")
             .RequireCors();
 
-        // Phase 5: Aura (or other integrators) provision Hub workspace + bootstrap key.
+        // Integrator provision: multi-product workspace + bootstrap key.
         // Auth: X-Lazuar-Provision-Key / Bearer provision secret OR SUPER_ADMIN JWT. Tenant-exempt.
+        // Body: external_product (default "aura") + external_org_id OR legacy aura_org_id.
         group.MapPost("/integrations/workspaces/provision", async Task<IResult> (
             [FromBody] ProvisionWorkspaceRequestDto req,
             HttpContext http,
@@ -542,7 +543,12 @@ public static class Endpoints
                     statusCode: auth.StatusCode);
             }
 
-            var auraOrgIdRaw = req.Aura_org_id?.Trim() ?? string.Empty;
+            // external_org_id aliases aura_org_id (backward compatible).
+            var externalOrgIdRaw = FirstNonEmpty(req.External_org_id, req.Aura_org_id);
+            var externalProductRaw = string.IsNullOrWhiteSpace(req.External_product)
+                ? ProvisionAuraWorkspaceCommandHandler.ProductAura
+                : req.External_product.Trim();
+
             if (!await rateLimiter.TryAcquireAsync("secret:global", settings.RateLimitPerMinute, http.RequestAborted))
             {
                 http.Response.Headers.RetryAfter = "60";
@@ -556,24 +562,31 @@ public static class Endpoints
                     statusCode: StatusCodes.Status429TooManyRequests);
             }
 
-            if (!string.IsNullOrEmpty(auraOrgIdRaw)
-                && !await rateLimiter.TryAcquireAsync($"org:{auraOrgIdRaw.ToLowerInvariant()}", settings.RateLimitPerAuraOrgPerMinute, http.RequestAborted))
+            if (!string.IsNullOrEmpty(externalOrgIdRaw))
             {
-                http.Response.Headers.RetryAfter = "60";
-                return Results.Json(
-                    new Microsoft.AspNetCore.Mvc.ProblemDetails
-                    {
-                        Status = StatusCodes.Status429TooManyRequests,
-                        Title = "Too Many Requests",
-                        Detail = "Provision rate limit exceeded for this aura_org_id. Retry later."
-                    },
-                    statusCode: StatusCodes.Status429TooManyRequests);
+                var perOrgKey =
+                    $"org:{externalProductRaw.ToLowerInvariant()}:{externalOrgIdRaw.ToLowerInvariant()}";
+                if (!await rateLimiter.TryAcquireAsync(
+                        perOrgKey,
+                        settings.RateLimitPerAuraOrgPerMinute,
+                        http.RequestAborted))
+                {
+                    http.Response.Headers.RetryAfter = "60";
+                    return Results.Json(
+                        new Microsoft.AspNetCore.Mvc.ProblemDetails
+                        {
+                            Status = StatusCodes.Status429TooManyRequests,
+                            Title = "Too Many Requests",
+                            Detail = "Provision rate limit exceeded for this external org. Retry later."
+                        },
+                        statusCode: StatusCodes.Status429TooManyRequests);
+                }
             }
 
             try
             {
                 var result = await mediator.Send(new ProvisionAuraWorkspaceCommand(
-                    req.Aura_org_id ?? string.Empty,
+                    externalOrgIdRaw,
                     req.Display_name ?? string.Empty,
                     req.Slug,
                     req.Owner_email,
@@ -582,12 +595,14 @@ public static class Endpoints
                     req.Key_name,
                     req.Webhook_url,
                     req.Webhook_enabled_events,
-                    auth.ActorUserId));
+                    auth.ActorUserId,
+                    externalProductRaw));
 
                 var log = loggerFactory.CreateLogger("Modules.One.WorkspaceProvision");
                 log.LogInformation(
-                    "WorkspaceProvisioned workspace_id={WorkspaceId} aura_org_id={AuraOrgId} created={Created} key_id={KeyId} prefix={Prefix} hint={Hint} webhook_endpoint_id={WebhookId} owner_attached={OwnerAttached} owner_status={OwnerStatus}",
+                    "WorkspaceProvisioned workspace_id={WorkspaceId} external_product={Product} external_org_id={ExternalOrgId} created={Created} key_id={KeyId} prefix={Prefix} hint={Hint} webhook_endpoint_id={WebhookId} owner_attached={OwnerAttached} owner_status={OwnerStatus}",
                     result.WorkspaceId,
+                    result.ExternalProduct,
                     result.AuraOrgId,
                     result.Created,
                     result.ApiKeyId,
@@ -603,6 +618,8 @@ public static class Endpoints
                     Workspace_id = result.WorkspaceId.ToString(),
                     Slug = result.Slug,
                     Aura_org_id = result.AuraOrgId,
+                    External_org_id = result.ExternalOrgId ?? result.AuraOrgId,
+                    External_product = result.ExternalProduct,
                     Created = result.Created,
                     Api_key = new ProvisionWorkspaceApiKeyDto
                     {
@@ -703,6 +720,16 @@ public static class Endpoints
 
         var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, workspaceId);
         return hasAccess;
+    }
+
+    private static string FirstNonEmpty(string? a, string? b)
+    {
+        if (!string.IsNullOrWhiteSpace(a))
+        {
+            return a.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(b) ? string.Empty : b.Trim();
     }
 
     private static void IssueCookie(HttpContext ctx, GlobalUser user, IConfiguration config)

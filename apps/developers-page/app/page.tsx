@@ -3,8 +3,13 @@ import Link from "next/link";
 const guides = [
   {
     href: "/quickstart",
-    title: "Quickstart",
+    title: "Quickstart (LHDN)",
     blurb: "Submit your first e-invoice with curl or the LHDN SDK, then verify signatures.",
+  },
+  {
+    href: "/payments-cashier",
+    title: "Payments cashier",
+    blurb: "Provision a workspace, mint a key, create an M2M checkout, verify payment webhooks.",
   },
   {
     href: "/auth",
@@ -25,6 +30,14 @@ const products = [
     blurb:
       "Malaysian e-Invoicing compliance. Submit clean JSON; we handle UBL 2.1 XML and PKI signatures.",
     badge: "Primary",
+    audience: "external" as const,
+  },
+  {
+    href: "/payments",
+    title: "Payments (M2M cashier)",
+    blurb:
+      "Ad-hoc amount checkouts for any server app. Scoped keys, idempotency, payment.completed / payment.failed webhooks. Not Commerce product catalog.",
+    badge: "Cashier",
     audience: "external" as const,
   },
   {
@@ -75,7 +88,7 @@ export default function DeveloperHub() {
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] mb-4">
           Start here
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {guides.map((g) => (
             <Link
               key={g.href}

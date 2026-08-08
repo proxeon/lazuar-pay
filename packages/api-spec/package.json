@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx tsp compile main.tsp --output-dir dist && npx tsp compile docs-one.tsp --output-dir dist/one && npx tsp compile docs-ops.tsp --output-dir dist/ops && npx tsp compile docs-billing.tsp --output-dir dist/billing && npx tsp compile docs-lhdn.tsp --output-dir dist/lhdn && npx tsp compile docs-commerce.tsp --output-dir dist/commerce",
+    "build": "npx tsp compile main.tsp --output-dir dist && npx tsp compile docs-one.tsp --output-dir dist/one && npx tsp compile docs-ops.tsp --output-dir dist/ops && npx tsp compile docs-billing.tsp --output-dir dist/billing && npx tsp compile docs-lhdn.tsp --output-dir dist/lhdn && npx tsp compile docs-commerce.tsp --output-dir dist/commerce && npx tsp compile docs-payments.tsp --output-dir dist/payments",
     "watch": "npx tsp compile main.tsp --watch"
   },
   "dependencies": {

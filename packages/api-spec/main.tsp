@@ -25,6 +25,9 @@ import "./modules/billing/routes.tsp";
 import "./modules/lhdn/models.tsp";
 import "./modules/lhdn/routes.tsp";
 
+import "./modules/payments/models.tsp";
+import "./modules/payments/routes.tsp";
+
 import "./modules/crm/models.tsp";
 
 import "./modules/platform/routes.tsp";

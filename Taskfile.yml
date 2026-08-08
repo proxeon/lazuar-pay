@@ -117,9 +117,16 @@ tasks:
       - pkill -9 ngrok || echo "No ngrok processes were running."
 
   tunnel:api:
-    desc: Start ngrok tunnel for the .NET API on port 8080
+    desc: Start ngrok tunnel for Hub API :8080 (Billplz/Stripe → Hub inbound). Set App__ApiBaseUrl to the public URL/api/v1. See Aura idea/022-remaining/RUNBOOK-local-full-fulfillment.md
     cmds:
-      - ngrok http 8080
+      - |
+        echo "Starting ngrok on Hub API port 8080..."
+        echo "After tunnel is up, set Hub App__ApiBaseUrl (alias HUB_PUBLIC_URL) to:"
+        echo "  https://{public-host}/api/v1"
+        echo "Billplz callback pattern:"
+        echo "  {App__ApiBaseUrl}/webhooks/payments/billplz/{tenantId}"
+        echo "⚠️  Do not point Billplz at Aura legacy /webhooks/gateway/* in hub mode."
+        ngrok http 8080
 
   tunnel:fe:
     desc: Start ngrok tunnel for Next.js community-page on port 3020
@@ -132,6 +139,9 @@ tasks:
       - |
         echo "Querying active ngrok tunnels..."
         curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | sed 's/"public_url":"//' || echo "No active ngrok agents detected. Ensure ngrok is running."
+        echo ""
+        echo "Hub public base should be: https://{host}/api/v1  → App__ApiBaseUrl"
+        echo "Billplz inbound: {App__ApiBaseUrl}/webhooks/payments/{gateway}/{tenantId}"
 
   # ─── CODE GENERATION (TypeSpec -> OpenAPI -> Clients) ──────────────────────
   gen:

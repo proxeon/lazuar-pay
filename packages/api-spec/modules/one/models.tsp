@@ -209,13 +209,26 @@ model ApiKeyDto {
   scopes: string[];
 }
 
-// Phase 5 / P2 — integrator workspace provision (Aura → Hub Connect-ready)
+// Integrator workspace provision (multi-product; Aura-compatible aliases)
 model ProvisionWorkspaceRequestDto {
-  /** Aura org id (GUID). Idempotency key for provision. */
-  aura_org_id: string;
+  /**
+   * Legacy Aura org id (GUID). Prefer external_org_id.
+   * Required when external_org_id is omitted. For product "aura" must be a GUID.
+   */
+  aura_org_id?: string;
+  /**
+   * External org / tenant id for the product (idempotency key with external_product).
+   * Alias of aura_org_id — either field is accepted.
+   */
+  external_org_id?: string;
+  /**
+   * Product slug bound on Organization.ExternalProduct (default "aura").
+   * e.g. aura, demo-app. Lowercase [a-z][a-z0-9_-]*.
+   */
+  external_product?: string;
   /** Display name for the Hub workspace (used on first create only). */
   display_name: string;
-  /** Optional slug; if omitted Hub generates aura-{compact}. */
+  /** Optional slug; if omitted Hub generates {product}-{compact}. */
   slug?: string;
   /** Optional: if user exists, grant workspace membership. Does not create users. */
   owner_email?: string;
@@ -226,7 +239,7 @@ model ProvisionWorkspaceRequestDto {
   owner_role?: string;
   /** Default true → sk_test_ bootstrap key. */
   is_test_mode?: boolean;
-  /** Default "Aura bootstrap". */
+  /** Default "{product} bootstrap" (Aura: "Aura bootstrap"). */
   key_name?: string;
   /** Absolute HTTPS URL of integrator webhook receiver (Connect inline path). */
   webhook_url?: string;
@@ -271,7 +284,12 @@ model ProvisionWorkspaceOwnerDto {
 model ProvisionWorkspaceResponseDto {
   workspace_id: string;
   slug: string;
+  /** Legacy alias of external_org_id (always populated for Aura clients). */
   aura_org_id: string;
+  /** Normalized external org id (same value as aura_org_id). */
+  external_org_id?: string;
+  /** Product slug that was bound (default aura). */
+  external_product?: string;
   created: boolean;
   api_key: ProvisionWorkspaceApiKeyDto;
   /** Present when a webhook endpoint was registered (create or prior). */

@@ -4955,8 +4955,17 @@ namespace Lazuar.ApiTypes
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ProvisionWorkspaceRequestDto
     {
+        /// <summary>Legacy Aura org id (GUID). Prefer external_org_id. Required if external_org_id omitted.</summary>
         [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
-        public string Aura_org_id { get; set; } = default!;
+        public string? Aura_org_id { get; set; }
+
+        /// <summary>External org / tenant id for the product. Alias of aura_org_id.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("external_org_id")]
+        public string? External_org_id { get; set; }
+
+        /// <summary>Product slug (default "aura"). e.g. aura, demo-app.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("external_product")]
+        public string? External_product { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("display_name")]
         public string Display_name { get; set; } = default!;
@@ -5039,8 +5048,17 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("slug")]
         public string Slug { get; set; } = default!;
 
+        /// <summary>Legacy alias of external_org_id (always populated).</summary>
         [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
         public string Aura_org_id { get; set; } = default!;
+
+        /// <summary>Normalized external org id (same value as aura_org_id).</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("external_org_id")]
+        public string? External_org_id { get; set; }
+
+        /// <summary>Product slug that was bound (default aura).</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("external_product")]
+        public string? External_product { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("created")]
         public bool Created { get; set; }
