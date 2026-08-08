@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Code, Key, Save, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -35,6 +35,8 @@ export default function DeveloperSettingsPage() {
   /** Shown only once after create — never re-fetched from GET. */
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const formSectionRef = useRef<HTMLDivElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
 
   const { data: endpoints = [], isLoading: isWebhookLoading } = useQuery({
     queryKey: ["developer-webhooks", activeWorkspaceId],
@@ -109,12 +111,21 @@ export default function DeveloperSettingsPage() {
     }
   };
 
+  const focusCreateForm = () => {
+    // Form is always mounted below the list; New only reset state before — looked broken.
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      urlInputRef.current?.focus({ preventScroll: true });
+    });
+  };
+
   const startEdit = (ep: WebhookEndpointDto) => {
     setEditingId(ep.id);
     setUrl(ep.url);
     setIsActive(ep.is_active);
     setEnabledEvents(ep.enabled_events ?? []);
     setRevealedSecret(null);
+    focusCreateForm();
   };
 
   const startCreate = () => {
@@ -123,6 +134,7 @@ export default function DeveloperSettingsPage() {
     setIsActive(true);
     setEnabledEvents([]);
     setRevealedSecret(null);
+    focusCreateForm();
   };
 
   const toggleEvent = (eventValue: string) => {
@@ -151,19 +163,28 @@ export default function DeveloperSettingsPage() {
               <button
                 type="button"
                 onClick={startCreate}
-                className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] flex items-center gap-1 hover:underline"
+                disabled={!activeWorkspaceId}
+                className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] flex items-center gap-1 hover:underline disabled:opacity-40 disabled:no-underline"
               >
                 <Plus size={12} /> New
               </button>
             </div>
 
-            {isWebhookLoading ? (
+            {!activeWorkspaceId ? (
+              <p className="text-[13px] text-rose-600">
+                Select a workspace first — webhooks are registered per workspace.
+              </p>
+            ) : isWebhookLoading ? (
               <div className="flex items-center gap-2 text-[13px] text-[#71717a]">
                 <Loader2 size={14} className="animate-spin" /> Loading…
               </div>
             ) : endpoints.length === 0 ? (
               <p className="text-[13px] text-[#71717a]">
-                No endpoints yet. Create one below — Lazuar will POST signed events when checkouts and subscriptions change.
+                No endpoints yet. Use the form below (or click{" "}
+                <button type="button" onClick={startCreate} className="font-semibold text-[#09090b] underline">
+                  New
+                </button>
+                ) — Lazuar will POST signed events when checkouts and subscriptions change.
               </p>
             ) : (
               <ul className="divide-y divide-[#f4f4f5]">
@@ -205,8 +226,12 @@ export default function DeveloperSettingsPage() {
           </div>
         </div>
 
-        {/* Create / update form */}
-        <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col">
+        {/* Create / update form — always visible; "New" scrolls here and clears edit mode */}
+        <div
+          ref={formSectionRef}
+          id="webhook-endpoint-form"
+          className="bg-white border border-[#e5e5e5] rounded-none flex flex-col scroll-mt-6"
+        >
           <form onSubmit={handleSubmit} className="flex flex-col">
             <div className="p-6 md:p-8 space-y-8">
               <div className="space-y-4">
@@ -221,11 +246,12 @@ export default function DeveloperSettingsPage() {
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-[11px] font-semibold text-[#09090b]">Payload URL</label>
                     <input
+                      ref={urlInputRef}
                       type="url"
                       required
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
-                      disabled={isPending || isWebhookLoading}
+                      disabled={isPending || isWebhookLoading || !activeWorkspaceId}
                       placeholder="https://your-saas.com/api/webhooks/lazuar"
                       className="w-full h-10 border border-[#e5e5e5] bg-white px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
                     />
