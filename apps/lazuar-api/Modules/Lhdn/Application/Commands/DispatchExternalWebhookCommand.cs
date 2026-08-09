@@ -3,7 +3,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Modules.Lhdn.Application.Ports;
+using Microsoft.Extensions.DependencyInjection;
+using Modules.Commerce.Contracts.Events;
 using Modules.Lhdn.Application.Services;
 
 namespace Modules.Lhdn.Application.Commands;
@@ -19,48 +20,54 @@ public record DispatchExternalWebhookCommand(
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
 
+/// <summary>
+/// R42 (A1): Enqueue LHDN invoice.valid / invoice.invalid via One's durable outbound path.
+/// Publishes <see cref="OutboundWebhookRequestedIntegrationEvent"/> on LhdnEventBus;
+/// does not call fire-and-forget <c>IWebhookSenderService</c> (retired in R43).
+/// </summary>
 public class DispatchExternalWebhookCommandHandler : ICommandHandler<DispatchExternalWebhookCommand>
 {
-    private readonly ILhdnRepository _repository;
-    private readonly IWebhookSenderService _webhookSender;
+    private static readonly JsonSerializerOptions PayloadJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
+    private readonly IEventBus _eventBus;
     private readonly ILhdnLinkService _linkService;
 
-    public DispatchExternalWebhookCommandHandler(ILhdnRepository repository, IWebhookSenderService webhookSender, ILhdnLinkService linkService)
+    public DispatchExternalWebhookCommandHandler(
+        [FromKeyedServices("LhdnEventBus")] IEventBus eventBus,
+        ILhdnLinkService linkService)
     {
-        _repository = repository;
-        _webhookSender = webhookSender;
+        _eventBus = eventBus;
         _linkService = linkService;
     }
 
     public async Task Handle(DispatchExternalWebhookCommand request, CancellationToken ct)
     {
-        var webhooks = await _repository.GetActiveWebhooksAsync(request.OrganizationId, ct);
-
         var portalUrl = _linkService.GetPortalUrl();
 
         var qrLink = (!string.IsNullOrEmpty(request.LhdnUuid) && !string.IsNullOrEmpty(request.LongId))
             ? $"{portalUrl}/{request.LhdnUuid}/share/{request.LongId}"
             : null;
 
-        var payload = new
+        // Data-only payload; One wraps platform envelope (id, event_type, created_at, data).
+        var dataObj = new
         {
-            @event = $"invoice.{request.Status.ToLowerInvariant()}",
-            data = new
-            {
-                internal_id = request.InternalId,
-                lhdn_uuid = request.LhdnUuid,
-                status = request.Status,
-                qr_link = qrLink,
-                error_message = request.ErrorMessage,
-                timestamp = DateTime.UtcNow
-            }
+            internal_id = request.InternalId,
+            lhdn_uuid = request.LhdnUuid,
+            status = request.Status,
+            qr_link = qrLink,
+            error_message = request.ErrorMessage
         };
 
-        var payloadJson = JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+        var payload = JsonSerializer.SerializeToElement(dataObj, PayloadJsonOptions);
+        var eventType = $"invoice.{request.Status.ToLowerInvariant()}";
 
-        foreach (var webhook in webhooks)
-        {
-            await _webhookSender.SendWebhookAsync(webhook, payloadJson, ct);
-        }
+        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            OrganizationId: request.OrganizationId,
+            TargetUrl: null,
+            EventType: eventType,
+            Payload: payload));
     }
 }

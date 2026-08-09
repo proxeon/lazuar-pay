@@ -60,23 +60,17 @@ When the background `LhdnSubmissionJob` transmits the payload, it encodes the st
 
 **Locked decision:** platform durable delivery lives in **One** (`WebhookDeliveryOutbox` + `OutboundWebhookDispatcherJob`). End-state for LHDN is **A** — route e-invoice lifecycle customer webhooks through that One dispatcher.
 
-**Until A ships, LHDN outbound is a frozen special-case:**
+**R42 (A1) enqueue path (current):**
 
-* **Mechanism:** fire-and-forget HTTP via `WebhookSenderService` (no delivery outbox, no retries, no DLQ).
-* **Trigger:** `LhdnStatusPollingJob` → `DispatchExternalWebhookCommand` on MyInvois **VALID** / **INVALID**.
-* **Registry:** `lhdn.WebhookSubscriptions` (module-local; not `one.TenantWebhookEndpoints`).
-* **Events:** `invoice.valid`, `invoice.invalid` only.
-* **Signing:** HMAC-SHA256 of the raw body → header `X-Lazuar-Signature` as hex (no timestamp). This is **not** One’s Standard Webhooks–style `t=…,v1=…` scheme.
-* **Observability:** failures log + `LazuarMetrics.RecordWebhookFailed("lhdn")` — silent dual stacks without metrics are not acceptable under freeze.
+* **Mechanism:** `DispatchExternalWebhookCommandHandler` publishes `OutboundWebhookRequestedIntegrationEvent` on `LhdnEventBus` → One `OutboundWebhookEventHandlers` → durable `WebhookDeliveryOutbox` + dispatcher.
+* **Trigger:** `LhdnStatusPollingJob` → `DispatchExternalWebhookCommand` on MyInvois **VALID** / **INVALID** (unchanged).
+* **Registry (delivery):** `one.TenantWebhookEndpoints` (migrate from Lhdn via R41). Legacy `lhdn.WebhookSubscriptions` is no longer POSTed by this path.
+* **Events:** `invoice.valid`, `invoice.invalid` only (`TargetUrl: null` fan-out).
+* **Payload:** data-only snake_case (`internal_id`, `lhdn_uuid`, `status`, `qr_link`, `error_message`); One wraps platform envelope.
+* **Signing / retries:** One Standard Webhooks–style delivery (not legacy Lhdn fire-and-forget HMAC).
+* **R43:** retire `WebhookSenderService` / leftover Lhdn webhook register surfaces (still present in code until then).
 
-### Freeze rules (do not violate without reopening 00.2)
-
-1. Do **not** build a second full Lhdn outbox/signing/retry stack (rejected option **B**).
-2. Do **not** “improve” fire-and-forget into durable delivery half-way.
-3. Allowed: docs, structured logs/metrics, bugfixes that keep the same shape.
-4. End-state **A**: publish LHDN lifecycle through One’s `OutboundWebhookRequestedIntegrationEvent` (or equivalent), migrate integrators to One registry/signing, then retire this path.
-
-See: `plans/004-maintenance/decisions.md` §00.2, `plans/004-maintenance/phase-04-analysis.md`.
+See: `plans/005-remaining/webhook-convergence-decisions.md`, `plans/005-remaining/r42-notes.md`.
 
 ---
 
