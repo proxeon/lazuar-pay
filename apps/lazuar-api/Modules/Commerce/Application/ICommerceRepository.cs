@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Modules.Commerce.Domain.Aggregates;
@@ -23,7 +22,6 @@ public interface ICommerceRepository
     Task<DunningCampaign?> GetDunningCampaignByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<bool> HasAnyDunningCampaignAsync(Guid organizationId, CancellationToken ct = default);
     Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid campaignId, CancellationToken ct = default);
-    Task<Dictionary<string, Guid>> GetDefaultTemplateIdsAsync(Guid organizationId, CancellationToken ct = default);
 
     void AddProduct(Product product);
     void AddSubscription(Subscription subscription);

@@ -1,10 +1,9 @@
-# Cross-schema SQL leaks — live status (R10)
+# Cross-schema SQL leaks — live status (R10 + R11–R13)
 
 **Verified:** 2026-08-09  
 **Branch:** `chore/remaining-005`  
 **Method:** Fresh greps of schema-qualified `FROM`/`JOIN`/`INTO`/`UPDATE` and Dapper / `FromSqlRaw` / `NpgsqlCommand` under `apps/lazuar-api`  
-**Baseline:** [`06-cross-schema-sql-leaks.md`](./06-cross-schema-sql-leaks.md)  
-**Constraint:** Inventory only — **no application code modified**
+**Baseline:** [`06-cross-schema-sql-leaks.md`](./06-cross-schema-sql-leaks.md)
 
 ---
 
@@ -14,7 +13,7 @@
 |----|--------|------|----------|------------|
 | L-01 | **fixed** (R11) | `DocumentPublishedIntegrationEventHandler.cs` — event payload only; no foreign-schema SQL | — | **R11 complete** |
 | L-02 | **fixed** (R12) | Auth moved to One `PlatformAuthEndpoints` + `IPlatformAdminAuthQuery`; Payments payment-config only; no `one.GlobalUsers` SQL in Payments | — | **R12 complete** |
-| L-03 | **present** | `apps/lazuar-api/Modules/Commerce/Infrastructure/Endpoints/PublicArrearsEndpoints.cs` (~51–52: JOIN `crm` + `one`; GET remains commerce-only) | P0 | **R13** |
+| L-03 | **fixed** (R13) | `PublicArrearsEndpoints.cs` — commerce SQL + `ICrmQueryService` + `IOneQueryService`; no `crm`/`one` JOIN | — | **R13 complete** |
 | L-04 | **present** (dead) | `apps/lazuar-api/Modules/Commerce/Infrastructure/Repositories/CommerceRepository.cs` (~125: `communications."MessageTemplates"`); interface only caller is definition | P2 | **R15** |
 | L-05 | **present** | `apps/lazuar-api/Modules/Commerce/Infrastructure/Services/CommerceDocumentLookup.cs` (~59: LEFT JOIN `crm."ClientProfiles"`) | P1 | **R14** |
 | L-06 | **present** | `apps/lazuar-api/BuildingBlocks/Infrastructure/Observability/PlatformMetricsCollector.cs` (ModuleSchemas all nine; ~208: `lhdn."TaxDocuments"` stuck product SQL) | P1 | **R16** handoff **R35** |
@@ -50,9 +49,9 @@
 
 ## Priority order (this wave)
 
-1. **R11** — L-01 DocumentPublished multi-schema JOIN  
+1. **R11** — L-01 DocumentPublished multi-schema JOIN — **complete**  
 2. **R12** — L-02 PlatformEndpoints → `one.GlobalUsers` — **complete**  
-3. **R13** — L-03 PublicArrears update-payment → `crm` + `one`  
+3. **R13** — L-03 PublicArrears update-payment → `crm` + `one` — **complete**  
 4. **R14** — L-05 CommerceDocumentLookup CRM join  
 5. **R15** — L-04 dead `GetDefaultTemplateIdsAsync` delete  
 6. **R16** — L-06 metrics handoff → **R35**  
@@ -66,7 +65,7 @@
 |------|-----------------------------------|
 | L-01 | **No** — handler uses event fields only (R11) |
 | L-02 | **No** — Payments has no `one.` SQL; One owns platform auth (R12) |
-| L-03 | Yes — `crm."ClientProfiles"` + `one."Organizations"` on POST update-payment |
+| L-03 | **No** — commerce SQL + CRM/One ports (R13) |
 | L-04 | Yes — method body present; **zero** call sites outside interface/impl |
 | L-05 | Yes — `crm."ClientProfiles"` in draft session lookup |
 | L-06 | Yes — schema array + `lhdn."TaxDocuments"` |
@@ -76,15 +75,14 @@
 
 ## Diff vs `06-cross-schema-sql-leaks.md`
 
-| ID | 06 status | Live (R10) |
-|----|-----------|------------|
+| ID | 06 status | Live |
+|----|-----------|------|
 | L-01 | open | **fixed** by R11 (event denorm) |
 | L-02 | open | **fixed** by R12 (One auth port + endpoints) |
-| L-03…L-06 | open | **still present** |
+| L-03 | open | **fixed** by R13 (CRM + One contracts ports) |
+| L-04…L-06 | open | **still present** |
 | L-07 | tracked dual-read exception (FW-1) | **fixed** by R05 One-only middleware |
 | New product leaks | n/a | **none found** |
-
-R11 unblocked.
 
 ---
 
@@ -98,5 +96,18 @@ R11 unblocked.
 | Payment-config | Still Payments `MapPlatformEndpoints` |
 | Host | Maps auth then payment-config on `/api/v1/platform` |
 
+---
 
-*End of R10 live inventory. No application code modified.*
+## L-03 detail (R13)
+
+| Check | Result |
+|-------|--------|
+| `JOIN crm."ClientProfiles"` | **Gone** |
+| `JOIN one."Organizations"` | **Gone** |
+| Commerce SQL | `Subscriptions` + `Products` only |
+| Customer email | `ICrmQueryService.GetClientProfileAsync` |
+| Tenant slug | `IOneQueryService.GetWorkspaceByIdAsync` |
+| GET arrears | Unchanged (commerce-only) |
+| Notes | [`r13-notes.md`](./r13-notes.md) |
+
+*R13 complete. Next open product leak: L-05 (R14).*
