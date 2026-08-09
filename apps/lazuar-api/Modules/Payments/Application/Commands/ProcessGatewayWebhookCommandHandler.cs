@@ -7,13 +7,12 @@ using BuildingBlocks.Application.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
-using Modules.Payments.Application.Services;
 using Modules.Payments.Contracts.Events;
 using Modules.Payments.Domain.Entities;
 
 namespace Modules.Payments.Application.Commands;
 
-public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewayWebhookCommand>
+public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewayWebhookCommand>
 {
     private readonly ITenantPaymentConfigRepository _configRepository;
     private readonly IPaymentWebhookLogRepository _logRepository;
@@ -158,149 +157,5 @@ public class ProcessGatewayWebhookCommandHandler : ICommandHandler<ProcessGatewa
         await _eventBus.PublishAsync(integrationEvent);
         await TrySaveChangesAsync(cancellationToken);
         LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
-    }
-
-    /// <summary>
-    /// Gap-fill merge: adapter metadata wins; session fills missing keys; force checkout_id from session.
-    /// Lookup key is ProviderSessionId == GatewayTransactionId (Billplz bill id).
-    /// </summary>
-    private async Task<Dictionary<string, string>> MergeSessionMetadataAsync(
-        Guid tenantId,
-        string? gatewayTransactionId,
-        Dictionary<string, string>? adapterMetadata,
-        CancellationToken cancellationToken)
-    {
-        var metadata = adapterMetadata is { Count: > 0 }
-            ? new Dictionary<string, string>(adapterMetadata, StringComparer.Ordinal)
-            : new Dictionary<string, string>(StringComparer.Ordinal);
-
-        if (string.IsNullOrWhiteSpace(gatewayTransactionId))
-        {
-            return metadata;
-        }
-
-        try
-        {
-            var session = await _sessions.GetByProviderSessionIdAsync(
-                tenantId, gatewayTransactionId, cancellationToken);
-            if (session is null)
-            {
-                return metadata;
-            }
-
-            var sessionMeta = IntegrationCheckoutMetadata.Deserialize(session.MetadataJson);
-            foreach (var (key, value) in sessionMeta)
-            {
-                if (!metadata.ContainsKey(key))
-                {
-                    metadata[key] = value;
-                }
-            }
-
-            // Always stamp correlation ids from the authoritative session row.
-            metadata["checkout_id"] = session.Id.ToString();
-            if (!metadata.ContainsKey("hub_workspace_id"))
-            {
-                metadata["hub_workspace_id"] = tenantId.ToString();
-            }
-
-            if (!metadata.ContainsKey("tenant_id"))
-            {
-                metadata["tenant_id"] = tenantId.ToString();
-            }
-
-            _logger.LogDebug(
-                "Merged IntegrationCheckoutSession metadata for ProviderSessionId={ProviderSessionId} CheckoutId={CheckoutId} TenantId={TenantId}",
-                gatewayTransactionId,
-                session.Id,
-                tenantId);
-        }
-        catch (Exception ex)
-        {
-            // Never fail money path on merge lookup errors — adapter metadata still publishes.
-            _logger.LogWarning(
-                ex,
-                "Failed to merge IntegrationCheckoutSession metadata for GatewayTransactionId={GatewayTransactionId} TenantId={TenantId}",
-                gatewayTransactionId,
-                tenantId);
-        }
-
-        return metadata;
-    }
-
-    private void LogProcessed(
-        ProcessGatewayWebhookCommand request,
-        string eventId,
-        string provider,
-        string? gatewayTransactionId,
-        string eventType,
-        Dictionary<string, string>? metadata)
-    {
-        string? checkoutId = null;
-        if (metadata is not null
-            && metadata.TryGetValue("checkout_id", out var rawCheckoutId)
-            && !string.IsNullOrWhiteSpace(rawCheckoutId))
-        {
-            checkoutId = rawCheckoutId;
-        }
-
-        _logger.LogInformation(
-            "Payment webhook processed successfully. EventId={EventId} Provider={Provider} GatewayTransactionId={GatewayTransactionId} TenantId={TenantId} EventType={EventType} CheckoutId={CheckoutId}",
-            eventId,
-            provider,
-            gatewayTransactionId ?? eventId,
-            request.TenantId,
-            eventType,
-            checkoutId);
-    }
-
-    /// <summary>
-    /// Business key for payment-level idempotency across dual gateway events
-    /// (e.g. Stripe checkout.session.completed + payment_intent.succeeded).
-    /// </summary>
-    private static string? BuildBusinessKey(string eventType, string? gatewayTransactionId)
-    {
-        if (string.IsNullOrEmpty(gatewayTransactionId))
-        {
-            return null;
-        }
-
-        // Money events only (caller already filters to these)
-        return eventType + ":" + gatewayTransactionId;
-    }
-
-    private async Task TrySaveChangesAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _logRepository.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex) when (IsUniqueConstraintViolation(ex))
-        {
-            // Concurrent delivery raced past the pre-checks; treat as successful duplicate (HTTP 200).
-            return;
-        }
-    }
-
-    /// <summary>
-    /// Detects PostgreSQL unique_violation (SQLSTATE 23505) without hard-depending on Npgsql in Application.
-    /// </summary>
-    public static bool IsUniqueConstraintViolation(Exception exception)
-    {
-        for (Exception? ex = exception; ex != null; ex = ex.InnerException)
-        {
-            var sqlState = ex.GetType().GetProperty("SqlState")?.GetValue(ex) as string;
-            if (sqlState == "23505")
-            {
-                return true;
-            }
-
-            if (ex.Message.Contains("23505", StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

@@ -1,0 +1,77 @@
+using System;
+using System.Threading.Tasks;
+using BuildingBlocks.Application;
+using Lazuar.ApiTypes;
+using MediatR;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using Modules.Commerce.Application.Queries;
+using Modules.Commerce.Contracts.Commands;
+using Modules.One.Contracts;
+
+namespace Modules.Commerce.Infrastructure;
+
+public static class PublicPortalEndpoints
+{
+    public static RouteGroupBuilder MapPublicPortalEndpoints(this RouteGroupBuilder group)
+    {
+        group.MapGet("/{tenantSlug}/portal", async Task<Results<Ok<AggregatedPortalDataResponse>, NotFound, UnauthorizedHttpResult>> (
+            string tenantSlug,
+            [FromQuery] string token,
+            IOneQueryService oneQueryService,
+            ICommerceQueryService queryService,
+            IMagicLinkTokenService tokenService) =>
+        {
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            var subId = tokenService.ValidateToken(token);
+            if (!subId.HasValue) return TypedResults.Unauthorized();
+
+            var portalData = await queryService.GetPortalDataAsync(tenantId.Value, subId.Value);
+            if (portalData == null) return TypedResults.NotFound();
+
+            return TypedResults.Ok(portalData);
+        });
+
+        group.MapPost("/{tenantSlug}/portal/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<string>, UnauthorizedHttpResult, NotFound>> (
+            string tenantSlug,
+            [FromQuery] string token,
+            [FromBody] CancelPortalRequest body,
+            IMediator mediator) =>
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (body == null || string.IsNullOrWhiteSpace(body.Subscription_id) || !Guid.TryParse(body.Subscription_id, out var subscriptionId))
+            {
+                return TypedResults.BadRequest("subscription_id is required and must be a valid GUID.");
+            }
+
+            try
+            {
+                await mediator.Send(new CancelPortalSubscriptionCommand(tenantSlug, token, subscriptionId));
+                return TypedResults.Ok(new StatusResponse { Status = "canceled" });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return TypedResults.Unauthorized();
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound();
+            }
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
+        });
+
+        return group;
+    }
+}

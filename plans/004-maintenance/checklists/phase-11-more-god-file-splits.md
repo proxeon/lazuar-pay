@@ -8,31 +8,39 @@
 
 ## 11.1 GatewayPaymentCompletedIntegrationEventHandler (~375 LOC)
 
-- [ ] Inventory: checkout complete vs subscription payment vs logging
-- [ ] Split into focused handlers **or** private methods/files with clear names
-- [ ] Keep integration event type and subscription registration stable
-- [ ] Tests for payment-completed paths green
+- [x] Inventory: checkout complete vs subscription payment vs logging  
+  → `../phase-11-analysis.md` §1.2
+- [x] Split into focused handlers **or** private methods/files with clear names  
+  → partials: router / OpenCheckout / Subscription / Helpers
+- [x] Keep integration event type and subscription registration stable  
+  → type name + ctor + `AddTransient` + `eventBus.Subscribe` unchanged
+- [x] Tests for payment-completed paths green  
+  → CommerceProductCompleteness + TenantIsolationHardening (handler ctor) green in smoke
 
 ## 11.2 Commerce `PublicEndpoints.cs` (~371 LOC)
 
-- [ ] Split under `Endpoints/`:
-  - [ ] Public product
-  - [ ] Public portal
-  - [ ] Public checkout + status
-  - [ ] Public custom checkout
-  - [ ] Public arrears
-- [ ] Thin `MapPublicCommerceEndpoints` composer
-- [ ] Routes/policies unchanged
+- [x] Split under `Endpoints/`:
+  - [x] Public product → `PublicProductEndpoints.cs`
+  - [x] Public portal → `PublicPortalEndpoints.cs`
+  - [x] Public checkout + status → `PublicCheckoutEndpoints.cs`
+  - [x] Public custom checkout → `PublicCustomCheckoutEndpoints.cs`
+  - [x] Public arrears → `PublicArrearsEndpoints.cs`
+- [x] Thin `MapPublicCommerceEndpoints` composer → `PublicEndpoints.cs` (~20 LOC)
+- [x] Routes/policies unchanged
 
 ## 11.3 ProcessGatewayWebhookCommandHandler (~305 LOC)
 
-- [ ] Separate verify/log/emit stages (partials or helpers)
-- [ ] Gateway-specific branches readable
-- [ ] Webhook idempotency tests green
+- [x] Separate verify/log/emit stages (partials or helpers)  
+  → orchestration + Metadata / Logging / Idempotency partials
+- [x] Gateway-specific branches readable  
+  → dispute / failed / completed still sequential in `HandleCoreAsync`
+- [x] Webhook idempotency tests green  
+  → `ProcessGatewayWebhookCommandHandlerTests` in smoke suite
 
 ## 11.4 LhdnGatewayAdapter (~383 LOC)
 
-- [ ] Split by operation: token, submit, status, TIN, cancel, rate limit
+- [ ] Split by operation: token, submit, status, TIN, cancel, rate limit  
+  → **deferred** this commit (webhook partials chosen as the optional third split)
 - [ ] Keep port interface stable
 - [ ] Module/LHDN gateway tests green (or smoke)
 
@@ -51,6 +59,6 @@
 
 ## 11.7 Exit criteria for each PR in this phase
 
-- [ ] Single file/PR focused
-- [ ] Behavior-preserving
-- [ ] Tests for that area green
+- [x] Single commit focused on phase-11 required splits (public + payment-completed + webhook)
+- [x] Behavior-preserving
+- [x] Tests for that area green → smoke **34/34** (webhook + commerce product + gateway payment filters)
