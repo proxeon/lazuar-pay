@@ -32,19 +32,7 @@ public class CrmDbContext : PlatformDbContext
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CrmDbContext).Assembly);
 
-        // Configure Inbox/Outbox Infrastructure Tables
-        modelBuilder.Entity<OutboxMessage>(builder =>
-        {
-            builder.ToTable("OutboxMessages");
-            builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.NextAttemptAt, x.OccurredOn }).HasFilter("\"ProcessedAt\" IS NULL");
-        });
-
-        modelBuilder.Entity<InboxMessage>(builder =>
-        {
-            builder.ToTable("InboxMessages");
-            builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.NextAttemptAt, x.ReceivedAt }).HasFilter("\"ProcessedAt\" IS NULL");
-        });
+        // Configure Inbox/Outbox Infrastructure Tables (shared BB helper — zero migration delta)
+        modelBuilder.ApplyOutboxInbox();
     }
 }

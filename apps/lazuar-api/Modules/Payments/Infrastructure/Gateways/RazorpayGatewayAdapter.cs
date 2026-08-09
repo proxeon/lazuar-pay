@@ -37,13 +37,13 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         try
         {
             var client = GetClient(apiKey);
-            var amountPaise = (int)(amount * quantity * 100);
-            var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : productName;
+            var amountPaise = GatewayCommon.ToMinorUnitsTruncating(amount, quantity);
+            var finalDescription = GatewayCommon.ProductDescription(productName, quantity);
             
             metadata.TryGetValue("customer_name", out var customerName);
             metadata.TryGetValue("customer_phone", out var customerPhone);
 
-            var finalName = !string.IsNullOrWhiteSpace(customerName) ? customerName : ExtractName(customerEmail);
+            var finalName = !string.IsNullOrWhiteSpace(customerName) ? customerName : GatewayCommon.ExtractName(customerEmail);
             var finalPhone = !string.IsNullOrWhiteSpace(customerPhone) ? customerPhone : "+60100000000";
 
             var customer = new Dictionary<string, object>
@@ -215,7 +215,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
 
             var orderReq = new Dictionary<string, object>
             {
-                { "amount", (int)(amount * 100) },
+                { "amount", GatewayCommon.ToMinorUnitsTruncating(amount) },
                 { "currency", currency.ToUpperInvariant() },
                 { "receipt", receipt },
                 { "payment_capture", true },
@@ -227,7 +227,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             {
                 { "email", "billing@lazuar.com" },
                 { "contact", "0000000000" },
-                { "amount", (int)(amount * 100) },
+                { "amount", GatewayCommon.ToMinorUnitsTruncating(amount) },
                 { "currency", currency.ToUpperInvariant() },
                 { "order_id", order["id"].ToString() },
                 { "customer_id", customerId },
@@ -252,7 +252,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         try
         {
             var client = GetClient(apiKey);
-            var refundReq = new Dictionary<string, object> { { "amount", (int)(amount * 100) } };
+            var refundReq = new Dictionary<string, object> { { "amount", GatewayCommon.ToMinorUnitsTruncating(amount) } };
             var refund = client.Payment.Fetch(transactionId).Refund(amount > 0 ? refundReq : null);
             return Task.FromResult(refund != null);
         }
@@ -268,10 +268,4 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         throw new InvalidOperationException("Razorpay does not provide a managed customer billing portal.");
     }
 
-    private static string ExtractName(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email)) return "Customer";
-        var atIndex = email.IndexOf('@');
-        return atIndex > 0 ? email[..atIndex] : "Customer";
-    }
 }

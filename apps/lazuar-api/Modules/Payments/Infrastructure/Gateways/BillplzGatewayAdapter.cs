@@ -85,14 +85,14 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             webhookUrl = $"{webhookUrl}&checkout_id={Uri.EscapeDataString(checkoutId)}";
         }
 
-        var totalAmountCents = (int)(amount * quantity * 100);
-        var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : (string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName);
+        var totalAmountCents = GatewayCommon.ToMinorUnitsTruncating(amount, quantity);
+        var finalDescription = GatewayCommon.ProductDescription(productName, quantity);
 
         var payload = new Dictionary<string, object>
         {
             ["collection_id"] = merchantId,
-            ["email"] = string.IsNullOrWhiteSpace(customerEmail) ? "customer@example.com" : customerEmail,
-            ["name"] = ExtractName(customerEmail),
+            ["email"] = GatewayCommon.ResolveEmail(customerEmail),
+            ["name"] = GatewayCommon.ExtractName(customerEmail),
             ["amount"] = totalAmountCents,
             ["description"] = finalDescription,
             ["callback_url"] = webhookUrl,
@@ -294,10 +294,4 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         return result;
     }
 
-    private static string ExtractName(string? email)
-    {
-        if (string.IsNullOrWhiteSpace(email)) return "Customer";
-        var atIndex = email.IndexOf('@');
-        return atIndex > 0 ? email[..atIndex] : "Customer";
-    }
 }

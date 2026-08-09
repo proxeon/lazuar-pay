@@ -45,18 +45,18 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             return new GatewayCheckoutResult(false, null, null, "MerchantId (Brand ID) is required for CHIP Collect.");
         }
 
-        var amountInCents = (int)Math.Round(amount * quantity * 100, 0);
-        var finalDescription = quantity > 1 ? $"{productName} (x{quantity})" : (string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName);
+        var amountInCents = GatewayCommon.ToMinorUnitsRounded(amount, quantity);
+        var finalDescription = GatewayCommon.ProductDescription(productName, quantity);
 
         metadata["tenant_id"] = tenantId.ToString();
-        var clientName = ExtractName(customerEmail);
+        var clientName = GatewayCommon.ExtractName(customerEmail);
 
         var payload = new Dictionary<string, object>
         {
             ["brand_id"] = merchantId,
             ["client"] = new
             {
-                email = string.IsNullOrWhiteSpace(customerEmail) ? "customer@example.com" : customerEmail,
+                email = GatewayCommon.ResolveEmail(customerEmail),
                 full_name = clientName
             },
             ["purchase"] = new
@@ -246,7 +246,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             
             var brandId = oldRoot.GetProperty("brand_id").GetString();
             var clientNode = oldRoot.GetProperty("client");
-            var clientEmail = clientNode.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : "customer@example.com";
+            var clientEmail = clientNode.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : GatewayCommon.PlaceholderEmail;
             var clientName = clientNode.TryGetProperty("full_name", out var nameProp) ? nameProp.GetString() : "Customer";
 
             var meta = new Dictionary<string, string>
@@ -261,7 +261,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
             }
 
-            var amountInCents = (int)Math.Round(amount * 100, 0);
+            var amountInCents = GatewayCommon.ToMinorUnitsRounded(amount);
             var newPurchasePayload = new Dictionary<string, object>
             {
                 ["brand_id"] = brandId!,
@@ -322,7 +322,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             
             if (amount > 0)
             {
-                payload = new { amount = (int)Math.Round(amount * 100, 0) };
+                payload = new { amount = GatewayCommon.ToMinorUnitsRounded(amount) };
             }
 
             var response = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/{transactionId}/refund/", payload);
@@ -348,10 +348,4 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         throw new InvalidOperationException("CHIP Collect does not provide a managed customer billing portal.");
     }
 
-    private static string ExtractName(string? email)
-    {
-        if (string.IsNullOrWhiteSpace(email)) return "Customer";
-        var atIndex = email.IndexOf('@');
-        return atIndex > 0 ? email[..atIndex] : "Customer";
-    }
 }

@@ -50,9 +50,10 @@
     <ProjectReference Include="..\..\Modules\Communications\Domain\Modules.Communications.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Communications\Infrastructure\Modules.Communications.Infrastructure.csproj" />
 
-    <!-- CRM domain/contracts: anonymize + consent unit tests -->
+    <!-- CRM domain/contracts + infrastructure (R53 outbox DI pilot registration tests) -->
     <ProjectReference Include="..\..\Modules\CRM\Domain\Modules.CRM.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\CRM\Contracts\Modules.CRM.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\CRM\Infrastructure\Modules.CRM.Infrastructure.csproj" />
 
     <!-- Messaging domain: delivery log unit tests -->
     <ProjectReference Include="..\..\Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />

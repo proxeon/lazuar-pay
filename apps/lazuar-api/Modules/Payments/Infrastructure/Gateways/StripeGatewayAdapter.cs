@@ -43,7 +43,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                             UnitAmountDecimal = amount * 100,
                             ProductData = new SessionLineItemPriceDataProductDataOptions
                             {
-                                Name = string.IsNullOrWhiteSpace(productName) ? "Lazuar Payment" : productName
+                                Name = string.IsNullOrWhiteSpace(productName) ? GatewayCommon.DefaultProductName : productName
                             },
                         },
                         Quantity = quantity,

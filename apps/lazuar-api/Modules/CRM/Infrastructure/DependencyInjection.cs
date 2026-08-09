@@ -26,14 +26,12 @@ public static class DependencyInjection
                 npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "crm");
             }));
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<CrmDbContext>>("CrmEventBus");
+        services.AddModuleOutboxInbox<CrmDbContext, CrmOutboxPublisherJob, CrmInboxConsumerJob>("CrmEventBus");
         services.AddScoped<ICrmQueryService, CrmQueryService>();
 
         services.AddTransient<GlobalUserProfileUpdatedIntegrationEventHandler>();
 
         services.AddOutboxSchemaMetrics("crm");
-        services.AddHostedService<CrmOutboxPublisherJob>();
-        services.AddHostedService<CrmInboxConsumerJob>();
 
         return services;
     }
