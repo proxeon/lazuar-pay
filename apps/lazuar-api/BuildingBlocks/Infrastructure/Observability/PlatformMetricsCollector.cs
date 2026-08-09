@@ -12,9 +12,19 @@ namespace BuildingBlocks.Infrastructure.Observability;
 /// <summary>
 /// On-demand SQL metrics across module private schemas (outbox lag, dead letters, LHDN stuck).
 /// </summary>
+/// <remarks>
+/// Temporary "god collector": hardcodes all module schema names and product SQL (e.g. lhdn.TaxDocuments).
+/// Future direction — plugin contributors (do not grow more module-specific SQL here):
+/// each module registers an <c>IPlatformMetricsContributor</c> / schema metrics source;
+/// LHDN stuck and similar product health signals move to the owning module; this type
+/// only aggregates registered sources. See docs/009-building-blocks-ownership.md.
+/// </remarks>
 public sealed class PlatformMetricsCollector : IPlatformMetricsCollector
 {
-    /// <summary>Schemas that own OutboxMessages / InboxMessages (see docs/007 runbook).</summary>
+    /// <summary>
+    /// Schemas that own OutboxMessages / InboxMessages (see docs/007 runbook).
+    /// Prefer DI-registered schema list / per-module contributors long-term (see class remarks).
+    /// </summary>
     public static readonly string[] ModuleSchemas =
     [
         "one", "messaging", "payments", "crm", "ops", "billing", "lhdn", "commerce", "communications"
