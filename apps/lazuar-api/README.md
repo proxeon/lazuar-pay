@@ -269,3 +269,36 @@ When adding a new module (for example, `Billing`), follow this structured, compi
 - [ ] Open `tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj` and reference the new Billing domain projects.
 - [ ] Update `ModuleBoundaryTests.cs` to include the `Modules.Billing` namespace within architectural boundaries.
 - [ ] Run `pnpm build` to compile the solution and verify that the build succeeds without error.
+
+---
+
+## 6. Testing
+
+From the **monorepo root**, prefer Taskfile so local and CI stay aligned:
+
+```bash
+task api:test
+```
+
+That runs the same five projects as the GitHub Actions `dotnet` job (order may differ slightly):
+
+| Project | What it covers | Dependencies |
+|---------|----------------|--------------|
+| `tests/Lazuar.ArchitectureTests` | Module boundary / layer rules | None |
+| `tests/Lazuar.ModuleTests` | Per-module unit tests (InMemory / fakes) | None for most suites |
+| `tests/Modules.Billing.Tests` | Billing domain unit tests | None |
+| `tests/Modules.Ops.Tests` | Ops LLM orchestrator (NSubstitute) | None (no live AI keys) |
+| `tests/Lazuar.IntegrationTests` | Cross-module / DB smoke | Docker + Postgres |
+
+### Integration / Postgres notes
+
+- **CI** starts a Postgres 16 service and sets `LAZUAR_TEST_PG` (see `.github/workflows/ci.yml`).
+- Some Billing tests soft-skip when Postgres is unreachable; Commerce Testcontainers suites **hard-fail** setup without Docker.
+- Local full parity: `task infra:up` (or Docker Desktop running for Testcontainers) before integration runs.
+
+Single project:
+
+```bash
+cd apps/lazuar-api
+dotnet test tests/Modules.Ops.Tests/Modules.Ops.Tests.csproj
+```
