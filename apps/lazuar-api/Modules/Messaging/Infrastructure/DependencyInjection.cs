@@ -2,10 +2,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Messaging.Application;
+using Modules.Messaging.Infrastructure.Configuration;
+using Modules.Messaging.Infrastructure.Email;
 using Modules.Messaging.Infrastructure.EventHandlers;
+using Modules.Messaging.Infrastructure.Messaging;
 using Modules.Messaging.Infrastructure.Workers;
 using Modules.Messaging.Contracts;
 using Modules.One.Contracts;
@@ -28,6 +32,22 @@ public static class DependencyInjection
         services.AddScoped<ITenantReplicaRepository, TenantReplicaRepository>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<MessagingDbContext>>("MessagingEventBus");
+
+        // R34 — email + channel ports owned by Messaging (not BuildingBlocks).
+        // Named HttpClient "Resend" is also used by Communications SaveEmailConfig (domains validation).
+        services.AddOptions<ResendOptions>().BindConfiguration(ResendOptions.SectionName);
+        services.AddHttpClient("Resend", (sp, client) =>
+        {
+            client.BaseAddress = new Uri("https://api.resend.com/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+            var options = sp.GetRequiredService<IOptions<ResendOptions>>().Value;
+            if (!string.IsNullOrEmpty(options.ApiKey))
+            {
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
+            }
+        });
+        services.AddSingleton<IEmailService, ResendEmailService>();
+        services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 
         services.AddTransient<TenantProvisionedIntegrationEventHandler>();
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();

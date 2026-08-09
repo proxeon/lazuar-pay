@@ -1,7 +1,7 @@
-using BuildingBlocks.Application;
 using Microsoft.Extensions.Logging;
+using Modules.Messaging.Application;
 
-namespace BuildingBlocks.Infrastructure;
+namespace Modules.Messaging.Infrastructure.Email;
 
 public sealed class ConsoleEmailService : IEmailService
 {

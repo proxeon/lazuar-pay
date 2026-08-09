@@ -48,8 +48,8 @@ Ownership target when a dedicated PR is justified. **Not** all moved in Phase 15
 
 | Item | Recommended owner | Why |
 |------|-------------------|-----|
-| `IEmailService`, Resend/Console, ResendOptions, `EmailTemplateBuilder` | **Messaging** (+ Communications for BYOK/config) | Only Messaging sends; brand HTML + org tags are product |
-| `IMessagingService`, ConsoleMessagingService | **Messaging** | Channel transport; decision 00.4 freezes multi-channel product work |
+| `IEmailService`, Resend/Console, ResendOptions, `EmailTemplateBuilder` | **Messaging** | **R34 done** — ports in Messaging.Application; adapters + brand HTML in Messaging.Infrastructure; BYOK/config stays Communications |
+| `IMessagingService`, ConsoleMessagingService | **Messaging** | **R34 done** — console WA stub under Messaging; 00.4 still freezes real WhatsApp product |
 | `MarkdownParser` (Markdig) | **Communications** (or thin shared content slice later) | Avoid Markdig on every Contracts fan-out |
 | `IMagicLinkTokenService` / MagicLinkTokenService | **Commerce** | **R33 done** — port on `Modules.Commerce.Contracts`; HMAC impl in Commerce.Infrastructure.Security |
 | DocumentLinkSigner **payload** helpers (`FinalDocumentPayload`, `DraftDocumentPayload`) | **Billing** / **Commerce** | Generic HMAC `Sign`/`TryValidate` may stay in BB Security |
@@ -66,7 +66,7 @@ Ownership target when a dedicated PR is justified. **Not** all moved in Phase 15
 | Item | Policy |
 |------|--------|
 | **R2 / object storage** | Stay as **thin shared port** (Billing + One). Interface lives in Application (`IR2StorageService`); adapters in Infrastructure. No Storage module unless blob lifecycle becomes product. |
-| **Email port** | Prefer Messaging-owned long-term. Thin `IEmailService` may remain in Application while product traffic goes through Messaging integration events. |
+| **Email port** | **Moved (R34)** to Messaging.Application / Infrastructure. Traffic still goes through `DispatchMessageIntegrationEvent`. |
 | **Platform metrics aggregator** | May stay in BB **if** pluginized (`IPlatformMetricsContributor` / schema registration). Today: hardcoded schema list + LHDN SQL — accept temporary god collector with plugin direction (comment on `PlatformMetricsCollector`). |
 | **Outbox lag gauges** | Shared technical observability — stay; schema list should eventually come from registration, not a constant array. |
 
@@ -94,7 +94,7 @@ Full LLM / email / messaging / metrics plugin moves are **large**. Phase 15 ship
 | Delete unused host `Lazuar.Api.Infrastructure.Data.PlatformDbContext` | **Done** |
 | Plugin note on `PlatformMetricsCollector` | **Done** (comment only) |
 | Move LLM factory / title / policies → Ops | **Done** (R31 / 005-remaining) |
-| Move email / Messaging ports | **Deferred** (decision 00.4 + composition root) |
+| Move email / Messaging ports | **Done** (R34 / 005-remaining) — console WA only; no Meta product |
 | Port placement (`IR2StorageService`, `IJwtService` → Application) | **Done** (R30 / 005-remaining) |
 | Split `BackgroundWorkerOptions` per module | **Deferred** |
 | `IPlatformMetricsContributor` plugins | **Deferred** (ticket direction only) |
@@ -118,8 +118,8 @@ Product-concern move criterion for Phase 15 exit: **explicitly deferred with thi
 | IPassword / ISecretVault / ITokenGenerator | ✅ | | | |
 | IJwtService port | ✅ App | | | **R30 done** — Application port |
 | IR2StorageService | ✅ App thin | | | **R30 done** — Application port |
-| IEmailService + Resend + templates | | ✅ Messaging | | Deferred move |
-| IMessagingService | | ✅ Messaging | | Deferred; 00.4 freeze product WA |
+| IEmailService + Resend + templates | | ✅ Messaging | | **R34 done** — Messaging DI registers Resend + brand wrap |
+| IMessagingService | | ✅ Messaging | | **R34 done**; 00.4 still freezes product WA |
 | MarkdownParser | | ✅ Communications | | Deferred |
 | MagicLinkTokenService | | ✅ Commerce | | **R33 done** — Contracts port + Infrastructure HMAC |
 | Document payload helpers | | ✅ Billing/Commerce | | Generic sign stays BB |

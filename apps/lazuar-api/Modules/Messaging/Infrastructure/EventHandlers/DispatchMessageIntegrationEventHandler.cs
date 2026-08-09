@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Messaging.Application;
+using Modules.Messaging.Infrastructure.Email;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

@@ -943,29 +943,29 @@ R99 Definition of done
 
 ## R34.1 Move
 
-- [ ] `IEmailService`, Resend, ConsoleEmail, ResendOptions → Messaging
-- [ ] `EmailTemplateBuilder` brand HTML → Messaging
-- [ ] `IMessagingService` + Console → Messaging
-- [ ] Host/Messaging DI still resolves for DispatchMessage path
-- [ ] Communications BYOK stays in Communications (not moved into BB)
+- [x] `IEmailService`, Resend, ConsoleEmail, ResendOptions → Messaging
+- [x] `EmailTemplateBuilder` brand HTML → Messaging
+- [x] `IMessagingService` + Console → Messaging
+- [x] Host/Messaging DI still resolves for DispatchMessage path
+- [x] Communications BYOK stays in Communications (not moved into BB)
 
 ## R34.2 Parity
 
-- [ ] Org tag `org` behavior unchanged
-- [ ] BYOK rules unchanged
+- [x] Org tag `org` behavior unchanged
+- [x] BYOK rules unchanged
 
 ## R34.3 Tests
 
-- [ ] Messaging dispatch / notify tests
-- [ ] Host build
+- [x] Messaging dispatch / notify tests
+- [x] Host build
 
 ## R34.4 Docs
 
-- [ ] Update 009
+- [x] Update 009
 
 ## R34.5 Exit
 
-- [ ] BB has no Resend/brand email stack
+- [x] BB has no Resend/brand email stack
 
 
 ---

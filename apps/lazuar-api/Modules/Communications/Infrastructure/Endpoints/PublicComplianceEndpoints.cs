@@ -130,7 +130,7 @@ public static class PublicComplianceEndpoints
                 recipient ??= data.TryGetProperty("recipient", out var recipEl) ? recipEl.GetString() : null;
                 if (string.IsNullOrWhiteSpace(recipient)) return Results.Ok();
 
-                // Extract org from the "org" tag (set on send by ResendEmailService).
+                // Extract org from the "org" tag (set on send by Messaging ResendEmailService — tag name frozen).
                 Guid? orgId = null;
                 if (data.TryGetProperty("tags", out var tagsEl) && tagsEl.ValueKind == JsonValueKind.Array)
                 {

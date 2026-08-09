@@ -1,4 +1,4 @@
-namespace BuildingBlocks.Infrastructure.Configuration;
+namespace Modules.Messaging.Infrastructure.Configuration;
 
 public sealed class ResendOptions
 {

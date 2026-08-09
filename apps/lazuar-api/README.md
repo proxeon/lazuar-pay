@@ -108,7 +108,7 @@ The `BuildingBlocks` folder is divided into three physical projects to enforce C
 * **Core Abstractions:**
   * `ICommand` & `IQuery`: Pipeline wrappers for MediatR.
   * `IIntegrationEvent`: Pure asynchronous messaging abstractions inheriting from MediatR's `INotification`.
-  * `IEmailService` & `IMessagingService`: Port definitions for external communications.
+  * (Email / messaging ports moved to **Messaging** module — R34)
   * `IExecutionContextAccessor`: Resolves claims (Tenant ID, User ID) from the active context.
 
 ### 3. `BuildingBlocks.Infrastructure`

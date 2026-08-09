@@ -1,5 +1,9 @@
-namespace BuildingBlocks.Application;
+namespace Modules.Messaging.Infrastructure.Email;
 
+/// <summary>
+/// Brand HTML shell applied at the Messaging dispatch edge ("Powered by Lazuar").
+/// Content/policy (templates, suppressions) stays in Communications.
+/// </summary>
 public static class EmailTemplateBuilder
 {
     public static string WrapWithBrandHtml(string rawBody, string? unsubscribeUrl = null)

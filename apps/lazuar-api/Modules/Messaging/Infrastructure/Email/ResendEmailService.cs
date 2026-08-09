@@ -1,15 +1,23 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using BuildingBlocks.Application;
-using BuildingBlocks.Infrastructure.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Modules.Messaging.Application;
+using Modules.Messaging.Infrastructure.Configuration;
 
-namespace BuildingBlocks.Infrastructure;
+namespace Modules.Messaging.Infrastructure.Email;
 
+/// <summary>
+/// Resend HTTP adapter. Tags outbound mail with <c>org</c> = organizationId so
+/// Communications inbound bounce/complaint webhooks can attribute suppressions.
+/// Tenant mail requires BYOK (no platform key fallback). System tenant may use platform key.
+/// </summary>
 public sealed class ResendEmailService : IEmailService
 {
+    /// <summary>Resend tag name used for bounce/complaint org attribution. Do not rename.</summary>
+    public const string OrgTagName = "org";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ResendOptions _options;
     private readonly ILogger<ResendEmailService> _logger;
@@ -83,7 +91,7 @@ public sealed class ResendEmailService : IEmailService
                 subject = subject,
                 html = body,
                 tags = organizationId.HasValue
-                    ? new[] { new { name = "org", value = organizationId.Value.ToString() } }
+                    ? new[] { new { name = OrgTagName, value = organizationId.Value.ToString() } }
                     : null,
                 headers
             };

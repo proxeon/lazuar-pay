@@ -61,8 +61,8 @@ Module Domain projects typically reference **both** `BuildingBlocks.Domain` and 
   * `IExecutionContextAccessor`, `ISqlConnectionFactory`
   * Security ports: password, secret vault, token generator
   * `PaginatedResponse` / paging helpers
-* **Present but product-shaped (tracked in 009 for move):** `IEmailService`, `IMessagingService`, `EmailTemplateBuilder`, `MarkdownParser`, product metric names.
-* **Moved out of BB:** LLM factory (R31), `AgentToolAttribute` / `IAgentPromptProvider` (R32 → Ops.Contracts), magic-link port (R33 → Commerce.Contracts).
+* **Present but product-shaped (tracked in 009 for move):** `MarkdownParser`, product metric names.
+* **Moved out of BB:** LLM factory (R31), `AgentToolAttribute` / `IAgentPromptProvider` (R32 → Ops.Contracts), magic-link port (R33 → Commerce.Contracts), email + messaging ports (R34 → Messaging).
 
 #### 3. `BuildingBlocks.Infrastructure`
 
@@ -71,7 +71,8 @@ Module Domain projects typically reference **both** `BuildingBlocks.Domain` and 
   * `PlatformDbContext` — multi-tenant filter, domain-event dispatch, job trigger (**single owner**; host must not ship a parallel base)
   * Outbox / inbox jobs and message entities
   * Password / JWT / AES vault / token generators
-* **Present but fat (tracked in 009):** Resend email, console messaging, full LLM client stack, hardcoded multi-schema metrics SQL, global `BackgroundWorkerOptions`, document payload helpers.
+* **Present but fat (tracked in 009):** hardcoded multi-schema metrics SQL, global `BackgroundWorkerOptions`, document payload helpers.
+* **Moved out of BB:** Resend/console email + console messaging (R34 → Messaging), full LLM client stack (R31 → Ops).
 
 Allowed mental folders under Infrastructure (even if not separate csproj yet): Persistence, Messaging, Security, Storage, Observability, Hosting; Email/Llm only until owned by modules.
 

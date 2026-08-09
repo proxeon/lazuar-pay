@@ -1,9 +1,11 @@
-// apps/lazuar-api/BuildingBlocks/Infrastructure/ConsoleMessagingService.cs
-using BuildingBlocks.Application;
 using Microsoft.Extensions.Logging;
+using Modules.Messaging.Application;
 
-namespace BuildingBlocks.Infrastructure;
+namespace Modules.Messaging.Infrastructure.Messaging;
 
+/// <summary>
+/// Console stand-in for WhatsApp/SMS transport. Decision 00.4 freezes real WhatsApp product work.
+/// </summary>
 public sealed class ConsoleMessagingService : IMessagingService
 {
     private readonly ILogger<ConsoleMessagingService> _logger;

@@ -1,4 +1,4 @@
-namespace BuildingBlocks.Application;
+namespace Modules.Messaging.Application;
 
 public interface IMessagingService
 {

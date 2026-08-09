@@ -60,7 +60,6 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-builder.Services.AddOptions<ResendOptions>().BindConfiguration(ResendOptions.SectionName);
 builder.Services.AddOptions<BackgroundWorkerOptions>().BindConfiguration(BackgroundWorkerOptions.SectionName);
 builder.Services.AddOptions<ObservabilityOptions>().BindConfiguration(ObservabilityOptions.SectionName);
 builder.Services.AddOptions<PlatformAdminSettings>().Configure<IConfiguration>((settings, configuration) =>
@@ -124,25 +123,12 @@ builder.Services.AddOptions<ApiKeyMigrationOptions>()
 }
 
 
-builder.Services.AddHttpClient("Resend", (sp, client) =>
-{
-    client.BaseAddress = new Uri("https://api.resend.com/");
-    client.Timeout = TimeSpan.FromSeconds(30);
-    var options = sp.GetRequiredService<IOptions<ResendOptions>>().Value;
-    if (!string.IsNullOrEmpty(options.ApiKey))
-    {
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.ApiKey}");
-    }
-});
-
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IExecutionContextAccessor, ExecutionContextAccessor>();
 builder.Services.AddSingleton<DatabaseJobTrigger>();
 builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
-builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
-builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 builder.Services.AddSingleton<ISecretVault, AesSecretVault>();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());

@@ -8,10 +8,11 @@ The `Messaging` module is the centralized, domain-agnostic dispatch engine for o
 * Messaging stays a **thin transport**; Communications remains content/policy owner.
 * **Console WhatsApp is not a production channel** — docs and defaults must not claim automated WhatsApp dunning as live.
 * **No merge into Communications** until product funds a real multi-channel provider (then reopen 00.4 / Phase 16).
-* BuildingBlocks ports (`IMessagingService`, email) stay technical; channel product work is not “just another adapter PR” without reopening 00.4.
+* Email + channel ports (`IEmailService`, `IMessagingService`, Resend, brand HTML) are **module-owned** (R34); channel product work is not “just another adapter PR” without reopening 00.4.
 
 ## 2. Core Responsibilities
-* **Universal Dispatch:** Consuming the generic `DispatchMessageIntegrationEvent` and routing the payload to the appropriate `IEmailService` or `IMessagingService` building block based on the requested `Channel`.
+* **Universal Dispatch:** Consuming the generic `DispatchMessageIntegrationEvent` and routing the payload to module-owned `IEmailService` (Resend) or `IMessagingService` (console WA stub) based on the requested `Channel`.
+* **Physical send adapters:** Owns Resend HTTP, Console email, brand HTML wrapper (`EmailTemplateBuilder`), and the WhatsApp console stub. Communications owns BYOK config, suppressions, and inbound Resend webhooks.
 * **Tenant Replication:** Maintaining a localized, read-only replica of Tenant metadata (`TenantReplica`) to allow the messaging infrastructure to resolve tenant slugs and statuses without querying the `One` module's database.
 * **HTML/Text Sanitization:** Stripping HTML tags from email bodies when routing to SMS/plain-text channels to ensure clean plain-text delivery.
 
