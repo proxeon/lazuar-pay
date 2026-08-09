@@ -8,8 +8,13 @@
 
 This document describes **what is still intentionally unfinished**, why it was deferred, **when** to do it, and **what “done” looks like**. It is the handoff for future implementers — not a second 00–18 program.
 
-**Phased execution checklists (like 00–18, many small phases):**  
-→ [`checklists-future/README.md`](./checklists-future/README.md) (F00–F16)
+**Phased execution checklists:**
+
+| Detail level | Path |
+|--------------|------|
+| Coarse F00–F16 | [`checklists-future/README.md`](./checklists-future/README.md) |
+| **Fine R00–R99 (prefer for implement)** | [`../005-remaining/checklists/README.md`](../005-remaining/checklists/README.md) |
+| How-to analyses | [`../005-remaining/`](../005-remaining/) |
 
 “Not one go” means **not one mega-PR**. A **long multi-phase checklist** is the intended way to implement this backlog.
 
