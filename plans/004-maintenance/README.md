@@ -5,11 +5,19 @@
 **Scope:** `apps/lazuar-api`, `packages/api-spec`, related generated contracts / tests / gen pipeline  
 **Out of scope:** Frontend apps, Caddy/DX gateway work
 
-## Implementation checklists (start here to execute)
+## Implementation checklists (phases 00–18 — largely executed)
 
 → **[`checklists/README.md`](./checklists/README.md)** — phase map 00–18, execution order, PR rules  
 
 Many small phase files (not one fat checklist): secrets, dual keys, TypeSpec honesty, CI, One endpoints split, Program composition, dunning, folders, fixtures, BB thinning, optional extracts, definition of done.
+
+## Future work (remaining modifications after 00–18)
+
+→ **[`FUTURE-WORK.md`](./FUTURE-WORK.md)** — deferred workstreams FW-1…FW-7  
+
+Covers: API key One-only cutover (calendar), LHDN webhooks → One, BuildingBlocks moves, cross-schema SQL, optional module extracts, TypeSpec Wave B, residual polish. Use this for future tickets — not a second maintenance mega-program.
+
+Also: locked **[`decisions.md`](./decisions.md)**, cutover design **[`api-key-cutover-design.md`](./api-key-cutover-design.md)**, close-out **[`phase-18-done.md`](./phase-18-done.md)**.
 
 ## Subagent reports (full text)
 
