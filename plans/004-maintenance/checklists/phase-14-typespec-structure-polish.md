@@ -8,41 +8,48 @@
 
 ## 14.1 Commerce models split
 
-- [ ] Split `modules/commerce/models.tsp` by subdomain e.g.:
-  - [ ] product models
-  - [ ] checkout / portal models
-  - [ ] subscription / dunning models
-  - [ ] coupon / stats models
-- [ ] Update imports in `routes.tsp` / `admin-routes` / `public-routes` / `main.tsp`
-- [ ] `task gen` succeeds
+- [x] Split `modules/commerce/models.tsp` by subdomain e.g.:
+  - [x] product models
+  - [x] checkout / portal models
+  - [x] subscription / dunning models
+  - [x] coupon / stats models
+- [x] Update imports in `routes.tsp` / `admin-routes` / `public-routes` / `main.tsp`  
+  *(barrel `models.tsp` keeps paths stable — no importer edits required)*
+- [x] `task gen` succeeds
 
 ## 14.2 One models + routes split
 
-- [ ] Split `modules/one/models.tsp` (auth, workspace, webhooks, api keys, provision)
-- [ ] Split `modules/one/routes.tsp` by same seams **or** keep routes and only split models first
-- [ ] Gen succeeds; clients compile
+- [x] Split `modules/one/models.tsp` (auth, workspace, webhooks, api keys, provision)
+- [x] Split `modules/one/routes.tsp` by same seams **or** keep routes and only split models first  
+  *(kept single `routes.tsp` / `OneOperations` — TypeSpec 1.13 rejects duplicate interface name across files)*
+- [x] Gen succeeds; clients compile
 
 ## 14.3 Orphan models
 
 For each orphan, **wire or delete**:
 
-- [ ] CRM models without routes — add routes or mark internal-only / remove from public OpenAPI
-- [ ] `LinkedCheckoutDto` / `PaymentRecordDto` if unused
-- [ ] Blank `messaging/models.tsp` — fill minimal ownership note or remove from compile if empty noise
-- [ ] Document intentional thin modules in api-spec README
+- [x] CRM models without routes — add routes or mark internal-only / remove from public OpenAPI  
+  *(documented intentional models-only; kept for `Lazuar.ApiTypes` consumers)*
+- [x] `LinkedCheckoutDto` / `PaymentRecordDto` if unused  
+  *(both deleted)*
+- [x] Blank `messaging/models.tsp` — fill minimal ownership note or remove from compile if empty noise  
+  *(ownership note; intentionally thin)*
+- [x] Document intentional thin modules in api-spec README
 
 ## 14.4 Admin routes size
 
-- [ ] Optionally split `commerce/admin-routes.tsp` if still painful after models split
+- [x] Optionally split `commerce/admin-routes.tsp` if still painful after models split  
+  *(skipped — ~204 LOC; optional; models split is the main win)*
 
 ## 14.5 Gen + consumers
 
-- [ ] Commit regenerated clients if repo policy commits them
-- [ ] `api-types-ts` / `api-types-dotnet` build
-- [ ] No accidental breaking rename without changelog note
+- [x] Commit regenerated clients if repo policy commits them
+- [x] `api-types-ts` / `api-types-dotnet` build
+- [x] No accidental breaking rename without changelog note  
+  *(only removals: unused `PaymentRecordDto`, `LinkedCheckoutDto`)*
 
 ## 14.6 Exit criteria
 
-- [ ] No single commerce/one models file still “bag of everything”
-- [ ] Orphans resolved or justified in README
-- [ ] Gen clean
+- [x] No single commerce/one models file still “bag of everything”
+- [x] Orphans resolved or justified in README
+- [x] Gen clean

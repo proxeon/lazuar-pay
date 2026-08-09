@@ -2009,16 +2009,6 @@ export interface components {
             /** Format: double */
             total_amount: number;
         };
-        "Commerce.PaymentRecordDto": {
-            id: string;
-            /** Format: double */
-            amount: number;
-            currency: string;
-            payment_method: string;
-            status: string;
-            /** Format: date-time */
-            created_at: string;
-        };
         "Commerce.PortalOrderDto": {
             id: string;
             product_id: string;
@@ -2249,11 +2239,6 @@ export interface components {
         };
         "Core.IdResponse": {
             id: string;
-        };
-        "Core.LinkedCheckoutDto": {
-            id: string;
-            name: string;
-            slug: string;
         };
         /** RFC 7807 Standardized Error Response */
         "Core.ProblemDetails": {

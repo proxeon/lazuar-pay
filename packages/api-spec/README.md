@@ -17,15 +17,22 @@ packages/api-spec/
 ├── common/
 │   └── models.tsp           # ProblemDetails, StatusResponse, IdResponse, auth schemes
 ├── modules/                 # Business verticals
-│   ├── one/                 # Identity, workspaces, entitlements
-│   ├── commerce/            # CaaS: products, checkout, subscriptions (admin + public)
+│   ├── one/
+│   │   ├── models.tsp       # Barrel → models/{auth,workspace,webhook,storage,api-keys,provision}.tsp
+│   │   ├── models/          # Subdomain DTOs (same namespace LazuarApi.One)
+│   │   └── routes.tsp       # Single OneOperations interface (stable tags/operationIds)
+│   ├── commerce/
+│   │   ├── models.tsp       # Barrel → models/{product,checkout,portal,dunning,...}.tsp
+│   │   ├── models/          # Subdomain DTOs (same namespace LazuarApi.Commerce)
+│   │   ├── admin-routes.tsp
+│   │   └── public-routes.tsp
 │   ├── payments/            # Gateway cashier / integration checkouts
 │   ├── billing/             # Ledger / financial truth
 │   ├── lhdn/                # Malaysian e-invoicing
 │   ├── ops/                 # Internal operator console
 │   ├── communications/      # Templates, broadcasts (admin)
-│   ├── crm/                 # Client profile models (models-only surface)
-│   ├── messaging/           # Dispatch DTOs (models-only; no routes)
+│   ├── crm/                 # Client profile models (models-only; see below)
+│   ├── messaging/           # Intentionally thin (models-only; no routes)
 │   └── platform/            # Cross-cutting platform routes
 ├── main.tsp                 # Full monorepo OpenAPI orchestrator (imports only)
 ├── docs-one.tsp             # Product-scoped docs (ADR 007)
@@ -42,18 +49,36 @@ packages/api-spec/
 
 | Module | Routes | Notes |
 | :--- | :--- | :--- |
-| **one** | `models.tsp`, `routes.tsp` | Global identity & workspaces |
-| **commerce** | `models.tsp`, `admin-routes.tsp`, `public-routes.tsp` | Pure CaaS surface |
+| **one** | barrel `models.tsp` + `routes.tsp` | Global identity & workspaces |
+| **commerce** | barrel `models.tsp` + `admin-routes` / `public-routes` | Pure CaaS surface |
 | **payments** | `models.tsp`, `routes.tsp` | M2M cashier / webhooks |
 | **billing** | `models.tsp`, `routes.tsp` | Ledger & net-profit APIs |
 | **lhdn** | `models.tsp`, `routes.tsp` | e-Invoice compliance |
 | **ops** | `models.tsp`, `routes.tsp` | Internal ops console |
 | **communications** | `models.tsp`, `admin-routes.tsp` | Templates & broadcasts |
-| **crm** | `models.tsp` only | Shared CRM DTOs |
-| **messaging** | `models.tsp` only | Dispatch-related models |
+| **crm** | `models.tsp` only | **Intentional orphans** — see below |
+| **messaging** | `models.tsp` only | **Intentionally thin** — see below |
 | **platform** | `routes.tsp` | Platform-level routes |
 
 **Removed (do not restore):** `modules/auth`, `modules/community`, `modules/vault`.
+
+---
+
+## Models-only / intentional thin modules
+
+| Module | Status | Why it stays |
+| :--- | :--- | :--- |
+| **CRM** | Models in monolith OpenAPI; **no TypeSpec routes** | Backend CRM is command/query only (no public HTTP). DTOs are consumed via generated `Lazuar.ApiTypes` (`ClientProfileDto`, create/update, `BillingAddressDto`) by CRM + Commerce tests/handlers. **Do not delete** without replacing the shared C# contracts. Product-scoped `docs-*.tsp` do **not** import CRM. |
+| **Messaging** | Empty namespace + ownership note | Dispatch/outbox module; templates live under Communications. No public OpenAPI surface. Keep the file so `main.tsp` can import the module without phantom DTOs. |
+
+### Orphans resolved (phase 14)
+
+| Model | Resolution |
+| :--- | :--- |
+| `Core.LinkedCheckoutDto` | **Removed** — never referenced by routes or other models |
+| `Commerce.PaymentRecordDto` | **Removed** — never used by any commerce route |
+
+When adding models, prefer wiring them to a route in the same PR, or document them here if they are deliberately models-only.
 
 ---
 
@@ -101,7 +126,7 @@ Example: extend **Commerce**.
 ### 1. Define the model
 
 ```typescript
-// modules/commerce/models.tsp
+// modules/commerce/models/<subdomain>.tsp  (or append to the nearest subdomain file)
 namespace LazuarApi.Commerce;
 
 model RefundRequestDto {
@@ -109,6 +134,8 @@ model RefundRequestDto {
   reason: string;
 }
 ```
+
+If you add a new subdomain file, import it from `modules/commerce/models.tsp` (the barrel).
 
 ### 2. Define the endpoint
 
