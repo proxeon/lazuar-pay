@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BuildingBlocks.Application;
+using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -16,11 +17,12 @@ public static class IntegrationEndpoints
 {
     public static IEndpointRouteBuilder MapPaymentsIntegrationEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/integrations/payments/checkouts")
+        // No trailing slash: OpenAPI + clients use /integrations/payments/checkouts
+        var group = endpoints.MapGroup("/integrations/payments")
             .RequireCors();
 
-        group.MapPost("/", async (
-            CreateIntegrationCheckoutRequest body,
+        group.MapPost("/checkouts", async (
+            CreateIntegrationCheckoutRequestDto body,
             HttpContext http,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
@@ -38,7 +40,7 @@ public static class IntegrationEndpoints
             {
                 var result = await mediator.Send(new CreateIntegrationCheckoutCommand(
                     OrganizationId: ctx.TenantId,
-                    Amount: body.Amount,
+                    Amount: (decimal)body.Amount,
                     Currency: body.Currency ?? string.Empty,
                     Description: body.Description ?? string.Empty,
                     CustomerEmail: body.Customer_email ?? string.Empty,
@@ -59,7 +61,7 @@ public static class IntegrationEndpoints
         })
         .RequireAuthorization("IntegrationPaymentsCheckoutsWrite");
 
-        group.MapGet("/{checkoutId:guid}", async (
+        group.MapGet("/checkouts/{checkoutId:guid}", async (
             Guid checkoutId,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
@@ -100,19 +102,19 @@ public static class IntegrationEndpoints
     private static IntegrationCheckoutResponseDto ToResponse(IntegrationCheckoutResult result) =>
         new()
         {
-            Checkout_id = result.CheckoutId,
+            Checkout_id = result.CheckoutId.ToString(),
             Checkout_url = result.CheckoutUrl,
             Gateway = result.Gateway,
             Status = result.Status,
-            Amount = result.Amount,
+            Amount = (double)result.Amount,
             Currency = result.Currency,
             Provider_session_id = result.ProviderSessionId,
             Gateway_transaction_id = result.GatewayTransactionId,
-            Expires_at = result.ExpiresAt,
-            Metadata = result.Metadata
+            Expires_at = new DateTimeOffset(DateTime.SpecifyKind(result.ExpiresAt, DateTimeKind.Utc)),
+            Metadata = result.Metadata ?? new Dictionary<string, string>()
         };
 
-    private static ProblemDetails Problem(string code, string detail, int status) =>
+    private static Microsoft.AspNetCore.Mvc.ProblemDetails Problem(string code, string detail, int status) =>
         new()
         {
             Status = status,
@@ -120,34 +122,4 @@ public static class IntegrationEndpoints
             Detail = detail,
             Extensions = { ["code"] = code }
         };
-}
-
-/// <summary>Request body for POST /integrations/payments/checkouts (snake_case JSON).</summary>
-public sealed class CreateIntegrationCheckoutRequest
-{
-    public decimal Amount { get; set; }
-    public string? Currency { get; set; }
-    public string? Description { get; set; }
-    public string? Customer_email { get; set; }
-    public string? Customer_name { get; set; }
-    public string? Success_url { get; set; }
-    public string? Cancel_url { get; set; }
-    public string? Gateway_name { get; set; }
-    public bool? Setup_future_usage { get; set; }
-    public string? Idempotency_key { get; set; }
-    public Dictionary<string, string>? Metadata { get; set; }
-}
-
-public sealed class IntegrationCheckoutResponseDto
-{
-    public Guid Checkout_id { get; set; }
-    public string? Checkout_url { get; set; }
-    public string Gateway { get; set; } = "";
-    public string Status { get; set; } = "";
-    public decimal Amount { get; set; }
-    public string Currency { get; set; } = "";
-    public string? Provider_session_id { get; set; }
-    public string? Gateway_transaction_id { get; set; }
-    public DateTime Expires_at { get; set; }
-    public Dictionary<string, string> Metadata { get; set; } = new();
 }
