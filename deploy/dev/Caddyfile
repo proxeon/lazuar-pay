@@ -1,0 +1,44 @@
+# Lazuar Hub — local dev gateway (prod-like path map)
+# Listen: http://localhost:9080
+# Requires FE/API processes on fixed ports (see README / mprocs).
+# Admin: handle_path strips /admin so Vite base=/admin/ asset URLs resolve
+#        the same way as deploy/prod/Caddyfile.
+# Portal/docs: path prefix preserved (Next basePath).
+# Ops: catch-all at /.
+#
+# Run: task proxy
+# Or:  caddy run --config deploy/dev/Caddyfile --adapter caddyfile
+
+:9080 {
+	encode gzip
+
+	handle /health {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# Portal (Next basePath=/portal)
+	handle /portal* {
+		reverse_proxy 127.0.0.1:3004
+	}
+
+	# Developer docs (Next basePath=/docs)
+	handle /docs* {
+		reverse_proxy 127.0.0.1:3002
+	}
+
+	# Superadmin (Vite base=/admin/) — strip prefix like prod
+	@adminExact path /admin
+	redir @adminExact /admin/ permanent
+	handle_path /admin/* {
+		reverse_proxy 127.0.0.1:3005
+	}
+
+	# Ops creator console at /
+	handle {
+		reverse_proxy 127.0.0.1:3003
+	}
+}

@@ -13,4 +13,11 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Dual-pinned with package.json `vite --port=3005 --host=0.0.0.0`.
+  // strictPort: fail loud if 3005 is busy — never silently steal another app's port.
+  server: {
+    host: true,
+    port: 3005,
+    strictPort: true,
+  },
 })

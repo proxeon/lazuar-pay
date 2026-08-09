@@ -43,6 +43,26 @@ tasks:
     cmds:
       - mprocs -c mprocs-dev.yaml
 
+  proxy:
+    desc: Local Caddy gateway on :9080 (prod-like paths → pinned FE/API ports). Requires caddy on PATH.
+    cmds:
+      - |
+        if ! command -v caddy >/dev/null 2>&1; then
+          echo "caddy not found. Install: brew install caddy"
+          exit 1
+        fi
+        caddy run --config deploy/dev/Caddyfile --adapter caddyfile
+
+  proxy:validate:
+    desc: Validate deploy/dev/Caddyfile syntax
+    cmds:
+      - |
+        if ! command -v caddy >/dev/null 2>&1; then
+          echo "caddy not found. Install: brew install caddy"
+          exit 1
+        fi
+        caddy validate --config deploy/dev/Caddyfile --adapter caddyfile
+
   # ==========================================
   # .NET API Tasks
   # ==========================================
