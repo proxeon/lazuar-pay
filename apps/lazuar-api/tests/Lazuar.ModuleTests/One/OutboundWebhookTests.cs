@@ -1,13 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
-using MediatR;
+using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Commerce.Contracts.Events;
@@ -193,13 +191,11 @@ public class OutboundWebhookTests
     }
 
     private static OneDbContext CreateDb()
-    {
-        var options = new DbContextOptionsBuilder<OneDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        return new OneDbContext(options, new TestExecutionContext(), new NoopMediator(), new DatabaseJobTrigger());
-    }
+        => new(
+            InMemoryDb.CreateOptions<OneDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
 
     private static string ComputeHmacHex(string secret, string payload)
     {
@@ -207,45 +203,5 @@ public class OutboundWebhookTests
         var payloadBytes = Encoding.UTF8.GetBytes(payload);
         using var hmac = new HMACSHA256(keyBytes);
         return Convert.ToHexString(hmac.ComputeHash(payloadBytes)).ToLowerInvariant();
-    }
-
-    private sealed class TestExecutionContext : IExecutionContextAccessor
-    {
-        public Guid UserId => Guid.Empty;
-        public Guid TenantId => Guid.Empty;
-        public bool IsSystemAdmin => true;
-        public string UserRole => "SUPER_ADMIN";
-        public bool IsTestMode => false;
-        public string AuditSignature => "test";
-    }
-
-    private sealed class NoopMediator : IMediator
-    {
-        public Task Publish(object notification, System.Threading.CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task Publish<TNotification>(TNotification notification, System.Threading.CancellationToken cancellationToken = default)
-            where TNotification : INotification
-            => Task.CompletedTask;
-
-        public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, System.Threading.CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task Send<TRequest>(TRequest request, System.Threading.CancellationToken cancellationToken = default)
-            where TRequest : IRequest
-            => throw new NotSupportedException();
-
-        public Task<object?> Send(object request, System.Threading.CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public IAsyncEnumerable<TResponse> CreateStream<TResponse>(
-            IStreamRequest<TResponse> request,
-            System.Threading.CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public IAsyncEnumerable<object?> CreateStream(
-            object request,
-            System.Threading.CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
     }
 }

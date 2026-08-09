@@ -1,9 +1,8 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
-using MediatR;
+using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Application;
 using Modules.Billing.Domain;
@@ -12,7 +11,6 @@ using Modules.Billing.Infrastructure;
 using Modules.Billing.Infrastructure.EventHandlers;
 using Modules.Billing.Infrastructure.Repositories;
 using Modules.Payments.Contracts.Events;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Billing.EventHandlers;
@@ -29,13 +27,11 @@ public class GatewayRefundCompletedHandlerTests
     public void SetUp()
     {
         _orgId = Guid.CreateVersion7();
-        var options = new DbContextOptionsBuilder<BillingDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        var ctx = Substitute.For<IExecutionContextAccessor>();
-        ctx.TenantId.Returns(Guid.Empty);
-        _db = new BillingDbContext(options, ctx, Substitute.For<IMediator>(), new DatabaseJobTrigger());
+        _db = new BillingDbContext(
+            InMemoryDb.CreateOptions<BillingDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
         _repo = new LedgerRepository(_db);
         _handler = new GatewayRefundCompletedHandler(_repo, _db);
     }

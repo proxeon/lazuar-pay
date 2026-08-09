@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
-using MediatR;
+using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Domain.Aggregates;
@@ -32,18 +30,10 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         _orgId = Guid.CreateVersion7();
         _productId = Guid.CreateVersion7();
 
-        var options = new DbContextOptionsBuilder<CommerceDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var executionContext = Substitute.For<IExecutionContextAccessor>();
-        // Empty tenant so global filter does not hide entities when not using IgnoreQueryFilters.
-        executionContext.TenantId.Returns(Guid.Empty);
-
         _db = new CommerceDbContext(
-            options,
-            executionContext,
-            Substitute.For<IMediator>(),
+            InMemoryDb.CreateOptions<CommerceDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
             new DatabaseJobTrigger());
 
         _handler = new GatewayPaymentFailedIntegrationEventHandler(

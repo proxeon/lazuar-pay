@@ -1,15 +1,13 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
-using MediatR;
+using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Modules.One.Domain;
 using Modules.One.Infrastructure;
 using Modules.One.Infrastructure.Workers;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.One;
@@ -77,13 +75,9 @@ public class OutboundWebhookClaimTests
     }
 
     private static OneDbContext CreateDb()
-    {
-        var options = new DbContextOptionsBuilder<OneDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        var ctx = Substitute.For<IExecutionContextAccessor>();
-        ctx.TenantId.Returns(Guid.Empty);
-        return new OneDbContext(options, ctx, Substitute.For<IMediator>(), new DatabaseJobTrigger());
-    }
+        => new(
+            InMemoryDb.CreateOptions<OneDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
 }

@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
-using MediatR;
+using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Modules.Billing.Domain.Aggregates;
@@ -12,7 +11,6 @@ using Modules.Billing.Infrastructure;
 using Modules.Billing.Infrastructure.EventHandlers;
 using Modules.Billing.Infrastructure.Services;
 using Modules.Payments.Contracts.Events;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Billing.EventHandlers;
@@ -29,16 +27,11 @@ public class PlatformTopUpEventHandlerTests
     {
         _tenantId = Guid.CreateVersion7();
 
-        var options = new DbContextOptionsBuilder<BillingDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var executionContext = Substitute.For<IExecutionContextAccessor>();
-        executionContext.TenantId.Returns(Guid.Empty); // webhooks have no tenant filter context
-
-        var mediator = Substitute.For<IMediator>();
-        var jobTrigger = new DatabaseJobTrigger();
-        _dbContext = new BillingDbContext(options, executionContext, mediator, jobTrigger);
+        _dbContext = new BillingDbContext(
+            InMemoryDb.CreateOptions<BillingDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
 
         var creditOptions = Options.Create(new CreditCostOptions
         {

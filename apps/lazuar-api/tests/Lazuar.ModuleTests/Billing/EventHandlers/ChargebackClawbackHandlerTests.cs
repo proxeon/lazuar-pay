@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using Lazuar.TestSupport;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -33,13 +33,11 @@ public class ChargebackClawbackHandlerTests
     public void SetUp()
     {
         _tenantId = Guid.CreateVersion7();
-        var options = new DbContextOptionsBuilder<BillingDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        var ctx = Substitute.For<IExecutionContextAccessor>();
-        ctx.TenantId.Returns(Guid.Empty);
-        _db = new BillingDbContext(options, ctx, Substitute.For<IMediator>(), new DatabaseJobTrigger());
+        _db = new BillingDbContext(
+            InMemoryDb.CreateOptions<BillingDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
         _mediator = Substitute.For<IMediator>();
 
         var creditOptions = Options.Create(new CreditCostOptions
