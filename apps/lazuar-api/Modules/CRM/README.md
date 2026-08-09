@@ -14,6 +14,12 @@ The `CRM` (Customer Relationship Management) module acts as the centralized, ten
 * **Not a Messaging Engine:** It does not send emails or SMS messages. It merely holds the contact data that other modules use to dispatch messages.
 * **No Business Context:** It does not store "Leads", "Deals", or "Support Tickets". It is strictly a primitive contact registry.
 
+## 3.1 Layer shape (no Application project)
+
+CRM is a **documented 3-layer exception**: `Contracts` + `Domain` + `Infrastructure` only — **no `Application` project**. Command handlers, query service, and workers live in Infrastructure. Host MediatR registers only the Infrastructure assembly for CRM (`ModulesWithoutApplication` in architecture tests).
+
+Do not invent an Application layer without an intentional epic (ports extraction + architecture-test update). The module is internal-only (no HTTP `Endpoints.cs`); other modules use `ICrmQueryService` / commands via Contracts.
+
 ## 4. Key Domain Aggregates & Entities
 * **`ClientProfileEntity`**: The core aggregate representing a customer within a specific tenant. Contains `FullName`, `Email`, `Phone`, `ConsentedToMarketing`, and an optional `GlobalUserId` link to the `One` module.
   * *Anonymize Behavior:* When triggered, it overwrites PII with dummy data (e.g., `deleted_{Id}@localhost`) and severs the `GlobalUserId` link.

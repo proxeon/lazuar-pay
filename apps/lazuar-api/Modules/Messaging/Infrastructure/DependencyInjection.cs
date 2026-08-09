@@ -6,6 +6,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Messaging.Application;
 using Modules.Messaging.Infrastructure.EventHandlers;
+using Modules.Messaging.Infrastructure.Workers;
 using Modules.Messaging.Contracts;
 using Modules.One.Contracts;
 

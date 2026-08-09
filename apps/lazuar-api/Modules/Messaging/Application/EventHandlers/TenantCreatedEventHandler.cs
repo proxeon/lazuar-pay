@@ -2,7 +2,7 @@ using MediatR;
 using Modules.Messaging.Domain;
 using Modules.One.Contracts;
 
-namespace Modules.Messaging.Application;
+namespace Modules.Messaging.Application.EventHandlers;
 
 public class TenantCreatedEventHandler : INotificationHandler<TenantProvisionedIntegrationEvent>
 {

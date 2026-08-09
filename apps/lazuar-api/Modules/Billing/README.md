@@ -16,6 +16,12 @@ The `Billing` module is the **Core Domain for Financial Truth**. It acts as the 
 * **Not an Access Control System:** It does not know if a user has an active Commerce subscription or portal access. It only knows the financial contract.
 * **No Cross-Schema Joins:** Billing does not query `commerce` / `crm` tables directly. Customer display for final receipts and proforma drafts is resolved via Commerce ports (`ICommerceDocumentLookup`).
 
+## 3.1 Handler layer note (intentional today)
+
+**Command and integration-event handlers currently live in `Infrastructure/`** (`Commands/`, `EventHandlers/`), not `Application/`. Application is thin (queries + LLM prompts + repository port). MediatR registers the Infrastructure assembly, so this is DI-safe.
+
+This is a known inversion vs Commerce/Lhdn (Application-owned handlers). A full rebalance (ports + moving handlers into Application + test updates) is a **separate epic** — do not “fix” placement casually in drive-by PRs.
+
 ## 4. Key Domain Aggregates & Entities
 * **`LedgerEntry`**: Aggregate root for a single financial transaction.
   * **`CustomerDocumentNumber`**: Immutable customer-facing receipt # (never overwritten by LHDN).

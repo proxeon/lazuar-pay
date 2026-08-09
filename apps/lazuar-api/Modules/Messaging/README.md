@@ -26,8 +26,10 @@ The `Messaging` module is the centralized, domain-agnostic dispatch engine for a
 * *None.* The Messaging module is a terminal sink for communication events. It does not publish events that trigger downstream business logic.
 
 ## 6. Background Workers
-* **`MessagingInboxConsumerJob`**: Processes incoming tenant replication events and universal dispatch requests transactionally.
-* **`MessagingOutboxPublisherJob`**: Standard outbox dispatcher for any events the module might need to emit in the future.
+* **`MessagingInboxConsumerJob`** (`Infrastructure/Workers/`): Processes incoming tenant replication events and universal dispatch requests transactionally.
+* **`MessagingOutboxPublisherJob`** (`Infrastructure/Workers/`): Standard outbox dispatcher for any events the module might need to emit in the future.
+
+Integration-event handlers (inbox enqueue + dispatch) live under `Infrastructure/EventHandlers/`. Domain-side tenant replica updates are MediatR notification handlers under `Application/EventHandlers/`.
 
 ## 7. Database Schema
 All tables reside in the isolated `messaging` schema.

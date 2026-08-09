@@ -3,7 +3,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.One.Contracts;
 
-namespace Modules.Messaging.Infrastructure;
+namespace Modules.Messaging.Infrastructure.EventHandlers;
 
 public class TenantProvisionedIntegrationEventHandler : IIntegrationEventHandler<TenantProvisionedIntegrationEvent>
 {

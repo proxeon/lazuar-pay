@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Modules.One.Contracts;
 
-namespace Modules.Messaging.Infrastructure;
+namespace Modules.Messaging.Infrastructure.EventHandlers;
 
 public class TenantProvisionedSeedingHandler : INotificationHandler<TenantProvisionedIntegrationEvent>
 {
