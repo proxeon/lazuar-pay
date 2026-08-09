@@ -1,12 +1,13 @@
 # 004 Maintenance — Future work (remaining modifications)
 
-**Status:** Active backlog after maintenance track 00–18  
+**Status:** **005 wave closed** (`chore/remaining-005`, R99) — implementable streams done or SKIP; **ops residual** only (keys migrate+deploy One-only, webhook staging migrate, table-drop clocks). See [`../005-remaining/r99-notes.md`](../005-remaining/r99-notes.md).  
 **Date:** 2026-08-09  
 **Branch that closed the track:** `chore/backend-maintenance-004`  
+**005 execution branch:** `chore/remaining-005`  
 **Locked decisions:** [`decisions.md`](./decisions.md)  
 **Track close-out:** [`phase-18-done.md`](./phase-18-done.md)
 
-This document describes **what is still intentionally unfinished**, why it was deferred, **when** to do it, and **what “done” looks like**. It is the handoff for future implementers — not a second 00–18 program.
+This document describes **what is still intentionally unfinished**, why it was deferred, **when** to do it, and **what “done” looks like**. After R99, residuals are **normal ops tickets**, not an open mega-program.
 
 **Phased execution checklists:**
 
@@ -24,11 +25,11 @@ This document describes **what is still intentionally unfinished**, why it was d
 
 | Audience | Use |
 |----------|-----|
-| Eng | Pick a workstream (FW-1…FW-7); follow “implementation outline”; open a focused PR |
+| Eng | Prefer residual ops tickets (below) or opportunistic follow-ups; completed FW streams are closed |
 | Product | Re-open Phase 16 / 00.2 / 00.3 only when triggers fire |
-| Ops | Calendar: API key cutover after **2026-11-30** |
+| Ops | Residual tickets: keys migrate+deploy One-only; webhook staging migrate; R06 table drop after ≥30d One-only prod. Dual-read calendar until **2026-11-30** |
 
-**Do not** treat this list as “must do before merge.” Maintenance track is already **healthy enough**. These are **future** modifications.
+**Do not** treat closed FW streams as open mega-program work. After R99, only ops residuals + product-gated extract remain.
 
 ---
 
@@ -36,13 +37,13 @@ This document describes **what is still intentionally unfinished**, why it was d
 
 | ID | Workstream | Urgency | Owner type |
 |----|------------|---------|------------|
-| **FW-1** | API key dual-read cutover (One-only middleware) | **Partial** — R05 code done; deploy gated on Q8 `active_legacy_only=0`; R06 table drop pending | Eng + Ops |
-| **FW-2** | LHDN outbound webhooks → One dispatcher | **Done** — R40–R43 (staging/prod ops exit optional) | Product + Eng |
-| **FW-3** | BuildingBlocks product-port code moves | Opportunistic | Eng |
-| **FW-4** | Cross-schema SQL / runtime boundary leaks | When touching area / P1 hygiene | Eng |
-| **FW-5** | Optional module extract / merge (Phase 16) | **Only with product trigger** | Product + Eng |
-| **FW-6** | TypeSpec Wave B + residual DX | Product DX | Eng |
-| **FW-7** | Remaining god-file / test-fixture polish | Opportunistic | Eng |
+| **FW-1** | API key dual-read cutover (One-only middleware) | **Partial** — code complete; **ops** migrate + deploy One-only; R06 dated | Eng + Ops |
+| **FW-2** | LHDN outbound webhooks → One dispatcher | **Done** — R40–R43 (staging/prod ops residual) | Product + Eng |
+| **FW-3** | BuildingBlocks product-port code moves | **Done** — R30–R35 | Eng |
+| **FW-4** | Cross-schema SQL / runtime boundary leaks | **Done** — R11–R15 fixed; R16→R35; R17→R05 | Eng |
+| **FW-5** | Optional module extract / merge (Phase 16) | **SKIP (R60)** — only with product trigger | Product + Eng |
+| **FW-6** | TypeSpec Wave B + residual DX | **Done** — R20–R25 | Eng |
+| **FW-7** | Remaining god-file / test-fixture polish | **Done** — R50–R53 (wave scope) | Eng |
 
 ---
 
@@ -50,9 +51,16 @@ This document describes **what is still intentionally unfinished**, why it was d
 
 ## Status (2026-08-09)
 
-**Partial:** R05 One-only middleware + One revoke subscription **implemented on** `chore/remaining-005` (code/docs).  
-**Remaining:** staging/prod **DEPLOY** after Q8 `active_legacy_only = 0` (R04/R05.1/R05.5); table archive **R06** (FW-1.3).  
-Notes: `plans/005-remaining/r05-notes.md`.
+**Partial — code complete, ops/deploy residual** (R99).
+
+| Band | State |
+|------|--------|
+| R01–R03 | **Code done** (inventory, migrator, runbook) |
+| R04 | **Ops pending** — staging/prod migrate |
+| R05 | **Code on branch**, deploy-gated on Q8 `active_legacy_only = 0` |
+| R06 | **Deferred** — ≥30d after One-only **in prod** (clock not started) |
+
+Notes: `plans/005-remaining/r04-notes.md`, `r05-notes.md`, `r06-notes.md`, `r99-notes.md`.
 
 ## Why deploy is gated
 
@@ -192,9 +200,20 @@ See `plans/005-remaining/webhook-convergence-decisions.md`:
 
 # FW-3 — BuildingBlocks product-port moves
 
-## Why deferred
+**Status: Done** (R30–R35 on `chore/remaining-005`, 2026-08-09).
 
-Ownership map shipped (Phase 15). Moving LLM/email/metrics is multi-PR, no calendar deadline, high merge noise if bundled with endpoint refactors.
+## Outcome
+
+Planned BuildingBlocks product-port moves for the 005 wave landed:
+
+| Phase | Move | State |
+|-------|------|--------|
+| R30 | Port hygiene (`IJwtService`, `IR2StorageService` → Application) | Done |
+| R31 | LLM factory / policies / title → **Ops** | Done |
+| R32 | Agent tools / prompt port → Ops.Contracts | Done |
+| R33 | Magic-link shapes → **Commerce** | Done |
+| R34 | Email + `IMessagingService` → **Messaging** | Done |
+| R35 | Metrics plugins + outbox schema registration | Done |
 
 ## What already exists
 
@@ -202,83 +221,67 @@ Ownership map shipped (Phase 15). Moving LLM/email/metrics is multi-PR, no calen
 |----------|------|
 | Ownership map | [`apps/lazuar-api/docs/009-building-blocks-ownership.md`](../../apps/lazuar-api/docs/009-building-blocks-ownership.md) |
 | SharedKernel policy | `SharedKernel/README.md`, marker xmldoc |
-| Metrics plugins (R35) | `IOutboxSchemaRegistration` + `IPlatformMetricsContributor`; Lhdn owns stuck SQL |
+| Notes | `plans/005-remaining/r30-notes.md` … `r35-notes.md` |
 
-## Recommended move order (opportunistic PRs)
+## Soft / out-of-wave residuals (not FW-3 blockers)
 
-| Order | Move | Destination | Notes |
-|------:|------|-------------|--------|
-| 1 | Port hygiene (interfaces in Application) | BB Application | When touching security/storage ports |
-| 2 | LLM factory + policies + title generator | **Ops** | Sole orchestrator is Ops |
-| 3 | Agent prompt / tool attributes | Ops.Contracts / Ops.Application | Billing implements via Contracts |
-| 4 | `IEmailService` / Resend / template HTML | **Messaging** (+ Communications for BYOK) | Brand HTML out of BB |
-| 5 | `IMessagingService` console/adapters | **Messaging** | Respect 00.4 freeze on multi-channel product |
-| 6 | Magic-link token shapes | **Commerce** | Product-shaped |
-| 7 | Document link payload helpers | Billing / Commerce | Generic HMAC may stay BB |
-| 8 | Metrics contributors | Modules + thin BB aggregator | **R35 done** (schema reg + LHDN stuck); dunning counter still soft/BB process counter |
-| 9 | Per-module worker options | Each module | Shrink `BackgroundWorkerOptions` god bag |
+- M4 dunning counter still soft BB process counter (R35 deferred)
+- Document link payload helpers may stay BB (generic HMAC)
+- Per-module worker options bag shrink — opportunistic when touching workers
+- Further 009 grey items: re-accept or ticket when touched
 
-## Implementation rules
+## Implementation rules (still)
 
 1. **One concern per PR.**  
 2. Architecture tests must stay green (BB ↛ Modules).  
 3. Prefer **ports + DI move** over renaming types widely.  
-4. Do **not** invent a Storage or Email module unless product lifecycle demands it (R2 stays thin shared port).  
+4. Do **not** invent a Storage or Email module unless product lifecycle demands it.  
 5. Re-read 009 before each PR; update 009 when ownership changes.
-
-## Done when (per move)
-
-Module owns the product code; BB only has technical spine; 009 map updated; builds/tests green.
-
-**Entire FW-3 “done”** only when map §3 items are moved or explicitly re-accepted as grey with rationale.
 
 ---
 
 # FW-4 — Cross-schema SQL / runtime boundary leaks
 
-## Why deferred
+**Status: Done** (R10–R17 / R35 on `chore/remaining-005`, 2026-08-09).
 
-Compile-time modularity is largely real. Runtime SQL that JOINs foreign schemas **bypasses** Contracts. Each leak needs a local design (query service, integration event, denormalized copy) — not a global rewrite.
+## Outcome
+
+| Phase | Leak | State |
+|-------|------|--------|
+| R11 | L-01 document published (Communications) | Fixed |
+| R12 | L-02 platform superadmin (Payments→one) | Fixed |
+| R13 | L-03 arrears update (Commerce) | Fixed |
+| R14 | L-05 document lookup CRM | Fixed |
+| R15 | L-04 dead template SQL | Fixed |
+| R16 → R35 | L-06 metrics multi-schema product SQL | Resolved via metrics plugins |
+| R17 → R05 | L-07 API-key dual-read SQL | Resolved via One-only middleware code |
 
 ## What already exists
 
 | Artifact | Path |
 |----------|------|
-| Coupling analysis | [`04-module-boundaries-modularization.md`](./04-module-boundaries-modularization.md) (esp. runtime leaks) |
-| Host Application refs fixed | Phase 17 architecture test |
+| Coupling analysis | [`04-module-boundaries-modularization.md`](./04-module-boundaries-modularization.md) |
+| Live inventory | `plans/005-remaining/cross-schema-leaks-live.md` |
+| Notes | `plans/005-remaining/r11-notes.md` … `r17-notes.md`, `r35-notes.md` |
 
-## Known leak classes to ticket (verify with current grep before PR)
+## Ongoing hygiene (not open program)
 
-Re-inventory before fixing — code moves may have shifted lines:
-
-| Area | Typical smell | Fix direction |
-|------|---------------|---------------|
-| **Communications** | JOIN other modules’ tables for receipts / fulfillment context | `I*QueryService` on owning module Contracts; or denormalize ids into Communications |
-| **Commerce** | Cross-module template / billing reads via raw SQL | Same |
-| **Payments / platform auth** | Direct SQL into `one."GlobalUsers"` or similar | One query port |
-| **PlatformMetricsCollector** | ~~Multi-schema product SQL~~ **fixed R35** (technical outbox only + Lhdn contributor) | FW-3 item 8 done for LHDN; dunning process counter optional |
-| **Any new code** | `FromSql` / Dapper across schemas | Block in review; prefer Contracts |
-
-## Implementation outline (per leak)
-
-1. **Reproduce** with a test or documented query.  
-2. **Define port** on owning module’s Contracts (read model DTO).  
-3. **Implement** in owning Infrastructure.  
-4. **Replace** cross-schema SQL in consumer.  
-5. **Optional:** architecture/integration test that forbids the old pattern if practical.  
-6. **Do not** “fix” by moving more SQL into BuildingBlocks.
-
-## Done when
-
-No known production paths use private foreign-schema SQL without an approved exception recorded in 009 or an ADR; metrics no longer hardcode foreign domain status SQL.
+| Area | Rule |
+|------|------|
+| **Any new code** | `FromSql` / Dapper across schemas blocked in review; prefer Contracts |
+| **Approved exception** | Platform metrics may query registered `{schema}.OutboxMessages` / `InboxMessages` only (009) |
+| New leaks | Ticket locally when found — not a “reopen FW-4 mega program”
 
 ---
 
 # FW-5 — Optional module extract / merge (Phase 16)
 
-## Why deferred
+**Status: SKIP (R60, 2026-08-09)** — no product trigger; decisions not reopened.  
+Notes: `plans/005-remaining/r60-notes.md`.
 
-**No product trigger.** Decisions: no new modules; credits in Billing; Messaging frozen; webhooks stay in One.
+## Why SKIP / deferred
+
+**No product trigger.** Decisions: no new modules; credits in Billing; Messaging frozen; webhooks stay in One. R00 selected Extract **NO**; R60 gate all unchecked → **SKIP and stop**.
 
 ## Do not start until gate is true
 
@@ -305,6 +308,7 @@ No known production paths use private foreign-schema SQL without an approved exc
 
 - [`checklists/phase-16-optional-extract-merge.md`](./checklists/phase-16-optional-extract-merge.md)  
 - [`phase-16-done.md`](./phase-16-done.md) — gate not met  
+- R60: `plans/005-remaining/checklists/r60-extract-gate-only.md` — **SKIP**
 
 ## Done when
 
@@ -314,56 +318,54 @@ N/A until extract ships; then Contracts-only boundaries, host registration, Type
 
 # FW-6 — TypeSpec Wave B and contract DX
 
-## Why deferred
+**Status: Done** (R20–R25 on `chore/remaining-005`, 2026-08-09).
 
-Phase 05 closed **P0** honesty (dual DTOs for listed surfaces, path slash, broadcast phantoms). Remaining items are product/DX polish.
+## Outcome
 
-## Remaining items (from Phase 05 deferrals)
+| Phase | Item | State |
+|-------|------|--------|
+| R20 | Commerce product dual DTOs | Done |
+| R21 | Record refund dual DTO | Done |
+| R22 | Broadcast preview / status honesty | Done |
+| R23 | Billing signed PDF honesty | Done |
+| R24 | Payments docs security schemes | Done |
+| R25 | Path-honesty CI | Done — `scripts/check-openapi-minimal-honesty.mjs` + `contracts` CI + `task contracts:honesty`; allowlist `packages/api-spec/honesty-allowlist.yaml` |
 
-| Item | Action |
-|------|--------|
-| Billing signed PDF download | Add to TypeSpec if public/admin API, or mark internal-only |
-| Broadcast preview / status | Implement + TSP **or** remove from docs surface |
-| Communications public compliance routes | Honesty pass (TSP ↔ Minimal API) |
-| Payments product docs security schemes | OpenAPI security where routes require auth |
-| Commerce **product** dual DTOs (`CreateProductRequest` locals, etc.) | Same pattern as Phase 05 P0 for subscribers |
-| Optional path-honesty CI | **Done (R25, 2026-08-09):** `scripts/check-openapi-minimal-honesty.mjs` + `contracts` CI + `task contracts:honesty`; allowlist `packages/api-spec/honesty-allowlist.yaml` |
-| Admin-routes.tsp split | Optional if file pain returns |
+Notes: `plans/005-remaining/r20-notes.md` … `r25-notes.md`.
 
-## Implementation outline
+## Soft residuals (not FW-6 blockers)
 
-1. Inventory remaining local C# DTOs that mirror OpenAPI.  
-2. Prefer generated `Lazuar.ApiTypes` after TSP fix + `task gen`.  
-3. Commit clients per repo policy.  
-4. CI gate optional but high value long-term.
-
-## Done when
-
-No known dual DTO pairs on shipping surfaces; docs OpenAPI security accurate; **path-honesty CI green (R25)**.
+- Admin-routes.tsp split if file pain returns
+- Future dual DTOs on new surfaces — same pattern, local PR
+- Allowlist hygiene when adding `impl_only` routes
 
 ---
 
 # FW-7 — Remaining navigability polish
 
-## Why deferred
+**Status: Done** for 005 wave scope (R50–R53 on `chore/remaining-005`, 2026-08-09).
 
-Highest-ROI god files already split (One endpoints, Program, provision, dunning, public commerce, payment-completed, webhook handler). Residual files can wait until touched.
+## Outcome (this wave)
 
-## Candidates
+| Phase | Item | State |
+|-------|------|--------|
+| R50 | TestSupport batch | Done |
+| R51 | `LhdnGatewayAdapter` partials | Done |
+| R52 | LLM stream partial | Done |
+| R53 | GatewayCommon + outbox DI pilot | Done |
+
+Notes: `plans/005-remaining/r50-notes.md` … `r53-notes.md`.
+
+## Follow-ups (opportunistic, not open program)
 
 | File / area | Suggestion |
 |-------------|------------|
-| `LhdnGatewayAdapter` | Partials by operation (token, submit, status, TIN, cancel) |
-| `LlmOrchestratorService` | Finish stream vs non-stream / tool partials |
-| Payment gateway adapters | Shared name/amount utils only — no mega base class |
+| Outbox/inbox DI | Roll `AddModuleOutboxInbox` to remaining modules (R53 pilot was CRM) |
 | `BillingQueryService` / `B2cConsolidationJob` | Partials when editing |
-| ModuleTests → `Lazuar.TestSupport` | Gradual migration beyond 2 pilots |
-| Outbox/inbox DI helper | `AddModuleOutboxInbox<T>` pilot then roll out |
 | ProblemDetails | Expand stable `code` map as endpoints are touched |
+| ModuleTests → `Lazuar.TestSupport` | Further batches when touching tests |
 
-## Done when
-
-Opportunistic — no global deadline. Prefer house style when the file is already in the PR.
+Prefer house style when the file is already in the PR — no global deadline.
 
 ---
 
@@ -379,14 +381,20 @@ These are **product freezes**, not incomplete refactors:
 
 ---
 
-## Suggested ticket titles (copy-paste)
+## Residual ops tickets (post-R99 — prefer these)
 
-1. `feat(one): migrate legacy LHDN API keys and remove dual-read (FW-1)`  
-2. `feat(webhooks): deliver LHDN lifecycle events via One dispatcher (FW-2)`  
-3. `refactor(ops): move LLM factory from BuildingBlocks to Ops (FW-3)`  
+1. `ops(keys): migrate legacy LHDN API keys staging/prod + deploy One-only (FW-1 / R04→R05)`  
+2. `ops(webhooks): registry migrate staging + verify LHDN → One outbox delivery (R41/R42.4)`  
+3. `ops(keys): drop/archive lhdn.DeveloperApiKeys after ≥30d One-only prod (R06)`  
+
+Historical / closed titles:
+
+1. ~~`feat(one): migrate legacy LHDN API keys and remove dual-read (FW-1)`~~ code done; ops above  
+2. ~~`feat(webhooks): deliver LHDN lifecycle events via One dispatcher (FW-2)`~~ **done R40–R43**  
+3. ~~`refactor(ops): move LLM factory from BuildingBlocks to Ops (FW-3)`~~ **done R31**  
 4. ~~`refactor(metrics): pluginize PlatformMetricsCollector contributors (FW-3/FW-4)`~~ **done R35**  
-5. `fix(comms): replace cross-schema receipt SQL with Contracts query (FW-4)`  
-6. `chore(api-spec): Wave B contract honesty — products + security schemes (FW-6)`  
+5. ~~`fix(comms): replace cross-schema receipt SQL with Contracts query (FW-4)`~~ **done R11+**  
+6. ~~`chore(api-spec): Wave B contract honesty — products + security schemes (FW-6)`~~ **done R20–R25**  
 
 ---
 
@@ -406,6 +414,8 @@ When a workstream completes:
 
 1. Mark the section **Done** with date + PR link at the top of that FW section.  
 2. Update `decisions.md` only if a lock changes (e.g. cutover completed early).  
-3. Keep this file as the **single index** of post-004 future modifications.
+3. Keep this file as the **single index** of post-004 future modifications.  
+4. After R99, prefer residual ops tickets above over reopening a mega program.
 
-**Last updated:** 2026-08-09  
+**Last updated:** 2026-08-09 (R60 SKIP + R99 wave close)  
+

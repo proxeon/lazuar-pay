@@ -1,6 +1,6 @@
 # 005 Remaining — detailed implementation checklists
 
-**Status:** Ready to execute  
+**Status:** **Wave closed** (R99, 2026-08-09) — code tracks complete or SKIP; residual ops tickets in `../r99-notes.md`  
 **Date:** 2026-08-09  
 **Style:** Many **small** phase files (not fat catch-alls). One phase ≈ one PR (or smaller).  
 **How-to analyses:** parent `../01-…`–`../10-…`  

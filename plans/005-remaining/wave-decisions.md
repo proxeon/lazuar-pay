@@ -2,21 +2,22 @@
 
 **Date:** 2026-08-09  
 **Branch:** `chore/remaining-005`  
-**Phase:** R00 complete  
+**Phase:** R00 complete · **R99 closed** (code tracks; ops residual)  
 **Analysis:** `10-program-sequencing-and-risks.md`, `checklists/r00-wave-align.md`  
-**Decisions source:** `../004-maintenance/decisions.md`
+**Decisions source:** `../004-maintenance/decisions.md`  
+**Close-out:** `r99-notes.md` · Extract SKIP: `r60-notes.md`
 
 ## Track selection
 
-| Track | In this wave? | Phases |
-|-------|---------------|--------|
-| Keys | YES | R01–R06 |
-| SQL | YES | R10–R17 |
-| TypeSpec | YES | R20–R25 |
-| BuildingBlocks | YES | R30–R35 |
-| Webhooks | YES | R40–R43 (R40 = product defaults from 00.2 A + analysis 02) |
-| Polish | YES | R50–R53 |
-| Extract | NO | R60 skip |
+| Track | In this wave? | Phases | Wave outcome |
+|-------|---------------|--------|--------------|
+| Keys | YES | R01–R06 | **Code complete, ops/deploy residual** (R04 migrate; R05 deploy gate; R06 dated) |
+| SQL | YES | R10–R17 | **Done** (R11–R15 fixed; R16→R35; R17→R05) |
+| TypeSpec | YES | R20–R25 | **Done** |
+| BuildingBlocks | YES | R30–R35 | **Done** |
+| Webhooks | YES | R40–R43 (R40 = product defaults from 00.2 A + analysis 02) | **Code done**; staging/prod ops residual |
+| Polish | YES | R50–R53 | **Done** |
+| Extract | NO | R60 skip | **SKIP** documented |
 
 ## Delivery
 
@@ -39,8 +40,14 @@
 3. Then: R03→R04, R11–R15, R31+, R41 after R40, TypeSpec remainder
 4. Then: R05 (after migrate), R42→R43, R35 (after R16 handoff / R10)
 5. R06 after ≥30d One-only in prod
-6. R99 close-out when selected tracks complete/deferred with dates
-7. R60 not started
+6. R99 close-out when selected tracks complete/deferred with dates — **done**
+7. R60 **SKIP** (not started; gate unmet)
+
+## Residual ops tickets (post-R99 — normal tickets)
+
+1. **Keys migrate + deploy One-only** (R04 → R05)
+2. **Webhook migrate staging** (then prod verify)
+3. **Table drops clocks** (R06 ≥30d after prod One-only; optional later webhook sub table)
 
 ## Webhooks R40 seed defaults (full locks in R40 artifact)
 

@@ -1,6 +1,6 @@
 # 005 — Remaining work: how-to analyses
 
-**Status:** Investigation complete (no application code changed by subagents)  
+**Status:** **Wave closed** on `chore/remaining-005` (R99) — code tracks done/SKIP; **ops residual** (keys migrate+deploy One-only, webhook migrate staging, table-drop clocks). See `r99-notes.md`, `r60-notes.md`.  
 **Date:** 2026-08-09  
 **Scope:** Remaining items from `plans/004-maintenance/FUTURE-WORK.md` (after maintenance track 00–18)
 
