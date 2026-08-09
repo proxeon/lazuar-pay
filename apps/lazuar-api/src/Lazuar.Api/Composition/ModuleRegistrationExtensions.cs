@@ -80,6 +80,8 @@ public static class ModuleRegistrationExtensions
             .RequireCors()
             .RequireAuthorization(policy => policy.RequireRole("SUPER_ADMIN"));
 
+        // Super-admin auth is One-owned (L-02 / R12); payment-config remains Payments.
+        platformGroup.MapPlatformAuthEndpoints();
         platformGroup.MapPlatformEndpoints();
 
         return app;

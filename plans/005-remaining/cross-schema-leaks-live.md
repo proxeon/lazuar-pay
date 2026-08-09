@@ -13,7 +13,7 @@
 | ID | Status | Path | Priority | Next phase |
 |----|--------|------|----------|------------|
 | L-01 | **fixed** (R11) | `DocumentPublishedIntegrationEventHandler.cs` — event payload only; no foreign-schema SQL | — | **R11 complete** |
-| L-02 | **present** | `apps/lazuar-api/Modules/Payments/Infrastructure/PlatformEndpoints.cs` (~53, ~84: `one."GlobalUsers"`) | P0 | **R12** |
+| L-02 | **fixed** (R12) | Auth moved to One `PlatformAuthEndpoints` + `IPlatformAdminAuthQuery`; Payments payment-config only; no `one.GlobalUsers` SQL in Payments | — | **R12 complete** |
 | L-03 | **present** | `apps/lazuar-api/Modules/Commerce/Infrastructure/Endpoints/PublicArrearsEndpoints.cs` (~51–52: JOIN `crm` + `one`; GET remains commerce-only) | P0 | **R13** |
 | L-04 | **present** (dead) | `apps/lazuar-api/Modules/Commerce/Infrastructure/Repositories/CommerceRepository.cs` (~125: `communications."MessageTemplates"`); interface only caller is definition | P2 | **R15** |
 | L-05 | **present** | `apps/lazuar-api/Modules/Commerce/Infrastructure/Services/CommerceDocumentLookup.cs` (~59: LEFT JOIN `crm."ClientProfiles"`) | P1 | **R14** |
@@ -51,7 +51,7 @@
 ## Priority order (this wave)
 
 1. **R11** — L-01 DocumentPublished multi-schema JOIN  
-2. **R12** — L-02 PlatformEndpoints → `one.GlobalUsers`  
+2. **R12** — L-02 PlatformEndpoints → `one.GlobalUsers` — **complete**  
 3. **R13** — L-03 PublicArrears update-payment → `crm` + `one`  
 4. **R14** — L-05 CommerceDocumentLookup CRM join  
 5. **R15** — L-04 dead `GetDefaultTemplateIdsAsync` delete  
@@ -65,7 +65,7 @@
 | Leak | Still matches foreign schema SQL? |
 |------|-----------------------------------|
 | L-01 | **No** — handler uses event fields only (R11) |
-| L-02 | Yes — `one."GlobalUsers"` (login + me) |
+| L-02 | **No** — Payments has no `one.` SQL; One owns platform auth (R12) |
 | L-03 | Yes — `crm."ClientProfiles"` + `one."Organizations"` on POST update-payment |
 | L-04 | Yes — method body present; **zero** call sites outside interface/impl |
 | L-05 | Yes — `crm."ClientProfiles"` in draft session lookup |
@@ -79,10 +79,24 @@
 | ID | 06 status | Live (R10) |
 |----|-----------|------------|
 | L-01 | open | **fixed** by R11 (event denorm) |
-| L-02…L-06 | open | **still present** (paths unchanged) |
+| L-02 | open | **fixed** by R12 (One auth port + endpoints) |
+| L-03…L-06 | open | **still present** |
 | L-07 | tracked dual-read exception (FW-1) | **fixed** by R05 One-only middleware |
 | New product leaks | n/a | **none found** |
 
 R11 unblocked.
+
+---
+
+## L-02 detail (R12)
+
+| Check | Result |
+|-------|--------|
+| Payments Dapper `one.GlobalUsers` | **Gone** |
+| Auth routes | `One/.../PlatformAuthEndpoints.cs` (`MapPlatformAuthEndpoints`) |
+| Query port | `IPlatformAdminAuthQuery` / `PlatformAdminAuthQuery` |
+| Payment-config | Still Payments `MapPlatformEndpoints` |
+| Host | Maps auth then payment-config on `/api/v1/platform` |
+
 
 *End of R10 live inventory. No application code modified.*

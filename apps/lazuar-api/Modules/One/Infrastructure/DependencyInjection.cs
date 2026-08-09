@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddSingleton<IntegratorProvisionRateLimiter>();
 
         services.AddScoped<IOneQueryService, OneQueryService>();
+        services.AddScoped<IPlatformAdminAuthQuery, PlatformAdminAuthQuery>();
         services.AddScoped<IOneRepository, OneRepository>();
         services.AddScoped<IApiCredentialService, ApiCredentialService>();
 

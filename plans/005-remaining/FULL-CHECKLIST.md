@@ -494,23 +494,23 @@ R99 Definition of done
 
 ## R12.1 Design
 
-- [ ] Define One Contracts query/auth port for super-admin validation (or reuse existing One service)
-- [ ] Payments only calls Contracts — no `one.` SQL
+- [x] Define One Contracts query/auth port for super-admin validation (or reuse existing One service)
+- [x] Payments only calls Contracts — no `one.` SQL
 
 ## R12.2 Implement
 
-- [ ] Add/use One port implementation
-- [ ] Replace PlatformEndpoints SQL
-- [ ] DI registration
+- [x] Add/use One port implementation
+- [x] Replace PlatformEndpoints SQL
+- [x] DI registration
 
 ## R12.3 Tests
 
-- [ ] Platform endpoint auth paths covered
-- [ ] No Payments project SQL string referencing `one.`
+- [x] Platform endpoint auth paths covered
+- [x] No Payments project SQL string referencing `one.`
 
 ## R12.4 Exit
 
-- [ ] L-02 closed; PR focused only on this leak family
+- [x] L-02 closed; PR focused only on this leak family
 
 
 ---
