@@ -30,9 +30,9 @@ public class InvoiceIssuedHandler : IIntegrationEventHandler<InvoiceIssuedIntegr
             referenceId,
             $"B2B Invoice issued: {@event.InvoiceNumber}");
 
-        // Deferred revenue schedule creation is not wired yet (C.1 honesty gate).
-        // RevenueRecognitionJob is unregistered until schedules are created from product periods.
-        // Booking to LIABILITY_DEFERRED_REVENUE remains so AR is honest; recognition amortization is deferred.
+        // Deferred revenue schedule creation is not wired (decisions 00.3 / Phase 17 park).
+        // RevenueRecognitionJob remains unregistered until a product epic owns schedule writers.
+        // Booking to LIABILITY_DEFERRED_REVENUE keeps AR honest; recognition amortization is deferred.
         entry.AddLine(AccountTypes.AssetAccountsReceivable, @event.Amount, @event.Currency, @event.Amount, @event.Currency);
         entry.AddLine(AccountTypes.LiabilityDeferredRevenue, -@event.Amount, @event.Currency, -@event.Amount, @event.Currency);
 

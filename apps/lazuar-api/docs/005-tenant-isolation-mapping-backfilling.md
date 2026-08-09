@@ -2,6 +2,8 @@
 
 This document provides a technical guide for cleanly partitioning legacy data into distinct, isolated tenants under the new platform's strict multi-tenancy requirements.
 
+> **Note (phase 02):** Community module entities (`CommunityPlan`, `CommunitySubscription`, `CommunityQueryService`) were removed (ADR 022). Use **Commerce** (and other live modules) as examples. Organization registry lives under the **One** module schema (`one`), not a separate `tenant` schema name in all environments — confirm against live migrations.
+
 ---
 
 ## 1. The Hazard of Orphan Records under Global Filters
@@ -24,16 +26,17 @@ During migration, you will encounter legacy data that does not have a clear tena
 To resolve this, you must apply one of the following two strategies:
 
 ### Strategy A: The System Tenant Fallback (For Global System Assets)
-Create a dedicated "System Tenant" in your `tenant.Organizations` table. This tenant represents the platform itself and is used to house global, non-isolated assets.
+Create a dedicated "System Tenant" in the One organizations table. This tenant represents the platform itself and is used to house global, non-isolated assets.
 
 1. **Insert System Tenant:** Seed a specific, fixed Guid as the System Tenant:
    ```sql
-   INSERT INTO tenant."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt")
+   INSERT INTO one."Organizations" ("Id", "Name", "Slug", "IsActive", "CreatedAt")
    VALUES ('00000000-0000-0000-0000-000000000001', 'System Organization', 'system-org', true, NOW());
    ```
 2. **Backfill System Assets:** Map any non-tenant specific legacy configuration, global template, or test user to this System Tenant ID:
    ```sql
    -- Example: Backfill messaging templates that are system defaults
+   -- Adjust schema/table to match live Communications/Messaging migrations.
    UPDATE messaging."MessageTemplates"
    SET "OrganizationId" = '00000000-0000-0000-0000-000000000001'
    WHERE "OrganizationId" IS NULL OR "OrganizationId" = '00000000-0000-0000-0000-000000000000';
@@ -67,7 +70,7 @@ If the data belongs to a specific customer, but the relational path to their ten
 -- Example: Map orphaned legacy profiles to their organization by matching user email domains
 UPDATE crm."ClientProfiles" cp
 SET "OrganizationId" = org."Id"
-FROM tenant."Organizations" org
+FROM one."Organizations" org
 WHERE cp."OrganizationId" = '00000000-0000-0000-0000-000000000000'
   AND split_part(cp."Email", '@', 2) = org."Slug";
 ```
@@ -80,23 +83,23 @@ When designing migrations, you must distinguish between data that is strictly te
 
 ### Partitioned Data (Implements `IMustHaveTenant`)
 These entities represent tenant-specific business data. They are isolated inside their module's private database schemas and are subject to global query filters:
-* `UserEntity` (User Access Module)
+* Identity / membership entities (One module)
 * `ClientProfileEntity` (CRM Module)
-* `CommunityPlan`, `CommunitySubscription` (Community Module)
+* Commerce products, subscriptions, and related fulfillment records (Commerce Module)
 * `TenantPaymentConfiguration` (Payments Module)
 
-**Rule:** Every record in these tables *must* contain a non-empty, valid `OrganizationId` matching a row in `tenant.Organizations`.
+**Rule:** Every record in these tables *must* contain a non-empty, valid `OrganizationId` matching a row in `one.Organizations`.
 
 ### Global/Shared Data (Does NOT Implement `IMustHaveTenant`)
 These entities represent static lookups, system configurations, or platform-wide schemas:
-* `OrganizationEntity` (Tenant Module - acts as the tenant registry)
-* `PaymentWebhookLog` (Payments Module - handles system-level payment idempotency logs)
+* `Organization` (One Module — acts as the tenant registry)
+* `PaymentWebhookLog` (Payments Module — handles system-level payment idempotency logs)
 * Global static configurations (e.g., system lookups like currency tables or country codes)
 
 **Rule:** These tables must not be filtered by tenant. They remain globally accessible to all contexts.
 
 ### Code Pattern to Safely Bypass Tenant Filters
-In rare cases where an administrator requires a cross-tenant summary report (e.g., for global platform metrics inside `CommunityQueryService.cs`), you must explicitly tell EF Core to bypass the tenant isolation filters:
+In rare cases where an administrator requires a cross-tenant summary report (e.g., global platform metrics inside a Commerce or Billing query service), you must explicitly tell EF Core to bypass the tenant isolation filters:
 ```csharp
 public async Task<decimal> GetGlobalPlatformRevenueAsync(CancellationToken ct)
 {

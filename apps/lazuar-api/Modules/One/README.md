@@ -6,13 +6,13 @@ The `One` module is the central nervous system of the Lazuar platform. It acts a
 ## 2. Core Responsibilities
 * **Global Authentication:** Managing master user credentials (`GlobalUser`), JWT generation, password hashing (BCrypt), and email verification flows.
 * **Workspace Provisioning:** Creating and managing tenant organizations (`Organization`), including slug validation and archival.
-* **Entitlement Management:** Toggling access to specific ecosystem apps (e.g., `COMMUNITY`, `VAULT`, `OPS`) per workspace via `TenantAppEntitlement`.
+* **Entitlement Management:** Toggling access to specific ecosystem apps (e.g., `COMMERCE`, `OPS`, `BILLING`) per workspace via `TenantAppEntitlement`. Legacy app IDs such as `COMMUNITY` / `VAULT` may still appear in older rows or handlers but those modules are removed (ADR 022).
 * **Onboarding Queue:** Managing the B2B application and approval flow (`AppAccessRequest`) for new Superadmin-led workspace provisioning.
 * **Workspace Invitations:** Generating secure, time-bound magic links to invite staff/admins to existing workspaces.
 * **Identity Synchronization:** Broadcasting profile updates so downstream modules (like `CRM`) can keep localized tenant records in sync with the global master identity.
 
 ## 3. Architectural Boundaries (What this module is NOT)
-* **Not a Tenant-Specific Business Engine:** It does not manage subscription billing, community plans, or localized message templates. 
+* **Not a Tenant-Specific Business Engine:** It does not manage subscription billing, Commerce products/plans, or localized message templates. 
 * **Not a PII Registry for Customers:** While it holds the *master* identity of platform users (Admins/Staff), the localized PII of a tenant's *customers* (subscribers, leads) is strictly managed by the `CRM` module.
 * **No Cross-Schema Foreign Keys:** Downstream modules reference `OrganizationId` and `GlobalUserId` strictly as primitive `Guid` values. The `One` module does not hold foreign keys pointing to downstream business entities.
 
@@ -29,16 +29,35 @@ The `One` module is the central nervous system of the Lazuar platform. It acts a
 * **`TenantProvisionedIntegrationEvent`**: Fired when a new workspace is created. Triggers downstream modules to initialize tenant-specific schemas/replicas.
 * **`WorkspaceUpdatedIntegrationEvent`**: Fired when workspace name/slug changes.
 * **`GlobalUserProfileUpdatedIntegrationEvent`**: Fired when a user changes their master name/email.
-* **`AppEntitlementGrantedIntegrationEvent`**: Fired when a new app (e.g., `COMMUNITY`) is toggled on for a tenant. Triggers JIT (Just-In-Time) seeding of default templates or configurations in the target module.
+* **`AppEntitlementGrantedIntegrationEvent`**: Fired when a new app (e.g., `COMMERCE`) is toggled on for a tenant. Triggers JIT (Just-In-Time) seeding of default templates or configurations in the target module.
 
 ### Consumed
-* **`CommunitySubscriptionActivatedIntegrationEvent`**: Listens to the Community module. When a public user pays for a subscription, `One` automatically generates a `TenantMembership` with the `CLIENT` role, granting them portal access to that specific workspace.
+* Subscription / portal membership activation is driven by live Commerce lifecycle integration events (not the deleted Community module). When a public user pays for a subscription, `One` may grant a `TenantMembership` with the `CLIENT` role for portal access to that workspace — confirm handlers in code rather than historical Community event names.
 
 ## 6. Background Workers
 * **`SystemGenesisBootstrapperJob`**: Runs on startup to guarantee the System Tenant exists and securely upserts root Superadmin credentials from environment variables.
 * **`OneInboxConsumerJob` / `OneOutboxPublisherJob`**: Standard transactional outbox/inbox workers for asynchronous event processing.
+* **`OutboundWebhookDispatcherJob`**: Claims `WebhookDeliveryOutbox` rows and delivers signed HTTP webhooks to customer endpoints (retries / fail terminal).
 
-## 7. Database Schema
+## 7. Platform outbound webhooks (durable model)
+
+One owns the **only platform-grade** customer webhook system (maintenance decision **00.2**). Other modules request delivery by publishing `OutboundWebhookRequestedIntegrationEvent` (Commerce.Contracts); they do **not** implement their own outbox/signing stacks.
+
+| Piece | Responsibility |
+|-------|----------------|
+| **`TenantWebhookEndpoint`** | Per-workspace multi-endpoint registry (URL, secret, active, `EnabledEvents`) |
+| **`WebhookDeliveryOutbox`** | Durable per-delivery queue (claim lease, up to 5 attempts, exponential backoff) |
+| **`OutboundWebhookEventHandlers`** | Fan-out integration events → outbox rows for matching endpoints |
+| **`OutboundWebhookDispatcherJob`** | HTTP POST via named client `"DeveloperWebhooks"` |
+| **`OutboundWebhookSignature`** | Standard Webhooks–style header: `t={unix},v1={hmac_hex}` over `{timestamp}.{body}` |
+
+**Headers on delivery:** `X-Lazuar-Signature`, `X-Lazuar-Event`, `X-Lazuar-Delivery-Id`, `X-Lazuar-Webhook-Id`.
+
+**Typical event types today:** `subscription.*`, `order.completed`, `payment_link.paid`, `payment.completed` / `payment.failed` (from Commerce / Payments publishers).
+
+**LHDN exception:** e-invoice `invoice.valid` / `invoice.invalid` still use a **frozen** fire-and-forget path inside the Lhdn module until end-state **A** routes them through this dispatcher. See `Modules/Lhdn/README.md` §5 and `plans/004-maintenance/phase-04-analysis.md`. Webhooks stay in One for this maintenance track (no `Modules/Webhooks` extract unless Phase 16).
+
+## 8. Database Schema
 All tables reside in the isolated `one` schema.
 * `one.GlobalUsers`
 * `one.Organizations`
@@ -46,4 +65,14 @@ All tables reside in the isolated `one` schema.
 * `one.TenantAppEntitlements`
 * `one.WorkspaceInvitations`
 * `one.AppAccessRequests`
+* `one.ApiCredentials` — **platform API keys** (SSoT mint/list/revoke)
+* `one.TenantWebhookEndpoints` / `one.WebhookDeliveryOutboxes`
 * `one.OutboxMessages` / `one.InboxMessages`
+
+## 9. Platform API credentials (SSoT) & dual-read window
+
+* **Long-term SSoT:** Machine client keys live in `one.ApiCredentials` (`ApiCredential` aggregate). Mint/list/revoke go through One commands / `IApiCredentialService` (also used by Lhdn `/lhdn/api-keys` façades).
+* **Scopes:** Closed catalog on `PlatformApiScopes` (includes `lhdn.documents:*`, payments checkout scopes, webhook manage). LHDN product scopes are modeled on One credentials (decisions 00.1).
+* **Host auth:** `ApiKeyAuthenticationMiddleware` dual-reads **One first**, then legacy `lhdn.DeveloperApiKeys` for integrators not yet migrated.
+* **Dual-read window (LOCKED):** dual-read **allowed until 2026-11-30**; target One-only middleware + One `ApiKeyRevokedIntegrationEvent` only by **2026-12-15**. Do not remove the Lhdn lookup before that date (unless prod legacy row count is zero and ops signs off).
+* **Design / inventory:** `plans/004-maintenance/api-key-cutover-design.md`, `plans/004-maintenance/phase-03-analysis.md`.

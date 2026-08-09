@@ -88,6 +88,7 @@ export function deserializeIntoGenerateApiKeyRequestDto(generateApiKeyRequestDto
     return {
         "is_test_mode": n => { generateApiKeyRequestDto.isTestMode = n.getBooleanValue(); },
         "name": n => { generateApiKeyRequestDto.name = n.getStringValue(); },
+        "scopes": n => { generateApiKeyRequestDto.scopes = n.getCollectionOfPrimitiveValues<string>("string"); },
     }
 }
 /**
@@ -116,6 +117,10 @@ export interface GenerateApiKeyRequestDto extends AdditionalDataHolder, Parsable
      * The name property
      */
     name?: string | null;
+    /**
+     * Optional closed-catalog scopes (e.g. payments.checkouts:write, lhdn.documents:read).Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.
+     */
+    scopes?: string[] | null;
 }
 export interface GenerateApiKeyResponseDto extends AdditionalDataHolder, Parsable {
     /**
@@ -176,6 +181,7 @@ export function serializeGenerateApiKeyRequestDto(writer: SerializationWriter, g
     if (!generateApiKeyRequestDto || isSerializingDerivedType) { return; }
     writer.writeBooleanValue("is_test_mode", generateApiKeyRequestDto.isTestMode);
     writer.writeStringValue("name", generateApiKeyRequestDto.name);
+    writer.writeCollectionOfPrimitiveValues<string>("scopes", generateApiKeyRequestDto.scopes);
     writer.writeAdditionalData(generateApiKeyRequestDto.additionalData);
 }
 /**

@@ -19,6 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Shared fakes / InMemory helpers (Phase 13) -->
+    <ProjectReference Include="..\Lazuar.TestSupport\Lazuar.TestSupport.csproj" />
+
     <!-- BuildingBlocks (MessageRetryPolicy / MessageProcessingResultApplier unit tests) -->
     <ProjectReference Include="..\..\BuildingBlocks\Infrastructure\BuildingBlocks.Infrastructure.csproj" />
 

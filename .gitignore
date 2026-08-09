@@ -76,3 +76,9 @@ dump/
 command/
 docs/chip-asia/
 docs/payment/
+
+# ----------------------------------------------------------------------
+# Local sandbox secrets (recreated by scripts/lhdn_sandbox)
+# ----------------------------------------------------------------------
+scripts/lhdn_sandbox/cookies.txt
+scripts/lhdn_sandbox/**/cookies.txt

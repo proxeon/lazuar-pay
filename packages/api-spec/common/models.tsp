@@ -33,11 +33,7 @@ model PaginatedResponse<T> {
   total_pages: int32;
 }
 
-model LinkedCheckoutDto {
-  id: string; // GUID
-  name: string;
-  slug: string;
-}
+// LinkedCheckoutDto removed (phase 14): never referenced by any route or model.
 
 @error
 model ProblemDetailsResponse {

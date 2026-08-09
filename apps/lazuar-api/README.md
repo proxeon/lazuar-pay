@@ -269,3 +269,65 @@ When adding a new module (for example, `Billing`), follow this structured, compi
 - [ ] Open `tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj` and reference the new Billing domain projects.
 - [ ] Update `ModuleBoundaryTests.cs` to include the `Modules.Billing` namespace within architectural boundaries.
 - [ ] Run `pnpm build` to compile the solution and verify that the build succeeds without error.
+
+---
+
+## 6. Testing
+
+From the **monorepo root**, prefer Taskfile so local and CI stay aligned:
+
+```bash
+task api:test
+```
+
+That runs the same five **test runner** projects as the GitHub Actions `dotnet` job (order may differ slightly).
+Shared helpers live in `tests/Lazuar.TestSupport` (not a runner; referenced by ModuleTests).
+
+| Project | What it covers | Dependencies |
+|---------|----------------|--------------|
+| `tests/Lazuar.ArchitectureTests` | Module boundary / layer rules | None |
+| `tests/Lazuar.ModuleTests` | Per-module unit tests (InMemory / fakes) | None for most suites |
+| `tests/Modules.Billing.Tests` | Billing domain unit tests | None |
+| `tests/Modules.Ops.Tests` | Ops LLM orchestrator (NSubstitute) | None (no live AI keys) |
+| `tests/Lazuar.IntegrationTests` | Cross-module / DB smoke | Docker + Postgres (see matrix) |
+| `tests/Lazuar.TestSupport` | Fakes + InMemory helpers (library only) | None |
+
+### Docker / Postgres matrix (soft-skip vs hard-fail)
+
+| Suite | Infra | Without Docker / Postgres |
+|-------|--------|---------------------------|
+| Architecture, ModuleTests, Billing.Tests, Ops.Tests | InMemory / pure unit | Always run |
+| `BillingQueryServiceTests` | Live Postgres via `LAZUAR_TEST_PG` or docker-compose defaults | **Soft-skip** (`Assert.Ignore`) if connect fails |
+| `CreditDeductionConcurrencyTests` | Testcontainers Postgres | **Soft-skip** if container start fails |
+| `CommerceQueryServiceTests` | Testcontainers Postgres + `MigrateAsync` | **Hard-fail** `OneTimeSetUp` if Docker unavailable |
+
+- **CI** starts Postgres 16 and sets `LAZUAR_TEST_PG` (see `.github/workflows/ci.yml`). Hosted runners also have Docker, so Testcontainers usually pass.
+- Local full parity: `task infra:up` **and** Docker Desktop (for Testcontainers) before integration runs.
+- Prefer soft-skip for optional live-DB smoke; reserve hard-fail for suites that cannot degrade usefully.
+
+Single project:
+
+```bash
+cd apps/lazuar-api
+dotnet test tests/Modules.Ops.Tests/Modules.Ops.Tests.csproj
+```
+
+### Shared test support (pilot)
+
+`Lazuar.TestSupport` provides `FakeExecutionContextAccessor` and `InMemoryDb` helpers.
+Adoption is intentional and gradual — see `tests/Lazuar.TestSupport/README.md`.
+
+### Pagination convention
+
+| Style | Params | Use |
+|-------|--------|-----|
+| **Preferred** | `page` (1-based) + `limit` | Public / admin list APIs (`PaginatedResponse<T>`) |
+| Legacy | `limit` + `offset` | Ops chat conversations only (still returns honest `TotalCount`) |
+
+Normalize with `BuildingBlocks.Application.Paging` (`Normalize` / `NormalizeOffset`). Never hard-code `TotalCount = 0` when returning `PaginatedResponse`.
+
+### Error shape (ProblemDetails)
+
+- Uncaught domain/validation exceptions → `GlobalExceptionHandler` → RFC 7807 `ProblemDetails` with a stable `code` extension (`business_rule_violation`, `invalid_operation`, `internal_error`).
+- **Public M2M exemplar:** Payments `IntegrationEndpoints` maps typed failures to `ProblemDetails` with explicit `code` at the endpoint (prefer this for new external APIs over bare strings / anonymous `{ error: ... }`).
+- Do not mass-rewrite every endpoint; adopt on touch or new surfaces.

@@ -69,8 +69,10 @@ public static class DependencyInjection
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddHostedService<BillingOutboxPublisherJob>();
-        // RevenueRecognitionJob intentionally unregistered (C.1): deferred schedules are not
-        // created from product periods yet. Keep entity/table; re-enable when amortization is wired.
+        // PARKED (decisions.md 00.3 / Phase 17): RevenueRecognitionJob is unregistered by design
+        // until a product epic owns deferred revenue schedule creation (finance / Xero track).
+        // Entity/table may remain; no shipping claim that recognition runs. Do not uncomment
+        // without schedule writers + idempotent ledger external refs. See class XML on the job.
         // services.AddHostedService<RevenueRecognitionJob>();
         services.AddHostedService<B2cConsolidationJob>();
 

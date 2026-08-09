@@ -1873,56 +1873,6 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PaymentRecordDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public string Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("amount")]
-        public double Amount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("currency")]
-        public string Currency { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("payment_method")]
-        public string Payment_method { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public string Status { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
-        public System.DateTimeOffset Created_at { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-        public string ToJson()
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Serialize(this, options);
-
-        }
-        public static PaymentRecordDto FromJson(string data)
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Deserialize<PaymentRecordDto>(data, options);
-
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PortalOrderDto
     {
 
@@ -2610,6 +2560,11 @@ namespace Lazuar.ApiTypes
 
     }
 
+    /// <summary>
+    /// Create broadcast. v1 fans out to all ACTIVE/PAST_DUE subscribers with marketing consent.
+    /// <br/>Targeting filters (plan/status/reminder-only) are not productized yet — do not re-add
+    /// <br/>until ISubscriberQueryService + Broadcast storage + fan-out honor them end-to-end.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateBroadcastRequestDto
     {
@@ -2625,15 +2580,6 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("channel")]
         public string Channel { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("target_plan_id")]
-        public string? Target_plan_id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("target_status")]
-        public string? Target_status { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("target_is_reminder_only")]
-        public bool? Target_is_reminder_only { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -3178,47 +3124,6 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<IdResponse>(data, options);
-
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class LinkedCheckoutDto
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public string Id { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("name")]
-        public string Name { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("slug")]
-        public string Slug { get; set; } = default!;
-
-        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
-
-        [System.Text.Json.Serialization.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-        public string ToJson()
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Serialize(this, options);
-
-        }
-        public static LinkedCheckoutDto FromJson(string data)
-        {
-
-            var options = new System.Text.Json.JsonSerializerOptions();
-
-            return System.Text.Json.JsonSerializer.Deserialize<LinkedCheckoutDto>(data, options);
 
         }
 
@@ -4689,10 +4594,11 @@ namespace Lazuar.ApiTypes
 
         /// <summary>
         /// Optional closed-catalog scopes (e.g. payments.checkouts:write, lhdn.documents:read).
-        /// Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.
+        /// <br/>Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.
         /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("scopes")]
-        public System.Collections.Generic.ICollection<string>? Scopes { get; set; } = default!;
+        public System.Collections.Generic.List<string>? Scopes { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -4935,142 +4841,355 @@ namespace Lazuar.ApiTypes
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ProvisionWorkspaceApiKeyDto
     {
+
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public string? Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("prefix")]
-        public string? Prefix { get; set; }
+        public string? Prefix { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("hint")]
-        public string? Hint { get; set; }
+        public string? Hint { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("scopes")]
         public System.Collections.Generic.List<string> Scopes { get; set; } = new System.Collections.Generic.List<string>();
 
-        /// <summary>Full secret — only on first create; null on idempotent re-call.</summary>
+        /// <summary>
+        /// Full secret — only on first create; null on idempotent re-call.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("plain_key")]
-        public string? Plain_key { get; set; }
-    }
+        public string? Plain_key { get; set; } = default!;
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ProvisionWorkspaceRequestDto
-    {
-        /// <summary>Legacy Aura org id (GUID). Prefer external_org_id. Required if external_org_id omitted.</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
-        public string? Aura_org_id { get; set; }
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
-        /// <summary>External org / tenant id for the product. Alias of aura_org_id.</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("external_org_id")]
-        public string? External_org_id { get; set; }
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
 
-        /// <summary>Product slug (default "aura"). e.g. aura, demo-app.</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("external_product")]
-        public string? External_product { get; set; }
+        public string ToJson()
+        {
 
-        [System.Text.Json.Serialization.JsonPropertyName("display_name")]
-        public string Display_name { get; set; } = default!;
+            var options = new System.Text.Json.JsonSerializerOptions();
 
-        [System.Text.Json.Serialization.JsonPropertyName("slug")]
-        public string? Slug { get; set; }
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
 
-        [System.Text.Json.Serialization.JsonPropertyName("owner_email")]
-        public string? Owner_email { get; set; }
+        }
+        public static ProvisionWorkspaceApiKeyDto FromJson(string data)
+        {
 
-        /// <summary>Default ADMIN. Allowed: ADMIN | SUPER_ADMIN (workspace membership, not global).</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("owner_role")]
-        public string? Owner_role { get; set; }
+            var options = new System.Text.Json.JsonSerializerOptions();
 
-        [System.Text.Json.Serialization.JsonPropertyName("is_test_mode")]
-        public bool? Is_test_mode { get; set; }
+            return System.Text.Json.JsonSerializer.Deserialize<ProvisionWorkspaceApiKeyDto>(data, options);
 
-        [System.Text.Json.Serialization.JsonPropertyName("key_name")]
-        public string? Key_name { get; set; }
+        }
 
-        /// <summary>Absolute HTTPS URL of integrator webhook receiver.</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("webhook_url")]
-        public string? Webhook_url { get; set; }
-
-        /// <summary>Optional event filter; omit/empty → payment.completed + payment.failed defaults.</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("webhook_enabled_events")]
-        public System.Collections.Generic.List<string>? Webhook_enabled_events { get; set; }
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ProvisionWorkspaceWebhookDto
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("id")]
-        public string? Id { get; set; }
-
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string? Url { get; set; }
-
-        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
-        public bool? Is_active { get; set; }
-
-        [System.Text.Json.Serialization.JsonPropertyName("enabled_events")]
-        public System.Collections.Generic.List<string> Enabled_events { get; set; } = new System.Collections.Generic.List<string>();
-
-        /// <summary>Full signing secret — only when newly created this call.</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
-        public string? Secret_key { get; set; }
-
-        [System.Text.Json.Serialization.JsonPropertyName("has_secret")]
-        public bool? Has_secret { get; set; }
-
-        [System.Text.Json.Serialization.JsonPropertyName("secret_hint")]
-        public string? Secret_hint { get; set; }
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ProvisionWorkspaceOwnerDto
     {
-        /// <summary>true if membership exists after this call (created or pre-existing).</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("attached")]
-        public bool Attached { get; set; }
+        /// <summary>
+        /// true if membership exists after this call (created or pre-existing).
+        /// </summary>
 
-        /// <summary>attached | user_not_found | not_requested</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("attached")]
+        public bool Attached { get; set; } = default!;
+
+        /// <summary>
+        /// attached | user_not_found | not_requested
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("status")]
         public string Status { get; set; } = default!;
 
+        /// <summary>
+        /// ADMIN | SUPER_ADMIN when attached
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("role")]
-        public string? Role { get; set; }
+        public string? Role { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("email")]
-        public string? Email { get; set; }
+        public string? Email { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ProvisionWorkspaceOwnerDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ProvisionWorkspaceOwnerDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProvisionWorkspaceRequestDto
+    {
+        /// <summary>
+        /// Legacy Aura org id (GUID). Prefer external_org_id.
+        /// <br/>Required when external_org_id is omitted. For product "aura" must be a GUID.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
+        public string? Aura_org_id { get; set; } = default!;
+
+        /// <summary>
+        /// External org / tenant id for the product (idempotency key with external_product).
+        /// <br/>Alias of aura_org_id — either field is accepted.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("external_org_id")]
+        public string? External_org_id { get; set; } = default!;
+
+        /// <summary>
+        /// Product slug bound on Organization.ExternalProduct (default "aura").
+        /// <br/>e.g. aura, demo-app. Lowercase [a-z][a-z0-9_-]*.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("external_product")]
+        public string? External_product { get; set; } = default!;
+
+        /// <summary>
+        /// Display name for the Hub workspace (used on first create only).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("display_name")]
+        public string Display_name { get; set; } = default!;
+
+        /// <summary>
+        /// Optional slug; if omitted Hub generates {product}-{compact}.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("slug")]
+        public string? Slug { get; set; } = default!;
+
+        /// <summary>
+        /// Optional: if user exists, grant workspace membership. Does not create users.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("owner_email")]
+        public string? Owner_email { get; set; } = default!;
+
+        /// <summary>
+        /// Workspace membership role when owner_email matches an existing GlobalUser.
+        /// <br/>Default ADMIN. Allowed: ADMIN | SUPER_ADMIN (never grants global system admin).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("owner_role")]
+        public string? Owner_role { get; set; } = default!;
+
+        /// <summary>
+        /// Default true → sk_test_ bootstrap key.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_test_mode")]
+        public bool? Is_test_mode { get; set; } = default!;
+
+        /// <summary>
+        /// Default "{product} bootstrap" (Aura: "Aura bootstrap").
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("key_name")]
+        public string? Key_name { get; set; } = default!;
+
+        /// <summary>
+        /// Absolute HTTPS URL of integrator webhook receiver (Connect inline path).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhook_url")]
+        public string? Webhook_url { get; set; } = default!;
+
+        /// <summary>
+        /// Optional event filter for the provisioned webhook endpoint.
+        /// <br/>Omit/empty → payment.completed + payment.failed defaults.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhook_enabled_events")]
+        public System.Collections.Generic.List<string>? Webhook_enabled_events { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ProvisionWorkspaceRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ProvisionWorkspaceRequestDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ProvisionWorkspaceResponseDto
     {
+
         [System.Text.Json.Serialization.JsonPropertyName("workspace_id")]
         public string Workspace_id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("slug")]
         public string Slug { get; set; } = default!;
 
-        /// <summary>Legacy alias of external_org_id (always populated).</summary>
+        /// <summary>
+        /// Legacy alias of external_org_id (always populated for Aura clients).
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
         public string Aura_org_id { get; set; } = default!;
 
-        /// <summary>Normalized external org id (same value as aura_org_id).</summary>
-        [System.Text.Json.Serialization.JsonPropertyName("external_org_id")]
-        public string? External_org_id { get; set; }
+        /// <summary>
+        /// Normalized external org id (same value as aura_org_id).
+        /// </summary>
 
-        /// <summary>Product slug that was bound (default aura).</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("external_org_id")]
+        public string? External_org_id { get; set; } = default!;
+
+        /// <summary>
+        /// Product slug that was bound (default aura).
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("external_product")]
-        public string? External_product { get; set; }
+        public string? External_product { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("created")]
-        public bool Created { get; set; }
+        public bool Created { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("api_key")]
-        public ProvisionWorkspaceApiKeyDto Api_key { get; set; } = default!;
+        public ProvisionWorkspaceApiKeyDto Api_key { get; set; } = new ProvisionWorkspaceApiKeyDto();
+
+        /// <summary>
+        /// Present when a webhook endpoint was registered (create or prior).
+        /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("webhook")]
-        public ProvisionWorkspaceWebhookDto? Webhook { get; set; }
+        public ProvisionWorkspaceWebhookDto? Webhook { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("owner")]
-        public ProvisionWorkspaceOwnerDto? Owner { get; set; }
+        public ProvisionWorkspaceOwnerDto? Owner { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ProvisionWorkspaceResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ProvisionWorkspaceResponseDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
+    /// Outbound webhook registered at provision (or healed on re-provision).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ProvisionWorkspaceWebhookDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string? Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        public string? Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_active")]
+        public bool? Is_active { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("enabled_events")]
+        public System.Collections.Generic.List<string> Enabled_events { get; set; } = new System.Collections.Generic.List<string>();
+
+        /// <summary>
+        /// Full signing secret — only when newly created this call.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
+        public string? Secret_key { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("has_secret")]
+        public bool? Has_secret { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret_hint")]
+        public string? Secret_hint { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static ProvisionWorkspaceWebhookDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<ProvisionWorkspaceWebhookDto>(data, options);
+
+        }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -6070,6 +6189,247 @@ namespace Lazuar.ApiTypes
 
     }
 
+    /// <summary>
+    /// Request body for POST /integrations/payments/checkouts
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateIntegrationCheckoutRequestDto
+    {
+        /// <summary>
+        /// Positive amount in major currency units (e.g. 10.00 MYR).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; } = default!;
+
+        /// <summary>
+        /// ISO 4217 currency code (e.g. MYR, USD).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        /// <summary>
+        /// Human-readable description shown on gateway / receipts when supported.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("customer_email")]
+        public string Customer_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("customer_name")]
+        public string? Customer_name { get; set; } = default!;
+
+        /// <summary>
+        /// Absolute success redirect URL after guest pay.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("success_url")]
+        public string Success_url { get; set; } = default!;
+
+        /// <summary>
+        /// Absolute cancel redirect URL.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("cancel_url")]
+        public string Cancel_url { get; set; } = default!;
+
+        /// <summary>
+        /// Optional gateway preference (billplz, stripe, …). Omit → workspace default active gateway.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
+        public string? Gateway_name { get; set; } = default!;
+
+        /// <summary>
+        /// When true, request setup for future off-session charges if gateway supports it.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("setup_future_usage")]
+        public bool? Setup_future_usage { get; set; } = default!;
+
+        /// <summary>
+        /// Optional idempotency key (also accepted via Idempotency-Key header).
+        /// <br/>Same key + same fingerprint → same session; same key + different body → 409.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("idempotency_key")]
+        public string? Idempotency_key { get; set; } = default!;
+
+        /// <summary>
+        /// Opaque string map. Hub stamps hub_workspace_id / checkout_id / hub_checkout_kind.
+        /// <br/>Domain ids (booking_id, order_id, …) stay in the integrator app — do not special-case in Hub.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("metadata")]
+        public System.Collections.Generic.Dictionary<string, string>? Metadata { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateIntegrationCheckoutRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateIntegrationCheckoutRequestDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class IntegrationCheckoutResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkout_id")]
+        public string Checkout_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkout_url")]
+        public string? Checkout_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway")]
+        public string Gateway { get; set; } = default!;
+
+        /// <summary>
+        /// open | completed | failed | expired
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("provider_session_id")]
+        public string? Provider_session_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_transaction_id")]
+        public string? Gateway_transaction_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
+        public System.DateTimeOffset Expires_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("metadata")]
+        public System.Collections.Generic.Dictionary<string, string> Metadata { get; set; } = new System.Collections.Generic.Dictionary<string, string>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static IntegrationCheckoutResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<IntegrationCheckoutResponseDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
+    /// Outbound payment.* webhook envelope (snake_case JSON body).
+    /// <br/>Signed with X-Lazuar-Signature: t=…,v1=… (HMAC-SHA256 of "{t}.{rawBody}").
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PaymentWebhookPayloadDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("event_id")]
+        public string Event_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("event_type")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public PaymentWebhookPayloadDtoEvent_type Event_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkout_id")]
+        public string Checkout_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("workspace_id")]
+        public string Workspace_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway")]
+        public string? Gateway { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_transaction_id")]
+        public string? Gateway_transaction_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("metadata")]
+        public System.Collections.Generic.Dictionary<string, string>? Metadata { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("occurred_at")]
+        public System.DateTimeOffset? Occurred_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PaymentWebhookPayloadDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PaymentWebhookPayloadDto>(data, options);
+
+        }
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Response
     {
@@ -6461,6 +6821,18 @@ namespace Lazuar.ApiTypes
 
         [System.Runtime.Serialization.EnumMember(Value = @"ARMY")]
         ARMY = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum PaymentWebhookPayloadDtoEvent_type
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"payment.completed")]
+        Payment_completed = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"payment.failed")]
+        Payment_failed = 1,
 
     }
 

@@ -7,7 +7,9 @@ namespace Lazuar.Api.EventHandlers;
 /// <summary>
 /// Evicts revoked API keys from the middleware's memory cache instantly to
 /// eliminate the 5-minute TTL security exposure window.
-/// Handles both One (platform) and legacy Lhdn revoke events.
+/// Handles both One (platform) and legacy Lhdn revoke events during the dual-read
+/// window (decisions 00.1: dual-read until 2026-11-30; One-only target 2026-12-15).
+/// After cutover, only the One event subscription should remain.
 /// </summary>
 public class ApiKeyRevokedIntegrationEventHandler :
     IIntegrationEventHandler<Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent>,

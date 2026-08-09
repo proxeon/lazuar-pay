@@ -15,10 +15,11 @@
     <ProjectReference Include="..\..\Modules\Ops\Infrastructure\Modules.Ops.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Lhdn\Infrastructure\Modules.Lhdn.Infrastructure.csproj" />
+    <!-- Host composes modules via Infrastructure entrypoints only. Application assemblies are
+         transitive (Infrastructure → Application) and used for MediatR assembly markers; do not
+         add direct *Application.csproj refs here (Phase 17.5 / ADR 001 alignment). -->
     <ProjectReference Include="..\..\Modules\Commerce\Infrastructure\Modules.Commerce.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Communications\Infrastructure\Modules.Communications.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Modules\Commerce\Application\Modules.Commerce.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\Communications\Application\Modules.Communications.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />

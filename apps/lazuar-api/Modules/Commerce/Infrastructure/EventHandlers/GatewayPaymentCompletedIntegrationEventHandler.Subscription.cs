@@ -1,0 +1,152 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain.Entities;
+using Modules.Payments.Contracts.Events;
+
+namespace Modules.Commerce.Infrastructure.EventHandlers;
+
+public partial class GatewayPaymentCompletedIntegrationEventHandler
+{
+    private async Task HandleSubscriptionPaymentAsync(
+        GatewayPaymentCompletedIntegrationEvent @event,
+        Guid subscriptionId)
+    {
+        var existingSub = await _dbContext.Subscriptions
+            .IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.OrganizationId == @event.OrganizationId);
+
+        if (existingSub == null)
+        {
+            return;
+        }
+
+        var productInfo = await _dbContext.Products
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == existingSub.ProductId && p.OrganizationId == @event.OrganizationId);
+
+        if (productInfo == null || productInfo.Interval == "one_time")
+        {
+            return;
+        }
+
+        var wasInArrears = existingSub.Status is "PAST_DUE" or "SUSPENDED";
+        var wasSuspended = existingSub.Status == "SUSPENDED";
+
+        // Capture campaign id before ClearDunning (Resume / RecoverFromPayment).
+        Guid? recoveryCampaignId = null;
+        if (wasInArrears)
+        {
+            if (@event.Metadata.TryGetValue("dunning_campaign_id", out var dunningCampaignIdStr)
+                && Guid.TryParse(dunningCampaignIdStr, out var fromMetadata))
+            {
+                recoveryCampaignId = fromMetadata;
+            }
+            else
+            {
+                recoveryCampaignId = existingSub.CurrentDunningCampaignId;
+            }
+        }
+
+        var periodEnd = DateTime.UtcNow;
+        var updatedNextBilling = productInfo.Interval == "yr"
+            ? DateTime.UtcNow.AddYears(1)
+            : DateTime.UtcNow.AddMonths(1);
+
+        if (wasSuspended)
+        {
+            existingSub.Resume(updatedNextBilling);
+        }
+        else if (existingSub.Status == "PAST_DUE")
+        {
+            // Activate intentionally does not advance dates for PAST_DUE; recover explicitly.
+            existingSub.RecoverFromPayment(periodEnd, updatedNextBilling);
+        }
+        else
+        {
+            existingSub.Activate(periodEnd, updatedNextBilling, existingSub.IsReminderOnly);
+        }
+
+        if (wasInArrears && recoveryCampaignId.HasValue)
+        {
+            var campaign = await _dbContext.DunningCampaigns
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == recoveryCampaignId.Value && c.OrganizationId == @event.OrganizationId);
+
+            if (campaign != null)
+            {
+                campaign.RecordRecovery(@event.AmountPaid);
+            }
+        }
+
+        if (wasSuspended)
+        {
+            await _eventBus.PublishAsync(new SubscriptionResumedIntegrationEvent(
+                existingSub.OrganizationId,
+                existingSub.Id,
+                existingSub.ClientProfileId,
+                existingSub.ProductId,
+                productInfo.FulfillmentTargets.ToList()
+            ));
+        }
+        else
+        {
+            await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
+                existingSub.OrganizationId,
+                existingSub.Id,
+                existingSub.ClientProfileId,
+                existingSub.ProductId,
+                productInfo.FulfillmentTargets.ToList(),
+                false
+            ));
+        }
+
+        // Store/refresh vault tokens when present (e.g. update-payment flow).
+        if (!string.IsNullOrEmpty(@event.GatewayCustomerId) && !string.IsNullOrEmpty(@event.GatewayTokenId))
+        {
+            existingSub.StoreVaultedToken(@event.GatewayCustomerId, @event.GatewayTokenId);
+        }
+
+        await MarkChargeAttemptSucceededAsync(@event, existingSub.Id);
+
+        await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM");
+        await _repository.SaveChangesAsync();
+    }
+
+    private async Task MarkChargeAttemptSucceededAsync(GatewayPaymentCompletedIntegrationEvent @event, Guid subscriptionId)
+    {
+        ChargeAttemptLog? attempt = null;
+
+        if (@event.Metadata != null
+            && @event.Metadata.TryGetValue("charge_attempt_id", out var attemptIdStr)
+            && Guid.TryParse(attemptIdStr, out var attemptId))
+        {
+            attempt = await _dbContext.ChargeAttemptLogs
+                .FirstOrDefaultAsync(l => l.Id == attemptId && l.SubscriptionId == subscriptionId);
+        }
+
+        attempt ??= await _dbContext.ChargeAttemptLogs
+            .Where(l => l.SubscriptionId == subscriptionId && l.Status == ChargeAttemptLog.StatusPending)
+            .OrderByDescending(l => l.AttemptNumber)
+            .ThenByDescending(l => l.AttemptedAt)
+            .FirstOrDefaultAsync();
+
+        if (attempt == null)
+        {
+            return;
+        }
+
+        string? gatewayName = null;
+        string? gatewayResponseCode = null;
+        if (@event.Metadata != null)
+        {
+            @event.Metadata.TryGetValue("gateway_name", out gatewayName);
+            @event.Metadata.TryGetValue("gateway_response_code", out gatewayResponseCode);
+        }
+
+        attempt.MarkSucceeded(gatewayName, gatewayResponseCode);
+    }
+}

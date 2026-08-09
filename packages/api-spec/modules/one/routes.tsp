@@ -1,4 +1,6 @@
 // packages/api-spec/modules/one/routes.tsp
+// Models are split under models/; routes stay one interface so OpenAPI tags/operationIds stay stable.
+// Further route splits require distinct interface names (TypeSpec does not merge same-name interfaces).
 import "@typespec/http";
 import "../../common/models.tsp";
 import "./models.tsp";

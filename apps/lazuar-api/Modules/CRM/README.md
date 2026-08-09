@@ -1,7 +1,7 @@
 # CRM Module (The "PII Registry")
 
 ## 1. Overview
-The `CRM` (Customer Relationship Management) module acts as the centralized, tenant-scoped registry for all customer Personally Identifiable Information (PII). It bridges the gap between the platform's global identity system (the `One` module) and the localized, tenant-specific customer records required by fulfillment modules like `Community`.
+The `CRM` (Customer Relationship Management) module acts as the centralized, tenant-scoped registry for all customer Personally Identifiable Information (PII). It bridges the gap between the platform's global identity system (the `One` module) and the localized, tenant-specific customer records required by fulfillment modules such as **Commerce**.
 
 ## 2. Core Responsibilities
 * **Customer Directory:** Maintaining a strict, isolated directory of client profiles (Name, Email, Phone) for each tenant.
@@ -14,6 +14,12 @@ The `CRM` (Customer Relationship Management) module acts as the centralized, ten
 * **Not a Messaging Engine:** It does not send emails or SMS messages. It merely holds the contact data that other modules use to dispatch messages.
 * **No Business Context:** It does not store "Leads", "Deals", or "Support Tickets". It is strictly a primitive contact registry.
 
+## 3.1 Layer shape (no Application project)
+
+CRM is a **documented 3-layer exception**: `Contracts` + `Domain` + `Infrastructure` only — **no `Application` project**. Command handlers, query service, and workers live in Infrastructure. Host MediatR registers only the Infrastructure assembly for CRM (`ModulesWithoutApplication` in architecture tests).
+
+Do not invent an Application layer without an intentional epic (ports extraction + architecture-test update). The module is internal-only (no HTTP `Endpoints.cs`); other modules use `ICrmQueryService` / commands via Contracts.
+
 ## 4. Key Domain Aggregates & Entities
 * **`ClientProfileEntity`**: The core aggregate representing a customer within a specific tenant. Contains `FullName`, `Email`, `Phone`, `ConsentedToMarketing`, and an optional `GlobalUserId` link to the `One` module.
   * *Anonymize Behavior:* When triggered, it overwrites PII with dummy data (e.g., `deleted_{Id}@localhost`) and severs the `GlobalUserId` link.
@@ -23,7 +29,7 @@ The `CRM` (Customer Relationship Management) module acts as the centralized, ten
 * **`GlobalUserProfileUpdatedIntegrationEvent`** (from `One`): When a user changes their name or email in their global launchpad, this handler finds all linked `ClientProfileEntity` records across all tenants and updates them to maintain data consistency.
 
 ### Published
-* **`ClientProfileAnonymizedIntegrationEvent`**: Fired when a GDPR deletion request is processed. Modules like `Community` listen to this event to immediately ban the user and cancel all active subscriptions associated with that `ClientProfileId`.
+* **`ClientProfileAnonymizedIntegrationEvent`**: Fired when a GDPR deletion request is processed. Downstream modules (notably **Commerce** for subscription cancellation, and **Communications** for email suppression) listen to this event for the affected `ClientProfileId`.
 
 ## 6. Cross-Module Contracts (Synchronous Queries)
 To prevent cross-schema database joins, the CRM module exposes a read-only contract for other modules to consume:

@@ -68,7 +68,11 @@ public static class DefaultMessageTemplates
             ["{{customer_name}}", "{{business_name}}"])
     ];
 
-    /// <summary>Orphan templates previously seeded but never wired to fulfillment events.</summary>
+    /// <summary>
+    /// Orphan templates previously seeded but never wired to fulfillment events.
+    /// Includes legacy Community* names retained for the Communications legacy-cleanup endpoint
+    /// (ADR 022). Do not remove these strings until ops confirms cleanup has run on all tenants.
+    /// </summary>
     public static readonly IReadOnlyList<string> OrphanNames =
     [
         "Community Welcome",

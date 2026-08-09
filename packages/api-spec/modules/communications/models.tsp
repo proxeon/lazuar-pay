@@ -61,14 +61,16 @@ model TestReminderResponse {
   sent_to: string;
 }
 
+/**
+ * Create broadcast. v1 fans out to all ACTIVE/PAST_DUE subscribers with marketing consent.
+ * Targeting filters (plan/status/reminder-only) are not productized yet — do not re-add
+ * until ISubscriberQueryService + Broadcast storage + fan-out honor them end-to-end.
+ */
 model CreateBroadcastRequestDto {
   subject: string;
   email_body: string;
   whatsapp_body: string;
   channel: string;
-  target_plan_id?: string; // GUID
-  target_status?: string;
-  target_is_reminder_only?: boolean;
 }
 
 model EmailConfigDto {

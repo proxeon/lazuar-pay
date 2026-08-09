@@ -152,7 +152,7 @@ tasks:
       - dotnet ef migrations add InitialCommunicationsSchema --context CommunicationsDbContext --project ../../Modules/Communications/Infrastructure/Modules.Communications.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   api:migrations:add:
-    desc: "Generate a new EF Core migration for a specific module. Usage: task api:migrations:add MODULE=Tenant NAME=AddUsersTable"
+    desc: "Generate a new EF Core migration. Usage: task api:migrations:add MODULE=Billing NAME=AddUsersTable. MODULE = DbContext prefix (Billing→BillingDbContext; One, Commerce, Ops, …). CRM: folder/csproj are Modules/CRM + Modules.CRM.*, but context is CrmDbContext — use MODULE=Crm (not CRM). On case-sensitive Linux, prefer raw: --context CrmDbContext --project ../../Modules/CRM/Infrastructure/Modules.CRM.Infrastructure.csproj"
     dir: apps/lazuar-api/src/Lazuar.Api
     requires:
       vars: [MODULE, NAME]

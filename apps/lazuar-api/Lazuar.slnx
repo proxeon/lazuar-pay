@@ -1,9 +1,9 @@
 <Solution>
-  <Folder Name="/src/" />
   <Folder Name="/tests/">
     <Project Path="tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj" />
     <Project Path="tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj" />
     <Project Path="tests/Lazuar.ModuleTests/Lazuar.ModuleTests.csproj" />
+    <Project Path="tests/Lazuar.TestSupport/Lazuar.TestSupport.csproj" />
     <Project Path="tests/Modules.Billing.Tests/Modules.Billing.Tests.csproj" />
     <Project Path="tests/Modules.Ops.Tests/Modules.Ops.Tests.csproj" />
   </Folder>
@@ -23,22 +23,17 @@
     <Project Path="Modules\One\Infrastructure\Modules.One.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Modules/Lhdn/">
-    <Project Path="../../packages/api-types-dotnet/Lazuar.ApiContracts.csproj" />
     <Project Path="Modules/Lhdn/Application/Modules.Lhdn.Application.csproj" />
     <Project Path="Modules/Lhdn/Contracts/Modules.Lhdn.Contracts.csproj" />
     <Project Path="Modules/Lhdn/Domain/Modules.Lhdn.Domain.csproj" />
     <Project Path="Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/Lhdn/Application/" />
-  <Folder Name="/Modules/Lhdn/Domain/" />
-  <Folder Name="/Modules/Lhdn/Infrastructure/" />
   <Folder Name="/Modules/Messaging/">
     <Project Path="Modules\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
     <Project Path="Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
     <Project Path="Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
     <Project Path="Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/Billing/Infrastructure/" />
   <Folder Name="/Modules/Commerce/">
     <Project Path="Modules/Commerce/Application/Modules.Commerce.Application.csproj" />
     <Project Path="Modules/Commerce/Contracts/Modules.Commerce.Contracts.csproj" />
@@ -68,7 +63,6 @@
     <Project Path="Modules\Ops\Application\Modules.Ops.Application.csproj" />
     <Project Path="Modules\Ops\Infrastructure\Modules.Ops.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/" />
   <Folder Name="/Modules/Billing/">
     <Project Path="Modules\Billing\Contracts\Modules.Billing.Contracts.csproj" />
     <Project Path="Modules\Billing\Domain\Modules.Billing.Domain.csproj" />
@@ -76,6 +70,7 @@
     <Project Path="Modules\Billing\Infrastructure\Modules.Billing.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Packages/">
+    <Project Path="../../packages/api-types-dotnet/Lazuar.ApiContracts.csproj" />
     <Project Path="../../packages/lhdn-sdk-dotnet/Lazuar.Lhdn.Sdk.csproj" />
   </Folder>
 </Solution>

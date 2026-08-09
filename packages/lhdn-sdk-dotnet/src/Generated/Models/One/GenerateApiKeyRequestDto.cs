@@ -24,6 +24,14 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.One
 #else
         public string Name { get; set; }
 #endif
+        /// <summary>Optional closed-catalog scopes (e.g. payments.checkouts:write, lhdn.documents:read).Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public List<string>? Scopes { get; set; }
+#nullable restore
+#else
+        public List<string> Scopes { get; set; }
+#endif
         /// <summary>
         /// Instantiates a new <see cref="global::Lazuar.Lhdn.Sdk.Generated.Models.One.GenerateApiKeyRequestDto"/> and sets the default values.
         /// </summary>
@@ -51,6 +59,7 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.One
             {
                 { "is_test_mode", n => { IsTestMode = n.GetBoolValue(); } },
                 { "name", n => { Name = n.GetStringValue(); } },
+                { "scopes", n => { Scopes = n.GetCollectionOfPrimitiveValues<string>()?.AsList(); } },
             };
         }
         /// <summary>
@@ -62,6 +71,7 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.One
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteBoolValue("is_test_mode", IsTestMode);
             writer.WriteStringValue("name", Name);
+            writer.WriteCollectionOfPrimitiveValues<string>("scopes", Scopes);
             writer.WriteAdditionalData(AdditionalData);
         }
     }

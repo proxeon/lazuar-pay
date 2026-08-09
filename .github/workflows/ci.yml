@@ -17,7 +17,8 @@ jobs:
           node-version: "22"
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          # Align with root package.json packageManager (pnpm@11.5.2)
+          version: 11.5.2
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
@@ -85,3 +86,5 @@ jobs:
         run: dotnet test tests/Lazuar.ModuleTests/Lazuar.ModuleTests.csproj --no-build --verbosity normal
       - name: Test (Billing)
         run: dotnet test tests/Modules.Billing.Tests/Modules.Billing.Tests.csproj --no-build --verbosity normal
+      - name: Test (Ops)
+        run: dotnet test tests/Modules.Ops.Tests/Modules.Ops.Tests.csproj --no-build --verbosity normal

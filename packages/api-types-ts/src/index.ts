@@ -583,6 +583,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/payments/checkouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Create M2M checkout. Workspace resolved from API key tenant. */
+        post: operations["IntegrationCheckoutOperations_createCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/payments/checkouts/{checkoutId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get integration checkout session by id (tenant-bound). */
+        get: operations["IntegrationCheckoutOperations_getCheckout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/lhdn/api-keys": {
         parameters: {
             query?: never;
@@ -884,6 +918,29 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["OneOperations_verifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/one/integrations/workspaces/provision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Integrator provision: create Hub workspace + scoped bootstrap key for (external_product, external_org_id).
+         *     Defaults: external_product=aura; aura_org_id remains an accepted alias for external_org_id.
+         *     Optional Connect: webhook_url registers outbound endpoint (secret_key once); owner_email attaches membership.
+         *     Auth: X-Lazuar-Provision-Key / Bearer provision secret, or SUPER_ADMIN JWT (not OrgAdmin / sk_*).
+         *     Idempotent on (external_product, external_org_id) — plain_key and webhook secret_key only on first materialization.
+         */
+        post: operations["OneOperations_provisionWorkspace"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1952,16 +2009,6 @@ export interface components {
             /** Format: double */
             total_amount: number;
         };
-        "Commerce.PaymentRecordDto": {
-            id: string;
-            /** Format: double */
-            amount: number;
-            currency: string;
-            payment_method: string;
-            status: string;
-            /** Format: date-time */
-            created_at: string;
-        };
         "Commerce.PortalOrderDto": {
             id: string;
             product_id: string;
@@ -2112,14 +2159,16 @@ export interface components {
             final_price: number;
             error_message?: string;
         };
+        /**
+         * @description Create broadcast. v1 fans out to all ACTIVE/PAST_DUE subscribers with marketing consent.
+         *     Targeting filters (plan/status/reminder-only) are not productized yet — do not re-add
+         *     until ISubscriberQueryService + Broadcast storage + fan-out honor them end-to-end.
+         */
         "Communications.CreateBroadcastRequestDto": {
             subject: string;
             email_body: string;
             whatsapp_body: string;
             channel: string;
-            target_plan_id?: string;
-            target_status?: string;
-            target_is_reminder_only?: boolean;
         };
         "Communications.CreateTemplateRequestDto": {
             name: string;
@@ -2190,11 +2239,6 @@ export interface components {
         };
         "Core.IdResponse": {
             id: string;
-        };
-        "Core.LinkedCheckoutDto": {
-            id: string;
-            name: string;
-            slug: string;
         };
         /** RFC 7807 Standardized Error Response */
         "Core.ProblemDetails": {
@@ -2463,8 +2507,8 @@ export interface components {
             name: string;
             is_test_mode: boolean;
             /**
-             * Optional closed-catalog scopes (e.g. payments.checkouts:write, lhdn.documents:read).
-             * Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.
+             * @description Optional closed-catalog scopes (e.g. payments.checkouts:write, lhdn.documents:read).
+             *     Omit for LHDN document defaults; empty array is rejected; unknown strings return 400.
              */
             scopes?: string[];
         };
@@ -2494,6 +2538,88 @@ export interface components {
         };
         "One.LoginResponse": {
             user: components["schemas"]["One.AuthUser"];
+        };
+        "One.ProvisionWorkspaceApiKeyDto": {
+            id?: string;
+            prefix?: string;
+            hint?: string;
+            scopes: string[];
+            /** @description Full secret — only on first create; null on idempotent re-call. */
+            plain_key?: string;
+        };
+        "One.ProvisionWorkspaceOwnerDto": {
+            /** @description true if membership exists after this call (created or pre-existing). */
+            attached: boolean;
+            /** @description attached | user_not_found | not_requested */
+            status: string;
+            /** @description ADMIN | SUPER_ADMIN when attached */
+            role?: string;
+            email?: string;
+        };
+        "One.ProvisionWorkspaceRequestDto": {
+            /**
+             * @description Legacy Aura org id (GUID). Prefer external_org_id.
+             *     Required when external_org_id is omitted. For product "aura" must be a GUID.
+             */
+            aura_org_id?: string;
+            /**
+             * @description External org / tenant id for the product (idempotency key with external_product).
+             *     Alias of aura_org_id — either field is accepted.
+             */
+            external_org_id?: string;
+            /**
+             * @description Product slug bound on Organization.ExternalProduct (default "aura").
+             *     e.g. aura, demo-app. Lowercase [a-z][a-z0-9_-]*.
+             */
+            external_product?: string;
+            /** @description Display name for the Hub workspace (used on first create only). */
+            display_name: string;
+            /** @description Optional slug; if omitted Hub generates {product}-{compact}. */
+            slug?: string;
+            /** @description Optional: if user exists, grant workspace membership. Does not create users. */
+            owner_email?: string;
+            /**
+             * @description Workspace membership role when owner_email matches an existing GlobalUser.
+             *     Default ADMIN. Allowed: ADMIN | SUPER_ADMIN (never grants global system admin).
+             */
+            owner_role?: string;
+            /** @description Default true → sk_test_ bootstrap key. */
+            is_test_mode?: boolean;
+            /** @description Default "{product} bootstrap" (Aura: "Aura bootstrap"). */
+            key_name?: string;
+            /** @description Absolute HTTPS URL of integrator webhook receiver (Connect inline path). */
+            webhook_url?: string;
+            /**
+             * @description Optional event filter for the provisioned webhook endpoint.
+             *     Omit/empty → payment.completed + payment.failed defaults.
+             */
+            webhook_enabled_events?: string[];
+        };
+        "One.ProvisionWorkspaceResponseDto": {
+            workspace_id: string;
+            slug: string;
+            /** @description Legacy alias of external_org_id (always populated for Aura clients). */
+            aura_org_id: string;
+            /** @description Normalized external org id (same value as aura_org_id). */
+            external_org_id?: string;
+            /** @description Product slug that was bound (default aura). */
+            external_product?: string;
+            created: boolean;
+            api_key: components["schemas"]["One.ProvisionWorkspaceApiKeyDto"];
+            /** @description Present when a webhook endpoint was registered (create or prior). */
+            webhook?: components["schemas"]["One.ProvisionWorkspaceWebhookDto"];
+            owner?: components["schemas"]["One.ProvisionWorkspaceOwnerDto"];
+        };
+        /** @description Outbound webhook registered at provision (or healed on re-provision). */
+        "One.ProvisionWorkspaceWebhookDto": {
+            id?: string;
+            url?: string;
+            is_active?: boolean;
+            enabled_events: string[];
+            /** @description Full signing secret — only when newly created this call. */
+            secret_key?: string;
+            has_secret?: boolean;
+            secret_hint?: string;
         };
         "One.PublicRegisterRequestDto": {
             email: string;
@@ -2634,6 +2760,79 @@ export interface components {
             schema_json: unknown;
             prefill_data?: unknown;
             is_resolved: boolean;
+        };
+        /** @description Request body for POST /integrations/payments/checkouts */
+        "Payments.CreateIntegrationCheckoutRequestDto": {
+            /**
+             * Format: double
+             * @description Positive amount in major currency units (e.g. 10.00 MYR).
+             */
+            amount: number;
+            /** @description ISO 4217 currency code (e.g. MYR, USD). */
+            currency: string;
+            /** @description Human-readable description shown on gateway / receipts when supported. */
+            description: string;
+            customer_email: string;
+            customer_name?: string;
+            /** @description Absolute success redirect URL after guest pay. */
+            success_url: string;
+            /** @description Absolute cancel redirect URL. */
+            cancel_url: string;
+            /** @description Optional gateway preference (billplz, stripe, …). Omit → workspace default active gateway. */
+            gateway_name?: string;
+            /** @description When true, request setup for future off-session charges if gateway supports it. */
+            setup_future_usage?: boolean;
+            /**
+             * @description Optional idempotency key (also accepted via Idempotency-Key header).
+             *     Same key + same fingerprint → same session; same key + different body → 409.
+             */
+            idempotency_key?: string;
+            /**
+             * @description Opaque string map. Hub stamps hub_workspace_id / checkout_id / hub_checkout_kind.
+             *     Domain ids (booking_id, order_id, …) stay in the integrator app — do not special-case in Hub.
+             */
+            metadata?: {
+                [key: string]: string;
+            };
+        };
+        "Payments.IntegrationCheckoutResponseDto": {
+            checkout_id: string;
+            checkout_url?: string;
+            gateway: string;
+            /** @description open | completed | failed | expired */
+            status: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            provider_session_id?: string;
+            gateway_transaction_id?: string;
+            /** Format: date-time */
+            expires_at: string;
+            metadata: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * @description Outbound payment.* webhook envelope (snake_case JSON body).
+         *     Signed with X-Lazuar-Signature: t=…,v1=… (HMAC-SHA256 of "{t}.{rawBody}").
+         */
+        "Payments.PaymentWebhookPayloadDto": {
+            event_id: string;
+            /** @enum {string} */
+            event_type: "payment.completed" | "payment.failed";
+            checkout_id: string;
+            workspace_id: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            status: string;
+            gateway?: string;
+            gateway_transaction_id?: string;
+            metadata?: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            occurred_at?: string;
         };
     };
     responses: never;
@@ -6071,6 +6270,144 @@ export interface operations {
             };
         };
     };
+    IntegrationCheckoutOperations_createCheckout: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Payments.CreateIntegrationCheckoutRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Payments.IntegrationCheckoutResponseDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    IntegrationCheckoutOperations_getCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checkoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Payments.IntegrationCheckoutResponseDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     LhdnOperations_listApiKeys: {
         parameters: {
             query?: never;
@@ -7587,6 +7924,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_provisionWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["One.ProvisionWorkspaceRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.ProvisionWorkspaceResponseDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

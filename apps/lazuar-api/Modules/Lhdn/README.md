@@ -56,7 +56,40 @@ When the background `LhdnSubmissionJob` transmits the payload, it encodes the st
 
 ---
 
-## 5. Directory Structure
+## 5. Outbound customer webhooks — **C freeze** (maintenance 00.2)
+
+**Locked decision:** platform durable delivery lives in **One** (`WebhookDeliveryOutbox` + `OutboundWebhookDispatcherJob`). End-state for LHDN is **A** — route e-invoice lifecycle customer webhooks through that One dispatcher.
+
+**Until A ships, LHDN outbound is a frozen special-case:**
+
+* **Mechanism:** fire-and-forget HTTP via `WebhookSenderService` (no delivery outbox, no retries, no DLQ).
+* **Trigger:** `LhdnStatusPollingJob` → `DispatchExternalWebhookCommand` on MyInvois **VALID** / **INVALID**.
+* **Registry:** `lhdn.WebhookSubscriptions` (module-local; not `one.TenantWebhookEndpoints`).
+* **Events:** `invoice.valid`, `invoice.invalid` only.
+* **Signing:** HMAC-SHA256 of the raw body → header `X-Lazuar-Signature` as hex (no timestamp). This is **not** One’s Standard Webhooks–style `t=…,v1=…` scheme.
+* **Observability:** failures log + `LazuarMetrics.RecordWebhookFailed("lhdn")` — silent dual stacks without metrics are not acceptable under freeze.
+
+### Freeze rules (do not violate without reopening 00.2)
+
+1. Do **not** build a second full Lhdn outbox/signing/retry stack (rejected option **B**).
+2. Do **not** “improve” fire-and-forget into durable delivery half-way.
+3. Allowed: docs, structured logs/metrics, bugfixes that keep the same shape.
+4. End-state **A**: publish LHDN lifecycle through One’s `OutboundWebhookRequestedIntegrationEvent` (or equivalent), migrate integrators to One registry/signing, then retire this path.
+
+See: `plans/004-maintenance/decisions.md` §00.2, `plans/004-maintenance/phase-04-analysis.md`.
+
+---
+
+## 6. Developer API keys (platform-owned; dual-read window)
+
+* **Mint/list/revoke SSoT is One** (`one.ApiCredentials` via `IApiCredentialService`). Lhdn `GET/POST/DELETE /lhdn/api-keys` and obsolete `GenerateApiKeyCommand` / `RevokeApiKeyCommand` / `ListApiKeysQuery` are **façades** — they do not insert into `lhdn.DeveloperApiKeys`.
+* **Legacy table:** `lhdn.DeveloperApiKeys` remains for **host dual-read auth only** until cutover. Host middleware reads **One first**, then this table.
+* **Dual-read window (LOCKED, decisions 00.1):** dual-read **allowed until 2026-11-30**; target removal of Lhdn lookup + Lhdn `ApiKeyRevokedIntegrationEvent` subscription by **2026-12-15**. Do **not** drop the table or dual-read path in interim maintenance PRs.
+* **After cutover:** integrators still on pure Lhdn-local keys must remint via One (or Lhdn façade) before dual-read ends; see `plans/004-maintenance/api-key-cutover-design.md`.
+
+---
+
+## 7. Directory Structure
 ```text
 Modules/Lhdn/
 ├── Application/             # Command and Query Handlers, Ports
@@ -70,7 +103,7 @@ Modules/Lhdn/
 
 ---
 
-## 6. Community & Technical References
+## 8. Community & Technical References
 *   [OASIS UBL 2.1 Specification](https://www.datypic.com/sc/ubl21/s-UBL-CommonAggregateComponents-2.1.xsd.html)
 *   [LHDN Official e-Invoicing SDK Portal](https://sdk.myinvois.hasil.gov.my/)
 *   [allaboutevemirolive/lhdn-info](https://github.com/allaboutevemirolive/lhdn-info)

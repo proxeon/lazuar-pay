@@ -13,8 +13,14 @@ The `Billing` module is the **Core Domain for Financial Truth**. It acts as the 
 
 ## 3. Architectural Boundaries (What this module is NOT)
 * **Not a Gateway Integrator:** It does not hold Stripe API keys, generate checkout URLs, or parse raw webhook JSON.
-* **Not an Access Control System:** It does not know if a user has access to a Telegram group or a Video Vault. It only knows the financial contract.
+* **Not an Access Control System:** It does not know if a user has an active Commerce subscription or portal access. It only knows the financial contract.
 * **No Cross-Schema Joins:** Billing does not query `commerce` / `crm` tables directly. Customer display for final receipts and proforma drafts is resolved via Commerce ports (`ICommerceDocumentLookup`).
+
+## 3.1 Handler layer note (intentional today)
+
+**Command and integration-event handlers currently live in `Infrastructure/`** (`Commands/`, `EventHandlers/`), not `Application/`. Application is thin (queries + LLM prompts + repository port). MediatR registers the Infrastructure assembly, so this is DI-safe.
+
+This is a known inversion vs Commerce/Lhdn (Application-owned handlers). A full rebalance (ports + moving handlers into Application + test updates) is a **separate epic** — do not “fix” placement casually in drive-by PRs.
 
 ## 4. Key Domain Aggregates & Entities
 * **`LedgerEntry`**: Aggregate root for a single financial transaction.
@@ -29,7 +35,7 @@ The `Billing` module is the **Core Domain for Financial Truth**. It acts as the 
 ## 5. Integration Events (Consumed)
 The Billing module listens to the global event bus to build the ledger. It does *not* publish events that trigger side-effects; it is the terminal sink for financial data.
 * **From Payments:** `GatewayPaymentCompletedIntegrationEvent`, `GatewayRefundCompletedIntegrationEvent`, `GatewayDisputeCreatedIntegrationEvent` (utility chargeback).
-* **From Community:** `ZeroAmountCheckoutCompletedIntegrationEvent` (Records 100% coupon discounts for ROI tracking).
+* **From Commerce:** `ZeroAmountCheckoutCompletedIntegrationEvent` (Records 100% coupon discounts for ROI tracking).
 * **From B2B/Invoicing:** `InvoiceIssuedIntegrationEvent`, `ManualPaymentRecordedIntegrationEvent`.
 * **From Affiliates:** `CommissionAccruedIntegrationEvent`.
 * **From LHDN:** `LhdnDocumentValidated|Cancelled` (touch LHDN fields only; never overwrite `CustomerDocumentNumber`).
@@ -38,7 +44,7 @@ The Billing module listens to the global event bus to build the ledger. It does 
 * **`BillingInboxConsumerJob`**: Processes incoming integration events and writes them to the ledger transactionally.
 * **`BillingOutboxPublisherJob`**: Standard outbox dispatcher.
 * **`B2cConsolidationJob`**: Monthly (28th MYT) consolidates prior-calendar-month `B2C_RECEIPT` / `PENDING` sales into a consolidated LHDN invoice. Idempotent per org/month (`B2C-CONS-{yyyyMM}-{orgId}`).
-* **`RevenueRecognitionJob`**: **Not registered.** Recognition is not live until deferred schedules are created from product periods. Entity/table kept; re-enable in DI when amortization is wired.
+* **`RevenueRecognitionJob`**: **Parked / not registered (decision 00.3).** Unregistered by design until a product epic owns deferred revenue schedule creation (finance / Xero track). Entity/table may remain; **no shipping claim that recognition runs.** Re-enable in DI only with schedule writers + idempotent ledger external refs (product epic — not maintenance drive-by).
 
 ## 7. Database Schema
 All tables reside in the isolated `billing` schema.
