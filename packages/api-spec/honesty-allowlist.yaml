@@ -1,8 +1,25 @@
 # OpenAPI ↔ Minimal API path honesty allowlist
-# Used by R25 path-honesty CI (impl ⊆ OpenAPI ∪ allowlist).
-# Product routes used by ops/portal/developers/SDKs must land in TypeSpec — not here.
+# Used by R25 path-honesty CI (`node scripts/check-openapi-minimal-honesty.mjs`).
 #
-# Paths are relative to /api/v1 (same as TypeSpec @route trees and openapi-fetch baseUrl).
+# Assertions (paths relative to /api/v1 — same as TypeSpec @route trees and openapi-fetch baseUrl):
+#   OpenAPI ⊆ Minimal ∪ openapi_only_exceptions
+#   Minimal ⊆ OpenAPI ∪ impl_only
+#
+# Product routes used by ops / portal / developers hub / SDKs must land in TypeSpec — not here.
+# Prefer fixing TypeSpec + `task gen` over growing this file.
+#
+# How to update:
+#   1. Run: task gen:spec && node scripts/check-openapi-minimal-honesty.mjs --verbose
+#   2. For intentional host-only routes: add an impl_only row (method + path + reason).
+#   3. For rare OpenAPI phantoms you cannot map yet: openapi_only_exceptions (prefer fix TSP).
+#   4. Remove rows when the route is promoted into TypeSpec or deleted from Minimal API.
+#
+# Out of scope for this allowlist (not under /api/v1):
+#   - Host health probes: GET /health, /health/ready, /health/metrics
+#   - Swagger/Scalar static assets
+#   - One-shot migrators / CLI tools (no HTTP Map*)
+#
+# See also: docs/contracts/openapi-vs-minimal-api.md
 
 impl_only:
   # --- R23: Billing signed final PDF ---
@@ -15,11 +32,12 @@ impl_only:
       (…/documents/draft/{sessionId}) and admin
       GET /admin/billing/ledger/{id}/document remain in TypeSpec.
 
-  # --- Already documented in docs/contracts/openapi-vs-minimal-api.md ---
+  # --- Payments: gateway inbound webhooks ---
   - method: POST
     path: /webhooks/payments/{gatewayType}/{tenantId}
     reason: Gateway-signed inbound; not a product API
 
+  # --- Messaging: internal fan-in / diagnostics ---
   - method: POST
     path: /messaging/notify
     reason: Authenticated internal fan-in (not third-party product surface)
@@ -27,6 +45,20 @@ impl_only:
   - method: GET
     path: /messaging/delivery-logs
     reason: Ops-adjacent messaging diagnostics
+
+  # --- Communications: HTML compliance + provider webhook ---
+  - method: GET
+    path: /public/communications/unsubscribe
+    reason: HTML email compliance link (browser GET); not a typed product API
+
+  - method: POST
+    path: /public/communications/webhooks/resend
+    reason: Resend/Svix machine webhook; provider-signed
+
+  # --- Communications: temporary ops utility ---
+  - method: DELETE
+    path: /admin/communications/templates/legacy-cleanup
+    reason: Temporary ops utility for legacy template cleanup; not product surface
 
 # OpenAPI paths that may lack a 1:1 Map (rare; prefer fix TypeSpec)
 openapi_only_exceptions: []

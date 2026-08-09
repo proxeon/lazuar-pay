@@ -21,8 +21,8 @@
 
 ## F09.3 CI (optional but recommended)
 
-- [ ] Add OpenAPI path vs Minimal API honesty check (script or test)
-- [ ] Wire into CI contracts job or document manual until automated
+- [x] Add OpenAPI path vs Minimal API honesty check (script or test)
+- [x] Wire into CI contracts job or document manual until automated
 
 ## F09.4 Exit
 

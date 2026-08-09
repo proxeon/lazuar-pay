@@ -232,6 +232,12 @@ tasks:
       - dotnet tool run kiota generate -l typescript -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-ts/src/generated --class-name LhdnClient --clean-output
       - dotnet tool run kiota generate -l csharp -d packages/api-spec/dist/lhdn/openapi.yaml -o packages/lhdn-sdk-dotnet/src/Generated --class-name LhdnClient --namespace-name Lazuar.Lhdn.Sdk.Generated --clean-output
 
+  contracts:honesty:
+    desc: OpenAPI paths vs Minimal API maps (allowlist-aware honesty gate)
+    deps: [gen:spec]
+    cmds:
+      - node scripts/check-openapi-minimal-honesty.mjs
+
   # ==========================================
   # Docker / GHCR  (always linux/amd64 for Ubuntu servers)
   # ==========================================

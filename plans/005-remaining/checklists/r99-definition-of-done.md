@@ -20,7 +20,7 @@
 ### TypeSpec (if selected)
 
 - [ ] R20–R24 targets for wave done
-- [ ] R25 optional CI on or ticketed
+- [x] R25 optional CI on or ticketed
 
 ### BB (if selected)
 

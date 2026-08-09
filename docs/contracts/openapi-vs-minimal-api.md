@@ -20,6 +20,13 @@ git diff --exit-code -- \
   packages/api-types-dotnet/Lazuar.ApiContracts.cs \
   packages/lhdn-sdk-ts/src/generated \
   packages/lhdn-sdk-dotnet/src/Generated
+node scripts/check-openapi-minimal-honesty.mjs   # R25 path honesty
+```
+
+Local-only honesty (after spec gen):
+
+```bash
+task contracts:honesty   # deps: gen:spec → honesty script
 ```
 
 `packages/api-spec/dist/` is gitignored (`dist/`); OpenAPI YAML is rebuilt every gen and is the intermediate for clients. If generation fails or drifts, fix TypeSpec or commit regenerated clients — do not hand-edit generated files except as a temporary hotfix with a follow-up `task gen`.
@@ -55,7 +62,10 @@ These exist on the host but are **not** required in the public TypeSpec surface,
 | `POST /webhooks/payments/{gatewayType}/{tenantId}` | Gateway-signed inbound; not a product API |
 | `POST /messaging/notify` | Authenticated internal fan-in (not third-party product surface) |
 | `GET /messaging/delivery-logs` | Ops-adjacent messaging diagnostics |
-| Host health / swagger static | Infrastructure |
+| `GET /public/communications/unsubscribe` | HTML email compliance link (browser GET) |
+| `POST /public/communications/webhooks/resend` | Resend/Svix machine webhook |
+| `DELETE /admin/communications/templates/legacy-cleanup` | Temporary ops utility |
+| Host health / swagger static | Infrastructure (outside `/api/v1`; not in honesty scrape) |
 
 If you add a **product** route used by lazuar-ops, lazuar-portal, lazuar-developers, or SDKs, it **must** land in TypeSpec before UI wiring.
 
@@ -86,4 +96,4 @@ Do **not** reintroduce `/admin/community/*` or `/admin/vault/*` without restorin
 - Communications public routes may lag admin surface — verify before portal features depend on them.
 - CSV export (`GET /admin/commerce/subscribers/export`) is binary; raw `fetch` is acceptable with a typed path comment.
 - Hand-patched OpenAPI from earlier phases must be replaced by a clean `task gen` (C.8 CI gate).
-- R25 will enforce OpenAPI ⊆ Minimal and Minimal ⊆ OpenAPI ∪ `honesty-allowlist.yaml`.
+- **R25 shipped:** `scripts/check-openapi-minimal-honesty.mjs` enforces OpenAPI ⊆ Minimal and Minimal ⊆ OpenAPI ∪ `honesty-allowlist.yaml` in the `contracts` CI job.

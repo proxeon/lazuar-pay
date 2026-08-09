@@ -47,6 +47,10 @@ jobs:
             exit 1
           }
 
+      - name: OpenAPI ↔ Minimal path honesty
+        # R25 / FW-6: OpenAPI ⊆ Minimal; Minimal ⊆ OpenAPI ∪ honesty-allowlist.yaml
+        run: node scripts/check-openapi-minimal-honesty.mjs
+
   dotnet:
     runs-on: ubuntu-latest
     defaults:

@@ -8,6 +8,16 @@ We use [TypeSpec](https://typespec.io/) to define API shapes, compile them to Op
 
 ---
 
+## Path honesty (R25)
+
+CI enforces that OpenAPI paths and Minimal API `Map*` routes stay aligned:
+
+- Script: `node scripts/check-openapi-minimal-honesty.mjs` (or `task contracts:honesty`)
+- Allowlist for intentional impl-only routes: [`honesty-allowlist.yaml`](./honesty-allowlist.yaml)
+- Human doc: `docs/contracts/openapi-vs-minimal-api.md`
+
+Prefer TypeSpec + `task gen` for product routes over growing the allowlist.
+
 ## Directory structure
 
 Definitions mirror the backend modular monolith (`apps/lazuar-api/Modules/`).
@@ -41,6 +51,7 @@ packages/api-spec/
 ├── docs-lhdn.tsp
 ├── docs-commerce.tsp
 ├── docs-payments.tsp
+├── honesty-allowlist.yaml # R25: impl-only / openapi-only exceptions
 ├── package.json
 └── tspconfig.yaml
 ```

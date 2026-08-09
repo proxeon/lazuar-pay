@@ -329,7 +329,7 @@ Phase 05 closed **P0** honesty (dual DTOs for listed surfaces, path slash, broad
 | Communications public compliance routes | Honesty pass (TSP ↔ Minimal API) |
 | Payments product docs security schemes | OpenAPI security where routes require auth |
 | Commerce **product** dual DTOs (`CreateProductRequest` locals, etc.) | Same pattern as Phase 05 P0 for subscribers |
-| Optional path-honesty CI | Script/test: OpenAPI paths vs Minimal API maps |
+| Optional path-honesty CI | **Done (R25, 2026-08-09):** `scripts/check-openapi-minimal-honesty.mjs` + `contracts` CI + `task contracts:honesty`; allowlist `packages/api-spec/honesty-allowlist.yaml` |
 | Admin-routes.tsp split | Optional if file pain returns |
 
 ## Implementation outline
@@ -341,7 +341,7 @@ Phase 05 closed **P0** honesty (dual DTOs for listed surfaces, path slash, broad
 
 ## Done when
 
-No known dual DTO pairs on shipping surfaces; docs OpenAPI security accurate; optional CI honesty gate green.
+No known dual DTO pairs on shipping surfaces; docs OpenAPI security accurate; **path-honesty CI green (R25)**.
 
 ---
 
