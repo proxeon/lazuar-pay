@@ -64,3 +64,13 @@ All tables reside in the isolated `billing` schema.
 Never calculate MRR, net cash, or tax payable by querying gateway tables or Commerce payment-log rows alone. Always query `billing.LedgerLines` / `IBillingQueryService` so gateway fees, discounts, refunds, and tax are balanced.
 
 > Historical note: ADR 014/020 era copy referred to Community/Vault as access owners. Those modules were removed (ADR 022); Pure CaaS MVP hides LHDN-heavy UI (ADR 023) but Billing still records truth for every cleared payment.
+
+## 9. Document download surfaces (contract honesty · R23)
+
+| Route | Product OpenAPI? | Behavior |
+|-------|------------------|----------|
+| `GET /admin/billing/ledger/{id}/document` | **Yes** — `DocumentDownloadUrlDto` | OrgAdmin; JSON `{ url }` R2 presign |
+| `GET /public/billing/{tenantSlug}/documents/draft/{sessionId}?sig&exp` | **Yes** — PDF `bytes` | HMAC draft proforma (checkout `draft_pdf_url`) |
+| `GET /public/billing/{tenantSlug}/documents/{ledgerEntryId}?sig&exp` | **No** — allowlisted | HMAC email `document_link`; **302** redirect to R2 |
+
+Final signed PDF is intentionally **not** in TypeSpec: consumers are human email links only (`DocumentPublishedIntegrationEventHandler`), success is a redirect (not streamable PDF), and claiming `bytes` would be dishonest. See `docs/contracts/openapi-vs-minimal-api.md` and `packages/api-spec/honesty-allowlist.yaml`. Promote to TSP only if product needs a typed client / Scalar path (model 302, do not claim PDF body).

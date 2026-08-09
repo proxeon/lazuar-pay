@@ -1,0 +1,32 @@
+# OpenAPI ↔ Minimal API path honesty allowlist
+# Used by R25 path-honesty CI (impl ⊆ OpenAPI ∪ allowlist).
+# Product routes used by ops/portal/developers/SDKs must land in TypeSpec — not here.
+#
+# Paths are relative to /api/v1 (same as TypeSpec @route trees and openapi-fetch baseUrl).
+
+impl_only:
+  # --- R23: Billing signed final PDF ---
+  - method: GET
+    path: /public/billing/{tenantSlug}/documents/{ledgerEntryId}
+    reason: >
+      HMAC email/human document link (DocumentPublished → document_link).
+      Runtime returns 302 Redirect to a short-lived R2 presigned URL, not PDF bytes.
+      No typed client / product OpenAPI consumer. Draft proforma
+      (…/documents/draft/{sessionId}) and admin
+      GET /admin/billing/ledger/{id}/document remain in TypeSpec.
+
+  # --- Already documented in docs/contracts/openapi-vs-minimal-api.md ---
+  - method: POST
+    path: /webhooks/payments/{gatewayType}/{tenantId}
+    reason: Gateway-signed inbound; not a product API
+
+  - method: POST
+    path: /messaging/notify
+    reason: Authenticated internal fan-in (not third-party product surface)
+
+  - method: GET
+    path: /messaging/delivery-logs
+    reason: Ops-adjacent messaging diagnostics
+
+# OpenAPI paths that may lack a 1:1 Map (rare; prefer fix TypeSpec)
+openapi_only_exceptions: []

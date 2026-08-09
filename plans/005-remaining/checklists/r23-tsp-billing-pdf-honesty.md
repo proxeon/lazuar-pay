@@ -6,15 +6,15 @@
 
 ## R23.1 Decision
 
-- [ ] Final signed PDF is public/admin API surface? yes/no: ________
-- [ ] If yes: add to TypeSpec billing routes/models
-- [ ] If no: allowlist as internal + document; ensure not advertised in product OpenAPI
+- [x] Final signed PDF is public/admin API surface? yes/no: **no**
+- [x] If yes: add to TypeSpec billing routes/models *(N/A)*
+- [x] If no: allowlist as internal + document; ensure not advertised in product OpenAPI
 
 ## R23.2 Implement
 
-- [ ] TSP + gen **or** allowlist entry for R25
-- [ ] Endpoint uses generated types if exposed
+- [x] TSP + gen **or** allowlist entry for R25 *(allowlist: `packages/api-spec/honesty-allowlist.yaml`)*
+- [x] Endpoint uses generated types if exposed *(N/A — not product-exposed; 302 redirect)*
 
 ## R23.3 Exit
 
-- [ ] Decision implemented and documented
+- [x] Decision implemented and documented *(see `../r23-notes.md`)*
