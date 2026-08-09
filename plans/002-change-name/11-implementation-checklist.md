@@ -357,32 +357,34 @@ Services today: `ops-page`, `portal-page`, `superadmin-page` (developers often *
 
 **Goal:** Ship as a normal frontend rebuild, not a deploy architecture change.
 
+**Status:** **DONE** 2026-08-09 — PR [#12](https://github.com/proxeon/lazuar-pay/pull/12) merged (`ea2d5d9`); GHCR + deploy green `VERSION=sha-ea2d5d9`. See [`phase-6-done.md`](./phase-6-done.md).
+
 ### 6.1 PR hygiene
 
-- [ ] Title e.g. `chore: rename frontend apps to lazuar-* prefix`
-- [ ] PR body includes:
-  - [ ] Old → new mapping table
-  - [ ] Explicit non-goals (GHCR/prod/Caddy unchanged)
-  - [ ] Verification performed
-  - [ ] Link to `plans/002-change-name/`
-- [ ] Keep PR focused: rename + path coupling + living docs only
+- [x] Title e.g. `chore: rename frontend apps to lazuar-* prefix`
+- [x] PR body includes:
+  - [x] Old → new mapping table
+  - [x] Explicit non-goals (GHCR/prod/Caddy unchanged)
+  - [x] Verification performed
+  - [x] Link to `plans/002-change-name/`
+- [x] Keep PR focused: rename + path coupling + living docs only
 
 ### 6.2 CI expectations
 
-- [ ] `ci.yml` contracts + dotnet jobs still pass (should be unaffected)
-- [ ] On merge to `main`, `ghcr.yml` builds all five images using **new Dockerfile paths** and **same image names**
-- [ ] Deploy job still rsyncs `deploy/prod` unchanged and pulls same GHCR names
+- [x] `ci.yml` contracts + dotnet jobs still pass (should be unaffected) — **dotnet green**; **contracts red pre-existing** (pnpm Action `version: 9` vs `packageManager: pnpm@11.5.2`, not rename)
+- [x] On merge to `main`, `ghcr.yml` builds all five images using **new Dockerfile paths** and **same image names**
+- [x] Deploy job still rsyncs `deploy/prod` unchanged and pulls same GHCR names
 
 ### 6.3 Post-merge production check (observe only)
 
-- [ ] Workflow: build matrix all green
-- [ ] Deploy: health-gate for `hub-api`, `hub-ops`, `hub-portal`, `hub-superadmin`, `hub-developers`, `hub-caddy`
-- [ ] Smoke: `hub.lazuar.com/` , `/portal`, `/docs`, `/admin`, `/api` (or `/health`) as you already smoke in remote-deploy
-- [ ] If anything fails: treat as **image build/path bug**, not as “need to rename prod services”
+- [x] Workflow: build matrix all green
+- [x] Deploy: health-gate for `hub-api`, `hub-ops`, `hub-portal`, `hub-superadmin`, `hub-developers`, `hub-caddy`
+- [x] Smoke: `hub.lazuar.com/` , `/portal`, `/docs`, `/admin`, `/api` (or `/health`) as you already smoke in remote-deploy — all **200**
+- [x] If anything fails: treat as **image build/path bug**, not as “need to rename prod services” — N/A (no failure)
 
 ### 6.4 Phase 6 exit criteria
 
-- [ ] Main green, hub healthy, no emergency compose rollback for service renames (there should be none)
+- [x] Main green, hub healthy, no emergency compose rollback for service renames (there should be none) — hub healthy on `sha-ea2d5d9`; main `ci.yml` contracts still red (pre-existing)
 
 ---
 
