@@ -8,6 +8,7 @@ using Modules.One.Infrastructure.Configuration;
 using Lazuar.Api;
 using Lazuar.Api.Composition;
 using Lazuar.Api.Jobs.ApiKeyMigration;
+using Lazuar.Api.Jobs.WebhookSubscriptionMigration;
 using Azure.Identity;
 using Amazon.S3;
 using Amazon.Runtime;
@@ -121,6 +122,49 @@ builder.Services.AddOptions<ApiKeyMigrationOptions>()
         builder.Services.AddSingleton<LegacyApiKeyMigrator>();
         builder.Services.AddHostedService<LegacyApiKeyMigrationHostedService>();
         Log.Information("API key migration hosted service registered (Enabled=true). Dual-read unchanged.");
+    }
+}
+
+// R41: optional one-shot LHDN webhook registry backfill (lhdn.WebhookSubscriptions → one.TenantWebhookEndpoints).
+// Lhdn fire-and-forget stays; only registers when Enabled=true. Dual-write of register API is out of scope.
+builder.Services.AddOptions<WebhookSubscriptionMigrationOptions>()
+    .BindConfiguration(WebhookSubscriptionMigrationOptions.SectionName)
+    .PostConfigure(opts =>
+    {
+        var enabledEnv = Environment.GetEnvironmentVariable("WEBHOOK_SUBSCRIPTION_MIGRATION_ENABLED");
+        if (!string.IsNullOrWhiteSpace(enabledEnv) && bool.TryParse(enabledEnv, out var enabled))
+        {
+            opts.Enabled = enabled;
+        }
+
+        var dryRunEnv = Environment.GetEnvironmentVariable("WEBHOOK_SUBSCRIPTION_MIGRATION_DRY_RUN");
+        if (!string.IsNullOrWhiteSpace(dryRunEnv) && bool.TryParse(dryRunEnv, out var dryRun))
+        {
+            opts.DryRun = dryRun;
+        }
+
+        if (opts.BatchSize <= 0)
+        {
+            opts.BatchSize = 500;
+        }
+    });
+
+{
+    var webhookMigrationSection = builder.Configuration.GetSection(WebhookSubscriptionMigrationOptions.SectionName);
+    var webhookMigrationEnabled = webhookMigrationSection.GetValue<bool?>(nameof(WebhookSubscriptionMigrationOptions.Enabled)) ?? false;
+    var webhookEnabledEnv = Environment.GetEnvironmentVariable("WEBHOOK_SUBSCRIPTION_MIGRATION_ENABLED");
+    if (!string.IsNullOrWhiteSpace(webhookEnabledEnv) && bool.TryParse(webhookEnabledEnv, out var webhookEnvEnabled))
+    {
+        webhookMigrationEnabled = webhookEnvEnabled;
+    }
+
+    if (webhookMigrationEnabled)
+    {
+        builder.Services.AddSingleton<IWebhookSubscriptionMigrationStore>(sp =>
+            new SqlWebhookSubscriptionMigrationStore(defaultConnectionString));
+        builder.Services.AddSingleton<LegacyWebhookSubscriptionMigrator>();
+        builder.Services.AddHostedService<LegacyWebhookSubscriptionMigrationHostedService>();
+        Log.Information("Webhook subscription migration hosted service registered (Enabled=true). Lhdn fire-and-forget unchanged.");
     }
 }
 

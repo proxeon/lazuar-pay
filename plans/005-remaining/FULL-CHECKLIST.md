@@ -1060,19 +1060,22 @@ R99 Definition of done
 
 ## R41.1 Migrator
 
-- [ ] Map `lhdn.WebhookSubscription` (or current table) → One endpoints
-- [ ] Set `EnabledEvents` to `invoice.valid` / `invoice.invalid` (per R40)
-- [ ] Idempotent; preserve secrets/signing material per R40 dual-verify design
-- [ ] Staging then prod runbook
+- [x] Map `lhdn.WebhookSubscriptions` (active) → One endpoints (`Jobs/WebhookSubscriptionMigration/`)
+- [x] Set `EnabledEvents` to `invoice.valid` / `invoice.invalid` (per R40)
+- [x] Idempotent on Org+Url; preserve secrets/signing material per R40 dual-verify design
+- [x] Staging then prod runbook → `r41-webhooks-registry-backfill-runbook.md`
+- [x] Dual-write of register API skipped (optional)
 
 ## R41.2 Validation
 
-- [ ] Row counts match expectations
-- [ ] No silent zero endpoints for orgs that had Lhdn subs
+- [ ] Row counts match expectations (ops execute)
+- [ ] No silent zero endpoints for orgs that had Lhdn subs (ops execute)
+- [x] Unit tests with fake store
 
 ## R41.3 Exit
 
-- [ ] Backfill complete; fire-and-forget still may run until R42/R43 cutover plan says stop
+- [x] Migrator implemented; fire-and-forget still may run until R42/R43 cutover plan says stop
+- [ ] Staging/prod execute when counts warrant
 
 
 ---
