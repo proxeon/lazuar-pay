@@ -646,7 +646,7 @@ public class ProvisionAuraWorkspaceTests
         ctx.UserId.Returns(Guid.Empty);
 
         var query = Substitute.For<IOneQueryService>();
-        var ok = await Endpoints.CanAccessWorkspaceWebhooksAsync(workspaceId, http, ctx, query, manageRequired: true);
+        var ok = await WebhookEndpoints.CanAccessWorkspaceWebhooksAsync(workspaceId, http, ctx, query, manageRequired: true);
         Assert.That(ok, Is.True);
     }
 
@@ -669,7 +669,7 @@ public class ProvisionAuraWorkspaceTests
         ctx.TenantId.Returns(workspaceId);
 
         var query = Substitute.For<IOneQueryService>();
-        var ok = await Endpoints.CanAccessWorkspaceWebhooksAsync(workspaceId, http, ctx, query, manageRequired: true);
+        var ok = await WebhookEndpoints.CanAccessWorkspaceWebhooksAsync(workspaceId, http, ctx, query, manageRequired: true);
         Assert.That(ok, Is.False);
     }
 
@@ -693,7 +693,7 @@ public class ProvisionAuraWorkspaceTests
         ctx.TenantId.Returns(keyOrg);
 
         var query = Substitute.For<IOneQueryService>();
-        var ok = await Endpoints.CanAccessWorkspaceWebhooksAsync(otherWorkspace, http, ctx, query, manageRequired: true);
+        var ok = await WebhookEndpoints.CanAccessWorkspaceWebhooksAsync(otherWorkspace, http, ctx, query, manageRequired: true);
         Assert.That(ok, Is.False);
     }
 
@@ -719,7 +719,7 @@ public class ProvisionAuraWorkspaceTests
         var query = Substitute.For<IOneQueryService>();
         query.GetTenantRoleAsync(userId, workspaceId).Returns("ADMIN");
 
-        var ok = await Endpoints.CanAccessWorkspaceWebhooksAsync(workspaceId, http, ctx, query, manageRequired: true);
+        var ok = await WebhookEndpoints.CanAccessWorkspaceWebhooksAsync(workspaceId, http, ctx, query, manageRequired: true);
         Assert.That(ok, Is.True);
     }
 
