@@ -6,20 +6,25 @@ using BuildingBlocks.Application;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Services;
 
 /// <summary>
 /// Commerce-owned implementation of cross-schema reads used by Billing document generation.
+/// Commerce SQL stays commerce-only; customer name/email come from <see cref="ICrmQueryService"/>.
 /// </summary>
 public class CommerceDocumentLookup : ICommerceDocumentLookup
 {
     private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly ICrmQueryService _crmQueryService;
 
     public CommerceDocumentLookup(
-        [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
+        [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
+        ICrmQueryService crmQueryService)
     {
         _connectionFactory = connectionFactory;
+        _crmQueryService = crmQueryService;
     }
 
     public async Task<CommerceCustomerDisplay?> GetCustomerByGatewayTransactionAsync(
@@ -53,10 +58,10 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
+        // L-05: commerce-owned SQL only; CRM name/email via ICrmQueryService (no crm JOIN).
         const string sql = @"
-            SELECT c.""AdHocLineItems"", cp.""FullName"" AS CustomerName, cp.""Email"" AS CustomerEmail
+            SELECT c.""AdHocLineItems"", c.""ClientProfileId""
             FROM commerce.""CheckoutSessions"" c
-            LEFT JOIN crm.""ClientProfiles"" cp ON c.""ClientProfileId"" = cp.""Id""
             WHERE c.""Id"" = @SessionId AND c.""OrganizationId"" = @OrgId
             LIMIT 1";
 
@@ -64,9 +69,15 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         if (sessionData == null) return null;
 
+        Guid clientProfileId = sessionData.ClientProfileId;
+        var profile = clientProfileId != Guid.Empty
+            ? await _crmQueryService.GetClientProfileAsync(clientProfileId)
+            : null;
+
+        // Former LEFT JOIN semantics: missing profile → defaults.
         return new DraftCheckoutSessionDisplay(
-            CustomerName: (string)(sessionData.CustomerName ?? "Customer"),
-            CustomerEmail: (string)(sessionData.CustomerEmail ?? ""),
+            CustomerName: profile?.Full_name ?? "Customer",
+            CustomerEmail: profile?.Email ?? "",
             AdHocLineItemsJson: (string?)sessionData.AdHocLineItems);
     }
 }

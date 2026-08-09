@@ -555,22 +555,22 @@ R99 Definition of done
 
 ## R14.1 Design
 
-- [ ] Session/document SQL stays commerce-only
-- [ ] Customer profile fields via `ICrmQueryService`
+- [x] Session/document SQL stays commerce-only
+- [x] Customer profile fields via `ICrmQueryService`
 
 ## R14.2 Implement
 
-- [ ] Split query; compose results in lookup service
-- [ ] Keep `ICommerceDocumentLookup` external contract stable for Billing
+- [x] Split query; compose results in lookup service
+- [x] Keep `ICommerceDocumentLookup` external contract stable for Billing
 
 ## R14.3 Tests
 
-- [ ] Billing draft/final document tests still pass
-- [ ] Lookup unit tests updated
+- [x] Billing draft/final document tests still pass
+- [x] Lookup unit tests updated
 
 ## R14.4 Exit
 
-- [ ] No `crm.` SQL inside CommerceDocumentLookup
+- [x] No `crm.` SQL inside CommerceDocumentLookup
 
 
 ---

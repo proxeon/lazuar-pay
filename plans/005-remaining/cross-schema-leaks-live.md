@@ -1,4 +1,4 @@
-# Cross-schema SQL leaks — live status (R10 + R11–R13)
+# Cross-schema SQL leaks — live status (R10 + R11–R14)
 
 **Verified:** 2026-08-09  
 **Branch:** `chore/remaining-005`  
@@ -15,7 +15,7 @@
 | L-02 | **fixed** (R12) | Auth moved to One `PlatformAuthEndpoints` + `IPlatformAdminAuthQuery`; Payments payment-config only; no `one.GlobalUsers` SQL in Payments | — | **R12 complete** |
 | L-03 | **fixed** (R13) | `PublicArrearsEndpoints.cs` — commerce SQL + `ICrmQueryService` + `IOneQueryService`; no `crm`/`one` JOIN | — | **R13 complete** |
 | L-04 | **present** (dead) | `apps/lazuar-api/Modules/Commerce/Infrastructure/Repositories/CommerceRepository.cs` (~125: `communications."MessageTemplates"`); interface only caller is definition | P2 | **R15** |
-| L-05 | **present** | `apps/lazuar-api/Modules/Commerce/Infrastructure/Services/CommerceDocumentLookup.cs` (~59: LEFT JOIN `crm."ClientProfiles"`) | P1 | **R14** |
+| L-05 | **fixed** (R14) | `CommerceDocumentLookup.cs` — commerce SQL + `ICrmQueryService`; no `crm` JOIN | — | **R14 complete** |
 | L-06 | **present** | `apps/lazuar-api/BuildingBlocks/Infrastructure/Observability/PlatformMetricsCollector.cs` (ModuleSchemas all nine; ~208: `lhdn."TaxDocuments"` stuck product SQL) | P1 | **R16** handoff **R35** |
 | L-07 | **fixed** (R05) | `apps/lazuar-api/src/Lazuar.Api/Middleware/ApiKeyAuthenticationMiddleware.cs` — One-only `one."ApiCredentials"`; **no** `LhdnLookupSql` / dual-read | — | **R17** handoff complete |
 | new? | **none** (product paths) | No new consumer-module foreign-schema production leaks beyond L-01…L-06 | — | — |
@@ -52,7 +52,7 @@
 1. **R11** — L-01 DocumentPublished multi-schema JOIN — **complete**  
 2. **R12** — L-02 PlatformEndpoints → `one.GlobalUsers` — **complete**  
 3. **R13** — L-03 PublicArrears update-payment → `crm` + `one` — **complete**  
-4. **R14** — L-05 CommerceDocumentLookup CRM join  
+4. **R14** — L-05 CommerceDocumentLookup CRM join — **complete**  
 5. **R15** — L-04 dead `GetDefaultTemplateIdsAsync` delete  
 6. **R16** — L-06 metrics handoff → **R35**  
 7. **R17** — L-07 keys handoff **complete** (fixed by R05; no SQL fix phase)
@@ -67,7 +67,7 @@
 | L-02 | **No** — Payments has no `one.` SQL; One owns platform auth (R12) |
 | L-03 | **No** — commerce SQL + CRM/One ports (R13) |
 | L-04 | Yes — method body present; **zero** call sites outside interface/impl |
-| L-05 | Yes — `crm."ClientProfiles"` in draft session lookup |
+| L-05 | **No** — commerce SQL + `ICrmQueryService` (R14) |
 | L-06 | Yes — schema array + `lhdn."TaxDocuments"` |
 | L-07 dual-read | **No** — middleware One-only |
 
@@ -80,7 +80,9 @@
 | L-01 | open | **fixed** by R11 (event denorm) |
 | L-02 | open | **fixed** by R12 (One auth port + endpoints) |
 | L-03 | open | **fixed** by R13 (CRM + One contracts ports) |
-| L-04…L-06 | open | **still present** |
+| L-04 | open | **still present** (dead) |
+| L-05 | open | **fixed** by R14 (CRM contracts port) |
+| L-06 | open | **still present** |
 | L-07 | tracked dual-read exception (FW-1) | **fixed** by R05 One-only middleware |
 | New product leaks | n/a | **none found** |
 
@@ -110,4 +112,17 @@
 | GET arrears | Unchanged (commerce-only) |
 | Notes | [`r13-notes.md`](./r13-notes.md) |
 
-*R13 complete. Next open product leak: L-05 (R14).*
+---
+
+## L-05 detail (R14)
+
+| Check | Result |
+|-------|--------|
+| `LEFT JOIN crm."ClientProfiles"` | **Gone** |
+| Commerce SQL | `CheckoutSessions` only (`AdHocLineItems`, `ClientProfileId`) |
+| Customer name/email | `ICrmQueryService.GetClientProfileAsync` |
+| `GetCustomerByGatewayTransactionAsync` | Unchanged (commerce-only) |
+| Billing port | `ICommerceDocumentLookup` surface stable |
+| Notes | [`r14-notes.md`](./r14-notes.md) |
+
+*R14 complete. Next open product leak: L-04 (R15, dead code) or L-06 (R16 metrics).*
