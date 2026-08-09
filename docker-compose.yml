@@ -46,10 +46,10 @@ services:
     networks:
       - lazuar-network
 
-  ops-page:
+  lazuar-ops:
     build:
       context: .
-      dockerfile: apps/ops-page/Dockerfile
+      dockerfile: apps/lazuar-ops/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
         VITE_PORTAL_URL: ${VITE_PORTAL_URL:-http://localhost:3004}
@@ -63,10 +63,10 @@ services:
       - lazuar-network
     profiles: ["full"]
 
-  portal-page:
+  lazuar-portal:
     build:
       context: .
-      dockerfile: apps/portal-page/Dockerfile
+      dockerfile: apps/lazuar-portal/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
     image: ghcr.io/proxeon/lazuar-hub-portal:local
@@ -82,16 +82,34 @@ services:
       - lazuar-network
     profiles: ["full"]
 
-  superadmin-page:
+  lazuar-admin:
     build:
       context: .
-      dockerfile: apps/superadmin-page/Dockerfile
+      dockerfile: apps/lazuar-admin/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
     image: ghcr.io/proxeon/lazuar-hub-superadmin:local
     container_name: lazuar-superadmin
     ports:
       - "3005:3000"
+    depends_on:
+      - api
+    networks:
+      - lazuar-network
+    profiles: ["full"]
+
+  lazuar-developers:
+    build:
+      context: .
+      dockerfile: apps/lazuar-developers/Dockerfile
+      args:
+        NEXT_BASE_PATH: /docs
+    image: ghcr.io/proxeon/lazuar-hub-developers:local
+    container_name: lazuar-developers
+    ports:
+      - "3002:3000"
+    environment:
+      OPENAPI_SPEC_ROOT: /app/openapi-specs
     depends_on:
       - api
     networks:

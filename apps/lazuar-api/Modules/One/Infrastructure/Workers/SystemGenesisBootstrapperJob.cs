@@ -79,7 +79,7 @@ public class SystemGenesisBootstrapperJob : IHostedService
                     }
                 }
 
-                // Ensure superadmin can open ops-page (memberships drive /me/entitlements for non-global paths).
+                // Ensure superadmin can open lazuar-ops (memberships drive /me/entitlements for non-global paths).
                 await db.SaveChangesAsync(cancellationToken);
                 user = await db.GlobalUsers.FirstAsync(u => u.Email == normalizedEmail, cancellationToken);
                 var systemOrgId = Guid.Parse("00000000-0000-0000-0000-000000000001");

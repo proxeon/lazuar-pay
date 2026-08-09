@@ -10,13 +10,13 @@
 | .NET contracts | `packages/api-types-dotnet/` |
 | TS types | `packages/api-types-ts/` |
 
-## Developers page (Scalar)
+## Developers hub (Scalar)
 
-Run **developers-page** in the monorepo:
+Run **lazuar-developers** in the monorepo:
 
 ```bash
 # typical local
-pnpm --filter developers-page dev
+pnpm --filter lazuar-developers dev
 ```
 
 Useful routes (when running):

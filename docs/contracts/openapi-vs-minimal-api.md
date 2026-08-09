@@ -54,7 +54,7 @@ These exist on the host but are **not** required in the public TypeSpec surface,
 | `GET /messaging/delivery-logs` | Ops-adjacent messaging diagnostics |
 | Host health / swagger static | Infrastructure |
 
-If you add a **product** route used by ops-page, portal-page, developers-page, or SDKs, it **must** land in TypeSpec before UI wiring.
+If you add a **product** route used by lazuar-ops, lazuar-portal, lazuar-developers, or SDKs, it **must** land in TypeSpec before UI wiring.
 
 ## Intentional frontend “dark matter” (not deleted)
 
@@ -62,9 +62,9 @@ Per **ADR 023** (UI lobotomy) and **ADR 022** (Community/Vault removal):
 
 | UI island | Status | Reactivation |
 |-----------|--------|--------------|
-| `ops-page` invoicing module (quotes / tax invoices / credit notes) | Code present; **no routes** in `App.tsx` | Uncomment `[MVP-HIDE]` routes + sidebar (Phase D.3) |
-| `ops-page` `BillingProfilePage` | Unrouted | Same |
-| `ops-page` Ops chat (`OpsChatWorkspace`, stream client) | Unrouted; API + OpenAPI exist | Mount `/ops/chat` when productizing |
+| `lazuar-ops` invoicing module (quotes / tax invoices / credit notes) | Code present; **no routes** in `App.tsx` | Uncomment `[MVP-HIDE]` routes + sidebar (Phase D.3) |
+| `lazuar-ops` `BillingProfilePage` | Unrouted | Same |
+| `lazuar-ops` Ops chat (`OpsChatWorkspace`, stream client) | Unrouted; API + OpenAPI exist | Mount `/ops/chat` when productizing |
 | `use-product-associations` | No-op stub | Community/Vault modules removed (ADR 022) |
 
 Do **not** reintroduce `/admin/community/*` or `/admin/vault/*` without restoring those modules.

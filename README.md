@@ -43,8 +43,10 @@ We actively avoid the "CMS Trap." We don't build website builders, and we don't 
 ```
 
 **Key Separation:**
-- **`ops-page` (Admin):** The AWS-style superapp. Internal staff use this to configure products, view the financial ledger, construct Dunning campaigns, and manage operations. 
-- **`portal-page` (Checkout):** The headless cash register. Highly optimized, distraction-free SSR Next.js app that processes transactions and grants access.
+- **`lazuar-ops` (Admin):** The AWS-style superapp. Internal staff use this to configure products, view the financial ledger, construct Dunning campaigns, and manage operations.
+- **`lazuar-portal` (Checkout):** The headless cash register. Highly optimized, distraction-free SSR Next.js app that processes transactions and grants access.
+- **`lazuar-admin` (Platform):** Global control plane for tenants/workspaces.
+- **`lazuar-developers` (API docs):** Scalar OpenAPI hub (local port 3002; prod path `/docs`).
 
 ---
 
@@ -93,18 +95,23 @@ The platform is designed to replace the fragmented, manual workflows currently c
 ```md
 .
 ├── apps/
-│   ├── lazuar-api/       # The Brain (.NET Modular Monolith) -> api.lazuar.com
-│   ├── ops-page/         # The Back-Office (Vite CSR)        -> ops.lazuar.com
-│   ├── portal-page/      # The Cash Register (Next.js SSR)   -> portal.lazuar.com
-│   └── superadmin-page/  # The Global Control Plane          -> admin.lazuar.com
+│   ├── lazuar-api/          # The Brain (.NET Modular Monolith) -> api.lazuar.com
+│   ├── lazuar-ops/          # The Back-Office (Vite CSR)        -> ops.lazuar.com
+│   ├── lazuar-portal/       # The Cash Register (Next.js SSR)   -> portal.lazuar.com
+│   ├── lazuar-admin/        # The Global Control Plane          -> admin.lazuar.com
+│   ├── lazuar-developers/   # Scalar OpenAPI hub                -> hub …/docs
+│   └── lazuar-docs/         # VitePress product guides
 │
 ├── packages/
-│   ├── api-spec/         # TypeSpec definitions (Single Source of Truth)
-│   ├── api-types-dotnet/ # Auto-generated C# Models
-│   └── api-types-ts/     # Auto-generated TypeScript Interfaces
+│   ├── api-spec/            # TypeSpec definitions (Single Source of Truth)
+│   ├── api-types-dotnet/    # Auto-generated C# Models
+│   └── api-types-ts/        # Auto-generated TypeScript Interfaces
 │
-└── docs/                 # Architecture Decision Logs (ADR)
+└── docs/                    # Architecture Decision Logs (ADR)
 ```
+
+**Monorepo app names:** `lazuar-ops`, `lazuar-portal`, `lazuar-admin`, `lazuar-developers`.
+TypeSpec SSoT remains `packages/api-spec`. GHCR images remain `lazuar-hub-*`. Public hub paths unchanged (`/`, `/portal`, `/docs`, `/admin`).
 
 ### Module Pattern (Backend)
 Every backend module is strictly decoupled to guarantee future microservice-readiness:
@@ -139,9 +146,10 @@ task fe
 | App | Port | Access URL | Description |
 |-----|------|------------|-------------|
 | `lazuar-api` | 8080 | `http://localhost:8080` | .NET 10 Modular Monolith |
-| `ops-page` | 3003 | `http://localhost:3003` | Superapp Console (Admin) |
-| `portal-page`| 3004 | `http://localhost:3004` | Universal Checkout & Dashboard |
-| `superadmin` | 3005 | `http://localhost:3005` | Platform Infrastructure Admin |
+| `lazuar-developers` | 3002 | `http://localhost:3002` | Scalar OpenAPI hub |
+| `lazuar-ops` | 3003 | `http://localhost:3003` | Superapp Console (Admin) |
+| `lazuar-portal` | 3004 | `http://localhost:3004` | Universal Checkout & Dashboard |
+| `lazuar-admin` | 3005 | `http://localhost:3005` | Platform Infrastructure Admin |
 
 ### Type Generation Pipeline
 When modifying API endpoints or models, edit the TypeSpec files in `packages/api-spec/` and run:

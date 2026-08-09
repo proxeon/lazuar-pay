@@ -1,16 +1,16 @@
 # mprocs-dev.yaml
 procs:
-  developers-page:
-    shell: cd apps/developers-page && pnpm dev
+  lazuar-developers:
+    shell: cd apps/lazuar-developers && pnpm dev
     autostart: true
-  ops-page:
-    shell: cd apps/ops-page && pnpm dev
+  lazuar-ops:
+    shell: cd apps/lazuar-ops && pnpm dev
     autostart: true
-  superadmin-page:
-    shell: cd apps/superadmin-page && pnpm dev
+  lazuar-admin:
+    shell: cd apps/lazuar-admin && pnpm dev
     autostart: true
-  portal-page:
-    shell: cd apps/portal-page && pnpm dev
+  lazuar-portal:
+    shell: cd apps/lazuar-portal && pnpm dev
     autostart: true
   ngrok-api-tunnel:
     shell: task tunnel:api

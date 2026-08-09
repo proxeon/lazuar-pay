@@ -48,7 +48,7 @@ services:
     networks:
       - lazuar-network
 
-  ops-page:
+  lazuar-ops:
     image: ghcr.io/proxeon/lazuar-hub-ops:${TAG:-latest}
     container_name: lazuar-ops
     ports:
@@ -58,7 +58,7 @@ services:
     networks:
       - lazuar-network
 
-  portal-page:
+  lazuar-portal:
     image: ghcr.io/proxeon/lazuar-hub-portal:${TAG:-latest}
     container_name: lazuar-portal
     ports:
@@ -71,11 +71,23 @@ services:
     networks:
       - lazuar-network
 
-  superadmin-page:
+  lazuar-admin:
     image: ghcr.io/proxeon/lazuar-hub-superadmin:${TAG:-latest}
     container_name: lazuar-superadmin
     ports:
       - "3005:3000"
+    depends_on:
+      - api
+    networks:
+      - lazuar-network
+
+  lazuar-developers:
+    image: ghcr.io/proxeon/lazuar-hub-developers:${TAG:-latest}
+    container_name: lazuar-developers
+    ports:
+      - "3002:3000"
+    environment:
+      OPENAPI_SPEC_ROOT: /app/openapi-specs
     depends_on:
       - api
     networks:

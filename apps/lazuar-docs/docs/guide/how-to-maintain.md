@@ -36,5 +36,5 @@ pnpm --filter lazuar-docs preview
 ## Publishing later
 
 - Set `base` in `.vitepress/config.ts` if served under a subpath.  
-- Point nav “Developers (Scalar)” at production developers-page URL.  
+- Point nav “Developers (Scalar)” at production lazuar-developers (hub `/docs`) URL.  
 - Promote pages from draft → stable when contracts freeze.

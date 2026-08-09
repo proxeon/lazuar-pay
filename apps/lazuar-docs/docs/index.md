@@ -37,7 +37,7 @@ features:
 
 ## Status
 
-These guides are **drafts for refinement**. Runtime APIs live in the monorepo; Scalar OpenAPI is under **developers-page** (`/payments`). Update guides as contracts change.
+These guides are **drafts for refinement**. Runtime APIs live in the monorepo; Scalar OpenAPI is under **lazuar-developers** (`/payments`). Update guides as contracts change.
 
 ## Local preview
 
