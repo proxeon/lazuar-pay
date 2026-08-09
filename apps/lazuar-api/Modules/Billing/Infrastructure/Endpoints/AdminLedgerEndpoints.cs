@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using BuildingBlocks.Infrastructure;
 using Lazuar.ApiTypes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

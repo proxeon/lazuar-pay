@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using BuildingBlocks.Application;
-using BuildingBlocks.Infrastructure;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.AspNetCore.Builder;

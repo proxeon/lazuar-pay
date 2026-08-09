@@ -35,8 +35,8 @@ Architecture tests (`ModuleBoundaryTests`) enforce BB ↛ `Modules.*` assembly e
 | ISqlConnectionFactory + Npgsql factory | Application / Infrastructure | Shared SQL access |
 | IExecutionContextAccessor | Application (impl in host) | Ambient tenant/user |
 | IPasswordService, ISecretVault, ITokenGeneratorService | Application + Infrastructure | Generic security |
-| JWT **generation** helper | Infrastructure; port should live in Application | Port hygiene deferred if not trivial |
-| Thin R2 / object storage port + S3 impl | Keep shared (multi-module: Billing + One) | Prefer port in Application long-term |
+| JWT **generation** helper (`IJwtService`) | Application port + Infrastructure `JwtService` | **R30:** interface moved to Application |
+| Thin R2 / object storage (`IR2StorageService` + S3 impl) | Application port + Infrastructure adapters | **R30:** interface in Application; keep shared (Billing + One) |
 | Technical metrics: dead-letter counters tied to message applier | Application.Observability | Messaging-technical |
 | GlobalExceptionHandler | Infrastructure or host | Host-facing; either is fine |
 
@@ -65,7 +65,7 @@ Ownership target when a dedicated PR is justified. **Not** all moved in Phase 15
 
 | Item | Policy |
 |------|--------|
-| **R2 / object storage** | Stay as **thin shared port** (Billing + One). Move interface to Application when touching ports. No Storage module unless blob lifecycle becomes product. |
+| **R2 / object storage** | Stay as **thin shared port** (Billing + One). Interface lives in Application (`IR2StorageService`); adapters in Infrastructure. No Storage module unless blob lifecycle becomes product. |
 | **Email port** | Prefer Messaging-owned long-term. Thin `IEmailService` may remain in Application while product traffic goes through Messaging integration events. |
 | **Platform metrics aggregator** | May stay in BB **if** pluginized (`IPlatformMetricsContributor` / schema registration). Today: hardcoded schema list + LHDN SQL — accept temporary god collector with plugin direction (comment on `PlatformMetricsCollector`). |
 | **Outbox lag gauges** | Shared technical observability — stay; schema list should eventually come from registration, not a constant array. |
@@ -95,7 +95,7 @@ Full LLM / email / messaging / metrics plugin moves are **large**. Phase 15 ship
 | Plugin note on `PlatformMetricsCollector` | **Done** (comment only) |
 | Move LLM stack → Ops | **Deferred** (not trivial; multi-package, DI, Ops tests) |
 | Move email / Messaging ports | **Deferred** (decision 00.4 + composition root) |
-| Port placement (`IR2StorageService`, `IJwtService` → Application) | **Deferred** (hygiene PR) |
+| Port placement (`IR2StorageService`, `IJwtService` → Application) | **Done** (R30 / 005-remaining) |
 | Split `BackgroundWorkerOptions` per module | **Deferred** |
 | `IPlatformMetricsContributor` plugins | **Deferred** (ticket direction only) |
 | BuildingBlocks project splits (Persistence / Messaging / …) | **Deferred** (plan 06 Option A/B later) |
@@ -116,8 +116,8 @@ Product-concern move criterion for Phase 15 exit: **explicitly deferred with thi
 | Host parallel PlatformDbContext | | | ❌ deleted | Dead weight |
 | ISqlConnectionFactory | ✅ | | | |
 | IPassword / ISecretVault / ITokenGenerator | ✅ | | | |
-| IJwtService port | ✅ App (target) | | | Interface placement deferred |
-| IR2StorageService | ✅ thin | | | Interface → Application later |
+| IJwtService port | ✅ App | | | **R30 done** — Application port |
+| IR2StorageService | ✅ App thin | | | **R30 done** — Application port |
 | IEmailService + Resend + templates | | ✅ Messaging | | Deferred move |
 | IMessagingService | | ✅ Messaging | | Deferred; 00.4 freeze product WA |
 | MarkdownParser | | ✅ Communications | | Deferred |

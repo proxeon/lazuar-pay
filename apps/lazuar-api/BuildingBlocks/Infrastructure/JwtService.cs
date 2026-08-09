@@ -1,12 +1,8 @@
 using System.Security.Claims;
+using BuildingBlocks.Application;
 using Microsoft.IdentityModel.Tokens;
 
 namespace BuildingBlocks.Infrastructure;
-
-public interface IJwtService
-{
-    string GenerateToken(IEnumerable<Claim> claims, string secret, string issuer, string audience, int expiryHours);
-}
 
 public class JwtService : IJwtService
 {

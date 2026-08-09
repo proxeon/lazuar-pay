@@ -5,15 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
+using BuildingBlocks.Application;
 
 namespace BuildingBlocks.Infrastructure;
-
-public interface IR2StorageService
-{
-    Task<string?> UploadAsync(Stream data, string bucket, string key, string contentType, CancellationToken ct = default);
-    string GetPresignedUploadUrl(string bucket, string key, string contentType, int expiryMinutes = 60);
-    string GetPresignedDownloadUrl(string bucket, string key, int expiryMinutes = 60);
-}
 
 /// <summary>
 /// No-op storage used when R2 is not configured so the API can still boot.

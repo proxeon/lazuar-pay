@@ -318,6 +318,54 @@ public class ModuleBoundaryTests
     }
 
     /// <summary>
+    /// R30 — Thin shared ports used by modules must live in BuildingBlocks.Application
+    /// (Infrastructure implements). Prevents re-introducing inverted port placement.
+    /// </summary>
+    [Test]
+    public void Shared_Technical_Ports_Must_Live_In_BuildingBlocks_Application()
+    {
+        // Module-consumed ports that were historically co-located with adapters.
+        Type[] requiredApplicationPorts =
+        [
+            typeof(BuildingBlocks.Application.IJwtService),
+            typeof(BuildingBlocks.Application.IR2StorageService),
+            typeof(BuildingBlocks.Application.ITokenGeneratorService),
+            typeof(BuildingBlocks.Application.ISecretVault),
+            typeof(BuildingBlocks.Application.IPasswordService),
+            typeof(BuildingBlocks.Application.ISqlConnectionFactory),
+        ];
+
+        foreach (var port in requiredApplicationPorts)
+        {
+            Assert.That(port.Assembly, Is.SameAs(BuildingBlocksApplicationAssembly),
+                $"Port '{port.FullName}' must live in BuildingBlocks.Application, not {port.Assembly.GetName().Name}.");
+            Assert.That(port.IsInterface, Is.True, $"'{port.FullName}' must be an interface port.");
+        }
+
+        // Guard: same simple names must not reappear as public interfaces under Infrastructure.
+        var forbiddenInfraPortNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "IJwtService",
+            "IR2StorageService",
+            "ITokenGeneratorService",
+            "ISecretVault",
+            "IPasswordService",
+            "ISqlConnectionFactory",
+        };
+
+        var infraPublicInterfaces = BuildingBlocksInfrastructureAssembly.GetTypes()
+            .Where(t => t.IsInterface && t.IsPublic)
+            .Select(t => t.Name)
+            .Where(forbiddenInfraPortNames.Contains)
+            .OrderBy(n => n)
+            .ToList();
+
+        Assert.That(infraPublicInterfaces, Is.Empty,
+            "BuildingBlocks.Infrastructure must not re-define module-facing ports: " +
+            string.Join(", ", infraPublicInterfaces));
+    }
+
+    /// <summary>
     /// Phase 17.5 — Host composes modules via Infrastructure entrypoints only.
     /// Application assemblies stay transitive (Infrastructure → Application) for MediatR markers;
     /// do not re-add direct <c>*Application.csproj</c> ProjectReferences on the host.
