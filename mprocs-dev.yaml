@@ -20,7 +20,8 @@ procs:
     shell: cd apps/lazuar-portal && NEXT_BASE_PATH=/portal pnpm dev
     autostart: true
   caddy:
-    shell: caddy run --config deploy/dev/Caddyfile --adapter caddyfile
+    # Docker Caddy → host.docker.internal (no brew install). Requires Docker Desktop.
+    shell: docker compose -f docker-compose.dev-proxy.yml up
     autostart: false
   ngrok-api-tunnel:
     shell: task tunnel:api

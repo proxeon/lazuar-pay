@@ -1,0 +1,21 @@
+# Local Caddy edge only — proxies host-run FE/API (mprocs + task dev).
+# Does not start Postgres or app containers.
+#
+#   task proxy
+#   docker compose -f docker-compose.dev-proxy.yml up
+#   docker compose -f docker-compose.dev-proxy.yml down
+
+name: lazuar-dev-proxy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: lazuar-dev-caddy
+    ports:
+      - "9080:9080"
+    volumes:
+      - ./deploy/dev/Caddyfile:/etc/caddy/Caddyfile:ro
+    extra_hosts:
+      # Linux Docker: map host.docker.internal → host gateway (Desktop often has this already)
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

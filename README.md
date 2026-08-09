@@ -156,10 +156,10 @@ Vite apps pin ports with `strictPort: true` (ops **3003**, admin **3005**). If a
 
 #### Local Caddy gateway (`task proxy`)
 
-Optional single origin that mirrors production path routing (`deploy/dev/Caddyfile`):
+Optional single origin that mirrors production path routing. Uses **Docker** (`caddy:2-alpine`) — no host Caddy install. See [`deploy/dev/README.md`](deploy/dev/README.md) and [`docker-compose.dev-proxy.yml`](docker-compose.dev-proxy.yml).
 
-| Gateway path | Upstream |
-|--------------|----------|
+| Gateway path | Upstream (host via `host.docker.internal`) |
+|--------------|--------------------------------------------|
 | `/health`, `/api/*` | API `:8080` |
 | `/` | ops `:3003` |
 | `/portal*` | portal `:3004` |
@@ -167,12 +167,12 @@ Optional single origin that mirrors production path routing (`deploy/dev/Caddyfi
 | `/admin/` | admin `:3005` (`handle_path`) |
 
 ```bash
-# macOS
-brew install caddy
-
-# With API + frontends already running:
-task proxy
-# or enable the `caddy` proc in mprocs (autostart: false by default)
+# Docker Desktop must be running (same as task infra:up)
+# With API + frontends already on the host:
+task proxy          # foreground
+task proxy:up       # detached
+task proxy:down
+task proxy:validate # syntax check via caddy image
 ```
 
 `task fe` / `mprocs-dev.yaml` sets base-path envs so path routing works:
