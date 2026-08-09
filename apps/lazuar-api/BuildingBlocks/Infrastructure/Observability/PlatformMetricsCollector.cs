@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application.Observability;
@@ -10,37 +11,38 @@ using Npgsql;
 namespace BuildingBlocks.Infrastructure.Observability;
 
 /// <summary>
-/// On-demand SQL metrics across module private schemas (outbox lag, dead letters, LHDN stuck).
+/// Thin platform metrics aggregator: scrapes registered outbox/inbox schemas and merges
+/// <see cref="IPlatformMetricsContributor"/> product bags (no module business-table SQL here).
 /// </summary>
 /// <remarks>
-/// Temporary "god collector": hardcodes all module schema names and product SQL (e.g. lhdn.TaxDocuments).
-/// Future direction — plugin contributors (do not grow more module-specific SQL here):
-/// each module registers an <c>IPlatformMetricsContributor</c> / schema metrics source;
-/// LHDN stuck and similar product health signals move to the owning module; this type
-/// only aggregates registered sources. See docs/009-building-blocks-ownership.md.
+/// Approved exception: may query <c>{schema}.OutboxMessages</c> / <c>InboxMessages</c> for schemas
+/// registered via <see cref="IOutboxSchemaRegistration"/>. Must not query module business tables
+/// (e.g. TaxDocuments). See docs/009-building-blocks-ownership.md.
 /// </remarks>
 public sealed class PlatformMetricsCollector : IPlatformMetricsCollector
 {
-    /// <summary>
-    /// Schemas that own OutboxMessages / InboxMessages (see docs/007 runbook).
-    /// Prefer DI-registered schema list / per-module contributors long-term (see class remarks).
-    /// </summary>
-    public static readonly string[] ModuleSchemas =
-    [
-        "one", "messaging", "payments", "crm", "ops", "billing", "lhdn", "commerce", "communications"
-    ];
+    /// <summary>Bag key set by Lhdn contributor; mapped to legacy snapshot / HTTP field.</summary>
+    public const string LhdnStuckCountKey = "lhdn.stuck_count";
 
     private readonly string _connectionString;
     private readonly ObservabilityOptions _options;
+    private readonly IReadOnlyList<IOutboxSchemaRegistration> _schemas;
+    private readonly IReadOnlyList<IPlatformMetricsContributor> _contributors;
     private readonly ILogger<PlatformMetricsCollector> _logger;
 
     public PlatformMetricsCollector(
         string connectionString,
         IOptions<ObservabilityOptions> options,
+        IEnumerable<IOutboxSchemaRegistration> schemas,
+        IEnumerable<IPlatformMetricsContributor> contributors,
         ILogger<PlatformMetricsCollector> logger)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        _schemas = (schemas ?? throw new ArgumentNullException(nameof(schemas)))
+            .OrderBy(s => s.Schema, StringComparer.Ordinal)
+            .ToList();
+        _contributors = (contributors ?? throw new ArgumentNullException(nameof(contributors))).ToList();
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -64,7 +66,7 @@ public sealed class PlatformMetricsCollector : IPlatformMetricsCollector
     public async Task<PlatformMetricsSnapshot> CollectAsync(CancellationToken cancellationToken = default)
     {
         var collectedAt = DateTime.UtcNow;
-        var schemaMetrics = new List<SchemaOutboxMetrics>(ModuleSchemas.Length);
+        var schemaMetrics = new List<SchemaOutboxMetrics>(_schemas.Count);
 
         try
         {
@@ -75,8 +77,9 @@ public sealed class PlatformMetricsCollector : IPlatformMetricsCollector
             long pendingTotal = 0;
             long deadTotal = 0;
 
-            foreach (var schema in ModuleSchemas)
+            foreach (var registration in _schemas)
             {
+                var schema = registration.Schema;
                 var (pending, outboxDead, lag) = await QueryOutboxAsync(conn, schema, cancellationToken);
                 var inboxDead = await QueryInboxDeadAsync(conn, schema, cancellationToken);
 
@@ -94,13 +97,29 @@ public sealed class PlatformMetricsCollector : IPlatformMetricsCollector
                 });
             }
 
-            var stuckThreshold = _options.LhdnStuckThreshold;
-            if (stuckThreshold <= TimeSpan.Zero)
+            var context = new PlatformMetricsCollectContext
             {
-                stuckThreshold = TimeSpan.FromHours(1);
+                Connection = conn,
+                CollectedAtUtc = collectedAt
+            };
+
+            foreach (var contributor in _contributors)
+            {
+                try
+                {
+                    await contributor.ContributeAsync(context, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    // Fail-soft: one product contributor must not blank lag/readiness gauges.
+                    _logger.LogWarning(
+                        ex,
+                        "Platform metrics contributor {ContributorName} failed; continuing with partial bag.",
+                        contributor.Name);
+                }
             }
 
-            var lhdnStuck = await QueryLhdnStuckAsync(conn, stuckThreshold, cancellationToken);
+            var lhdnStuck = context.Bag.TryGetLong(LhdnStuckCountKey, out var stuck) ? stuck : 0L;
 
             var snapshot = new PlatformMetricsSnapshot
             {
@@ -141,7 +160,7 @@ public sealed class PlatformMetricsCollector : IPlatformMetricsCollector
         string schema,
         CancellationToken ct)
     {
-        // Quote schema identifier from our fixed allow-list only.
+        // Schema identifiers come only from DI-validated IOutboxSchemaRegistration allow-list.
         var sql = $"""
             SELECT
                 COUNT(*) FILTER (WHERE "ProcessedAt" IS NULL AND "Status" IS DISTINCT FROM 'Dead') AS pending,
@@ -192,33 +211,6 @@ public sealed class PlatformMetricsCollector : IPlatformMetricsCollector
             return result is long l ? l : Convert.ToInt64(result ?? 0L);
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
-        {
-            return 0;
-        }
-    }
-
-    private static async Task<long> QueryLhdnStuckAsync(
-        NpgsqlConnection conn,
-        TimeSpan olderThan,
-        CancellationToken ct)
-    {
-        // PENDING/SUBMITTED and UpdatedAt older than threshold (or CreatedAt if UpdatedAt null — column is required).
-        const string sql = """
-            SELECT COUNT(*)
-            FROM lhdn."TaxDocuments"
-            WHERE "ValidationStatus" IN ('PENDING', 'SUBMITTED')
-              AND "UpdatedAt" < (NOW() AT TIME ZONE 'UTC') - @threshold
-            """;
-
-        try
-        {
-            await using var cmd = new NpgsqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("threshold", olderThan);
-            var result = await cmd.ExecuteScalarAsync(ct);
-            return result is long l ? l : Convert.ToInt64(result ?? 0L);
-        }
-        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.UndefinedTable
-            or PostgresErrorCodes.InvalidSchemaName)
         {
             return 0;
         }

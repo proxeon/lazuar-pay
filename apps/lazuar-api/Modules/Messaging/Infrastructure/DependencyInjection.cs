@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.Messaging.Application;
 using Modules.Messaging.Infrastructure.Configuration;
 using Modules.Messaging.Infrastructure.Email;
@@ -54,6 +55,7 @@ public static class DependencyInjection
         services.AddTransient<WorkspaceUpdatedIntegrationEventHandler>();
         services.AddTransient<DispatchMessageIntegrationEventHandler>();
 
+        services.AddOutboxSchemaMetrics("messaging");
         services.AddHostedService<MessagingOutboxPublisherJob>();
         services.AddHostedService<MessagingInboxConsumerJob>();
 

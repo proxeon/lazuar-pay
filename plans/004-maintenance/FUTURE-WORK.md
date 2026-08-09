@@ -204,7 +204,7 @@ Ownership map shipped (Phase 15). Moving LLM/email/metrics is multi-PR, no calen
 |----------|------|
 | Ownership map | [`apps/lazuar-api/docs/009-building-blocks-ownership.md`](../../apps/lazuar-api/docs/009-building-blocks-ownership.md) |
 | SharedKernel policy | `SharedKernel/README.md`, marker xmldoc |
-| Metrics comment | `PlatformMetricsCollector` future plugin note |
+| Metrics plugins (R35) | `IOutboxSchemaRegistration` + `IPlatformMetricsContributor`; Lhdn owns stuck SQL |
 
 ## Recommended move order (opportunistic PRs)
 
@@ -217,7 +217,7 @@ Ownership map shipped (Phase 15). Moving LLM/email/metrics is multi-PR, no calen
 | 5 | `IMessagingService` console/adapters | **Messaging** | Respect 00.4 freeze on multi-channel product |
 | 6 | Magic-link token shapes | **Commerce** | Product-shaped |
 | 7 | Document link payload helpers | Billing / Commerce | Generic HMAC may stay BB |
-| 8 | Metrics contributors | Modules + thin BB aggregator | Kill LHDN/dunning SQL in BB collector |
+| 8 | Metrics contributors | Modules + thin BB aggregator | **R35 done** (schema reg + LHDN stuck); dunning counter still soft/BB process counter |
 | 9 | Per-module worker options | Each module | Shrink `BackgroundWorkerOptions` god bag |
 
 ## Implementation rules
@@ -258,7 +258,7 @@ Re-inventory before fixing — code moves may have shifted lines:
 | **Communications** | JOIN other modules’ tables for receipts / fulfillment context | `I*QueryService` on owning module Contracts; or denormalize ids into Communications |
 | **Commerce** | Cross-module template / billing reads via raw SQL | Same |
 | **Payments / platform auth** | Direct SQL into `one."GlobalUsers"` or similar | One query port |
-| **PlatformMetricsCollector** | Multi-schema product SQL | FW-3 metrics contributors |
+| **PlatformMetricsCollector** | ~~Multi-schema product SQL~~ **fixed R35** (technical outbox only + Lhdn contributor) | FW-3 item 8 done for LHDN; dunning process counter optional |
 | **Any new code** | `FromSql` / Dapper across schemas | Block in review; prefer Contracts |
 
 ## Implementation outline (per leak)
@@ -386,7 +386,7 @@ These are **product freezes**, not incomplete refactors:
 1. `feat(one): migrate legacy LHDN API keys and remove dual-read (FW-1)`  
 2. `feat(webhooks): deliver LHDN lifecycle events via One dispatcher (FW-2)`  
 3. `refactor(ops): move LLM factory from BuildingBlocks to Ops (FW-3)`  
-4. `refactor(metrics): pluginize PlatformMetricsCollector contributors (FW-3/FW-4)`  
+4. ~~`refactor(metrics): pluginize PlatformMetricsCollector contributors (FW-3/FW-4)`~~ **done R35**  
 5. `fix(comms): replace cross-schema receipt SQL with Contracts query (FW-4)`  
 6. `chore(api-spec): Wave B contract honesty — products + security schemes (FW-6)`  
 

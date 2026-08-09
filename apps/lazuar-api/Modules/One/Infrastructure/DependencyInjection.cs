@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.One.Application;
 using Modules.One.Contracts;
 using Modules.One.Infrastructure.Configuration;
@@ -67,6 +68,7 @@ public static class DependencyInjection
 
         services.AddHostedService<SystemGenesisBootstrapperJob>();
         services.AddHostedService<OneInboxConsumerJob>();
+        services.AddOutboxSchemaMetrics("one");
         services.AddHostedService<OneOutboxPublisherJob>();
         services.AddHostedService<OutboundWebhookDispatcherJob>();
 

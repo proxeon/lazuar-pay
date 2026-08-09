@@ -56,7 +56,7 @@ Ownership target when a dedicated PR is justified. **Not** all moved in Phase 15
 | Full LLM stack (`IChatClientFactory`, policies, title generator) | **Ops** Application.Llm + Infrastructure.Llm | **R31 done** — registered in `AddOpsModule`; OpenAI removed from BB |
 | `IAgentPromptProvider`, `AgentToolAttribute` | **Ops.Contracts** / Ops.Application | Agent product feature; Billing implements via Contracts |
 | `LazuarMetrics.RecordDunningCancel` | **Commerce** (or tagged generic counter) | Product metric |
-| LHDN stuck SQL in `PlatformMetricsCollector` | **Lhdn** `IPlatformMetricsContributor` | Private schema + domain status vocabulary |
+| LHDN stuck SQL in `PlatformMetricsCollector` | **Lhdn** `IPlatformMetricsContributor` | **R35 done** — `LhdnStuckMetricsContributor` owns TaxDocuments SQL |
 | Module-specific fields on `BackgroundWorkerOptions` | Per-module `IOptions<T>` | BB should not catalog every worker interval |
 
 ---
@@ -67,8 +67,8 @@ Ownership target when a dedicated PR is justified. **Not** all moved in Phase 15
 |------|--------|
 | **R2 / object storage** | Stay as **thin shared port** (Billing + One). Interface lives in Application (`IR2StorageService`); adapters in Infrastructure. No Storage module unless blob lifecycle becomes product. |
 | **Email port** | **Moved (R34)** to Messaging.Application / Infrastructure. Traffic still goes through `DispatchMessageIntegrationEvent`. |
-| **Platform metrics aggregator** | May stay in BB **if** pluginized (`IPlatformMetricsContributor` / schema registration). Today: hardcoded schema list + LHDN SQL — accept temporary god collector with plugin direction (comment on `PlatformMetricsCollector`). |
-| **Outbox lag gauges** | Shared technical observability — stay; schema list should eventually come from registration, not a constant array. |
+| **Platform metrics aggregator** | **Pluginized (R35).** Thin BB aggregator scrapes only `{schema}.OutboxMessages`/`InboxMessages` for DI-registered `IOutboxSchemaRegistration`; product health via `IPlatformMetricsContributor` bags. **Approved exception:** multi-schema *technical* outbox scrape is platform observability — not product SQL. Must not query module business tables. |
+| **Outbox lag gauges** | Shared technical observability — stay; schema list from `AddOutboxSchemaMetrics` per module (R35). |
 
 ---
 
@@ -92,12 +92,12 @@ Full LLM / email / messaging / metrics plugin moves are **large**. Phase 15 ship
 | Ownership map (this doc) + docs/002 refine | **Done** (Phase 15) |
 | SharedKernel marker documentation | **Done** |
 | Delete unused host `Lazuar.Api.Infrastructure.Data.PlatformDbContext` | **Done** |
-| Plugin note on `PlatformMetricsCollector` | **Done** (comment only) |
+| Plugin note on `PlatformMetricsCollector` | **Superseded by R35** (real plugins) |
 | Move LLM factory / title / policies → Ops | **Done** (R31 / 005-remaining) |
 | Move email / Messaging ports | **Done** (R34 / 005-remaining) — console WA only; no Meta product |
 | Port placement (`IR2StorageService`, `IJwtService` → Application) | **Done** (R30 / 005-remaining) |
 | Split `BackgroundWorkerOptions` per module | **Deferred** |
-| `IPlatformMetricsContributor` plugins | **Deferred** (ticket direction only) |
+| `IPlatformMetricsContributor` plugins | **Done** (R35) — schema registration + Lhdn stuck contributor |
 | BuildingBlocks project splits (Persistence / Messaging / …) | **Deferred** (plan 06 Option A/B later) |
 
 Product-concern move criterion for Phase 15 exit: **explicitly deferred with this map** (no silent kitchen-sink growth).
@@ -127,7 +127,7 @@ Product-concern move criterion for Phase 15 exit: **explicitly deferred with thi
 | AgentTool / IAgentPromptProvider | | ✅ Ops | | **R32 done** — `Modules.Ops.Contracts` |
 | Dead-letter metrics | ✅ | | | Technical |
 | Dunning / webhook product counters | | ✅ or tagged | | Soft |
-| Metrics schema list / LHDN SQL | ✅ if pluginized | Lhdn contributor | | Plugin deferred |
+| Metrics schema list / LHDN SQL | ✅ pluginized R35 | Lhdn contributor | | `IOutboxSchemaRegistration` + `LhdnStuckMetricsContributor` |
 | BackgroundWorkerOptions (as-is) | | ✅ per module | | Deferred |
 | SharedKernel | ✅ empty marker | | | Fill only with true shared VOs |
 

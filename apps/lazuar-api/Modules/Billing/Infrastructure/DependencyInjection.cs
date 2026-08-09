@@ -1,6 +1,7 @@
 using BuildingBlocks.Application;
 using Modules.Ops.Contracts;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -68,6 +69,7 @@ public static class DependencyInjection
         services.AddTransient<ChargebackClawbackHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
+        services.AddOutboxSchemaMetrics("billing");
         services.AddHostedService<BillingOutboxPublisherJob>();
         // PARKED (decisions.md 00.3 / Phase 17): RevenueRecognitionJob is unregistered by design
         // until a product epic owns deferred revenue schedule creation (finance / Xero track).

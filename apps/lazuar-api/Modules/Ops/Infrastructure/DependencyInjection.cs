@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.Ops.Application;
 using Modules.Ops.Application.Llm;
 using Modules.Ops.Application.Services;
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<IEventBus, OutboxEventBus<OpsDbContext>>("OpsEventBus");
 
         services.AddHostedService<OpsInboxConsumerJob>();
+        services.AddOutboxSchemaMetrics("ops");
         services.AddHostedService<OpsOutboxPublisherJob>();
 
         return services;

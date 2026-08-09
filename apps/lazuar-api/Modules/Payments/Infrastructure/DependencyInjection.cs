@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Builder;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Infrastructure.Gateways;
 using Modules.Payments.Infrastructure.Repositories;
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>("PaymentsEventBus");
 
         services.AddHostedService<PaymentsInboxConsumerJob>();
+        services.AddOutboxSchemaMetrics("payments");
         services.AddHostedService<PaymentsOutboxPublisherJob>();
 
         services.AddTransient<GatewayRefundRequestedIntegrationEventHandler>();

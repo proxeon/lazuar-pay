@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.Commerce.Contracts.Events;
 using Modules.Billing.Contracts.Events;
 using Modules.One.Contracts;
@@ -41,6 +42,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunicationsDbContext>>("CommunicationsEventBus");
 
         services.AddHostedService<CommunicationsInboxConsumerJob>();
+        services.AddOutboxSchemaMetrics("communications");
         services.AddHostedService<CommunicationsOutboxPublisherJob>();
         services.AddHostedService<BroadcastFanoutJob>();
 

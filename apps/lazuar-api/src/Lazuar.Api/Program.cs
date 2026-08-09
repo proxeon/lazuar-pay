@@ -76,6 +76,8 @@ builder.Services.AddSingleton<IPlatformMetricsCollector>(sp =>
     new PlatformMetricsCollector(
         defaultConnectionString,
         sp.GetRequiredService<IOptions<ObservabilityOptions>>(),
+        sp.GetServices<BuildingBlocks.Application.Observability.IOutboxSchemaRegistration>(),
+        sp.GetServices<BuildingBlocks.Application.Observability.IPlatformMetricsContributor>(),
         sp.GetRequiredService<ILogger<PlatformMetricsCollector>>()));
 builder.Services.AddHostedService<PlatformMetricsRefreshJob>();
 

@@ -23,7 +23,11 @@ public sealed class PlatformMetricsSnapshot
     /// <summary>Dead outbox + inbox rows across schemas.</summary>
     public long DeadLetterCount { get; init; }
 
-    /// <summary>TaxDocuments in PENDING/SUBMITTED older than configured threshold.</summary>
+    /// <summary>
+    /// Legacy first-class field: Lhdn stuck TaxDocuments count from contributor bag key
+    /// <c>lhdn.stuck_count</c> (0 when Lhdn contributor absent). Preserved for
+    /// <c>/health/metrics</c> <c>lhdn_stuck_count</c> and gauge compatibility.
+    /// </summary>
     public long LhdnStuckCount { get; init; }
 
     /// <summary>Per-schema outbox breakdown (for ops JSON).</summary>

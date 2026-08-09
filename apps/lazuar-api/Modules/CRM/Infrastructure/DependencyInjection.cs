@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.CRM.Contracts;
 using Modules.CRM.Infrastructure.EventHandlers;
 using Modules.CRM.Infrastructure.Workers;
@@ -30,6 +31,7 @@ public static class DependencyInjection
 
         services.AddTransient<GlobalUserProfileUpdatedIntegrationEventHandler>();
 
+        services.AddOutboxSchemaMetrics("crm");
         services.AddHostedService<CrmOutboxPublisherJob>();
         services.AddHostedService<CrmInboxConsumerJob>();
 

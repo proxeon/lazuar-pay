@@ -3,7 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
+using BuildingBlocks.Application.Observability;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
+using Modules.Lhdn.Infrastructure.Observability;
 using Modules.Billing.Contracts.Events;
 using Modules.Payments.Contracts.Events;
 using Modules.Lhdn.Application.Ports;
@@ -63,6 +66,25 @@ public static class DependencyInjection
         services.AddHostedService<LhdnReferenceDataSeederJob>();
         services.AddHostedService<LhdnOutboxPublisherJob>();
         services.AddHostedService<LhdnInboxConsumerJob>();
+
+        // R35: outbox schema metrics + product stuck contributor (owns TaxDocuments SQL)
+        services.AddOutboxSchemaMetrics("lhdn");
+        services.AddOptions<LhdnObservabilityOptions>()
+            .BindConfiguration(LhdnObservabilityOptions.SectionName)
+            .PostConfigure<IConfiguration>((opts, config) =>
+            {
+                // Dual-bind: prefer Lhdn:StuckThreshold; fall back to Observability:LhdnStuckThreshold
+                var stuckExplicit = config.GetSection(LhdnObservabilityOptions.SectionName)["StuckThreshold"];
+                if (string.IsNullOrWhiteSpace(stuckExplicit))
+                {
+                    var legacy = config["Observability:LhdnStuckThreshold"];
+                    if (!string.IsNullOrWhiteSpace(legacy) && TimeSpan.TryParse(legacy, out var ts))
+                    {
+                        opts.StuckThreshold = ts;
+                    }
+                }
+            });
+        services.AddSingleton<IPlatformMetricsContributor, LhdnStuckMetricsContributor>();
 
         return services;
     }

@@ -16,24 +16,23 @@
 | L-03 | **fixed** (R13) | `PublicArrearsEndpoints.cs` — commerce SQL + `ICrmQueryService` + `IOneQueryService`; no `crm`/`one` JOIN | — | **R13 complete** |
 | L-04 | **present** (dead) | `apps/lazuar-api/Modules/Commerce/Infrastructure/Repositories/CommerceRepository.cs` (~125: `communications."MessageTemplates"`); interface only caller is definition | P2 | **R15** |
 | L-05 | **fixed** (R14) | `CommerceDocumentLookup.cs` — commerce SQL + `ICrmQueryService`; no `crm` JOIN | — | **R14 complete** |
-| L-06 | **handoff R35** (still present) | `apps/lazuar-api/BuildingBlocks/Infrastructure/Observability/PlatformMetricsCollector.cs` (ModuleSchemas all nine; ~208: `lhdn."TaxDocuments"` stuck product SQL) | P1 | **R35** (R16 handoff complete — do not half-fix) |
+| L-06 | **fixed** (R35) | Pluginized: DI `IOutboxSchemaRegistration` + Lhdn `LhdnStuckMetricsContributor`; no product SQL / no ModuleSchemas in BB collector | — | **R35 complete** |
 | L-07 | **fixed** (R05) | `apps/lazuar-api/src/Lazuar.Api/Middleware/ApiKeyAuthenticationMiddleware.cs` — One-only `one."ApiCredentials"`; **no** `LhdnLookupSql` / dual-read | — | **R17 complete** (no separate SQL PR) |
 | new? | **none** (product paths) | No new consumer-module foreign-schema production leaks beyond L-01…L-06 | — | — |
 
 ---
 
-## L-06 detail (R16 → R35)
+## L-06 detail (R16 → R35 fixed)
 
 | Check | Result |
 |-------|--------|
-| `ModuleSchemas` hardcoded array | **Present** — 9 schemas |
-| Outbox/inbox multi-schema SQL | **Present** — loop over `ModuleSchemas` |
-| `lhdn."TaxDocuments"` stuck SQL | **Present** — `QueryLhdnStuckAsync` |
-| R16 code change | **None** (handoff only) |
-| Fix phase | **R35** metrics plugins + schema registration |
-| Notes | [`r16-notes.md`](./r16-notes.md) |
+| `ModuleSchemas` hardcoded array | **Gone** — modules call `AddOutboxSchemaMetrics` |
+| Outbox/inbox multi-schema SQL | **Approved technical scrape** of registered schemas only |
+| `lhdn."TaxDocuments"` stuck SQL | **Moved** to `Modules.Lhdn...LhdnStuckMetricsContributor` |
+| R35 | Metrics plugins + schema registration |
+| Notes | [`r35-notes.md`](./r35-notes.md), handoff [`r16-notes.md`](./r16-notes.md) |
 
-**Classification:** Still a P1 BB boundary leak. SQL track must **not** partially move one query. Full fix is contributor + DI schema registration under R35 (`05-bb-metrics-plugins.md`, `checklists/r35-bb-metrics-plugins.md`).
+**Classification:** L-06 **closed**. BB aggregator must not reintroduce product-table SQL.
 
 ---
 
@@ -71,7 +70,8 @@
 3. **R13** — L-03 PublicArrears update-payment → `crm` + `one` — **complete**  
 4. **R14** — L-05 CommerceDocumentLookup CRM join — **complete**  
 5. **R15** — L-04 dead `GetDefaultTemplateIdsAsync` delete  
-6. **R16** — L-06 metrics handoff → **R35** — **complete** (fix in R35)  
+6. **R16** — L-06 metrics handoff → **R35** — **complete** (fixed in R35)  
+6b. **R35** — metrics plugins — **complete** (L-06 closed)  
 7. **R17** — L-07 keys handoff — **complete** (fixed by R05; no SQL fix phase)
 
 ---
@@ -85,7 +85,7 @@
 | L-03 | **No** — commerce SQL + CRM/One ports (R13) |
 | L-04 | Yes — method body present; **zero** call sites outside interface/impl |
 | L-05 | **No** — commerce SQL + `ICrmQueryService` (R14) |
-| L-06 | Yes — schema array + `lhdn."TaxDocuments"` (**handoff R35**) |
+| L-06 | **No** — product SQL in Lhdn contributor; schemas from DI (**fixed R35**) |
 | L-07 dual-read | **No** — middleware One-only (**fixed R05**; R17 complete) |
 
 ---
@@ -99,7 +99,7 @@
 | L-03 | open | **fixed** by R13 (CRM + One contracts ports) |
 | L-04 | open | **still present** (dead) |
 | L-05 | open | **fixed** by R14 (CRM contracts port) |
-| L-06 | open | **still present** — **R16 handoff → R35** (no half-fix) |
+| L-06 | open | **fixed** by R35 (plugins + schema registration) |
 | L-07 | tracked dual-read exception (FW-1) | **fixed** by R05 One-only middleware; **R17 complete** |
 | New product leaks | n/a | **none found** |
 
@@ -142,4 +142,4 @@
 | Billing port | `ICommerceDocumentLookup` surface stable |
 | Notes | [`r14-notes.md`](./r14-notes.md) |
 
-*SQL product-leak track: L-04 (R15) still open if not yet landed; L-06 owned by R35 after R16 handoff; L-07 closed via R05/R17.*
+*SQL product-leak track: L-04 (R15) still open if not yet landed; L-06 fixed by R35; L-07 closed via R05/R17.*

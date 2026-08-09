@@ -1,5 +1,6 @@
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using BuildingBlocks.Infrastructure.Observability;
 using Modules.Commerce.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommerceDbContext>>("CommerceEventBus");
 
         services.AddHostedService<CommerceInboxConsumerJob>();
+        services.AddOutboxSchemaMetrics("commerce");
         services.AddHostedService<CommerceOutboxPublisherJob>();
         
         services.AddHostedService<BillingEngineJob>();

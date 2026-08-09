@@ -11,9 +11,10 @@ public sealed class ObservabilityOptions
     public const string SectionName = "Observability";
 
     /// <summary>
-    /// TaxDocuments in PENDING/SUBMITTED older than this are counted as stuck.
-    /// Default: 1 hour.
+    /// Legacy: TaxDocuments stuck threshold. Prefer <c>Lhdn:StuckThreshold</c>
+    /// (<c>LhdnObservabilityOptions</c>). Kept for dual-bind during cutover.
     /// </summary>
+    [Obsolete("Use Lhdn:StuckThreshold (LhdnObservabilityOptions). Dual-bound by AddLhdnModule.")]
     public TimeSpan LhdnStuckThreshold { get; set; } = TimeSpan.FromHours(1);
 
     /// <summary>
