@@ -44,7 +44,7 @@ The Billing module listens to the global event bus to build the ledger. It does 
 * **`BillingInboxConsumerJob`**: Processes incoming integration events and writes them to the ledger transactionally.
 * **`BillingOutboxPublisherJob`**: Standard outbox dispatcher.
 * **`B2cConsolidationJob`**: Monthly (28th MYT) consolidates prior-calendar-month `B2C_RECEIPT` / `PENDING` sales into a consolidated LHDN invoice. Idempotent per org/month (`B2C-CONS-{yyyyMM}-{orgId}`).
-* **`RevenueRecognitionJob`**: **Not registered.** Recognition is not live until deferred schedules are created from product periods. Entity/table kept; re-enable in DI when amortization is wired.
+* **`RevenueRecognitionJob`**: **Parked / not registered (decision 00.3).** Unregistered by design until a product epic owns deferred revenue schedule creation (finance / Xero track). Entity/table may remain; **no shipping claim that recognition runs.** Re-enable in DI only with schedule writers + idempotent ledger external refs (product epic — not maintenance drive-by).
 
 ## 7. Database Schema
 All tables reside in the isolated `billing` schema.

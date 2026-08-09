@@ -16,13 +16,6 @@ public static class IntegrationProvisionEndpoints
 {
     public static RouteGroupBuilder MapIntegrationProvisionEndpoints(this RouteGroupBuilder group)
     {
-        // Phase 1 policy probe for IntegrationPaymentsCheckoutsWrite (real M2M checkout routes land in Phase 2).
-        // Authenticated API clients with payments.checkouts:write (or human admins) receive 200; others 403.
-        // Registered on the /one group (same final path as endpoints.MapGet("/one/integrations/...")).
-        group.MapGet("/integrations/payments/checkouts/_scope-probe", () =>
-                TypedResults.Ok(new StatusResponse { Status = "payments.checkouts:write" }))
-            .RequireAuthorization("IntegrationPaymentsCheckoutsWrite");
-
         // Integrator provision: multi-product workspace + bootstrap key.
         // Auth: X-Lazuar-Provision-Key / Bearer provision secret OR SUPER_ADMIN JWT. Tenant-exempt.
         // Body: external_product (default "aura") + external_org_id OR legacy aura_org_id.

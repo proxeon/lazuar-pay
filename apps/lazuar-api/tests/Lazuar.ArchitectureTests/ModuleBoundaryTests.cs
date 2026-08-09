@@ -316,4 +316,68 @@ public class ModuleBoundaryTests
                 $"Failing types: {FormatFailingTypes(result)}");
         }
     }
+
+    /// <summary>
+    /// Phase 17.5 — Host composes modules via Infrastructure entrypoints only.
+    /// Application assemblies stay transitive (Infrastructure → Application) for MediatR markers;
+    /// do not re-add direct <c>*Application.csproj</c> ProjectReferences on the host.
+    /// </summary>
+    [Test]
+    public void Host_Csproj_Must_Not_Directly_Reference_Module_Application_Projects()
+    {
+        var hostCsproj = FindHostCsprojPath();
+        Assert.That(File.Exists(hostCsproj), Is.True, $"Host csproj not found at '{hostCsproj}'.");
+
+        var text = File.ReadAllText(hostCsproj);
+        var forbidden = new List<string>();
+        foreach (var line in text.Split('\n'))
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.Contains("ProjectReference", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // Match module Application projects only (not BuildingBlocks.Application if ever added).
+            if (trimmed.Contains("Modules.", StringComparison.Ordinal)
+                && trimmed.Contains("Application", StringComparison.Ordinal)
+                && trimmed.Contains(".csproj", StringComparison.OrdinalIgnoreCase))
+            {
+                forbidden.Add(trimmed);
+            }
+        }
+
+        Assert.That(forbidden, Is.Empty,
+            "Lazuar.Api.csproj must not ProjectReference Modules.*.Application. " +
+            "Compose via Infrastructure only; Application is transitive. Offending lines:\n" +
+            string.Join("\n", forbidden));
+    }
+
+    private static string FindHostCsprojPath()
+    {
+        // tests/Lazuar.ArchitectureTests → apps/lazuar-api/src/Lazuar.Api/Lazuar.Api.csproj
+        var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, "src", "Lazuar.Api", "Lazuar.Api.csproj");
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            // Also walk from repo-relative paths when TestDirectory is bin/Debug/netX
+            var sibling = Path.Combine(dir.FullName, "Lazuar.Api.csproj");
+            if (File.Exists(sibling) && dir.Name == "Lazuar.Api")
+            {
+                return sibling;
+            }
+
+            dir = dir.Parent;
+        }
+
+        // Fallback: relative from ArchitectureTests project folder layout
+        return Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "src", "Lazuar.Api", "Lazuar.Api.csproj"));
+    }
 }

@@ -1,12 +1,19 @@
 # Messaging Module (The "Dispatch Router")
 
 ## 1. Overview
-The `Messaging` module is the centralized, domain-agnostic dispatch engine for all outbound communications (Email, SMS, WhatsApp). It acts as a "dumb pipe" that receives pre-rendered communication payloads from business modules and routes them to the physical infrastructure gateways (e.g., Resend, Twilio, Meta).
+The `Messaging` module is the centralized, domain-agnostic dispatch engine for outbound communications. It acts as a "dumb pipe" that receives pre-rendered communication payloads from business modules and routes them to physical infrastructure gateways (e.g., Resend for email).
+
+### Product freeze (decision 00.4 / Phase 17)
+* **WhatsApp / multi-channel is frozen** for the maintenance horizon (no production WhatsApp channel in the next 6 months per `plans/004-maintenance/decisions.md` §00.4).
+* Messaging stays a **thin transport**; Communications remains content/policy owner.
+* **Console WhatsApp is not a production channel** — docs and defaults must not claim automated WhatsApp dunning as live.
+* **No merge into Communications** until product funds a real multi-channel provider (then reopen 00.4 / Phase 16).
+* BuildingBlocks ports (`IMessagingService`, email) stay technical; channel product work is not “just another adapter PR” without reopening 00.4.
 
 ## 2. Core Responsibilities
 * **Universal Dispatch:** Consuming the generic `DispatchMessageIntegrationEvent` and routing the payload to the appropriate `IEmailService` or `IMessagingService` building block based on the requested `Channel`.
 * **Tenant Replication:** Maintaining a localized, read-only replica of Tenant metadata (`TenantReplica`) to allow the messaging infrastructure to resolve tenant slugs and statuses without querying the `One` module's database.
-* **HTML/Text Sanitization:** Stripping HTML tags from email bodies when routing to SMS/WhatsApp channels to ensure clean plain-text delivery.
+* **HTML/Text Sanitization:** Stripping HTML tags from email bodies when routing to SMS/plain-text channels to ensure clean plain-text delivery.
 
 ## 3. Architectural Boundaries (What this module is NOT)
 * **Not a Template Engine:** *Crucial architectural shift.* This module does **not** store message templates, subject lines, or automation rules. Templates are owned by **Communications** (and rendered by the domain modules that trigger them, e.g. Commerce dunning). The `Messaging` module only receives the *final rendered HTML/Text*.

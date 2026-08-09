@@ -3,6 +3,8 @@ namespace Lazuar.Api.Composition;
 /// <summary>
 /// Registers MediatR handlers from the host assembly plus each module Application/Infrastructure assembly.
 /// CRM has no Application layer assembly — only Infrastructure is registered for that module.
+/// Application assembly markers resolve via transitive ProjectReferences from Infrastructure
+/// (host must not add direct *Application.csproj refs — Phase 17.5).
 /// </summary>
 public static class MediatRRegistrationExtensions
 {
