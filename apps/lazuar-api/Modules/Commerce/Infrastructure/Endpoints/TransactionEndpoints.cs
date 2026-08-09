@@ -13,12 +13,6 @@ using Modules.Commerce.Contracts.Commands;
 
 namespace Modules.Commerce.Infrastructure;
 
-public record RecordRefundRequest(
-    decimal? Amount = null,
-    string? Gateway_name = null,
-    string? Subscription_id = null,
-    decimal Tax_amount = 0m);
-
 public static class TransactionEndpoints
 {
     public static RouteGroupBuilder MapTransactionEndpoints(this RouteGroupBuilder group)
@@ -41,7 +35,7 @@ public static class TransactionEndpoints
         // Thin ops endpoint: publishes GatewayRefundRequested for Payments to execute at the gateway.
         group.MapPost("/transactions/{id:guid}/refund", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             Guid id,
-            RecordRefundRequest? req,
+            RecordRefundRequestDto? req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
@@ -53,13 +47,16 @@ public static class TransactionEndpoints
                     subscriptionId = sid;
                 }
 
+                decimal? amount = req?.Amount is double a ? (decimal)a : null;
+                decimal taxAmount = req?.Tax_amount is double t ? (decimal)t : 0m;
+
                 await mediator.Send(new RecordRefundCommand(
                     ctx.TenantId,
                     id,
-                    req?.Amount,
+                    amount,
                     req?.Gateway_name,
                     subscriptionId,
-                    req?.Tax_amount ?? 0m));
+                    taxAmount));
 
                 return TypedResults.Ok(new StatusResponse { Status = "refund_requested" });
             }

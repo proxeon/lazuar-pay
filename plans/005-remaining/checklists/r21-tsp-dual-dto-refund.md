@@ -7,14 +7,14 @@
 
 ## R21.1 Align + switch
 
-- [ ] Use generated `RecordRefundRequestDto` (or fix TSP)
-- [ ] Delete local record
-- [ ] `task gen` if needed
+- [x] Use generated `RecordRefundRequestDto` (or fix TSP)
+- [x] Delete local record
+- [x] `task gen` if needed *(N/A — shapes already match; no TSP edit)*
 
 ## R21.2 Tests
 
-- [ ] Refund-related tests green
+- [x] Refund-related tests green
 
 ## R21.3 Exit
 
-- [ ] Dual DTO gone for refund
+- [x] Dual DTO gone for refund
