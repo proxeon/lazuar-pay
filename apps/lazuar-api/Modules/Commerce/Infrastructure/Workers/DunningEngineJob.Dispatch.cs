@@ -1,0 +1,69 @@
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using BuildingBlocks.Application;
+using Microsoft.EntityFrameworkCore;
+using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain;
+using Modules.Commerce.Domain.Aggregates;
+
+namespace Modules.Commerce.Infrastructure.Workers;
+
+public partial class DunningEngineJob
+{
+    /// <summary>
+    /// When WhatsApp is not productized (Messaging:WhatsAppEnabled=false), demote WHATSAPP/ALL
+    /// to email-only recovery. Pure WhatsApp steps without email copy are skipped.
+    /// </summary>
+    private static string? ResolveEffectiveCommunicationAction(Domain.Entities.DunningStep step, bool whatsAppEnabled)
+    {
+        var action = (step.ActionType ?? "EMAIL").ToUpperInvariant();
+        if (action is "AUTOCHARGE" or "AUTO_CHARGE") return action;
+
+        if (whatsAppEnabled) return action;
+
+        if (action == "WHATSAPP")
+        {
+            if (!string.IsNullOrWhiteSpace(step.EmailBody))
+                return "EMAIL";
+            return null;
+        }
+
+        if (action == "ALL")
+            return "EMAIL";
+
+        return action;
+    }
+
+    private async Task DispatchCommunicationStepAsync(
+        CommerceDbContext db,
+        Subscription sub,
+        Domain.Entities.DunningStep step,
+        int daysOverdue,
+        string effectiveActionType,
+        IEventBus eventBus,
+        CancellationToken ct)
+    {
+        var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+
+        var payloadObj = new
+        {
+            subscription_id = sub.Id.ToString(),
+            client_profile_id = sub.ClientProfileId.ToString(),
+            product_id = sub.ProductId.ToString(),
+            action_type = effectiveActionType,
+            subject = step.Subject,
+            email_body = step.EmailBody,
+            whatsapp_body = effectiveActionType == "EMAIL" ? string.Empty : step.WhatsAppBody,
+            plan_name = product?.Name ?? string.Empty,
+            amount = product?.Price ?? 0m,
+            currency = product?.Currency ?? string.Empty,
+            days_overdue = daysOverdue
+        };
+
+        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+
+        await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
+            sub.OrganizationId, "COMMUNICATIONS", "reminder.dunning", payloadElement));
+    }
+}
