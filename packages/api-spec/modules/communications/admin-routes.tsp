@@ -56,6 +56,20 @@ interface AdminCommunicationsOperations {
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
+  @route("/broadcasts/preview")
+  @doc("Pre-send audience size and credit preview. v1 broadcasts are free; credit fields are reserved and return zeros.")
+  previewBroadcastCost():
+    | BroadcastCostPreviewDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/broadcasts/{id}")
+  @doc("Broadcast fan-out status. credits_reserved/credits_used are reserved; v1 always 0.")
+  getBroadcastStatus(@path id: string):
+    | BroadcastStatusDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
   @route("/email-config")
   getEmailConfig(): EmailConfigDto | LazuarApi.Core.ProblemDetailsResponse;
 

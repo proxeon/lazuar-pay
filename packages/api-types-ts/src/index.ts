@@ -487,6 +487,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/communications/broadcasts/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Pre-send audience size and credit preview. v1 broadcasts are free; credit fields are reserved and return zeros. */
+        get: operations["AdminCommunicationsOperations_previewBroadcastCost"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/communications/broadcasts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Broadcast fan-out status. credits_reserved/credits_used are reserved; v1 always 0. */
+        get: operations["AdminCommunicationsOperations_getBroadcastStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/communications/email-config": {
         parameters: {
             query?: never;
@@ -2158,6 +2192,59 @@ export interface components {
             /** Format: double */
             final_price: number;
             error_message?: string;
+        };
+        /**
+         * @description Pre-send cost preview for a broadcast audience.
+         *     Credit cost fields are reserved for future models; v1 is free (zeros / always sufficient).
+         */
+        "Communications.BroadcastCostPreviewDto": {
+            /** Format: int32 */
+            recipient_count: number;
+            /**
+             * Format: int32
+             * @description Reserved; v1 free — always 0.
+             */
+            credits_per_recipient: number;
+            /**
+             * Format: int32
+             * @description Reserved; v1 free — always 0.
+             */
+            total_credits: number;
+            sufficient_credits: boolean;
+            /** Format: int32 */
+            available_credits: number;
+        };
+        /**
+         * @description Broadcast fan-out status for admin polling.
+         *     credits_reserved / credits_used are reserved for future cost models;
+         *     v1 broadcasts are free and always return 0.
+         */
+        "Communications.BroadcastStatusDto": {
+            id: string;
+            status: string;
+            /** Format: int32 */
+            total_recipients: number;
+            /** Format: int32 */
+            sent_count: number;
+            /** Format: int32 */
+            suppressed_count: number;
+            /** Format: int32 */
+            failed_count: number;
+            /**
+             * Format: int32
+             * @description Reserved; v1 broadcasts are free — always 0.
+             */
+            credits_reserved: number;
+            /**
+             * Format: int32
+             * @description Reserved; v1 broadcasts are free — always 0.
+             */
+            credits_used: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            completed_at?: string;
+            failure_reason?: string;
         };
         /**
          * @description Create broadcast. v1 fans out to all ACTIVE/PAST_DUE subscribers with marketing consent.
@@ -5612,6 +5699,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.IdResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunicationsOperations_previewBroadcastCost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Communications.BroadcastCostPreviewDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommunicationsOperations_getBroadcastStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Communications.BroadcastStatusDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

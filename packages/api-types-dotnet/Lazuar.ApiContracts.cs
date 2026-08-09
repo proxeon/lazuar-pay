@@ -2561,6 +2561,143 @@ namespace Lazuar.ApiTypes
     }
 
     /// <summary>
+    /// Pre-send cost preview for a broadcast audience.
+    /// <br/>Credit cost fields are reserved for future models; v1 is free (zeros / always sufficient).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class BroadcastCostPreviewDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("recipient_count")]
+        public int Recipient_count { get; set; } = default!;
+
+        /// <summary>
+        /// Reserved; v1 free — always 0.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("credits_per_recipient")]
+        public int Credits_per_recipient { get; set; } = default!;
+
+        /// <summary>
+        /// Reserved; v1 free — always 0.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_credits")]
+        public int Total_credits { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sufficient_credits")]
+        public bool Sufficient_credits { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("available_credits")]
+        public int Available_credits { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static BroadcastCostPreviewDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<BroadcastCostPreviewDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
+    /// Broadcast fan-out status for admin polling.
+    /// <br/>credits_reserved / credits_used are reserved for future cost models;
+    /// <br/>v1 broadcasts are free and always return 0.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class BroadcastStatusDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("total_recipients")]
+        public int Total_recipients { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sent_count")]
+        public int Sent_count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("suppressed_count")]
+        public int Suppressed_count { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failed_count")]
+        public int Failed_count { get; set; } = default!;
+
+        /// <summary>
+        /// Reserved; v1 broadcasts are free — always 0.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("credits_reserved")]
+        public int Credits_reserved { get; set; } = default!;
+
+        /// <summary>
+        /// Reserved; v1 broadcasts are free — always 0.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("credits_used")]
+        public int Credits_used { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("completed_at")]
+        public System.DateTimeOffset? Completed_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failure_reason")]
+        public string? Failure_reason { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static BroadcastStatusDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<BroadcastStatusDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
     /// Create broadcast. v1 fans out to all ACTIVE/PAST_DUE subscribers with marketing consent.
     /// <br/>Targeting filters (plan/status/reminder-only) are not productized yet — do not re-add
     /// <br/>until ISubscriberQueryService + Broadcast storage + fan-out honor them end-to-end.

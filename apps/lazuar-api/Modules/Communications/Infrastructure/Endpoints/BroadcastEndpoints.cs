@@ -7,12 +7,10 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Billing.Contracts;
 using Modules.Commerce.Contracts;
 using Modules.Communications.Application;
-using Modules.Communications.Contracts;
 using Modules.Communications.Contracts.Commands;
 
 namespace Modules.Communications.Infrastructure;
@@ -44,23 +42,23 @@ public static class BroadcastEndpoints
             }
         });
 
+        // Register /broadcasts/preview before /broadcasts/{id} so "preview" is not captured as a Guid.
         group.MapGet("/broadcasts/preview", async Task<Ok<BroadcastCostPreviewDto>> (
             IExecutionContextAccessor ctx,
             ISubscriberQueryService subscriberQuery,
-            ICreditCostService costService,
             IBillingQueryService billingQuery) =>
         {
             var recipientCount = await subscriberQuery.GetActiveSubscriberCountAsync(ctx.TenantId);
-            // Broadcasts are free now; set costs to 0 to preserve DTO compatibility
+            // v1 broadcasts are free; credit cost fields reserved (always 0 / sufficient).
             var available = await billingQuery.GetAvailableCreditsAsync(ctx.TenantId);
 
             return TypedResults.Ok(new BroadcastCostPreviewDto
             {
-                RecipientCount = recipientCount,
-                CreditsPerRecipient = 0,
-                TotalCredits = 0,
-                SufficientCredits = true,
-                AvailableCredits = available
+                Recipient_count = recipientCount,
+                Credits_per_recipient = 0,
+                Total_credits = 0,
+                Sufficient_credits = true,
+                Available_credits = available
             });
         });
 
@@ -76,15 +74,15 @@ public static class BroadcastEndpoints
             {
                 Id = broadcast.Id.ToString(),
                 Status = broadcast.Status,
-                TotalRecipients = broadcast.TotalRecipients,
-                SentCount = broadcast.SentCount,
-                SuppressedCount = broadcast.SuppressedCount,
-                FailedCount = broadcast.FailedCount,
-                CreditsReserved = 0, // Hardcoded to 0 to preserve DTO structure
-                CreditsUsed = 0,     // Hardcoded to 0 to preserve DTO structure
-                CreatedAt = new DateTimeOffset(broadcast.CreatedAt),
-                CompletedAt = broadcast.CompletedAt.HasValue ? new DateTimeOffset(broadcast.CompletedAt.Value) : null,
-                FailureReason = broadcast.FailureReason
+                Total_recipients = broadcast.TotalRecipients,
+                Sent_count = broadcast.SentCount,
+                Suppressed_count = broadcast.SuppressedCount,
+                Failed_count = broadcast.FailedCount,
+                Credits_reserved = 0, // Reserved; v1 free
+                Credits_used = 0,     // Reserved; v1 free
+                Created_at = new DateTimeOffset(broadcast.CreatedAt),
+                Completed_at = broadcast.CompletedAt.HasValue ? new DateTimeOffset(broadcast.CompletedAt.Value) : null,
+                Failure_reason = broadcast.FailureReason
             });
         });
 
