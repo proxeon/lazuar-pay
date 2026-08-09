@@ -12,7 +12,7 @@
 
 | ID | Status | Path | Priority | Next phase |
 |----|--------|------|----------|------------|
-| L-01 | **present** | `apps/lazuar-api/Modules/Communications/Infrastructure/EventHandlers/DocumentPublishedIntegrationEventHandler.cs` (~47–49: `billing` + JOIN `one` + `commerce`) | P0 | **R11** |
+| L-01 | **fixed** (R11) | `DocumentPublishedIntegrationEventHandler.cs` — event payload only; no foreign-schema SQL | — | **R11 complete** |
 | L-02 | **present** | `apps/lazuar-api/Modules/Payments/Infrastructure/PlatformEndpoints.cs` (~53, ~84: `one."GlobalUsers"`) | P0 | **R12** |
 | L-03 | **present** | `apps/lazuar-api/Modules/Commerce/Infrastructure/Endpoints/PublicArrearsEndpoints.cs` (~51–52: JOIN `crm` + `one`; GET remains commerce-only) | P0 | **R13** |
 | L-04 | **present** (dead) | `apps/lazuar-api/Modules/Commerce/Infrastructure/Repositories/CommerceRepository.cs` (~125: `communications."MessageTemplates"`); interface only caller is definition | P2 | **R15** |
@@ -64,7 +64,7 @@
 
 | Leak | Still matches foreign schema SQL? |
 |------|-----------------------------------|
-| L-01 | Yes — `billing."LedgerEntries"` + `one."Organizations"` + `commerce."TransactionLogs"` |
+| L-01 | **No** — handler uses event fields only (R11) |
 | L-02 | Yes — `one."GlobalUsers"` (login + me) |
 | L-03 | Yes — `crm."ClientProfiles"` + `one."Organizations"` on POST update-payment |
 | L-04 | Yes — method body present; **zero** call sites outside interface/impl |
@@ -78,7 +78,8 @@
 
 | ID | 06 status | Live (R10) |
 |----|-----------|------------|
-| L-01…L-06 | open | **still present** (paths unchanged) |
+| L-01 | open | **fixed** by R11 (event denorm) |
+| L-02…L-06 | open | **still present** (paths unchanged) |
 | L-07 | tracked dual-read exception (FW-1) | **fixed** by R05 One-only middleware |
 | New product leaks | n/a | **none found** |
 

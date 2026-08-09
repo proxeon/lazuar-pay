@@ -8,22 +8,22 @@
 
 ## R11.1 Design
 
-- [ ] Prefer enrich `DocumentPublishedIntegrationEvent` at publish site with fields Comms needs
-- [ ] Or add Contracts query ports on owning modules (document choice: ________)
-- [ ] List fields currently loaded via SQL: ________
+- [x] Prefer enrich `DocumentPublishedIntegrationEvent` at publish site with fields Comms needs
+- [x] Or add Contracts query ports on owning modules (document choice: **event denorm at publish; not query ports**)
+- [x] List fields currently loaded via SQL: **TenantSlug, BusinessName, CustomerName, CustomerEmail**
 
 ## R11.2 Implement
 
-- [ ] Publisher (Billing/Commerce path) supplies customer/doc fields
-- [ ] Handler uses event payload only (no foreign-schema SQL)
-- [ ] Delete Dapper multi-schema query
+- [x] Publisher (Billing/Commerce path) supplies customer/doc fields
+- [x] Handler uses event payload only (no foreign-schema SQL)
+- [x] Delete Dapper multi-schema query
 
 ## R11.3 Tests
 
-- [ ] Handler unit/module test with enriched event
-- [ ] Regression: document published still triggers communications behavior
+- [x] Handler unit/module test with enriched event
+- [x] Regression: document published still triggers communications behavior
 
 ## R11.4 Exit
 
-- [ ] Grep handler: no foreign schema SQL
+- [x] Grep handler: no foreign schema SQL
 - [ ] Single-purpose PR merged

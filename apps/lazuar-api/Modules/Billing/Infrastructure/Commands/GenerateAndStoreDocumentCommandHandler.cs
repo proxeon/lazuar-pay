@@ -13,6 +13,7 @@ using Modules.Billing.Contracts.Events;
 using Modules.Billing.Domain;
 using Modules.Billing.Infrastructure.Documents;
 using Modules.Commerce.Contracts;
+using Modules.One.Contracts;
 using QuestPDF.Fluent;
 
 namespace Modules.Billing.Infrastructure.Commands;
@@ -22,6 +23,7 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
     private readonly BillingDbContext _dbContext;
     private readonly IR2StorageService _r2Service;
     private readonly ICommerceDocumentLookup _commerceDocumentLookup;
+    private readonly IOneQueryService _oneQueryService;
     private readonly IEventBus _eventBus;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
@@ -30,6 +32,7 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         BillingDbContext dbContext,
         IR2StorageService r2Service,
         ICommerceDocumentLookup commerceDocumentLookup,
+        IOneQueryService oneQueryService,
         [Microsoft.Extensions.DependencyInjection.FromKeyedServices("BillingEventBus")] IEventBus eventBus,
         IHttpClientFactory httpClientFactory,
         IConfiguration config)
@@ -37,6 +40,7 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         _dbContext = dbContext;
         _r2Service = r2Service;
         _commerceDocumentLookup = commerceDocumentLookup;
+        _oneQueryService = oneQueryService;
         _eventBus = eventBus;
         _httpClientFactory = httpClientFactory;
         _bucketName = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
@@ -57,6 +61,10 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
             request.OrganizationId, entry.ReferenceId, ct);
         var customerName = customer?.Name ?? "Customer";
         var customerEmail = customer?.Email ?? "";
+
+        var workspace = await _oneQueryService.GetWorkspaceByIdAsync(request.OrganizationId);
+        var tenantSlug = workspace?.Slug ?? "";
+        var businessName = workspace?.Name ?? profile?.LegalName ?? "Business";
 
         byte[]? logoBytes = null;
         if (!string.IsNullOrEmpty(profile?.LogoUrl))
@@ -118,7 +126,11 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
             request.OrganizationId,
             request.LedgerEntryId,
             request.DocumentType,
-            storageKey
+            storageKey,
+            tenantSlug,
+            businessName,
+            customerName,
+            customerEmail
         ));
     }
 }
