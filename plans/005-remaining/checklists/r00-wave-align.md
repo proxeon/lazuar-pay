@@ -8,29 +8,29 @@
 
 ## R00.1 Track selection (yes / no / later)
 
-- [ ] Keys R01–R06: ________
-- [ ] SQL R10–R17: ________
-- [ ] TypeSpec R20–R25: ________
-- [ ] BuildingBlocks R30–R35: ________
-- [ ] Webhooks R40–R43: ________ (needs product for R40)
-- [ ] Polish R50–R53: ________
-- [ ] Extract R60: default **no** unless product trigger: ________
+- [x] Keys R01–R06: YES
+- [x] SQL R10–R17: YES
+- [x] TypeSpec R20–R25: YES
+- [x] BuildingBlocks R30–R35: YES
+- [x] Webhooks R40–R43: YES (R40 document product defaults from decisions.md end-state A)
+- [x] Polish R50–R53: YES
+- [x] Extract R60: default **no** unless product trigger: NO (skip)
 
 ## R00.2 Delivery
 
-- [ ] Branch strategy: long-lived `chore/remaining-005` **or** stacked PRs to main: ________
-- [ ] One phase ≈ one PR (confirm)
-- [ ] Confirm dual-read keys not removed before R04 migrate complete
-- [ ] Confirm no second Lhdn webhook stack (decision B rejected)
+- [x] Branch strategy: long-lived `chore/remaining-005` (one phase ≈ one commit; push after each)
+- [x] One phase ≈ one PR/commit (confirm)
+- [x] Confirm dual-read keys not removed before R04 migrate complete
+- [x] Confirm no second Lhdn webhook stack (decision B rejected)
 
 ## R00.3 Calendar / freezes still in force
 
-- [ ] Keys dual-read until 2026-11-30 unless row count 0 (early OK)
-- [ ] Revenue recognition stays parked
-- [ ] WhatsApp / multi-channel stays frozen
-- [ ] No new modules without R60 gate
+- [x] Keys dual-read until 2026-11-30 unless row count 0 (early OK)
+- [x] Revenue recognition stays parked
+- [x] WhatsApp / multi-channel stays frozen
+- [x] No new modules without R60 gate
 
 ## R00.4 Exit
 
-- [ ] Ordered start list written (e.g. R01 + R10 + R20)
-- [ ] Team unblocked to start first phase
+- [x] Ordered start list written (see `../wave-decisions.md`)
+- [x] Team unblocked to start first phase
