@@ -80,7 +80,16 @@ See: `plans/004-maintenance/decisions.md` §00.2, `plans/004-maintenance/phase-0
 
 ---
 
-## 6. Directory Structure
+## 6. Developer API keys (platform-owned; dual-read window)
+
+* **Mint/list/revoke SSoT is One** (`one.ApiCredentials` via `IApiCredentialService`). Lhdn `GET/POST/DELETE /lhdn/api-keys` and obsolete `GenerateApiKeyCommand` / `RevokeApiKeyCommand` / `ListApiKeysQuery` are **façades** — they do not insert into `lhdn.DeveloperApiKeys`.
+* **Legacy table:** `lhdn.DeveloperApiKeys` remains for **host dual-read auth only** until cutover. Host middleware reads **One first**, then this table.
+* **Dual-read window (LOCKED, decisions 00.1):** dual-read **allowed until 2026-11-30**; target removal of Lhdn lookup + Lhdn `ApiKeyRevokedIntegrationEvent` subscription by **2026-12-15**. Do **not** drop the table or dual-read path in interim maintenance PRs.
+* **After cutover:** integrators still on pure Lhdn-local keys must remint via One (or Lhdn façade) before dual-read ends; see `plans/004-maintenance/api-key-cutover-design.md`.
+
+---
+
+## 7. Directory Structure
 ```text
 Modules/Lhdn/
 ├── Application/             # Command and Query Handlers, Ports
@@ -94,7 +103,7 @@ Modules/Lhdn/
 
 ---
 
-## 7. Community & Technical References
+## 8. Community & Technical References
 *   [OASIS UBL 2.1 Specification](https://www.datypic.com/sc/ubl21/s-UBL-CommonAggregateComponents-2.1.xsd.html)
 *   [LHDN Official e-Invoicing SDK Portal](https://sdk.myinvois.hasil.gov.my/)
 *   [allaboutevemirolive/lhdn-info](https://github.com/allaboutevemirolive/lhdn-info)

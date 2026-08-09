@@ -99,11 +99,17 @@ public class ApiKeyAuthenticationMiddleware
     }
 
     /// <summary>
-    /// Dual-read: platform keys in One first, then legacy Lhdn <c>DeveloperApiKeys</c>.
+    /// Dual-read credential lookup (maintenance 004 / decisions 00.1).
+    /// <list type="bullet">
+    /// <item><description>Read order: <c>one.ApiCredentials</c> first, then legacy <c>lhdn.DeveloperApiKeys</c>.</description></item>
+    /// <item><description>Dual-read allowed until <b>2026-11-30</b>; target One-only middleware by <b>2026-12-15</b>.</description></item>
+    /// <item><description>Do not remove the Lhdn branch before that window (or earlier only if prod legacy row count is zero).</description></item>
+    /// </list>
+    /// See <c>plans/004-maintenance/api-key-cutover-design.md</c>.
     /// </summary>
     internal static async Task<ApiKeyCacheEntry?> LookupCredentialAsync(IServiceProvider services, string keyHash)
     {
-        // Prefer platform store (One)
+        // Prefer platform store (One) — long-term SSoT
         var oneFactory = services.GetKeyedService<ISqlConnectionFactory>("OneSqlConnectionFactory");
         if (oneFactory is not null)
         {
@@ -118,7 +124,7 @@ public class ApiKeyAuthenticationMiddleware
             }
         }
 
-        // Fallback: legacy LHDN-local keys during migration window
+        // Fallback: legacy LHDN-local keys during dual-read window (until 2026-11-30; remove by 2026-12-15)
         var lhdnFactory = services.GetKeyedService<ISqlConnectionFactory>("LhdnSqlConnectionFactory");
         if (lhdnFactory is not null)
         {

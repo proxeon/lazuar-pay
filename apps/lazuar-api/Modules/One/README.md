@@ -65,5 +65,14 @@ All tables reside in the isolated `one` schema.
 * `one.TenantAppEntitlements`
 * `one.WorkspaceInvitations`
 * `one.AppAccessRequests`
+* `one.ApiCredentials` — **platform API keys** (SSoT mint/list/revoke)
 * `one.TenantWebhookEndpoints` / `one.WebhookDeliveryOutboxes`
 * `one.OutboxMessages` / `one.InboxMessages`
+
+## 9. Platform API credentials (SSoT) & dual-read window
+
+* **Long-term SSoT:** Machine client keys live in `one.ApiCredentials` (`ApiCredential` aggregate). Mint/list/revoke go through One commands / `IApiCredentialService` (also used by Lhdn `/lhdn/api-keys` façades).
+* **Scopes:** Closed catalog on `PlatformApiScopes` (includes `lhdn.documents:*`, payments checkout scopes, webhook manage). LHDN product scopes are modeled on One credentials (decisions 00.1).
+* **Host auth:** `ApiKeyAuthenticationMiddleware` dual-reads **One first**, then legacy `lhdn.DeveloperApiKeys` for integrators not yet migrated.
+* **Dual-read window (LOCKED):** dual-read **allowed until 2026-11-30**; target One-only middleware + One `ApiKeyRevokedIntegrationEvent` only by **2026-12-15**. Do not remove the Lhdn lookup before that date (unless prod legacy row count is zero and ops signs off).
+* **Design / inventory:** `plans/004-maintenance/api-key-cutover-design.md`, `plans/004-maintenance/phase-03-analysis.md`.

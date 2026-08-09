@@ -412,7 +412,9 @@ app.UseCommerceSubscriptions();
 app.UseCommunicationsSubscriptions();
 
 var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
-// Dual-subscribe: platform (One) credentials + legacy Lhdn keys during migration.
+// Dual-subscribe: platform (One) credentials + legacy Lhdn keys during dual-read window
+// (allowed until 2026-11-30; target One-only revoke event by 2026-12-15 — decisions 00.1).
+// Do not drop the Lhdn subscription before cutover; see plans/004-maintenance/api-key-cutover-design.md.
 eventBus.Subscribe<Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 eventBus.Subscribe<Modules.One.Contracts.WorkspaceUpdatedIntegrationEvent, Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
