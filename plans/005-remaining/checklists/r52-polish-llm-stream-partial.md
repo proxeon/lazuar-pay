@@ -7,14 +7,14 @@
 
 ## R52.1 Split
 
-- [ ] Move stream loop to `.Stream.cs` partial (or equivalent)
-- [ ] Keep non-stream path clear
-- [ ] No streaming behavior regression
+- [x] Move stream loop to `.Stream.cs` partial (or equivalent)
+- [x] Keep non-stream path clear
+- [x] No streaming behavior regression
 
 ## R52.2 Tests
 
-- [ ] Ops LLM tests green
+- [x] Ops LLM tests green
 
 ## R52.3 Exit
 
-- [ ] Main file thinner; stream isolated
+- [x] Main file thinner; stream isolated

@@ -1151,25 +1151,26 @@ R99 Definition of done
 # R50 — TestSupport migration batch
 
 **Track:** Polish · **Analysis:** `../09-polish-godfiles-testsupport.md`  
-**Goal:** Migrate N ModuleTests off copy-paste fixtures
+**Goal:** Migrate N ModuleTests off copy-paste fixtures  
+**Notes:** `r50-notes.md` · **Checklist:** `checklists/r50-polish-testsupport-batch.md`
 
 ---
 
 ## R50.1 Select batch
 
-- [ ] Target N = 4–6 (recommended first batch)
-- [ ] Prefer: One webhook tests, Billing event-handler fixtures, one Commerce fixture
-- [ ] Skip: WebApplicationFactory auth suites, mediator-heavy LHDN/provision for later
+- [x] Target N = 4–6 (recommended first batch) → **N = 6**
+- [x] Prefer: One webhook tests, Billing event-handler fixtures, one Commerce fixture
+- [x] Skip: WebApplicationFactory auth suites, mediator-heavy LHDN/provision for later
 
 ## R50.2 Migrate
 
-- [ ] Use `Lazuar.TestSupport` FakeExecutionContext + InMemory helpers
-- [ ] Delete local NoopMediator duplicates where possible
-- [ ] All migrated tests green
+- [x] Use `Lazuar.TestSupport` FakeExecutionContext + InMemory helpers
+- [x] Delete local NoopMediator duplicates where possible (`OutboundWebhookTests`)
+- [x] All migrated tests green (40 passed)
 
 ## R50.3 Exit
 
-- [ ] Batch merged; list remaining high-copy suites for next batch
+- [x] Batch done; list remaining high-copy suites for next batch → `r50-notes.md`
 
 
 ---
@@ -1183,16 +1184,16 @@ R99 Definition of done
 
 ## R51.1 Split
 
-- [ ] Partials: Token, Submit, Status, TIN, Cancel (+ shared rate limit if needed)
-- [ ] Keep public type name + port interface stable
+- [x] Partials: Token, Submit, Status, TIN, Cancel (+ shared rate limit if needed)
+- [x] Keep public type name + port interface stable
 
 ## R51.2 Tests
 
-- [ ] LHDN gateway / module tests green
+- [x] LHDN gateway / module tests green
 
 ## R51.3 Exit
 
-- [ ] Navigable files; zero behavior change
+- [x] Navigable files; zero behavior change
 
 
 ---
@@ -1206,17 +1207,17 @@ R99 Definition of done
 
 ## R52.1 Split
 
-- [ ] Move stream loop to `.Stream.cs` partial (or equivalent)
-- [ ] Keep non-stream path clear
-- [ ] No streaming behavior regression
+- [x] Move stream loop to `.Stream.cs` partial (or equivalent)
+- [x] Keep non-stream path clear
+- [x] No streaming behavior regression
 
 ## R52.2 Tests
 
-- [ ] Ops LLM tests green
+- [x] Ops LLM tests green
 
 ## R52.3 Exit
 
-- [ ] Main file thinner; stream isolated
+- [x] Main file thinner; stream isolated
 
 
 ---
