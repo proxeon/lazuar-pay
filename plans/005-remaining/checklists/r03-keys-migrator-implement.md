@@ -2,40 +2,41 @@
 
 **Track:** Keys · **Analysis:** `../01-api-key-one-only-cutover.md` § migration  
 **Depends on:** R01, R02  
-**Do not:** Remove dual-read (R05)
+**Do not:** Remove dual-read (R05)  
+**Runbook:** `../r03-keys-migrator-runbook.md`
 
 ---
 
 ## R03.1 Implementation choice
 
-- [ ] Choose: hosted one-shot job **or** ops SQL/script **or** admin command: ________
-- [ ] Idempotent on `KeyHash` (skip if already in One)
-- [ ] Copy fields: KeyHash, Prefix, KeyHint, Scopes, OrganizationId, Name, IsActive, CreatedAt
-- [ ] CreatedByUserId = null for migrated
-- [ ] Preserve Id if design requires; else new Guid (document choice: ________)
-- [ ] Scope quarantine log for unknown scopes
-- [ ] Dry-run mode if possible (count only)
+- [x] Choose: hosted one-shot job **or** ops SQL/script **or** admin command: **hosted one-shot job** (`LegacyApiKeyMigrationHostedService` under `Lazuar.Api/Jobs/ApiKeyMigration/`, gated by `ApiKeyMigration:Enabled` / `API_KEY_MIGRATION_ENABLED`)
+- [x] Idempotent on `KeyHash` (skip if already in One)
+- [x] Copy fields: KeyHash, Prefix, KeyHint, Scopes, OrganizationId, Name, IsActive, CreatedAt
+- [x] CreatedByUserId = null for migrated
+- [x] Preserve Id if design requires; else new Guid (document choice: **prefer preserve source Id**; on Id collision with different KeyHash → `Guid.CreateVersion7()` + remap flag)
+- [x] Scope quarantine log for unknown scopes
+- [x] Dry-run mode if possible (count only)
 
 ## R03.2 Safety
 
-- [ ] No plaintext key material logged
-- [ ] Transaction per batch or single txn documented
-- [ ] Failure leaves dual-read still valid
+- [x] No plaintext key material logged
+- [x] Transaction per batch or single txn documented: **per-row insert**; re-run idempotent; failure leaves dual-read valid
+- [x] Failure leaves dual-read still valid
 
 ## R03.3 Tests
 
-- [ ] Unit/module: empty Lhdn → no-op
-- [ ] Unit: Lhdn row copies to One
-- [ ] Unit: re-run idempotent
-- [ ] Unit: collision hash already in One → skip/update policy documented
-- [ ] Unit: unknown scope quarantine behavior
+- [x] Unit/module: empty Lhdn → no-op
+- [x] Unit: Lhdn row copies to One
+- [x] Unit: re-run idempotent
+- [x] Unit: collision hash already in One → skip/update policy documented (`already_migrated` / `hash_collision_different_org`)
+- [x] Unit: unknown scope quarantine behavior
 
 ## R03.4 Docs
 
-- [ ] Runbook section in design doc or ops README: how to run migrator
-- [ ] Rollback: dual-read still on; no table drop
+- [x] Runbook section in design doc or ops README: how to run migrator → `plans/005-remaining/r03-keys-migrator-runbook.md`
+- [x] Rollback: dual-read still on; no table drop
 
 ## R03.5 Exit
 
-- [ ] Migrator merged; dual-read still enabled
-- [ ] Ready for R04 execute on staging
+- [x] Migrator merged; dual-read still enabled
+- [x] Ready for R04 execute on staging

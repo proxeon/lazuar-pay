@@ -8,6 +8,7 @@ using BuildingBlocks.Infrastructure.Observability;
 using Modules.One.Infrastructure.Configuration;
 using Lazuar.Api;
 using Lazuar.Api.Composition;
+using Lazuar.Api.Jobs.ApiKeyMigration;
 using Azure.Identity;
 using Amazon.S3;
 using Amazon.Runtime;
@@ -79,6 +80,50 @@ builder.Services.AddSingleton<IPlatformMetricsCollector>(sp =>
         sp.GetRequiredService<IOptions<ObservabilityOptions>>(),
         sp.GetRequiredService<ILogger<PlatformMetricsCollector>>()));
 builder.Services.AddHostedService<PlatformMetricsRefreshJob>();
+
+// R03: optional one-shot legacy API key migrator (lhdn.DeveloperApiKeys → one.ApiCredentials).
+// Dual-read middleware stays; only registers when Enabled=true.
+builder.Services.AddOptions<ApiKeyMigrationOptions>()
+    .BindConfiguration(ApiKeyMigrationOptions.SectionName)
+    .PostConfigure(opts =>
+    {
+        var enabledEnv = Environment.GetEnvironmentVariable("API_KEY_MIGRATION_ENABLED");
+        if (!string.IsNullOrWhiteSpace(enabledEnv) && bool.TryParse(enabledEnv, out var enabled))
+        {
+            opts.Enabled = enabled;
+        }
+
+        var dryRunEnv = Environment.GetEnvironmentVariable("API_KEY_MIGRATION_DRY_RUN");
+        if (!string.IsNullOrWhiteSpace(dryRunEnv) && bool.TryParse(dryRunEnv, out var dryRun))
+        {
+            opts.DryRun = dryRun;
+        }
+
+        if (opts.BatchSize <= 0)
+        {
+            opts.BatchSize = 500;
+        }
+    });
+
+{
+    var migrationSection = builder.Configuration.GetSection(ApiKeyMigrationOptions.SectionName);
+    var migrationEnabled = migrationSection.GetValue<bool?>(nameof(ApiKeyMigrationOptions.Enabled)) ?? false;
+    var enabledEnv = Environment.GetEnvironmentVariable("API_KEY_MIGRATION_ENABLED");
+    if (!string.IsNullOrWhiteSpace(enabledEnv) && bool.TryParse(enabledEnv, out var envEnabled))
+    {
+        migrationEnabled = envEnabled;
+    }
+
+    if (migrationEnabled)
+    {
+        builder.Services.AddSingleton<IApiKeyMigrationStore>(sp =>
+            new SqlApiKeyMigrationStore(defaultConnectionString));
+        builder.Services.AddSingleton<LegacyApiKeyMigrator>();
+        builder.Services.AddHostedService<LegacyApiKeyMigrationHostedService>();
+        Log.Information("API key migration hosted service registered (Enabled=true). Dual-read unchanged.");
+    }
+}
+
 
 builder.Services.AddHttpClient("Resend", (sp, client) =>
 {

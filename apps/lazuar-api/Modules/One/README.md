@@ -75,4 +75,5 @@ All tables reside in the isolated `one` schema.
 * **Scopes:** Closed catalog on `PlatformApiScopes` (includes `lhdn.documents:*`, payments checkout scopes, webhook manage). LHDN product scopes are modeled on One credentials (decisions 00.1).
 * **Host auth:** `ApiKeyAuthenticationMiddleware` dual-reads **One first**, then legacy `lhdn.DeveloperApiKeys` for integrators not yet migrated.
 * **Dual-read window (LOCKED):** dual-read **allowed until 2026-11-30**; target One-only middleware + One `ApiKeyRevokedIntegrationEvent` only by **2026-12-15**. Do not remove the Lhdn lookup before that date (unless prod legacy row count is zero and ops signs off).
+* **Legacy migrator (R03):** optional one-shot host job `Lazuar.Api/Jobs/ApiKeyMigration` copies residual `lhdn.DeveloperApiKeys` → `one.ApiCredentials` (hash rows only; `API_KEY_MIGRATION_ENABLED` / dry-run). Dual-read stays until R05. Runbook: `plans/005-remaining/r03-keys-migrator-runbook.md`.
 * **Design / inventory:** `plans/004-maintenance/api-key-cutover-design.md`, `plans/004-maintenance/phase-03-analysis.md`.
