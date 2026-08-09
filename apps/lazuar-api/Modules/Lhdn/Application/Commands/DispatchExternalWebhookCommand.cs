@@ -21,9 +21,9 @@ public record DispatchExternalWebhookCommand(
 }
 
 /// <summary>
-/// R42 (A1): Enqueue LHDN invoice.valid / invoice.invalid via One's durable outbound path.
-/// Publishes <see cref="OutboundWebhookRequestedIntegrationEvent"/> on LhdnEventBus;
-/// does not call fire-and-forget <c>IWebhookSenderService</c> (retired in R43).
+/// Enqueue LHDN invoice.valid / invoice.invalid via One's durable outbound path (R42/R43).
+/// Publishes <see cref="OutboundWebhookRequestedIntegrationEvent"/> on LhdnEventBus only —
+/// pure publish path; fire-and-forget sender retired (R43).
 /// </summary>
 public class DispatchExternalWebhookCommandHandler : ICommandHandler<DispatchExternalWebhookCommand>
 {

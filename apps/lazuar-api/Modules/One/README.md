@@ -53,9 +53,9 @@ One owns the **only platform-grade** customer webhook system (maintenance decisi
 
 **Headers on delivery:** `X-Lazuar-Signature`, `X-Lazuar-Event`, `X-Lazuar-Delivery-Id`, `X-Lazuar-Webhook-Id`.
 
-**Typical event types today:** `subscription.*`, `order.completed`, `payment_link.paid`, `payment.completed` / `payment.failed` (from Commerce / Payments publishers).
+**Typical event types today:** `subscription.*`, `order.completed`, `payment_link.paid`, `payment.completed` / `payment.failed` (from Commerce / Payments publishers); **LHDN** `invoice.valid` / `invoice.invalid` (from Lhdn `DispatchExternalWebhookCommand` → `OutboundWebhookRequestedIntegrationEvent`).
 
-**LHDN exception:** e-invoice `invoice.valid` / `invoice.invalid` still use a **frozen** fire-and-forget path inside the Lhdn module until end-state **A** routes them through this dispatcher. See `Modules/Lhdn/README.md` §5 and `plans/004-maintenance/phase-04-analysis.md`. Webhooks stay in One for this maintenance track (no `Modules/Webhooks` extract unless Phase 16).
+**LHDN invoice events (R42/R43):** MyInvois VALID/INVALID poll publishes data-only payload via Lhdn outbox → this dispatcher fans out to `one.TenantWebhookEndpoints` with `EnabledEvents` matching `invoice.valid` / `invoice.invalid`. Fire-and-forget Lhdn sender is **retired**. See `Modules/Lhdn/README.md` §5. Webhooks stay in One for this maintenance track (no `Modules/Webhooks` extract unless Phase 16).
 
 ## 8. Database Schema
 All tables reside in the isolated `one` schema.

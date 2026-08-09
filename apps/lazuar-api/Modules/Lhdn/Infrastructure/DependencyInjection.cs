@@ -53,7 +53,6 @@ public static class DependencyInjection
         services.AddKeyedScoped<IUblDocumentStrategy, SelfBilledCreditNoteStrategy>("SelfBilledCredit");
 
         services.AddScoped<ILhdnGatewayAdapter, LhdnGatewayAdapter>();
-        services.AddScoped<IWebhookSenderService, WebhookSenderService>();
         services.AddScoped<ITaxpayerValidationService, TaxpayerValidationService>();
         services.AddSingleton<ILhdnLinkService, LhdnLinkService>();
 

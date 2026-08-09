@@ -14,7 +14,7 @@ namespace Lazuar.ModuleTests.Lhdn;
 
 /// <summary>
 /// R42 A1: LHDN lifecycle enqueues via OutboundWebhookRequestedIntegrationEvent
-/// (no fire-and-forget IWebhookSenderService).
+/// (fire-and-forget sender retired R43).
 /// </summary>
 [TestFixture]
 public class DispatchExternalWebhookCommandTests
@@ -102,9 +102,9 @@ public class DispatchExternalWebhookCommandTests
     }
 
     [Test]
-    public async Task Does_Not_Use_WebhookSenderService_Path()
+    public async Task Does_Not_Use_FireAndForget_Sender_Path()
     {
-        // Handler only takes IEventBus + ILhdnLinkService — no IWebhookSenderService dependency.
+        // Handler only takes IEventBus + ILhdnLinkService — pure One publish (R43).
         // Publish is the sole side effect.
         await _handler.Handle(
             new DispatchExternalWebhookCommand(

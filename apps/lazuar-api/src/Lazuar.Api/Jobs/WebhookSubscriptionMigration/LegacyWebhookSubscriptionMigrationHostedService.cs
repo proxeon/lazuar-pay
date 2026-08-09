@@ -5,7 +5,7 @@ namespace Lazuar.Api.Jobs.WebhookSubscriptionMigration;
 /// <summary>
 /// One-shot hosted runner for <see cref="LegacyWebhookSubscriptionMigrator"/> (R41).
 /// Registered only when <see cref="WebhookSubscriptionMigrationOptions.Enabled"/> is true.
-/// Does not block host startup; Lhdn fire-and-forget path is untouched (R42/R43).
+/// Does not block host startup. Delivery path is One durable dispatcher (R42/R43).
 /// </summary>
 public sealed class LegacyWebhookSubscriptionMigrationHostedService : IHostedService, IDisposable
 {
@@ -36,7 +36,7 @@ public sealed class LegacyWebhookSubscriptionMigrationHostedService : IHostedSer
         }
 
         _logger.LogInformation(
-            "Webhook subscription migration scheduled (DryRun={DryRun}, BatchSize={BatchSize}). Lhdn fire-and-forget unchanged.",
+            "Webhook subscription migration scheduled (DryRun={DryRun}, BatchSize={BatchSize}).",
             opts.DryRun,
             opts.BatchSize);
 
@@ -113,7 +113,7 @@ public sealed class LegacyWebhookSubscriptionMigrationHostedService : IHostedSer
             // Failure must leave Lhdn fire-and-forget valid — never throw unobserved into host.
             _logger.LogError(
                 ex,
-                "Webhook subscription migration failed. Lhdn WebhookSubscriptions and fire-and-forget path are unchanged.");
+                "Webhook subscription migration failed. lhdn.WebhookSubscriptions table left unchanged.");
         }
     }
 

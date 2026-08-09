@@ -56,21 +56,21 @@ When the background `LhdnSubmissionJob` transmits the payload, it encodes the st
 
 ---
 
-## 5. Outbound customer webhooks — **C freeze** (maintenance 00.2)
+## 5. Outbound customer webhooks — One durable path (end-state A)
 
-**Locked decision:** platform durable delivery lives in **One** (`WebhookDeliveryOutbox` + `OutboundWebhookDispatcherJob`). End-state for LHDN is **A** — route e-invoice lifecycle customer webhooks through that One dispatcher.
+**Locked decision:** platform durable delivery lives in **One** (`WebhookDeliveryOutbox` + `OutboundWebhookDispatcherJob`). LHDN e-invoice lifecycle customer webhooks use that path only (R42 enqueue + **R43** fire-and-forget retired).
 
-**R42 (A1) enqueue path (current):**
+**Path (current):**
 
-* **Mechanism:** `DispatchExternalWebhookCommandHandler` publishes `OutboundWebhookRequestedIntegrationEvent` on `LhdnEventBus` → One `OutboundWebhookEventHandlers` → durable `WebhookDeliveryOutbox` + dispatcher.
-* **Trigger:** `LhdnStatusPollingJob` → `DispatchExternalWebhookCommand` on MyInvois **VALID** / **INVALID** (unchanged).
-* **Registry (delivery):** `one.TenantWebhookEndpoints` (migrate from Lhdn via R41). Legacy `lhdn.WebhookSubscriptions` is no longer POSTed by this path.
+* **Mechanism:** `DispatchExternalWebhookCommandHandler` publishes `OutboundWebhookRequestedIntegrationEvent` on `LhdnEventBus` → One `OutboundWebhookEventHandlers` → durable `WebhookDeliveryOutbox` + `OutboundWebhookDispatcherJob`.
+* **Trigger:** `LhdnStatusPollingJob` → `DispatchExternalWebhookCommand` on MyInvois **VALID** / **INVALID**.
+* **Registry (delivery):** `one.TenantWebhookEndpoints` (legacy rows backfilled via R41). `lhdn.WebhookSubscriptions` is **not** POSTed; table retained until optional later drop / façade period.
 * **Events:** `invoice.valid`, `invoice.invalid` only (`TargetUrl: null` fan-out).
 * **Payload:** data-only snake_case (`internal_id`, `lhdn_uuid`, `status`, `qr_link`, `error_message`); One wraps platform envelope.
-* **Signing / retries:** One Standard Webhooks–style delivery (not legacy Lhdn fire-and-forget HMAC).
-* **R43:** retire `WebhookSenderService` / leftover Lhdn webhook register surfaces (still present in code until then).
+* **Signing / retries:** One Standard Webhooks–style (`t=,v1=` HMAC over `{timestamp}.{body}`); retries/DLQ via One dispatcher.
+* **Retired (R43):** Lhdn `WebhookSenderService` / `IWebhookSenderService` (fire-and-forget body-only HMAC). No `RecordWebhookFailed("lhdn")` call sites remain.
 
-See: `plans/005-remaining/webhook-convergence-decisions.md`, `plans/005-remaining/r42-notes.md`.
+See: `plans/005-remaining/webhook-convergence-decisions.md`, `plans/005-remaining/r42-notes.md`, `plans/005-remaining/r43-notes.md`.
 
 ---
 

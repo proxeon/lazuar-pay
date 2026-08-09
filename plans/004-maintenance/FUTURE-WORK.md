@@ -37,7 +37,7 @@ This document describes **what is still intentionally unfinished**, why it was d
 | ID | Workstream | Urgency | Owner type |
 |----|------------|---------|------------|
 | **FW-1** | API key dual-read cutover (One-only middleware) | **Partial** — R05 code done; deploy gated on Q8 `active_legacy_only=0`; R06 table drop pending | Eng + Ops |
-| **FW-2** | LHDN outbound webhooks → One dispatcher | **Product-scheduled** | Product + Eng |
+| **FW-2** | LHDN outbound webhooks → One dispatcher | **Done** — R40–R43 (staging/prod ops exit optional) | Product + Eng |
 | **FW-3** | BuildingBlocks product-port code moves | Opportunistic | Eng |
 | **FW-4** | Cross-schema SQL / runtime boundary leaks | When touching area / P1 hygiene | Eng |
 | **FW-5** | Optional module extract / merge (Phase 16) | **Only with product trigger** | Product + Eng |
@@ -128,67 +128,65 @@ Middleware One-only in prod; dual-read gone; revoke single-path; staging + prod 
 
 # FW-2 — LHDN customer webhooks → One dispatcher
 
-## Why deferred
+**Status: Done** (R40–R43, 2026-08-09). Staging/prod verification remains ops (R42.4 exit).
 
-End-state is **A** (route through One). Interim is **C freeze** (fire-and-forget + metrics only). Full A needs product decisions on **payload shape** and **signing** (body HMAC vs Standard Webhooks). Building a second Lhdn durable stack (**B**) is **rejected**.
+## Outcome
 
-## What already exists
+End-state **A** shipped:
 
-| Artifact | Path |
-|----------|------|
-| Decision | `decisions.md` §00.2 |
-| Inventory | [`phase-04-analysis.md`](./phase-04-analysis.md) |
-| Freeze docs | `Modules/Lhdn/README.md` §5, `Modules/One/README.md` §7 |
-| Observability | `WebhookSenderService` failure logs + `RecordWebhookFailed("lhdn")` |
+1. LHDN lifecycle customer webhooks (`invoice.valid` / `invoice.invalid`) deliver via One:
+   - `DispatchExternalWebhookCommand` → `OutboundWebhookRequestedIntegrationEvent` → `WebhookDeliveryOutbox` + `OutboundWebhookDispatcherJob`
+   - Same retry / multi-endpoint model as platform webhooks
+2. Fire-and-forget `WebhookSenderService` / `IWebhookSenderService` **deleted** (R43). No `RecordWebhookFailed("lhdn")` call sites.
+3. Docs: Lhdn README §5 (One path; C freeze removed); One README §7 lists invoice events.
 
-## Target end-state
+## Product locks (R40)
 
-1. LHDN lifecycle events that customers subscribe to are delivered via One:
-   - `WebhookDeliveryOutbox` + `OutboundWebhookDispatcherJob`
-   - Same retry / DLQ / multi-endpoint model as platform webhooks
-2. Fire-and-forget `WebhookSenderService` no longer used for those events (deleted or dead-code free).
-3. Integrator docs describe the **new** delivery contract (or dual-verify window if signing changes).
+See `plans/005-remaining/webhook-convergence-decisions.md`:
 
-## Product decisions before code (blockers)
+1. **Signing:** One Standard Webhooks–style (`t=,v1=`); dual-sign window skipped.
+2. **Payload:** data-only snake_case; One wraps platform envelope.
+3. **Routing:** fan-out `TargetUrl: null` → endpoints with matching `EnabledEvents`.
+4. **Event types:** `invoice.valid`, `invoice.invalid` only.
 
-Write answers before implementation PR:
+## Implementation checklist (closed)
 
-1. **Signing:** keep LHDN body-only HMAC hex, or move to One `t=,v1=` Standard Webhooks-style?  
-   - If change: dual-verify window + customer migration notice.
-2. **Payload:** keep current LHDN JSON envelope, or wrap in One event envelope?  
-3. **Routing:** which workspace `TenantWebhookEndpoint` rows receive LHDN events (all workspace endpoints vs filtered by event type)?
-4. **Event types:** confirm list (`invoice.valid`, `invoice.invalid`, others?).
+### FW-2.1 — Design note
 
-If product cannot share One signing without breaking customers, **re-open 00.2** and consider B with a formal ADR — do not silently fork.
+- [x] Payload mapping / signing / retry — R40 decisions + R42 notes.
+- [x] Dual-window plan — **skipped** (hard cut after R41).
 
-## Implementation outline
+### FW-2.2 — Enqueue path (R42)
 
-### FW-2.1 — Design note (short ADR or plan appendix)
+- [x] On VALID/INVALID, publish `OutboundWebhookRequestedIntegrationEvent` via LhdnEventBus.
+- [x] Org id + data payload preserved; tests green.
 
-- [ ] Payload mapping table (LHDN event → outbox body).
-- [ ] Signing dual-window plan if needed.
-- [ ] Failure/retry semantics (inherit One job).
+### FW-2.3 — Disable fire-and-forget (R43)
 
-### FW-2.2 — Enqueue path
-
-- [ ] On LHDN lifecycle (validated/invalid/etc.), enqueue One delivery commands for matching endpoints.
-- [ ] Preserve correlation ids / organization ids.
-- [ ] Tests: event → outbox row(s).
-
-### FW-2.3 — Disable fire-and-forget
-
-- [ ] Stop calling `WebhookSenderService` for migrated events.
-- [ ] Remove service / Lhdn subscription tables if fully superseded (or keep table as config that maps into One endpoints — product choice).
-- [ ] Metrics: retire or re-tag `RecordWebhookFailed("lhdn")` once path is One.
+- [x] No `IWebhookSenderService` on customer path.
+- [x] Service + interface deleted; DI registration removed.
+- [x] Metrics: pure Lhdn failure counter call sites gone (`RecordWebhookFailed` remains for `outbound` / `payment`).
+- [x] `lhdn.WebhookSubscriptions` **kept** (optional later drop / façade).
 
 ### FW-2.4 — Integrator honesty
 
-- [ ] Update hub docs / api-spec descriptions.
-- [ ] Changelog for breaking signing/payload if any.
+- [x] Lhdn/One module READMEs updated.
+- [x] Signing/payload change documented in R40/R42 notes (breaking vs legacy body-only HMAC).
 
-## Done when
+## Residual (not FW-2 exit blockers)
 
-No customer LHDN webhook relies on fire-and-forget; One dispatcher is the only delivery path; tests + docs green; freeze section removed from Lhdn README.
+- Staging/prod: confirm durable outbox delivery on live env (R42.4).
+- Optional: dual-write/façade `/lhdn/webhooks` over One; drop `lhdn.WebhookSubscriptions` after period.
+- Expand catalog beyond `invoice.valid` / `invoice.invalid` if product asks.
+
+## Evidence
+
+| Artifact | Path |
+|----------|------|
+| Decisions | `plans/005-remaining/webhook-convergence-decisions.md` |
+| Notes | `plans/005-remaining/r40`…`r43-notes.md` |
+| Lhdn path | `Modules/Lhdn/README.md` §5 |
+| One path | `Modules/One/README.md` §7 |
 
 ---
 
