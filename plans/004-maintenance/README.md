@@ -15,7 +15,9 @@ Many small phase files (not one fat checklist): secrets, dual keys, TypeSpec hon
 
 → **[`FUTURE-WORK.md`](./FUTURE-WORK.md)** — deferred workstreams FW-1…FW-7  
 
-Covers: API key One-only cutover (calendar), LHDN webhooks → One, BuildingBlocks moves, cross-schema SQL, optional module extracts, TypeSpec Wave B, residual polish. Use this for future tickets — not a second maintenance mega-program.
+→ **[`checklists-future/README.md`](./checklists-future/README.md)** — **phased checklists F00–F16** (same style as 00–18; many phases, not one mega-PR)
+
+Covers: API key cutover, LHDN webhooks → One, BuildingBlocks moves, cross-schema SQL, optional extracts, TypeSpec Wave B, polish. Execute phase-by-phase; do not squash into a single commit.
 
 Also: locked **[`decisions.md`](./decisions.md)**, cutover design **[`api-key-cutover-design.md`](./api-key-cutover-design.md)**, close-out **[`phase-18-done.md`](./phase-18-done.md)**.
 
