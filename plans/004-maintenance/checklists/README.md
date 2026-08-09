@@ -1,9 +1,10 @@
 # 004 — Implementation checklists (backend + TypeSpec maintenance)
 
-**Status:** Ready to execute (no code changes required to start Phase 00)  
+**Status:** Phases 00–18 executed on branch `chore/backend-maintenance-004` (track healthy enough; residual dual-read cutover / webhook A / BB moves → normal backlog)  
 **Date:** 2026-08-09  
 **Scope:** `apps/lazuar-api`, `packages/api-spec`, related contracts/tests/CI/gen pipeline  
-**Out of scope:** Frontend apps, Caddy/DX gateway (already shipped)
+**Out of scope:** Frontend apps, Caddy/DX gateway (already shipped)  
+**Close-out:** [`phase-18-definition-of-done.md`](./phase-18-definition-of-done.md) · [`../phase-18-done.md`](../phase-18-done.md)
 
 ## How to use
 
