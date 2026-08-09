@@ -5,6 +5,7 @@
 **Branch:** `chore/phase-7-rename-docs-polish`  
 **Base:** `main`  
 **Repo:** `proxeon/lazuar-pay`  
+**PR:** [#13](https://github.com/proxeon/lazuar-pay/pull/13) (merged `003e32b`)  
 **Related:** [`phase-7-analysis.md`](./phase-7-analysis.md), [`11-implementation-checklist.md`](./11-implementation-checklist.md) § Phase 7
 
 ---
@@ -25,6 +26,7 @@
 | README multi-domain tree polish | **SKIPPED** (optional; not blocking) |
 | Naming debt documented | **DONE** (this file §3) |
 | Deploy / Docker / bake / prod | **UNTOUCHED** |
+| PR merge | **PASS** [#13](https://github.com/proxeon/lazuar-pay/pull/13) → `003e32b` |
 
 **Overall Phase 7:** **PASS** — minimal DX polish only; rename project closed.
 
