@@ -14,35 +14,6 @@ using Modules.Commerce.Contracts.Commands;
 
 namespace Modules.Commerce.Infrastructure;
 
-public record CreateProductRequest(
-    string Name, 
-    string Slug, 
-    decimal Price, 
-    string Pricing_model,
-    decimal Minimum_price,
-    string Currency, 
-    string Interval, 
-    string Gateway_name,
-    bool Requires_address, 
-    bool Requires_tax_id, 
-    bool Requires_phone, 
-    List<string> Fulfillment_targets);
-
-public record UpdateProductRequest(
-    string Name, 
-    string Slug, 
-    decimal Price, 
-    string Pricing_model,
-    decimal Minimum_price,
-    string Currency, 
-    string Interval, 
-    bool Is_active,
-    string Gateway_name,
-    bool Requires_address, 
-    bool Requires_tax_id, 
-    bool Requires_phone, 
-    List<string> Fulfillment_targets);
-
 public static class ProductEndpoints
 {
     public static RouteGroupBuilder MapProductEndpoints(this RouteGroupBuilder group)
@@ -65,7 +36,7 @@ public static class ProductEndpoints
         });
 
         group.MapPost("/products", async Task<Ok<IdResponse>> (
-            CreateProductRequest req,
+            CreateProductRequestDto req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
@@ -73,9 +44,9 @@ public static class ProductEndpoints
                 ctx.TenantId,
                 req.Name,
                 req.Slug,
-                req.Price,
+                (decimal)req.Price,
                 req.Pricing_model,
-                req.Minimum_price,
+                (decimal)req.Minimum_price,
                 req.Currency,
                 req.Interval,
                 req.Gateway_name,
@@ -92,7 +63,7 @@ public static class ProductEndpoints
 
         group.MapPut("/products/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id,
-            UpdateProductRequest req,
+            UpdateProductRequestDto req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
@@ -101,9 +72,9 @@ public static class ProductEndpoints
                 id,
                 req.Name,
                 req.Slug,
-                req.Price,
+                (decimal)req.Price,
                 req.Pricing_model,
-                req.Minimum_price,
+                (decimal)req.Minimum_price,
                 req.Currency,
                 req.Interval,
                 req.Is_active,

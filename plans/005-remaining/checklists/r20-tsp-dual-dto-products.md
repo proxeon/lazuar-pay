@@ -7,21 +7,21 @@
 
 ## R20.1 Align types
 
-- [ ] Confirm generated `CreateProductRequestDto` / `UpdateProductRequestDto` exist after gen
-- [ ] Diff fields local vs generated; fix TypeSpec if gap
-- [ ] `task gen` if TSP changed
+- [x] Confirm generated `CreateProductRequestDto` / `UpdateProductRequestDto` exist after gen
+- [x] Diff fields local vs generated; fix TypeSpec if gap
+- [x] `task gen` if TSP changed *(N/A — shapes already match; no TSP edit)*
 
 ## R20.2 Switch endpoints
 
-- [ ] Bind Minimal API to generated types
-- [ ] Map to commands (decimal/double ACL if needed)
-- [ ] Delete local request records
+- [x] Bind Minimal API to generated types
+- [x] Map to commands (decimal/double ACL if needed)
+- [x] Delete local request records
 
 ## R20.3 Tests
 
-- [ ] Product completeness / endpoint tests green
-- [ ] Build Commerce + host
+- [x] Product completeness / endpoint tests green
+- [x] Build Commerce + host
 
 ## R20.4 Exit
 
-- [ ] No local product create/update DTOs remain
+- [x] No local product create/update DTOs remain
