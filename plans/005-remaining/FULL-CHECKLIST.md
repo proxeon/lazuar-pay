@@ -603,23 +603,29 @@ R99 Definition of done
 # R16 — L-06 metrics SQL handoff
 
 **Track:** SQL · **Analysis:** `../06-cross-schema-sql-leaks.md` L-06, `../05-bb-metrics-plugins.md`  
-**Goal:** Do **not** half-fix metrics here — link to R35
+**Goal:** Do **not** half-fix metrics here — link to R35  
+**Notes:** `r16-notes.md` · **Status:** complete (handoff R35)
 
 ---
 
 ## R16.1 Confirm still present
 
-- [ ] `PlatformMetricsCollector` still has hardcoded schemas + `lhdn.TaxDocuments` (or current equivalent)
+- [x] `PlatformMetricsCollector` still has hardcoded schemas + `lhdn.TaxDocuments` (or current equivalent)  
+  — Confirmed 2026-08-09: `ModuleSchemas` (9) + `QueryLhdnStuckAsync` → `lhdn."TaxDocuments"`
 
 ## R16.2 Handoff
 
-- [ ] Ensure R35 is on the wave plan if L-06 is P1 this wave
-- [ ] If metrics out of wave: ticket id ________ and stop
-- [ ] Do not leave a partial “move one query” without contributor design
+- [x] Ensure R35 is on the wave plan if L-06 is P1 this wave  
+  — BB track YES; R35 after R16 (`wave-decisions.md`)
+- [x] If metrics out of wave: ticket id ________ and stop  
+  — N/A (R35 **in** wave)
+- [x] Do not leave a partial “move one query” without contributor design  
+  — No app code in R16
 
 ## R16.3 Exit
 
-- [ ] Explicit: fixed in R35 **or** deferred ticket
+- [x] Explicit: fixed in R35 **or** deferred ticket  
+  — **Fixed in R35** (`checklists/r35-bb-metrics-plugins.md`)
 
 
 ---
@@ -627,22 +633,26 @@ R99 Definition of done
 # R17 — L-07 API key dual-read handoff
 
 **Track:** SQL · **Analysis:** `../06-cross-schema-sql-leaks.md` L-07  
-**Goal:** Dual-read is **intentional until R05** — not a Contracts-port fix
+**Goal:** Dual-read was intentional until R05 — not a Contracts-port fix. **R05 done:** confirm dual-read removed; no separate SQL PR.  
+**Notes:** `r17-notes.md` · Keys: `r05-notes.md` · **Status:** complete (fixed by R05)
 
 ---
 
 ## R17.1 Confirm
 
-- [ ] Host middleware still dual-reads `one` + `lhdn` for keys
+- [x] Dual-read **removed** — host middleware is **One-only** (`one."ApiCredentials"`; no `LhdnLookupSql` / `lhdn."DeveloperApiKeys"`)  
+  — Confirmed 2026-08-09 after R05
 
 ## R17.2 Handoff
 
-- [ ] Tracked exclusively under Keys R01–R05
-- [ ] No “fix” by moving Lhdn SQL into a module without cutover
+- [x] Tracked exclusively under Keys R01–R05  
+  — Cutover code in R05; deploy gate + table drop remain Keys (R05.5 / R06)
+- [x] No “fix” by moving Lhdn SQL into a module without cutover  
+  — Obsolete path; One-only middleware already landed
 
 ## R17.3 Exit
 
-- [ ] Linked to R05; no separate SQL PR required
+- [x] Linked to R05; no separate SQL PR required
 
 
 ---

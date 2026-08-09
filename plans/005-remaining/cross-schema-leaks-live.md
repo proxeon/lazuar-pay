@@ -1,4 +1,4 @@
-# Cross-schema SQL leaks — live status (R10 + R11–R14)
+# Cross-schema SQL leaks — live status (R10 + R11–R17)
 
 **Verified:** 2026-08-09  
 **Branch:** `chore/remaining-005`  
@@ -16,13 +16,28 @@
 | L-03 | **fixed** (R13) | `PublicArrearsEndpoints.cs` — commerce SQL + `ICrmQueryService` + `IOneQueryService`; no `crm`/`one` JOIN | — | **R13 complete** |
 | L-04 | **present** (dead) | `apps/lazuar-api/Modules/Commerce/Infrastructure/Repositories/CommerceRepository.cs` (~125: `communications."MessageTemplates"`); interface only caller is definition | P2 | **R15** |
 | L-05 | **fixed** (R14) | `CommerceDocumentLookup.cs` — commerce SQL + `ICrmQueryService`; no `crm` JOIN | — | **R14 complete** |
-| L-06 | **present** | `apps/lazuar-api/BuildingBlocks/Infrastructure/Observability/PlatformMetricsCollector.cs` (ModuleSchemas all nine; ~208: `lhdn."TaxDocuments"` stuck product SQL) | P1 | **R16** handoff **R35** |
-| L-07 | **fixed** (R05) | `apps/lazuar-api/src/Lazuar.Api/Middleware/ApiKeyAuthenticationMiddleware.cs` — One-only `one."ApiCredentials"`; **no** `LhdnLookupSql` / dual-read | — | **R17** handoff complete |
+| L-06 | **handoff R35** (still present) | `apps/lazuar-api/BuildingBlocks/Infrastructure/Observability/PlatformMetricsCollector.cs` (ModuleSchemas all nine; ~208: `lhdn."TaxDocuments"` stuck product SQL) | P1 | **R35** (R16 handoff complete — do not half-fix) |
+| L-07 | **fixed** (R05) | `apps/lazuar-api/src/Lazuar.Api/Middleware/ApiKeyAuthenticationMiddleware.cs` — One-only `one."ApiCredentials"`; **no** `LhdnLookupSql` / dual-read | — | **R17 complete** (no separate SQL PR) |
 | new? | **none** (product paths) | No new consumer-module foreign-schema production leaks beyond L-01…L-06 | — | — |
 
 ---
 
-## L-07 detail (R05)
+## L-06 detail (R16 → R35)
+
+| Check | Result |
+|-------|--------|
+| `ModuleSchemas` hardcoded array | **Present** — 9 schemas |
+| Outbox/inbox multi-schema SQL | **Present** — loop over `ModuleSchemas` |
+| `lhdn."TaxDocuments"` stuck SQL | **Present** — `QueryLhdnStuckAsync` |
+| R16 code change | **None** (handoff only) |
+| Fix phase | **R35** metrics plugins + schema registration |
+| Notes | [`r16-notes.md`](./r16-notes.md) |
+
+**Classification:** Still a P1 BB boundary leak. SQL track must **not** partially move one query. Full fix is contributor + DI schema registration under R35 (`05-bb-metrics-plugins.md`, `checklists/r35-bb-metrics-plugins.md`).
+
+---
+
+## L-07 detail (R05 + R17)
 
 | Check | Result |
 |-------|--------|
@@ -31,6 +46,8 @@
 | Remaining SQL | `FROM one."ApiCredentials"` only |
 | Lookup path | `LookupCredentialAsync` → keyed `OneSqlConnectionFactory` only; Lhdn-only keys → 401 |
 | Remarks | Documents One-only / R05; table drop still R06 |
+| R17 | Handoff complete — dual-read removed by R05; no SQL fix PR |
+| Notes | [`r17-notes.md`](./r17-notes.md), [`r05-notes.md`](./r05-notes.md) |
 
 **Classification:** Dual-read boundary debt from `06` is **closed**. Residual host hardcode of `one.ApiCredentials` is allowed composition-root auth (not a multi-schema leak). R17 is handoff-complete (no further dual-read fix work).
 
@@ -54,8 +71,8 @@
 3. **R13** — L-03 PublicArrears update-payment → `crm` + `one` — **complete**  
 4. **R14** — L-05 CommerceDocumentLookup CRM join — **complete**  
 5. **R15** — L-04 dead `GetDefaultTemplateIdsAsync` delete  
-6. **R16** — L-06 metrics handoff → **R35**  
-7. **R17** — L-07 keys handoff **complete** (fixed by R05; no SQL fix phase)
+6. **R16** — L-06 metrics handoff → **R35** — **complete** (fix in R35)  
+7. **R17** — L-07 keys handoff — **complete** (fixed by R05; no SQL fix phase)
 
 ---
 
@@ -68,8 +85,8 @@
 | L-03 | **No** — commerce SQL + CRM/One ports (R13) |
 | L-04 | Yes — method body present; **zero** call sites outside interface/impl |
 | L-05 | **No** — commerce SQL + `ICrmQueryService` (R14) |
-| L-06 | Yes — schema array + `lhdn."TaxDocuments"` |
-| L-07 dual-read | **No** — middleware One-only |
+| L-06 | Yes — schema array + `lhdn."TaxDocuments"` (**handoff R35**) |
+| L-07 dual-read | **No** — middleware One-only (**fixed R05**; R17 complete) |
 
 ---
 
@@ -82,8 +99,8 @@
 | L-03 | open | **fixed** by R13 (CRM + One contracts ports) |
 | L-04 | open | **still present** (dead) |
 | L-05 | open | **fixed** by R14 (CRM contracts port) |
-| L-06 | open | **still present** |
-| L-07 | tracked dual-read exception (FW-1) | **fixed** by R05 One-only middleware |
+| L-06 | open | **still present** — **R16 handoff → R35** (no half-fix) |
+| L-07 | tracked dual-read exception (FW-1) | **fixed** by R05 One-only middleware; **R17 complete** |
 | New product leaks | n/a | **none found** |
 
 ---
@@ -125,4 +142,4 @@
 | Billing port | `ICommerceDocumentLookup` surface stable |
 | Notes | [`r14-notes.md`](./r14-notes.md) |
 
-*R14 complete. Next open product leak: L-04 (R15, dead code) or L-06 (R16 metrics).*
+*SQL product-leak track: L-04 (R15) still open if not yet landed; L-06 owned by R35 after R16 handoff; L-07 closed via R05/R17.*
