@@ -43,6 +43,47 @@ tasks:
     cmds:
       - mprocs -c mprocs-dev.yaml
 
+  proxy:
+    desc: Local Caddy gateway on :9080 via Docker (caddy:2-alpine → host FE/API ports)
+    cmds:
+      - |
+        if ! docker info >/dev/null 2>&1; then
+          echo "Docker is not running. Start Docker Desktop, then retry: task proxy"
+          exit 1
+        fi
+        echo "Caddy gateway → http://localhost:9080"
+        echo "Upstream host apps must be up (task dev + task fe)."
+        docker compose -f docker-compose.dev-proxy.yml up
+
+  proxy:up:
+    desc: Start local Caddy gateway detached (docker compose -d)
+    cmds:
+      - |
+        if ! docker info >/dev/null 2>&1; then
+          echo "Docker is not running. Start Docker Desktop, then retry."
+          exit 1
+        fi
+        docker compose -f docker-compose.dev-proxy.yml up -d
+        echo "Gateway: http://localhost:9080  (stop: task proxy:down)"
+
+  proxy:down:
+    desc: Stop local Caddy gateway container
+    cmds:
+      - docker compose -f docker-compose.dev-proxy.yml down
+
+  proxy:validate:
+    desc: Validate deploy/dev/Caddyfile via caddy Docker image
+    cmds:
+      - |
+        if ! docker info >/dev/null 2>&1; then
+          echo "Docker is not running. Start Docker Desktop, then retry."
+          exit 1
+        fi
+        docker run --rm \
+          -v "$PWD/deploy/dev/Caddyfile:/etc/caddy/Caddyfile:ro" \
+          caddy:2-alpine \
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
   # ==========================================
   # .NET API Tasks
   # ==========================================

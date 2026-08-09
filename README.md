@@ -150,6 +150,43 @@ task fe
 | `lazuar-ops` | 3003 | `http://localhost:3003` | Superapp Console (Admin) |
 | `lazuar-portal` | 3004 | `http://localhost:3004` | Universal Checkout & Dashboard |
 | `lazuar-admin` | 3005 | `http://localhost:3005` | Platform Infrastructure Admin |
+| **Gateway (optional)** | **9080** | `http://localhost:9080` | Local Caddy edge — prod-like paths |
+
+Vite apps pin ports with `strictPort: true` (ops **3003**, admin **3005**). If a port is already in use, dev fails loudly instead of stealing another app’s port — free the port and retry.
+
+#### Local Caddy gateway (`task proxy`)
+
+Optional single origin that mirrors production path routing. Uses **Docker** (`caddy:2-alpine`) — no host Caddy install. See [`deploy/dev/README.md`](deploy/dev/README.md) and [`docker-compose.dev-proxy.yml`](docker-compose.dev-proxy.yml).
+
+| Gateway path | Upstream (host via `host.docker.internal`) |
+|--------------|--------------------------------------------|
+| `/health`, `/api/*` | API `:8080` |
+| `/` | ops `:3003` |
+| `/portal*` | portal `:3004` |
+| `/docs*` | developers `:3002` |
+| `/admin/` | admin `:3005` (`handle_path`) |
+
+```bash
+# Docker Desktop must be running (same as task infra:up)
+# With API + frontends already on the host:
+task proxy          # foreground
+task proxy:up       # detached
+task proxy:down
+task proxy:validate # syntax check via caddy image
+```
+
+`task fe` / `mprocs-dev.yaml` sets base-path envs so path routing works:
+
+| App | Via gateway | Direct (with mprocs envs) |
+|-----|-------------|---------------------------|
+| ops | `http://localhost:9080/` | `http://localhost:3003/` |
+| portal | `http://localhost:9080/portal` | `http://localhost:3004/portal` |
+| developers | `http://localhost:9080/docs` | `http://localhost:3002/docs` |
+| admin | `http://localhost:9080/admin/` | `http://localhost:3005/admin/` |
+
+Running `pnpm dev` **outside** mprocs does **not** set those envs (apps stay at `/` on their ports). See also [`deploy/dev/README.md`](deploy/dev/README.md).
+
+If HMR is flaky through `:9080`, use direct app ports for day-to-day UI work; use the gateway for path smoke tests.
 
 ### Type Generation Pipeline
 When modifying API endpoints or models, edit the TypeSpec files in `packages/api-spec/` and run:

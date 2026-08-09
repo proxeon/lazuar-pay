@@ -1,17 +1,28 @@
 # mprocs-dev.yaml
+# When using path-based gateway (task proxy → :9080), basePath envs match prod.
+# Direct ports after mprocs start:
+#   developers → http://localhost:3002/docs
+#   ops        → http://localhost:3003/
+#   portal     → http://localhost:3004/portal
+#   admin      → http://localhost:3005/admin/
+# Running `pnpm dev` outside mprocs leaves base paths unset (root on each port).
 procs:
   lazuar-developers:
-    shell: cd apps/lazuar-developers && pnpm dev
+    shell: cd apps/lazuar-developers && NEXT_BASE_PATH=/docs pnpm dev
     autostart: true
   lazuar-ops:
     shell: cd apps/lazuar-ops && pnpm dev
     autostart: true
   lazuar-admin:
-    shell: cd apps/lazuar-admin && pnpm dev
+    shell: cd apps/lazuar-admin && VITE_BASE_PATH=/admin/ pnpm dev
     autostart: true
   lazuar-portal:
-    shell: cd apps/lazuar-portal && pnpm dev
+    shell: cd apps/lazuar-portal && NEXT_BASE_PATH=/portal pnpm dev
     autostart: true
+  caddy:
+    # Docker Caddy → host.docker.internal (no brew install). Requires Docker Desktop.
+    shell: docker compose -f docker-compose.dev-proxy.yml up
+    autostart: false
   ngrok-api-tunnel:
     shell: task tunnel:api
     autostart: false
