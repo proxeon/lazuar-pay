@@ -37,8 +37,27 @@ The `One` module is the central nervous system of the Lazuar platform. It acts a
 ## 6. Background Workers
 * **`SystemGenesisBootstrapperJob`**: Runs on startup to guarantee the System Tenant exists and securely upserts root Superadmin credentials from environment variables.
 * **`OneInboxConsumerJob` / `OneOutboxPublisherJob`**: Standard transactional outbox/inbox workers for asynchronous event processing.
+* **`OutboundWebhookDispatcherJob`**: Claims `WebhookDeliveryOutbox` rows and delivers signed HTTP webhooks to customer endpoints (retries / fail terminal).
 
-## 7. Database Schema
+## 7. Platform outbound webhooks (durable model)
+
+One owns the **only platform-grade** customer webhook system (maintenance decision **00.2**). Other modules request delivery by publishing `OutboundWebhookRequestedIntegrationEvent` (Commerce.Contracts); they do **not** implement their own outbox/signing stacks.
+
+| Piece | Responsibility |
+|-------|----------------|
+| **`TenantWebhookEndpoint`** | Per-workspace multi-endpoint registry (URL, secret, active, `EnabledEvents`) |
+| **`WebhookDeliveryOutbox`** | Durable per-delivery queue (claim lease, up to 5 attempts, exponential backoff) |
+| **`OutboundWebhookEventHandlers`** | Fan-out integration events → outbox rows for matching endpoints |
+| **`OutboundWebhookDispatcherJob`** | HTTP POST via named client `"DeveloperWebhooks"` |
+| **`OutboundWebhookSignature`** | Standard Webhooks–style header: `t={unix},v1={hmac_hex}` over `{timestamp}.{body}` |
+
+**Headers on delivery:** `X-Lazuar-Signature`, `X-Lazuar-Event`, `X-Lazuar-Delivery-Id`, `X-Lazuar-Webhook-Id`.
+
+**Typical event types today:** `subscription.*`, `order.completed`, `payment_link.paid`, `payment.completed` / `payment.failed` (from Commerce / Payments publishers).
+
+**LHDN exception:** e-invoice `invoice.valid` / `invoice.invalid` still use a **frozen** fire-and-forget path inside the Lhdn module until end-state **A** routes them through this dispatcher. See `Modules/Lhdn/README.md` §5 and `plans/004-maintenance/phase-04-analysis.md`. Webhooks stay in One for this maintenance track (no `Modules/Webhooks` extract unless Phase 16).
+
+## 8. Database Schema
 All tables reside in the isolated `one` schema.
 * `one.GlobalUsers`
 * `one.Organizations`
@@ -46,4 +65,5 @@ All tables reside in the isolated `one` schema.
 * `one.TenantAppEntitlements`
 * `one.WorkspaceInvitations`
 * `one.AppAccessRequests`
+* `one.TenantWebhookEndpoints` / `one.WebhookDeliveryOutboxes`
 * `one.OutboxMessages` / `one.InboxMessages`
