@@ -5,6 +5,10 @@
 **Status:** Accepted
 **Context:** Frontend Codebase Organization (`portal-page`)
 
+> **Path note (plan 002, 2026-08):** `apps/portal-page` → **`apps/lazuar-portal`**.
+> Package / filter: `lazuar-portal`. GHCR image remains `lazuar-hub-portal`.
+> Public path still `/portal`. Read every `apps/portal-page/...` as `apps/lazuar-portal/...`.
+
 ## Context & Problem Statement
 
 As established in ADR 016, we are consolidating 15 public-facing applications (Community, Vault, Events, etc.) into a single transactional routing engine: `portal.lazuar.com` (built with Next.js or Remix). 

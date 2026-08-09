@@ -6,6 +6,13 @@
 
 This directory captures an exhaustive evaluation of the Lazuar modular monolith to identify gaps and solidify the backend. Product-owner starter concerns (dunning, webhooks/API, developers-page, integration credentials vs JWT) are covered in depth in the reports listed below.
 
+> **Frontend path rename (plan 002, 2026-08):** monorepo apps moved
+> `developers-page` → `lazuar-developers`, `ops-page` → `lazuar-ops`,
+> `portal-page` → `lazuar-portal`, `superadmin-page` → `lazuar-admin`.
+> Reports below still use historical `*-page` paths (and often `lazuar-hub`
+> absolute roots) as evidence snapshots — map mentally when opening code.
+> Living commands and app folders use the new names; see root `README.md`.
+
 ---
 
 ## How to use

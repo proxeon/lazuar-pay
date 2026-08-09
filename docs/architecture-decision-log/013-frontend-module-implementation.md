@@ -6,6 +6,10 @@
 
 This document outlines the standard operating procedure for adding a completely new module to the `ops-page` frontend.
 
+> **Path note (plan 002, 2026-08):** `apps/ops-page` → **`apps/lazuar-ops`**.
+> Package / filter: `lazuar-ops`. GHCR image remains `lazuar-hub-ops`.
+> Read every `apps/ops-page/...` path in this SOP as `apps/lazuar-ops/...`.
+
 ---
 
 ## 1. Directory Structure Rule
