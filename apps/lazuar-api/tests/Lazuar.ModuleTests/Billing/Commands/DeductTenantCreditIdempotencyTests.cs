@@ -2,16 +2,14 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
-using MediatR;
+using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure;
 using Modules.Billing.Infrastructure.Commands;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Billing.Commands;
@@ -30,13 +28,11 @@ public class DeductTenantCreditIdempotencyTests
     public void SetUp()
     {
         _orgId = Guid.CreateVersion7();
-        var options = new DbContextOptionsBuilder<BillingDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        var ctx = Substitute.For<IExecutionContextAccessor>();
-        ctx.TenantId.Returns(Guid.Empty);
-        _db = new BillingDbContext(options, ctx, Substitute.For<IMediator>(), new DatabaseJobTrigger());
+        _db = new BillingDbContext(
+            InMemoryDb.CreateOptions<BillingDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
     }
 
     [TearDown]

@@ -26,10 +26,11 @@ public static class ChatEndpoints
             var tenantId = ctx.TenantId;
             if (tenantId == Guid.Empty) throw new InvalidOperationException("Active workspace context required.");
 
-            int safeLimit = limit > 0 ? limit : 20;
-            int safeOffset = offset >= 0 ? offset : 0;
+            // Legacy limit/offset query shape (not page/limit); still returns truthful TotalCount for UI paging.
+            var (safeLimit, safeOffset, currentPage) = Paging.NormalizeOffset(limit, offset, defaultLimit: 20);
 
             var conversations = await repo.GetConversationsAsync(tenantId, safeLimit, safeOffset);
+            var totalCount = await repo.CountConversationsAsync(tenantId);
 
             var dtos = conversations.Select(c => new OpsConversationDto
             {
@@ -38,8 +39,7 @@ public static class ChatEndpoints
                 Updated_at = new DateTimeOffset(c.UpdatedAt)
             }).ToList();
 
-            int currentPage = (safeOffset / safeLimit) + 1;
-            return Results.Ok(new PaginatedResponse<OpsConversationDto>(dtos, 0, currentPage, safeLimit));
+            return Results.Ok(new PaginatedResponse<OpsConversationDto>(dtos, totalCount, currentPage, safeLimit));
         });
 
         group.MapGet("/chat/conversations/{id:guid}/messages", async Task<IResult> (Guid id, IOpsRepository repo, IExecutionContextAccessor ctx) =>

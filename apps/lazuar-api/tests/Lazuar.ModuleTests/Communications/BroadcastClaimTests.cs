@@ -1,15 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
+using Lazuar.TestSupport;
 using Modules.Communications.Domain.Aggregates;
 using Modules.Communications.Infrastructure;
 using Modules.Communications.Infrastructure.Workers;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Communications;
@@ -43,13 +40,9 @@ public class BroadcastClaimTests
     }
 
     private static CommunicationsDbContext CreateDb()
-    {
-        var options = new DbContextOptionsBuilder<CommunicationsDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        var ctx = Substitute.For<IExecutionContextAccessor>();
-        ctx.TenantId.Returns(Guid.Empty);
-        return new CommunicationsDbContext(options, ctx, Substitute.For<IMediator>(), new DatabaseJobTrigger());
-    }
+        => new(
+            InMemoryDb.CreateOptions<CommunicationsDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
 }

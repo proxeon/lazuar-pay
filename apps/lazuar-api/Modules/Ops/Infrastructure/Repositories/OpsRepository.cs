@@ -35,6 +35,13 @@ public class OpsRepository : IOpsRepository
             .ToListAsync(ct);
     }
 
+    public async Task<int> CountConversationsAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.Conversations
+            .Where(c => c.OrganizationId == organizationId)
+            .CountAsync(ct);
+    }
+
     public async Task<OpsMessage?> GetMessageByIdAsync(Guid organizationId, Guid messageId, CancellationToken ct = default)
     {
         return await _context.Messages
