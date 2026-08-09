@@ -34,13 +34,13 @@ When executed, the pipeline runs in three distinct phases:
 
 ### 3. .NET C# Generation (`task gen:types-dotnet`)
 * **Action:** Uses `NSwag.ConsoleCore` (installed via local `.config/dotnet-tools.json`) to read the transient `openapi.yaml`.
-* **Output:** Generates C# `record` DTOs at:
-  `packages/api-types-dotnet/Generated/Models.cs`
-* **Consumption:** This directory acts as an isolated C# project (`Lazuar.ApiContracts.csproj`). It is attached to the backend `.slnx` solution. Backend modules (e.g., Community, Payments) reference this project to map internal Domain Entities to strictly defined API input/output models.
+* **Output:** Generates C# DTO types at:
+  `packages/api-types-dotnet/Lazuar.ApiContracts.cs`
+* **Consumption:** This file is compiled by an isolated C# project (`Lazuar.ApiContracts.csproj` with `EnableDefaultCompileItems=false` so only this single generated file is included). It is attached to the backend `.slnx` solution. Backend modules (e.g., Payments, Lhdn) reference this project to map internal Domain Entities to strictly defined API input/output models.
 
 ## Architectural Guidelines & Rules
 
-1. **Never edit generated files:** You must never manually edit `src/index.ts`, `Generated/Models.cs`, or `openapi.yaml`. All changes must be made in `api-spec/main.tsp` and regenerated using `task gen`.
-2. **Commit generated code:** Both `index.ts` and `Models.cs` should be committed to version control. This ensures that frontend and backend developers can pull the repo and run the apps without being forced to install the TypeSpec compiler locally.
+1. **Never edit generated files:** You must never manually edit `src/index.ts`, `Lazuar.ApiContracts.cs`, or `openapi.yaml`. All changes must be made in `api-spec/main.tsp` and regenerated using `task gen`.
+2. **Commit generated code:** Both `index.ts` and `Lazuar.ApiContracts.cs` should be committed to version control. This ensures that frontend and backend developers can pull the repo and run the apps without being forced to install the TypeSpec compiler locally.
 3. **No Domain Leaks:** The generated .NET DTOs represent the *external contract*. They must not be used as database entities or aggregate roots. Always map incoming DTOs to Commands/Queries at the Application layer.
 4. **Isolated Tooling:** The NSwag CLI tool is localized via `packages/api-types-dotnet/.config/dotnet-tools.json`. This guarantees that CI/CD pipelines and other developers always execute the exact same version of the code generator without requiring global machine installations.

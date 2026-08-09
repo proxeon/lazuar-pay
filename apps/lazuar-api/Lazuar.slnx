@@ -1,5 +1,4 @@
 <Solution>
-  <Folder Name="/src/" />
   <Folder Name="/tests/">
     <Project Path="tests/Lazuar.ArchitectureTests/Lazuar.ArchitectureTests.csproj" />
     <Project Path="tests/Lazuar.IntegrationTests/Lazuar.IntegrationTests.csproj" />
@@ -29,16 +28,12 @@
     <Project Path="Modules/Lhdn/Domain/Modules.Lhdn.Domain.csproj" />
     <Project Path="Modules/Lhdn/Infrastructure/Modules.Lhdn.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/Lhdn/Application/" />
-  <Folder Name="/Modules/Lhdn/Domain/" />
-  <Folder Name="/Modules/Lhdn/Infrastructure/" />
   <Folder Name="/Modules/Messaging/">
     <Project Path="Modules\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
     <Project Path="Modules\Messaging\Domain\Modules.Messaging.Domain.csproj" />
     <Project Path="Modules\Messaging\Application\Modules.Messaging.Application.csproj" />
     <Project Path="Modules\Messaging\Infrastructure\Modules.Messaging.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/Billing/Infrastructure/" />
   <Folder Name="/Modules/Commerce/">
     <Project Path="Modules/Commerce/Application/Modules.Commerce.Application.csproj" />
     <Project Path="Modules/Commerce/Contracts/Modules.Commerce.Contracts.csproj" />
@@ -68,7 +63,6 @@
     <Project Path="Modules\Ops\Application\Modules.Ops.Application.csproj" />
     <Project Path="Modules\Ops\Infrastructure\Modules.Ops.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Modules/" />
   <Folder Name="/Modules/Billing/">
     <Project Path="Modules\Billing\Contracts\Modules.Billing.Contracts.csproj" />
     <Project Path="Modules\Billing\Domain\Modules.Billing.Domain.csproj" />

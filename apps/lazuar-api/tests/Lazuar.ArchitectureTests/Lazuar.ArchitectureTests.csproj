@@ -60,9 +60,4 @@
     <ProjectReference Include="..\..\Modules\Communications\Infrastructure\Modules.Communications.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Embeds the static test vector into the compiled test assembly -->
-    <EmbeddedResource Include="TestData\lhdn-golden-master.json" />
-  </ItemGroup>
-
 </Project>
