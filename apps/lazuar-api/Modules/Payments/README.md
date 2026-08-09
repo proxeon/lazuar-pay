@@ -11,7 +11,7 @@ The `Payments` module acts as a strict **Infrastructure Port and Gateway Orchest
 
 ## 3. Architectural Boundaries (What this module is NOT)
 * **Not an Accounting Ledger:** This module does *not* calculate MRR, Net Profit, Recognized Revenue, or Tax Liabilities. It only reports the *Gross Amount* and *Gateway Fee* extracted from the provider.
-* **Not a Fulfillment Engine:** It does not grant access to communities, unlock digital downloads, or manage subscription lifecycles. It only reports that a financial transaction occurred.
+* **Not a Fulfillment Engine:** It does not activate Commerce subscriptions, unlock products, or manage subscription lifecycles. It only reports that a financial transaction occurred.
 * **Stateless regarding Checkouts:** It does not store pending checkout sessions in the database. Context (like `subscription_id`) is passed through gateway metadata or callback URL query strings.
 
 ## 4. Key Domain Aggregates & Entities
@@ -19,7 +19,7 @@ The `Payments` module acts as a strict **Infrastructure Port and Gateway Orchest
 * **`PaymentWebhookLog`**: A strict idempotency ledger tracking `(Provider, EventId)` to block duplicate webhook processing.
 
 ## 5. Integration Events (Published)
-The Payments module publishes universal financial events to the Outbox. Other modules (Community, Billing, Vault) subscribe to these to fulfill orders.
+The Payments module publishes universal financial events to the Outbox. Other modules (Commerce, Billing, Communications) subscribe to these to fulfill orders or record ledger truth.
 * `GatewayPaymentCompletedIntegrationEvent`: Fired when a charge succeeds. Includes `AmountPaid`, `GatewayFee`, `TaxAmount`, `NetAmount`, `FxRate`, and `Metadata`.
 * `GatewayPaymentFailedIntegrationEvent`: Fired when a checkout or charge fails.
 * `GatewayRefundCompletedIntegrationEvent`: Fired when a refund is successfully processed at the gateway level.

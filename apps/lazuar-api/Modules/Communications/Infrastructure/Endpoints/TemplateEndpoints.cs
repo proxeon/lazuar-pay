@@ -67,7 +67,7 @@ public static class TemplateEndpoints
                     .Replace("{{group_link}}", "https://t.me/joinchat/example", StringComparison.OrdinalIgnoreCase)
                     .Replace("{{meeting_link}}", "https://zoom.us/j/123456789", StringComparison.OrdinalIgnoreCase)
                     .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{renewal_link}}", "https://community.lazuar.com/checkout", StringComparison.OrdinalIgnoreCase)
+                    .Replace("{{renewal_link}}", "https://portal.lazuar.com/checkout", StringComparison.OrdinalIgnoreCase)
                     .Replace("{{portal_magic_link}}", "https://portal.lazuar.com/workspace/portal?token=test_token", StringComparison.OrdinalIgnoreCase)
                     .Replace("{{fulfillment_url}}", "https://cloudflare.r2/download.pdf", StringComparison.OrdinalIgnoreCase)
                     .Replace("{{current_period_end}}", "31 Dec 2026", StringComparison.OrdinalIgnoreCase);

@@ -1,13 +1,15 @@
 # 001 — Cross-Module Communication Guidelines (Sync vs. Async)
 
-This document establishes the strict architectural rules governing how different operational modules (such as `Tenant`, `Community`, `Payments`, `CRM`, and `Messaging`) communicate with each other within the Lazuar platform modular monolith.
+This document establishes the strict architectural rules governing how different operational modules (such as `One`, `Commerce`, `Payments`, `CRM`, `Billing`, `Communications`, and `Messaging`) communicate with each other within the Lazuar platform modular monolith.
+
+> **Module map (post ADR 022):** Community and Vault modules were removed. Subscription/checkout fulfillment lives in **Commerce**; templates/broadcasts in **Communications**; gateway cash movement in **Payments**.
 
 ---
 
 ## 1. The Golden Rule of Module Isolation
 Modules must remain strictly decoupled. This isolation ensures the codebase is stable, highly testable, and ready to be separated into physical microservices in the future if required.
 
-* **No Direct DB Joins:** A database query in the `Community` schema must never execute a join to a table in the `CRM` or `Payments` schemas.
+* **No Direct DB Joins:** A database query in the `commerce` schema must never execute a join to a table in the `crm` or `payments` schemas.
 * **No Direct Write-Model References:** A domain entity or aggregate root in one module must never reference a domain entity or aggregate root in another module.
 * **No Cross-Schema Foreign Keys:** Foreign key constraints must never be configured between database tables belonging to different schemas.
 
@@ -18,7 +20,7 @@ When a module requires low-latency, read-only data from another module to fulfil
 
 ```
 ┌───────────────────────────┐                ┌───────────────────────────┐
-│     Community Module      │                │        CRM Module         │
+│     Commerce Module       │                │        CRM Module         │
 │  (Command/Query Handler)  │                │   (Infrastructure/API)    │
 └─────────────┬─────────────┘                └─────────────▲─────────────┘
               │                                            │
@@ -35,8 +37,8 @@ When a module requires low-latency, read-only data from another module to fulfil
 2. **Contract Dependency:** The calling module must only reference the target module's `.Contracts` assembly. It is strictly forbidden to reference the target's `.Application` or `.Infrastructure` assemblies.
 3. **Execution Pathway:** The calling handler dispatches the Query via `IMediator` or invokes the targeted public interface (e.g., `ICrmQueryService`).
 
-### Code Example (From `InitiateSubscriptionCheckoutCommandHandler.cs`):
-Here, the `Community` module queries client data from the `CRM` module and requests a checkout session from the `Payments` module synchronously:
+### Code Example (checkout initiation):
+Here, the `Commerce` module queries client data from the `CRM` module and requests a checkout session from the `Payments` module synchronously:
 ```csharp
 // 1. Fetch Customer Data via CRM Read Model Contract (Cross-module query without DB Join)
 var customerProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
@@ -143,13 +145,13 @@ public class GatewayPaymentCompletedIntegrationEventHandler
 ## 4. Handling Cross-Schema References
 To maintain clean database schemas, you must never define physical foreign keys linking tables across schemas.
 
-* **Reference Strategy:** Store target references as raw primitive `Guid` identifiers. For example, `CommunitySubscription` references `ClientProfileEntity` strictly as a raw `Guid` property:
+* **Reference Strategy:** Store target references as raw primitive `Guid` identifiers. For example, a Commerce subscription references a CRM client profile strictly as a raw `Guid` property:
   ```csharp
-  public class CommunitySubscription : Entity, IAggregateRoot, IMustHaveTenant
+  public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
   {
       public Guid Id { get; private set; }
       public Guid ClientProfileId { get; private set; } // Managed as raw primitive Guid
-      public Guid PlanId { get; private set; } // Foreign key allowed because it is local
+      public Guid ProductId { get; private set; } // Foreign key allowed because it is local
   }
   ```
 * **Data Resolution:** The infrastructure layer resolves the primitive `Guid` to the necessary object using synchronous contract queries or replication models when compiling views.

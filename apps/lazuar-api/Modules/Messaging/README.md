@@ -9,7 +9,7 @@ The `Messaging` module is the centralized, domain-agnostic dispatch engine for a
 * **HTML/Text Sanitization:** Stripping HTML tags from email bodies when routing to SMS/WhatsApp channels to ensure clean plain-text delivery.
 
 ## 3. Architectural Boundaries (What this module is NOT)
-* **Not a Template Engine:** *Crucial architectural shift.* This module does **not** store message templates, subject lines, or automation rules. Templates are strictly owned by the domain modules that use them (e.g., the `Community` module owns "Payment Reminder" templates). The `Messaging` module only receives the *final rendered HTML/Text*.
+* **Not a Template Engine:** *Crucial architectural shift.* This module does **not** store message templates, subject lines, or automation rules. Templates are owned by **Communications** (and rendered by the domain modules that trigger them, e.g. Commerce dunning). The `Messaging` module only receives the *final rendered HTML/Text*.
 * **Not a Campaign Manager:** It does not handle bulk marketing logic, A/B testing, or subscriber segmentation. It simply processes the dispatch queue.
 * **Completely Context-Blind:** It does not know *why* an email is being sent. It only knows *who* to send it to and *what* the final content is.
 
@@ -18,7 +18,7 @@ The `Messaging` module is the centralized, domain-agnostic dispatch engine for a
 
 ## 5. Integration Events
 ### Consumed
-* **`DispatchMessageIntegrationEvent`**: The universal event published by *any* module (Community, One, Vault) when a message needs to be sent. Contains `ToEmail`, `ToPhone`, `Subject`, `HtmlBody`, and `Channel`.
+* **`DispatchMessageIntegrationEvent`**: The universal event published by *any* live module (Commerce, One, Communications, Billing, Ops, etc.) when a message needs to be sent. Contains `ToEmail`, `ToPhone`, `Subject`, `HtmlBody`, and `Channel`.
 * **`TenantProvisionedIntegrationEvent`** (from `One`): Creates a new `TenantReplica` when a new workspace is born.
 * **`WorkspaceUpdatedIntegrationEvent`** (from `One`): Updates the `TenantReplica` if the workspace name or slug changes.
 
@@ -37,4 +37,4 @@ All tables reside in the isolated `messaging` schema.
 
 ## 8. The Golden Rule of Messaging
 **"Render at the Source, Dispatch at the Edge."**
-If you are writing a new feature in the `Community` or `Vault` module, you must fetch the template, inject the variables (e.g., `{{customer_name}}`), and publish the *final rendered string* via `DispatchMessageIntegrationEvent`. Never attempt to pass raw template IDs or variable dictionaries to the `Messaging` module.
+If you are writing a new feature in `Commerce`, `Communications`, or another live module, you must fetch the template, inject the variables (e.g., `{{customer_name}}`), and publish the *final rendered string* via `DispatchMessageIntegrationEvent`. Never attempt to pass raw template IDs or variable dictionaries to the `Messaging` module.

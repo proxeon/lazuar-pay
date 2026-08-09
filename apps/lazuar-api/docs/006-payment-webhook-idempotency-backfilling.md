@@ -74,75 +74,25 @@ Because Billplz does not support arbitrary JSON metadata payloads, we map our id
 * **`reference_2`:** Must contain the hardcoded string `"commerce_subscription"`.
 
 The webhook parser will reconstruct these fields back into standard metadata key-values upon receiving callbacks.
-```
 
 ---
 
-### File Path: `apps/lazuar-api/docs/007-reminder-schedule-catch-up-guard.md`
+## 4. Reminder catch-up guard — OBSOLETE
 
-```markdown
-# 007 — Reminder Schedule Catch-Up Guard
+> **OBSOLETE (phase 02 maintenance):** The following section documented `CommunityLifecycleJob` and `community.ReminderDispatchLogs` / `community.Subscriptions` / `community.ReminderSchedules`. The Community module and `community` schema were removed (ADR 022; `DropLegacySchemas`). **Do not execute any `community.*` SQL.**
+>
+> Commerce dunning / reminder behavior is owned by **Commerce** + **Communications** today. If a catch-up storm guard is still needed for imports, rewrite against the live Commerce reminder/dunning tables and jobs — do not resurrect Community SQL.
 
-This document describes how to prevent the background reminder engine (`CommunityLifecycleJob.cs`) from spamming imported subscribers with immediate overdue notifications on day one of launching the new platform.
+### Historical hazard (for archive readers only)
 
----
+The deleted `CommunityLifecycleJob` evaluated active subscriptions against `NextRenewalDate` and could spam imported subscribers if dispatch logs for the current cycle were missing. The old mitigation was to backfill `community."ReminderDispatchLogs"` before enabling the job.
 
-## 1. The Hazard: The "Catch-Up" Notification Storm
+### Example of what NOT to run
 
-The background worker `CommunityLifecycleJob` runs automatically inside the `Community` module. It evaluates active subscriptions and compares their `NextRenewalDate` to the current system time (`DateTime.UtcNow`). 
-
-If a subscription is past due, the worker loops through the active `ReminderSchedules` and raises a `SubscriptionRenewalDueDomainEvent`.
-
-When migrating historical subscribers:
-* Many active subscribers might be imported with a `NextRenewalDate` that is in the past (e.g., if they are in a grace period).
-* If the database does not contain a log indicating that their billing reminders were already sent for that billing period, the background scheduler will assume no notifications were dispatched.
-* **The storm occurs:** The background job will immediately execute all active schedules sequentially, sending several overdue emails or messages to the customer on the same day.
-
----
-
-## 2. The Solution: The `ReminderDispatchLog` Table
-
-The database schema provides an idempotency table to block this behavior: `community.ReminderDispatchLogs`. 
-
-This table enforces a strict database-level unique constraint on:
 ```sql
-UNIQUE ("SubscriptionId", "ScheduleId", "TargetRenewalDate")
+-- DO NOT RUN — community schema dropped (ADR 022)
+-- INSERT INTO community."ReminderDispatchLogs" (...)
+-- FROM community."Subscriptions" s
+-- CROSS JOIN community."ReminderSchedules" sch
+-- ...
 ```
-
-When a reminder is dispatched, a record is locked in this table. To make the new scheduler "silent" for past periods, you must backfill this table during the data migration process.
-
-```
-                         NextRenewalDate < NOW() ?
-                                    │
-                                    ├──► YES: Has Dispatch Log?
-                                    │           ├──► YES: Do nothing (Blocked)
-                                    │           └──► NO: Trigger Email (Storm!)
-```
-
----
-
-## 3. Playbook: Seeding the Dispatch Logs
-
-When importing subscription records that are past due or currently active in their billing cycles, you must generate "placeholder" dispatch logs. This tells the scheduler that all notifications for the *current* and *past* periods have already been processed.
-
-### PostgreSQL Backfill Script:
-Execute this query as the final stage of your data migration ETL pipeline:
-```sql
--- For every imported subscription that has a past or current NextRenewalDate,
--- we insert placeholder logs for all active reminder schedules.
-INSERT INTO community."ReminderDispatchLogs" ("Id", "SubscriptionId", "ScheduleId", "TargetRenewalDate", "DispatchedAt")
-SELECT 
-    gen_random_uuid() as "Id",
-    s."Id" as "SubscriptionId",
-    sch."Id" as "ScheduleId",
-    s."NextRenewalDate" as "TargetRenewalDate",
-    NOW() as "DispatchedAt"
-FROM community."Subscriptions" s
-CROSS JOIN community."ReminderSchedules" sch
-WHERE s."Status" IN ('ACTIVE', 'PAST_DUE')
-  AND s."NextRenewalDate" <= NOW()
-  AND sch."IsEnabled" = true
-ON CONFLICT ("SubscriptionId", "ScheduleId", "TargetRenewalDate") DO NOTHING;
-```
-
-By populating these rows, you ensure that when `CommunityLifecycleJob` boots, it will skip sending renewal reminders for the current active cycle and only trigger dispatches when the *next* renewal period arrives.

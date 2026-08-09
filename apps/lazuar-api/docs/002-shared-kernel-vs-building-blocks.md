@@ -69,6 +69,6 @@ To prevent dependency loops, business write models (such as `UserEntity`, `Organ
 ---
 
 ## 4. Why this Separation Matters
-Maintaining these boundaries prevents "circular dependency loops." If an aggregate in the `Community` module were to reference a concrete aggregate class in `Tenant` via a shared project, extracting `Community` into an independent microservice later would be difficult. 
+Maintaining these boundaries prevents "circular dependency loops." If an aggregate in the `Commerce` module were to reference a concrete aggregate class in `One` via a shared project, extracting `Commerce` into an independent microservice later would be difficult. 
 
 By keeping `BuildingBlocks` purely technical and `SharedKernel` free of domain entities, modules remain isolated, allowing them to be developed, tested, and scaled independently.

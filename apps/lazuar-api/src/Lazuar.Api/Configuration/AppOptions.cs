@@ -5,7 +5,7 @@ public sealed class AppOptions
     public const string SectionName = "App";
 
     /// <summary>
-    /// The primary client-facing frontend URL (e.g. Community Enrollment page at port 3020).
+    /// The primary client-facing frontend URL (portal / public checkout surfaces, typically port 3020).
     /// </summary>
     public string ClientUrl { get; init; } = "http://localhost:3020";
 

@@ -13,7 +13,7 @@ The `Billing` module is the **Core Domain for Financial Truth**. It acts as the 
 
 ## 3. Architectural Boundaries (What this module is NOT)
 * **Not a Gateway Integrator:** It does not hold Stripe API keys, generate checkout URLs, or parse raw webhook JSON.
-* **Not an Access Control System:** It does not know if a user has access to a Telegram group or a Video Vault. It only knows the financial contract.
+* **Not an Access Control System:** It does not know if a user has an active Commerce subscription or portal access. It only knows the financial contract.
 * **No Cross-Schema Joins:** Billing does not query `commerce` / `crm` tables directly. Customer display for final receipts and proforma drafts is resolved via Commerce ports (`ICommerceDocumentLookup`).
 
 ## 4. Key Domain Aggregates & Entities
@@ -29,7 +29,7 @@ The `Billing` module is the **Core Domain for Financial Truth**. It acts as the 
 ## 5. Integration Events (Consumed)
 The Billing module listens to the global event bus to build the ledger. It does *not* publish events that trigger side-effects; it is the terminal sink for financial data.
 * **From Payments:** `GatewayPaymentCompletedIntegrationEvent`, `GatewayRefundCompletedIntegrationEvent`, `GatewayDisputeCreatedIntegrationEvent` (utility chargeback).
-* **From Community:** `ZeroAmountCheckoutCompletedIntegrationEvent` (Records 100% coupon discounts for ROI tracking).
+* **From Commerce:** `ZeroAmountCheckoutCompletedIntegrationEvent` (Records 100% coupon discounts for ROI tracking).
 * **From B2B/Invoicing:** `InvoiceIssuedIntegrationEvent`, `ManualPaymentRecordedIntegrationEvent`.
 * **From Affiliates:** `CommissionAccruedIntegrationEvent`.
 * **From LHDN:** `LhdnDocumentValidated|Cancelled` (touch LHDN fields only; never overwrite `CustomerDocumentNumber`).

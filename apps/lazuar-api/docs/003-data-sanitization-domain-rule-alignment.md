@@ -1,13 +1,17 @@
 # 003 — Data Sanitization & Domain Rule Alignment Playbook
 
-This playbook outlines the strategies, cleaning rules, and mapping matrices required to migrate legacy database records into the new `.NET 10` modular monolith without violating aggregate invariants or breaking business rules.
+> **OBSOLETE / HISTORICAL (phase 02 maintenance):** This playbook was written against the removed **Community** module aggregates (`CommunityPlan`, `CommunitySubscription`) and legacy subscription migration. Community/Vault schemas were dropped (ADR 022; `DropLegacySchemas` migration). Do **not** treat `community.*` or Community type names as live targets.
+>
+> **Current equivalent:** Commerce product/subscription aggregates and domain invariants under `Modules/Commerce`. Rewrite any active ETL against Commerce + CRM + Payments before use.
+
+This playbook outlines the strategies, cleaning rules, and mapping matrices required to migrate legacy database records into the modular monolith without violating aggregate invariants or breaking business rules.
 
 ---
 
 ## 1. Why Data Sanitization is Mandatory
 Legacy databases often suffer from "data rot" (orphaned records, inconsistent statuses, or invalid parameters). The legacy system tolerated these anomalies because its validation checks were loose or non-existent.
 
-In the new modular monolith, domain rules are hardcoded as structural invariants inside aggregate constructors (e.g., `CommunityPlan` and `CommunitySubscription`). If you try to load, seed, or map corrupt legacy data directly into these domain objects, the system will throw a `BusinessRuleValidationException`, halting execution.
+In the modular monolith, domain rules are hardcoded as structural invariants inside aggregate constructors (historically Community plan/subscription; today **Commerce** product/subscription equivalents). If you try to load, seed, or map corrupt legacy data directly into these domain objects, the system will throw a `BusinessRuleValidationException`, halting execution.
 
 ---
 
@@ -19,7 +23,7 @@ Before initiating a migration run, you must execute the following database sanit
 * **Legacy Anomaly:** Some legacy plans might have `-1` or NULL values to indicate infinity, or corrupt negative integer values.
 * **Sanitization Script:** Run this query to locate and correct invalid grace periods before importing:
   ```sql
-  -- Identify corrupt plans
+  -- Identify corrupt plans (legacy source DB — not a live community.* schema)
   SELECT id, slug, grace_period_days FROM legacy_plans WHERE grace_period_days < 0;
 
   -- Fix them by converting negative/invalid values to a safe default (e.g., 0 days)
@@ -43,7 +47,7 @@ Before initiating a migration run, you must execute the following database sanit
 
 ## 3. Legacy Status Mapping Matrix
 
-Legacy subscription statuses must be mapped cleanly to the strict state machine defined in `CommunitySubscription.cs`.
+Legacy subscription statuses must be mapped cleanly to the strict state machine defined by the **target** subscription aggregate (today: Commerce subscription domain, not the deleted Community module).
 
 ```
                   ┌─────────────────────────────────────┐
