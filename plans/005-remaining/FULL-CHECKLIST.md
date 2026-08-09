@@ -853,28 +853,28 @@ R99 Definition of done
 
 ## R31.1 Move files
 
-- [ ] `IChatClientFactory`, policies, title generator, DI (`AddThinLlmFactory`) → Ops
-- [ ] Fold registration into `AddOpsModule`
-- [ ] Drop OpenAI from BB Application package refs if unused
+- [x] `IChatClientFactory`, policies, title generator, DI (`AddThinLlmFactory`) → Ops
+- [x] Fold registration into `AddOpsModule`
+- [x] Drop OpenAI from BB Application package refs if unused
 
 ## R31.2 Fix consumers
 
-- [ ] Ops orchestrator usings/DI
-- [ ] Remove dead `using BuildingBlocks.Application.Llm` elsewhere (e.g. Commerce)
+- [x] Ops orchestrator usings/DI
+- [x] Remove dead `using BuildingBlocks.Application.Llm` elsewhere (e.g. Commerce)
 
 ## R31.3 Tests
 
-- [ ] Modules.Ops.Tests green
-- [ ] Architecture tests green
-- [ ] Host builds
+- [x] Modules.Ops.Tests green
+- [x] Architecture tests green
+- [x] Host builds
 
 ## R31.4 Docs
 
-- [ ] Update 009 ownership map
+- [x] Update 009 ownership map
 
 ## R31.5 Exit
 
-- [ ] BB has no LLM factory surface
+- [x] BB has no LLM factory surface
 
 
 ---

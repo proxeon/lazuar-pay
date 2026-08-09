@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Modules.Ops.Application;
+using Modules.Ops.Application.Llm;
 using Modules.Ops.Application.Services;
+using Modules.Ops.Infrastructure.Llm;
 using Modules.Ops.Infrastructure.Repositories;
 using Modules.Ops.Infrastructure.Services;
 using Modules.Ops.Infrastructure.Workers;
@@ -28,6 +30,8 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("OpsSqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
+        services.AddSingleton<IChatClientFactory, ChatClientFactory>();
+        services.AddScoped<ILlmTitleGenerator, LlmTitleGenerator>();
         services.AddSingleton<IToolRegistry, ToolRegistry>();
         services.AddScoped<ILlmOrchestratorService, LlmOrchestratorService>();
         services.AddScoped<IOpsRepository, OpsRepository>();

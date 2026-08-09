@@ -1,4 +1,3 @@
-// apps/lazuar-api/BuildingBlocks/Infrastructure/Llm/ProviderQuirksPolicy.cs
 using System;
 using System.ClientModel;
 using System.ClientModel.Primitives;
@@ -7,7 +6,7 @@ using System.IO;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-namespace BuildingBlocks.Infrastructure.Llm;
+namespace Modules.Ops.Infrastructure.Llm;
 
 public sealed class ProviderQuirksPolicy : PipelinePolicy
 {

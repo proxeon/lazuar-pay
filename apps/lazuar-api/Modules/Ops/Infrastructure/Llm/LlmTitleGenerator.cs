@@ -2,9 +2,9 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
-using BuildingBlocks.Application.Llm;
+using Modules.Ops.Application.Llm;
 
-namespace BuildingBlocks.Infrastructure.Llm;
+namespace Modules.Ops.Infrastructure.Llm;
 
 public sealed class LlmTitleGenerator : ILlmTitleGenerator
 {
@@ -41,7 +41,7 @@ public sealed class LlmTitleGenerator : ILlmTitleGenerator
                 new UserChatMessage(preview)
             };
 
-            // FIX: Removed MaxOutputTokenCount. 
+            // FIX: Removed MaxOutputTokenCount.
             // Many OpenRouter models reject or return empty when max_completion_tokens is too low.
             var result = await chatClient.CompleteChatAsync(messages);
 

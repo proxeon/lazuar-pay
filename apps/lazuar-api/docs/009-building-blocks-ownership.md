@@ -53,7 +53,7 @@ Ownership target when a dedicated PR is justified. **Not** all moved in Phase 15
 | `MarkdownParser` (Markdig) | **Communications** (or thin shared content slice later) | Avoid Markdig on every Contracts fan-out |
 | `IMagicLinkTokenService` / MagicLinkTokenService | **Commerce** | API is `subscriptionId`-shaped |
 | DocumentLinkSigner **payload** helpers (`FinalDocumentPayload`, `DraftDocumentPayload`) | **Billing** / **Commerce** | Generic HMAC `Sign`/`TryValidate` may stay in BB Security |
-| Full LLM stack (`IChatClientFactory`, policies, title generator, `AddThinLlmFactory`) | **Ops** Infrastructure (+ Application ports) | Sole orchestrator is Ops; OpenAI type leak on Application |
+| Full LLM stack (`IChatClientFactory`, policies, title generator) | **Ops** Application.Llm + Infrastructure.Llm | **R31 done** — registered in `AddOpsModule`; OpenAI removed from BB |
 | `IAgentPromptProvider`, `AgentToolAttribute` | **Ops.Contracts** / Ops.Application | Agent product feature; Billing implements via Contracts |
 | `LazuarMetrics.RecordDunningCancel` | **Commerce** (or tagged generic counter) | Product metric |
 | LHDN stuck SQL in `PlatformMetricsCollector` | **Lhdn** `IPlatformMetricsContributor` | Private schema + domain status vocabulary |
@@ -93,7 +93,7 @@ Full LLM / email / messaging / metrics plugin moves are **large**. Phase 15 ship
 | SharedKernel marker documentation | **Done** |
 | Delete unused host `Lazuar.Api.Infrastructure.Data.PlatformDbContext` | **Done** |
 | Plugin note on `PlatformMetricsCollector` | **Done** (comment only) |
-| Move LLM stack → Ops | **Deferred** (not trivial; multi-package, DI, Ops tests) |
+| Move LLM factory / title / policies → Ops | **Done** (R31 / 005-remaining) |
 | Move email / Messaging ports | **Deferred** (decision 00.4 + composition root) |
 | Port placement (`IR2StorageService`, `IJwtService` → Application) | **Done** (R30 / 005-remaining) |
 | Split `BackgroundWorkerOptions` per module | **Deferred** |
@@ -123,8 +123,8 @@ Product-concern move criterion for Phase 15 exit: **explicitly deferred with thi
 | MarkdownParser | | ✅ Communications | | Deferred |
 | MagicLinkTokenService | | ✅ Commerce | | Deferred |
 | Document payload helpers | | ✅ Billing/Commerce | | Generic sign stays BB |
-| LLM factory / title / DI | | ✅ Ops | | **Deferred** big-bang |
-| AgentTool / IAgentPromptProvider | | ✅ Ops | | Deferred with LLM |
+| LLM factory / title / DI | | ✅ Ops | | **R31 done** — `Modules.Ops.Application.Llm` + `Infrastructure.Llm` |
+| AgentTool / IAgentPromptProvider | | ✅ Ops | | **Deferred R32** (still BB Application) |
 | Dead-letter metrics | ✅ | | | Technical |
 | Dunning / webhook product counters | | ✅ or tagged | | Soft |
 | Metrics schema list / LHDN SQL | ✅ if pluginized | Lhdn contributor | | Plugin deferred |

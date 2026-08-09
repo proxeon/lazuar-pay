@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace BuildingBlocks.Application.Llm;
+namespace Modules.Ops.Application.Llm;
 
 public interface ILlmTitleGenerator
 {

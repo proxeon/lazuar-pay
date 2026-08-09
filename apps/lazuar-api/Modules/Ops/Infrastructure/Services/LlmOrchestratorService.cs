@@ -27,6 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Application.Llm;
+using Modules.Ops.Application.Llm;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Configuration;

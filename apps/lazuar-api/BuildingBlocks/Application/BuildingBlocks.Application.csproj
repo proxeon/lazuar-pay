@@ -8,6 +8,5 @@
   <ItemGroup>
     <PackageReference Include="Markdig" />
     <PackageReference Include="MediatR" />
-    <PackageReference Include="OpenAI" />
   </ItemGroup>
 </Project>

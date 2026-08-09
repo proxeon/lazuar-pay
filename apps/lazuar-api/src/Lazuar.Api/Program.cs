@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
-using BuildingBlocks.Infrastructure.Llm;
 using BuildingBlocks.Infrastructure.Observability;
 using Modules.One.Infrastructure.Configuration;
 using Lazuar.Api;
@@ -146,7 +145,6 @@ builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 builder.Services.AddSingleton<ISecretVault, AesSecretVault>();
 builder.Services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
-builder.Services.AddThinLlmFactory();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 

@@ -8,4 +8,7 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\..\..\..\packages\api-types-dotnet\Lazuar.ApiContracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenAI" />
+  </ItemGroup>
 </Project>

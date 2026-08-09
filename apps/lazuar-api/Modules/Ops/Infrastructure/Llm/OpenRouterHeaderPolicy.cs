@@ -2,7 +2,7 @@ using System.ClientModel.Primitives;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace BuildingBlocks.Infrastructure.Llm;
+namespace Modules.Ops.Infrastructure.Llm;
 
 public sealed class OpenRouterHeaderPolicy : PipelinePolicy
 {

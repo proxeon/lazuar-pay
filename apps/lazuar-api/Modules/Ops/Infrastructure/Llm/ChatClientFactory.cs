@@ -1,13 +1,12 @@
-// apps/lazuar-api/BuildingBlocks/Infrastructure/Llm/ChatClientFactory.cs
 using System;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using Microsoft.Extensions.Configuration;
 using OpenAI;
 using OpenAI.Chat;
-using BuildingBlocks.Application.Llm;
+using Modules.Ops.Application.Llm;
 
-namespace BuildingBlocks.Infrastructure.Llm;
+namespace Modules.Ops.Infrastructure.Llm;
 
 public sealed class ChatClientFactory : IChatClientFactory
 {
@@ -53,7 +52,7 @@ public sealed class ChatClientFactory : IChatClientFactory
     {
         var options = new OpenAIClientOptions
         {
-            // FIX: Added trailing slash 
+            // FIX: Added trailing slash
             Endpoint = new Uri("https://api.deepseek.com/v1/")
         };
         options.AddPolicy(new ProviderQuirksPolicy("DEEPSEEK", thinkingEnabled, reasoningEffort), PipelinePosition.BeforeTransport);

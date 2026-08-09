@@ -1,5 +1,4 @@
 using BuildingBlocks.Application;
-using BuildingBlocks.Application.Llm;
 using BuildingBlocks.Infrastructure;
 using Modules.Commerce.Contracts;
 using Microsoft.AspNetCore.Builder;
