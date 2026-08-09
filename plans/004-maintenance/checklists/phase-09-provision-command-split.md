@@ -8,36 +8,41 @@
 
 ## 09.1 Behavioral inventory
 
-- [ ] List steps: validate → create/ensure tenant → owner → credentials → webhook → result DTO
-- [ ] List static helpers: `Normalize*`, `DefaultKeyNameFor`, etc. and their callers (endpoints, tests)
-- [ ] Identify idempotent ensure vs create-new branches
+- [x] List steps: validate → create/ensure tenant → owner → credentials → webhook → result DTO  
+  → see `../phase-09-analysis.md` §1.1
+- [x] List static helpers: `Normalize*`, `DefaultKeyNameFor`, etc. and their callers (endpoints, tests)  
+  → analysis §1.2; kept on handler type
+- [x] Identify idempotent ensure vs create-new branches  
+  → analysis §1.3
 
 ## 09.2 Split design (idiomatic)
 
 Prefer private collaborators or partial classes in same folder, e.g.:
 
-- [ ] Keep command + result types stable (public names)
-- [ ] Extract `ProvisionAuraWorkspaceHandler` steps into:
-  - [ ] Tenant ensure/create
-  - [ ] Owner membership
-  - [ ] API key mint
-  - [ ] Webhook registration
-  - [ ] Response mapping
-- [ ] Move pure normalizers to `ProvisionAuraWorkspaceNormalizers.cs` (or keep public static façade if endpoints depend)
+- [x] Keep command + result types stable (public names)  
+  → `ProvisionAuraWorkspaceCommand.cs` + `ProvisionAuraWorkspaceResult.cs`
+- [x] Extract `ProvisionAuraWorkspaceHandler` steps into:
+  - [x] Tenant ensure/create → `…Handler.Tenant.cs`
+  - [x] Owner membership → `…Handler.Owner.cs`
+  - [x] API key mint → `…Handler.Keys.cs`
+  - [x] Webhook registration → `…Handler.Webhook.cs`
+  - [x] Response mapping → `…Handler.Mapping.cs`
+- [x] Move pure normalizers to `ProvisionAuraWorkspaceNormalizers.cs` (or keep public static façade if endpoints depend)  
+  → partial `…Handler.Normalizers.cs` (stable public static surface; no call-site churn)
 
 ## 09.3 Rules
 
-- [ ] MediatR request/response types **not renamed** without test updates
-- [ ] Idempotency behavior unchanged
-- [ ] No new external dependencies
+- [x] MediatR request/response types **not renamed** without test updates
+- [x] Idempotency behavior unchanged
+- [x] No new external dependencies
 
 ## 09.4 Tests
 
-- [ ] `ProvisionAuraWorkspaceTests` green
-- [ ] Related API key / webhook tests green
-- [ ] Endpoint provision still works
+- [x] `ProvisionAuraWorkspaceTests` green → **33/33**
+- [x] Related API key / webhook tests green → covered in same suite (bootstrap mint, secret-once, ensure)
+- [x] Endpoint provision still works → no endpoint renames; MediatR types stable
 
 ## 09.5 Exit criteria
 
-- [ ] No single file owns all provision steps at 600+ LOC
-- [ ] Behavior parity with pre-split
+- [x] No single file owns all provision steps at 600+ LOC → largest ~213 LOC orchestration
+- [x] Behavior parity with pre-split → full provision suite green
