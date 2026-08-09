@@ -48,15 +48,16 @@ public static class ModuleRegistrationExtensions
     }
 
     /// <summary>
-    /// Host-owned dual-subscribe window for API key revoke cache eviction + workspace updates.
-    /// Dual-subscribe One + legacy Lhdn revoke events allowed until 2026-11-30;
-    /// target One-only revoke event by 2026-12-15 — decisions 00.1 / api-key-cutover-design.md.
+    /// Host-owned integration-event subscriptions for API key cache eviction + workspace updates.
+    /// R05 One-only: subscribe <c>Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent</c> only
+    /// (Lhdn dual-subscribe window closed). Keep <c>WorkspaceUpdatedIntegrationEvent</c>.
+    /// <b>DEPLOY ONLY</b> after env Q8 <c>active_legacy_only = 0</c> (or signed residual quarantine).
+    /// Table drop of <c>lhdn.DeveloperApiKeys</c> is R06 — not this registration.
     /// </summary>
     public static WebApplication UseHostEventSubscriptions(this WebApplication app)
     {
         var eventBus = app.Services.GetRequiredService<IEventBusSubscriptions>();
         eventBus.Subscribe<Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent, EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
-        eventBus.Subscribe<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent, EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
         eventBus.Subscribe<Modules.One.Contracts.WorkspaceUpdatedIntegrationEvent, EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
         return app;
     }

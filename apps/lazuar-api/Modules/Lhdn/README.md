@@ -80,12 +80,14 @@ See: `plans/004-maintenance/decisions.md` §00.2, `plans/004-maintenance/phase-0
 
 ---
 
-## 6. Developer API keys (platform-owned; dual-read window)
+## 6. Developer API keys (platform-owned; dual-read closed — R05)
 
 * **Mint/list/revoke SSoT is One** (`one.ApiCredentials` via `IApiCredentialService`). Lhdn `GET/POST/DELETE /lhdn/api-keys` and obsolete `GenerateApiKeyCommand` / `RevokeApiKeyCommand` / `ListApiKeysQuery` are **façades** — they do not insert into `lhdn.DeveloperApiKeys`.
-* **Legacy table:** `lhdn.DeveloperApiKeys` remains for **host dual-read auth only** until cutover. Host middleware reads **One first**, then this table.
-* **Dual-read window (LOCKED, decisions 00.1):** dual-read **allowed until 2026-11-30**; target removal of Lhdn lookup + Lhdn `ApiKeyRevokedIntegrationEvent` subscription by **2026-12-15**. Do **not** drop the table or dual-read path in interim maintenance PRs.
-* **After cutover:** integrators still on pure Lhdn-local keys must remint via One (or Lhdn façade) before dual-read ends; see `plans/004-maintenance/api-key-cutover-design.md`.
+* **Host auth:** dual-read is **closed (R05)**. Middleware authenticates against **One only**; pure Lhdn-local keys get **401**. Integrators must use One-minted keys (or Lhdn façade mint).
+* **Legacy table:** `lhdn.DeveloperApiKeys` may still exist in DB for audit/history until **R06** archive/drop (≥ 30 days after One-only in prod). Host no longer reads it for auth.
+* **Revoke events:** host no longer subscribes to Lhdn `ApiKeyRevokedIntegrationEvent`; cache eviction is One event only.
+* **DEPLOY gate:** One-only code must not go live on an env until Q8 `active_legacy_only = 0` (or signed residual quarantine). See `plans/005-remaining/r05-notes.md`.
+* **Design:** `plans/004-maintenance/api-key-cutover-design.md`, `plans/005-remaining/01-api-key-one-only-cutover.md`.
 
 ---
 

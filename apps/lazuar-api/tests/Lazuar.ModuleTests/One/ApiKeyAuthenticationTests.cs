@@ -163,6 +163,41 @@ public class ApiKeyAuthenticationTests
     }
 
     [Test]
+    public async Task One_Only_Lookup_Lhdn_Only_Key_Returns_401_And_Does_Not_Call_Lhdn_Factory()
+    {
+        // R05 regression: dual-read removed — keys present only on lhdn.DeveloperApiKeys fail closed.
+        // LhdnSqlConnectionFactory must never be consulted even when registered.
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.HashToken(Arg.Any<string>()).Returns("hash:legacy-only");
+
+        var lhdnFactory = Substitute.For<ISqlConnectionFactory>();
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton<ISqlConnectionFactory>("LhdnSqlConnectionFactory", lhdnFactory);
+        // Intentionally no OneSqlConnectionFactory → One miss; legacy branch no longer exists.
+        var sp = services.BuildServiceProvider();
+
+        var context = new DefaultHttpContext { RequestServices = sp };
+        context.Request.Headers.Authorization = "Bearer sk_live_legacyonlykey";
+
+        var nextCalled = false;
+        var middleware = new ApiKeyAuthenticationMiddleware(
+            _ =>
+            {
+                nextCalled = true;
+                return Task.CompletedTask;
+            },
+            new MemoryCache(new MemoryCacheOptions()),
+            tokens);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.That(nextCalled, Is.False);
+        Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status401Unauthorized));
+        Assert.That(context.User.Identity?.IsAuthenticated ?? false, Is.False);
+        lhdnFactory.DidNotReceive().CreateConnection();
+    }
+
+    [Test]
     public async Task Revoked_Key_After_Cache_Eviction_Returns_401()
     {
         // Mirrors production: revoke removes ApiKey_{hash} from cache; next request re-looks up

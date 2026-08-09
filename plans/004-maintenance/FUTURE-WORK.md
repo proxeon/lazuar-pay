@@ -36,7 +36,7 @@ This document describes **what is still intentionally unfinished**, why it was d
 
 | ID | Workstream | Urgency | Owner type |
 |----|------------|---------|------------|
-| **FW-1** | API key dual-read cutover (One-only middleware) | **Calendar** (2026-11-30 → 2026-12-15) | Eng + Ops |
+| **FW-1** | API key dual-read cutover (One-only middleware) | **Partial** — R05 code done; deploy gated on Q8 `active_legacy_only=0`; R06 table drop pending | Eng + Ops |
 | **FW-2** | LHDN outbound webhooks → One dispatcher | **Product-scheduled** | Product + Eng |
 | **FW-3** | BuildingBlocks product-port code moves | Opportunistic | Eng |
 | **FW-4** | Cross-schema SQL / runtime boundary leaks | When touching area / P1 hygiene | Eng |
@@ -48,9 +48,15 @@ This document describes **what is still intentionally unfinished**, why it was d
 
 # FW-1 — API key One-only cutover
 
-## Why deferred
+## Status (2026-08-09)
 
-Removing dual-read **before** migrating remaining `lhdn.DeveloperApiKeys` rows causes **401** for legacy keys. Decisions locked dual-read until **2026-11-30**.
+**Partial:** R05 One-only middleware + One revoke subscription **implemented on** `chore/remaining-005` (code/docs).  
+**Remaining:** staging/prod **DEPLOY** after Q8 `active_legacy_only = 0` (R04/R05.1/R05.5); table archive **R06** (FW-1.3).  
+Notes: `plans/005-remaining/r05-notes.md`.
+
+## Why deploy is gated
+
+Removing dual-read **before** migrating remaining `lhdn.DeveloperApiKeys` rows causes **401** for legacy keys. Decisions locked dual-read until **2026-11-30** (or earlier if active legacy-only count is zero).
 
 ## What already exists
 
@@ -59,7 +65,7 @@ Removing dual-read **before** migrating remaining `lhdn.DeveloperApiKeys` rows c
 | Locked dates | `decisions.md` §00.1 |
 | Full design | [`api-key-cutover-design.md`](./api-key-cutover-design.md) |
 | Inventory | [`phase-03-analysis.md`](./phase-03-analysis.md) |
-| Interim shipped | One mint SSoT; dual-read middleware; cutover comments; module READMEs |
+| R05 code | One-only middleware; One revoke only; Lhdn dual-read closed in READMEs |
 
 ## Target end-state
 
@@ -94,11 +100,11 @@ If **active** legacy row count is **zero** earlier, cutover may move **forward**
 
 ### FW-1.2 — Code cutover
 
-- [ ] `ApiKeyAuthenticationMiddleware`: remove Lhdn SQL branch.
-- [ ] `Program.cs` / composition: remove dual Lhdn revoke subscription.
-- [ ] Remove or gut Lhdn domain mint paths that could reintroduce inserts.
-- [ ] Tests: One-only auth; revoke invalidates cache; no Lhdn dual-read path.
-- [ ] Update Lhdn/One READMEs: dual-read window closed.
+- [x] `ApiKeyAuthenticationMiddleware`: remove Lhdn SQL branch. (R05 code)
+- [x] `Program.cs` / composition: remove dual Lhdn revoke subscription. (R05 code)
+- [x] Remove or gut Lhdn domain mint paths that could reintroduce inserts. (already façades; no reintro)
+- [x] Tests: One-only auth; revoke invalidates cache; no Lhdn dual-read path. (R05)
+- [x] Update Lhdn/One READMEs: dual-read window closed. (R05)
 
 ### FW-1.3 — Table archive (later)
 

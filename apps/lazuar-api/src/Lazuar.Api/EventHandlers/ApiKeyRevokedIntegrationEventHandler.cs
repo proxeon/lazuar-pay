@@ -7,13 +7,12 @@ namespace Lazuar.Api.EventHandlers;
 /// <summary>
 /// Evicts revoked API keys from the middleware's memory cache instantly to
 /// eliminate the 5-minute TTL security exposure window.
-/// Handles both One (platform) and legacy Lhdn revoke events during the dual-read
-/// window (decisions 00.1: dual-read until 2026-11-30; One-only target 2026-12-15).
-/// After cutover, only the One event subscription should remain.
+/// R05 One-only: handles <see cref="Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent"/> only.
+/// Lhdn dual-subscribe removed (legacy dual-read window closed). Table drop is R06 — not this handler.
+/// <b>DEPLOY ONLY</b> after env Q8 <c>active_legacy_only = 0</c> (or signed residual quarantine).
 /// </summary>
 public class ApiKeyRevokedIntegrationEventHandler :
-    IIntegrationEventHandler<Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent>,
-    IIntegrationEventHandler<Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent>
+    IIntegrationEventHandler<Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent>
 {
     private readonly IMemoryCache _cache;
 
@@ -23,12 +22,6 @@ public class ApiKeyRevokedIntegrationEventHandler :
     }
 
     public Task HandleAsync(Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent @event)
-    {
-        Evict(@event.KeyHash);
-        return Task.CompletedTask;
-    }
-
-    public Task HandleAsync(Modules.Lhdn.Contracts.Events.ApiKeyRevokedIntegrationEvent @event)
     {
         Evict(@event.KeyHash);
         return Task.CompletedTask;

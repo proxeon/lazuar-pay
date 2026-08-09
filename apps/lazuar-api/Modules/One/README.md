@@ -69,11 +69,13 @@ All tables reside in the isolated `one` schema.
 * `one.TenantWebhookEndpoints` / `one.WebhookDeliveryOutboxes`
 * `one.OutboxMessages` / `one.InboxMessages`
 
-## 9. Platform API credentials (SSoT) & dual-read window
+## 9. Platform API credentials (SSoT) — One-only (R05)
 
-* **Long-term SSoT:** Machine client keys live in `one.ApiCredentials` (`ApiCredential` aggregate). Mint/list/revoke go through One commands / `IApiCredentialService` (also used by Lhdn `/lhdn/api-keys` façades).
+* **SSoT:** Machine client keys live in `one.ApiCredentials` (`ApiCredential` aggregate). Mint/list/revoke go through One commands / `IApiCredentialService` (also used by Lhdn `/lhdn/api-keys` façades).
 * **Scopes:** Closed catalog on `PlatformApiScopes` (includes `lhdn.documents:*`, payments checkout scopes, webhook manage). LHDN product scopes are modeled on One credentials (decisions 00.1).
-* **Host auth:** `ApiKeyAuthenticationMiddleware` dual-reads **One first**, then legacy `lhdn.DeveloperApiKeys` for integrators not yet migrated.
-* **Dual-read window (LOCKED):** dual-read **allowed until 2026-11-30**; target One-only middleware + One `ApiKeyRevokedIntegrationEvent` only by **2026-12-15**. Do not remove the Lhdn lookup before that date (unless prod legacy row count is zero and ops signs off).
-* **Legacy migrator (R03):** optional one-shot host job `Lazuar.Api/Jobs/ApiKeyMigration` copies residual `lhdn.DeveloperApiKeys` → `one.ApiCredentials` (hash rows only; `API_KEY_MIGRATION_ENABLED` / dry-run). Dual-read stays until R05. Runbook: `plans/005-remaining/r03-keys-migrator-runbook.md`.
-* **Design / inventory:** `plans/004-maintenance/api-key-cutover-design.md`, `plans/004-maintenance/phase-03-analysis.md`.
+* **Host auth (One-only, R05):** `ApiKeyAuthenticationMiddleware` reads **only** `one.ApiCredentials`. Lhdn dual-read is **closed** — Lhdn-only keys receive **401**.
+* **Revoke cache:** host subscribes **only** `Modules.One.Contracts.Events.ApiKeyRevokedIntegrationEvent` (Lhdn dual-subscribe removed).
+* **DEPLOY gate:** ship One-only middleware to an env **only after** inventory Q8 `active_legacy_only = 0` (or signed residual quarantine). See `plans/005-remaining/r05-notes.md`.
+* **Table drop:** `lhdn.DeveloperApiKeys` archive/drop is **R06** (≥ 30 days after One-only in prod) — not R05.
+* **Legacy migrator (R03):** host job `Lazuar.Api/Jobs/ApiKeyMigration` for residual rows before cutover. Runbook: `plans/005-remaining/r03-keys-migrator-runbook.md`.
+* **Design / inventory:** `plans/004-maintenance/api-key-cutover-design.md`, `plans/005-remaining/01-api-key-one-only-cutover.md`.

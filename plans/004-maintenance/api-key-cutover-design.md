@@ -1,9 +1,11 @@
 # API key cutover design (Phase 03.2)
 
-**Status:** Design for interim + future cutover  
+**Status:** R05 One-only **code on branch** `chore/remaining-005` (2026-08-09). Dual-read middleware + Lhdn revoke dual-subscribe **removed in code**.  
+**Not yet:** prod/staging **DEPLOY** — gate is env Q8 `active_legacy_only = 0` (or signed residual). Table drop remains **R06**.  
 **Date:** 2026-08-09  
 **Locks:** `plans/004-maintenance/decisions.md` §00.1  
-**Companion inventory:** `plans/004-maintenance/phase-03-analysis.md`
+**Companion inventory:** `plans/004-maintenance/phase-03-analysis.md`  
+**R05 notes:** `plans/005-remaining/r05-notes.md`
 
 ---
 

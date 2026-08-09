@@ -21,13 +21,6 @@ public class ApiKeyAuthenticationMiddleware
         LIMIT 1
         """;
 
-    private const string LhdnLookupSql = """
-        SELECT "Id" AS "CredentialId", "OrganizationId", "Scopes"
-        FROM lhdn."DeveloperApiKeys"
-        WHERE "KeyHash" = @KeyHash AND "IsActive" = true
-        LIMIT 1
-        """;
-
     public ApiKeyAuthenticationMiddleware(RequestDelegate next, IMemoryCache cache, ITokenGeneratorService tokenGenerator)
     {
         _next = next;
@@ -99,44 +92,36 @@ public class ApiKeyAuthenticationMiddleware
     }
 
     /// <summary>
-    /// Dual-read credential lookup (maintenance 004 / decisions 00.1).
+    /// One-only credential lookup (R05 / remaining-005 F03).
     /// <list type="bullet">
-    /// <item><description>Read order: <c>one.ApiCredentials</c> first, then legacy <c>lhdn.DeveloperApiKeys</c>.</description></item>
-    /// <item><description>Dual-read allowed until <b>2026-11-30</b>; target One-only middleware by <b>2026-12-15</b>.</description></item>
-    /// <item><description>Do not remove the Lhdn branch before that window (or earlier only if prod legacy row count is zero).</description></item>
+    /// <item><description>Reads <b>only</b> <c>one.ApiCredentials</c> via keyed <c>OneSqlConnectionFactory</c>.</description></item>
+    /// <item><description>Legacy Lhdn dual-read is <b>removed</b> — Lhdn-only keys get 401.</description></item>
+    /// <item>
+    /// <description>
+    /// <b>DEPLOY ONLY</b> after target env inventory Q8 <c>active_legacy_only = 0</c>
+    /// (or signed residual quarantine). Shipping this code before that gate 401s residual Lhdn-only integrators.
+    /// </description>
+    /// </item>
+    /// <item><description>Legacy Lhdn key table drop / archive is <b>R06</b> (≥ 30 days after One-only in prod) — not this change.</description></item>
     /// </list>
-    /// See <c>plans/004-maintenance/api-key-cutover-design.md</c>.
+    /// See <c>plans/005-remaining/r05-notes.md</c>, <c>plans/004-maintenance/api-key-cutover-design.md</c>.
     /// </summary>
     internal static async Task<ApiKeyCacheEntry?> LookupCredentialAsync(IServiceProvider services, string keyHash)
     {
-        // Prefer platform store (One) — long-term SSoT
         var oneFactory = services.GetKeyedService<ISqlConnectionFactory>("OneSqlConnectionFactory");
-        if (oneFactory is not null)
+        if (oneFactory is null)
         {
-            using var oneConnection = oneFactory.CreateConnection();
-            var oneResult = await oneConnection.QuerySingleOrDefaultAsync<ApiKeyCacheEntry>(
-                OneLookupSql,
-                new { KeyHash = keyHash });
-
-            if (oneResult is not null && oneResult.OrganizationId != Guid.Empty)
-            {
-                return oneResult;
-            }
+            return null;
         }
 
-        // Fallback: legacy LHDN-local keys during dual-read window (until 2026-11-30; remove by 2026-12-15)
-        var lhdnFactory = services.GetKeyedService<ISqlConnectionFactory>("LhdnSqlConnectionFactory");
-        if (lhdnFactory is not null)
-        {
-            using var lhdnConnection = lhdnFactory.CreateConnection();
-            var lhdnResult = await lhdnConnection.QuerySingleOrDefaultAsync<ApiKeyCacheEntry>(
-                LhdnLookupSql,
-                new { KeyHash = keyHash });
+        using var oneConnection = oneFactory.CreateConnection();
+        var oneResult = await oneConnection.QuerySingleOrDefaultAsync<ApiKeyCacheEntry>(
+            OneLookupSql,
+            new { KeyHash = keyHash });
 
-            if (lhdnResult is not null && lhdnResult.OrganizationId != Guid.Empty)
-            {
-                return lhdnResult;
-            }
+        if (oneResult is not null && oneResult.OrganizationId != Guid.Empty)
+        {
+            return oneResult;
         }
 
         return null;
