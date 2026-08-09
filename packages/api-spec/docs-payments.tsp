@@ -30,4 +30,7 @@ See docs/payments-integration-quickstart.md and docs/api-versioning.md.
 """)
 @server("https://hub.lazuar.com/api/v1", "Production server")
 @server("http://localhost:8080/api/v1", "Local development server")
+// Integration clients use Authorization: Bearer sk_test_|sk_live_… (documented as Bearer).
+// ApiKeyAuth is also declared so Scalar “Try it” accepts a raw key in the Authorization header.
+@useAuth(BearerAuth | ApiKeyAuth<ApiKeyLocation.header, "Authorization">)
 namespace LazuarApi;

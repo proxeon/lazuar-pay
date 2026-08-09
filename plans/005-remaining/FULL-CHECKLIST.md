@@ -721,23 +721,23 @@ R99 Definition of done
 
 ## R22.1 Decision
 
-- [ ] **A:** Add routes + models to TypeSpec and use generated types in endpoints  
+- [x] **A:** Add routes + models to TypeSpec and use generated types in endpoints  
 - [ ] **B:** Remove/internalize routes if not product  
-- [ ] Choice: ________
+- [x] Choice: **A** (OrgAdmin product surface; see `r22-notes.md`)
 
 ## R22.2 Implement A or B
 
-- [ ] TSP + gen **or** remove endpoints/docs
-- [ ] Endpoints use `Lazuar.ApiTypes` if A
-- [ ] Clients committed if policy requires
+- [x] TSP + gen **or** remove endpoints/docs
+- [x] Endpoints use `Lazuar.ApiTypes` if A
+- [x] Clients committed if policy requires *(regenerated; commit with PR)*
 
 ## R22.3 Tests
 
-- [ ] Broadcast tests green
+- [x] Broadcast tests green *(9/9 Broadcast*)*
 
 ## R22.4 Exit
 
-- [ ] No honesty gap for preview/status
+- [x] No honesty gap for preview/status
 
 
 ---
@@ -750,18 +750,18 @@ R99 Definition of done
 
 ## R23.1 Decision
 
-- [ ] Final signed PDF is public/admin API surface? yes/no: ________
-- [ ] If yes: add to TypeSpec billing routes/models
-- [ ] If no: allowlist as internal + document; ensure not advertised in product OpenAPI
+- [x] Final signed PDF is public/admin API surface? yes/no: **no**
+- [x] If yes: add to TypeSpec billing routes/models *(N/A)*
+- [x] If no: allowlist as internal + document; ensure not advertised in product OpenAPI
 
 ## R23.2 Implement
 
-- [ ] TSP + gen **or** allowlist entry for R25
-- [ ] Endpoint uses generated types if exposed
+- [x] TSP + gen **or** allowlist entry for R25 *(allowlist: `packages/api-spec/honesty-allowlist.yaml`)*
+- [x] Endpoint uses generated types if exposed *(N/A — not product-exposed; 302 redirect)*
 
 ## R23.3 Exit
 
-- [ ] Decision implemented and documented
+- [x] Decision implemented and documented *(see `r23-notes.md`)*
 
 
 ---
@@ -769,19 +769,20 @@ R99 Definition of done
 # R24 — Payments OpenAPI security schemes
 
 **Track:** TypeSpec · **Analysis:** `../08-typespec-wave-b.md`  
-**Problem:** Payments docs package may lack auth schemes while routes require auth
+**Problem:** Payments docs package may lack auth schemes while routes require auth  
+**Notes:** `../r24-notes.md`
 
 ---
 
 ## R24.1 Fix
 
-- [ ] Add `@useAuth` / security to payments docs TSP (mirror LHDN/one pattern)
-- [ ] Rebuild docs OpenAPI via gen
-- [ ] Spot-check `dist/payments` or docs output has securitySchemes
+- [x] Add `@useAuth` / security to payments docs TSP (mirror LHDN/one pattern)
+- [x] Rebuild docs OpenAPI via gen
+- [x] Spot-check `dist/payments` or docs output has securitySchemes
 
 ## R24.2 Exit
 
-- [ ] Authenticated payments routes documented with security
+- [x] Authenticated payments routes documented with security
 
 
 ---

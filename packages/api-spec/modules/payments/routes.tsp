@@ -13,6 +13,7 @@ namespace LazuarApi.Payments;
  *
  * Paths intentionally have no trailing slash (OpenAPI key /clients: `/integrations/payments/checkouts`).
  */
+@useAuth(BearerAuth)
 @route("/integrations/payments")
 @doc("Integration (M2M) payment checkouts — ad-hoc amount + metadata. Requires scoped API key.")
 interface IntegrationCheckoutOperations {
