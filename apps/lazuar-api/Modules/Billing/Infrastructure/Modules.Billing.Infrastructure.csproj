@@ -30,5 +30,6 @@
     <ProjectReference Include="..\..\Lhdn\Contracts\Modules.Lhdn.Contracts.csproj" />
     <ProjectReference Include="..\..\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
     <ProjectReference Include="..\..\One\Contracts\Modules.One.Contracts.csproj" />
+    <ProjectReference Include="..\..\Ops\Contracts\Modules.Ops.Contracts.csproj" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,12 @@
 using System;
 
-namespace BuildingBlocks.Application;
+namespace Modules.Ops.Contracts;
 
+/// <summary>
+/// Marks a MediatR command/query as an Ops agent tool for <c>ToolRegistry</c> discovery.
+/// Cross-module extension point — live in Ops.Contracts so other modules can annotate without
+/// referencing Ops.Application/Infrastructure.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
 public sealed class AgentToolAttribute : Attribute
 {

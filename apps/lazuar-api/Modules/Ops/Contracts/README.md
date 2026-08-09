@@ -1,9 +1,12 @@
-# Ops.Contracts — intentionally hollow
+# Ops.Contracts
 
-Ops is an **agent / chat orchestration** module. Cross-module contracts are not needed today:
+Cross-module **agent extension points** owned by Ops:
 
-- Chat commands and repository ports live in `Application`.
-- Domain types are Ops-local.
-- No other module publishes or consumes Ops integration events.
+| Type | Purpose |
+|------|---------|
+| `AgentToolAttribute` | Annotate MediatR commands/queries so Ops `ToolRegistry` discovers them as LLM tools |
+| `IAgentPromptProvider` | Inject per-app system-prompt rules into the Ops orchestrator (e.g. Billing) |
 
-The `Modules.Ops.Contracts` project exists for **layer symmetry** (same four-project skeleton as other modules) and so host/solution references stay uniform. Add `Commands/` / `Events/` only when another module must call or react to Ops.
+Other modules (One, Billing, Payments, Lhdn, …) may ProjectReference this assembly from **Application** (or Infrastructure for DI registration) only. Do **not** reference Ops.Application or Ops.Infrastructure from outer layers of other modules.
+
+Chat orchestration ports (`ILlmOrchestratorService`, `IToolRegistry`, factory/title) stay in Ops.Application — not Contracts — because only Ops Infrastructure consumes them.

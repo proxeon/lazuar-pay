@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Ops.Contracts;
 using Modules.Billing.Contracts;
 
 namespace Modules.Billing.Application.Queries.Agent;

@@ -124,7 +124,7 @@ Product-concern move criterion for Phase 15 exit: **explicitly deferred with thi
 | MagicLinkTokenService | | ✅ Commerce | | Deferred |
 | Document payload helpers | | ✅ Billing/Commerce | | Generic sign stays BB |
 | LLM factory / title / DI | | ✅ Ops | | **R31 done** — `Modules.Ops.Application.Llm` + `Infrastructure.Llm` |
-| AgentTool / IAgentPromptProvider | | ✅ Ops | | **Deferred R32** (still BB Application) |
+| AgentTool / IAgentPromptProvider | | ✅ Ops | | **R32 done** — `Modules.Ops.Contracts` |
 | Dead-letter metrics | ✅ | | | Technical |
 | Dunning / webhook product counters | | ✅ or tagged | | Soft |
 | Metrics schema list / LHDN SQL | ✅ if pluginized | Lhdn contributor | | Plugin deferred |

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Ops.Contracts;
 using Modules.Payments.Application.Ports;
 
 namespace Modules.Payments.Application.Queries.Agent;

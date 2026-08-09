@@ -1,4 +1,4 @@
-using BuildingBlocks.Application.Llm;
+using Modules.Ops.Contracts;
 
 namespace Modules.Billing.Application.Llm;
 

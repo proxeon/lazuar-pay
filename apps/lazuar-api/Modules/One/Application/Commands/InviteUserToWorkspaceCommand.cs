@@ -1,5 +1,6 @@
 // apps/lazuar-api/Modules/One/Application/Commands/InviteUserToWorkspaceCommand.cs
 using BuildingBlocks.Application;
+using Modules.Ops.Contracts;
 using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;

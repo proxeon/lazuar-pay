@@ -26,7 +26,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using BuildingBlocks.Application.Llm;
+using Modules.Ops.Contracts;
 using Modules.Ops.Application.Llm;
 using Lazuar.ApiTypes;
 using MediatR;

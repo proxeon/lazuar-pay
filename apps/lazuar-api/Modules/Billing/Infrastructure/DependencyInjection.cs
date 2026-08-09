@@ -1,5 +1,5 @@
 using BuildingBlocks.Application;
-using BuildingBlocks.Application.Llm;
+using Modules.Ops.Contracts;
 using BuildingBlocks.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;

@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using BuildingBlocks.Application.Llm;
+using Modules.Ops.Contracts;
 using Modules.Ops.Application.Llm;
 using FluentAssertions;
 using MediatR;

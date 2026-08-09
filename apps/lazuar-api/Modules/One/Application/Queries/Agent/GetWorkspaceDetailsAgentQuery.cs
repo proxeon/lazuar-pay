@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Ops.Contracts;
 using Modules.One.Contracts;
 
 namespace Modules.One.Application.Queries.Agent;

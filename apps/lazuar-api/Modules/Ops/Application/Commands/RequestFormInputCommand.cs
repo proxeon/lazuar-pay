@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Ops.Contracts;
 
 namespace Modules.Ops.Application.Commands;
 
