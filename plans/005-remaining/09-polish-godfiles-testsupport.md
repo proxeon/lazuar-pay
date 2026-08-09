@@ -158,12 +158,12 @@ All remain `public partial class LhdnGatewayAdapter` in namespace `Modules.Lhdn.
 
 #### Move rules
 
-- [ ] Type name `LhdnGatewayAdapter` unchanged (DI registration unchanged).
-- [ ] Interface method signatures unchanged.
-- [ ] Static limiter dictionaries stay on the primary partial (shared state).
-- [ ] No HTTP client / base URL / cache-key format changes.
-- [ ] Rate limits (12 login, 100 submit, etc.) stay as today unless a product change is intentional.
-- [ ] Prefer **partials over inheritance** (matches ProcessGatewayWebhook / GatewayPaymentCompleted).
+- [x] Type name `LhdnGatewayAdapter` unchanged (DI registration unchanged).
+- [x] Interface method signatures unchanged.
+- [x] Static limiter dictionaries stay on the primary partial (shared state).
+- [x] No HTTP client / base URL / cache-key format changes.
+- [x] Rate limits (12 login, 100 submit, etc.) stay as today unless a product change is intentional.
+- [x] Prefer **partials over inheritance** (matches ProcessGatewayWebhook / GatewayPaymentCompleted).
 
 #### Risk
 

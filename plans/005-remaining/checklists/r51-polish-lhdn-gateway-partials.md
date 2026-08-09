@@ -7,13 +7,13 @@
 
 ## R51.1 Split
 
-- [ ] Partials: Token, Submit, Status, TIN, Cancel (+ shared rate limit if needed)
-- [ ] Keep public type name + port interface stable
+- [x] Partials: Token, Submit, Status, TIN, Cancel (+ shared rate limit if needed)
+- [x] Keep public type name + port interface stable
 
 ## R51.2 Tests
 
-- [ ] LHDN gateway / module tests green
+- [x] LHDN gateway / module tests green
 
 ## R51.3 Exit
 
-- [ ] Navigable files; zero behavior change
+- [x] Navigable files; zero behavior change

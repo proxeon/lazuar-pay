@@ -8,7 +8,7 @@
 
 ## F14.1 God files (when touching)
 
-- [ ] `LhdnGatewayAdapter` partials (token/submit/status/TIN/cancel)
+- [x] `LhdnGatewayAdapter` partials (token/submit/status/TIN/cancel)
 - [ ] `LlmOrchestratorService` remaining partial cleanup
 - [ ] Payment gateway shared name/amount helpers (no mega base class)
 - [ ] `BillingQueryService` / `B2cConsolidationJob` partials if editing those areas
