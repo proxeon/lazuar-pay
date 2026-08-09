@@ -919,17 +919,17 @@ R99 Definition of done
 
 ## R33.1 Move
 
-- [ ] `IMagicLinkTokenService` + HMAC impl → Commerce (Contracts port if Communications needs it)
-- [ ] Preserve wire format + secret source (parity freeze)
-- [ ] Communications uses Contracts not BB
+- [x] `IMagicLinkTokenService` + HMAC impl → Commerce (Contracts port if Communications needs it)
+- [x] Preserve wire format + secret source (parity freeze)
+- [x] Communications uses Contracts not BB
 
 ## R33.2 Tests
 
-- [ ] Portal magic link + dunning mint tests green
+- [x] Portal magic link + dunning mint tests green
 
 ## R33.3 Exit
 
-- [ ] No magic-link product shapes in BB
+- [x] No magic-link product shapes in BB
 
 
 ---

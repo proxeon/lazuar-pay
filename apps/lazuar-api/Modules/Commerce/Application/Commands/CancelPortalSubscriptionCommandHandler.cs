@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Contracts.Events;
 using Modules.One.Contracts;

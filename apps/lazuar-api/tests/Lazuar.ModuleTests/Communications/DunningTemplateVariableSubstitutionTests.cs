@@ -5,6 +5,7 @@ using BuildingBlocks.Application;
 using FluentAssertions;
 using Lazuar.ApiTypes;
 using Microsoft.Extensions.Configuration;
+using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Events;
 using Modules.Communications.Application;
 using Modules.Communications.Infrastructure.EventHandlers;
@@ -69,7 +70,7 @@ public class DunningTemplateVariableSubstitutionTests
             days_overdue = "3",
             action_type = "EMAIL",
             subject = "Action Needed: Payment issue for {{plan_name}}",
-            email_body = "Hi {{customer_name}}, {{plan_name}} is {{currency}} {{amount}} overdue by {{days_overdue}} days. Fix: {{update_payment_link}}",
+            email_body = "Hi {{customer_name}}, {{plan_name}} is {{currency}} {{amount}} overdue by {{days_overdue}} days. Fix: {{update_payment_link}} Portal: {{portal_magic_link}}",
             whatsapp_body = "{{plan_name}} overdue {{days_overdue}}"
         });
 
@@ -78,6 +79,8 @@ public class DunningTemplateVariableSubstitutionTests
             InternalTargetApp: "COMMUNICATIONS",
             EventType: "reminder.dunning",
             Payload: payload));
+
+        tokens.Received(1).GenerateToken(subscriptionId);
 
         await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
             e.OrganizationId == orgId
@@ -91,6 +94,8 @@ public class DunningTemplateVariableSubstitutionTests
             && e.HtmlEmailBody.Contains("99.00")
             && e.HtmlEmailBody.Contains("3")
             && e.HtmlEmailBody.Contains("Aisha Merchant")
+            && e.HtmlEmailBody.Contains("https://portal.test/acme/portal?token=magic-token")
+            && e.HtmlEmailBody.Contains("{{portal_magic_link}}") == false
             && e.PlainTextPhoneBody == "Premium Mastermind overdue 3"
             && e.PlainTextPhoneBody.Contains("{{plan_name}}") == false));
     }

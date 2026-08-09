@@ -2,10 +2,14 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using BuildingBlocks.Application;
+using Modules.Commerce.Contracts;
 
-namespace BuildingBlocks.Infrastructure;
+namespace Modules.Commerce.Infrastructure.Security;
 
+/// <summary>
+/// HMAC-SHA256 portal tokens: Base64("{subscriptionId}:{expiryUnix}:{hmacHex}"), 24h TTL.
+/// Secret source: Jwt:Secret (parity with pre-move BB impl — do not change without deliberate token versioning).
+/// </summary>
 public class MagicLinkTokenService : IMagicLinkTokenService
 {
     private readonly string _secret;

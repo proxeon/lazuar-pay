@@ -51,7 +51,7 @@ Ownership target when a dedicated PR is justified. **Not** all moved in Phase 15
 | `IEmailService`, Resend/Console, ResendOptions, `EmailTemplateBuilder` | **Messaging** (+ Communications for BYOK/config) | Only Messaging sends; brand HTML + org tags are product |
 | `IMessagingService`, ConsoleMessagingService | **Messaging** | Channel transport; decision 00.4 freezes multi-channel product work |
 | `MarkdownParser` (Markdig) | **Communications** (or thin shared content slice later) | Avoid Markdig on every Contracts fan-out |
-| `IMagicLinkTokenService` / MagicLinkTokenService | **Commerce** | API is `subscriptionId`-shaped |
+| `IMagicLinkTokenService` / MagicLinkTokenService | **Commerce** | **R33 done** — port on `Modules.Commerce.Contracts`; HMAC impl in Commerce.Infrastructure.Security |
 | DocumentLinkSigner **payload** helpers (`FinalDocumentPayload`, `DraftDocumentPayload`) | **Billing** / **Commerce** | Generic HMAC `Sign`/`TryValidate` may stay in BB Security |
 | Full LLM stack (`IChatClientFactory`, policies, title generator) | **Ops** Application.Llm + Infrastructure.Llm | **R31 done** — registered in `AddOpsModule`; OpenAI removed from BB |
 | `IAgentPromptProvider`, `AgentToolAttribute` | **Ops.Contracts** / Ops.Application | Agent product feature; Billing implements via Contracts |
@@ -121,7 +121,7 @@ Product-concern move criterion for Phase 15 exit: **explicitly deferred with thi
 | IEmailService + Resend + templates | | ✅ Messaging | | Deferred move |
 | IMessagingService | | ✅ Messaging | | Deferred; 00.4 freeze product WA |
 | MarkdownParser | | ✅ Communications | | Deferred |
-| MagicLinkTokenService | | ✅ Commerce | | Deferred |
+| MagicLinkTokenService | | ✅ Commerce | | **R33 done** — Contracts port + Infrastructure HMAC |
 | Document payload helpers | | ✅ Billing/Commerce | | Generic sign stays BB |
 | LLM factory / title / DI | | ✅ Ops | | **R31 done** — `Modules.Ops.Application.Llm` + `Infrastructure.Llm` |
 | AgentTool / IAgentPromptProvider | | ✅ Ops | | **R32 done** — `Modules.Ops.Contracts` |

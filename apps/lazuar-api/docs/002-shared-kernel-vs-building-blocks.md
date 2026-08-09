@@ -61,7 +61,8 @@ Module Domain projects typically reference **both** `BuildingBlocks.Domain` and 
   * `IExecutionContextAccessor`, `ISqlConnectionFactory`
   * Security ports: password, secret vault, token generator
   * `PaginatedResponse` / paging helpers
-* **Present but product-shaped (tracked in 009 for move):** `IEmailService`, `IMessagingService`, `EmailTemplateBuilder`, `MarkdownParser`, LLM ports, `AgentToolAttribute`, magic-link port, product metric names.
+* **Present but product-shaped (tracked in 009 for move):** `IEmailService`, `IMessagingService`, `EmailTemplateBuilder`, `MarkdownParser`, product metric names.
+* **Moved out of BB:** LLM factory (R31), `AgentToolAttribute` / `IAgentPromptProvider` (R32 → Ops.Contracts), magic-link port (R33 → Commerce.Contracts).
 
 #### 3. `BuildingBlocks.Infrastructure`
 

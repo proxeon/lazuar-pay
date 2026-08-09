@@ -144,7 +144,6 @@ builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IMessagingService, ConsoleMessagingService>();
 builder.Services.AddSingleton<IEmailService, ResendEmailService>();
 builder.Services.AddSingleton<ISecretVault, AesSecretVault>();
-builder.Services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
 builder.Services.AddSingleton<InMemoryEventBus>();
 builder.Services.AddSingleton<IEventBusSubscriptions>(sp => sp.GetRequiredService<InMemoryEventBus>());
 

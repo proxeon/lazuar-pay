@@ -10,6 +10,7 @@ using Modules.Commerce.Application.EventHandlers;
 using Modules.Commerce.Application.Queries;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Infrastructure.Repositories;
+using Modules.Commerce.Infrastructure.Security;
 using Modules.Commerce.Infrastructure.Services;
 using Modules.Commerce.Infrastructure.Workers;
 using Modules.Commerce.Infrastructure.EventHandlers;
@@ -40,6 +41,8 @@ public static class DependencyInjection
         services.AddScoped<ICommerceQueryService, CommerceQueryService>();
         services.AddScoped<ISubscriberQueryService, SubscriberQueryService>();
         services.AddScoped<ICommerceDocumentLookup, CommerceDocumentLookup>();
+
+        services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommerceDbContext>>("CommerceEventBus");
 

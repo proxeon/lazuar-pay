@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Commerce.Application.Queries;
+using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Commands;
 using Modules.One.Contracts;
 
