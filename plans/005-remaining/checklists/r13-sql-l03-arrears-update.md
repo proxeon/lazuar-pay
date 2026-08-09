@@ -8,19 +8,19 @@
 
 ## R13.1 Design
 
-- [ ] Split into commerce-owned SQL + `ICrmQueryService` + `IOneQueryService` (or enrich domain)
-- [ ] Document data flow for arrears update-payment
+- [x] Split into commerce-owned SQL + `ICrmQueryService` + `IOneQueryService` (or enrich domain)
+- [x] Document data flow for arrears update-payment
 
 ## R13.2 Implement
 
-- [ ] Replace multi-schema Dapper with port composition
-- [ ] Preserve HTTP contract/behavior
+- [x] Replace multi-schema Dapper with port composition
+- [x] Preserve HTTP contract/behavior
 
 ## R13.3 Tests
 
-- [ ] Arrears / update-payment tests green
-- [ ] Tenant isolation preserved
+- [x] Arrears / update-payment tests green
+- [x] Tenant isolation preserved
 
 ## R13.4 Exit
 
-- [ ] No `crm.`/`one.` in that endpoint SQL
+- [x] No `crm.`/`one.` in that endpoint SQL

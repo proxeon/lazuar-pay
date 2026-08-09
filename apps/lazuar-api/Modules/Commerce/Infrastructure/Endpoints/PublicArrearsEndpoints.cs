@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.CRM.Contracts;
+using Modules.One.Contracts;
 using Modules.Payments.Contracts.Queries;
 
 namespace Modules.Commerce.Infrastructure;
@@ -29,7 +31,7 @@ public static class PublicArrearsEndpoints
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
                 WHERE s.""Id"" = @SubId LIMIT 1";
-                
+
             var result = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<ArrearsSummaryDto>(connection, query, new { SubId = subId });
             return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
         });
@@ -37,29 +39,39 @@ public static class PublicArrearsEndpoints
         group.MapPost("/checkout/{subId:guid}/update-payment", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
             Guid subId,
             [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory sqlFactory,
+            ICrmQueryService crmQueryService,
+            IOneQueryService oneQueryService,
             IMediator mediator,
             IConfiguration config) =>
         {
+            // L-03: commerce-owned SQL only; CRM email + One tenant slug via contracts ports.
             using var connection = sqlFactory.CreateConnection();
             var query = @"
-                SELECT s.""OrganizationId"", s.""ProductId"", s.""Status"", s.""CurrentDunningCampaignId"",
-                       p.""Name"" as ProductName, p.""Price"", p.""Currency"", p.""GatewayName"" as ProductGatewayName,
-                       cp.""Email"" as CustomerEmail,
-                       org.""Slug"" as TenantSlug
+                SELECT s.""OrganizationId"", s.""ProductId"", s.""ClientProfileId"", s.""Status"", s.""CurrentDunningCampaignId"",
+                       p.""Name"" as ProductName, p.""Price"", p.""Currency"", p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
-                JOIN crm.""ClientProfiles"" cp ON s.""ClientProfileId"" = cp.""Id""
-                JOIN one.""Organizations"" org ON s.""OrganizationId"" = org.""Id""
                 WHERE s.""Id"" = @SubId LIMIT 1";
-                
-            var sub = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<dynamic>(connection, query, new { SubId = subId });
-            
+
+            var sub = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<ArrearsUpdatePaymentRow>(
+                connection, query, new { SubId = subId });
+
             if (sub == null) return TypedResults.BadRequest("Subscription not found.");
-            if (sub.Status != "PAST_DUE" && sub.Status != "SUSPENDED") return TypedResults.BadRequest("This subscription is currently active and does not require a payment update.");
+            if (sub.Status != "PAST_DUE" && sub.Status != "SUSPENDED")
+            {
+                return TypedResults.BadRequest("This subscription is currently active and does not require a payment update.");
+            }
+
+            // Former multi-schema JOIN semantics: missing profile/org → not found.
+            var profile = await crmQueryService.GetClientProfileAsync(sub.ClientProfileId);
+            if (profile == null) return TypedResults.BadRequest("Subscription not found.");
+
+            var workspace = await oneQueryService.GetWorkspaceByIdAsync(sub.OrganizationId);
+            if (workspace == null) return TypedResults.BadRequest("Subscription not found.");
 
             var clientUrl = config["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
-            var successUrl = $"{clientUrl}/{sub.TenantSlug}/portal"; 
-            var cancelUrl = $"{clientUrl}/{sub.TenantSlug}/update-payment/{subId}";
+            var successUrl = $"{clientUrl}/{workspace.Slug}/portal";
+            var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}";
 
             var metadata = new Dictionary<string, string>
             {
@@ -70,11 +82,11 @@ public static class PublicArrearsEndpoints
 
             if (sub.CurrentDunningCampaignId != null)
             {
-                metadata["dunning_campaign_id"] = sub.CurrentDunningCampaignId.ToString();
+                metadata["dunning_campaign_id"] = sub.CurrentDunningCampaignId.ToString()!;
             }
 
             // Use the subscription product's gateway (not default BILLPLZ).
-            string? productGateway = sub.ProductGatewayName as string;
+            string? productGateway = sub.ProductGatewayName;
             if (string.IsNullOrWhiteSpace(productGateway))
             {
                 productGateway = null;
@@ -83,15 +95,15 @@ public static class PublicArrearsEndpoints
             try
             {
                 var checkoutQuery = new GenerateCheckoutSessionQuery(
-                    (Guid)sub.OrganizationId,
-                    (decimal)sub.Price,
-                    (string)sub.Currency,
-                    (string)sub.ProductName,
-                    (string)sub.CustomerEmail,
+                    sub.OrganizationId,
+                    sub.Price,
+                    sub.Currency,
+                    sub.ProductName,
+                    profile.Email,
                     successUrl,
                     cancelUrl,
                     metadata,
-                    true, 
+                    true,
                     1,
                     productGateway
                 );
@@ -106,5 +118,21 @@ public static class PublicArrearsEndpoints
         });
 
         return group;
+    }
+
+    /// <summary>
+    /// Commerce-schema projection for public update-payment (no CRM/One columns).
+    /// </summary>
+    private sealed class ArrearsUpdatePaymentRow
+    {
+        public Guid OrganizationId { get; init; }
+        public Guid ProductId { get; init; }
+        public Guid ClientProfileId { get; init; }
+        public string Status { get; init; } = "";
+        public Guid? CurrentDunningCampaignId { get; init; }
+        public string ProductName { get; init; } = "";
+        public decimal Price { get; init; }
+        public string Currency { get; init; } = "";
+        public string? ProductGatewayName { get; init; }
     }
 }
