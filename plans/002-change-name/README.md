@@ -1,7 +1,10 @@
 # 002 — Change frontend app names
 
-**Status:** Investigation complete · implementation checklist ready (no rename executed yet)  
-**Date:** 2026-08-08  
+**Status:** Rename shipped (Phases 0–6) · Phase 7 polish done  
+**Date:** 2026-08-08 · **Closed:** 2026-08-09  
+
+**Phase closeouts:** [`phase-6-done.md`](./phase-6-done.md) (merge + deploy) · [`phase-7-done.md`](./phase-7-done.md) (docs banners + tunnel nit)  
+
 
 **Implementation checklist (start here to execute):**  
 → [`11-implementation-checklist.md`](./11-implementation-checklist.md)

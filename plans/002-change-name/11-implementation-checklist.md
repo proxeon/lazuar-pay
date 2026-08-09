@@ -390,43 +390,44 @@ Services today: `ops-page`, `portal-page`, `superadmin-page` (developers often *
 
 ## Phase 7 — Optional follow-ups (separate PRs)
 
-Do **not** block the rename on these.
+Do **not** block the rename on these.  
+**Minimal Phase 7 (2026-08-09):** banners + `tunnel:fe` nit — see [`phase-7-done.md`](./phase-7-done.md).
 
 ### 7.1 Documentation archaeology
 
-- [ ] `docs/001-gaps/**` path renames or a single banner: “frontend apps renamed 2026-…; old `*-page` names are historical”
-- [ ] ADRs that are active SOPs (`013`, `017`, etc.): path-refresh or watermark
-- [ ] ADRs that are pure history: leave or watermark only
-- [ ] Optionally rename gap file `04-developers-page-dx.md` for consistency (purely cosmetic)
+- [x] `docs/001-gaps/**` path renames or a single banner: “frontend apps renamed 2026-…; old `*-page` names are historical” — **done:** banner on `docs/001-gaps/README.md` only (no bulk body rewrite)
+- [x] ADRs that are active SOPs (`013`, `017`, etc.): path-refresh or watermark — **done:** path-note banners on ADR `013`, `017`, `007`
+- [x] ADRs that are pure history: leave or watermark only — **skipped (leave):** pure-history ADRs untouched
+- [x] Optionally rename gap file `04-developers-page-dx.md` for consistency (purely cosmetic) — **skipped:** keep historical filename
 
 ### 7.2 Local compose parity
 
-- [ ] Add developers (`lazuar-developers`) to root `docker-compose.yml` and `docker-compose.ghcr.yml` if still missing after Phase 2
-- [ ] Document profile `full` includes all four frontends + api + db
+- [x] Add developers (`lazuar-developers`) to root `docker-compose.yml` and `docker-compose.ghcr.yml` if still missing after Phase 2 — **already done in Phase 2; no Phase 7 change**
+- [x] Document profile `full` includes all four frontends + api + db — **already documented in compose header; no Phase 7 change**
 
 ### 7.3 GHCR image rebrand (only if product demands)
 
-Separate playbook — **not** part of rename:
+Separate playbook — **not** part of rename — **skipped forever for plan 002** (keep `lazuar-hub-*`):
 
-- [ ] Decide new image names (e.g. keep `lazuar-hub-*` forever vs shorten)
-- [ ] Dual-tag push old+new for N releases
-- [ ] Update `deploy/prod/docker-compose.yml` images atomically
-- [ ] Update bake tags + ghcr matrix `name:` + any pull docs
-- [ ] Retire old tags after cutover window
+- [x] Decide new image names (e.g. keep `lazuar-hub-*` forever vs shorten) — **decision: keep forever for this plan**
+- [x] Dual-tag push old+new for N releases — **skipped**
+- [x] Update `deploy/prod/docker-compose.yml` images atomically — **skipped**
+- [x] Update bake tags + ghcr matrix `name:` + any pull docs — **skipped**
+- [x] Retire old tags after cutover window — **skipped**
 
 ### 7.4 DX nits
 
-- [ ] Fix stale `tunnel:fe` / community-page leftovers in Taskfile if still wrong
-- [ ] Align README domain story with single-host `hub.lazuar.com` path routing if still multi-domain
+- [x] Fix stale `tunnel:fe` / community-page leftovers in Taskfile if still wrong — **done:** `ngrok http 3004` for `lazuar-portal`
+- [x] Align README domain story with single-host `hub.lazuar.com` path routing if still multi-domain — **skipped** (optional polish; not rename-blocking)
 
 ### 7.5 Naming debt that stays by design
 
-Document and stop worrying:
+Document and stop worrying — **done** in [`phase-7-done.md`](./phase-7-done.md) § naming debt:
 
-- [ ] Backend `Modules/Ops` vs app `lazuar-ops`
-- [ ] Public `/docs` = developers hub UI; `lazuar-docs` = VitePress product docs on another port
-- [ ] GHCR `lazuar-hub-superadmin` vs app `lazuar-admin`
-- [ ] Prod containers `hub-*` vs local containers `lazuar-*`
+- [x] Backend `Modules/Ops` vs app `lazuar-ops`
+- [x] Public `/docs` = developers hub UI; `lazuar-docs` = VitePress product docs on another port
+- [x] GHCR `lazuar-hub-superadmin` vs app `lazuar-admin`
+- [x] Prod containers `hub-*` vs local containers `lazuar-*`
 
 ---
 

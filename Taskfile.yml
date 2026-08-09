@@ -139,9 +139,9 @@ tasks:
         ngrok http 8080
 
   tunnel:fe:
-    desc: Start ngrok tunnel for Next.js community-page on port 3020
+    desc: Start ngrok tunnel for lazuar-portal (Next.js) on port 3004
     cmds:
-      - ngrok http 3020
+      - ngrok http 3004
 
   tunnel:status:
     desc: Query the local ngrok agent API to print active public tunnel URLs

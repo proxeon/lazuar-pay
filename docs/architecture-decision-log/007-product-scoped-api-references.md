@@ -4,6 +4,11 @@
 **Status:** Accepted  
 **Date:** June 2026  
 
+> **Path note (plan 002, 2026-08):** `apps/developers-page` → **`apps/lazuar-developers`**
+> (not `lazuar-spec` — avoids clash with `packages/api-spec`).
+> Production mount is **`hub.lazuar.com/docs`**, not `developers.lazuar.com`.
+> TypeSpec SSoT remains `packages/api-spec`. Read SOP paths under the new app folder.
+
 ## Context
 
 As the Lazuar platform scales into a Modular Monolith with multiple distinct products (One, Community, Vault, Funnel, etc.), generating a single, massive `openapi.yaml` file creates significant Developer Experience (DX) issues:
