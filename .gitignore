@@ -17,6 +17,8 @@ dist/
 .turbo/
 .vercel/
 .task/
+# VitePress (lazuar-docs) local dev/build cache
+**/.vitepress/cache/
 
 # ----------------------------------------------------------------------
 # .NET / C# (API & Types)
