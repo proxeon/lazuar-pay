@@ -8,6 +8,9 @@
   --accent: #3b82f6;
   --badge: #f59e0b;
   --badge-fg: #1a1205;
+  --danger: #f87171;
+  --ok: #34d399;
+  --warn: #fbbf24;
   font-family:
     ui-sans-serif,
     system-ui,
@@ -66,7 +69,116 @@ main {
   color: var(--muted);
 }
 
+.error {
+  color: var(--danger);
+}
+
+.warn {
+  color: var(--warn);
+}
+
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9em;
+}
+
+pre.ascii {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  overflow-x: auto;
+  background: #0b1015;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: var(--muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.form input {
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: #0b1015;
+  color: var(--fg);
+  font: inherit;
+}
+
+.form button {
+  margin-top: 0.35rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 0.45rem;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.order-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.order-list li {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-list li:last-child {
+  border-bottom: none;
+}
+
+.status {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.status-paid {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.status-failed,
+.status-cancelled {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.status-checkout_open,
+.status-draft {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.status-block {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }

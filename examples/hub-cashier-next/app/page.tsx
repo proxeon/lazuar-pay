@@ -24,13 +24,35 @@ export default function HomePage() {
           </li>
         </ul>
         <p>
-          <Link href="/pay">Go to /pay (scaffold)</Link>
+          <Link href="/pay">Start a payment →</Link>
+          {" · "}
+          <Link href="/orders">Orders</Link>
+        </p>
+      </section>
+
+      <section className="card">
+        <h2>Architecture (text)</h2>
+        <pre className="ascii">
+{`Browser  →  Sample (:3020)  →  Hub (:8080/api/v1)
+   │              │                    │
+   │         local order            create checkout
+   │         .data/                    │
+   │              │                    ▼
+   │              │            hosted checkout URL
+   │              │◄── redirect ───────┘
+   │
+   │   success_url  →  /pay/success  (poll local; never unlock)
+   │
+Hub worker ──POST /webhooks/hub/payments──► verify HMAC → mark paid`}
+        </pre>
+        <p className="muted">
+          Domain stays in the sample. Money rails and gateway secrets stay on
+          Hub (BYOK).
         </p>
       </section>
 
       <p className="muted" style={{ marginTop: "1.5rem" }}>
-        Scaffold only (S31). Checkout + webhook logic lands in later sample
-        phases. Dev port: <code>3020</code>.
+        Demo-only · port <code>3020</code> · store <code>.data/</code>
       </p>
     </>
   );
