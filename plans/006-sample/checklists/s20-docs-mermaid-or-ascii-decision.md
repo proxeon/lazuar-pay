@@ -16,12 +16,13 @@
 
 ## S20.2 Decision record
 
-- [ ] Choose A / B / C: ________
-- [ ] Write decision in `plans/006-sample/README.md` or `D00` notes (one sentence)
-- [ ] If B/C: pick plugin approach (`vitepress-plugin-mermaid` or equivalent)
+- [x] Choose A / B / C: **A ASCII-only**
+- [x] Write decision in `plans/006-sample/README.md` or `D00` notes (one sentence) — recorded in `wave-decisions.md` Diagrams lock + how-to-maintain
+- [x] If B/C: pick plugin approach (`vitepress-plugin-mermaid` or equivalent) — N/A (A chosen)
 
 ## S20.3 If Mermaid enabled
 
+- [x] N/A — Mermaid not enabled this wave
 - [ ] Add deps to `apps/lazuar-docs/package.json`
 - [ ] Wire `docs/.vitepress/config.ts` (and theme if required)
 - [ ] Pin mermaid major version
@@ -30,9 +31,9 @@
 
 ## S20.4 If ASCII-only
 
-- [ ] Document that Phase B Mermaid is optional follow-up
-- [ ] Still require prose summary under every diagram (a11y)
+- [x] Document that Phase B Mermaid is optional follow-up (`wave-decisions.md`, `how-to-maintain.md`)
+- [x] Still require prose summary under every diagram (a11y)
 
 ## S20.5 Exit
 
-- [ ] Decision locked; subsequent S21–S24 use chosen format only
+- [x] Decision locked; subsequent S21–S24 use chosen format only

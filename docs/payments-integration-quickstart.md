@@ -193,6 +193,6 @@ Fulfillment rules:
 
 ## 7. Next steps
 
-- Second-app curl harness: [`script/second-app-proof.md`](../script/second-app-proof.md)
+- Multi-app proof: [Second-app checklist](../apps/lazuar-docs/docs/integrations/second-app-checklist.md) (former `script/second-app-proof.md` removed; engineer curls remain in this quickstart)
 - Event catalog UI: Developers hub `/webhooks`
 - Auth & scopes: Developers hub `/auth`

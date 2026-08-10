@@ -75,8 +75,10 @@
 
 | Topic | Lock |
 |-------|------|
-| Primary format | **Mermaid preferred** if plugin enabled |
-| Fallback | **ASCII** always acceptable; prose summary always |
+| Primary format | **ASCII-only (S20 Option A)** for this wave |
+| Mermaid | Optional Phase B follow-up via `vitepress-plugin-mermaid` — not required for S21–S25 |
+| Fallback / a11y | Prose summary (2–4 sentences) **required** under every diagram |
+| Rationale | Plugin not installed; ASCII already works in VitePress; avoid build/theme risk |
 
 ---
 

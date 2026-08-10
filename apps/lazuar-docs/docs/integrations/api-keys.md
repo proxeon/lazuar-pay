@@ -58,3 +58,8 @@ Prefer per-integrator secrets later; today often one env secret per Hub deployme
 - [ ] Least scopes  
 - [ ] Never log full `sk_` / `whsec_`  
 - [ ] Revoke unused keys  
+
+## Related
+
+- [Architecture: who does what — M3 secrets](/guide/architecture-who-does-what#m3--who-holds-which-secrets)
+- [Provision a workspace](/integrations/provision)

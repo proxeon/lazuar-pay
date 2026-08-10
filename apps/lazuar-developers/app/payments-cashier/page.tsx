@@ -123,8 +123,12 @@ export default function PaymentsCashierPage() {
 
       <GuideSection title="5. Second-app proof">
         <p className="text-[13px] text-[#71717a]">
-          Curl-only harness (zero Aura imports):{" "}
-          <span className="font-mono text-[12px]">script/second-app-proof.md</span>.
+          Prove multi-app independence with the Second-app checklist in lazuar-docs (
+          <span className="font-mono text-[12px]">integrations/second-app-checklist</span>
+          ). The former curl harness{" "}
+          <span className="font-mono text-[12px]">script/second-app-proof.md</span> was removed;
+          use the curls in this page and{" "}
+          <span className="font-mono text-[12px]">docs/payments-integration-quickstart.md</span>.
         </p>
       </GuideSection>
     </HubShell>

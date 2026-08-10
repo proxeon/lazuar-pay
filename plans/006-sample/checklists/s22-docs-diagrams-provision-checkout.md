@@ -8,27 +8,27 @@
 
 ## S22.1 Provision (`integrations/provision.md`)
 
-- [ ] Sequence: first provision (secret auth, external_product+org_id, once secrets)
-- [ ] Sequence or note: idempotent re-call (`created=false`, plain_key null)
-- [ ] Bootstrap scopes called out: payments checkouts write/read + webhooks.endpoints:manage
-- [ ] Prose: secrets returned once
-- [ ] Link to payment-flow for full E2E
+- [x] Sequence: first provision (secret auth, external_product+org_id, once secrets)
+- [x] Sequence or note: idempotent re-call (`created=false`, plain_key null)
+- [x] Bootstrap scopes called out: payments checkouts write/read + webhooks.endpoints:manage
+- [x] Prose: secrets returned once
+- [x] Link to payment-flow for full E2E
 
 ## S22.2 Create checkout (`integrations/create-checkout.md`)
 
-- [ ] Sequence: POST checkouts → checkout_url → guest redirect → (optional GET status)
-- [ ] State diagram: open → completed/failed (optional expired)
-- [ ] Flowchart or note: success_url / poll vs webhook unlock
-- [ ] Note PAYMENTS_NOT_CONFIGURED when BYOK missing
-- [ ] Amount units: major (e.g. 25.00 MYR), not cents
-- [ ] Link architecture create-payment matrix
+- [x] Sequence: POST checkouts → checkout_url → guest redirect → (optional GET status)
+- [x] State diagram: open → completed/failed (optional expired)
+- [x] Flowchart or note: success_url / poll vs webhook unlock
+- [x] Note PAYMENTS_NOT_CONFIGURED when BYOK missing
+- [x] Amount units: major (e.g. 25.00 MYR), not cents
+- [x] Link architecture create-payment matrix (payment-flow / cashier; architecture page when exists)
 
 ## S22.3 Consistency
 
-- [ ] Auth: Bearer sk_test_/sk_live_ only for machine path
-- [ ] No Commerce paths mixed in
+- [x] Auth: Bearer sk_test_/sk_live_ only for machine path
+- [x] No Commerce paths mixed in
 
 ## S22.4 Exit
 
-- [ ] Docs build green
-- [ ] Each diagram has prose summary
+- [x] Docs build green
+- [x] Each diagram has prose summary

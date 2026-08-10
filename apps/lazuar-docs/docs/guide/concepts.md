@@ -58,3 +58,14 @@ Server-to-server bootstrap of a workspace:
 |------|---------------|----------|
 | Guest → salon | Customer → merchant | Hub BYOK |
 | Salon → platform | Tenant → Aura company | Paddle (outside Hub) |
+
+## Why Hub (cashier)
+
+For multi-gateway or multi-tenant apps, Hub holds BYOK credentials and normalizes one webhook signature so your app does not re-implement Billplz/Stripe verify per processor. Full comparison: [Hub vs DIY gateways](/integrations/hub-vs-diy). Ownership matrices: [Architecture: who does what](/guide/architecture-who-does-what).
+
+## Related
+
+- [Product lines](/guide/product-lines)
+- [Payments cashier](/integrations/payments-cashier)
+- [Architecture: who does what](/guide/architecture-who-does-what)
+- [Hub vs DIY](/integrations/hub-vs-diy)

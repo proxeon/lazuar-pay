@@ -3,6 +3,8 @@ import { defineConfig } from "vitepress";
 /**
  * Lazuar Hub product & integrator guides.
  * Source: apps/lazuar-docs/docs — refine freely; later publish as public docs site.
+ *
+ * Diagram format (S20): ASCII-only for this wave; Mermaid plugin optional later.
  */
 
 const sidebar = [
@@ -20,6 +22,7 @@ const sidebar = [
     collapsed: false,
     items: [
       { text: "Overview", link: "/integrations/" },
+      { text: "Payment flow", link: "/integrations/payment-flow" },
       { text: "Payments cashier (M2M)", link: "/integrations/payments-cashier" },
       { text: "Provision a workspace", link: "/integrations/provision" },
       { text: "Create a checkout", link: "/integrations/create-checkout" },
@@ -60,6 +63,7 @@ export default defineConfig({
     siteTitle: "Lazuar Hub",
     nav: [
       { text: "Guide", link: "/" },
+      { text: "Payment flow", link: "/integrations/payment-flow" },
       { text: "Payments", link: "/integrations/payments-cashier" },
       { text: "Webhooks", link: "/integrations/webhooks" },
       {

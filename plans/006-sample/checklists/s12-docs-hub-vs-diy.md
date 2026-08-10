@@ -8,38 +8,38 @@
 
 ## S12.1 Placement
 
-- [ ] Create `apps/lazuar-docs/docs/guide/hub-vs-diy.md` **or** `integrations/hub-vs-diy.md` (prefer **integrations** after cashier per analysis)
-- [ ] Sidebar: **after** Payments cashier (not first in Integrations)
-- [ ] H1 clear: Hub vs DIY gateways / Why not embed Billplz or Stripe
+- [x] Create `apps/lazuar-docs/docs/guide/hub-vs-diy.md` **or** `integrations/hub-vs-diy.md` (prefer **integrations** after cashier per analysis)
+- [x] Sidebar: **after** Payments cashier (not first in Integrations)
+- [x] H1 clear: Hub vs DIY gateways / Why not embed Billplz or Stripe
 
 ## S12.2 Required editorial rules
 
-- [ ] Banner: DIY column is **contrast only**, not supported primary path
-- [ ] Primary CTA links to Payments cashier / provision — not Billplz docs as how-to
-- [ ] **No** production-ready Billplz `x_signature` field-order recipes
-- [ ] **No** full Stripe `ConstructEvent` tutorial as Path B
-- [ ] No vendor dunking (“Billplz is broken”) — factual quirks only
+- [x] Banner: DIY column is **contrast only**, not supported primary path
+- [x] Primary CTA links to Payments cashier / provision — not Billplz docs as how-to
+- [x] **No** production-ready Billplz `x_signature` field-order recipes
+- [x] **No** full Stripe `ConstructEvent` tutorial as Path B
+- [x] No vendor dunking (“Billplz is broken”) — factual quirks only
 
 ## S12.3 Content blocks
 
-- [ ] Dual flow ASCII/Mermaid: DIY app↔gateway vs App↔Hub↔gateway
-- [ ] Condensed responsibility matrix (App DIY Billplz / DIY Stripe / App via Hub / Hub)
-- [ ] One paragraph “why Hub” (multi-gateway, one signature, BYOK vault)
-- [ ] Anti-pattern callouts (redirect unlock, dual webhooks double-credit, secrets in SPA)
-- [ ] Trust hierarchy: Hub signed event > GET checkout > success_url never sole
-- [ ] Migration dual-run: time-boxed insurance only (Aura) — not greenfield
+- [x] Dual flow ASCII/Mermaid: DIY app↔gateway vs App↔Hub↔gateway
+- [x] Condensed responsibility matrix (App DIY Billplz / DIY Stripe / App via Hub / Hub)
+- [x] One paragraph “why Hub” (multi-gateway, one signature, BYOK vault)
+- [x] Anti-pattern callouts (redirect unlock, dual webhooks double-credit, secrets in SPA)
+- [x] Trust hierarchy: Hub signed event > GET checkout > success_url never sole
+- [x] Migration dual-run: time-boxed insurance only (Aura) — not greenfield
 
 ## S12.4 Deep links (not re-host)
 
-- [ ] ADR 009 Billplz metadata (engineering)
-- [ ] payments-integration-quickstart (engineer twin)
-- [ ] architecture-who-does-what, webhooks, second-app-checklist
+- [x] ADR 009 Billplz metadata (engineering)
+- [x] payments-integration-quickstart (engineer twin)
+- [x] architecture-who-does-what, webhooks, second-app-checklist
 
 ## S12.5 Concepts teaser
 
-- [ ] Optional 5–10 line “Why Hub” H2 in `guide/concepts.md` linking to this page
+- [x] Optional 5–10 line “Why Hub” H2 in `guide/concepts.md` linking to this page
 
 ## S12.6 Exit
 
-- [ ] Docs build green
-- [ ] Review: zero runnable DIY gateway verify snippets
+- [x] Docs build green
+- [x] Review: zero runnable DIY gateway verify snippets

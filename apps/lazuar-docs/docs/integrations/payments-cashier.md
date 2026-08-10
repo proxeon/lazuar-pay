@@ -9,9 +9,25 @@
 2. Server-side checkout session with metadata  
 3. Signed webhooks when payment completes or fails  
 
+## System context
+
+```text
++------------------+     sk_ / HTTPS      +------------------+     BYOK      +----------+
+| Your app + DB    | -------------------> | Lazuar Hub       | ------------> | Gateway  |
+| (orders/domain)  | <--- signed webhook- | (vault + session)| <--- inbound- | hosted UI|
++------------------+                      +------------------+               +----------+
+        ^                                          ^
+        | success_url UX only                      | App:ApiBaseUrl public for hop 1
+        +---- guest browser (not fulfillment) -----+
+```
+
+**Summary:** Domain data stays in your app DB. Hub holds gateway credentials (BYOK) and checkout sessions. Guests pay on the gateway; fulfillment is the signed Hub webhook only.
+
+Canonical end-to-end sequence (SSoT — do not fork a third copy): **[Payment flow](/integrations/payment-flow)**.
+
 ## Prerequisites
 
-1. Hub API base URL (include `/api/v1` in examples below as `$HUB`).  
+1. Hub API base URL (include `/api/v1` in examples below as `$HUB`). Prefer **`:8080`**.  
 2. Provision secret **or** SUPER_ADMIN access.  
 3. Active gateway BYOK on the workspace.  
 4. Public URL for **your** webhook receiver.  
@@ -55,7 +71,9 @@ Scalar developers page **Payments** product · TypeSpec `packages/api-spec/docs-
 
 See [OpenAPI & Scalar](/reference/openapi).
 
-## Related monorepo files
+## Related
 
-- `docs/payments-integration-quickstart.md` (engineer-oriented twin)  
-- `script/second-app-proof.md` (curl harness)  
+- [Payment flow](/integrations/payment-flow) — full E2E diagrams  
+- [Second-app checklist](/integrations/second-app-checklist)  
+- [Environments & public URLs](/integrations/environments)  
+- Monorepo: `docs/payments-integration-quickstart.md`, `script/second-app-proof.md`  

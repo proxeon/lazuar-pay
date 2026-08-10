@@ -16,6 +16,35 @@ Either:
 - `Authorization: Bearer <same secret>`, or  
 - SUPER_ADMIN human session  
 
+## Sequence
+
+```text
+Integrator backend                 Hub API                         Hub One DB
+       |                              |                                 |
+       |-- POST …/workspaces/provision ------------------------------>|
+       |   external_product + external_org_id                         |
+       |   display_name, is_test_mode, optional webhook_url           |
+       |                              |-- auth provision secret / SUPER_ADMIN
+       |                              |-- upsert workspace on           |
+       |                              |   (external_product, external_org_id)
+       |                              |                                 |
+       |                    [first materialization]                     |
+       |                              |-- mint sk_test_/sk_live_ + scopes
+       |                              |-- optional webhook endpoint + whsec_
+       |<-- created=true, plain_key, secret_key ----------------------|
+       |                              |                                 |
+       |                    [idempotent re-call]                        |
+       |                              |-- same workspace_id             |
+       |<-- created=false, plain_key=null, secret_key=null ------------|
+       |   (webhook may heal URL if missing; no remint on exact match)  |
+```
+
+**Summary:** Auth with the provision secret (or SUPER_ADMIN). Hub upserts on `(external_product, external_org_id)`. First call returns bootstrap `plain_key` and optional `whsec_` once; re-calls return the same workspace with secrets null. Store secrets immediately.
+
+**Bootstrap scopes** (first mint): `payments.checkouts:write`, `payments.checkouts:read`, `webhooks.endpoints:manage`.
+
+Full cashier path: [Payment flow](/integrations/payment-flow).
+
 ## Preferred body (multi-product)
 
 ```bash
@@ -110,3 +139,4 @@ Re-call with the same `(external_product, external_org_id)`:
 1. [API keys & scopes](/integrations/api-keys)  
 2. Configure BYOK in Hub Ops for the workspace  
 3. [Create a checkout](/integrations/create-checkout)  
+4. Full path: [Payment flow](/integrations/payment-flow)  

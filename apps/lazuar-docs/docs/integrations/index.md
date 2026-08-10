@@ -4,6 +4,8 @@ Integrate **your backend** with Lazuar Hub using HTTP + scoped keys. Hub does no
 
 ## Flow (Payments cashier)
 
+Compact overview. **Canonical E2E (SSoT):** [Payment flow](/integrations/payment-flow).
+
 ```text
 Your app                  Lazuar Hub                 Gateway
    |                          |                         |
@@ -18,16 +20,19 @@ Your app                  Lazuar Hub                 Gateway
    |-- unlock domain ---------|                         |
 ```
 
+**Summary:** Provision once, configure BYOK, create checkout, redirect guest, fulfill only on signed `payment.completed` from Hub — never on browser success alone.
+
 ## Guide map
 
 | Step | Guide |
 |------|--------|
 | 1. Choose product | [Product lines](/guide/product-lines) |
-| 2. Provision | [Provision a workspace](/integrations/provision) |
-| 3. Keys | [API keys & scopes](/integrations/api-keys) |
-| 4. Checkout | [Create a checkout](/integrations/create-checkout) |
-| 5. Webhooks | [Webhooks](/integrations/webhooks) |
-| 6. Environments | [Environments & public URLs](/integrations/environments) |
+| 2. Full money path | [Payment flow](/integrations/payment-flow) |
+| 3. Provision | [Provision a workspace](/integrations/provision) |
+| 4. Keys | [API keys & scopes](/integrations/api-keys) |
+| 5. Checkout | [Create a checkout](/integrations/create-checkout) |
+| 6. Webhooks | [Webhooks](/integrations/webhooks) |
+| 7. Environments | [Environments & public URLs](/integrations/environments) |
 | Full cashier | [Payments cashier](/integrations/payments-cashier) |
 | Prove second app | [Second-app checklist](/integrations/second-app-checklist) |
 

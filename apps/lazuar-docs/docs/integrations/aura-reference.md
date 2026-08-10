@@ -44,3 +44,6 @@ Aura still ships legacy Billplz/Stripe adapters for `legacy` mode. That is **mig
 
 - Aura `idea/021-payment/` and `idea/022-remaining/` (internal product notes)  
 - This site: [Payments cashier](/integrations/payments-cashier)  
+- [Architecture: who does what](/guide/architecture-who-does-what)  
+- [Hub vs DIY](/integrations/hub-vs-diy) (dual-run is migration insurance only)  
+- [Second-app checklist](/integrations/second-app-checklist)  
