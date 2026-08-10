@@ -14,8 +14,8 @@ Related monorepo sources of truth:
 |---------|--------|
 | OpenAPI / TypeSpec | `packages/api-spec/` |
 | Live payments quickstart (engineers) | `docs/payments-integration-quickstart.md` |
-| Curl harness | `script/second-app-proof.md` |
-| Sample cashier app | `examples/hub-cashier-next` (when present) |
+| Curl harness | `plans/006-sample/harness/second-app-proof.md` |
+| Sample cashier app | `examples/hub-cashier-next` (port **3020**) |
 | Architecture ADRs | `docs/architecture-decision-log/` |
 | Diagram design sources | `plans/006-sample/01-docs-flow-diagrams.md` |
 | Wave locks | `plans/006-sample/wave-decisions.md` |
@@ -33,7 +33,7 @@ Related monorepo sources of truth:
 | [Second-app checklist](/integrations/second-app-checklist) | Independence + proof sequence |
 | [Payments cashier](/integrations/payments-cashier) | System context; links E2E to payment-flow |
 | Architecture who-does-what | Matrices (when page exists) |
-| Run sample app | Sample run sequence (when page exists) |
+| [Run sample app](/integrations/run-sample-app) | Sample run sequence |
 
 ## Diagrams (S20 format + maintenance)
 

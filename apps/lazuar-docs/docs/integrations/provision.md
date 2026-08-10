@@ -48,7 +48,7 @@ Full cashier path: [Payment flow](/integrations/payment-flow).
 ## Preferred body (multi-product)
 
 ```bash
-export HUB=http://localhost:8090/api/v1   # your Hub base + /api/v1
+export HUB=http://localhost:8080/api/v1   # your Hub base + /api/v1 (canonical local)
 
 curl -sS -X POST "$HUB/one/integrations/workspaces/provision" \
   -H "Content-Type: application/json" \

@@ -74,6 +74,7 @@ See [OpenAPI & Scalar](/reference/openapi).
 ## Related
 
 - [Payment flow](/integrations/payment-flow) — full E2E diagrams  
+- [Run sample app](/integrations/run-sample-app) — Next.js sample on port **3020**  
 - [Second-app checklist](/integrations/second-app-checklist)  
 - [Environments & public URLs](/integrations/environments)  
-- Monorepo: `docs/payments-integration-quickstart.md`, `script/second-app-proof.md`  
+- Monorepo: `docs/payments-integration-quickstart.md`, `plans/006-sample/harness/second-app-proof.md`, `examples/hub-cashier-next`  

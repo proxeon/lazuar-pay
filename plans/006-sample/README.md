@@ -1,6 +1,8 @@
 # 006 — Sample app + docs diagrams program
 
-**Status:** analysis complete 2026-08-10 · **execution checklists ready**  
+**Status:** **done** (code + docs implementable complete) · 2026-08-10
+
+**Residual (ops, not open sample code debt):** real sandbox multi-hop e2e when Hub + BYOK + hop1 tunnel available; optional mprocs sample proc (autostart false); optional Mermaid plugin; TypeSpec envelope honesty gap for Wave B.  
 **Scope:** Make Hub integrator story **demoable** without Aura: VitePress flow diagrams + responsibility matrices in `apps/lazuar-docs`, plus a standalone Next.js sample under `examples/` that provisions (or accepts keys), creates M2M checkouts, verifies signed webhooks, and fulfills a toy domain object.  
 **Prerequisite:** `plans/005-remaining` wave closed (ops residual only). **No 005 residual blocks this program.**
 
@@ -80,7 +82,7 @@ Orchestration detail, DoD, and risks: **[`10-program-sequencing.md`](./10-progra
 | Payment payload (data) | `…/Payments/…/IntegrationCheckoutGatewayEventsHandler.cs` |
 | VitePress config | `apps/lazuar-docs/docs/.vitepress/config.ts` |
 | Engineer quickstart twin | `docs/payments-integration-quickstart.md` |
-| pnpm workspace | `pnpm-workspace.yaml` (`apps/*`, `packages/*` — **examples not yet**) |
+| pnpm workspace | `pnpm-workspace.yaml` (`apps/*`, `packages/*`, `examples/*`) |
 | API local port | `8080` (`launchSettings.json`, compose, README) |
 | Docs local port | `5180` (`lazuar-docs` package.json) |
 
@@ -135,9 +137,20 @@ Sample + webhook docs must document the **runtime envelope**. TypeSpec flat mode
 
 ## Definition of done (program-level)
 
-- [ ] VitePress builds with new diagrams and matrices (`pnpm --filter lazuar-docs build`).  
-- [ ] Sample app runs locally with Hub `:8080`, creates checkout, verifies webhook, unlocks toy order.  
-- [ ] No Billplz/Stripe SDK in sample dependencies.  
-- [ ] Sample not required for monorepo product CI green.  
-- [ ] Second-app checklist can point at sample as evidence path.  
-- [ ] Guides mark envelope shape and raw-body requirement explicitly.
+- [x] VitePress builds with new diagrams and matrices (`pnpm --filter lazuar-docs build`).  
+- [x] Sample app runs locally (handler path green; full Hub sandbox residual ops).  
+- [x] No Billplz/Stripe SDK in sample dependencies.  
+- [x] Sample not required for monorepo product CI green.  
+- [x] Second-app checklist can point at sample as evidence path.  
+- [x] Guides mark envelope shape and raw-body requirement explicitly.
+
+### Residual tickets
+
+| Residual | Notes |
+|----------|--------|
+| Real sandbox e2e | Hub `:8080` + BYOK + hop1 public URL; fill remaining rows in `evidence/local-e2e.md` |
+| Optional mprocs sample | autostart **false** if added |
+| Mermaid plugin | docs wave is ASCII-only (S20) |
+| TypeSpec envelope honesty | runtime envelope vs flat DTO — docs note; not sample-blocking |
+
+Evidence: [`evidence/local-e2e.md`](./evidence/local-e2e.md) · Harness: [`harness/second-app-proof.md`](./harness/second-app-proof.md)

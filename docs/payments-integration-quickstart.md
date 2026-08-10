@@ -193,6 +193,8 @@ Fulfillment rules:
 
 ## 7. Next steps
 
-- Multi-app proof: [Second-app checklist](../apps/lazuar-docs/docs/integrations/second-app-checklist.md) (former `script/second-app-proof.md` removed; engineer curls remain in this quickstart)
+- Multi-app proof: [Second-app checklist](../apps/lazuar-docs/docs/integrations/second-app-checklist.md)
+- Curl harness: [plans/006-sample/harness/second-app-proof.md](../plans/006-sample/harness/second-app-proof.md)
+- Sample runbook: [Run sample app](../apps/lazuar-docs/docs/integrations/run-sample-app.md) · app `examples/hub-cashier-next` (port **3020**)
 - Event catalog UI: Developers hub `/webhooks`
 - Auth & scopes: Developers hub `/auth`

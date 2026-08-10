@@ -13,6 +13,9 @@ hero:
       text: Who does what
       link: /guide/architecture-who-does-what
     - theme: alt
+      text: Run sample
+      link: /integrations/run-sample-app
+    - theme: alt
       text: Product lines
       link: /guide/product-lines
 features:
@@ -36,11 +39,12 @@ features:
 | Understand Payments vs Commerce vs LHDN | [Product lines](/guide/product-lines) |
 | Wire webhooks safely | [Webhooks](/integrations/webhooks) |
 | Prove multi-app independence | [Second-app checklist](/integrations/second-app-checklist) |
+| Run the Next.js cashier sample | [Run sample app](/integrations/run-sample-app) |
 | See how Aura does it | [Aura as a reference client](/integrations/aura-reference) |
 
 ## Status
 
-These guides are **drafts for refinement**. Runtime APIs live in the monorepo; Scalar OpenAPI is under **lazuar-developers** (`/payments`). Orientation pages (architecture, cashier, checklists) live here; machine-readable contracts stay in developers/OpenAPI. Update guides as contracts change.
+These guides are **drafts for refinement**. Runtime APIs live in the monorepo; Scalar OpenAPI is under **lazuar-developers** (`/payments`). Orientation pages (architecture, cashier, checklists) live here; machine-readable contracts stay in developers/OpenAPI. Update guides as contracts change. Includes a runnable sample under monorepo `examples/hub-cashier-next` (port **3020**).
 
 ## Local preview
 

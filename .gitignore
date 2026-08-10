@@ -82,3 +82,8 @@ docs/payment/
 # ----------------------------------------------------------------------
 scripts/lhdn_sandbox/cookies.txt
 scripts/lhdn_sandbox/**/cookies.txt
+
+# Sample app local demo stores
+.data/
+
+*.tsbuildinfo

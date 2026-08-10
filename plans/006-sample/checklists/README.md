@@ -1,6 +1,6 @@
 # 006 Sample — detailed implementation checklists
 
-**Status:** S00 frozen · ready for S10 / S20 / S30  
+**Status:** S00–S61 + S99 complete (implementable scope) · residual: real Hub sandbox e2e  
 **Date:** 2026-08-10  
 **Style:** Many **small** phase files (not fat catch-alls). One phase ≈ one PR (or a tightly scoped commit).  
 **How-to analyses:** parent `../01-…`–`../10-…`  

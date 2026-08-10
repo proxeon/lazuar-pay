@@ -35,6 +35,7 @@ Your app                  Lazuar Hub                 Gateway
 | 7. Environments | [Environments & public URLs](/integrations/environments) |
 | Full cashier | [Payments cashier](/integrations/payments-cashier) |
 | Prove second app | [Second-app checklist](/integrations/second-app-checklist) |
+| Run sample | [Run sample app](/integrations/run-sample-app) |
 
 ## Auth summary
 

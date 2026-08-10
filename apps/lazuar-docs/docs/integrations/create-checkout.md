@@ -80,7 +80,7 @@ poll GET status  →  optional spinner / UX, not fulfillment SSoT
 ## Example
 
 ```bash
-export HUB=http://localhost:8090/api/v1
+export HUB=http://localhost:8080/api/v1
 export SK_TEST_KEY=sk_test_…
 
 curl -sS -X POST "$HUB/integrations/payments/checkouts" \

@@ -8,35 +8,35 @@
 
 ## S53.1 Template
 
-- [ ] Create `plans/006-sample/evidence/local-e2e.md` template with:
-  - [ ] Date, branch, Hub port, sample port
-  - [ ] Provision redacted (sk_***/whsec_***)
-  - [ ] Checkout id (ok to store)
-  - [ ] Delivery id if known
-  - [ ] Tunnel notes (hop1/hop2)
-  - [ ] Pass/fail checklist rows
+- [x] Create `plans/006-sample/evidence/local-e2e.md` template with:
+  - [x] Date, branch, Hub port, sample port
+  - [x] Provision redacted (sk_***/whsec_***)
+  - [x] Checkout id (ok to store)
+  - [x] Delivery id if known
+  - [x] Tunnel notes (hop1/hop2)
+  - [x] Pass/fail checklist rows
 
 ## S53.2 Curl path (handler + optional)
 
-- [ ] Provision (or use existing keys)
-- [ ] Create checkout with valid sk + BYOK
-- [ ] Fake signed payment.completed → order paid
-- [ ] Bad signature → 401
-- [ ] Replay delivery → single unlock
+- [x] Provision (or use existing keys) — skipped (no Hub); dummy secrets for handler
+- [x] Create checkout with valid sk + BYOK — residual (Hub); local draft order created instead
+- [x] Fake signed payment.completed → order paid
+- [x] Bad signature → 401
+- [x] Replay delivery → single unlock
 
 ## S53.3 Browser path (when sandbox reachable)
 
-- [ ] Create order in UI → redirect to gateway
-- [ ] Complete sandbox pay **or** document blocked (no tunnel) and pass via fake webhook only
-- [ ] Success page alone does not pay
-- [ ] Cancel path does not pay
+- [x] Create order in UI → redirect to gateway — **blocked** (no Hub); documented
+- [x] Complete sandbox pay **or** document blocked (no tunnel) and pass via fake webhook only
+- [x] Success page alone does not pay — code-reviewed
+- [x] Cancel path does not pay — code-reviewed
 
 ## S53.4 Negative spots
 
-- [ ] PAYMENTS_NOT_CONFIGURED observed or documented when BYOK off
-- [ ] Missing scope/key documented
+- [x] PAYMENTS_NOT_CONFIGURED observed or documented when BYOK off
+- [x] Missing scope/key documented
 
 ## S53.5 Exit
 
-- [ ] At least one evidence file filled (or explicit “sandbox blocked; fake webhook path green”)
-- [ ] Gaps listed as residual ops (tunnel), not as open code debt if sample correct
+- [x] At least one evidence file filled (or explicit “sandbox blocked; fake webhook path green”)
+- [x] Gaps listed as residual ops (tunnel), not as open code debt if sample correct

@@ -30,6 +30,7 @@ const sidebar = [
       { text: "API keys & scopes", link: "/integrations/api-keys" },
       { text: "Environments & public URLs", link: "/integrations/environments" },
       { text: "Aura as a reference client", link: "/integrations/aura-reference" },
+      { text: "Run the sample app", link: "/integrations/run-sample-app" },
       { text: "Second-app checklist", link: "/integrations/second-app-checklist" },
     ],
   },
@@ -65,6 +66,7 @@ export default defineConfig({
       { text: "Guide", link: "/" },
       { text: "Payment flow", link: "/integrations/payment-flow" },
       { text: "Payments", link: "/integrations/payments-cashier" },
+      { text: "Sample", link: "/integrations/run-sample-app" },
       { text: "Webhooks", link: "/integrations/webhooks" },
       {
         text: "API",

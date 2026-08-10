@@ -8,21 +8,21 @@
 
 ## S52.1 Related section
 
-- [ ] Link architecture-who-does-what
-- [ ] Link payment-flow
-- [ ] Link run-sample-app
-- [ ] Link payments-cashier
+- [x] Link architecture-who-does-what
+- [x] Link payment-flow
+- [x] Link run-sample-app
+- [x] Link payments-cashier
 
 ## S52.2 Harness section
 
-- [ ] Replace deleted script path with sample + harness
-- [ ] Keep independence checks (no Aura imports, no shared DB)
-- [ ] Note: running sample is necessary for demo; independence still required for multi-product claims
+- [x] Replace deleted script path with sample + harness
+- [x] Keep independence checks (no Aura imports, no shared DB)
+- [x] Note: running sample is necessary for demo; independence still required for multi-product claims
 
 ## S52.3 Flow checkboxes
 
-- [ ] Optionally parenthesize deep links to provision/checkout/webhooks steps
+- [x] Optionally parenthesize deep links to provision/checkout/webhooks steps
 
 ## S52.4 Exit
 
-- [ ] Checklist consistent with sample defaults (`external_product`, webhook path, port)
+- [x] Checklist consistent with sample defaults (`external_product`, webhook path, port)

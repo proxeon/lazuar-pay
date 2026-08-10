@@ -217,7 +217,10 @@ node examples/hub-cashier-next/scripts/test-webhook-verify.mjs
 
 ## Docs
 
-When the docs runbook exists: Integrations → **Run sample app** in `lazuar-docs` (S50). Until then, this README is the operator guide.
+- VitePress runbook: Integrations → **[Run sample app](../../apps/lazuar-docs/docs/integrations/run-sample-app.md)** (`/integrations/run-sample-app`)
+- Curl harness: [`plans/006-sample/harness/second-app-proof.md`](../../plans/006-sample/harness/second-app-proof.md)
+- Second-app checklist: [`apps/lazuar-docs/docs/integrations/second-app-checklist.md`](../../apps/lazuar-docs/docs/integrations/second-app-checklist.md)
+- Evidence template: [`plans/006-sample/evidence/local-e2e.md`](../../plans/006-sample/evidence/local-e2e.md)
 
 ---
 

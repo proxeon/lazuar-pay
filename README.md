@@ -102,15 +102,19 @@ The platform is designed to replace the fragmented, manual workflows currently c
 │   ├── lazuar-developers/   # Scalar OpenAPI hub                -> hub …/docs
 │   └── lazuar-docs/         # VitePress product guides
 │
+├── examples/
+│   └── hub-cashier-next/    # Integrator sample (Next.js) — port 3020 (optional)
+│
 ├── packages/
 │   ├── api-spec/            # TypeSpec definitions (Single Source of Truth)
 │   ├── api-types-dotnet/    # Auto-generated C# Models
 │   └── api-types-ts/        # Auto-generated TypeScript Interfaces
 │
-└── docs/                    # Architecture Decision Logs (ADR)
+└── docs/                    # Architecture Decision Logs (ADR) + engineer quickstarts
 ```
 
-**Monorepo app names:** `lazuar-ops`, `lazuar-portal`, `lazuar-admin`, `lazuar-developers`.
+**Monorepo app names:** `lazuar-ops`, `lazuar-portal`, `lazuar-admin`, `lazuar-developers`.  
+**Optional sample:** `examples/hub-cashier-next` (port **3020**) — not started by default product turbo; see [`examples/README.md`](examples/README.md) and program notes in [`plans/006-sample/README.md`](plans/006-sample/README.md).
 TypeSpec SSoT remains `packages/api-spec`. GHCR images remain `lazuar-hub-*`. Public hub paths unchanged (`/`, `/portal`, `/docs`, `/admin`).
 
 ### Module Pattern (Backend)
@@ -150,6 +154,7 @@ task fe
 | `lazuar-ops` | 3003 | `http://localhost:3003` | Superapp Console (Admin) |
 | `lazuar-portal` | 3004 | `http://localhost:3004` | Universal Checkout & Dashboard |
 | `lazuar-admin` | 3005 | `http://localhost:3005` | Platform Infrastructure Admin |
+| `@examples/hub-cashier-next` | **3020** | `http://localhost:3020` | Integrator sample (optional; `pnpm example:cashier`) |
 | **Gateway (optional)** | **9080** | `http://localhost:9080` | Local Caddy edge — prod-like paths |
 
 Vite apps pin ports with `strictPort: true` (ops **3003**, admin **3005**). If a port is already in use, dev fails loudly instead of stealing another app’s port — free the port and retry.
