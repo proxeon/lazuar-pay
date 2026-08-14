@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Entities;
 using Modules.Payments.Contracts.Events;
@@ -68,6 +69,12 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         else
         {
             existingSub.Activate(periodEnd, updatedNextBilling, existingSub.IsReminderOnly);
+        }
+
+        if (string.IsNullOrWhiteSpace(existingSub.MetadataJson))
+        {
+            var persist = CommerceCheckoutMetadata.ForPersistence(@event.Metadata, productInfo.Interval);
+            existingSub.SetMetadataJson(CommerceCheckoutMetadata.Serialize(persist));
         }
 
         if (wasInArrears && recoveryCampaignId.HasValue)

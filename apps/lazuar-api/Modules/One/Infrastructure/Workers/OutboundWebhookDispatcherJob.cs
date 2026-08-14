@@ -112,15 +112,25 @@ public class OutboundWebhookDispatcherJob : BackgroundService
                 }
                 else
                 {
-                    var error = $"HTTP {(int)response.StatusCode} {response.StatusCode}";
-                    delivery.RecordFailure(error);
+                    var status = (int)response.StatusCode;
+                    var error = $"HTTP {status} {response.StatusCode}";
+                    if (IsPermanentHttpFailure(status))
+                    {
+                        delivery.RecordPermanentFailure(error);
+                    }
+                    else
+                    {
+                        delivery.RecordFailure(error);
+                    }
+
                     LazuarMetrics.RecordWebhookFailed("outbound");
                     _logger.LogWarning(
-                        "Webhook delivery {DeliveryId} to {Url} failed: {Error} (attempt {Attempt}).",
+                        "Webhook delivery {DeliveryId} to {Url} failed: {Error} (attempt {Attempt}, status={Status}).",
                         delivery.Id,
                         endpoint.Url,
                         error,
-                        delivery.AttemptCount);
+                        delivery.AttemptCount,
+                        delivery.Status);
                 }
             }
             catch (Exception ex)
@@ -217,4 +227,8 @@ public class OutboundWebhookDispatcherJob : BackgroundService
 
         return vault.DecryptOrPlaintext(endpoint.SecretKey);
     }
+
+    /// <summary>4xx is a permanent client reject (401/422 policy). 5xx / transport still retry.</summary>
+    internal static bool IsPermanentHttpFailure(int statusCode) =>
+        statusCode is >= 400 and < 500;
 }

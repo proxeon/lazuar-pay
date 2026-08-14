@@ -9,3 +9,4 @@ import "./models/subscriber.tsp";
 import "./models/coupon.tsp";
 import "./models/stats.tsp";
 import "./models/custom-checkout.tsp";
+import "./models/webhooks.tsp";

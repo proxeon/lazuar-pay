@@ -74,6 +74,7 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             var subscription = new Domain.Aggregates.Subscription(session.OrganizationId, session.ClientProfileId, product.Id);
             var nextBilling = product.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
             subscription.Activate(DateTime.UtcNow, nextBilling);
+            subscription.SetMetadataJson(session.MetadataJson);
             _repository.AddSubscription(subscription);
 
             await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(

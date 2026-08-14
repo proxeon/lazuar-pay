@@ -19,7 +19,7 @@ public class CommerceRepository : ICommerceRepository
 
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
+        return await _context.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
     public async Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default)
@@ -65,6 +65,7 @@ public class CommerceRepository : ICommerceRepository
         if (local != null) return local;
 
         return await _context.Subscriptions
+            .IgnoreQueryFilters()
             .Include(s => s.ReminderLogs)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }

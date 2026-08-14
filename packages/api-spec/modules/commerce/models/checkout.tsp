@@ -17,6 +17,12 @@ model PublicCheckoutRequestDto {
   quantity?: int32;
   is_guest_checkout?: boolean;
   coupon_code?: string;
+  /**
+   * Opaque string map persisted onto the Commerce Subscription (P09 / P10.22).
+   * Send aura_org_id, optional type=saas_subscription, optional billing_interval.
+   * Pay overwrites type unless the client sent saas_subscription; always stamps tenant_id.
+   */
+  metadata?: Record<string>;
 }
 
 model CheckoutResponse {

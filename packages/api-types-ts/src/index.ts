@@ -1900,6 +1900,22 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Five Commerce lifecycle types Aura applies on POST /webhooks/hub/saas.
+         * @enum {string}
+         */
+        "Commerce.CommerceSubscriptionEventType": "subscription.activated" | "subscription.resumed" | "subscription.past_due" | "subscription.canceled" | "subscription.suspended";
+        /**
+         * @description Outbound envelope posted to workspace webhook URLs.
+         *     `id` is the dispatcher envelope id (Aura claim key), not commerce.Subscriptions.Id.
+         */
+        "Commerce.CommerceWebhookEnvelope": {
+            id: string;
+            event_type: components["schemas"]["Commerce.CommerceSubscriptionEventType"];
+            /** Format: date-time */
+            created_at: string;
+            data: components["schemas"]["Commerce.SubscriptionWebhookData"];
+        };
         "Commerce.CouponDto": {
             id: string;
             code: string;
@@ -2131,6 +2147,14 @@ export interface components {
             quantity?: number;
             is_guest_checkout?: boolean;
             coupon_code?: string;
+            /**
+             * @description Opaque string map persisted onto the Commerce Subscription (P09 / P10.22).
+             *     Send aura_org_id, optional type=saas_subscription, optional billing_interval.
+             *     Pay overwrites type unless the client sent saas_subscription; always stamps tenant_id.
+             */
+            metadata?: {
+                [key: string]: string;
+            };
         };
         /** Ops offline payment against an existing subscriber. */
         "Commerce.RecordPaymentRequestDto": {
@@ -2158,6 +2182,32 @@ export interface components {
             secret_key?: string;
             /** @description Soft-disable without deleting credentials. Defaults to true on create. */
             is_active?: boolean;
+        };
+        /**
+         * @description `data` object for subscription.* events.
+         *     current_period_end is the paid-through instant (NextBillingDate).
+         *     customer_id is ClientProfileId; client_profile_id is a backward-compat alias.
+         */
+        "Commerce.SubscriptionWebhookData": {
+            subscription_id: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "PAST_DUE" | "CANCELED" | "SUSPENDED";
+            /** Format: date-time */
+            current_period_end?: string;
+            customer_id: string;
+            client_profile_id?: string;
+            customer_email?: string;
+            product_id: string;
+            /** Format: double */
+            amount?: number;
+            currency?: string;
+            /** @enum {string} */
+            interval?: "mo" | "yr";
+            /** @description Present on subscription.activated only. */
+            is_first_payment?: boolean;
+            metadata?: {
+                [key: string]: string;
+            };
         };
         "Commerce.TransactionLogDto": {
             id: string;

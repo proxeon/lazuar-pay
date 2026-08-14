@@ -20,8 +20,10 @@ Lazuar Commerce — integrator v1 surface (D5: webhooks + public checkout first)
 **Integrator-facing (no M2M product admin):**
 - Public routes under `/public/commerce/*` — unauthenticated buy links, checkout initiation,
   portal magic-token access, arrears/update-payment, and custom checkout sessions.
-- Workspace outbound webhooks for unlock/revoke (subscription.activated|resumed|suspended|canceled|past_due,
-  order.completed, payment_link.paid). See Developers hub → Event catalog.
+- Workspace outbound webhooks for unlock/revoke. Frozen SaaS names (no subscription.updated):
+  subscription.activated|resumed|past_due|canceled|suspended, plus order.completed and payment_link.paid.
+  Envelope + SubscriptionWebhookData: modules/commerce/models/webhooks.tsp.
+  Ignore on the SaaS URL: payment.*, order.completed, payment_link.paid, invoice.*, unknown types.
 
 **Console-only (not for machine integrators):**
 - `/admin/commerce/*` requires human JWT + OrgAdmin for products, subscriptions, campaigns, etc.

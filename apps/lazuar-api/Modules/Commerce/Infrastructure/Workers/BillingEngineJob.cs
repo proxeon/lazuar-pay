@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -11,10 +10,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -66,6 +67,7 @@ public class BillingEngineJob : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
             var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("CommerceEventBus");
+            var crm = scope.ServiceProvider.GetService<ICrmQueryService>();
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             try
@@ -89,7 +91,7 @@ public class BillingEngineJob : BackgroundService
 
                 try
                 {
-                    await ProcessOneSubscriptionAsync(db, eventBus, sub, ct);
+                    await ProcessOneSubscriptionAsync(db, eventBus, crm, sub, ct);
                     await db.SaveChangesAsync(ct);
                     if (tx != null) await tx.CommitAsync(ct);
                 }
@@ -154,6 +156,7 @@ public class BillingEngineJob : BackgroundService
     private async Task ProcessOneSubscriptionAsync(
         CommerceDbContext db,
         IEventBus eventBus,
+        ICrmQueryService? crm,
         Subscription sub,
         CancellationToken ct)
     {
@@ -197,15 +200,14 @@ public class BillingEngineJob : BackgroundService
         {
             sub.MarkAsPastDue();
 
-            var payloadObj = new
+            string? email = null;
+            if (crm != null)
             {
-                subscription_id = sub.Id.ToString(),
-                client_profile_id = sub.ClientProfileId.ToString(),
-                product_id = sub.ProductId.ToString(),
-                status = "PAST_DUE"
-            };
+                var profile = await crm.GetClientProfileAsync(sub.ClientProfileId);
+                email = profile?.Email;
+            }
 
-            var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+            var payloadElement = CommerceWebhookPayload.From(sub, product, email, "PAST_DUE");
 
             foreach (var target in product.FulfillmentTargets)
             {

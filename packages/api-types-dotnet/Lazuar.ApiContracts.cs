@@ -1044,6 +1044,79 @@ namespace Lazuar.ApiTypes
 
     }
 
+    /// <summary>
+    /// Five Commerce lifecycle types Aura applies on POST /webhooks/hub/saas.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum CommerceSubscriptionEventType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"subscription.activated")]
+        Subscription_activated = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"subscription.resumed")]
+        Subscription_resumed = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"subscription.past_due")]
+        Subscription_past_due = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"subscription.canceled")]
+        Subscription_canceled = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"subscription.suspended")]
+        Subscription_suspended = 4,
+
+    }
+
+    /// <summary>
+    /// Outbound envelope posted to workspace webhook URLs.
+    /// <br/>`id` is the dispatcher envelope id (Aura claim key), not commerce.Subscriptions.Id.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CommerceWebhookEnvelope
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("event_type")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public CommerceSubscriptionEventType Event_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SubscriptionWebhookData Data { get; set; } = new SubscriptionWebhookData();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CommerceWebhookEnvelope FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CommerceWebhookEnvelope>(data, options);
+
+        }
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CouponDto
     {
@@ -2086,6 +2159,15 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("coupon_code")]
         public string? Coupon_code { get; set; } = default!;
 
+        /// <summary>
+        /// Opaque string map persisted onto the Commerce Subscription (P09 / P10.22).
+        /// <br/>Send aura_org_id, optional type=saas_subscription, optional billing_interval.
+        /// <br/>Pay overwrites type unless the client sent saas_subscription; always stamps tenant_id.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("metadata")]
+        public System.Collections.Generic.Dictionary<string, string>? Metadata { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2260,6 +2342,85 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<SavePaymentConfigRequestDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
+    /// `data` object for subscription.* events.
+    /// <br/>current_period_end is the paid-through instant (NextBillingDate).
+    /// <br/>customer_id is ClientProfileId; client_profile_id is a backward-compat alias.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SubscriptionWebhookData
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("subscription_id")]
+        public string Subscription_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public SubscriptionWebhookDataStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_period_end")]
+        public System.DateTimeOffset? Current_period_end { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("customer_id")]
+        public string Customer_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("client_profile_id")]
+        public string? Client_profile_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("customer_email")]
+        public string? Customer_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
+        public string Product_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double? Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string? Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("interval")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public SubscriptionWebhookDataInterval? Interval { get; set; } = default!;
+
+        /// <summary>
+        /// Present on subscription.activated only.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_first_payment")]
+        public bool? Is_first_payment { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("metadata")]
+        public System.Collections.Generic.Dictionary<string, string>? Metadata { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static SubscriptionWebhookData FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<SubscriptionWebhookData>(data, options);
 
         }
 
@@ -6895,6 +7056,36 @@ namespace Lazuar.ApiTypes
             return System.Text.Json.JsonSerializer.Deserialize<Response5>(data, options);
 
         }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum SubscriptionWebhookDataStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACTIVE")]
+        ACTIVE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PAST_DUE")]
+        PAST_DUE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CANCELED")]
+        CANCELED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum SubscriptionWebhookDataInterval
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"mo")]
+        Mo = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"yr")]
+        Yr = 1,
 
     }
 

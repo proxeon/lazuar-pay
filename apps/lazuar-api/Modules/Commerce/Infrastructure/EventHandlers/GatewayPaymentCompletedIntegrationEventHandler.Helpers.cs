@@ -1,5 +1,7 @@
 using System;
 using System.Threading.Tasks;
+using Modules.Commerce.Application;
+using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 using Modules.Payments.Contracts.Events;
 
@@ -53,5 +55,21 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         );
 
         _dbContext.TransactionLogs.Add(transactionLog);
+    }
+
+    private static void ApplyCheckoutMetadata(
+        Subscription subscription,
+        CheckoutSession session,
+        GatewayPaymentCompletedIntegrationEvent @event,
+        string? productInterval)
+    {
+        if (!string.IsNullOrWhiteSpace(session.MetadataJson))
+        {
+            subscription.SetMetadataJson(session.MetadataJson);
+            return;
+        }
+
+        var persist = CommerceCheckoutMetadata.ForPersistence(@event.Metadata, productInterval);
+        subscription.SetMetadataJson(CommerceCheckoutMetadata.Serialize(persist));
     }
 }

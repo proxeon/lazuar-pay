@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BuildingBlocks.Application;
 
 namespace Modules.Commerce.Contracts.Commands;
@@ -19,7 +20,8 @@ public record InitiateCheckoutCommand(
     int Quantity,
     bool IsGuestCheckout,
     string? CouponCode,
-    Guid? SessionId = null
+    Guid? SessionId = null,
+    IReadOnlyDictionary<string, string>? Metadata = null
 ) : ICommand<CheckoutResultDto>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

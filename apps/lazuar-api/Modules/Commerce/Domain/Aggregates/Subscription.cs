@@ -29,6 +29,12 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime UpdatedAt { get; private set; }
     public DateTime? SuspendedAt { get; private set; }
 
+    /// <summary>
+    /// JSON object persisted from checkout (aura_org_id, type, billing_interval).
+    /// Survives session expiry so renewals can emit metadata on subscription.* webhooks.
+    /// </summary>
+    public string? MetadataJson { get; private set; }
+
     private readonly List<ReminderDispatchLog> _reminderLogs = new();
     public IReadOnlyCollection<ReminderDispatchLog> ReminderLogs => _reminderLogs.AsReadOnly();
 
@@ -172,6 +178,18 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         CurrentDunningStepIndex = 0;
         LastCompletedDayOffset = null;
         DunningPausedUntil = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>No-op when <paramref name="metadataJson"/> is empty so renewals keep the first-checkout map.</summary>
+    public void SetMetadataJson(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return;
+        }
+
+        MetadataJson = metadataJson;
         UpdatedAt = DateTime.UtcNow;
     }
 }

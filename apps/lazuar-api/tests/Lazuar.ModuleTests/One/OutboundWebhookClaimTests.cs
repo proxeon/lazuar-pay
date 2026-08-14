@@ -16,6 +16,32 @@ namespace Lazuar.ModuleTests.One;
 public class OutboundWebhookClaimTests
 {
     [Test]
+    public void RecordPermanentFailure_FailsImmediately_AttemptCountOne()
+    {
+        var delivery = new WebhookDeliveryOutbox(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            "subscription.activated",
+            "{}");
+
+        delivery.RecordPermanentFailure("HTTP 401 Unauthorized");
+
+        delivery.Status.Should().Be("FAILED");
+        delivery.AttemptCount.Should().Be(1);
+        delivery.LastError.Should().Be("HTTP 401 Unauthorized");
+    }
+
+    [Test]
+    public void IsPermanentHttpFailure_Treats401And422AsTerminal()
+    {
+        OutboundWebhookDispatcherJob.IsPermanentHttpFailure(401).Should().BeTrue();
+        OutboundWebhookDispatcherJob.IsPermanentHttpFailure(422).Should().BeTrue();
+        OutboundWebhookDispatcherJob.IsPermanentHttpFailure(409).Should().BeTrue();
+        OutboundWebhookDispatcherJob.IsPermanentHttpFailure(500).Should().BeFalse();
+        OutboundWebhookDispatcherJob.IsPermanentHttpFailure(200).Should().BeFalse();
+    }
+
+    [Test]
     public void ClaimLease_PushesNextAttemptAt_WhilePending()
     {
         var delivery = new WebhookDeliveryOutbox(

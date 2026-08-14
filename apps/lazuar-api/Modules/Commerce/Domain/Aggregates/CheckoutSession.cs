@@ -30,6 +30,9 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
+    /// <summary>Checkout metadata to copy onto the Subscription at first Activate (P09 / P10.22).</summary>
+    public string? MetadataJson { get; private set; }
+
 #pragma warning disable CS8618
     private CheckoutSession() { }
 #pragma warning restore CS8618
@@ -91,6 +94,17 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     public void Expire()
     {
         Status = "EXPIRED";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetMetadataJson(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return;
+        }
+
+        MetadataJson = metadataJson;
         UpdatedAt = DateTime.UtcNow;
     }
 }

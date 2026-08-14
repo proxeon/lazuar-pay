@@ -3,25 +3,36 @@ using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Modules.Commerce.Application;
+using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Entities;
+using Modules.CRM.Contracts;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
 
 /// <summary>
 /// Bridges gateway payment failures into Commerce recovery: mark charge attempt failed, PAST_DUE + dunning campaign assignment.
+/// Emits <c>subscription.past_due</c> when status first changes to PAST_DUE (Stripe off-session renew fail).
 /// </summary>
 public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHandler<GatewayPaymentFailedIntegrationEvent>
 {
     private readonly CommerceDbContext _dbContext;
+    private readonly IEventBus _eventBus;
+    private readonly ICrmQueryService _crmQueryService;
     private readonly ILogger<GatewayPaymentFailedIntegrationEventHandler> _logger;
 
     public GatewayPaymentFailedIntegrationEventHandler(
         CommerceDbContext dbContext,
+        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
+        ICrmQueryService crmQueryService,
         ILogger<GatewayPaymentFailedIntegrationEventHandler> logger)
     {
         _dbContext = dbContext;
+        _eventBus = eventBus;
+        _crmQueryService = crmQueryService;
         _logger = logger;
     }
 
@@ -58,7 +69,8 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             return;
         }
 
-        if (sub.Status != "PAST_DUE")
+        var becamePastDue = sub.Status != "PAST_DUE";
+        if (becamePastDue)
         {
             sub.MarkAsPastDue();
             _logger.LogInformation(
@@ -97,7 +109,24 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             }
         }
 
+        if (becamePastDue)
+        {
+            await PublishPastDueAsync(sub);
+        }
+
         await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task PublishPastDueAsync(Domain.Aggregates.Subscription sub)
+    {
+        var product = await _dbContext.Products
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == sub.ProductId);
+        var profile = await _crmQueryService.GetClientProfileAsync(sub.ClientProfileId);
+        var payload = CommerceWebhookPayload.From(sub, product, profile?.Email, "PAST_DUE");
+
+        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            sub.OrganizationId, TargetUrl: null, "subscription.past_due", payload));
     }
 
     private async Task MarkChargeAttemptFailedAsync(GatewayPaymentFailedIntegrationEvent @event, Guid subscriptionId)

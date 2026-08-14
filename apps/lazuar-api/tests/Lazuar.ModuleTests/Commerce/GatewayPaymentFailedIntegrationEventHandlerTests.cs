@@ -1,15 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
 using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.EventHandlers;
+using Modules.CRM.Contracts;
 using Modules.Payments.Contracts.Events;
 using NSubstitute;
 using NUnit.Framework;
@@ -21,6 +24,7 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
 {
     private CommerceDbContext _db = null!;
     private GatewayPaymentFailedIntegrationEventHandler _handler = null!;
+    private IEventBus _eventBus = null!;
     private Guid _orgId;
     private Guid _productId;
 
@@ -36,8 +40,11 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
             InMemoryDb.NullMediator,
             new DatabaseJobTrigger());
 
+        _eventBus = Substitute.For<IEventBus>();
         _handler = new GatewayPaymentFailedIntegrationEventHandler(
             _db,
+            _eventBus,
+            Substitute.For<ICrmQueryService>(),
             Substitute.For<ILogger<GatewayPaymentFailedIntegrationEventHandler>>());
     }
 
@@ -83,6 +90,13 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters().FirstAsync(s => s.Id == sub.Id);
         reloaded.Status.Should().Be("PAST_DUE");
         reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"
+            && e.TargetUrl == null
+            && e.OrganizationId == _orgId
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
+            && e.Payload.GetProperty("status").GetString() == "PAST_DUE"));
     }
 
     [Test]
@@ -153,6 +167,8 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters().FirstAsync(s => s.Id == sub.Id);
         reloaded.Status.Should().Be("PAST_DUE");
         reloaded.CurrentDunningCampaignId.Should().Be(existingCampaignId);
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<OutboundWebhookRequestedIntegrationEvent>());
     }
 
     [Test]

@@ -52,7 +52,8 @@ public static class PublicCheckoutEndpoints
                 req.Quantity ?? 1,
                 req.Is_guest_checkout ?? false,
                 req.Coupon_code,
-                parsedSessionId
+                parsedSessionId,
+                req.Metadata
             );
 
             try

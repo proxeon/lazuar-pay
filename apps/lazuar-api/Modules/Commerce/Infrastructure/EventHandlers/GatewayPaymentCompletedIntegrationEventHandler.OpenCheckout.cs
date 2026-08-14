@@ -84,6 +84,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
 
             var nextBilling = product.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
             subscription.Activate(DateTime.UtcNow, nextBilling);
+            ApplyCheckoutMetadata(subscription, session, @event, product.Interval);
 
             if (!string.IsNullOrEmpty(@event.GatewayCustomerId) && !string.IsNullOrEmpty(@event.GatewayTokenId))
             {

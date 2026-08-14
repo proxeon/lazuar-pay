@@ -1,8 +1,10 @@
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Events;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Application.EventHandlers;
 
@@ -13,70 +15,106 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
     IIntegrationEventHandler<SubscriptionResumedIntegrationEvent>
 {
     private readonly IEventBus _eventBus;
+    private readonly ICommerceRepository _repository;
+    private readonly ICrmQueryService _crmQueryService;
 
-    public SubscriptionLifecycleIntegrationEventHandlers([FromKeyedServices("CommerceEventBus")] IEventBus eventBus)
+    public SubscriptionLifecycleIntegrationEventHandlers(
+        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
+        ICommerceRepository repository,
+        ICrmQueryService crmQueryService)
     {
         _eventBus = eventBus;
+        _repository = repository;
+        _crmQueryService = crmQueryService;
     }
 
-    public async Task HandleAsync(SubscriptionActivatedIntegrationEvent @event)
+    public Task HandleAsync(SubscriptionActivatedIntegrationEvent @event) =>
+        PublishAsync(
+            @event.OrganizationId,
+            @event.SubscriptionId,
+            @event.ClientProfileId,
+            @event.ProductId,
+            "ACTIVE",
+            "subscription.activated",
+            @event.IsFirstPayment);
+
+    public Task HandleAsync(SubscriptionSuspendedIntegrationEvent @event) =>
+        PublishAsync(
+            @event.OrganizationId,
+            @event.SubscriptionId,
+            @event.ClientProfileId,
+            @event.ProductId,
+            "SUSPENDED",
+            "subscription.suspended",
+            isFirstPayment: null);
+
+    public Task HandleAsync(SubscriptionCanceledIntegrationEvent @event) =>
+        PublishAsync(
+            @event.OrganizationId,
+            @event.SubscriptionId,
+            @event.ClientProfileId,
+            @event.ProductId,
+            "CANCELED",
+            "subscription.canceled",
+            isFirstPayment: null);
+
+    public Task HandleAsync(SubscriptionResumedIntegrationEvent @event) =>
+        PublishAsync(
+            @event.OrganizationId,
+            @event.SubscriptionId,
+            @event.ClientProfileId,
+            @event.ProductId,
+            "ACTIVE",
+            "subscription.resumed",
+            isFirstPayment: null);
+
+    private async Task PublishAsync(
+        Guid organizationId,
+        Guid subscriptionId,
+        Guid clientProfileId,
+        Guid productId,
+        string status,
+        string eventType,
+        bool? isFirstPayment)
     {
-        var payloadObj = new
-        {
-            subscription_id = @event.SubscriptionId.ToString(),
-            client_profile_id = @event.ClientProfileId.ToString(),
-            product_id = @event.ProductId.ToString(),
-            is_first_payment = @event.IsFirstPayment,
-            status = "ACTIVE"
-        };
-        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+        var payloadElement = await BuildPayloadAsync(
+            subscriptionId, clientProfileId, productId, status, isFirstPayment);
 
         await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-            @event.OrganizationId, TargetUrl: null, "subscription.activated", payloadElement));
+            organizationId, TargetUrl: null, eventType, payloadElement));
     }
 
-    public async Task HandleAsync(SubscriptionSuspendedIntegrationEvent @event)
+    private async Task<JsonElement> BuildPayloadAsync(
+        Guid subscriptionId,
+        Guid clientProfileId,
+        Guid productId,
+        string status,
+        bool? isFirstPayment)
     {
-        var payloadObj = new
+        var sub = await _repository.GetSubscriptionByIdAsync(subscriptionId);
+        var product = sub != null
+            ? await _repository.GetProductByIdAsync(sub.ProductId)
+            : await _repository.GetProductByIdAsync(productId);
+        var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var email = profile?.Email;
+
+        if (sub != null)
         {
-            subscription_id = @event.SubscriptionId.ToString(),
-            client_profile_id = @event.ClientProfileId.ToString(),
-            product_id = @event.ProductId.ToString(),
-            status = "SUSPENDED"
-        };
-        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+            return CommerceWebhookPayload.From(sub, product, email, status, isFirstPayment);
+        }
 
-        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-            @event.OrganizationId, TargetUrl: null, "subscription.suspended", payloadElement));
-    }
-
-    public async Task HandleAsync(SubscriptionCanceledIntegrationEvent @event)
-    {
-        var payloadObj = new
-        {
-            subscription_id = @event.SubscriptionId.ToString(),
-            client_profile_id = @event.ClientProfileId.ToString(),
-            product_id = @event.ProductId.ToString(),
-            status = "CANCELED"
-        };
-        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
-
-        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-            @event.OrganizationId, TargetUrl: null, "subscription.canceled", payloadElement));
-    }
-
-    public async Task HandleAsync(SubscriptionResumedIntegrationEvent @event)
-    {
-        var payloadObj = new
-        {
-            subscription_id = @event.SubscriptionId.ToString(),
-            client_profile_id = @event.ClientProfileId.ToString(),
-            product_id = @event.ProductId.ToString(),
-            status = "ACTIVE"
-        };
-        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
-
-        await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-            @event.OrganizationId, TargetUrl: null, "subscription.resumed", payloadElement));
+        return CommerceWebhookPayload.Build(
+            subscriptionId,
+            clientProfileId,
+            productId,
+            status,
+            nextBillingDate: null,
+            currentPeriodEnd: null,
+            email,
+            product?.Price,
+            product?.Currency,
+            product?.Interval,
+            metadata: null,
+            isFirstPayment);
     }
 }

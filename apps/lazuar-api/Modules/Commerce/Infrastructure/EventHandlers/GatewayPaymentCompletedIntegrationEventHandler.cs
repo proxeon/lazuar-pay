@@ -31,7 +31,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler : IIntegrati
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
     {
         var type = @event.Metadata.GetValueOrDefault("type");
-        if (type != "commerce_subscription" && type != "custom_payment_link")
+        if (!CommerceCheckoutMetadata.IsCommerceSubscriptionType(type) && type != "custom_payment_link")
         {
             return;
         }

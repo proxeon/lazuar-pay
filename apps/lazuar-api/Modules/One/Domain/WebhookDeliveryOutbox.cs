@@ -65,4 +65,12 @@ public class WebhookDeliveryOutbox : Entity, IMustHaveTenant
             NextAttemptAt = DateTime.UtcNow.AddMinutes(Math.Pow(2, AttemptCount));
         }
     }
+
+    /// <summary>401 / 422 / other 4xx — fail immediately (secret or payload bug; do not hide in backoff).</summary>
+    public void RecordPermanentFailure(string error)
+    {
+        AttemptCount++;
+        LastError = error;
+        Status = "FAILED";
+    }
 }

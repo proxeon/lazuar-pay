@@ -155,6 +155,9 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             DateTime.UtcNow.AddHours(24)
         );
 
+        var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, product.Interval);
+        session.SetMetadataJson(CommerceCheckoutMetadata.Serialize(persistMeta));
+
         _repository.AddCheckoutSession(session);
         await _repository.SaveChangesAsync(ct);
 
@@ -170,12 +173,10 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
             var cancelUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}?cancelled=true";
 
-            var metadata = new Dictionary<string, string>
-            {
-                { "type", "commerce_subscription" },
-                { "subscription_id", session.Id.ToString() },
-                { "tenant_id", tenantId.Value.ToString() }
-            };
+            var metadata = CommerceCheckoutMetadata.MergeClientIntoGateway(
+                request.Metadata,
+                tenantId.Value,
+                session.Id);
 
             // Product gateway when set; Payments resolves first active → BILLPLZ if blank (legacy rows).
             var preferredGateway = string.IsNullOrWhiteSpace(product.GatewayName)

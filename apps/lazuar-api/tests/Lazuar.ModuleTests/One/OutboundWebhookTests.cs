@@ -21,6 +21,23 @@ namespace Lazuar.ModuleTests.One;
 public class OutboundWebhookTests
 {
     [Test]
+    public void Signature_P09_SaasEnvelope_Vector_Is_Stable()
+    {
+        const string secret = "whsec_p09_test";
+        const long ts = 1_700_000_000L;
+        const string body =
+            """{"id":"evt_p09","event_type":"subscription.activated","created_at":"2023-11-14T22:13:20Z","data":{"subscription_id":"00000000-0000-0000-0000-000000000001","status":"ACTIVE"}}""";
+
+        var header = OutboundWebhookSignature.ComputeHeaderValue(secret, body, ts);
+        const string expected = "t=1700000000,v1=7fdf77fb7999da96c9aa8e06cb70a386a0f637be6e68a4a8b873f5765d3ba730";
+
+        Assert.That(header, Is.EqualTo(expected));
+        Assert.That(
+            OutboundWebhookSignature.TryVerify(secret, body, expected, toleranceSeconds: 0, nowUnixSeconds: ts),
+            Is.True);
+    }
+
+    [Test]
     public void Signature_Format_Is_Timestamp_And_V1_Hmac_Of_Timestamp_Dot_Body()
     {
         const string secret = "whsec_test_secret";
