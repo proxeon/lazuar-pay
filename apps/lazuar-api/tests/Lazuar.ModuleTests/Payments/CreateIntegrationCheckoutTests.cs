@@ -98,6 +98,38 @@ public class CreateIntegrationCheckoutTests
             });
 
     [Test]
+    public async Task Create_TestKey_With_StripeLiveK2_Throws_KeyModeMismatch()
+    {
+        WithActiveGateway("STRIPE", "sk_live_real_stripe_secret");
+        AdapterReturns("https://checkout.stripe.com/c/pay/cs_live", "cs_live");
+
+        var act = async () => await _create.Handle(
+            ValidCommand() with { RequestIsTestMode = true },
+            CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<PaymentIntegrationException>();
+        ex.Which.Code.Should().Be(PaymentErrorCodes.KeyModeMismatch);
+        await _adapter.DidNotReceive().GenerateCheckoutAsync(
+            Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<decimal>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<Dictionary<string, string>>(), Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<int>());
+    }
+
+    [Test]
+    public async Task Create_TestKey_With_BillplzPlainK2_DoesNotThrow()
+    {
+        WithActiveGateway("BILLPLZ", "billplz_collection_secret");
+        AdapterReturns("https://www.billplz.com/bills/bill_x", "bill_x");
+
+        var result = await _create.Handle(
+            ValidCommand(gatewayName: "BILLPLZ") with { RequestIsTestMode = true },
+            CancellationToken.None);
+
+        result.Gateway.Should().Be("BILLPLZ");
+        result.ProviderSessionId.Should().Be("bill_x");
+    }
+
+    [Test]
     public async Task Create_WithMockedStripe_PersistsSession_AndStampsMetadata()
     {
         WithActiveGateway("STRIPE");

@@ -126,4 +126,12 @@ public static class PlatformApiScopes
 
         return false;
     }
+
+    /// <summary>
+    /// True when the key has any payments.* product scope (not webhook manage).
+    /// </summary>
+    public static bool HasAnyPaymentsScope(string? scopes) =>
+        HasScope(scopes, PaymentsCheckoutsWrite)
+        || HasScope(scopes, PaymentsCheckoutsRead)
+        || HasScope(scopes, PaymentsConfigRead);
 }

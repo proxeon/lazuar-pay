@@ -12,7 +12,7 @@ namespace Modules.One.Application.Commands;
 public record CreateWebhookEndpointResult(
     Guid Id,
     string Url,
-    string SecretKey,
+    string? SecretKey,
     bool IsActive,
     IReadOnlyList<string> EnabledEvents,
     DateTime CreatedAt);
@@ -30,21 +30,41 @@ public class CreateWebhookEndpointCommandHandler : ICommandHandler<CreateWebhook
 {
     private readonly IOneRepository _repository;
     private readonly ITokenGeneratorService _tokenGenerator;
+    private readonly ISecretVault _secretVault;
 
-    public CreateWebhookEndpointCommandHandler(IOneRepository repository, ITokenGeneratorService tokenGenerator)
+    public CreateWebhookEndpointCommandHandler(
+        IOneRepository repository,
+        ITokenGeneratorService tokenGenerator,
+        ISecretVault secretVault)
     {
         _repository = repository;
         _tokenGenerator = tokenGenerator;
+        _secretVault = secretVault;
     }
 
     public async Task<CreateWebhookEndpointResult> Handle(CreateWebhookEndpointCommand request, CancellationToken ct)
     {
         var url = WebhookUrlValidator.NormalizeAndValidate(request.Url, allowHttpLoopback: true);
-        var secret = "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
+        var existing = (await _repository.ListWebhookEndpointsAsync(request.OrganizationId, ct))
+            .FirstOrDefault(e => string.Equals(e.Url, url, StringComparison.Ordinal));
+
+        if (existing is not null)
+        {
+            return new CreateWebhookEndpointResult(
+                existing.Id,
+                existing.Url,
+                SecretKey: null,
+                existing.IsActive,
+                existing.EnabledEvents.ToList(),
+                existing.CreatedAt);
+        }
+
+        var plain = "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
+        var stored = _secretVault.Encrypt(plain);
         var endpoint = new TenantWebhookEndpoint(
             request.OrganizationId,
             url,
-            secret,
+            stored,
             request.IsActive,
             request.EnabledEvents);
 
@@ -54,7 +74,7 @@ public class CreateWebhookEndpointCommandHandler : ICommandHandler<CreateWebhook
         return new CreateWebhookEndpointResult(
             endpoint.Id,
             endpoint.Url,
-            secret,
+            plain,
             endpoint.IsActive,
             endpoint.EnabledEvents.ToList(),
             endpoint.CreatedAt);
@@ -96,6 +116,79 @@ public class UpdateWebhookEndpointCommandHandler : ICommandHandler<UpdateWebhook
     }
 }
 
+public record RotateWebhookEndpointSecretResult(Guid Id, string SecretKey);
+
+public record RotateWebhookEndpointSecretCommand(Guid OrganizationId, Guid EndpointId)
+    : ICommand<RotateWebhookEndpointSecretResult>
+{
+    public Guid Id { get; init; } = Guid.CreateVersion7();
+}
+
+public class RotateWebhookEndpointSecretCommandHandler
+    : ICommandHandler<RotateWebhookEndpointSecretCommand, RotateWebhookEndpointSecretResult>
+{
+    private readonly IOneRepository _repository;
+    private readonly ITokenGeneratorService _tokenGenerator;
+    private readonly ISecretVault _secretVault;
+
+    public RotateWebhookEndpointSecretCommandHandler(
+        IOneRepository repository,
+        ITokenGeneratorService tokenGenerator,
+        ISecretVault secretVault)
+    {
+        _repository = repository;
+        _tokenGenerator = tokenGenerator;
+        _secretVault = secretVault;
+    }
+
+    public async Task<RotateWebhookEndpointSecretResult> Handle(
+        RotateWebhookEndpointSecretCommand request,
+        CancellationToken ct)
+    {
+        var endpoint = await _repository.GetWebhookEndpointByIdAsync(request.EndpointId, ct)
+            ?? throw new InvalidOperationException("Webhook endpoint not found.");
+
+        if (endpoint.OrganizationId != request.OrganizationId)
+        {
+            throw new InvalidOperationException("Webhook endpoint not found.");
+        }
+
+        var plain = "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
+        endpoint.RotateSecret(_secretVault.Encrypt(plain));
+        await _repository.SaveChangesAsync(ct);
+        return new RotateWebhookEndpointSecretResult(endpoint.Id, plain);
+    }
+}
+
+public record DisableWebhookEndpointCommand(Guid OrganizationId, Guid EndpointId) : ICommand
+{
+    public Guid Id { get; init; } = Guid.CreateVersion7();
+}
+
+public class DisableWebhookEndpointCommandHandler : ICommandHandler<DisableWebhookEndpointCommand>
+{
+    private readonly IOneRepository _repository;
+
+    public DisableWebhookEndpointCommandHandler(IOneRepository repository)
+    {
+        _repository = repository;
+    }
+
+    public async Task Handle(DisableWebhookEndpointCommand request, CancellationToken ct)
+    {
+        var endpoint = await _repository.GetWebhookEndpointByIdAsync(request.EndpointId, ct)
+            ?? throw new InvalidOperationException("Webhook endpoint not found.");
+
+        if (endpoint.OrganizationId != request.OrganizationId)
+        {
+            throw new InvalidOperationException("Webhook endpoint not found.");
+        }
+
+        endpoint.Disable();
+        await _repository.SaveChangesAsync(ct);
+    }
+}
+
 /// <summary>
 /// Legacy single-endpoint upsert retained for callers not yet migrated to multi-endpoint create/update.
 /// Creates a new endpoint if none exist; otherwise updates the first endpoint for the org.
@@ -109,11 +202,16 @@ public class SaveWebhookCommandHandler : ICommandHandler<SaveWebhookCommand>
 {
     private readonly IOneRepository _repository;
     private readonly ITokenGeneratorService _tokenGenerator;
+    private readonly ISecretVault _secretVault;
 
-    public SaveWebhookCommandHandler(IOneRepository repository, ITokenGeneratorService tokenGenerator)
+    public SaveWebhookCommandHandler(
+        IOneRepository repository,
+        ITokenGeneratorService tokenGenerator,
+        ISecretVault secretVault)
     {
         _repository = repository;
         _tokenGenerator = tokenGenerator;
+        _secretVault = secretVault;
     }
 
     public async Task Handle(SaveWebhookCommand request, CancellationToken ct)
@@ -122,8 +220,12 @@ public class SaveWebhookCommandHandler : ICommandHandler<SaveWebhookCommand>
 
         if (endpoint == null)
         {
-            var secret = "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
-            endpoint = new TenantWebhookEndpoint(request.OrganizationId, request.Url, secret, request.IsActive);
+            var plain = "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
+            endpoint = new TenantWebhookEndpoint(
+                request.OrganizationId,
+                request.Url,
+                _secretVault.Encrypt(plain),
+                request.IsActive);
             _repository.AddWebhookEndpoint(endpoint);
         }
         else

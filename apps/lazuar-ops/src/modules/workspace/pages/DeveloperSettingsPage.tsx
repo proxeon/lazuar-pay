@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Code, Key, Save, Plus } from "lucide-react";
+import { Loader2, Code, Key, Save, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
@@ -10,6 +10,7 @@ import { cn } from "../../../lib/utils";
 
 type WebhookEndpointDto = components["schemas"]["One.WebhookEndpointDto"];
 type CreateWebhookEndpointResponseDto = components["schemas"]["One.CreateWebhookEndpointResponseDto"];
+type RotateWebhookSecretResponseDto = components["schemas"]["One.RotateWebhookSecretResponseDto"];
 
 /** Catalog of outbound events currently emitted to workspace endpoints. Empty selection = all events. */
 const WEBHOOK_EVENT_OPTIONS = [
@@ -64,8 +65,13 @@ export default function DeveloperSettingsPage() {
       return data as CreateWebhookEndpointResponseDto;
     },
     onSuccess: (created) => {
-      toast.success("Webhook endpoint created. Copy the signing secret now — it will not be shown again.");
-      setRevealedSecret(created.secret_key);
+      if (created.secret_key) {
+        toast.success("Webhook endpoint created. Copy the signing secret now — it will not be shown again.");
+        setRevealedSecret(created.secret_key);
+      } else {
+        toast.success("Webhook endpoint already registered for this URL. Secret is not shown again — rotate to remint.");
+        setRevealedSecret(null);
+      }
       setUrl("");
       setIsActive(true);
       setEnabledEvents([]);
@@ -100,7 +106,37 @@ export default function DeveloperSettingsPage() {
     onError: (err: any) => toast.error(err.message || "Failed to update webhook endpoint."),
   });
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const rotateMutation = useMutation({
+    mutationFn: async (endpointId: string) => {
+      const { data, error } = await client.POST(
+        "/one/workspaces/{id}/webhooks/{endpointId}/rotate-secret",
+        {
+          params: { path: { id: activeWorkspaceId, endpointId } },
+        }
+      );
+      if (error) throw new Error(error.detail);
+      return data as RotateWebhookSecretResponseDto;
+    },
+    onSuccess: (rotated) => {
+      toast.success("Copy the new signing secret now.");
+      setRevealedSecret(rotated.secret_key);
+      queryClient.invalidateQueries({ queryKey: ["developer-webhooks", activeWorkspaceId] });
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to rotate signing secret."),
+  });
+
+  const isPending = createMutation.isPending || updateMutation.isPending || rotateMutation.isPending;
+
+  const handleRotate = (ep: WebhookEndpointDto) => {
+    if (
+      !window.confirm(
+        `Rotate the signing secret for ${ep.url}? The old secret will stop verifying immediately.`
+      )
+    ) {
+      return;
+    }
+    rotateMutation.mutate(ep.id);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,13 +248,28 @@ export default function DeveloperSettingsPage() {
                         </div>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => startEdit(ep)}
-                      className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:underline shrink-0"
-                    >
-                      Edit
-                    </button>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleRotate(ep)}
+                        disabled={rotateMutation.isPending}
+                        className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:underline disabled:opacity-50 inline-flex items-center gap-1"
+                      >
+                        {rotateMutation.isPending ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : (
+                          <RefreshCw size={11} />
+                        )}
+                        Rotate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(ep)}
+                        className="text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

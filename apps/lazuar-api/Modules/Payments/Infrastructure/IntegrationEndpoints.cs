@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using MediatR;
@@ -50,7 +52,8 @@ public static class IntegrationEndpoints
                     GatewayName: body.Gateway_name,
                     SetupFutureUsage: body.Setup_future_usage ?? false,
                     IdempotencyKey: idempotencyKey,
-                    Metadata: body.Metadata));
+                    Metadata: body.Metadata,
+                    RequestIsTestMode: ctx.IsTestMode));
 
                 return Results.Ok(ToResponse(result));
             }
@@ -84,6 +87,47 @@ public static class IntegrationEndpoints
             return Results.Ok(ToResponse(result));
         })
         .RequireAuthorization("IntegrationPaymentsCheckoutsRead");
+
+        group.MapGet("/me", async (
+            HttpContext http,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            if (ctx.TenantId == Guid.Empty)
+            {
+                return Results.Json(
+                    Problem(PaymentErrorCodes.Unauthorized, "Missing or invalid authentication.", 401),
+                    statusCode: 401);
+            }
+
+            var credentialRaw = http.User.FindFirst("CredentialId")?.Value;
+            if (!Guid.TryParse(credentialRaw, out var credentialId) || credentialId == Guid.Empty)
+            {
+                return Results.Json(
+                    Problem(PaymentErrorCodes.Forbidden, "Machine API key required.", 403),
+                    statusCode: 403);
+            }
+
+            var scopes = http.User.FindAll("scope").Select(c => c.Value).ToList();
+            var keyName = http.User.FindFirst("CredentialName")?.Value;
+            if (string.IsNullOrWhiteSpace(keyName)) keyName = null;
+
+            var result = await mediator.Send(new GetPaymentsMeQuery(
+                ctx.TenantId, credentialId, ctx.IsTestMode, scopes, keyName));
+
+            return Results.Ok(new PaymentsMeResponseDto
+            {
+                Workspace_id = result.WorkspaceId.ToString(),
+                Organization_id = result.OrganizationId.ToString(),
+                Is_test_mode = result.IsTestMode,
+                Key_id = result.KeyId.ToString(),
+                Key_name = result.KeyName,
+                Scopes = result.Scopes.ToList(),
+                Has_active_gateway = result.HasActiveGateway,
+                Gateway_names = result.GatewayNames.ToList()
+            });
+        })
+        .RequireAuthorization("IntegrationPaymentsMe");
 
         return endpoints;
     }

@@ -651,6 +651,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/payments/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Introspect machine key. Additive; checkout routes unchanged. */
+        get: operations["IntegrationCheckoutOperations_introspectMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/lhdn/api-keys": {
         parameters: {
             query?: never;
@@ -968,8 +985,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Integrator provision: create Hub workspace + scoped bootstrap key for (external_product, external_org_id).
-         *     Defaults: external_product=aura; aura_org_id remains an accepted alias for external_org_id.
+         * @description Integrator workspace provision: create workspace + scoped bootstrap key for (external_product, external_org_id).
+         *     Canonical body: external_product + external_org_id.
+         *     Legacy: only aura_org_id and no product → product aura.
+         *     external_org_id without product → 400 external_product_required.
+         *     Alias aurabook normalizes to stored aura (same unique pair; no second workspace).
          *     Optional Connect: webhook_url registers outbound endpoint (secret_key once); owner_email attaches membership.
          *     Auth: X-Lazuar-Provision-Key / Bearer provision secret, or SUPER_ADMIN JWT (not OrgAdmin / sk_*).
          *     Idempotent on (external_product, external_org_id) — plain_key and webhook secret_key only on first materialization.
@@ -1214,6 +1234,7 @@ export interface paths {
         };
         get: operations["OneOperations_getWorkspaceWebhooks"];
         put?: never;
+        /** @description Register a workspace webhook. Same normalized URL is idempotent: first create returns secret_key; repeats return the existing row without reminting or re-revealing. */
         post: operations["OneOperations_createWorkspaceWebhook"];
         delete?: never;
         options?: never;
@@ -1247,6 +1268,23 @@ export interface paths {
         get?: never;
         put: operations["OneOperations_updateWorkspaceWebhook"];
         post?: never;
+        /** @description Soft-disable the endpoint (is_active=false). Idempotent if already disabled. Does not hard-delete. */
+        delete: operations["OneOperations_disableWorkspaceWebhook"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/one/workspaces/{id}/webhooks/{endpointId}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OneOperations_rotateWorkspaceWebhookSecret"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2561,12 +2599,12 @@ export interface components {
             /** @description Empty or omitted = all events. */
             enabled_events?: string[];
         };
-        /** @description Create response — includes full secret once. */
+        /** @description Create response — includes full secret once on first create. */
         "One.CreateWebhookEndpointResponseDto": {
             id: string;
             url: string;
-            /** @description Full signing secret — returned only once on create. */
-            secret_key: string;
+            /** @description Full signing secret — returned only once on first create. Omitted/null on idempotent same-URL create. */
+            secret_key?: string;
             is_active: boolean;
             enabled_events: string[];
             /** Format: date-time */
@@ -2646,17 +2684,19 @@ export interface components {
         "One.ProvisionWorkspaceRequestDto": {
             /**
              * @description Legacy Aura org id (GUID). Prefer external_org_id.
-             *     Required when external_org_id is omitted. For product "aura" must be a GUID.
+             *     Required when external_org_id is omitted. For product "aura" (and alias "aurabook") must be a GUID.
              */
             aura_org_id?: string;
             /**
              * @description External org / tenant id for the product (idempotency key with external_product).
-             *     Alias of aura_org_id — either field is accepted.
+             *     Alias of aura_org_id — either field is accepted. Sending this field without external_product is 400 external_product_required.
              */
             external_org_id?: string;
             /**
-             * @description Product slug bound on Organization.ExternalProduct (default "aura").
-             *     e.g. aura, demo-app. Lowercase [a-z][a-z0-9_-]*.
+             * @description Product slug bound on Organization.ExternalProduct.
+             *     Required except for the legacy body that sends only aura_org_id (then product=aura).
+             *     Alias "aurabook" is normalized to stored "aura" (do not fork the unique index).
+             *     e.g. demo-app, sample-shop, aura. Lowercase [a-z][a-z0-9_-]*.
              */
             external_product?: string;
             /** @description Display name for the Hub workspace (used on first create only). */
@@ -2689,7 +2729,7 @@ export interface components {
             aura_org_id: string;
             /** @description Normalized external org id (same value as aura_org_id). */
             external_org_id?: string;
-            /** @description Product slug that was bound (default aura). */
+            /** @description Product slug that was bound (never `aurabook`; alias folds to `aura`). */
             external_product?: string;
             created: boolean;
             api_key: components["schemas"]["One.ProvisionWorkspaceApiKeyDto"];
@@ -2722,6 +2762,11 @@ export interface components {
             email: string;
             token: string;
             new_password: string;
+        };
+        "One.RotateWebhookSecretResponseDto": {
+            id: string;
+            /** @description Full signing secret — returned only once on rotate. */
+            secret_key: string;
         };
         "One.SaveWebhookEndpointRequestDto": {
             url: string;
@@ -2920,6 +2965,19 @@ export interface components {
             };
             /** Format: date-time */
             occurred_at?: string;
+        };
+        /** @description Introspect the Bearer K1. Never echo the secret. */
+        "Payments.PaymentsMeResponseDto": {
+            workspace_id: string;
+            /** @description Pay organization / tenant id (not the integrator's Aura org id). */
+            organization_id: string;
+            is_test_mode: boolean;
+            key_id: string;
+            key_name?: string;
+            scopes: string[];
+            /** @description Optional Ready fields (P02.40 may keep these here instead of a separate /config). */
+            has_active_gateway?: boolean;
+            gateway_names?: string[];
         };
     };
     responses: never;
@@ -6627,6 +6685,71 @@ export interface operations {
             };
         };
     };
+    IntegrationCheckoutOperations_introspectMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Payments.PaymentsMeResponseDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     LhdnOperations_listApiKeys: {
         parameters: {
             query?: never;
@@ -9651,6 +9774,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_disableWorkspaceWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_rotateWorkspaceWebhookSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.RotateWebhookSecretResponseDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

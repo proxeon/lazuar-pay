@@ -82,6 +82,8 @@ ngrok http 8080
 
 **Billplz lock-in:** Old bills keep the callback URL from creation time. After changing `App:ApiBaseUrl` or tunnel host, **create new checkouts/bills** — do not expect old sandbox bills to hit the new public base.
 
+**Billplz sandbox vs live is not the K1 prefix.** Hub calls `https://www.billplz-sandbox.com` unless `App:ApiBaseUrl` contains `lazuar.com`, in which case it calls production Billplz. A `sk_live_` integrator key against a non-prod Hub still hits Billplz **sandbox**. Aura may warn: “Billplz environment follows Hub base URL, not the key prefix.”
+
 Full ops runbook (Aura dual-stack): monorepo `idea/022-remaining/RUNBOOK-local-full-fulfillment.md` if present, or Hub Taskfile `tunnel:api`.
 
 ## Staging / production

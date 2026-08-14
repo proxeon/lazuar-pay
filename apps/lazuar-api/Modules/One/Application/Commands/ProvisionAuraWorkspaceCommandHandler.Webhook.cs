@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
@@ -31,7 +32,7 @@ public partial class ProvisionAuraWorkspaceCommandHandler
         var webhookEndpoint = new TenantWebhookEndpoint(
             organizationId,
             webhookUrl,
-            webhookSecret,
+            _secretVault.Encrypt(webhookSecret),
             isActive: true,
             webhookEvents);
         _repository.AddWebhookEndpoint(webhookEndpoint);
@@ -75,7 +76,7 @@ public partial class ProvisionAuraWorkspaceCommandHandler
                 var created = new TenantWebhookEndpoint(
                     organizationId,
                     webhookUrl,
-                    webhookSecret,
+                    _secretVault.Encrypt(webhookSecret),
                     isActive: true,
                     webhookEvents);
                 _repository.AddWebhookEndpoint(created);
@@ -107,6 +108,9 @@ public partial class ProvisionAuraWorkspaceCommandHandler
     private string MintWebhookSecret() =>
         "whsec_" + _tokenGenerator.GenerateSecureToken(24).PlainToken;
 
-    private static string SecretHint(string secret) =>
-        secret.Length >= 4 ? secret[^4..] : secret;
+    private string SecretHint(string storedOrPlain)
+    {
+        var plain = _secretVault.DecryptOrPlaintext(storedOrPlain);
+        return plain.Length >= 4 ? plain[^4..] : plain;
+    }
 }

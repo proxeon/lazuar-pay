@@ -174,6 +174,7 @@ interface OneOperations {
   @useAuth(BearerAuth)
   @post
   @route("/workspaces/{id}/webhooks")
+  @doc("Register a workspace webhook. Same normalized URL is idempotent: first create returns secret_key; repeats return the existing row without reminting or re-revealing.")
   createWorkspaceWebhook(
     @path id: string,
     @body body: CreateWebhookEndpointRequestDto,
@@ -186,6 +187,23 @@ interface OneOperations {
     @path id: string,
     @path endpointId: string,
     @body body: UpdateWebhookEndpointRequestDto,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @post
+  @route("/workspaces/{id}/webhooks/{endpointId}/rotate-secret")
+  rotateWorkspaceWebhookSecret(
+    @path id: string,
+    @path endpointId: string,
+  ): RotateWebhookSecretResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @delete
+  @route("/workspaces/{id}/webhooks/{endpointId}")
+  @doc("Soft-disable the endpoint (is_active=false). Idempotent if already disabled. Does not hard-delete.")
+  disableWorkspaceWebhook(
+    @path id: string,
+    @path endpointId: string,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)

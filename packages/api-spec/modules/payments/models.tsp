@@ -66,7 +66,6 @@ model PaymentWebhookPayloadDto {
 }
 
 /**
- * DRAFT P00.31 — implement runtime in P02.
  * Introspect the Bearer K1. Never echo the secret.
  */
 model PaymentsMeResponseDto {

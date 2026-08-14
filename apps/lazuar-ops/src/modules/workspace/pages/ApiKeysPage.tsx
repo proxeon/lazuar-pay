@@ -48,7 +48,12 @@ const SCOPE_CATALOG = [
 ] as const;
 
 const PRESET_LHDN = ["lhdn.documents:write", "lhdn.documents:read"] as const;
-const PRESET_AURA = ["payments.checkouts:write", "payments.checkouts:read"] as const;
+/** Least-privilege Payments integrator (no LHDN). Matches PlatformApiScopes.DefaultAuraIntegratorScopes. */
+const PRESET_PAYMENTS_INTEGRATOR = [
+  "payments.checkouts:write",
+  "payments.checkouts:read",
+  "webhooks.endpoints:manage",
+] as const;
 
 export default function ApiKeysPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string }>();
@@ -365,6 +370,18 @@ export default function ApiKeysPage() {
                   </p>
                 </div>
 
+                <div className="flex items-start gap-3 p-3 border border-amber-200 bg-amber-50">
+                  <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-amber-900 leading-relaxed">
+                    This is a <strong>Lazuar Pay</strong> secret (<span className="font-mono">sk_test_</span>{" "}
+                    / <span className="font-mono">sk_live_</span>), not a Stripe secret. Stripe merchant
+                    keys use the same prefix. Paste it only into AuraBook{" "}
+                    <strong>Guest payments → Lazuar Pay</strong>, or send it as{" "}
+                    <span className="font-mono">Authorization: Bearer …</span> to Lazuar Pay. Never drop
+                    it into Stripe Dashboard or a Stripe SDK.
+                  </p>
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold text-[#09090b]">Secret key</label>
                   <div className="flex items-center gap-0 border border-[#e5e5e5] bg-[#fafafa]">
@@ -469,11 +486,11 @@ export default function ApiKeysPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => applyPreset(PRESET_AURA)}
+                          onClick={() => applyPreset(PRESET_PAYMENTS_INTEGRATOR)}
                           disabled={createMutation.isPending}
                           className="h-7 px-2.5 text-[9px] font-bold uppercase tracking-widest border border-[#e5e5e5] bg-white text-[#09090b] hover:bg-[#fafafa] disabled:opacity-50"
                         >
-                          Aura payments
+                          Payments integrator
                         </button>
                       </div>
                     </div>

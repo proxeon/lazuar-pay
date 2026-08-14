@@ -177,6 +177,18 @@ public class GenerateAndListApiCredentialsTests
     }
 
     [Test]
+    public void TryGetApiKey_Rejects_NonSk_Prefix()
+    {
+        var pk = new DefaultHttpContext();
+        pk.Request.Headers.Authorization = "Bearer pk_live_xx";
+        Assert.That(ApiKeyAuthenticationMiddleware.TryGetApiKey(pk.Request, out _), Is.False);
+
+        var lpk = new DefaultHttpContext();
+        lpk.Request.Headers.Authorization = "Bearer lpk_test_xx";
+        Assert.That(ApiKeyAuthenticationMiddleware.TryGetApiKey(lpk.Request, out _), Is.False);
+    }
+
+    [Test]
     public async Task GenerateApiCredential_With_Payments_Scopes_Only_Persists_Those_Scopes()
     {
         var repo = Substitute.For<IOneRepository>();

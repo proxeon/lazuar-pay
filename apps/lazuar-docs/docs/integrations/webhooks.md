@@ -144,7 +144,25 @@ Body (conceptually):
 }
 ```
 
-`secret_key` / signing secret returned **once**.
+`secret_key` / signing secret returned **once** on first create.
+
+Same normalized URL + same workspace is **idempotent**: the existing row is returned and `secret_key` is omitted. Events / `is_active` are not changed on that path. To remint, call:
+
+```http
+POST /api/v1/one/workspaces/{workspaceId}/webhooks/{endpointId}/rotate-secret
+```
+
+`200` `{ "id", "secret_key" }` — old `whsec` stops verifying immediately.
+
+```http
+DELETE /api/v1/one/workspaces/{workspaceId}/webhooks/{endpointId}
+```
+
+Soft-disables (`is_active: false`). Idempotent if already disabled. PUT `is_active: false` remains valid.
+
+URL rule: absolute URL, no userinfo, **https** or **http loopback** (`localhost` / `127.0.0.1` / `::1`). Max 2048 characters.
+
+Signing secrets are encrypted at rest. HMAC still uses the **full** decrypted `whsec_…` string — do not strip the prefix.
 
 ## Request to your app
 

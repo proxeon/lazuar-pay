@@ -54,6 +54,20 @@ public class TenantWebhookEndpoint : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>Replace the stored signing secret (already encrypted at rest).</summary>
+    public void RotateSecret(string storedSecret)
+    {
+        SecretKey = storedSecret;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Soft-disable. Delivery history and HMAC material are retained.</summary>
+    public void Disable()
+    {
+        IsActive = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     /// <summary>
     /// Empty EnabledEvents means the endpoint accepts every event type.
     /// </summary>

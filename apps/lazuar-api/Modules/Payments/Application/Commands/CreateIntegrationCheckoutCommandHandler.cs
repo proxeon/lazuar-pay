@@ -147,7 +147,8 @@ public class CreateIntegrationCheckoutCommandHandler
                 quantity: 1,
                 preferredGateway: resolvedGateway,
                 requireActiveGateway: true,
-                cancellationToken);
+                cancellationToken,
+                request.RequestIsTestMode);
 
             session.MarkProviderIssued(gatewayResult.CheckoutUrl, gatewayResult.ProviderSessionId);
             await _sessions.SaveChangesAsync(cancellationToken);

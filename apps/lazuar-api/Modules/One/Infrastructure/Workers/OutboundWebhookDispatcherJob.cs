@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using BuildingBlocks.Application.Observability;
 using BuildingBlocks.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore;
@@ -68,6 +69,7 @@ public class OutboundWebhookDispatcherJob : BackgroundService
         if (pendingDeliveries.Count == 0) return;
 
         var client = _httpClientFactory.CreateClient("DeveloperWebhooks");
+        var vault = scope.ServiceProvider.GetRequiredService<ISecretVault>();
 
         foreach (var delivery in pendingDeliveries)
         {
@@ -90,8 +92,9 @@ public class OutboundWebhookDispatcherJob : BackgroundService
             {
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint.Url);
                 var unixTs = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                var signingSecret = ResolveSigningSecret(vault, endpoint);
                 var signature = OutboundWebhookSignature.ComputeHeaderValue(
-                    endpoint.SecretKey,
+                    signingSecret,
                     delivery.Payload,
                     unixTs);
 
@@ -199,5 +202,19 @@ public class OutboundWebhookDispatcherJob : BackgroundService
         }
 
         return pendingDeliveries;
+    }
+
+    /// <summary>
+    /// Decrypt stored HMAC material. Lazy-encrypt leftover plaintext <c>whsec_</c> rows.
+    /// Full decrypted string is used (prefix is not stripped).
+    /// </summary>
+    internal static string ResolveSigningSecret(ISecretVault vault, TenantWebhookEndpoint endpoint)
+    {
+        if (endpoint.SecretKey.StartsWith("whsec_", StringComparison.Ordinal))
+        {
+            endpoint.RotateSecret(vault.Encrypt(endpoint.SecretKey));
+        }
+
+        return vault.DecryptOrPlaintext(endpoint.SecretKey);
     }
 }

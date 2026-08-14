@@ -44,13 +44,12 @@ interface IntegrationCheckoutOperations {
     | LazuarApi.Core.ProblemDetailsResponse;
 
   /**
-   * DRAFT P00.31 — not implemented in Minimal API until P02.
-   * Introspect Bearer K1: workspace_id, is_test_mode, scopes, key metadata.
-   * 401 bad/revoked key. 403 if key has no payments scopes. Never echo the secret.
+   * Introspect Bearer K1: workspace_id, is_test_mode, scopes, key metadata, optional Ready flags.
+   * 401 bad/revoked/wrong scheme. 403 if key has no payments.* scopes. Never echo the secret.
    */
   @get
   @route("/me")
-  @doc("DRAFT: introspect machine key. Runtime lands in P02. Additive; checkout routes unchanged.")
+  @doc("Introspect machine key. Additive; checkout routes unchanged.")
   introspectMe():
     | PaymentsMeResponseDto
     | LazuarApi.Core.ProblemDetailsResponse;

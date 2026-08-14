@@ -146,6 +146,17 @@ public static class AuthAndCorsExtensions
                     || (ctx.User.IsInRole("API_CLIENT")
                         && ctx.User.HasClaim("scope", PlatformApiScopes.WebhooksEndpointsManage)));
             });
+
+            // K1 introspect only — API_CLIENT + any payments.* scope. Humans must not pass.
+            options.AddPolicy("IntegrationPaymentsMe", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("API_CLIENT")
+                    && (ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite)
+                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead)
+                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsConfigRead)));
+            });
         });
 
         return services;

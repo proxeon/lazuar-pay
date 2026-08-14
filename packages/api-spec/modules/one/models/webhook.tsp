@@ -20,15 +20,21 @@ model CreateWebhookEndpointRequestDto {
   enabled_events?: string[];
 }
 
-/** Create response — includes full secret once. */
+/** Create response — includes full secret once on first create. */
 model CreateWebhookEndpointResponseDto {
   id: string; // GUID
   url: string;
-  /** Full signing secret — returned only once on create. */
-  secret_key: string;
+  /** Full signing secret — returned only once on first create. Omitted/null on idempotent same-URL create. */
+  secret_key?: string;
   is_active: boolean;
   enabled_events: string[];
   created_at: utcDateTime;
+}
+
+model RotateWebhookSecretResponseDto {
+  id: string;
+  /** Full signing secret — returned only once on rotate. */
+  secret_key: string;
 }
 
 model UpdateWebhookEndpointRequestDto {

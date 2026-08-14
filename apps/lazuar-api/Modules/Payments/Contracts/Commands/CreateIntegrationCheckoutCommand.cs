@@ -19,7 +19,8 @@ public record CreateIntegrationCheckoutCommand(
     string? GatewayName = null,
     bool SetupFutureUsage = false,
     string? IdempotencyKey = null,
-    Dictionary<string, string>? Metadata = null) : ICommand<IntegrationCheckoutResult>
+    Dictionary<string, string>? Metadata = null,
+    bool? RequestIsTestMode = null) : ICommand<IntegrationCheckoutResult>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

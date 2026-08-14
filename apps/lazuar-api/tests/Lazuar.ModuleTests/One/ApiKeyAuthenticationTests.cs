@@ -400,6 +400,57 @@ public class ApiKeyAuthenticationTests
     }
 
     [Test]
+    public async Task Payments_Me_Policy_Allows_ApiClient_With_Any_Payments_Scope()
+    {
+        var auth = BuildAuthorizationService();
+        foreach (var scope in new[]
+                 {
+                     PlatformApiScopes.PaymentsCheckoutsWrite,
+                     PlatformApiScopes.PaymentsCheckoutsRead,
+                     PlatformApiScopes.PaymentsConfigRead
+                 })
+        {
+            var apiClient = Principal(role: "API_CLIENT", scopes: [scope]);
+            var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsMe");
+            Assert.That(result.Succeeded, Is.True, $"scope {scope} should pass IntegrationPaymentsMe");
+        }
+    }
+
+    [Test]
+    public async Task Payments_Me_Policy_Denies_Lhdn_Only_Key()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.LhdnDocumentsWrite, PlatformApiScopes.LhdnDocumentsRead]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsMe");
+        Assert.That(result.Succeeded, Is.False);
+    }
+
+    [Test]
+    public async Task Payments_Me_Policy_Denies_Webhooks_Manage_Only_Key()
+    {
+        var auth = BuildAuthorizationService();
+        var apiClient = Principal(
+            role: "API_CLIENT",
+            scopes: [PlatformApiScopes.WebhooksEndpointsManage]);
+
+        var result = await auth.AuthorizeAsync(apiClient, null, "IntegrationPaymentsMe");
+        Assert.That(result.Succeeded, Is.False);
+    }
+
+    [Test]
+    public async Task Payments_Me_Policy_Denies_Human_Admin()
+    {
+        var auth = BuildAuthorizationService();
+        var admin = Principal(role: "ADMIN");
+
+        var result = await auth.AuthorizeAsync(admin, null, "IntegrationPaymentsMe");
+        Assert.That(result.Succeeded, Is.False);
+    }
+
+    [Test]
     public async Task Payments_Config_Read_Policy_Allows_Scoped_Client_Only()
     {
         var auth = BuildAuthorizationService();
@@ -489,6 +540,16 @@ public class ApiKeyAuthenticationTests
                     || ctx.User.IsInRole("ADMIN")
                     || (ctx.User.IsInRole("API_CLIENT")
                         && ctx.User.HasClaim("scope", PlatformApiScopes.WebhooksEndpointsManage)));
+            });
+
+            options.AddPolicy("IntegrationPaymentsMe", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("API_CLIENT")
+                    && (ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite)
+                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead)
+                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsConfigRead)));
             });
         });
         services.AddSingleton<IAuthorizationHandler, PassThroughHandler>();

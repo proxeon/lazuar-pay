@@ -42,7 +42,8 @@ public sealed class CheckoutSessionCashier
         int quantity,
         string? preferredGateway,
         bool requireActiveGateway,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool? requestIsTestMode = null)
     {
         var gatewayName = await ResolveGatewayNameAsync(
             tenantId, preferredGateway, requireActiveGateway, cancellationToken);
@@ -69,6 +70,7 @@ public sealed class CheckoutSessionCashier
         }
 
         var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
+        EnsureKeyModeMatchesGateway(requestIsTestMode, plainApiKey);
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
         var result = await adapter.GenerateCheckoutAsync(
@@ -126,5 +128,26 @@ public sealed class CheckoutSessionCashier
         }
 
         return "BILLPLZ";
+    }
+
+    /// <summary>
+    /// Cheap Stripe-prefix guard only. Fixture keys like <c>sk_test</c> (no trailing _) and Billplz are skipped.
+    /// </summary>
+    internal static void EnsureKeyModeMatchesGateway(bool? requestIsTestMode, string plainApiKey)
+    {
+        if (requestIsTestMode is null) return;
+        var k2 = plainApiKey.Trim();
+        var k2Test = k2.StartsWith("sk_test_", StringComparison.OrdinalIgnoreCase);
+        var k2Live = k2.StartsWith("sk_live_", StringComparison.OrdinalIgnoreCase);
+        if (!k2Test && !k2Live) return;
+        if (requestIsTestMode.Value != k2Test)
+        {
+            throw new PaymentIntegrationException(
+                PaymentErrorCodes.KeyModeMismatch,
+                requestIsTestMode.Value
+                    ? "Test API key cannot charge a live gateway credential (KEY_MODE_MISMATCH)."
+                    : "Live API key cannot charge a test gateway credential (KEY_MODE_MISMATCH).",
+                statusCode: 409);
+        }
     }
 }

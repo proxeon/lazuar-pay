@@ -123,8 +123,12 @@ public class ProvisionAuraWorkspaceTests
         tokens.HashToken(Arg.Any<string>()).Returns(ci => $"hash:{ci.Arg<string>()}");
 
         var eventBus = Substitute.For<IEventBus>();
+        var vault = Substitute.For<ISecretVault>();
+        vault.Encrypt(Arg.Any<string>()).Returns(ci => ci.ArgAt<string>(0));
+        vault.Decrypt(Arg.Any<string>()).Returns(_ =>
+            throw new System.Security.Cryptography.CryptographicException());
 
-        return new ProvisionAuraWorkspaceCommandHandler(repo, tokens, eventBus);
+        return new ProvisionAuraWorkspaceCommandHandler(repo, tokens, eventBus, vault);
     }
 
     private static ProvisionAuraWorkspaceCommand Cmd(
@@ -817,9 +821,11 @@ public class ProvisionAuraWorkspaceTests
     public async Task CreateWebhookEndpoint_Validates_Https()
     {
         var repo = Substitute.For<IOneRepository>();
+        repo.ListWebhookEndpointsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<TenantWebhookEndpoint>>([]));
         var tokens = Substitute.For<ITokenGeneratorService>();
         tokens.GenerateSecureToken(24).Returns(new GeneratedToken("abcdefghijklmnopqrstuvwx", "h"));
-        var handler = new CreateWebhookEndpointCommandHandler(repo, tokens);
+        var handler = new CreateWebhookEndpointCommandHandler(repo, tokens, IdentityVault());
 
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.Handle(
@@ -832,5 +838,52 @@ public class ProvisionAuraWorkspaceTests
         Assert.That(ok.SecretKey, Does.StartWith("whsec_"));
         Assert.That(ok.Url, Is.EqualTo("https://good.example/hook"));
         repo.Received(1).AddWebhookEndpoint(Arg.Any<TenantWebhookEndpoint>());
+    }
+
+    [Test]
+    public async Task CreateWebhookEndpoint_SameUrl_IsIdempotent_DoesNotReRevealSecret()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var endpoints = new List<TenantWebhookEndpoint>();
+        repo.When(r => r.AddWebhookEndpoint(Arg.Any<TenantWebhookEndpoint>()))
+            .Do(ci => endpoints.Add(ci.Arg<TenantWebhookEndpoint>()));
+        repo.ListWebhookEndpointsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult((IReadOnlyList<TenantWebhookEndpoint>)endpoints.ToList()));
+
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.GenerateSecureToken(24).Returns(new GeneratedToken("abcdefghijklmnopqrstuvwx", "h"));
+        var handler = new CreateWebhookEndpointCommandHandler(repo, tokens, IdentityVault());
+        var orgId = Guid.CreateVersion7();
+        const string url = "https://good.example/hook";
+
+        var first = await handler.Handle(new CreateWebhookEndpointCommand(orgId, url), CancellationToken.None);
+        var second = await handler.Handle(new CreateWebhookEndpointCommand(orgId, url), CancellationToken.None);
+
+        Assert.That(first.SecretKey, Does.StartWith("whsec_"));
+        Assert.That(second.SecretKey, Is.Null.Or.Empty);
+        Assert.That(second.Id, Is.EqualTo(first.Id));
+        repo.Received(1).AddWebhookEndpoint(Arg.Any<TenantWebhookEndpoint>());
+    }
+
+    [Test]
+    public async Task CreateWebhookEndpoint_Rejects_Http_NonLoopback()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        var handler = new CreateWebhookEndpointCommandHandler(repo, tokens, IdentityVault());
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(
+                new CreateWebhookEndpointCommand(Guid.CreateVersion7(), "http://evil.test/hook"),
+                CancellationToken.None));
+    }
+
+    private static ISecretVault IdentityVault()
+    {
+        var vault = Substitute.For<ISecretVault>();
+        vault.Encrypt(Arg.Any<string>()).Returns(ci => ci.ArgAt<string>(0));
+        vault.Decrypt(Arg.Any<string>()).Returns(_ =>
+            throw new System.Security.Cryptography.CryptographicException());
+        return vault;
     }
 }

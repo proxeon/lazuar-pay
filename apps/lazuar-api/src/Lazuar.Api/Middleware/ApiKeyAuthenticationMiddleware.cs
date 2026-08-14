@@ -15,7 +15,7 @@ public class ApiKeyAuthenticationMiddleware
     private readonly ITokenGeneratorService _tokenGenerator;
 
     private const string OneLookupSql = """
-        SELECT "Id" AS "CredentialId", "OrganizationId", "Scopes"
+        SELECT "Id" AS "CredentialId", "OrganizationId", "Scopes", "Name"
         FROM one."ApiCredentials"
         WHERE "KeyHash" = @KeyHash AND "IsActive" = true
         LIMIT 1
@@ -75,6 +75,11 @@ public class ApiKeyAuthenticationMiddleware
                 new("IsTestMode", isTestMode ? "true" : "false"),
                 new(ClaimTypes.Role, "API_CLIENT")
             };
+
+            if (!string.IsNullOrEmpty(entry.Name))
+            {
+                claims.Add(new Claim("CredentialName", entry.Name));
+            }
 
             foreach (var scope in PlatformApiScopes.Split(entry.Scopes))
             {
@@ -166,5 +171,6 @@ public class ApiKeyAuthenticationMiddleware
         public Guid CredentialId { get; init; }
         public Guid OrganizationId { get; init; }
         public string Scopes { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
     }
 }

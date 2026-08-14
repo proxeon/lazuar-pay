@@ -65,4 +65,19 @@ public class IntegrationCheckoutEndpointsAuthorizationTests
         Assert.That(authorizeData, Is.Not.Empty);
         Assert.That(authorizeData.Any(a => a.Policy == "IntegrationPaymentsCheckoutsRead"), Is.True);
     }
+
+    [Test]
+    public void MapPaymentsIntegrationEndpoints_MeRequiresPaymentsMePolicy()
+    {
+        var endpoints = MapIntegrationRoutes();
+        var me = endpoints.SingleOrDefault(e =>
+            e.RoutePattern.RawText is { } raw
+            && raw.Contains("integrations/payments/me", System.StringComparison.Ordinal)
+            && HasMethod(e, "GET"));
+
+        Assert.That(me, Is.Not.Null, "GET /integrations/payments/me should be mapped");
+        var authorizeData = me!.Metadata.GetOrderedMetadata<IAuthorizeData>();
+        Assert.That(authorizeData, Is.Not.Empty);
+        Assert.That(authorizeData.Any(a => a.Policy == "IntegrationPaymentsMe"), Is.True);
+    }
 }

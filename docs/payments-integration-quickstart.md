@@ -73,6 +73,22 @@ curl -sS -X POST "$HUB/one/integrations/workspaces/provision" \
 
 Default bootstrap scopes: `payments.checkouts:write`, `payments.checkouts:read`, `webhooks.endpoints:manage`.
 
+## Mint a Payments integrator key (AuraBook Guest payments)
+
+1. Sign in to Lazuar Pay Ops → **Developer → API Keys**.
+2. **Create Key**. Name is required (e.g. `AuraBook guest`).
+3. Environment: **Test** (`sk_test_…`) or **Live** (`sk_live_…`).
+4. Click preset **Payments integrator** (scopes: `payments.checkouts:write`, `payments.checkouts:read`, `webhooks.endpoints:manage`). Do not add LHDN scopes.
+5. Create. Copy the secret **once**. It is a **Lazuar Pay** secret, not a Stripe secret — same `sk_` prefix, different system.
+6. Paste into AuraBook **Guest payments → Lazuar Pay** (P04/P05). Aura will `GET /integrations/payments/me` then `POST /one/workspaces/{workspace_id}/webhooks`. You can probe first:
+
+```bash
+curl -sS "$HUB/integrations/payments/me" \
+  -H "Authorization: Bearer $SK"
+```
+
+Expect `200` with `workspace_id` + `scopes`. The body must **not** contain `sk_` or `whsec_`.
+
 ---
 
 ## 3. Create a checkout
@@ -119,6 +135,7 @@ curl -sS -X POST "$HUB/integrations/payments/checkouts" \
 | `GATEWAY_ERROR` | 502 |
 | `CHECKOUT_NOT_FOUND` | 404 |
 | `UNAUTHORIZED` / `FORBIDDEN` | 401 / 403 |
+| `KEY_MODE_MISMATCH` | 409 (test K1 vs Stripe `sk_live_` K2, or the reverse) |
 
 ---
 
@@ -213,9 +230,9 @@ AuraBook consumes this public surface. Aura does **not** invent `/integrations/p
 | Create guest checkout | `POST /api/v1/integrations/payments/checkouts` | Bearer K1 + `payments.checkouts:write` | **Live** — Aura `HubPaymentsClient.CreateCheckoutAsync` |
 | Get checkout (UX / reconcile only; **not** a money event) | `GET /api/v1/integrations/payments/checkouts/{id}` | Bearer K1 + `payments.checkouts:read` | **Live** |
 | Provision Type-T workspace (K0 hatch) | `POST /api/v1/one/integrations/workspaces/provision` | `X-Lazuar-Provision-Key` (not salon K1) | **Live** — Aura Connect only |
-| Introspect pasted K1 | `GET /api/v1/integrations/payments/me` | Bearer K1 | **Missing** — TypeSpec **draft** P00.31; implement P02. Aura must not trust a typed workspace id (L11) |
-| Payments ready? (vault live, no K2 material) | fields on `/me` or future `GET /integrations/payments/config` | Bearer K1; optional `payments.config:read` | **Missing** — P02.40. Do not treat “row has workspace id” as Ready (L15) |
-| Register guest webhook | intended: after introspect, `POST /api/v1/one/workspaces/{workspace_id}/webhooks` | Bearer K1 + `webhooks.endpoints:manage` | **Partial** — route **exists** for humans / machine keys **with** manage scope. Create is **not** same-URL idempotent today (always new row + new `whsec_`). P02.32 must add idempotent same-URL + no re-reveal. Aura P00 client does **not** call this yet |
+| Introspect pasted K1 | `GET /api/v1/integrations/payments/me` | Bearer K1 + any `payments.*` scope | **Live** — `GET /api/v1/integrations/payments/me` |
+| Payments ready? (vault live, no K2 material) | fields on `/me` | Bearer K1 (no `payments.config:read` required) | **Live on `/me`** — `has_active_gateway`, `gateway_names` (no K2) |
+| Register guest webhook | after introspect, `POST /api/v1/one/workspaces/{workspace_id}/webhooks` | Bearer K1 + `webhooks.endpoints:manage` | **Live** — same POST; same-URL idempotent; rotate at `POST …/webhooks/{id}/rotate-secret`; DELETE disables; `whsec` encrypted at rest |
 | Guest money events | signed `payment.completed` / `payment.failed` → Aura `/webhooks/hub/payments` | `X-Lazuar-Signature` | **Live** envelope `{ id, event_type, created_at, data }` (see §9 / CONTRACT-webhook-v1 amendment) |
 | SaaS money events | second Aura URL | n/a this product | **Out of Payments M1** — Type-P / Commerce later |
 
@@ -223,23 +240,26 @@ AuraBook consumes this public surface. Aura does **not** invent `/integrations/p
 
 Pay mints K1 as `sk_test_` / `sk_live_` (`GenerateApiCredentialCommand`, provision key helper). Stripe merchant secrets (K2) use the **same prefixes**.
 
-Aura **must not** accept a pasted key on regex alone (P04). Decision **deferred to P02.20**:
+`Prefix decision = B`
 
-| Option | Meaning |
-|--------|---------|
-| **A** | New prefixes `lpk_test_` / `lpk_live_` for newly minted keys; old `sk_*` still verify |
-| **B** (recommended now) | Keep `sk_*`; Aura rejects keys that fail Pay introspect even if they look like Stripe |
+Keep minting `sk_test_` / `sk_live_`. Aura P04 **must not** accept a key that only matches an `sk_live_` regex — it must `GET /me` and treat 401/403 as `PAY_KEY_INVALID`. If the pasted value looks like Stripe but Pay 401s: “This looks like a Stripe secret. Mint a Lazuar Pay key.”
 
-Tick in P02: `Prefix decision = ________`
-
-### 8.2 `PRESET_AURA` omits webhook manage (P00.34)
+### 8.2 Payments integrator preset includes webhook manage
 
 Ops UI: `apps/lazuar-ops/src/modules/workspace/pages/ApiKeysPage.tsx`
 
 ```ts
-const PRESET_AURA = ["payments.checkouts:write", "payments.checkouts:read"] as const;
+const PRESET_PAYMENTS_INTEGRATOR = [
+  "payments.checkouts:write",
+  "payments.checkouts:read",
+  "webhooks.endpoints:manage",
+] as const;
 ```
 
-The scope **exists** in `SCOPE_CATALOG` and in `PlatformApiScopes.WebhooksEndpointsManage`. Provision bootstrap (`DefaultAuraIntegratorScopes`) **includes** `webhooks.endpoints:manage`. A salon who clicks **Aura payments** in the create-key dialog gets a K1 that can checkout but **cannot** `POST /one/workspaces/{id}/webhooks`.
+Matches `PlatformApiScopes.DefaultAuraIntegratorScopes`. No LHDN scopes. `payments.config:read` is optional via catalog checkbox.
 
-P02.01 will add `webhooks.endpoints:manage` (and optionally `payments.config:read`) to that preset. **Do not change the preset in P00.**
+### 8.3 Billplz sandbox vs live (known gap)
+
+Billplz sandbox vs live is **not** selected by the K1 prefix today. Hub calls `https://www.billplz-sandbox.com` unless `App:ApiBaseUrl` contains `lazuar.com`, in which case it calls production Billplz. A `sk_live_` integrator key against a non-prod Hub still hits Billplz **sandbox**. Aura may warn: “Billplz environment follows Hub base URL, not the key prefix.”
+
+`KEY_MODE_MISMATCH` only compares Stripe-shaped K2 (`sk_test_` / `sk_live_` with the trailing underscore). Fixture keys like `sk_test` and Billplz/CHIP/Razorpay secrets are not gated.

@@ -4505,7 +4505,7 @@ namespace Lazuar.ApiTypes
     }
 
     /// <summary>
-    /// Create response — includes full secret once.
+    /// Create response — includes full secret once on first create.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateWebhookEndpointResponseDto
@@ -4518,11 +4518,11 @@ namespace Lazuar.ApiTypes
         public string Url { get; set; } = default!;
 
         /// <summary>
-        /// Full signing secret — returned only once on create.
+        /// Full signing secret — returned only once on first create. Omitted/null on idempotent same-URL create.
         /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
-        public string Secret_key { get; set; } = default!;
+        public string? Secret_key { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool Is_active { get; set; } = default!;
@@ -5086,7 +5086,7 @@ namespace Lazuar.ApiTypes
     {
         /// <summary>
         /// Legacy Aura org id (GUID). Prefer external_org_id.
-        /// <br/>Required when external_org_id is omitted. For product "aura" must be a GUID.
+        /// <br/>Required when external_org_id is omitted. For product "aura" (and alias "aurabook") must be a GUID.
         /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("aura_org_id")]
@@ -5094,15 +5094,17 @@ namespace Lazuar.ApiTypes
 
         /// <summary>
         /// External org / tenant id for the product (idempotency key with external_product).
-        /// <br/>Alias of aura_org_id — either field is accepted.
+        /// <br/>Alias of aura_org_id — either field is accepted. Sending this field without external_product is 400 external_product_required.
         /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("external_org_id")]
         public string? External_org_id { get; set; } = default!;
 
         /// <summary>
-        /// Product slug bound on Organization.ExternalProduct (default "aura").
-        /// <br/>e.g. aura, demo-app. Lowercase [a-z][a-z0-9_-]*.
+        /// Product slug bound on Organization.ExternalProduct.
+        /// <br/>Required except for the legacy body that sends only aura_org_id (then product=aura).
+        /// <br/>Alias "aurabook" is normalized to stored "aura" (do not fork the unique index).
+        /// <br/>e.g. demo-app, sample-shop, aura. Lowercase [a-z][a-z0-9_-]*.
         /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("external_product")]
@@ -5219,7 +5221,7 @@ namespace Lazuar.ApiTypes
         public string? External_org_id { get; set; } = default!;
 
         /// <summary>
-        /// Product slug that was bound (default aura).
+        /// Product slug that was bound (never `aurabook`; alias folds to `aura`).
         /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("external_product")]
@@ -5447,6 +5449,48 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<ResetPasswordRequestDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RotateWebhookSecretResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        /// <summary>
+        /// Full signing secret — returned only once on rotate.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret_key")]
+        public string Secret_key { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static RotateWebhookSecretResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<RotateWebhookSecretResponseDto>(data, options);
 
         }
 
@@ -6562,6 +6606,73 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<PaymentWebhookPayloadDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
+    /// Introspect the Bearer K1. Never echo the secret.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PaymentsMeResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("workspace_id")]
+        public string Workspace_id { get; set; } = default!;
+
+        /// <summary>
+        /// Pay organization / tenant id (not the integrator's Aura org id).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("organization_id")]
+        public string Organization_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_test_mode")]
+        public bool Is_test_mode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("key_id")]
+        public string Key_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("key_name")]
+        public string? Key_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("scopes")]
+        public System.Collections.Generic.List<string> Scopes { get; set; } = new System.Collections.Generic.List<string>();
+
+        /// <summary>
+        /// Optional Ready fields (P02.40 may keep these here instead of a separate /config).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("has_active_gateway")]
+        public bool? Has_active_gateway { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_names")]
+        public System.Collections.Generic.List<string>? Gateway_names { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PaymentsMeResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PaymentsMeResponseDto>(data, options);
 
         }
 

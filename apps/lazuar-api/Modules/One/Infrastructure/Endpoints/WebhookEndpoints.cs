@@ -126,6 +126,64 @@ public static class WebhookEndpoints
             }
         }).RequireAuthorization();
 
+        group.MapPost("/workspaces/{id:guid}/webhooks/{endpointId:guid}/rotate-secret", async Task<Results<Ok<RotateWebhookSecretResponseDto>, UnauthorizedHttpResult, NotFound, BadRequest<string>>> (
+            Guid id,
+            Guid endpointId,
+            HttpContext http,
+            IExecutionContextAccessor ctx,
+            IMediator mediator,
+            IOneQueryService queryService) =>
+        {
+            if (!await CanAccessWorkspaceWebhooksAsync(id, http, ctx, queryService, manageRequired: true))
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            try
+            {
+                var rotated = await mediator.Send(new RotateWebhookEndpointSecretCommand(id, endpointId));
+                return TypedResults.Ok(new RotateWebhookSecretResponseDto
+                {
+                    Id = rotated.Id.ToString(),
+                    Secret_key = rotated.SecretKey
+                });
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(ex.Message);
+            }
+        }).RequireAuthorization();
+
+        group.MapDelete("/workspaces/{id:guid}/webhooks/{endpointId:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult, NotFound>> (
+            Guid id,
+            Guid endpointId,
+            HttpContext http,
+            IExecutionContextAccessor ctx,
+            IMediator mediator,
+            IOneQueryService queryService) =>
+        {
+            if (!await CanAccessWorkspaceWebhooksAsync(id, http, ctx, queryService, manageRequired: true))
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            try
+            {
+                await mediator.Send(new DisableWebhookEndpointCommand(id, endpointId));
+                return TypedResults.Ok(new StatusResponse { Status = "disabled" });
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound();
+            }
+        }).RequireAuthorization();
+
         group.MapGet("/workspaces/{id:guid}/webhooks/logs", async Task<Results<Ok<ICollection<WebhookDeliveryLogDto>>, UnauthorizedHttpResult>> (
             Guid id,
             HttpContext http,

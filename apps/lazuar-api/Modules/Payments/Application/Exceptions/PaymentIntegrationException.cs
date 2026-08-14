@@ -70,4 +70,5 @@ public static class PaymentErrorCodes
     public const string CheckoutNotFound = "CHECKOUT_NOT_FOUND";
     public const string Unauthorized = "UNAUTHORIZED";
     public const string Forbidden = "FORBIDDEN";
+    public const string KeyModeMismatch = "KEY_MODE_MISMATCH";
 }

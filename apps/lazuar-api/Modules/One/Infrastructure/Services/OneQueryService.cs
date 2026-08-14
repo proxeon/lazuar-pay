@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.One.Contracts;
 using Lazuar.ApiTypes;
@@ -12,10 +13,12 @@ namespace Modules.One.Infrastructure.Services;
 public class OneQueryService : IOneQueryService
 {
     private readonly OneDbContext _context;
+    private readonly ISecretVault _secretVault;
 
-    public OneQueryService(OneDbContext context)
+    public OneQueryService(OneDbContext context, ISecretVault secretVault)
     {
         _context = context;
+        _secretVault = secretVault;
     }
 
     public async Task<WorkspaceSnapshotDto?> GetWorkspaceByIdAsync(Guid tenantId)
@@ -133,13 +136,10 @@ public class OneQueryService : IOneQueryService
         {
             var hasSecret = !string.IsNullOrEmpty(e.SecretKey);
             string? hint = null;
-            if (hasSecret && e.SecretKey.Length >= 4)
+            if (hasSecret)
             {
-                hint = e.SecretKey[^4..];
-            }
-            else if (hasSecret)
-            {
-                hint = e.SecretKey;
+                var plain = _secretVault.DecryptOrPlaintext(e.SecretKey);
+                hint = plain.Length >= 4 ? plain[^4..] : plain;
             }
 
             return new WebhookEndpointSnapshotDto(

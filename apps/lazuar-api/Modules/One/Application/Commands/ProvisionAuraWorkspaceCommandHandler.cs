@@ -50,15 +50,18 @@ public partial class ProvisionAuraWorkspaceCommandHandler
     private readonly IOneRepository _repository;
     private readonly ITokenGeneratorService _tokenGenerator;
     private readonly IEventBus _eventBus;
+    private readonly ISecretVault _secretVault;
 
     public ProvisionAuraWorkspaceCommandHandler(
         IOneRepository repository,
         ITokenGeneratorService tokenGenerator,
-        [FromKeyedServices("OneEventBus")] IEventBus eventBus)
+        [FromKeyedServices("OneEventBus")] IEventBus eventBus,
+        ISecretVault secretVault)
     {
         _repository = repository;
         _tokenGenerator = tokenGenerator;
         _eventBus = eventBus;
+        _secretVault = secretVault;
     }
 
     public async Task<ProvisionAuraWorkspaceResult> Handle(
