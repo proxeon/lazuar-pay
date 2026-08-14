@@ -64,3 +64,20 @@ model PaymentWebhookPayloadDto {
   metadata?: Record<string>;
   occurred_at?: utcDateTime;
 }
+
+/**
+ * DRAFT P00.31 — implement runtime in P02.
+ * Introspect the Bearer K1. Never echo the secret.
+ */
+model PaymentsMeResponseDto {
+  workspace_id: string;
+  /** Pay organization / tenant id (not the integrator's Aura org id). */
+  organization_id: string;
+  is_test_mode: boolean;
+  key_id: string;
+  key_name?: string;
+  scopes: string[];
+  /** Optional Ready fields (P02.40 may keep these here instead of a separate /config). */
+  has_active_gateway?: boolean;
+  gateway_names?: string[];
+}

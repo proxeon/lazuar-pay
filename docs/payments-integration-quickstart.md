@@ -1,7 +1,7 @@
 # Payments cashier quickstart (M2M integration)
 
 **Audience:** Any server app integrating Lazuar Hub as a **BYOK cashier** (not Commerce catalog, not LHDN, not Paddle).  
-**Repos:** Hub (`lazuar-hub`). Aura is only one first-party client.  
+**Repos:** Hub (`lazuar-hub`). Aura is a first-party consumer of this surface — see the consume/gap table in §8.  
 **OpenAPI:** Scalar → Developers hub `/payments` · TypeSpec `packages/api-spec/docs-payments.tsp` · generated `packages/api-spec/dist/payments/openapi.yaml`.
 
 ---
@@ -198,3 +198,45 @@ Fulfillment rules:
 - Sample runbook: [Run sample app](../apps/lazuar-docs/docs/integrations/run-sample-app.md) · app `examples/hub-cashier-next` (port **3020**)
 - Event catalog UI: Developers hub `/webhooks`
 - Auth & scopes: Developers hub `/auth`
+
+---
+
+## 8. Aura consume / gap table (P00)
+
+AuraBook consumes this public surface. Aura does **not** invent `/integrations/payments/*` shapes. Missing rows are **Pay** tickets (P02), not Aura-private RPCs.
+
+| Concern | Path | Auth | Status for Aura |
+|---------|------|------|-----------------|
+| Create guest checkout | `POST /api/v1/integrations/payments/checkouts` | Bearer K1 + `payments.checkouts:write` | **Live** — Aura `HubPaymentsClient.CreateCheckoutAsync` |
+| Get checkout (UX / reconcile only; **not** a money event) | `GET /api/v1/integrations/payments/checkouts/{id}` | Bearer K1 + `payments.checkouts:read` | **Live** |
+| Provision Type-T workspace (K0 hatch) | `POST /api/v1/one/integrations/workspaces/provision` | `X-Lazuar-Provision-Key` (not salon K1) | **Live** — Aura Connect only |
+| Introspect pasted K1 | `GET /api/v1/integrations/payments/me` | Bearer K1 | **Missing** — TypeSpec **draft** P00.31; implement P02. Aura must not trust a typed workspace id (L11) |
+| Payments ready? (vault live, no K2 material) | fields on `/me` or future `GET /integrations/payments/config` | Bearer K1; optional `payments.config:read` | **Missing** — P02.40. Do not treat “row has workspace id” as Ready (L15) |
+| Register guest webhook | intended: after introspect, `POST /api/v1/one/workspaces/{workspace_id}/webhooks` | Bearer K1 + `webhooks.endpoints:manage` | **Partial** — route **exists** for humans / machine keys **with** manage scope. Create is **not** same-URL idempotent today (always new row + new `whsec_`). P02.32 must add idempotent same-URL + no re-reveal. Aura P00 client does **not** call this yet |
+| Guest money events | signed `payment.completed` / `payment.failed` → Aura `/webhooks/hub/payments` | `X-Lazuar-Signature` | **Live** envelope `{ id, event_type, created_at, data }` (see §9 / CONTRACT-webhook-v1 amendment) |
+| SaaS money events | second Aura URL | n/a this product | **Out of Payments M1** — Type-P / Commerce later |
+
+### 8.1 `sk_` prefix collision (P00.33)
+
+Pay mints K1 as `sk_test_` / `sk_live_` (`GenerateApiCredentialCommand`, provision key helper). Stripe merchant secrets (K2) use the **same prefixes**.
+
+Aura **must not** accept a pasted key on regex alone (P04). Decision **deferred to P02.20**:
+
+| Option | Meaning |
+|--------|---------|
+| **A** | New prefixes `lpk_test_` / `lpk_live_` for newly minted keys; old `sk_*` still verify |
+| **B** (recommended now) | Keep `sk_*`; Aura rejects keys that fail Pay introspect even if they look like Stripe |
+
+Tick in P02: `Prefix decision = ________`
+
+### 8.2 `PRESET_AURA` omits webhook manage (P00.34)
+
+Ops UI: `apps/lazuar-ops/src/modules/workspace/pages/ApiKeysPage.tsx`
+
+```ts
+const PRESET_AURA = ["payments.checkouts:write", "payments.checkouts:read"] as const;
+```
+
+The scope **exists** in `SCOPE_CATALOG` and in `PlatformApiScopes.WebhooksEndpointsManage`. Provision bootstrap (`DefaultAuraIntegratorScopes`) **includes** `webhooks.endpoints:manage`. A salon who clicks **Aura payments** in the create-key dialog gets a K1 that can checkout but **cannot** `POST /one/workspaces/{id}/webhooks`.
+
+P02.01 will add `webhooks.endpoints:manage` (and optionally `payments.config:read`) to that preset. **Do not change the preset in P00.**

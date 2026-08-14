@@ -61,4 +61,9 @@ impl_only:
     reason: Temporary ops utility for legacy template cleanup; not product surface
 
 # OpenAPI paths that may lack a 1:1 Map (rare; prefer fix TypeSpec)
-openapi_only_exceptions: []
+openapi_only_exceptions:
+  - method: GET
+    path: /integrations/payments/me
+    reason: >
+      P00.31 TypeSpec draft for Aura K1 introspect. Runtime MapGet lands in P02.
+      Additive; does not change POST/GET /integrations/payments/checkouts.

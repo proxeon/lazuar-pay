@@ -16,6 +16,7 @@ Lazuar Payments — M2M cashier (integration checkouts).
 
 **Integrator-facing:**
 - `POST/GET /integrations/payments/checkouts` — ad-hoc amount checkout for any server app.
+- `GET /integrations/payments/me` — **DRAFT P00.31** (runtime P02). Introspect Bearer K1. Not implemented yet.
 - Auth: `Authorization: Bearer sk_test_…|sk_live_…` with scopes
   `payments.checkouts:write` and/or `payments.checkouts:read`.
 - Outbound webhooks: `payment.completed` / `payment.failed` with `X-Lazuar-Signature`.
