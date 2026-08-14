@@ -497,6 +497,8 @@ public class ProvisionAuraWorkspaceTests
     {
         Assert.That(ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct(null), Is.EqualTo("aura"));
         Assert.That(ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct("Demo-App"), Is.EqualTo("demo-app"));
+        Assert.That(ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct("aurabook"), Is.EqualTo("aura"));
+        Assert.That(ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct("AuraBook"), Is.EqualTo("aura"));
         Assert.Throws<InvalidOperationException>(() =>
             ProvisionAuraWorkspaceCommandHandler.NormalizeExternalProduct("1bad"));
         Assert.Throws<InvalidOperationException>(() =>
@@ -512,9 +514,84 @@ public class ProvisionAuraWorkspaceTests
             Is.EqualTo(guid.ToLowerInvariant()));
         Assert.Throws<InvalidOperationException>(() =>
             ProvisionAuraWorkspaceCommandHandler.NormalizeExternalOrgId("not-guid", "aura"));
+        Assert.Throws<InvalidOperationException>(() =>
+            ProvisionAuraWorkspaceCommandHandler.NormalizeExternalOrgId("not-guid", "aurabook"));
+        Assert.That(
+            ProvisionAuraWorkspaceCommandHandler.NormalizeExternalOrgId(guid, "aurabook"),
+            Is.EqualTo(guid.ToLowerInvariant()));
         Assert.That(
             ProvisionAuraWorkspaceCommandHandler.NormalizeExternalOrgId("Tenant-X", "demo-app"),
             Is.EqualTo("tenant-x"));
+    }
+
+    [Test]
+    public void ResolveProvisionIdentity_OnlyAuraOrgId_DefaultsProductAura()
+    {
+        var guid = Guid.CreateVersion7().ToString("D");
+        var id = ProvisionAuraWorkspaceCommandHandler.ResolveProvisionIdentity(
+            externalProduct: null,
+            externalOrgId: null,
+            auraOrgId: guid);
+        Assert.That(id.Product, Is.EqualTo("aura"));
+        Assert.That(id.ExternalOrgIdRaw, Is.EqualTo(guid));
+    }
+
+    [Test]
+    public void ResolveProvisionIdentity_ExternalOrgIdWithoutProduct_ThrowsExternalProductRequired()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            ProvisionAuraWorkspaceCommandHandler.ResolveProvisionIdentity(
+                externalProduct: null,
+                externalOrgId: "tenant-001",
+                auraOrgId: null));
+        Assert.That(ex!.Message, Does.StartWith(
+            ProvisionAuraWorkspaceCommandHandler.ErrorExternalProductRequired));
+    }
+
+    [Test]
+    public void ResolveProvisionIdentity_ExternalOrgIdAndAuraOrgIdWithoutProduct_Throws()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            ProvisionAuraWorkspaceCommandHandler.ResolveProvisionIdentity(
+                null, "tenant-001", Guid.CreateVersion7().ToString("D")));
+    }
+
+    [Test]
+    public void ResolveProvisionIdentity_ExplicitProductPlusExternalOrgId_Canonical()
+    {
+        var id = ProvisionAuraWorkspaceCommandHandler.ResolveProvisionIdentity(
+            "Demo-App", "Tenant-001", null);
+        Assert.That(id.Product, Is.EqualTo("demo-app"));
+        Assert.That(id.ExternalOrgIdRaw, Is.EqualTo("Tenant-001"));
+    }
+
+    [Test]
+    public async Task Provision_Aurabook_Alias_Does_Not_Fork_Existing_Aura_Workspace()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var handler = CreateHandler(repo, out var orgs, out _, out _, out _, out _, out _);
+
+        var guid = Guid.CreateVersion7().ToString("D");
+        var first = await handler.Handle(Cmd(guid, externalProduct: "aura"), CancellationToken.None);
+        var second = await handler.Handle(Cmd(guid, displayName: "Ignored", externalProduct: "aurabook"), CancellationToken.None);
+
+        Assert.That(first.Created, Is.True);
+        Assert.That(first.ExternalProduct, Is.EqualTo("aura"));
+        Assert.That(second.Created, Is.False);
+        Assert.That(second.PlainKey, Is.Null);
+        Assert.That(second.WorkspaceId, Is.EqualTo(first.WorkspaceId));
+        Assert.That(second.ExternalProduct, Is.EqualTo("aura"));
+        Assert.That(orgs, Has.Count.EqualTo(1));
+        Assert.That(orgs[0].ExternalProduct, Is.EqualTo("aura"));
+        repo.Received(1).AddOrganization(Arg.Any<Organization>());
+    }
+
+    [Test]
+    public void DefaultKeyNameFor_Aura_Vs_OtherProduct()
+    {
+        Assert.That(ProvisionAuraWorkspaceCommandHandler.DefaultKeyNameFor("aura"), Is.EqualTo("Aura bootstrap"));
+        Assert.That(ProvisionAuraWorkspaceCommandHandler.DefaultKeyNameFor("aurabook"), Is.EqualTo("Aura bootstrap"));
+        Assert.That(ProvisionAuraWorkspaceCommandHandler.DefaultKeyNameFor("demo-app"), Is.EqualTo("demo-app bootstrap"));
     }
 
     [Test]

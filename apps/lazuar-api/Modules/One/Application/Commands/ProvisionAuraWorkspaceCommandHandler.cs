@@ -11,12 +11,16 @@ using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
 
+/// <summary>Integrator provision handler (historical Aura type name).</summary>
 public partial class ProvisionAuraWorkspaceCommandHandler
     : ICommandHandler<ProvisionAuraWorkspaceCommand, ProvisionAuraWorkspaceResult>
 {
     /// <summary>Default / Aura product slug (backward compatible). Prefer <see cref="ProductAura"/>.</summary>
     public const string ExternalProduct = "aura";
     public const string ProductAura = "aura";
+    /// <summary>Alias only; never persist. <see cref="NormalizeExternalProduct"/> maps it to <see cref="ProductAura"/>.</summary>
+    public const string ProductAurabook = "aurabook";
+    public const string ErrorExternalProductRequired = "external_product_required";
     public const string PaymentsAppId = "PAYMENTS";
     public const string DefaultKeyName = "Aura bootstrap";
     public const string OwnerStatusAttached = "attached";

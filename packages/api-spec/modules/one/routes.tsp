@@ -223,8 +223,11 @@ interface OneOperations {
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   /**
-   * Integrator provision: create Hub workspace + scoped bootstrap key for (external_product, external_org_id).
-   * Defaults: external_product=aura; aura_org_id remains an accepted alias for external_org_id.
+   * Integrator workspace provision: create workspace + scoped bootstrap key for (external_product, external_org_id).
+   * Canonical body: external_product + external_org_id.
+   * Legacy: only aura_org_id and no product → product aura.
+   * external_org_id without product → 400 external_product_required.
+   * Alias aurabook normalizes to stored aura (same unique pair; no second workspace).
    * Optional Connect: webhook_url registers outbound endpoint (secret_key once); owner_email attaches membership.
    * Auth: X-Lazuar-Provision-Key / Bearer provision secret, or SUPER_ADMIN JWT (not OrgAdmin / sk_*).
    * Idempotent on (external_product, external_org_id) — plain_key and webhook secret_key only on first materialization.

@@ -70,9 +70,12 @@ export default function PaymentsCashierPage() {
       <GuideSection title="2. Provision workspace">
         <p className="mb-3 text-[13px] text-[#71717a]">
           Prefer <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">external_product</code> +{" "}
-          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">external_org_id</code>. Aura clients
-          may still send <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">aura_org_id</code>{" "}
-          (GUID); default product is <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">aura</code>.
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">external_org_id</code>.
+          Product is required on that body (400{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">external_product_required</code> if
+          omitted). Legacy Aura clients may send only{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">aura_org_id</code> (GUID); that path
+          still maps to product <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">aura</code>.
         </p>
         <CodeBlock>{`curl -sS -X POST "$HUB/one/integrations/workspaces/provision" \\
   -H "Content-Type: application/json" \\

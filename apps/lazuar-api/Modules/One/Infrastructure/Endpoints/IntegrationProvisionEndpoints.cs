@@ -16,9 +16,10 @@ public static class IntegrationProvisionEndpoints
 {
     public static RouteGroupBuilder MapIntegrationProvisionEndpoints(this RouteGroupBuilder group)
     {
-        // Integrator provision: multi-product workspace + bootstrap key.
+        // Integrator workspace provision: (external_product, external_org_id).
         // Auth: X-Lazuar-Provision-Key / Bearer provision secret OR SUPER_ADMIN JWT. Tenant-exempt.
-        // Body: external_product (default "aura") + external_org_id OR legacy aura_org_id.
+        // Legacy: only aura_org_id + omitted product → product aura.
+        // New-style: external_org_id without product → 400 external_product_required.
         group.MapPost("/integrations/workspaces/provision", async Task<IResult> (
             [FromBody] ProvisionWorkspaceRequestDto req,
             HttpContext http,
@@ -41,11 +42,41 @@ public static class IntegrationProvisionEndpoints
                     statusCode: auth.StatusCode);
             }
 
-            // external_org_id aliases aura_org_id (backward compatible).
-            var externalOrgIdRaw = FirstNonEmpty(req.External_org_id, req.Aura_org_id);
-            var externalProductRaw = string.IsNullOrWhiteSpace(req.External_product)
-                ? ProvisionAuraWorkspaceCommandHandler.ProductAura
-                : req.External_product.Trim();
+            ProvisionAuraWorkspaceCommandHandler.ProvisionIdentity identity;
+            try
+            {
+                identity = ProvisionAuraWorkspaceCommandHandler.ResolveProvisionIdentity(
+                    req.External_product,
+                    req.External_org_id,
+                    req.Aura_org_id);
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.StartsWith(
+                    ProvisionAuraWorkspaceCommandHandler.ErrorExternalProductRequired,
+                    StringComparison.Ordinal))
+            {
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = ProvisionAuraWorkspaceCommandHandler.ErrorExternalProductRequired,
+                        Detail = "external_product is required when external_org_id is sent. Omit the product only for the legacy aura_org_id body.",
+                        Extensions = { ["code"] = ProvisionAuraWorkspaceCommandHandler.ErrorExternalProductRequired }
+                    },
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Invalid product slug (etc.) from the resolver: 400 before rate-limit.
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "Bad Request",
+                        Detail = ex.Message
+                    },
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
 
             if (!await rateLimiter.TryAcquireAsync("secret:global", settings.RateLimitPerMinute, http.RequestAborted))
             {
@@ -60,10 +91,11 @@ public static class IntegrationProvisionEndpoints
                     statusCode: StatusCodes.Status429TooManyRequests);
             }
 
-            if (!string.IsNullOrEmpty(externalOrgIdRaw))
+            if (!string.IsNullOrEmpty(identity.ExternalOrgIdRaw))
             {
                 var perOrgKey =
-                    $"org:{externalProductRaw.ToLowerInvariant()}:{externalOrgIdRaw.ToLowerInvariant()}";
+                    $"org:{identity.Product}:{identity.ExternalOrgIdRaw.ToLowerInvariant()}";
+                // RateLimitPerAuraOrgPerMinute — do not rename the setting
                 if (!await rateLimiter.TryAcquireAsync(
                         perOrgKey,
                         settings.RateLimitPerAuraOrgPerMinute,
@@ -84,7 +116,7 @@ public static class IntegrationProvisionEndpoints
             try
             {
                 var result = await mediator.Send(new ProvisionAuraWorkspaceCommand(
-                    externalOrgIdRaw,
+                    identity.ExternalOrgIdRaw,
                     req.Display_name ?? string.Empty,
                     req.Slug,
                     req.Owner_email,
@@ -94,7 +126,7 @@ public static class IntegrationProvisionEndpoints
                     req.Webhook_url,
                     req.Webhook_enabled_events,
                     auth.ActorUserId,
-                    externalProductRaw));
+                    identity.Product));
 
                 var log = loggerFactory.CreateLogger("Modules.One.WorkspaceProvision");
                 log.LogInformation(
@@ -168,15 +200,5 @@ public static class IntegrationProvisionEndpoints
         });
 
         return group;
-    }
-
-    private static string FirstNonEmpty(string? a, string? b)
-    {
-        if (!string.IsNullOrWhiteSpace(a))
-        {
-            return a.Trim();
-        }
-
-        return string.IsNullOrWhiteSpace(b) ? string.Empty : b.Trim();
     }
 }

@@ -11,10 +11,42 @@ namespace Modules.One.Application.Commands;
 /// </summary>
 public partial class ProvisionAuraWorkspaceCommandHandler
 {
-    public static string DefaultKeyNameFor(string product) =>
+    public readonly record struct ProvisionIdentity(string Product, string ExternalOrgIdRaw);
+
+    public static bool IsAuraProduct(string product) =>
         string.Equals(product, ProductAura, StringComparison.Ordinal)
+        || string.Equals(product, ProductAurabook, StringComparison.Ordinal);
+
+    public static string DefaultKeyNameFor(string product) =>
+        IsAuraProduct(product)
             ? DefaultKeyName
             : $"{product} bootstrap";
+
+    /// <summary>
+    /// HTTP field-presence rules (P01.03). Command-level <see cref="NormalizeExternalProduct"/>
+    /// still defaults empty → aura so existing handler tests stay valid.
+    /// </summary>
+    public static ProvisionIdentity ResolveProvisionIdentity(
+        string? externalProduct,
+        string? externalOrgId,
+        string? auraOrgId)
+    {
+        var hasProduct = !string.IsNullOrWhiteSpace(externalProduct);
+        var hasExternalOrg = !string.IsNullOrWhiteSpace(externalOrgId);
+
+        if (!hasProduct && hasExternalOrg)
+        {
+            throw new InvalidOperationException(
+                $"{ErrorExternalProductRequired}: external_product is required when external_org_id is sent.");
+        }
+
+        var product = hasProduct
+            ? NormalizeExternalProduct(externalProduct)
+            : ProductAura;
+
+        var orgRaw = FirstNonEmpty(externalOrgId, auraOrgId);
+        return new ProvisionIdentity(product, orgRaw);
+    }
 
     public static string NormalizeOwnerRole(string? raw)
     {
@@ -61,13 +93,15 @@ public partial class ProvisionAuraWorkspaceCommandHandler
     }
 
     /// <summary>
-    /// Product slug: lower-case [a-z][a-z0-9_-]* , default <see cref="ProductAura"/>.
+    /// Product slug: lower-case [a-z][a-z0-9_-]* . Empty defaults to <see cref="ProductAura"/>
+    /// (command-level / test compat only — HTTP must call <see cref="ResolveProvisionIdentity"/>).
+    /// Alias <see cref="ProductAurabook"/> folds to stored <see cref="ProductAura"/>.
     /// </summary>
     public static string NormalizeExternalProduct(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
         {
-            return ProductAura;
+            return ProductAura; // command-level / test compat only — HTTP must call ResolveProvisionIdentity
         }
 
         var product = raw.Trim().ToLowerInvariant();
@@ -83,11 +117,13 @@ public partial class ProvisionAuraWorkspaceCommandHandler
                 "external_product must start with a letter and contain only a-z, 0-9, _ or -.");
         }
 
-        return product;
+        return string.Equals(product, ProductAurabook, StringComparison.Ordinal)
+            ? ProductAura
+            : product;
     }
 
     /// <summary>
-    /// Resolves external org id. For product <c>aura</c>, requires a GUID (legacy contract).
+    /// Resolves external org id. For product <c>aura</c> (and alias <c>aurabook</c>), requires a GUID.
     /// Other products accept any non-empty stable string (max 128), lowercased.
     /// </summary>
     public static string NormalizeExternalOrgId(string? raw, string product)
@@ -99,7 +135,11 @@ public partial class ProvisionAuraWorkspaceCommandHandler
         }
 
         var trimmed = raw.Trim();
-        if (string.Equals(product, ProductAura, StringComparison.Ordinal))
+        var folded = string.Equals(product, ProductAurabook, StringComparison.Ordinal)
+            ? ProductAura
+            : product;
+
+        if (IsAuraProduct(folded))
         {
             return NormalizeAuraOrgId(trimmed);
         }
@@ -111,6 +151,16 @@ public partial class ProvisionAuraWorkspaceCommandHandler
         }
 
         return trimmed.ToLowerInvariant();
+    }
+
+    private static string FirstNonEmpty(string? a, string? b)
+    {
+        if (!string.IsNullOrWhiteSpace(a))
+        {
+            return a.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(b) ? string.Empty : b.Trim();
     }
 
     /// <summary>Aura-only GUID normalizer (legacy name kept for tests / callers).</summary>

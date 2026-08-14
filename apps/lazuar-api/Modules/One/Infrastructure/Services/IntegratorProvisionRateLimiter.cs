@@ -8,7 +8,7 @@ namespace Modules.One.Infrastructure.Services;
 
 /// <summary>
 /// In-memory fixed-window style limiter for provision endpoint (single-instance staging).
-/// Keys: global secret identity + per-aura_org_id.
+/// Keys: global secret identity + per (external_product, external_org_id).
 /// </summary>
 public sealed class IntegratorProvisionRateLimiter
 {

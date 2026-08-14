@@ -1,5 +1,7 @@
 # Provision a workspace
 
+**Integrator workspace provision** (any product). Aura is an example integrator, not a prerequisite.
+
 Creates (or reuses) a Hub workspace bound to **your** product tenant, mints a bootstrap API key, optionally registers an outbound webhook.
 
 ## Endpoint
@@ -67,9 +69,9 @@ curl -sS -X POST "$HUB/one/integrations/workspaces/provision" \
 
 | Field | Required | Notes |
 |-------|----------|--------|
-| `external_product` | no | Defaults to `aura`. Stable product slug (`demo-app`, `erp`, …). |
+| `external_product` | * | Required except the legacy `aura_org_id`-only body (then product=`aura`). Omit + `external_org_id` → **400** `external_product_required`. Alias `aurabook` is stored as `aura` (same unique pair). |
 | `external_org_id` | * | Your tenant id. Alias: `aura_org_id`. |
-| `aura_org_id` | * | Aura-compatible; must be **GUID** when product is `aura`. |
+| `aura_org_id` | * | Legacy / Aura example; must be **GUID** when product is `aura` (or alias `aurabook`). |
 | `display_name` | yes | Human label for Ops UI. |
 | `is_test_mode` | no | Prefer `true` outside production. |
 | `webhook_url` | no | If set, creates/heals outbound endpoint; returns `webhook.secret_key` once. |
@@ -77,7 +79,7 @@ curl -sS -X POST "$HUB/one/integrations/workspaces/provision" \
 | `owner_email` | no | If user already exists, attaches ADMIN (or `owner_role`) membership. **Does not create users.** |
 | `owner_role` | no | `ADMIN` (default) or `SUPER_ADMIN` (workspace role only — not global system admin). |
 
-\* Provide `external_org_id` **or** `aura_org_id`.
+\* Provide `external_org_id` **or** `aura_org_id`. Sending `external_org_id` without `external_product` is **400** `external_product_required`.
 
 ## Idempotency
 
@@ -123,7 +125,7 @@ Re-call with the same `(external_product, external_org_id)`:
 
 **Store `plain_key` and `secret_key` immediately** — they are not returned again.
 
-## Aura-compatible body
+## Legacy / Aura example body
 
 ```json
 {

@@ -31,7 +31,7 @@ Email-provider configuration gates **Commerce** product activation in some flows
 
 ---
 
-## 2. Provision a workspace (multi-product)
+## 2. Integrator workspace provision
 
 `POST /api/v1/one/integrations/workspaces/provision`
 
@@ -51,7 +51,7 @@ curl -sS -X POST "$HUB/one/integrations/workspaces/provision" \
   }'
 ```
 
-### Aura-compatible (still supported)
+### Legacy / Aura example (still supported)
 
 ```json
 {
@@ -62,8 +62,11 @@ curl -sS -X POST "$HUB/one/integrations/workspaces/provision" \
 }
 ```
 
-- `external_product` defaults to **`aura`**.
-- `external_org_id` aliases `aura_org_id` (either is accepted).
+- Canonical body is `external_product` + `external_org_id`. Aura is **one example integrator**, not a prerequisite.
+- Legacy: if the body has **only** `aura_org_id` and omits `external_product`, product defaults to `aura`.
+- If the body has `external_org_id` and omits `external_product` → **400** `external_product_required`.
+- `aura_org_id` aliases `external_org_id` when product is `aura`.
+- Alias `aurabook` is accepted and stored as `aura` (same unique pair; do not send `aurabook` expecting a new workspace).
 - For product `aura`, org id must be a **GUID**. Other products accept any stable non-empty string (max 128).
 - Idempotent on `(external_product, external_org_id)`.
 - Response includes `api_key.plain_key` and `webhook.secret_key` **only on first materialization**. Store them once.

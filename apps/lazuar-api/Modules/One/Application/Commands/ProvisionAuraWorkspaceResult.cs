@@ -25,7 +25,7 @@ public record ProvisionAuraWorkspaceResult(
     bool OwnerAttached,
     string OwnerStatus,
     string? OwnerRole,
-    /// <summary>Integrator product slug (e.g. aura, demo-app). Default aura.</summary>
+    /// <summary>Normalized product slug actually bound (<c>aurabook</c> is never stored).</summary>
     string ExternalProduct = "aura",
     /// <summary>External org / tenant id for that product (alias of AuraOrgId).</summary>
     string? ExternalOrgId = null);

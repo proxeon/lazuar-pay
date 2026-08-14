@@ -4,17 +4,19 @@ namespace LazuarApi.One;
 model ProvisionWorkspaceRequestDto {
   /**
    * Legacy Aura org id (GUID). Prefer external_org_id.
-   * Required when external_org_id is omitted. For product "aura" must be a GUID.
+   * Required when external_org_id is omitted. For product "aura" (and alias "aurabook") must be a GUID.
    */
   aura_org_id?: string;
   /**
    * External org / tenant id for the product (idempotency key with external_product).
-   * Alias of aura_org_id — either field is accepted.
+   * Alias of aura_org_id — either field is accepted. Sending this field without external_product is 400 external_product_required.
    */
   external_org_id?: string;
   /**
-   * Product slug bound on Organization.ExternalProduct (default "aura").
-   * e.g. aura, demo-app. Lowercase [a-z][a-z0-9_-]*.
+   * Product slug bound on Organization.ExternalProduct.
+   * Required except for the legacy body that sends only aura_org_id (then product=aura).
+   * Alias "aurabook" is normalized to stored "aura" (do not fork the unique index).
+   * e.g. demo-app, sample-shop, aura. Lowercase [a-z][a-z0-9_-]*.
    */
   external_product?: string;
   /** Display name for the Hub workspace (used on first create only). */
@@ -79,7 +81,7 @@ model ProvisionWorkspaceResponseDto {
   aura_org_id: string;
   /** Normalized external org id (same value as aura_org_id). */
   external_org_id?: string;
-  /** Product slug that was bound (default aura). */
+  /** Product slug that was bound (never `aurabook`; alias folds to `aura`). */
   external_product?: string;
   created: boolean;
   api_key: ProvisionWorkspaceApiKeyDto;
