@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, RefreshCw, XCircle, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, RefreshCw, Repeat, XCircle, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
@@ -11,6 +12,13 @@ type WebhookDeliveryLogDto = components["schemas"]["One.WebhookDeliveryLogDto"];
 function shortId(id: string): string {
   if (!id) return "—";
   return id.length > 8 ? `${id.slice(0, 8)}…` : id;
+}
+
+function redeliverAction(status: string): "redeliver" | "resend" | null {
+  const normalized = (status || "").toUpperCase();
+  if (normalized === "FAILED") return "redeliver";
+  if (normalized === "SUCCESS" || normalized === "DELIVERED") return "resend";
+  return null;
 }
 
 function statusPresentation(status: string) {
@@ -53,6 +61,31 @@ export default function DeliveryLogsPage() {
     enabled: !!activeWorkspaceId,
   });
 
+  const redeliverMutation = useMutation({
+    mutationFn: async (deliveryId: string) => {
+      const { data, error } = await client.POST("/one/workspaces/{id}/webhooks/logs/{deliveryId}/redeliver", {
+        params: { path: { id: activeWorkspaceId, deliveryId } },
+      });
+      if (error) throw new Error(error.detail || "Failed to redeliver.");
+      return data as WebhookDeliveryLogDto;
+    },
+    onSuccess: () => {
+      toast.success("Redeliver queued. A new signed attempt will be sent shortly.");
+      queryClient.invalidateQueries({ queryKey: ["developer-webhook-logs", activeWorkspaceId] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to redeliver."),
+  });
+
+  const handleRedeliver = (event: React.MouseEvent, log: WebhookDeliveryLogDto) => {
+    event.stopPropagation();
+    if (
+      !window.confirm("Send this event again to the same endpoint? Receivers must be idempotent.")
+    ) {
+      return;
+    }
+    redeliverMutation.mutate(log.id);
+  };
+
   return (
     <PageLayout
       title="Delivery Logs"
@@ -91,29 +124,34 @@ export default function DeliveryLogsPage() {
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">
                   Error / Details
                 </th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[18%] text-right">
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[14%] text-right">
                   Timestamp
+                </th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[10%] text-right">
+                  Action
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLogsLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#a1a1aa]">
+                  <td colSpan={8} className="py-12 text-center text-[#a1a1aa]">
                     <Loader2 className="animate-spin mx-auto" size={20} />
                   </td>
                 </tr>
               ) : !logs || logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#71717a] text-[13px]">
+                  <td colSpan={8} className="py-12 text-center text-[#71717a] text-[13px]">
                     No webhook deliveries logged yet.
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => {
                   const presentation = statusPresentation(log.status);
+                  const action = redeliverAction(log.status);
                   const isExpanded = expandedId === log.id;
                   const hasDetail = Boolean(log.last_error) || presentation.tone !== "success";
+                  const isThisPending = redeliverMutation.isPending && redeliverMutation.variables === log.id;
 
                   return (
                     <Fragment key={log.id}>
@@ -188,10 +226,27 @@ export default function DeliveryLogsPage() {
                             })}
                           </span>
                         </td>
+                        <td className="px-5 py-4 text-right">
+                          {action ? (
+                            <button
+                              type="button"
+                              onClick={(event) => handleRedeliver(event, log)}
+                              disabled={redeliverMutation.isPending}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-[#09090b] hover:underline disabled:opacity-50"
+                            >
+                              {isThisPending ? (
+                                <Loader2 size={11} className="animate-spin" />
+                              ) : (
+                                <Repeat size={11} />
+                              )}
+                              {action === "resend" ? "Resend" : "Redeliver"}
+                            </button>
+                          ) : null}
+                        </td>
                       </tr>
                       {isExpanded && (
                         <tr className="bg-[#fafafa]">
-                          <td colSpan={7} className="px-5 py-4">
+                          <td colSpan={8} className="px-5 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[12px]">
                               <div className="space-y-1">
                                 <div className="text-[9px] font-bold uppercase tracking-widest text-[#71717a]">
@@ -226,8 +281,7 @@ export default function DeliveryLogsPage() {
                                 </pre>
                               </div>
                               <p className="md:col-span-2 text-[11px] text-[#a1a1aa]">
-                                Redeliver / resend is not available yet (API residual). Retry is handled by the
-                                outbound dispatcher for failed deliveries.
+                                Redeliver queues a new signed attempt. Automatic retry still runs for 5xx.
                               </p>
                             </div>
                           </td>

@@ -122,6 +122,17 @@ public class OneRepository : IOneRepository
 
     public void AddWebhookEndpoint(TenantWebhookEndpoint endpoint) => _context.TenantWebhookEndpoints.Add(endpoint);
 
+    public async Task<WebhookDeliveryOutbox?> GetWebhookDeliveryAsync(
+        Guid organizationId, Guid deliveryId, CancellationToken ct = default)
+    {
+        return await _context.WebhookDeliveryOutboxes
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(d => d.OrganizationId == organizationId && d.Id == deliveryId, ct);
+    }
+
+    public void AddWebhookDelivery(WebhookDeliveryOutbox delivery) =>
+        _context.WebhookDeliveryOutboxes.Add(delivery);
+
     public async Task<ApiCredential?> GetApiCredentialAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.ApiCredentials

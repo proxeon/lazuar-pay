@@ -50,6 +50,7 @@ model SaveWebhookEndpointRequestDto {
   is_active: boolean;
 }
 
+/** Shallow delivery attempt. Payload is not included. POST …/redeliver returns a new PENDING row. */
 model WebhookDeliveryLogDto {
   id: string; // GUID
   event_type: string;

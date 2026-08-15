@@ -215,6 +215,15 @@ interface OneOperations {
 
   @useAuth(BearerAuth)
   @post
+  @route("/workspaces/{id}/webhooks/logs/{deliveryId}/redeliver")
+  @doc("Enqueue a new signed delivery of the same stored payload. New X-Lazuar-Delivery-Id; envelope id unchanged. FAILED and SUCCESS only.")
+  redeliverWorkspaceWebhookDelivery(
+    @path id: string,
+    @path deliveryId: string,
+  ): WebhookDeliveryLogDto | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @post
   @route("/storage/presigned-url")
   getPresignedUrl(@body body: GetPresignedUrlRequestDto):
     | GetPresignedUrlResponseDto

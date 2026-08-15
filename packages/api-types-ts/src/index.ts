@@ -1258,6 +1258,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/one/workspaces/{id}/webhooks/logs/{deliveryId}/redeliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueue a new signed delivery of the same stored payload. New X-Lazuar-Delivery-Id; envelope id unchanged. FAILED and SUCCESS only. */
+        post: operations["OneOperations_redeliverWorkspaceWebhookDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/one/workspaces/{id}/webhooks/{endpointId}": {
         parameters: {
             query?: never;
@@ -2854,6 +2871,7 @@ export interface components {
         "One.VerifyEmailRequestDto": {
             token: string;
         };
+        /** @description Shallow delivery attempt. Payload is not included. POST …/redeliver returns a new PENDING row. */
         "One.WebhookDeliveryLogDto": {
             id: string;
             event_type: string;
@@ -9765,6 +9783,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["One.WebhookDeliveryLogDto"][];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_redeliverWorkspaceWebhookDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                deliveryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.WebhookDeliveryLogDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

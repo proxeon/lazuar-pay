@@ -208,6 +208,51 @@ public static class WebhookEndpoints
             return TypedResults.Ok((ICollection<WebhookDeliveryLogDto>)dtos);
         }).RequireAuthorization();
 
+        group.MapPost("/workspaces/{id:guid}/webhooks/logs/{deliveryId:guid}/redeliver",
+            async Task<Results<Ok<WebhookDeliveryLogDto>, UnauthorizedHttpResult, NotFound, Conflict<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            Guid id,
+            Guid deliveryId,
+            HttpContext http,
+            IExecutionContextAccessor ctx,
+            IMediator mediator,
+            IOneQueryService queryService) =>
+        {
+            if (!await CanAccessWorkspaceWebhooksAsync(id, http, ctx, queryService, manageRequired: true))
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            try
+            {
+                var created = await mediator.Send(new RedeliverWebhookDeliveryCommand(id, deliveryId));
+                return TypedResults.Ok(new WebhookDeliveryLogDto
+                {
+                    Id = created.Id.ToString(),
+                    Event_type = created.EventType,
+                    Status = created.Status,
+                    Attempt_count = created.AttemptCount,
+                    Last_error = created.LastError,
+                    Created_at = new DateTimeOffset(created.CreatedAt)
+                });
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound();
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.Contains("already pending", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.Conflict(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = "Conflict",
+                    Detail = ex.Message
+                });
+            }
+        }).RequireAuthorization();
+
         return group;
     }
 

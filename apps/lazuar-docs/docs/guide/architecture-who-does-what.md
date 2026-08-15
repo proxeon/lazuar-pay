@@ -137,7 +137,7 @@ See also: [Concepts](/guide/concepts), [Provision a workspace](/integrations/pro
 | Idempotency conflict | 409 `IDEMPOTENCY_CONFLICT` | New key or same body | Detect fingerprint mismatch | — |
 | Provider create fail | 502 `GATEWAY_ERROR` | Retry with backoff + new/same idempotency policy | Mark session failed; surface detail | Upstream error |
 | Checkout not found | 404 | Wrong id or tenant | Tenant-scoped get | — |
-| Bad webhook signature | 401 from **your** app | Fix whsec_; alert | May retry delivery | — |
+| Bad webhook signature | 401 from **your** app | Fix whsec_; alert | Does **not** retry; operator redrives from Delivery Logs | — |
 | Your handler 5xx | — | Fix crash; keep idempotent | Retry outbox with backoff | — |
 | Duplicate webhook | 200 + no-op | Dedupe event_id / delivery_id / checkout_id | At-least-once delivery | Provider at-least-once |
 | Browser success only | — | Show “processing…”; wait webhook | — | Redirect |

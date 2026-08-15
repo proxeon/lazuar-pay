@@ -75,9 +75,9 @@ Dedupe by event id / delivery id (+ gateway txn)
 | Status | Meaning to Hub |
 |--------|----------------|
 | **2xx** | ACK — stop retrying this delivery |
-| **401** | Bad signature — fix secret; Hub may still retry |
-| **422** | Unprocessable (missing ids) — fix mapping; avoid silent 200 |
-| **5xx** | Transient — Hub retries with backoff |
+| **401 / 4xx** | Permanent FAILED — fix secret or mapping, then **Redeliver** from Delivery Logs. Hub does not retry 4xx. |
+| **422** | Unprocessable (missing ids) — same as other 4xx; do not ACK 200 |
+| **5xx** | Transient — Hub retries with backoff (5 attempts) |
 
 ## Envelope honesty (runtime body)
 
@@ -239,6 +239,20 @@ Rules:
 ## Delivery logs
 
 Hub Ops (workspace) shows outbound delivery attempts. Use them when “paid at gateway, unpaid in app.”
+
+## Redeliver
+
+After a 4xx (wrong `whsec_`, mapping 422) or after the 5-attempt 5xx budget dies, replay hop 2 without SQL:
+
+```http
+POST /api/v1/one/workspaces/{workspaceId}/webhooks/logs/{deliveryId}/redeliver
+```
+
+Auth: workspace ADMIN / SUPER_ADMIN session, system admin, or machine key with `webhooks.endpoints:manage` (path id must match the key tenant).
+
+Hub clones a **new** outbox row (`PENDING`, attempt 0) with the same stored payload. The original FAILED / SUCCESS row is left in place. The dispatcher signs the clone with a fresh `t=,v1=` and a new `X-Lazuar-Delivery-Id`; the envelope `id` is unchanged. PENDING deliveries return 409. Disabled endpoints return 409 — re-enable on Outbound Webhooks first.
+
+Ops Delivery Logs: **Redeliver** (FAILED) / **Resend** (SUCCESS). Receivers must stay idempotent on event / checkout / txn id.
 
 ## Next
 

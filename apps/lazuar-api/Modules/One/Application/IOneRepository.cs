@@ -35,6 +35,10 @@ public interface IOneRepository
     Task<IReadOnlyList<TenantWebhookEndpoint>> ListWebhookEndpointsAsync(Guid organizationId, CancellationToken ct = default);
     void AddWebhookEndpoint(TenantWebhookEndpoint endpoint);
 
+    Task<WebhookDeliveryOutbox?> GetWebhookDeliveryAsync(
+        Guid organizationId, Guid deliveryId, CancellationToken ct = default);
+    void AddWebhookDelivery(WebhookDeliveryOutbox delivery);
+
     Task<ApiCredential?> GetApiCredentialAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<ApiCredential>> ListApiCredentialsAsync(Guid organizationId, CancellationToken ct = default);
     void AddApiCredential(ApiCredential credential);

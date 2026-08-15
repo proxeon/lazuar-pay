@@ -225,7 +225,7 @@ StoreHub / AutoCount / Xero / MyInvois portal would score **Y** on LP-110–114 
 | LP-130 | Dashboard API keys (live/test, revoke) | — | Y | P | P | Y | Y | Y | Y | Y | Y |
 | LP-131 | Scoped keys (least privilege) | 1 | P | N | N | P | Y | Y | Y | Y | Y |
 | LP-132 | Outbound webhooks (tenant endpoints) | 0 | Y | P | P | Y | Y | Y | Y | Y | Y |
-| LP-133 | Signed deliveries + retry + redrive | 0 | P | P | P | Y | Y | Y | Y | Y | Y |
+| LP-133 | Signed deliveries + retry + redrive | 0 | Y | P | P | Y | Y | Y | Y | Y | Y |
 | LP-134 | Delivery logs UI | — | Y | N | N | P | Y | Y | Y | Y | P |
 | LP-135 | Versioned event catalog in docs | 1 | P | P | P | P | Y | Y | Y | Y | Y |
 | LP-136 | M2M create-checkout (integrator) | — | Y | Y | Y | Y | Y | Y | Y | Y | Y |

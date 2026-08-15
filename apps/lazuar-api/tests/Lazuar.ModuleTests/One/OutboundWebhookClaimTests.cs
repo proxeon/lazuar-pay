@@ -16,6 +16,35 @@ namespace Lazuar.ModuleTests.One;
 public class OutboundWebhookClaimTests
 {
     [Test]
+    public void RecordFailure_Backoff_ThenFailedAtFive()
+    {
+        var delivery = new WebhookDeliveryOutbox(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            "subscription.activated",
+            "{}");
+
+        var waitsMinutes = new[] { 2, 4, 8, 16 };
+        for (var i = 0; i < waitsMinutes.Length; i++)
+        {
+            var before = DateTime.UtcNow;
+            delivery.RecordFailure($"HTTP 500 #{i + 1}");
+
+            delivery.Status.Should().Be("PENDING");
+            delivery.AttemptCount.Should().Be(i + 1);
+            delivery.NextAttemptAt.Should().BeCloseTo(
+                before.AddMinutes(waitsMinutes[i]),
+                TimeSpan.FromSeconds(2));
+        }
+
+        var nextAfterFourth = delivery.NextAttemptAt;
+        delivery.RecordFailure("HTTP 500 #5");
+        delivery.Status.Should().Be("FAILED");
+        delivery.AttemptCount.Should().Be(5);
+        delivery.NextAttemptAt.Should().Be(nextAfterFourth);
+    }
+
+    [Test]
     public void RecordPermanentFailure_FailsImmediately_AttemptCountOne()
     {
         var delivery = new WebhookDeliveryOutbox(
