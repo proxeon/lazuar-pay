@@ -9,10 +9,14 @@ namespace Modules.Commerce.Application.EventHandlers;
 public class OrderCompletedIntegrationEventHandler : IIntegrationEventHandler<OrderCompletedIntegrationEvent>
 {
     private readonly IEventBus _eventBus;
+    private readonly ICommerceRepository _repository;
 
-    public OrderCompletedIntegrationEventHandler([FromKeyedServices("CommerceEventBus")] IEventBus eventBus)
+    public OrderCompletedIntegrationEventHandler(
+        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
+        ICommerceRepository repository)
     {
         _eventBus = eventBus;
+        _repository = repository;
     }
 
     public async Task HandleAsync(OrderCompletedIntegrationEvent @event)
@@ -29,5 +33,6 @@ public class OrderCompletedIntegrationEventHandler : IIntegrationEventHandler<Or
         // Workspace fan-out: One delivers to all active endpoints (no product-URL match).
         await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
             @event.OrganizationId, TargetUrl: null, "order.completed", payloadElement));
+        await _repository.SaveChangesAsync();
     }
 }

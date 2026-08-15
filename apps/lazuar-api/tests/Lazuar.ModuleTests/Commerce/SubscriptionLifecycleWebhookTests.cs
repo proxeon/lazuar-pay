@@ -23,7 +23,7 @@ public class SubscriptionLifecycleWebhookTests
     [Test]
     public async Task SubscriptionActivated_Publishes_OutboundWebhook_With_Null_TargetUrl()
     {
-        var (handler, bus) = CreateHandler();
+        var (handler, bus, repo) = CreateHandler();
 
         var orgId = Guid.CreateVersion7();
         var subscriptionId = Guid.CreateVersion7();
@@ -42,12 +42,13 @@ public class SubscriptionLifecycleWebhookTests
             e.OrganizationId == orgId
             && e.EventType == "subscription.activated"
             && e.TargetUrl == null));
+        await repo.Received(1).SaveChangesAsync();
     }
 
     [Test]
     public async Task SubscriptionSuspended_Canceled_Resumed_Publish_Matching_Event_Types()
     {
-        var (handler, bus) = CreateHandler();
+        var (handler, bus, repo) = CreateHandler();
 
         var orgId = Guid.CreateVersion7();
         var subId = Guid.CreateVersion7();
@@ -65,6 +66,7 @@ public class SubscriptionLifecycleWebhookTests
             e.EventType == "subscription.canceled" && e.TargetUrl == null));
         await bus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
             e.EventType == "subscription.resumed" && e.TargetUrl == null));
+        await repo.Received(3).SaveChangesAsync();
     }
 
     [Test]
@@ -132,12 +134,12 @@ public class SubscriptionLifecycleWebhookTests
         Assert.That(payload.GetProperty("metadata").GetProperty("aura_org_id").GetString(), Is.EqualTo(auraOrgId.ToString()));
     }
 
-    private static (SubscriptionLifecycleIntegrationEventHandlers Handler, IEventBus Bus) CreateHandler()
+    private static (SubscriptionLifecycleIntegrationEventHandlers Handler, IEventBus Bus, ICommerceRepository Repo) CreateHandler()
     {
         var bus = Substitute.For<IEventBus>();
         var repo = Substitute.For<ICommerceRepository>();
         var crm = Substitute.For<ICrmQueryService>();
         crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns((ClientProfileDto?)null);
-        return (new SubscriptionLifecycleIntegrationEventHandlers(bus, repo, crm), bus);
+        return (new SubscriptionLifecycleIntegrationEventHandlers(bus, repo, crm), bus, repo);
     }
 }

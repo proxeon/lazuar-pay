@@ -82,6 +82,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
 
         await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
             organizationId, TargetUrl: null, eventType, payloadElement));
+        await _repository.SaveChangesAsync();
     }
 
     private async Task<JsonElement> BuildPayloadAsync(
