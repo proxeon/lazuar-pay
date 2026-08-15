@@ -29,11 +29,25 @@ public partial class CommerceQueryService
             new { SessionId = sessionId, OrgId = organizationId });
         if (session == null) return null;
 
-        if (session.Status == "COMPLETED")
+        return MapPublicCheckoutStatus(session.Status);
+    }
+
+    /// <summary>
+    /// Public poller contract: COMPLETED only when the row is COMPLETED; EXPIRED is honest;
+    /// OPEN (and anything else) is PENDING. Token is never minted.
+    /// </summary>
+    internal static CheckoutStatusDto? MapPublicCheckoutStatus(string? status)
+    {
+        if (status is null)
         {
-            return new CheckoutStatusDto("COMPLETED", Token: null);
+            return null;
         }
 
-        return new CheckoutStatusDto("PENDING", Token: null);
+        return status switch
+        {
+            "COMPLETED" => new CheckoutStatusDto("COMPLETED", Token: null),
+            "EXPIRED" => new CheckoutStatusDto("EXPIRED", Token: null),
+            _ => new CheckoutStatusDto("PENDING", Token: null)
+        };
     }
 }

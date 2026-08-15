@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { CheckoutLayout } from "./CheckoutLayout";
 import { OrderSummaryCard } from "./OrderSummaryCard";
 import { PromoCodeInput } from "./PromoCodeInput";
@@ -17,8 +16,6 @@ interface CheckoutViewProps {
 }
 
 export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancelled }: CheckoutViewProps) {
-  const router = useRouter();
-
   const [authContext, setAuthContext] = useState<CheckoutAuthContext>(initialAuthContext);
   const [couponCode, setCouponCode] = useState("");
   const [isCouponValidating, setIsCouponValidating] = useState(false);
@@ -84,10 +81,6 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     setAuthContext((prev) => ({ ...prev, isGuestMode: isGuest }));
   };
 
-  const handleSuccessZeroAmount = () => {
-    router.push(`/${tenantSlug}/checkout/${product.slug}/success`);
-  };
-
   const handleError = (errorMsg: string) => {
     if (errorMsg.includes("Payment gateway is not configured or active for this workspace")) {
       setGlobalError("This creator is currently updating their payment settings. Please try again later.");
@@ -135,7 +128,6 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
             quantity={quantity}
             onQuantityChange={handleQuantityChange}
             onSetGuestMode={handleSetGuestMode}
-            onSuccessZeroAmount={handleSuccessZeroAmount}
             onError={handleError}
           />
         }

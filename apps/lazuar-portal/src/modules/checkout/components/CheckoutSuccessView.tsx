@@ -10,12 +10,16 @@ interface CheckoutSuccessViewProps {
   product: ProductDto;
 }
 
+const POLL_INTERVAL_MS = 3000;
+const MAX_ATTEMPTS = 20;
+
 export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessViewProps) {
   const searchParams = useSearchParams();
   const subId = searchParams.get("sub_id");
-  
-  const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT" | "ERROR">("VERIFYING");
+
+  const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT" | "EXPIRED" | "ERROR">("VERIFYING");
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [pollKey, setPollKey] = useState(0);
 
   useEffect(() => {
     if (!subId) {
@@ -24,8 +28,8 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
     }
 
     let attempts = 0;
-    const maxAttempts = 10;
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let cancelled = false;
 
     const verifyPayment = async () => {
       attempts++;
@@ -33,25 +37,40 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
       try {
         const response = await getCheckoutStatus(tenantSlug, subId);
 
-        if (response.status === "ACTIVE" || response.status === "COMPLETED") {
+        if (cancelled) return;
+
+        // Paid only when commerce session is COMPLETED. Never treat ACTIVE / PENDING / EXPIRED as success.
+        if (response.status === "COMPLETED") {
           if (response.token) setAccessToken(response.token);
           setStatus("SUCCESS");
           return;
         }
-      } catch (err) {
+
+        if (response.status === "EXPIRED") {
+          setStatus("EXPIRED");
+          return;
+        }
+      } catch {
+        // Swallow and retry — HTTP errors are not paid.
       }
 
-      if (attempts >= maxAttempts) {
+      if (cancelled) return;
+
+      if (attempts >= MAX_ATTEMPTS) {
         setStatus("TIMEOUT");
       } else {
-        timeoutId = setTimeout(verifyPayment, 2500);
+        timeoutId = setTimeout(verifyPayment, POLL_INTERVAL_MS);
       }
     };
 
+    setStatus("VERIFYING");
     verifyPayment();
 
-    return () => clearTimeout(timeoutId);
-  }, [subId, tenantSlug]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [subId, tenantSlug, pollKey]);
 
   if (status === "ERROR") {
     return (
@@ -87,6 +106,29 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
     );
   }
 
+  if (status === "EXPIRED") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full text-center">
+          <svg className="h-8 w-8 text-rose-500 mx-auto mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <h1 className="text-xl font-semibold text-foreground mb-3">Checkout Expired</h1>
+          <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
+            This checkout session for <strong className="text-foreground">{product.name}</strong> is no longer active. If you completed a payment, please check your email. Otherwise, start checkout again.
+          </p>
+          <Link href={`/${tenantSlug}/checkout/${product.slug}`} className="block w-full">
+            <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
+              Return to Checkout
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (status === "TIMEOUT") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -98,8 +140,18 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
           </div>
           <h1 className="text-xl font-semibold text-foreground mb-3">Processing Payment</h1>
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-            We are still processing your payment for <strong className="text-foreground">{product.name}</strong>. Please check your email in a few minutes for your receipt and access links.
+            We are still processing your payment for <strong className="text-foreground">{product.name}</strong>. Please check your email in a few minutes for your receipt. This page does not confirm payment until verification finishes.
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("VERIFYING");
+              setPollKey((key) => key + 1);
+            }}
+            className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors mb-3"
+          >
+            Check again
+          </button>
           <Link href={`/${tenantSlug}/portal`} className="block w-full">
             <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
               Go to Dashboard
@@ -126,7 +178,7 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
         </div>
         <h1 className="text-2xl font-semibold text-foreground mb-3">Order Complete!</h1>
         <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-          Your order for <strong className="text-foreground">{product.name}</strong> is confirmed. Please check your email for your receipt, digital downloads, and community access links.
+          Your order for <strong className="text-foreground">{product.name}</strong> is confirmed. Please check your email for your receipt.
         </p>
 
         <Link href={accessToken ? `/${tenantSlug}/portal?token=${encodeURIComponent(accessToken)}` : `/${tenantSlug}/portal`} className="block w-full">

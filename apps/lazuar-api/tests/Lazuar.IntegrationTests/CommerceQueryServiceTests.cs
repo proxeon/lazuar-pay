@@ -2,8 +2,10 @@ using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.Services;
 using Modules.CRM.Contracts;
@@ -80,5 +82,46 @@ public class CommerceQueryServiceTests
         Assert.DoesNotThrowAsync(async () => await _queryService.GetStatsAsync(orgId));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetPortalDataAsync(orgId, Guid.CreateVersion7()));
         Assert.DoesNotThrowAsync(async () => await _queryService.GetCustomCheckoutsAsync(orgId, 1, 50));
+        Assert.DoesNotThrowAsync(async () => await _queryService.GetCheckoutStatusAsync(orgId, Guid.CreateVersion7()));
+    }
+
+    [Test]
+    public async Task GetCheckoutStatusAsync_PollerContract_CompletedPendingExpiredAndMissing()
+    {
+        var orgId = Guid.CreateVersion7();
+        var otherOrgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var productId = Guid.CreateVersion7();
+
+        var open = new CheckoutSession(orgId, clientId, productId, couponId: null, DateTime.UtcNow.AddHours(1));
+        var completed = new CheckoutSession(orgId, clientId, productId, couponId: null, DateTime.UtcNow.AddHours(1));
+        completed.Complete();
+        var expired = new CheckoutSession(orgId, clientId, productId, couponId: null, DateTime.UtcNow.AddHours(-1));
+        expired.Expire();
+
+        _dbContext.CheckoutSessions.AddRange(open, completed, expired);
+        await _dbContext.SaveChangesAsync();
+
+        var missing = await _queryService.GetCheckoutStatusAsync(orgId, Guid.CreateVersion7());
+        missing.Should().BeNull();
+
+        var wrongOrg = await _queryService.GetCheckoutStatusAsync(otherOrgId, completed.Id);
+        wrongOrg.Should().BeNull();
+
+        var pending = await _queryService.GetCheckoutStatusAsync(orgId, open.Id);
+        pending.Should().NotBeNull();
+        pending!.Status.Should().Be("PENDING");
+        pending.Token.Should().BeNull();
+
+        var done = await _queryService.GetCheckoutStatusAsync(orgId, completed.Id);
+        done.Should().NotBeNull();
+        done!.Status.Should().Be("COMPLETED");
+        done.Token.Should().BeNull();
+
+        var dead = await _queryService.GetCheckoutStatusAsync(orgId, expired.Id);
+        dead.Should().NotBeNull();
+        dead!.Status.Should().Be("EXPIRED");
+        dead.Status.Should().NotBe("COMPLETED");
+        dead.Token.Should().BeNull();
     }
 }

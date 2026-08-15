@@ -15,7 +15,6 @@ interface CheckoutFormProps {
   quantity: number;
   onQuantityChange: (qty: number) => void;
   onSetGuestMode: (isGuest: boolean) => void;
-  onSuccessZeroAmount: () => void;
   onError: (errorMsg: string) => void;
 }
 
@@ -28,7 +27,6 @@ export function CheckoutForm({
   quantity,
   onQuantityChange,
   onSetGuestMode,
-  onSuccessZeroAmount,
   onError
 }: CheckoutFormProps) {
   const config = product.checkout_configuration;
@@ -86,12 +84,16 @@ export function CheckoutForm({
 
     try {
       const result = await submitCheckout(payload);
-      
-      if (result.is_zero_amount_bypass) {
-        onSuccessZeroAmount();
-      } else {
-        window.location.href = result.url;
+
+      // Zero-amount already settled server-side; navigate to the initiate URL (includes sub_id).
+      // Do not guess /success — missing handle would show Invalid Session after a real COMPLETED.
+      if (result.is_zero_amount_bypass && !result.url) {
+        onError("Checkout completed but the confirmation link was missing. Please check your email.");
+        setIsSubmitting(false);
+        return;
       }
+
+      window.location.assign(result.url);
     } catch (err: any) {
       onError(err.message || "An error occurred during checkout.");
       setIsSubmitting(false);

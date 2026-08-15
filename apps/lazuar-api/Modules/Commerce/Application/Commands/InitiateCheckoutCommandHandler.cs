@@ -161,16 +161,18 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         _repository.AddCheckoutSession(session);
         await _repository.SaveChangesAsync(ct);
 
+        // Same poller handle as the paid hop-2 return — buyer success must observe session COMPLETED.
+        var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
+
         if (netAmount == 0)
         {
             var processZeroAmountCmd = new ProcessZeroAmountCheckoutCommand(tenantId.Value, session.Id);
             await _mediator.Send(processZeroAmountCmd, ct);
 
-            return new CheckoutResultDto(string.Empty, true);
+            return new CheckoutResultDto(successUrl, true);
         }
         else
         {
-            var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
             var cancelUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}?cancelled=true";
 
             var metadata = CommerceCheckoutMetadata.MergeClientIntoGateway(

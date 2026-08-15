@@ -484,6 +484,53 @@ public class ProcessGatewayWebhookCommandHandlerTests
             e.GatewayTransactionId != piId));
     }
 
+    [Test]
+    public async Task Handle_UnverifiedParse_DoesNotPublishGatewayPaymentCompleted()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                Verified: false,
+                EventType: "PAYMENT_COMPLETED",
+                EventId: "evt_bad_sig",
+                AmountPaid: 10m,
+                Currency: "MYR",
+                GatewayTransactionId: "pi_bad",
+                Metadata: new Dictionary<string, string>
+                {
+                    ["type"] = "commerce_subscription",
+                    ["subscription_id"] = Guid.CreateVersion7().ToString()
+                },
+                GatewayFee: 0,
+                TaxAmount: 0,
+                NetAmount: 10,
+                FxRate: 1,
+                BaseCurrency: "MYR",
+                Error: "bad signature"));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () => await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("verification failed"));
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+    }
+
     private sealed class EmptySessionRepo : IIntegrationCheckoutSessionRepository
     {
         public Task<IntegrationCheckoutSession?> GetByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
