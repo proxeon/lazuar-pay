@@ -57,8 +57,12 @@ internal static class DunningStepDispatcher
             whatsapp_body = effectiveActionType == "EMAIL" ? string.Empty : step.WhatsAppBody,
             plan_name = product?.Name ?? string.Empty,
             amount = product?.Price ?? 0m,
+            total_price = product?.Price ?? 0m,
             currency = product?.Currency ?? string.Empty,
-            days_overdue = daysOverdue
+            days_overdue = daysOverdue,
+            current_period_end = sub.NextBillingDate.HasValue
+                ? sub.NextBillingDate.Value.ToString("yyyy-MM-dd")
+                : string.Empty
         };
 
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });

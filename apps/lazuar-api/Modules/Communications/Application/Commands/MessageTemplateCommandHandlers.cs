@@ -161,25 +161,9 @@ public class SendTestReminderCommandHandler : ICommandHandler<SendTestReminderCo
 
         if (template == null) throw new InvalidOperationException("Template not found.");
 
-        string PopulateMocks(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return text;
-            return text
-                .Replace("{{customer_name}}", "Test User", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{business_name}}", "Test Business", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{plan_name}}", "Test Plan", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{group_link}}", "https://t.me/test", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{meeting_link}}", "https://zoom.us/test", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{renewal_link}}", "https://example.com/renew", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{portal_magic_link}}", "https://portal.lazuar.com/workspace/portal?token=test_token", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{fulfillment_url}}", "https://cloudflare.r2/download.pdf", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{current_period_end}}", "31 Dec 2026", StringComparison.OrdinalIgnoreCase);
-        }
-
-        var subject = MarkdownParser.ToPlainText(PopulateMocks(template.Subject));
-        var emailBody = MarkdownParser.ToHtml(PopulateMocks(template.EmailBody));
-        var whatsappBody = MarkdownParser.ToPlainText(PopulateMocks(template.WhatsAppBody));
+        var subject = MarkdownParser.ToPlainText(MessageTemplateHydrator.PopulatePreview(template.Subject));
+        var emailBody = MarkdownParser.ToHtml(MessageTemplateHydrator.PopulatePreview(template.EmailBody));
+        var whatsappBody = MarkdownParser.ToPlainText(MessageTemplateHydrator.PopulatePreview(template.WhatsAppBody));
 
         var dispatchEvent = new DispatchMessageIntegrationEvent(
             OrganizationId: request.OrganizationId,

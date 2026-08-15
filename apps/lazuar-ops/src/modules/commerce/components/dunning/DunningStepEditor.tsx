@@ -264,7 +264,7 @@ export default function DunningStepEditor({
                         onChange={e => onUpdate(index, step.action_type === "EMAIL" ? "email_body" : "whatsapp_body", e.target.value)} 
                         disabled={isActionLoading}
                         rows={6}
-                        placeholder="Available variables: {{customer_name}}, {{plan_name}}, {{update_payment_link}}"
+                        placeholder="Available variables: {{customer_name}}, {{plan_name}}, {{update_payment_link}}, {{amount}}, {{currency}}, {{current_period_end}}, {{days_overdue}}"
                         className={cn("w-full p-3 rounded-sm border border-[#e5e5e5] text-[13px] focus:outline-none focus:border-[#09090b] resize-y", step.action_type === "EMAIL" ? "font-mono" : "font-sans")}
                       />
                     </div>

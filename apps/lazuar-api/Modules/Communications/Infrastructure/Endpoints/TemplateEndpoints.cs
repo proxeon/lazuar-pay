@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Modules.Communications.Application;
 using Modules.Communications.Contracts;
 using Modules.Communications.Contracts.Commands;
 using Modules.Communications.Domain;
@@ -57,25 +58,9 @@ public static class TemplateEndpoints
         group.MapPost("/templates/preview", async Task<Ok<TemplatePreviewResponseDto>> (
             TemplatePreviewRequestDto req) =>
         {
-            string PopulateMocks(string text)
-            {
-                if (string.IsNullOrEmpty(text)) return text;
-                return text
-                    .Replace("{{customer_name}}", "Ahmad Firdaus", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{business_name}}", "Lazuar HQ", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{plan_name}}", "Founders Mastermind", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{group_link}}", "https://t.me/joinchat/example", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{meeting_link}}", "https://zoom.us/j/123456789", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{total_price}}", "99.00", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{renewal_link}}", "https://portal.lazuar.com/checkout", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{portal_magic_link}}", "https://portal.lazuar.com/workspace/portal?token=test_token", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{fulfillment_url}}", "https://cloudflare.r2/download.pdf", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{current_period_end}}", "31 Dec 2026", StringComparison.OrdinalIgnoreCase);
-            }
-
-            var subjectContent = MarkdownParser.ToPlainText(PopulateMocks(req.Subject));
-            var htmlEmailContent = MarkdownParser.ToHtml(PopulateMocks(req.Email_body));
-            var textWhatsappContent = MarkdownParser.ToPlainText(PopulateMocks(req.Whatsapp_body));
+            var subjectContent = MarkdownParser.ToPlainText(MessageTemplateHydrator.PopulatePreview(req.Subject));
+            var htmlEmailContent = MarkdownParser.ToHtml(MessageTemplateHydrator.PopulatePreview(req.Email_body));
+            var textWhatsappContent = MarkdownParser.ToPlainText(MessageTemplateHydrator.PopulatePreview(req.Whatsapp_body));
 
             var response = new TemplatePreviewResponseDto
             {

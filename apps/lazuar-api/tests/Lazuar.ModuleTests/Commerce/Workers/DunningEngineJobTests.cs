@@ -101,6 +101,8 @@ public class DunningEngineJobTests
             && e.Payload.GetProperty("email_body").GetString() == "Please pay"
             && e.Payload.GetProperty("subject").GetString() == "Past due"
             && e.Payload.GetProperty("plan_name").GetString() == "Plan"
+            && e.Payload.GetProperty("total_price").GetDecimal() == 50m
+            && e.Payload.GetProperty("current_period_end").GetString() == sub.NextBillingDate!.Value.ToString("yyyy-MM-dd")
             && e.Payload.GetProperty("client_profile_id").GetString() == sub.ClientProfileId.ToString()
             && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
     }

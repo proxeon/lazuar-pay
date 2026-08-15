@@ -51,7 +51,7 @@ export default function TemplatesPage() {
           whatsapp_body: newWhatsappBody,
           channel: "ALL",
           required_variables: ["{{customer_name}}"],
-          optional_variables: ["{{plan_name}}", "{{renewal_link}}"]
+          optional_variables: ["{{plan_name}}", "{{renewal_link}}", "{{update_payment_link}}"]
         }
       });
       if (error) throw new Error(error.detail);

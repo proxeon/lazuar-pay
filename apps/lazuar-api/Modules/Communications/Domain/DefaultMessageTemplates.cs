@@ -26,10 +26,10 @@ public static class DefaultMessageTemplates
             "Payment Failed",
             "ALL",
             "Action Needed: Payment issue for {{plan_name}}",
-            "Hi {{customer_name}},\n\nWe tried to process your renewal for {{plan_name}}, but the payment didn't go through. This usually just means your bank blocked the transaction or the card expired.\n\nTo ensure you don't lose access, please update your payment details here:\n\n[Securely Update Payment]({{renewal_link}})\n\nIf you need any help, just reply to this email.\n\n— {{business_name}}",
-            "Hi {{customer_name}} 👋 Quick heads up: your recent card payment for {{plan_name}} was declined by the bank. To keep your access active, you can quickly update your details here: {{renewal_link}}. Let us know if you need help!",
-            ["{{renewal_link}}"],
-            ["{{customer_name}}", "{{business_name}}", "{{plan_name}}"]),
+            "Hi {{customer_name}},\n\nWe tried to process your renewal for {{plan_name}}, but the payment didn't go through. This usually just means your bank blocked the transaction or the card expired.\n\nTo ensure you don't lose access, please update your payment details here:\n\n[Securely Update Payment]({{update_payment_link}})\n\nIf you need any help, just reply to this email.\n\n— {{business_name}}",
+            "Hi {{customer_name}} 👋 Quick heads up: your recent card payment for {{plan_name}} was declined by the bank. To keep your access active, you can quickly update your details here: {{update_payment_link}}. Let us know if you need help!",
+            ["{{update_payment_link}}"],
+            ["{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{renewal_link}}"]),
 
         new Definition(
             "Subscription Cancelled",

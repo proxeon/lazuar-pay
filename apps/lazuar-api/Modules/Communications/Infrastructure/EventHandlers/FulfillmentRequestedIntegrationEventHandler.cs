@@ -81,7 +81,8 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
                 $"Dunning hydrate failed: CRM profile {clientProfileId} not found for organization {@event.OrganizationId} subscription {subIdStr}.");
         }
 
-        if (isDunning && string.IsNullOrWhiteSpace(profile.Email))
+        var toEmail = profile.Email ?? "";
+        if (isDunning && string.IsNullOrWhiteSpace(toEmail))
         {
             _logger.LogError(
                 "Dunning hydrate failed: profile email empty. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
@@ -94,25 +95,27 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         var workspaceSlug = workspace?.Slug ?? "";
 
         var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
-        var portalLink = $"{portalBase}/{workspaceSlug}/portal";
-        var updatePaymentLink = $"{portalBase}/{workspaceSlug}/update-payment/{subIdStr}";
-
-        string portalMagicLink = portalLink;
+        string? magicToken = null;
         if (Guid.TryParse(subIdStr, out var subscriptionId))
         {
-            var token = _tokenService.GenerateToken(subscriptionId);
-            portalMagicLink = $"{portalBase}/{workspaceSlug}/portal?token={token}";
+            magicToken = _tokenService.GenerateToken(subscriptionId);
         }
 
+        var links = MessageLinkBuilder.Build(portalBase, workspaceSlug, subIdStr, magicToken);
+
         var planName = root.TryGetProperty("plan_name", out var planProp) ? planProp.GetString() ?? "" : "";
-        var amount = ReadNumericString(root, "amount");
-        var totalPrice = root.TryGetProperty("total_price", out var totalProp)
-            ? (totalProp.ValueKind == JsonValueKind.String ? totalProp.GetString() ?? amount : totalProp.ToString())
+        var amount = MessageTemplateHydrator.FormatMoney(ReadNumericString(root, "amount"));
+        var totalPrice = root.TryGetProperty("total_price", out _)
+            ? MessageTemplateHydrator.FormatMoney(ReadNumericString(root, "total_price"))
             : amount;
         var currency = root.TryGetProperty("currency", out var currProp) ? currProp.GetString() ?? "" : "";
         var daysOverdue = root.TryGetProperty("days_overdue", out var daysProp)
-            ? (daysProp.ValueKind == JsonValueKind.String ? daysProp.GetString() ?? "0" : daysProp.ToString())
-            : "0";
+            ? (daysProp.ValueKind == JsonValueKind.String ? daysProp.GetString() ?? "" : daysProp.ToString())
+            : "";
+        var currentPeriodEnd = root.TryGetProperty("current_period_end", out var periodProp)
+            ? MessageTemplateHydrator.FormatPeriodEnd(
+                periodProp.ValueKind == JsonValueKind.String ? periodProp.GetString() : periodProp.ToString())
+            : "";
 
         var channel = root.TryGetProperty("channel", out var channelProp) ? channelProp.GetString() ?? "EMAIL" : "EMAIL";
 
@@ -142,26 +145,23 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
             channel = template.Channel;
         }
 
-        string PopulateVariables(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return text;
-            return text
-                .Replace("{{customer_name}}", profile.Full_name, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{customer_email}}", profile.Email, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{customer_phone}}", profile.Phone ?? "", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{business_name}}", workspace?.Name ?? "Lazuar Merchant", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{plan_name}}", planName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{amount}}", amount, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{total_price}}", totalPrice, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{currency}}", currency, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{days_overdue}}", daysOverdue, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{renewal_link}}", portalLink, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{portal_magic_link}}", portalMagicLink, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{update_payment_link}}", updatePaymentLink, StringComparison.OrdinalIgnoreCase);
-        }
+        var templateContext = new MessageTemplateContext(
+            CustomerName: string.IsNullOrWhiteSpace(profile.Full_name) ? "Customer" : profile.Full_name,
+            CustomerEmail: toEmail,
+            CustomerPhone: profile.Phone ?? "",
+            BusinessName: string.IsNullOrWhiteSpace(workspace?.Name) ? "Lazuar Merchant" : workspace.Name,
+            PlanName: planName,
+            Amount: amount,
+            TotalPrice: totalPrice,
+            Currency: currency,
+            DaysOverdue: daysOverdue,
+            CurrentPeriodEnd: currentPeriodEnd,
+            RenewalLink: links.RenewalLink,
+            PortalMagicLink: links.PortalMagicLink,
+            UpdatePaymentLink: links.UpdatePaymentLink);
 
-        var populatedSubject = PopulateVariables(subject);
-        var populatedHtml = MarkdownParser.ToHtml(PopulateVariables(emailBody));
+        var populatedSubject = MessageTemplateHydrator.Populate(subject, templateContext);
+        var populatedHtml = MarkdownParser.ToHtml(MessageTemplateHydrator.Populate(emailBody, templateContext));
         var emailChannel = channel is "EMAIL" or "ALL";
 
         if (isDunning &&
@@ -177,11 +177,11 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
 
         var dispatchEvent = new DispatchMessageIntegrationEvent(
             @event.OrganizationId,
-            profile.Email,
+            toEmail,
             profile.Phone,
             populatedSubject,
             populatedHtml,
-            PopulateVariables(whatsappBody),
+            MessageTemplateHydrator.Populate(whatsappBody, templateContext),
             channel
         );
 

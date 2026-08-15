@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts;
+using Modules.Communications.Application;
 using Modules.CRM.Contracts;
 using Modules.Messaging.Contracts;
 using Modules.One.Contracts;
@@ -59,7 +60,8 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         }
 
         var profile = await _crmQueryService.GetClientProfileAsync(context.ClientProfileId);
-        if (profile == null || string.IsNullOrWhiteSpace(profile.Email))
+        var toEmail = profile?.Email;
+        if (profile == null || string.IsNullOrWhiteSpace(toEmail))
         {
             return;
         }
@@ -73,34 +75,34 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         }
 
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(@event.OrganizationId);
-        var slug = workspace?.Slug ?? "";
-        var businessName = string.IsNullOrWhiteSpace(workspace?.Name) ? "Business" : workspace.Name;
-        var customerName = string.IsNullOrWhiteSpace(profile.Full_name) ? "Customer" : profile.Full_name;
-        var planName = string.IsNullOrWhiteSpace(context.ProductName) ? "{{plan_name}}" : context.ProductName;
-
         var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
-        var updatePaymentLink = $"{portalBase}/{slug}/update-payment/{subscriptionId}";
-        var portalMagicLink = $"{portalBase}/{slug}/portal?token={_tokenService.GenerateToken(subscriptionId)}";
+        var token = _tokenService.GenerateToken(subscriptionId);
+        var links = MessageLinkBuilder.Build(portalBase, workspace?.Slug ?? "", subscriptionId.ToString(), token);
 
-        string Populate(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return text;
-            return text
-                .Replace("{{customer_name}}", customerName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{business_name}}", businessName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{plan_name}}", planName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{renewal_link}}", updatePaymentLink, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{update_payment_link}}", updatePaymentLink, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{portal_magic_link}}", portalMagicLink, StringComparison.OrdinalIgnoreCase);
-        }
+        var ctx = new MessageTemplateContext(
+            CustomerName: string.IsNullOrWhiteSpace(profile.Full_name) ? "Customer" : profile.Full_name,
+            CustomerEmail: toEmail,
+            CustomerPhone: profile.Phone ?? "",
+            BusinessName: string.IsNullOrWhiteSpace(workspace?.Name) ? "Lazuar Merchant" : workspace.Name,
+            PlanName: context.ProductName ?? "",
+            Amount: "",
+            TotalPrice: "",
+            Currency: "",
+            DaysOverdue: "",
+            CurrentPeriodEnd: "",
+            RenewalLink: links.RenewalLink,
+            PortalMagicLink: links.PortalMagicLink,
+            UpdatePaymentLink: links.UpdatePaymentLink);
+
+        var whatsapp = MessageTemplateHydrator.Populate(template.WhatsAppBody, ctx);
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
             @event.OrganizationId,
-            profile.Email,
+            toEmail,
             null,
-            Populate(template.Subject ?? ""),
-            MarkdownParser.ToHtml(Populate(template.EmailBody ?? "")),
-            string.IsNullOrEmpty(template.WhatsAppBody) ? null : Populate(template.WhatsAppBody),
+            MessageTemplateHydrator.Populate(template.Subject, ctx),
+            MarkdownParser.ToHtml(MessageTemplateHydrator.Populate(template.EmailBody, ctx)),
+            string.IsNullOrEmpty(whatsapp) ? null : whatsapp,
             template.Channel ?? "EMAIL"));
         await _dbContext.SaveChangesAsync();
     }

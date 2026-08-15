@@ -61,10 +61,20 @@ public class GatewayPaymentFailedEmailHandlerTests
             e.ToEmail == "aisha@example.com"
             && e.ToPhone == null
             && e.HtmlEmailBody != null
-            && e.HtmlEmailBody.Contains($"/acme/update-payment/{subId}")
+            && e.HtmlEmailBody.Contains($"https://portal.test/acme/update-payment/{subId}")
             && e.HtmlEmailBody.Contains("portal.lazuar.com/checkout/update") == false
+            && e.HtmlEmailBody.Contains("Aisha Merchant")
+            && e.HtmlEmailBody.Contains("Acme Studio")
+            && e.HtmlEmailBody.Contains("Premium Plan")
+            && e.HtmlEmailBody.Contains("{{") == false
             && e.Subject.Contains("Premium Plan")
-            && e.Subject.Contains("{{plan_name}}") == false));
+            && e.Subject.Contains("{{") == false
+            && e.PlainTextPhoneBody != null
+            && e.PlainTextPhoneBody.Contains("Premium Plan")
+            && e.PlainTextPhoneBody.Contains($"https://portal.test/acme/update-payment/{subId}")
+            && e.PlainTextPhoneBody.Contains("{{") == false
+            && e.Channel == "ALL"));
+        tokens.Received(1).GenerateToken(subId);
     }
 
     [Test]

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using Dapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.CRM.Contracts;
 using Modules.Commerce.Contracts;
@@ -16,13 +17,16 @@ public class SubscriberQueryService : ISubscriberQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
     private readonly ICrmQueryService _crmQueryService;
+    private readonly CommerceDbContext _dbContext;
 
     public SubscriberQueryService(
         [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
-        ICrmQueryService crmQueryService)
+        ICrmQueryService crmQueryService,
+        CommerceDbContext dbContext)
     {
         _connectionFactory = connectionFactory;
         _crmQueryService = crmQueryService;
+        _dbContext = dbContext;
     }
 
     public async Task<int> GetActiveSubscriberCountAsync(Guid organizationId)
@@ -73,5 +77,29 @@ public class SubscriberQueryService : ISubscriberQueryService
             }
         }
         return result;
+    }
+
+    public async Task<SubscriptionMailContext?> GetSubscriptionMailContextAsync(Guid organizationId, Guid subscriptionId)
+    {
+        var sub = await _dbContext.Subscriptions
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.OrganizationId == organizationId);
+
+        if (sub == null) return null;
+
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == sub.ProductId);
+
+        return new SubscriptionMailContext(
+            sub.Id,
+            sub.ProductId,
+            product?.Name ?? "",
+            product?.Price ?? 0m,
+            product?.Currency ?? "",
+            sub.NextBillingDate,
+            sub.Status);
     }
 }

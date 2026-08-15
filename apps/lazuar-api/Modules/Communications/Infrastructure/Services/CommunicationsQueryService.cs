@@ -88,11 +88,16 @@ public class CommunicationsQueryService : ICommunicationsQueryService
                 Title = "Billing & Subscriptions",
                 Items = new List<TemplateVariableDto>
                 {
+                    new TemplateVariableDto { Tag = "{{business_name}}", Description = "The workspace / merchant display name." },
                     new TemplateVariableDto { Tag = "{{plan_name}}", Description = "The subscription name (e.g. Premium Tier)." },
-                    new TemplateVariableDto { Tag = "{{total_price}}", Description = "Final charge total (factoring discounts and tax overlays)." },
-                    new TemplateVariableDto { Tag = "{{renewal_link}}", Description = "Direct, secure checkout billing link." },
-                    new TemplateVariableDto { Tag = "{{current_period_end}}", Description = "The date the current billing cycle ends." },
-                    new TemplateVariableDto { Tag = "{{portal_magic_link}}", Description = "Secure, 24-hour auto-login link to the subscriber portal." }
+                    new TemplateVariableDto { Tag = "{{amount}}", Description = "Product list price, formatted 0.00." },
+                    new TemplateVariableDto { Tag = "{{total_price}}", Description = "Same as amount until invoice totals exist." },
+                    new TemplateVariableDto { Tag = "{{currency}}", Description = "ISO currency code (e.g. MYR)." },
+                    new TemplateVariableDto { Tag = "{{days_overdue}}", Description = "Calendar days past NextBillingDate. Pre-dunning is 0." },
+                    new TemplateVariableDto { Tag = "{{current_period_end}}", Description = "Next billing / paid-through date (NextBillingDate)." },
+                    new TemplateVariableDto { Tag = "{{update_payment_link}}", Description = "Hosted update-payment URL for this subscription." },
+                    new TemplateVariableDto { Tag = "{{renewal_link}}", Description = "Same as update-payment link (recovery checkout)." },
+                    new TemplateVariableDto { Tag = "{{portal_magic_link}}", Description = "Secure, 24-hour auto-login link to the subscriber portal (dunning and lifecycle)." }
                 }
             },
             new TemplateVariableCategoryDto
@@ -100,9 +105,7 @@ public class CommunicationsQueryService : ICommunicationsQueryService
                 Title = "Fulfillment Assets",
                 Items = new List<TemplateVariableDto>
                 {
-                    new TemplateVariableDto { Tag = "{{fulfillment_url}}", Description = "Cloudflare R2 Download Link." },
-                    new TemplateVariableDto { Tag = "{{meeting_link}}", Description = "Zoom or private scheduling access links." },
-                    new TemplateVariableDto { Tag = "{{group_link}}", Description = "Direct invitation link for Telegram or WhatsApp." }
+                    new TemplateVariableDto { Tag = "{{fulfillment_url}}", Description = "Cloudflare R2 Download Link." }
                 }
             }
         };

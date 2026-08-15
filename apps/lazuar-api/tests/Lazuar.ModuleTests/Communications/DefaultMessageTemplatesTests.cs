@@ -65,6 +65,19 @@ public class DefaultMessageTemplatesTests
     }
 
     [Test]
+    public void PaymentFailed_RequiresUpdatePaymentLink_AndDoesNotHardcodePortalHost()
+    {
+        var def = DefaultMessageTemplates.GetByName("Payment Failed")!;
+        def.RequiredVariables.Should().Contain("{{update_payment_link}}");
+        def.OptionalVariables.Should().Contain("{{renewal_link}}");
+        def.EmailBody.Should().Contain("{{update_payment_link}}");
+        def.WhatsAppBody.Should().Contain("{{update_payment_link}}");
+        def.EmailBody.Should().NotContain("https://portal.lazuar.com");
+        def.WhatsAppBody.Should().NotContain("https://portal.lazuar.com");
+        def.EmailBody.Should().NotContain("{{renewal_link}}");
+    }
+
+    [Test]
     public void PortalAccess_IsEmailOnly_AndRequiresMagicLink()
     {
         var def = DefaultMessageTemplates.GetByName("Portal Access")!;
