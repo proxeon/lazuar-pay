@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import type { LocalStepState } from "./types";
 
 interface CampaignSettingsPanelProps {
   isNew: boolean;
@@ -11,6 +12,7 @@ interface CampaignSettingsPanelProps {
   targetPaymentMethods: string[]; setTargetPaymentMethods: React.Dispatch<React.SetStateAction<string[]>>;
   finalAction: string; setFinalAction: (v: string) => void;
   gracePeriodDays: number; setGracePeriodDays: (v: number) => void;
+  steps: LocalStepState[];
 }
 
 export default function CampaignSettingsPanel({
@@ -21,8 +23,15 @@ export default function CampaignSettingsPanel({
   targetProductIds, setTargetProductIds,
   targetPaymentMethods, setTargetPaymentMethods,
   finalAction, setFinalAction,
-  gracePeriodDays, setGracePeriodDays
+  gracePeriodDays, setGracePeriodDays,
+  steps
 }: CampaignSettingsPanelProps) {
+
+  const lastPastDueDay = steps
+    .map(s => Number.parseInt(s.day_offset, 10))
+    .filter(d => Number.isFinite(d) && d >= 0)
+    .reduce((max, d) => Math.max(max, d), 0);
+  const terminalDay = Math.max(Math.max(0, gracePeriodDays || 0), lastPastDueDay);
 
   const toggleArrayItem = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
     setter(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
@@ -92,7 +101,7 @@ export default function CampaignSettingsPanel({
           <div className="flex items-start justify-between border-b border-[#f4f4f5] pb-3">
             <div>
               <h3 className="text-[14px] font-bold text-[#09090b]">Terminal Escalation</h3>
-              <p className="text-[11px] text-[#71717a] mt-0.5">Executes automatically after Grace Period ends.</p>
+              <p className="text-[11px] text-[#71717a] mt-0.5">Terminal on day +{terminalDay}.</p>
             </div>
           </div>
           <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 p-3 rounded-sm">
@@ -113,6 +122,7 @@ export default function CampaignSettingsPanel({
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Grace Period (Days) *</label>
               <input type="number" min="0" required value={gracePeriodDays} onChange={e => setGracePeriodDays(Number(e.target.value))} disabled={isActionLoading} className="flex h-10 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+              <p className="text-[10px] text-[#71717a]">Later of grace and the last past-due step.</p>
             </div>
           </div>
         </div>

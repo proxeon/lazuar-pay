@@ -120,7 +120,7 @@ public class CommerceRepository : ICommerceRepository
     public async Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid campaignId, CancellationToken ct = default)
     {
         return await _context.Subscriptions
-            .AnyAsync(s => s.CurrentDunningCampaignId == campaignId, ct);
+            .AnyAsync(s => s.CurrentDunningCampaignId == campaignId && s.Status == "PAST_DUE", ct);
     }
 
     public void AddProduct(Product product) => _context.Products.Add(product);

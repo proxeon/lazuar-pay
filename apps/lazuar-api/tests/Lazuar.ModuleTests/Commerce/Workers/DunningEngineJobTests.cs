@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Application.Observability;
 using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Configuration;
 using FluentAssertions;
@@ -19,6 +20,7 @@ using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Infrastructure;
+using Modules.Commerce.Infrastructure.Dunning;
 using Modules.Commerce.Infrastructure.Workers;
 using Modules.Payments.Contracts.Events;
 using NSubstitute;
@@ -609,7 +611,7 @@ public class DunningEngineJobTests
     }
 
     [Test]
-    public async Task PastDue_GraceReached_SkipsRemainingAutoCharge()
+    public async Task PastDue_GraceReached_DoesNotCancelOrChargeBeforeLastAutoChargeOffset()
     {
         var product = CreateProduct(_orgId, "STRIPE");
         var sub = PastDueSub(_orgId, product.Id, daysOverdue: 3);
@@ -625,10 +627,256 @@ public class DunningEngineJobTests
         await _job.RunOnceAsync(CancellationToken.None);
 
         (await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id))
-            .Status.Should().Be("CANCELED");
+            .Status.Should().Be("PAST_DUE");
         await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
         (await _db.ChargeAttemptLogs.IgnoreQueryFilters().CountAsync(l => l.SubscriptionId == sub.Id))
             .Should().Be(0);
+    }
+
+    [TestCase(7, new[] { -3, 0, 3 }, 7)]
+    [TestCase(3, new[] { 0, 7 }, 7)]
+    [TestCase(0, new[] { 0 }, 0)]
+    [TestCase(7, new[] { -3 }, 7)]
+    [TestCase(3, new int[0], 3)]
+    [TestCase(-1, new[] { 5 }, 5)]
+    public void ResolveTerminalDayOffset_UsesLaterOfGraceAndLastPastDueStep(
+        int grace, int[] offsets, int expected)
+    {
+        DunningEngineJob.ResolveTerminalDayOffset(grace, offsets).Should().Be(expected);
+        PastDueDunningProcessor.ResolveTerminalDayOffset(grace, offsets).Should().Be(expected);
+    }
+
+    [Test]
+    public async Task Cancel_AfterLastStep_WhenLastStepAfterGrace()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "CANCEL", grace: 3, dayOffset: 7);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 7);
+        sub.AssignDunningCampaign(campaign.Id);
+        var cancelsBefore = LazuarMetrics.DunningCancelsTotal;
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("CANCELED");
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 7);
+
+        (await _db.DunningCampaigns.IgnoreQueryFilters().SingleAsync(c => c.Id == campaign.Id))
+            .ChurnedSubscriptions.Should().Be(1);
+        LazuarMetrics.DunningCancelsTotal.Should().Be(cancelsBefore + 1);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.InternalTargetApp == "COMMUNICATIONS"
+            && e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
+            && e.Payload.GetProperty("action_type").GetString() == "EMAIL"));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<SubscriptionCanceledIntegrationEvent>(e =>
+            e.SubscriptionId == sub.Id && e.OrganizationId == _orgId));
+    }
+
+    [Test]
+    public async Task Cancel_DoesNotFire_BeforeLastStep()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "CANCEL", grace: 3, dayOffset: 7);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 3);
+        sub.AssignDunningCampaign(campaign.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.ReminderLogs.Should().BeEmpty();
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task Suspend_AfterLastStep_SameDayAsGrace()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "SUSPEND", grace: 7, dayOffset: 3);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 7);
+        sub.AssignDunningCampaign(campaign.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("SUSPENDED");
+        reloaded.SuspendedAt.Should().NotBeNull();
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 3);
+
+        (await _db.DunningCampaigns.IgnoreQueryFilters().SingleAsync(c => c.Id == campaign.Id))
+            .ChurnedSubscriptions.Should().Be(0);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<SubscriptionSuspendedIntegrationEvent>(e =>
+            e.SubscriptionId == sub.Id));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task GraceZero_DispatchesDayZeroThenCancels()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "CANCEL", grace: 0, dayOffset: 0);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 0);
+        sub.AssignDunningCampaign(campaign.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("CANCELED");
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+        await _eventBus.Received(1).PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task None_DoesNotBlockLaterSteps()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "NONE", grace: 3, dayOffset: 7);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 7);
+        sub.AssignDunningCampaign(campaign.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 7);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionSuspendedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task Cancel_WhenNoPastDueSteps_OnGraceDay()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = new DunningCampaign(_orgId, "Empty timeline", "CANCEL", gracePeriodDays: 3, priorityOrder: 1);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 3);
+        sub.AssignDunningCampaign(campaign.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        (await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id))
+            .Status.Should().Be("CANCELED");
+        await _eventBus.Received(1).PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task Paused_SkipsTerminal()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "CANCEL", grace: 3, dayOffset: 7);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 10);
+        sub.AssignDunningCampaign(campaign.Id);
+        sub.PauseDunning(DateTime.UtcNow.AddDays(1));
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.ReminderLogs.Should().BeEmpty();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task UnknownActionType_Cancel_DoesNotCallDomainCancel()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = new DunningCampaign(_orgId, "Bogus step", "NONE", gracePeriodDays: 7, priorityOrder: 1);
+        campaign.AddStep(0, "CANCEL", null, null, null);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 0);
+        sub.AssignDunningCampaign(campaign.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task AlreadyCanceled_NotReclaimed()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "CANCEL", grace: 0, dayOffset: 0);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.Date.AddDays(-10));
+        sub.AssignDunningCampaign(campaign.Id);
+        sub.Cancel();
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("CANCELED");
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
     }
 
     [Test]
@@ -681,6 +929,13 @@ public class DunningEngineJobTests
     {
         var campaign = new DunningCampaign(orgId, "Day0", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
         campaign.AddStep(0, "EMAIL", "Past due", "Please pay", null);
+        return campaign;
+    }
+
+    private static DunningCampaign EmailCampaign(Guid orgId, string finalAction, int grace, int dayOffset)
+    {
+        var campaign = new DunningCampaign(orgId, "LP078", finalAction, gracePeriodDays: grace, priorityOrder: 1);
+        campaign.AddStep(dayOffset, "EMAIL", "Past due", "Please pay", null);
         return campaign;
     }
 

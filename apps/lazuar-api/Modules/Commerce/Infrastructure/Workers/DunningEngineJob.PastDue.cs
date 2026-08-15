@@ -9,6 +9,9 @@ namespace Modules.Commerce.Infrastructure.Workers;
 
 public partial class DunningEngineJob
 {
+    internal static int ResolveTerminalDayOffset(int gracePeriodDays, IEnumerable<int> dayOffsets) =>
+        PastDueDunningProcessor.ResolveTerminalDayOffset(gracePeriodDays, dayOffsets);
+
     private async Task ProcessPastDueSubscriptionAsync(
         CommerceDbContext db,
         IEventBus eventBus,

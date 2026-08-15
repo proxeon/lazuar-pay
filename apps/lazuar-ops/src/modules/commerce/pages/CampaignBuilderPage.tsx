@@ -230,6 +230,7 @@ export default function CampaignBuilderPage() {
           targetPaymentMethods={targetPaymentMethods} setTargetPaymentMethods={setTargetPaymentMethods}
           finalAction={finalAction} setFinalAction={setFinalAction}
           gracePeriodDays={gracePeriodDays} setGracePeriodDays={setGracePeriodDays}
+          steps={steps}
         />
         <CampaignTimeline
           steps={steps}

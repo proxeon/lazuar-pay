@@ -198,6 +198,36 @@ public class SubscriptionRecoveryTests
     }
 
     [Test]
+    public void Suspend_SetsSuspendedAtAndStatus()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-5));
+        sub.MarkAsPastDue();
+
+        sub.Suspend();
+
+        sub.Status.Should().Be("SUSPENDED");
+        sub.SuspendedAt.Should().NotBeNull();
+        sub.SuspendedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
+        sub.CurrentDunningCampaignId.Should().BeNull();
+    }
+
+    [Test]
+    public void Cancel_SetsCanceledStatus_DoesNotClearSuspendedAtUnlessWasSuspended()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-5));
+        sub.MarkAsPastDue();
+        sub.Suspend();
+        var suspendedAt = sub.SuspendedAt;
+
+        sub.Cancel();
+
+        sub.Status.Should().Be("CANCELED");
+        sub.SuspendedAt.Should().Be(suspendedAt);
+    }
+
+    [Test]
     public void RecoverFromPayment_AndResume_ClearRenewalCheckout()
     {
         var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());

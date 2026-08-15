@@ -17,7 +17,8 @@ using Modules.Payments.Contracts;
 namespace Modules.Commerce.Infrastructure.Dunning;
 
 /// <summary>
-/// Assigns a matching campaign (if missing) and catch-up-dispatches due past-due steps.
+/// Assigns a matching campaign (if missing), catch-up-dispatches due past-due steps,
+/// then applies campaign FinalAction after the later of grace and the last past-due step.
 /// Shared by the hourly engine, payment-failed handler, and billing no-token path.
 /// </summary>
 public sealed class PastDueDunningProcessor
@@ -81,71 +82,6 @@ public sealed class PastDueDunningProcessor
 
         var campaign = campaigns.FirstOrDefault(c => c.Id == sub.CurrentDunningCampaignId);
         if (campaign == null) return;
-
-        if (daysOverdue >= campaign.GracePeriodDays)
-        {
-            if (campaign.FinalAction == "CANCEL" || campaign.FinalAction == "SUSPEND")
-            {
-                if (campaign.FinalAction == "CANCEL")
-                {
-                    sub.Cancel();
-                    LazuarMetrics.RecordDunningCancel();
-                    var trackedCampaign = await db.DunningCampaigns
-                        .IgnoreQueryFilters()
-                        .FirstOrDefaultAsync(c => c.Id == campaign.Id, ct);
-                    trackedCampaign?.RecordChurn();
-                    _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Canceled.", sub.Id);
-                }
-                else
-                {
-                    sub.Suspend();
-                    _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Suspended.", sub.Id);
-                }
-
-                var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
-                var targets = product?.FulfillmentTargets.ToList() ?? new List<string>();
-
-                if (campaign.FinalAction == "CANCEL")
-                {
-                    await eventBus.PublishAsync(new SubscriptionCanceledIntegrationEvent(
-                        sub.OrganizationId,
-                        sub.Id,
-                        sub.ClientProfileId,
-                        sub.ProductId,
-                        targets));
-                }
-                else
-                {
-                    await eventBus.PublishAsync(new SubscriptionSuspendedIntegrationEvent(
-                        sub.OrganizationId,
-                        sub.Id,
-                        sub.ClientProfileId,
-                        sub.ProductId,
-                        targets));
-                }
-
-                var eventTypeString = campaign.FinalAction == "CANCEL" ? "subscription.canceled" : "subscription.suspended";
-                var payloadObj = new
-                {
-                    subscription_id = sub.Id.ToString(),
-                    client_profile_id = sub.ClientProfileId.ToString(),
-                    product_id = sub.ProductId.ToString(),
-                    status = campaign.FinalAction == "CANCEL" ? "CANCELED" : "SUSPENDED"
-                };
-                var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
-
-                foreach (var target in targets)
-                {
-                    if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                        await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                            sub.OrganizationId, internalApp, eventTypeString, payloadElement));
-                    }
-                }
-            }
-            return;
-        }
 
         var dueSteps = campaign.Steps
             .Where(s => s.DayOffset >= 0 && s.DayOffset <= daysOverdue)
@@ -228,20 +164,30 @@ public sealed class PastDueDunningProcessor
             }
             else
             {
-                var effectiveAction = DunningStepDispatcher.ResolveEffectiveCommunicationAction(step, whatsAppEnabled);
-                if (effectiveAction == null)
+                var rawAction = (step.ActionType ?? string.Empty).ToUpperInvariant();
+                if (rawAction is not ("EMAIL" or "WHATSAPP" or "ALL"))
                 {
-                    _logger.LogInformation(
-                        "Skipped communication dunning WHATSAPP step DayOffset={DayOffset} for Subscription {Id}: WhatsApp disabled and no email body.",
-                        step.DayOffset, sub.Id);
+                    _logger.LogWarning(
+                        "Skipped non-communication dunning ActionType {ActionType} DayOffset={DayOffset} for Subscription {Id}. Terminal cancel/suspend is campaign FinalAction only.",
+                        step.ActionType, step.DayOffset, sub.Id);
                 }
                 else
                 {
-                    await DunningStepDispatcher.DispatchCommunicationStepAsync(
-                        db, sub, step, daysOverdue, effectiveAction, eventBus, ct);
-                    _logger.LogInformation(
-                        "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id} as {Action}.",
-                        step.DayOffset, sub.Id, effectiveAction);
+                    var effectiveAction = DunningStepDispatcher.ResolveEffectiveCommunicationAction(step, whatsAppEnabled);
+                    if (effectiveAction == null)
+                    {
+                        _logger.LogInformation(
+                            "Skipped communication dunning WHATSAPP step DayOffset={DayOffset} for Subscription {Id}: WhatsApp disabled and no email body.",
+                            step.DayOffset, sub.Id);
+                    }
+                    else
+                    {
+                        await DunningStepDispatcher.DispatchCommunicationStepAsync(
+                            db, sub, step, daysOverdue, effectiveAction, eventBus, ct);
+                        _logger.LogInformation(
+                            "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id} as {Action}.",
+                            step.DayOffset, sub.Id, effectiveAction);
+                    }
                 }
             }
 
@@ -250,5 +196,81 @@ public sealed class PastDueDunningProcessor
                 sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
             }
         }
+
+        var terminalDay = ResolveTerminalDayOffset(
+            campaign.GracePeriodDays,
+            campaign.Steps.Select(s => s.DayOffset));
+        if (daysOverdue < terminalDay
+            || (campaign.FinalAction != "CANCEL" && campaign.FinalAction != "SUSPEND"))
+        {
+            return;
+        }
+
+        if (campaign.FinalAction == "CANCEL")
+        {
+            sub.Cancel();
+            LazuarMetrics.RecordDunningCancel();
+            var trackedCampaign = await db.DunningCampaigns
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == campaign.Id, ct);
+            trackedCampaign?.RecordChurn();
+            _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Canceled.", sub.Id);
+        }
+        else
+        {
+            sub.Suspend();
+            _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Suspended.", sub.Id);
+        }
+
+        var terminalProduct = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+        var targets = terminalProduct?.FulfillmentTargets.ToList() ?? new List<string>();
+
+        if (campaign.FinalAction == "CANCEL")
+        {
+            await eventBus.PublishAsync(new SubscriptionCanceledIntegrationEvent(
+                sub.OrganizationId,
+                sub.Id,
+                sub.ClientProfileId,
+                sub.ProductId,
+                targets));
+        }
+        else
+        {
+            await eventBus.PublishAsync(new SubscriptionSuspendedIntegrationEvent(
+                sub.OrganizationId,
+                sub.Id,
+                sub.ClientProfileId,
+                sub.ProductId,
+                targets));
+        }
+
+        var eventTypeString = campaign.FinalAction == "CANCEL" ? "subscription.canceled" : "subscription.suspended";
+        var payloadObj = new
+        {
+            subscription_id = sub.Id.ToString(),
+            client_profile_id = sub.ClientProfileId.ToString(),
+            product_id = sub.ProductId.ToString(),
+            status = campaign.FinalAction == "CANCEL" ? "CANCELED" : "SUSPENDED"
+        };
+        var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+
+        foreach (var target in targets)
+        {
+            if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
+            {
+                var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
+                await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
+                    sub.OrganizationId, internalApp, eventTypeString, payloadElement));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Later of clamped grace and the last past-due (DayOffset &gt;= 0) step. Pre-dunning offsets do not delay terminal.
+    /// </summary>
+    internal static int ResolveTerminalDayOffset(int gracePeriodDays, IEnumerable<int> dayOffsets)
+    {
+        var lastPastDueDay = dayOffsets.Where(offset => offset >= 0).DefaultIfEmpty(0).Max();
+        return Math.Max(Math.Max(0, gracePeriodDays), lastPastDueDay);
     }
 }

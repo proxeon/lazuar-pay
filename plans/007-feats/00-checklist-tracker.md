@@ -153,7 +153,7 @@ Statuses we persist: `PENDING`, `ACTIVE`, `PAST_DUE`, `SUSPENDED`, `CANCELED`. `
 | LP-075 | Magic update-payment link | — | Y | N | N | P | P | Y | Y | Y | Y |
 | LP-076 | Hard vs soft decline handling | 3 | N | N | N | N | P | Y | P | Y | P |
 | LP-077 | Recovered-revenue metrics | 0 | P | N | N | P | P | Y | Y | Y | P |
-| LP-078 | Terminal action (suspend / cancel) | 0 | P | N | N | P | Y | Y | Y | Y | Y |
+| LP-078 | Terminal action (suspend / cancel) | 0 | Y | N | N | P | Y | Y | Y | Y | Y |
 | LP-079 | Campaign snapshot (don’t mutate in-flight) | 0 | N | — | — | N | N | Y | P | Y | N |
 | LP-080 | Pause dunning per subscriber | — | Y | N | N | P | P | P | P | Y | N |
 
