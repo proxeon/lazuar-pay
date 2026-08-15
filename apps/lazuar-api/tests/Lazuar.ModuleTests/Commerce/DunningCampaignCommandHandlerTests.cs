@@ -102,7 +102,11 @@ public class DunningCampaignCommandHandlerTests
         saved.Should().NotBeNull();
         saved!.Steps.Should().Contain(s => s.DayOffset == -3 && s.ActionType == "EMAIL");
         saved.Steps.Should().Contain(s => s.DayOffset == 0 && s.ActionType == "EMAIL");
-        saved.Steps.Should().Contain(s => s.DayOffset == 3 && s.ActionType == "WHATSAPP");
+        saved.Steps.Should().Contain(s =>
+            s.DayOffset == 3
+            && s.ActionType == "EMAIL"
+            && !string.IsNullOrWhiteSpace(s.EmailBody)
+            && s.EmailBody!.Contains("{{update_payment_link}}"));
         saved.Steps.Should().Contain(s => s.DayOffset == 1 && s.ActionType == "AUTO_CHARGE");
         saved.Steps.Should().Contain(s => s.DayOffset == 5 && s.ActionType == "AUTO_CHARGE");
         repo.Received(1).AddDunningCampaign(Arg.Any<DunningCampaign>());

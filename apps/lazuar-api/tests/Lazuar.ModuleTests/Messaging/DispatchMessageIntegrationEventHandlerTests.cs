@@ -129,6 +129,116 @@ public class DispatchMessageIntegrationEventHandlerTests
     }
 
     [Test]
+    public async Task HandleAsync_TenantEmail_InactiveByok_LogsFailedAndThrowsNoFallback()
+    {
+        var orgId = Guid.CreateVersion7();
+        _comms.GetEmailConfigCredentialsAsync(orgId).Returns(new TenantEmailCredentials(
+            "tenant_key",
+            "from@tenant.test",
+            IsActive: false));
+
+        _email.SendEmailAsync(
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<Guid?>(),
+            Arg.Is<string?>(k => string.IsNullOrWhiteSpace(k)),
+            Arg.Any<string?>(),
+            Arg.Any<string?>())
+            .Returns<string?>(_ => throw new InvalidOperationException(
+                "No platform fallback allowed for tenant emails. You must configure a valid BYOK Resend API key and Sender Email to dispatch tenant communications."));
+
+        var evt = new DispatchMessageIntegrationEvent(
+            OrganizationId: orgId,
+            ToEmail: "user@example.com",
+            ToPhone: null,
+            Subject: "Hello",
+            HtmlEmailBody: "<p>Hi</p>",
+            PlainTextPhoneBody: null,
+            Channel: "EMAIL");
+
+        var act = () => _sut.HandleAsync(evt);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*No platform fallback*");
+
+        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        log.Status.Should().Be("FAILED");
+        log.Channel.Should().Be("EMAIL");
+        log.Error.Should().Contain("No platform fallback");
+    }
+
+    [Test]
+    public async Task HandleAsync_TenantEmail_NullByok_LogsFailedAndThrowsNoFallback()
+    {
+        var orgId = Guid.CreateVersion7();
+        _comms.GetEmailConfigCredentialsAsync(orgId).Returns((TenantEmailCredentials?)null);
+
+        _email.SendEmailAsync(
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<Guid?>(),
+            Arg.Is<string?>(k => string.IsNullOrWhiteSpace(k)),
+            Arg.Any<string?>(),
+            Arg.Any<string?>())
+            .Returns<string?>(_ => throw new InvalidOperationException(
+                "No platform fallback allowed for tenant emails. You must configure a valid BYOK Resend API key and Sender Email to dispatch tenant communications."));
+
+        var evt = new DispatchMessageIntegrationEvent(
+            OrganizationId: orgId,
+            ToEmail: "user@example.com",
+            ToPhone: null,
+            Subject: "Hello",
+            HtmlEmailBody: "<p>Hi</p>",
+            PlainTextPhoneBody: null,
+            Channel: "EMAIL");
+
+        var act = () => _sut.HandleAsync(evt);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*No platform fallback*");
+
+        (await _db.MessageDeliveryLogs.SingleAsync()).Status.Should().Be("FAILED");
+    }
+
+    [Test]
+    public async Task HandleAsync_SuppressedAddress_SkipsEmailAndDoesNotSend()
+    {
+        var orgId = Guid.CreateVersion7();
+        _suppression.IsSuppressedAsync(orgId, "user@example.com").Returns(true);
+        _comms.GetEmailConfigCredentialsAsync(orgId).Returns(new TenantEmailCredentials(
+            "tenant_key",
+            "from@tenant.test",
+            IsActive: true));
+
+        var evt = new DispatchMessageIntegrationEvent(
+            OrganizationId: orgId,
+            ToEmail: "user@example.com",
+            ToPhone: null,
+            Subject: "Hello",
+            HtmlEmailBody: "<p>Hi</p>",
+            PlainTextPhoneBody: null,
+            Channel: "EMAIL");
+
+        await _sut.HandleAsync(evt);
+
+        await _email.DidNotReceive().SendEmailAsync(
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<Guid?>(),
+            Arg.Any<string?>(),
+            Arg.Any<string?>(),
+            Arg.Any<string?>());
+
+        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        log.Status.Should().Be("SKIPPED");
+        log.Channel.Should().Be("EMAIL");
+        log.Error.Should().Contain("suppressed");
+    }
+
+    [Test]
     public async Task HandleAsync_WhatsAppDisabled_SkipsWhatsAppAndDoesNotCallIMessagingService()
     {
         var orgId = Guid.CreateVersion7();

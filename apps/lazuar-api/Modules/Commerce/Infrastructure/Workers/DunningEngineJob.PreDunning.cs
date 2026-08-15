@@ -33,7 +33,7 @@ public partial class DunningEngineJob
 
         var dueSteps = campaign.Steps
             .Where(s => s.DayOffset < 0
-                && Math.Abs(s.DayOffset) <= daysUntilDue
+                && daysUntilDue <= Math.Abs(s.DayOffset)
                 && (s.ActionType == "EMAIL" || s.ActionType == "WHATSAPP" || s.ActionType == "ALL"))
             .Where(s => !sub.ReminderLogs.Any(l =>
                 l.DayOffset == s.DayOffset && l.TargetBillingDate.Date == targetDate))

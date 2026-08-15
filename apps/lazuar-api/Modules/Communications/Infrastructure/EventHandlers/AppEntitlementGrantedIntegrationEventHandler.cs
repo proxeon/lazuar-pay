@@ -34,9 +34,8 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
         {
             var templates = DefaultMessageTemplates.CreateAllForTenant(@event.TenantId).ToList();
             _dbContext.MessageTemplates.AddRange(templates);
-            await _dbContext.SaveChangesAsync();
-
             await _eventBus.PublishAsync(new DefaultTemplatesSeededIntegrationEvent(@event.TenantId));
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

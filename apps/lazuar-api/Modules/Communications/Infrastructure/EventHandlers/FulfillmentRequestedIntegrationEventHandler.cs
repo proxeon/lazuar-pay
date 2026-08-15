@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Events;
 using Modules.CRM.Contracts;
@@ -18,24 +19,30 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
     private readonly ICommunicationsRepository _repository;
     private readonly ICrmQueryService _crmQueryService;
     private readonly IOneQueryService _oneQueryService;
+    private readonly CommunicationsDbContext _db;
     private readonly IEventBus _eventBus;
     private readonly IConfiguration _configuration;
     private readonly IMagicLinkTokenService _tokenService;
+    private readonly ILogger<FulfillmentRequestedIntegrationEventHandler> _logger;
 
     public FulfillmentRequestedIntegrationEventHandler(
         ICommunicationsRepository repository,
         ICrmQueryService crmQueryService,
         IOneQueryService oneQueryService,
+        CommunicationsDbContext db,
         [FromKeyedServices("CommunicationsEventBus")] IEventBus eventBus,
         IConfiguration configuration,
-        IMagicLinkTokenService tokenService)
+        IMagicLinkTokenService tokenService,
+        ILogger<FulfillmentRequestedIntegrationEventHandler> logger)
     {
         _repository = repository;
         _crmQueryService = crmQueryService;
         _oneQueryService = oneQueryService;
+        _db = db;
         _eventBus = eventBus;
         _configuration = configuration;
         _tokenService = tokenService;
+        _logger = logger;
     }
 
     public async Task HandleAsync(FulfillmentRequestedIntegrationEvent @event)
@@ -47,21 +54,46 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
 
         using var doc = JsonDocument.Parse(@event.Payload.GetRawText());
         var root = doc.RootElement;
+        var isDunning = @event.EventType == "reminder.dunning";
+        var subIdStr = root.TryGetProperty("subscription_id", out var sidProp) ? sidProp.GetString() ?? "" : "";
+        var rawClientProfileId = root.TryGetProperty("client_profile_id", out var clientProfileIdProp)
+            ? clientProfileIdProp.GetString()
+            : null;
 
-        if (!root.TryGetProperty("client_profile_id", out var clientProfileIdProp) ||
-            !Guid.TryParse(clientProfileIdProp.GetString(), out var clientProfileId))
+        if (!Guid.TryParse(rawClientProfileId, out var clientProfileId))
         {
-            return;
+            if (!isDunning) return;
+            _logger.LogError(
+                "Dunning hydrate failed: missing client_profile_id. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
+                @event.OrganizationId, subIdStr, rawClientProfileId);
+            throw new InvalidOperationException(
+                $"Dunning hydrate failed: missing or invalid client_profile_id for organization {@event.OrganizationId} subscription {subIdStr}.");
         }
 
         var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
-        if (profile == null) return;
+        if (profile == null)
+        {
+            if (!isDunning) return;
+            _logger.LogError(
+                "Dunning hydrate failed: CRM profile missing. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
+                @event.OrganizationId, subIdStr, clientProfileId);
+            throw new InvalidOperationException(
+                $"Dunning hydrate failed: CRM profile {clientProfileId} not found for organization {@event.OrganizationId} subscription {subIdStr}.");
+        }
+
+        if (isDunning && string.IsNullOrWhiteSpace(profile.Email))
+        {
+            _logger.LogError(
+                "Dunning hydrate failed: profile email empty. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
+                @event.OrganizationId, subIdStr, clientProfileId);
+            throw new InvalidOperationException(
+                $"Dunning hydrate failed: CRM profile {clientProfileId} has no email for organization {@event.OrganizationId} subscription {subIdStr}.");
+        }
 
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(@event.OrganizationId);
         var workspaceSlug = workspace?.Slug ?? "";
 
         var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
-        var subIdStr = root.TryGetProperty("subscription_id", out var sidProp) ? sidProp.GetString() ?? "" : "";
         var portalLink = $"{portalBase}/{workspaceSlug}/portal";
         var updatePaymentLink = $"{portalBase}/{workspaceSlug}/update-payment/{subIdStr}";
 
@@ -81,18 +113,18 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         var daysOverdue = root.TryGetProperty("days_overdue", out var daysProp)
             ? (daysProp.ValueKind == JsonValueKind.String ? daysProp.GetString() ?? "0" : daysProp.ToString())
             : "0";
-        
+
         var channel = root.TryGetProperty("channel", out var channelProp) ? channelProp.GetString() ?? "EMAIL" : "EMAIL";
 
         string subject = "";
         string emailBody = "";
         string whatsappBody = "";
 
-        if (@event.EventType == "reminder.dunning")
+        if (isDunning)
         {
             var actionType = root.TryGetProperty("action_type", out var atProp) ? atProp.GetString() ?? "EMAIL" : "EMAIL";
             channel = actionType == "ALL" ? "ALL" : actionType;
-            
+
             subject = root.TryGetProperty("subject", out var sProp) ? sProp.GetString() ?? "" : "";
             emailBody = root.TryGetProperty("email_body", out var ebProp) ? ebProp.GetString() ?? "" : "";
             whatsappBody = root.TryGetProperty("whatsapp_body", out var wbProp) ? wbProp.GetString() ?? "" : "";
@@ -100,10 +132,10 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         else
         {
             if (!root.TryGetProperty("template_id", out var templateIdProp) || !Guid.TryParse(templateIdProp.GetString(), out var templateId)) return;
-            
+
             var template = await _repository.GetTemplateByIdAsync(@event.OrganizationId, templateId);
             if (template == null) return;
-            
+
             subject = template.Subject;
             emailBody = template.EmailBody;
             whatsappBody = template.WhatsAppBody;
@@ -128,17 +160,33 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
                 .Replace("{{update_payment_link}}", updatePaymentLink, StringComparison.OrdinalIgnoreCase);
         }
 
+        var populatedSubject = PopulateVariables(subject);
+        var populatedHtml = MarkdownParser.ToHtml(PopulateVariables(emailBody));
+        var emailChannel = channel is "EMAIL" or "ALL";
+
+        if (isDunning &&
+            ((string.IsNullOrWhiteSpace(populatedSubject) && string.IsNullOrWhiteSpace(populatedHtml))
+             || (emailChannel && string.IsNullOrWhiteSpace(populatedHtml))))
+        {
+            _logger.LogError(
+                "Dunning hydrate failed: empty EMAIL subject/body. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
+                @event.OrganizationId, subIdStr, clientProfileId);
+            throw new InvalidOperationException(
+                $"Dunning hydrate failed: empty EMAIL subject/body for organization {@event.OrganizationId} subscription {subIdStr}.");
+        }
+
         var dispatchEvent = new DispatchMessageIntegrationEvent(
             @event.OrganizationId,
             profile.Email,
             profile.Phone,
-            PopulateVariables(subject),
-            MarkdownParser.ToHtml(PopulateVariables(emailBody)),
+            populatedSubject,
+            populatedHtml,
             PopulateVariables(whatsappBody),
             channel
         );
 
         await _eventBus.PublishAsync(dispatchEvent);
+        await _db.SaveChangesAsync();
     }
 
     private static string ReadNumericString(JsonElement root, string propertyName)

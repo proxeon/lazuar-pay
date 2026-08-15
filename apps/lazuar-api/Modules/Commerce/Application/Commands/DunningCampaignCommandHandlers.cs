@@ -152,10 +152,10 @@ public class GenerateDefaultDunningCampaignsCommandHandler : ICommandHandler<Gen
             "Your {{plan_name}} subscription is due today. To maintain access, please update your payment method here: {{update_payment_link}}", 
             null);
             
-        campaign.AddStep(3, "WHATSAPP", 
-            null, 
-            null, 
-            "Hey {{customer_name}}, your {{plan_name}} subscription is past due. You can securely update your payment method to restore access here: {{update_payment_link}}");
+        campaign.AddStep(3, "EMAIL",
+            "Your {{plan_name}} subscription is past due",
+            "Hey {{customer_name}}, your {{plan_name}} subscription is past due. You can securely update your payment method to restore access here: {{update_payment_link}}",
+            null);
 
         // Billing owns attempt 1; dunning retries before grace 7. Billplz products skip via capabilities.
         campaign.AddStep(1, "AUTO_CHARGE", null, null, null);
