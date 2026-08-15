@@ -32,6 +32,8 @@ public class PaymentWebhookLogConfig : IEntityTypeConfiguration<PaymentWebhookLo
         builder.HasIndex(x => new { x.Provider, x.BusinessKey })
             .IsUnique()
             .HasFilter("\"BusinessKey\" IS NOT NULL");
+
+        builder.Property(x => x.OutboxMessageId);
     }
 }
 

@@ -154,10 +154,10 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
             var computedSigWithExtra = ComputeHmac(formData, webhookSecret, excludeExtra: false);
 
-            if (!string.Equals(providedSignature, computedSigWithExtra, StringComparison.OrdinalIgnoreCase))
+            if (!FixedTimeEqualsHex(providedSignature, computedSigWithExtra))
             {
                 var computedSigWithoutExtra = ComputeHmac(formData, webhookSecret, excludeExtra: true);
-                if (!string.Equals(providedSignature, computedSigWithoutExtra, StringComparison.OrdinalIgnoreCase))
+                if (!FixedTimeEqualsHex(providedSignature, computedSigWithoutExtra))
                 {
                     return Task.FromResult(new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Billplz x_signature verification failed."));
                 }
@@ -166,6 +166,13 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             var paid = formData.GetValueOrDefault("paid", "false");
             var state = formData.GetValueOrDefault("state", "due");
             var billId = formData.GetValueOrDefault("id", "");
+            if (string.IsNullOrWhiteSpace(billId))
+            {
+                return Task.FromResult(new GatewayWebhookParsedResult(
+                    false, "", "", 0, "", null, new(), 0, 0, 0, 1, "",
+                    "Missing stable Billplz bill id"));
+            }
+
             var paidAmountCents = int.TryParse(formData.GetValueOrDefault("paid_amount", "0"), out var pac) ? pac : 0;
             var paidAmountMyr = paidAmountCents / 100m;
 
@@ -286,6 +293,13 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var hash = HMACSHA256.HashData(keyBytes, dataBytes);
         
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static bool FixedTimeEqualsHex(string provided, string computed)
+    {
+        var left = Encoding.UTF8.GetBytes(provided.Trim().ToLowerInvariant());
+        var right = Encoding.UTF8.GetBytes(computed.Trim().ToLowerInvariant());
+        return left.Length == right.Length && CryptographicOperations.FixedTimeEquals(left, right);
     }
 
     internal static Dictionary<string, string> ParseFormBody(string body)

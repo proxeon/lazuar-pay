@@ -166,8 +166,15 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 return Task.FromResult(new GatewayWebhookParsedResult(true, rawEventType ?? "", "", 0, "", null, new(), 0, 0, 0, 1, "", null));
             }
 
-            var eventId = root.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString();
-            var purchaseId = eventId; 
+            var purchaseId = ReadStablePurchaseId(root);
+            if (string.IsNullOrWhiteSpace(purchaseId))
+            {
+                return Task.FromResult(new GatewayWebhookParsedResult(
+                    false, mappedEventType, "", 0, "", null, new(), 0, 0, 0, 1, "",
+                    "Missing stable CHIP purchase id"));
+            }
+
+            var eventId = purchaseId;
 
             var purchaseNode = root.TryGetProperty("purchase", out var pNode) ? pNode : default;
             var amountCents = purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("total", out var tProp) ? tProp.GetDecimal() : 0m;
@@ -356,6 +363,24 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
     /// Recurring token from root or purchase; client.id from root.client or purchase.client.
     /// Charge path only needs the token — if customer is missing, customer falls back to token.
     /// </summary>
+    /// <summary>
+    /// Nested <c>purchase.id</c> first, then root <c>id</c>. Never invent a Guid.
+    /// </summary>
+    internal static string? ReadStablePurchaseId(JsonElement root)
+    {
+        if (root.TryGetProperty("purchase", out var purchase)
+            && purchase.ValueKind == JsonValueKind.Object)
+        {
+            var nested = ReadString(purchase, "id");
+            if (!string.IsNullOrWhiteSpace(nested))
+            {
+                return nested;
+            }
+        }
+
+        return ReadString(root, "id");
+    }
+
     internal static (string? CustomerId, string? TokenId) ExtractVaultIds(JsonElement root)
     {
         var purchaseId = ReadString(root, "id");

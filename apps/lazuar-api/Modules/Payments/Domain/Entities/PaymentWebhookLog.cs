@@ -25,18 +25,34 @@ public class PaymentWebhookLog : Entity
     /// </summary>
     public string? BusinessKey { get; private set; }
 
+    /// <summary>
+    /// Payments outbox row that carries the integration event. Null on pre-ticket backfill
+    /// rows — do not invent work on redelivery.
+    /// </summary>
+    public Guid? OutboxMessageId { get; private set; }
+
+    /// <summary>
+    /// UTC time this webhook was received and domain work was queued (outbox insert).
+    /// Not Commerce / Billing / session fulfillment.
+    /// </summary>
     public DateTime ProcessedAt { get; private set; }
 
 #pragma warning disable CS8618 
     private PaymentWebhookLog() { }
 #pragma warning restore CS8618
 
-    public PaymentWebhookLog(string eventId, string provider, string? businessKey = null)
+    public PaymentWebhookLog(string eventId, string provider, string? businessKey = null, Guid? outboxMessageId = null)
     {
         Id = Guid.CreateVersion7();
         EventId = eventId;
         Provider = provider;
         BusinessKey = businessKey;
+        OutboxMessageId = outboxMessageId;
         ProcessedAt = DateTime.UtcNow;
+    }
+
+    public void AssignOutboxMessageId(Guid outboxMessageId)
+    {
+        OutboxMessageId = outboxMessageId;
     }
 }

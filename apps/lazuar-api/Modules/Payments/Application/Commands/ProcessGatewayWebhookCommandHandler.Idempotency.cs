@@ -12,7 +12,7 @@ public partial class ProcessGatewayWebhookCommandHandler
     /// </summary>
     private static string? BuildBusinessKey(string eventType, string? gatewayTransactionId)
     {
-        if (string.IsNullOrEmpty(gatewayTransactionId))
+        if (string.IsNullOrWhiteSpace(gatewayTransactionId))
         {
             return null;
         }

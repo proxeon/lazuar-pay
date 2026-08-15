@@ -13,10 +13,18 @@ public interface ITenantPaymentConfigRepository
     Task<IReadOnlyList<TenantPaymentConfiguration>> GetAllByTenantIdAsync(Guid tenantId, CancellationToken ct = default);
 }
 
+public enum OutboxRequeueResult
+{
+    Requeued,
+    AlreadyActive,
+    Missing
+}
+
 public interface IPaymentWebhookLogRepository
 {
-    Task<bool> HasBeenProcessedAsync(string eventId, string provider, CancellationToken ct = default);
-    Task<bool> HasBusinessKeyBeenProcessedAsync(string businessKey, string provider, CancellationToken ct = default);
+    Task<PaymentWebhookLog?> GetByEventIdAsync(string eventId, string provider, CancellationToken ct = default);
+    Task<PaymentWebhookLog?> GetByBusinessKeyAsync(string businessKey, string provider, CancellationToken ct = default);
+    Task<OutboxRequeueResult> TryRequeueDeadOutboxAsync(Guid outboxId, CancellationToken ct = default);
     void Add(PaymentWebhookLog log);
 
     /// <summary>

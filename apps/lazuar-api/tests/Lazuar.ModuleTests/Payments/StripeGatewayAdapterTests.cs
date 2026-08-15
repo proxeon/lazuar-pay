@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Payments.Infrastructure.Gateways;
 using NUnit.Framework;
 using Stripe;
@@ -126,5 +130,156 @@ public class StripeGatewayAdapterTests
         parsed.Metadata["receipt"].Should().Be(subscriptionId.ToString());
         parsed.GatewayCustomerId.Should().Be("cus_1");
         parsed.GatewayTokenId.Should().Be("pm_1");
+    }
+
+    private const string WebhookSecret = "whsec_test_lp090";
+    private const string StripeApiVersion = "2025-03-31.basil";
+
+    [Test]
+    public async Task ParseWebhook_MissingStripeSignature_IsNotVerified()
+    {
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var result = await adapter.ParseWebhookAsync(
+            "sk_test",
+            WebhookSecret,
+            SessionCompletedJson("evt_1", "cs_1", "pi_1"),
+            new Dictionary<string, string>());
+
+        result.Verified.Should().BeFalse();
+        result.Error.Should().Contain("Stripe-Signature");
+    }
+
+    [Test]
+    public async Task ParseWebhook_BadSecret_IsNotVerified()
+    {
+        var json = SessionCompletedJson("evt_bad", "cs_1", "pi_1");
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", "whsec_wrong", json, headers);
+
+        result.Verified.Should().BeFalse();
+    }
+
+    [Test]
+    public async Task ParseWebhook_CheckoutSessionCompleted_UsesEventIdAndPaymentIntent()
+    {
+        var json = SessionCompletedJson("evt_cs_1", "cs_test_1", "pi_test_1");
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", WebhookSecret, json, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.EventId.Should().Be("evt_cs_1");
+        result.GatewayTransactionId.Should().Be("pi_test_1");
+    }
+
+    [Test]
+    public async Task ParseWebhook_PaymentIntentSucceeded_UsesPaymentIntentId()
+    {
+        var json = PaymentIntentSucceededJson("evt_pi_1", "pi_test_1");
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", WebhookSecret, json, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.EventId.Should().Be("evt_pi_1");
+        result.GatewayTransactionId.Should().Be("pi_test_1");
+    }
+
+    [Test]
+    public async Task ParseWebhook_UnmappedType_IsVerifiedWithStripeType()
+    {
+        var json = $$"""
+            {
+              "id": "evt_unmapped",
+              "object": "event",
+              "api_version": "{{StripeApiVersion}}",
+              "request": null,
+              "type": "customer.updated",
+              "data": {
+                "object": {
+                  "id": "cus_1",
+                  "object": "customer"
+                }
+              }
+            }
+            """;
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", WebhookSecret, json, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("customer.updated");
+        result.EventId.Should().Be("evt_unmapped");
+    }
+
+    private static string SessionCompletedJson(string eventId, string sessionId, string paymentIntentId) =>
+        $$"""
+        {
+          "id": "{{eventId}}",
+          "object": "event",
+          "api_version": "{{StripeApiVersion}}",
+          "request": null,
+          "type": "checkout.session.completed",
+          "data": {
+            "object": {
+              "id": "{{sessionId}}",
+              "object": "checkout.session",
+              "amount_total": 5000,
+              "currency": "myr",
+              "payment_intent": "{{paymentIntentId}}",
+              "metadata": {}
+            }
+          }
+        }
+        """;
+
+    private static string PaymentIntentSucceededJson(string eventId, string paymentIntentId) =>
+        $$"""
+        {
+          "id": "{{eventId}}",
+          "object": "event",
+          "api_version": "{{StripeApiVersion}}",
+          "request": null,
+          "type": "payment_intent.succeeded",
+          "data": {
+            "object": {
+              "id": "{{paymentIntentId}}",
+              "object": "payment_intent",
+              "amount": 5000,
+              "amount_received": 5000,
+              "currency": "myr",
+              "status": "succeeded",
+              "metadata": {}
+            }
+          }
+        }
+        """;
+
+    private static string SignStripe(string json, string secret)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var payload = timestamp + "." + json;
+        var hash = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(payload));
+        var hex = Convert.ToHexString(hash).ToLowerInvariant();
+        return $"t={timestamp},v1={hex}";
     }
 }

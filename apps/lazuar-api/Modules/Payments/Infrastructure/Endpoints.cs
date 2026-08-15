@@ -69,6 +69,7 @@ public static class Endpoints
 
                 await mediator.Send(command);
 
+                // Intake ACK only. Domain fulfillment lives in Commerce / Billing / M2M session.
                 return Results.Ok(new { received = true });
             }
             catch (Exception ex) when (ex is NotSupportedException

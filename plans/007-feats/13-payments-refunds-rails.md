@@ -431,7 +431,7 @@ README still says “Stripe, Billplz, FPX, Curlec.” **Curlec is not an adapter
 - `X-Signature` RSA-SHA256 PKCS1 over raw body with PEM public key.
 - `purchase.paid` → completed; `purchase.payment_failure` → failed; **`purchase.preauthorized` not paid** (fixed vs gap 02).
 - `payment.refunded` registered but **unmapped** → dropped.
-- `EventId = root.id`, fallback **`Guid.NewGuid()`** — still unsafe if CHIP omits id (rarer than old Razorpay path, still wrong).
+- `EventId` = nested `purchase.id` then root `id`; **fail-closed** if both missing (no Guid). Done by LP-090 (`LP-PAY-020`).
 - `GatewayCustomerId` **always null**. Token = purchase id if `is_recurring_token`.
 - Fees from `payment.fee_amount` / `net_amount` when present.
 
@@ -693,7 +693,7 @@ Allow-list: stripe, billplz, razorpay, chip. Else 400.
 | **400 on bad signature** | After secret rotation, gateways give up. Need admin replay + store-first. | `LP-PAY-017` reserved |
 | **Sync Stripe expand** | Webhook latency + fail-closed if `ConstructEvent` fails. Fee expand is try/catch. | residual |
 | **Billplz EventId = bill id** | Fine for paid-once bills. Failed then paid: different EventTypes, same bill id, **different business keys** (`PAYMENT_FAILED:bill` vs `PAYMENT_COMPLETED:bill`) — correct. | ok |
-| **CHIP EventId fallback Guid** | Residual critical if id missing. | propose `LP-PAY-020` |
+| **CHIP EventId fallback Guid** | Closed by LP-090: fail-closed, no Guid. | done-by-LP-090 (`LP-PAY-020`) |
 | **Stripe failures unmapped** | Hosted 3DS abandon / `payment_intent.payment_failed` never become outbound `payment.failed`. | propose `LP-PAY-021` (parent mint; do not overload `LP-PAY-007` which is “published into Commerce”) |
 | **Tenant in URL** | Org id is path, not signed payload. Security = per-tenant webhook secret. | accepted BYOK |
 | **Query metadata unsigned** | ADR 009; mitigated by session table. | accepted |
@@ -839,7 +839,7 @@ Competitor columns here are **processors / CaaS**, not salon OS.
 5. Default refund gateway ≠ STRIPE; use the log’s gateway / session.GatewayName.
 6. `setup_future_usage` on Billplz → 422 `VAULT_NOT_SUPPORTED`.
 7. Billplz non-MYR → 422.
-8. CHIP EventId: fail-closed, no Guid.
+8. CHIP EventId fail-closed — **done in LP-090** (no Guid).
 9. Capability flags on `/me` (`supports_off_session`, `supports_refunds`, `supports_disputes`, `rails: hosted_opaque`) — `LP-PAY-018`.
 10. Raw webhook intake table + admin replay — `LP-PAY-016` / `017`.
 11. Restore Billplz fee schedule (config or post-fetch) — `LP-PAY-011`.
@@ -889,7 +889,7 @@ Money plane for every `LP-PAY-*` row: **G. Merchant GMV** unless noted.
 | Proposed ID | Feature | Ours | V | W | P | Class | Why it is a new job |
 |-------------|---------|------|---|--:|--:|-------|---------------------|
 | LP-PAY-019 | Settlement / payout read-model (not a ledger rewrite) | absent | Later | 4 | 3 | later | Competitors sell T+N files; Pay has per-tx fees only |
-| LP-PAY-020 | CHIP EventId fail-closed (no Guid) | absent | Later | 1 | 0 | hygiene | Integrity hole leftover from Razorpay fix |
+| LP-PAY-020 | CHIP EventId fail-closed (no Guid) | **done-by-LP-090** | Later | 1 | 0 | hygiene | Closed inside LP-090; parent need not mint a second family |
 | LP-PAY-021 | Map Stripe `payment_intent.payment_failed` + `checkout.session.expired` | absent | Later | 1 | 0 | must-my | Split from `007` if parent wants `007` to stay “Commerce consumes failed” |
 | LP-PAY-022 | Inbound refund webhooks + outbound `payment.refunded` | absent | Later | 1 | 1 | must-my | Split from `009` (API path vs async dashboard refunds) |
 | LP-PAY-023 | Billplz refund SOP + mark-refunded (no fake API) | absent | Later | 1 | 0 | must-my | Split from `009` so Stripe/CHIP API refunds can ship independently |

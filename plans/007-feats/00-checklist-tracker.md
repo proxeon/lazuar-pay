@@ -165,7 +165,7 @@ WhatsApp transport is `ConsoleMessagingService` (log only). `Messaging:WhatsAppE
 
 | ID | Feature | Wave | Lazuar | Billplz | CHIP | HitPay | Xendit | Stripe | Paddle | Chargebee | Polar |
 |----|---------|------|--------|---------|------|--------|--------|--------|--------|-----------|-------|
-| LP-090 | Inbound webhook verify + idempotency | 0 | P | Y | Y | Y | Y | Y | Y | Y | Y |
+| LP-090 | Inbound webhook verify + idempotency | 0 | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 | LP-091 | Refund full | 1 | P | P | Y | Y | Y | Y | Y | Y | Y |
 | LP-092 | Refund partial | 1 | P | N | P | Y | Y | Y | Y | Y | Y |
 | LP-093 | Refund UI in merchant console | 1 | N | Y | Y | Y | Y | Y | Y | Y | Y |

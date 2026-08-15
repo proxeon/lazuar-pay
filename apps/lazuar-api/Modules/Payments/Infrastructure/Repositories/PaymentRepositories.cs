@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Domain.Aggregates;
@@ -44,18 +45,44 @@ public class PaymentWebhookLogRepository : IPaymentWebhookLogRepository
         _context = context;
     }
 
-    public async Task<bool> HasBeenProcessedAsync(string eventId, string provider, CancellationToken ct = default)
-    {
-        return await _context.PaymentWebhookLogs
-            .IgnoreQueryFilters() // Webhooks hit without a logged-in user context
-            .AnyAsync(l => l.EventId == eventId && l.Provider == provider, ct);
-    }
-
-    public async Task<bool> HasBusinessKeyBeenProcessedAsync(string businessKey, string provider, CancellationToken ct = default)
+    public async Task<PaymentWebhookLog?> GetByEventIdAsync(string eventId, string provider, CancellationToken ct = default)
     {
         return await _context.PaymentWebhookLogs
             .IgnoreQueryFilters()
-            .AnyAsync(l => l.BusinessKey == businessKey && l.Provider == provider, ct);
+            .FirstOrDefaultAsync(l => l.EventId == eventId && l.Provider == provider, ct);
+    }
+
+    public async Task<PaymentWebhookLog?> GetByBusinessKeyAsync(string businessKey, string provider, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(businessKey))
+        {
+            return null;
+        }
+
+        return await _context.PaymentWebhookLogs
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(l => l.BusinessKey == businessKey && l.Provider == provider, ct);
+    }
+
+    public async Task<OutboxRequeueResult> TryRequeueDeadOutboxAsync(Guid outboxId, CancellationToken ct = default)
+    {
+        var message = await _context.OutboxMessages.FirstOrDefaultAsync(m => m.Id == outboxId, ct);
+        if (message is null)
+        {
+            return OutboxRequeueResult.Missing;
+        }
+
+        if (!string.Equals(message.Status, MessageProcessingStatus.Dead, StringComparison.Ordinal))
+        {
+            return OutboxRequeueResult.AlreadyActive;
+        }
+
+        message.Status = MessageProcessingStatus.Pending;
+        message.ProcessedAt = null;
+        message.NextAttemptAt = null;
+        message.AttemptCount = 0;
+        await _context.SaveChangesAsync(ct);
+        return OutboxRequeueResult.Requeued;
     }
 
     public void Add(PaymentWebhookLog log)

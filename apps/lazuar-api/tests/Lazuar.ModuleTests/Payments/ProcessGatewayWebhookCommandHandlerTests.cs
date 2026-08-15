@@ -44,6 +44,14 @@ public class ProcessGatewayWebhookCommandHandlerTests
             sessions ?? new EmptySessionRepo(),
             NullLogger<ProcessGatewayWebhookCommandHandler>.Instance);
 
+    private static void StubFreshLogs(IPaymentWebhookLogRepository logRepo)
+    {
+        logRepo.GetByEventIdAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((PaymentWebhookLog?)null);
+        logRepo.GetByBusinessKeyAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((PaymentWebhookLog?)null);
+    }
+
     [Test]
     public async Task Handle_PaymentFailed_Publishes_GatewayPaymentFailedIntegrationEvent()
     {
@@ -60,10 +68,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
             .Returns(config);
 
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        logRepo.HasBusinessKeyBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
+        StubFreshLogs(logRepo);
 
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
         adapter.GatewayType.Returns("STRIPE");
@@ -103,7 +108,8 @@ public class ProcessGatewayWebhookCommandHandlerTests
 
         logRepo.Received(1).Add(Arg.Is<PaymentWebhookLog>(l =>
             l.EventId == "evt_failed_1"
-            && l.BusinessKey == "PAYMENT_FAILED:pi_failed_1"));
+            && l.BusinessKey == "PAYMENT_FAILED:pi_failed_1"
+            && l.OutboxMessageId != null));
         await logRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -117,10 +123,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
             .Returns(config);
 
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        logRepo.HasBusinessKeyBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
+        StubFreshLogs(logRepo);
 
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
         adapter.GatewayType.Returns("STRIPE");
@@ -155,13 +158,13 @@ public class ProcessGatewayWebhookCommandHandlerTests
         await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
             e.GatewayTransactionId == "evt_no_tx"));
 
-        logRepo.Received(1).Add(Arg.Is<PaymentWebhookLog>(l => l.BusinessKey == null));
-        await logRepo.DidNotReceive().HasBusinessKeyBeenProcessedAsync(
+        logRepo.Received(1).Add(Arg.Is<PaymentWebhookLog>(l => l.BusinessKey == null && l.OutboxMessageId != null));
+        await logRepo.DidNotReceive().GetByBusinessKeyAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task Handle_Skips_When_EventId_Already_Processed()
+    public async Task Handle_Skips_When_EventId_Already_Processed_And_OutboxActive()
     {
         var tenantId = Guid.CreateVersion7();
         var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
@@ -169,8 +172,12 @@ public class ProcessGatewayWebhookCommandHandlerTests
         configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
             .Returns(config);
 
+        var existing = new PaymentWebhookLog(
+            "evt_dup", "STRIPE", "PAYMENT_COMPLETED:pi_1", Guid.CreateVersion7());
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync("evt_dup", "STRIPE", Arg.Any<CancellationToken>()).Returns(true);
+        logRepo.GetByEventIdAsync("evt_dup", "STRIPE", Arg.Any<CancellationToken>()).Returns(existing);
+        logRepo.TryRequeueDeadOutboxAsync(existing.OutboxMessageId!.Value, Arg.Any<CancellationToken>())
+            .Returns(OutboxRequeueResult.AlreadyActive);
 
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
         adapter.ParseWebhookAsync(
@@ -192,6 +199,8 @@ public class ProcessGatewayWebhookCommandHandlerTests
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentFailedIntegrationEvent>());
         logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+        await logRepo.Received(1).TryRequeueDeadOutboxAsync(
+            existing.OutboxMessageId!.Value, Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -203,11 +212,15 @@ public class ProcessGatewayWebhookCommandHandlerTests
         configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
             .Returns(config);
 
+        var existing = new PaymentWebhookLog(
+            "evt_first", "STRIPE", "PAYMENT_COMPLETED:pi_shared", Guid.CreateVersion7());
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        logRepo.HasBusinessKeyBeenProcessedAsync("PAYMENT_COMPLETED:pi_shared", "STRIPE", Arg.Any<CancellationToken>())
-            .Returns(true);
+        logRepo.GetByEventIdAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((PaymentWebhookLog?)null);
+        logRepo.GetByBusinessKeyAsync("PAYMENT_COMPLETED:pi_shared", "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(existing);
+        logRepo.TryRequeueDeadOutboxAsync(existing.OutboxMessageId!.Value, Arg.Any<CancellationToken>())
+            .Returns(OutboxRequeueResult.AlreadyActive);
 
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
         adapter.ParseWebhookAsync(
@@ -241,10 +254,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
             .Returns(config);
 
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        logRepo.HasBusinessKeyBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
+        StubFreshLogs(logRepo);
         logRepo.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new Exception("23505: duplicate key value violates unique constraint")));
 
@@ -326,10 +336,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
             .Returns(config);
 
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        logRepo.HasBusinessKeyBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
+        StubFreshLogs(logRepo);
 
         // Adapter returns stripped Billplz-like metadata (type only, no checkout_id).
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
@@ -382,10 +389,7 @@ public class ProcessGatewayWebhookCommandHandlerTests
             .Returns(config);
 
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        logRepo.HasBusinessKeyBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(false);
+        StubFreshLogs(logRepo);
 
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
         adapter.ParseWebhookAsync(
@@ -433,21 +437,18 @@ public class ProcessGatewayWebhookCommandHandlerTests
         configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
             .Returns(config);
 
-        var processedEventIds = new HashSet<string>(StringComparer.Ordinal);
-        var processedBusinessKeys = new HashSet<string>(StringComparer.Ordinal);
+        var logs = new List<PaymentWebhookLog>();
         var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
-        logRepo.HasBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(ci => Task.FromResult(processedEventIds.Contains(ci.ArgAt<string>(0))));
-        logRepo.HasBusinessKeyBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(ci => Task.FromResult(processedBusinessKeys.Contains(ci.ArgAt<string>(0))));
+        logRepo.GetByEventIdAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(logs.FirstOrDefault(l =>
+                l.EventId == ci.ArgAt<string>(0) && l.Provider == ci.ArgAt<string>(1))));
+        logRepo.GetByBusinessKeyAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(logs.FirstOrDefault(l =>
+                l.BusinessKey == ci.ArgAt<string>(0) && l.Provider == ci.ArgAt<string>(1))));
+        logRepo.TryRequeueDeadOutboxAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(OutboxRequeueResult.AlreadyActive);
         logRepo.When(r => r.Add(Arg.Any<PaymentWebhookLog>()))
-            .Do(ci =>
-            {
-                var log = ci.Arg<PaymentWebhookLog>();
-                processedEventIds.Add(log.EventId);
-                if (!string.IsNullOrEmpty(log.BusinessKey))
-                    processedBusinessKeys.Add(log.BusinessKey!);
-            });
+            .Do(ci => logs.Add(ci.Arg<PaymentWebhookLog>()));
 
         var call = 0;
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
@@ -529,6 +530,225 @@ public class ProcessGatewayWebhookCommandHandlerTests
         Assert.That(ex!.Message, Does.Contain("verification failed"));
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
         logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+    }
+
+    [Test]
+    public async Task Handle_MissingConfig_ThrowsInvalidOperation()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns((TenantPaymentConfiguration?)null);
+
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter(Arg.Any<string>()).Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () => await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("Webhook secret not configured"));
+        await adapter.DidNotReceive().ParseWebhookAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+            Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentFailedIntegrationEvent>());
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+    }
+
+    [Test]
+    public async Task Handle_UnknownEventType_Returns_NoLog_NoPublish()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "charge.succeeded", "evt_passthrough", 10m, "MYR", "ch_1",
+                new Dictionary<string, string>(), 0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+        await logRepo.DidNotReceive().GetByEventIdAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentFailedIntegrationEvent>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayDisputeCreatedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task Handle_Redelivery_Requeues_DeadOutbox()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var outboxId = Guid.CreateVersion7();
+        var existing = new PaymentWebhookLog("evt_dead", "STRIPE", "PAYMENT_COMPLETED:pi_dead", outboxId);
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        logRepo.GetByEventIdAsync("evt_dead", "STRIPE", Arg.Any<CancellationToken>()).Returns(existing);
+        logRepo.TryRequeueDeadOutboxAsync(outboxId, Arg.Any<CancellationToken>())
+            .Returns(OutboxRequeueResult.Requeued);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_COMPLETED", "evt_dead", 10m, "MYR", "pi_dead",
+                new Dictionary<string, string>(), 0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        await logRepo.Received(1).TryRequeueDeadOutboxAsync(outboxId, Arg.Any<CancellationToken>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+    }
+
+    [Test]
+    public async Task Handle_BusinessKeyHit_Requeues_DeadOutbox()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var outboxId = Guid.CreateVersion7();
+        var existing = new PaymentWebhookLog("evt_first", "STRIPE", "PAYMENT_COMPLETED:pi_x", outboxId);
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        logRepo.GetByEventIdAsync("evt_second", "STRIPE", Arg.Any<CancellationToken>())
+            .Returns((PaymentWebhookLog?)null);
+        logRepo.GetByBusinessKeyAsync("PAYMENT_COMPLETED:pi_x", "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(existing);
+        logRepo.TryRequeueDeadOutboxAsync(outboxId, Arg.Any<CancellationToken>())
+            .Returns(OutboxRequeueResult.Requeued);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_COMPLETED", "evt_second", 10m, "MYR", "pi_x",
+                new Dictionary<string, string>(), 0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        await logRepo.Received(1).TryRequeueDeadOutboxAsync(outboxId, Arg.Any<CancellationToken>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+    }
+
+    [Test]
+    public async Task Handle_Duplicate_BackfillRow_WithoutOutboxId_DoesNotInventWork()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var existing = new PaymentWebhookLog("evt_backfill", "STRIPE", "PAYMENT_COMPLETED:pi_old");
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        logRepo.GetByEventIdAsync("evt_backfill", "STRIPE", Arg.Any<CancellationToken>()).Returns(existing);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_COMPLETED", "evt_backfill", 10m, "MYR", "pi_old",
+                new Dictionary<string, string>(), 0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        await logRepo.DidNotReceive().TryRequeueDeadOutboxAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentFailedIntegrationEvent>());
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+    }
+
+    [Test]
+    public async Task Handle_Redelivery_MissingOutbox_Republishes_WithoutSecondLog()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var staleOutboxId = Guid.CreateVersion7();
+        var existing = new PaymentWebhookLog("evt_missing", "STRIPE", "PAYMENT_COMPLETED:pi_missing", staleOutboxId);
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        logRepo.GetByEventIdAsync("evt_missing", "STRIPE", Arg.Any<CancellationToken>()).Returns(existing);
+        logRepo.TryRequeueDeadOutboxAsync(staleOutboxId, Arg.Any<CancellationToken>())
+            .Returns(OutboxRequeueResult.Missing);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_COMPLETED", "evt_missing", 10m, "MYR", "pi_missing",
+                new Dictionary<string, string>(), 0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentCompletedIntegrationEvent>(e =>
+            e.GatewayTransactionId == "pi_missing"));
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+        await logRepo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        Assert.That(existing.OutboxMessageId, Is.Not.Null);
+        Assert.That(existing.OutboxMessageId, Is.Not.EqualTo(staleOutboxId));
     }
 
     private sealed class EmptySessionRepo : IIntegrationCheckoutSessionRepository

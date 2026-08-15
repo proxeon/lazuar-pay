@@ -167,4 +167,82 @@ public class BillplzGatewayAdapterTests
 
         charged.Should().BeFalse();
     }
+
+    [Test]
+    public async Task ParseWebhook_BadSignature_IsNotVerified()
+    {
+        var form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["id"] = "bill_bad_sig",
+            ["paid"] = "true",
+            ["state"] = "paid",
+            ["paid_amount"] = "1000",
+            ["x_signature"] = "deadbeef"
+        };
+
+        var result = await CreateAdapter().ParseWebhookAsync(
+            "unused", WebhookSecret, ToFormBody(form), new Dictionary<string, string>());
+
+        result.Verified.Should().BeFalse();
+        result.Error.Should().Contain("x_signature");
+    }
+
+    [Test]
+    public async Task ParseWebhook_MissingId_IsNotVerified()
+    {
+        var form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["paid"] = "true",
+            ["state"] = "paid",
+            ["paid_amount"] = "1000"
+        };
+        form["x_signature"] = ComputeXSignature(form, WebhookSecret);
+
+        var result = await CreateAdapter().ParseWebhookAsync(
+            "unused", WebhookSecret, ToFormBody(form), new Dictionary<string, string>());
+
+        result.Verified.Should().BeFalse();
+        result.Error.Should().Contain("bill id");
+        result.EventId.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task ParseWebhook_EmptyId_IsNotVerified()
+    {
+        var form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["id"] = "   ",
+            ["paid"] = "true",
+            ["state"] = "paid",
+            ["paid_amount"] = "1000"
+        };
+        form["x_signature"] = ComputeXSignature(form, WebhookSecret);
+
+        var result = await CreateAdapter().ParseWebhookAsync(
+            "unused", WebhookSecret, ToFormBody(form), new Dictionary<string, string>());
+
+        result.Verified.Should().BeFalse();
+        result.Error.Should().Contain("bill id");
+    }
+
+    [Test]
+    public async Task ParseWebhook_Unpaid_IsPaymentFailed_WithBillId()
+    {
+        var form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["id"] = "bill_unpaid_1",
+            ["paid"] = "false",
+            ["state"] = "due",
+            ["paid_amount"] = "0"
+        };
+        form["x_signature"] = ComputeXSignature(form, WebhookSecret);
+
+        var result = await CreateAdapter().ParseWebhookAsync(
+            "unused", WebhookSecret, ToFormBody(form), new Dictionary<string, string>());
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_FAILED");
+        result.EventId.Should().Be("bill_unpaid_1");
+        result.GatewayTransactionId.Should().Be("bill_unpaid_1");
+    }
 }

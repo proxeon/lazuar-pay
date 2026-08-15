@@ -21,8 +21,9 @@ public partial class ProcessGatewayWebhookCommandHandler
             checkoutId = rawCheckoutId;
         }
 
+        // Intake: received + outbox queued. Not Commerce / Billing / session fulfillment.
         _logger.LogInformation(
-            "Payment webhook processed successfully. EventId={EventId} Provider={Provider} GatewayTransactionId={GatewayTransactionId} TenantId={TenantId} EventType={EventType} CheckoutId={CheckoutId}",
+            "Payment webhook received and queued. EventId={EventId} Provider={Provider} GatewayTransactionId={GatewayTransactionId} TenantId={TenantId} EventType={EventType} CheckoutId={CheckoutId}",
             eventId,
             provider,
             gatewayTransactionId ?? eventId,

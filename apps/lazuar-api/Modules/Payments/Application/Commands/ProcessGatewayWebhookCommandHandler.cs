@@ -87,21 +87,19 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
             return;
         }
 
-        var alreadyProcessed = await _logRepository.HasBeenProcessedAsync(parsedResult.EventId, config.GatewayType, cancellationToken);
-        if (alreadyProcessed)
+        var businessKey = BuildBusinessKey(parsedResult.EventType, parsedResult.GatewayTransactionId);
+        var existing = await _logRepository.GetByEventIdAsync(
+            parsedResult.EventId, config.GatewayType, cancellationToken);
+        if (existing is null && businessKey is not null)
         {
-            return;
+            existing = await _logRepository.GetByBusinessKeyAsync(
+                businessKey, config.GatewayType, cancellationToken);
         }
 
-        var businessKey = BuildBusinessKey(parsedResult.EventType, parsedResult.GatewayTransactionId);
-        if (businessKey is not null)
+        if (existing is not null)
         {
-            var businessKeyProcessed = await _logRepository.HasBusinessKeyBeenProcessedAsync(
-                businessKey, config.GatewayType, cancellationToken);
-            if (businessKeyProcessed)
-            {
-                return;
-            }
+            await HandleExistingLogAsync(request, parsedResult, existing, cancellationToken);
+            return;
         }
 
         // Rehydrate stripped gateway metadata from IntegrationCheckoutSession (Billplz bill id, etc.).
@@ -113,32 +111,85 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
 
         var log = new PaymentWebhookLog(parsedResult.EventId, config.GatewayType, businessKey);
         _logRepository.Add(log);
+        await PublishParsedEventAsync(request, parsedResult, metadata, log);
+        await TrySaveChangesAsync(cancellationToken);
+        LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
+    }
 
+    private async Task HandleExistingLogAsync(
+        ProcessGatewayWebhookCommand request,
+        GatewayWebhookParsedResult parsedResult,
+        PaymentWebhookLog existing,
+        CancellationToken cancellationToken)
+    {
+        // Pre-ticket backfill / seed rows have no outbox correlation — do not invent work.
+        if (existing.OutboxMessageId is null)
+        {
+            return;
+        }
+
+        var requeue = await _logRepository.TryRequeueDeadOutboxAsync(
+            existing.OutboxMessageId.Value, cancellationToken);
+        if (requeue == OutboxRequeueResult.AlreadyActive)
+        {
+            return;
+        }
+
+        if (requeue == OutboxRequeueResult.Requeued)
+        {
+            _logger.LogInformation(
+                "Re-queued Dead payment webhook outbox. EventId={EventId} Provider={Provider} OutboxMessageId={OutboxMessageId}",
+                existing.EventId,
+                existing.Provider,
+                existing.OutboxMessageId);
+            return;
+        }
+
+        var metadata = await MergeSessionMetadataAsync(
+            request.TenantId,
+            parsedResult.GatewayTransactionId,
+            parsedResult.Metadata,
+            cancellationToken);
+        await PublishParsedEventAsync(request, parsedResult, metadata, existing);
+        await _logRepository.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Re-published payment webhook after missing outbox. EventId={EventId} Provider={Provider} OutboxMessageId={OutboxMessageId}",
+            existing.EventId,
+            existing.Provider,
+            existing.OutboxMessageId);
+    }
+
+    private async Task PublishParsedEventAsync(
+        ProcessGatewayWebhookCommand request,
+        GatewayWebhookParsedResult parsedResult,
+        Dictionary<string, string> metadata,
+        PaymentWebhookLog log)
+    {
         if (parsedResult.EventType == "DISPUTE_CREATED")
         {
-            await _eventBus.PublishAsync(new GatewayDisputeCreatedIntegrationEvent(
+            var disputeEvent = new GatewayDisputeCreatedIntegrationEvent(
                 OrganizationId: request.TenantId,
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
                 AmountDisputed: parsedResult.AmountPaid,
                 Currency: parsedResult.Currency,
-                Metadata: metadata));
-            await TrySaveChangesAsync(cancellationToken);
-            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
+                Metadata: metadata);
+            log.AssignOutboxMessageId(disputeEvent.Id);
+            await _eventBus.PublishAsync(disputeEvent);
             return;
         }
 
         if (parsedResult.EventType == "PAYMENT_FAILED")
         {
-            await _eventBus.PublishAsync(new GatewayPaymentFailedIntegrationEvent(
+            var failedEvent = new GatewayPaymentFailedIntegrationEvent(
                 OrganizationId: request.TenantId,
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
-                Metadata: metadata));
-            await TrySaveChangesAsync(cancellationToken);
-            LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
+                Metadata: metadata);
+            log.AssignOutboxMessageId(failedEvent.Id);
+            await _eventBus.PublishAsync(failedEvent);
             return;
         }
 
-        var integrationEvent = new GatewayPaymentCompletedIntegrationEvent(
+        var completedEvent = new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: request.TenantId,
             GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
             AmountPaid: parsedResult.AmountPaid,
@@ -151,11 +202,8 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
             LineItems: new List<LineItemDto>(),
             Metadata: metadata,
             GatewayCustomerId: parsedResult.GatewayCustomerId,
-            GatewayTokenId: parsedResult.GatewayTokenId
-        );
-
-        await _eventBus.PublishAsync(integrationEvent);
-        await TrySaveChangesAsync(cancellationToken);
-        LogProcessed(request, parsedResult.EventId, config.GatewayType, parsedResult.GatewayTransactionId, parsedResult.EventType, metadata);
+            GatewayTokenId: parsedResult.GatewayTokenId);
+        log.AssignOutboxMessageId(completedEvent.Id);
+        await _eventBus.PublishAsync(completedEvent);
     }
 }
