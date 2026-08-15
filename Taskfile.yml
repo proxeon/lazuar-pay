@@ -160,7 +160,69 @@ tasks:
       - dotnet ef migrations add {{.NAME}} --context {{.MODULE}}DbContext --project ../../Modules/{{.MODULE}}/Infrastructure/Modules.{{.MODULE}}.Infrastructure.csproj --startup-project Lazuar.Api.csproj --output-dir Migrations
 
   # ==========================================
-  # Ngrok Tunnel Tasks
+  # Cloudflare named tunnel (preferred hop A)
+  # Same tunnel as Aura `task tunnel:cf` — one process, two ingresses.
+  # Dual-run Pay listens on :8090 (Aura owns 8080).
+  # ==========================================
+  tunnel:cf:
+    desc: Run named Cloudflare tunnel (Pay :8090 + Aura :8000). Preferred hop A for Billplz. Same command as Aura task tunnel:cf.
+    interactive: true
+    cmds:
+      - |
+        set -euo pipefail
+        CFG="${CF_CONFIG:-$HOME/.cloudflared/config.yml}"
+        NAME="${CF_TUNNEL_NAME:-aura-025-fulfillment}"
+        PAY_HOST="${CF_PAY_HOST:-pay-local.lazuar.dev}"
+        AURA_HOST="${CF_AURA_HOST:-aura-local.lazuar.dev}"
+        if ! command -v cloudflared >/dev/null 2>&1; then
+          echo "cloudflared not installed. macOS: brew install cloudflared"
+          exit 1
+        fi
+        if [ ! -f "$HOME/.cloudflared/cert.pem" ]; then
+          echo "Not logged in. Run: task tunnel:cf:login  (pick zone lazuar.dev)"
+          exit 1
+        fi
+        if [ ! -f "$CFG" ]; then
+          echo "Missing $CFG — run Aura: task tunnel:cf:init"
+          exit 1
+        fi
+        echo "Named tunnel $NAME"
+        echo "  hop A  https://${PAY_HOST}  → 127.0.0.1:8090  (set App__ApiBaseUrl=https://${PAY_HOST}/api/v1)"
+        echo "  hop B  https://${AURA_HOST} → 127.0.0.1:8000"
+        echo "Leave this running. Do not also start ngrok for hop A."
+        cloudflared --config "$CFG" tunnel run "$NAME"
+
+  tunnel:cf:login:
+    desc: Authorize cloudflared in the browser. Pick zone lazuar.dev.
+    interactive: true
+    cmds:
+      - |
+        if ! command -v cloudflared >/dev/null 2>&1; then
+          echo "cloudflared not installed. macOS: brew install cloudflared"
+          exit 1
+        fi
+        cloudflared tunnel login
+
+  tunnel:cf:url:
+    desc: Print hop A App__ApiBaseUrl and probe https://pay-local/health
+    cmds:
+      - |
+        set -euo pipefail
+        PAY_HOST="${CF_PAY_HOST:-pay-local.lazuar.dev}"
+        AURA_HOST="${CF_AURA_HOST:-aura-local.lazuar.dev}"
+        echo "App__ApiBaseUrl=https://${PAY_HOST}/api/v1"
+        echo "Aura hop B:     https://${AURA_HOST}/api/v1"
+        echo "Listen:         http://0.0.0.0:8090  (dual-run; Aura owns 8080)"
+        echo "DB:             localhost:5434 / lazuar_mvp"
+        pay_code=$(curl -sS -m 10 -o /tmp/pay-cf-health.json -w '%{http_code}' "https://${PAY_HOST}/health" || echo fail)
+        echo "GET https://${PAY_HOST}/health → ${pay_code}"
+        if [ "$pay_code" != "200" ]; then
+          echo "Tunnel down or Pay not on :8090. Start: task tunnel:cf"
+          exit 1
+        fi
+
+  # ==========================================
+  # Ngrok Tunnel Tasks (legacy — not hop A)
   # ==========================================
   tunnel:stop:
     desc: Force kill any orphaned ngrok processes running in the background
@@ -168,15 +230,17 @@ tasks:
       - pkill -9 ngrok || echo "No ngrok processes were running."
 
   tunnel:api:
-    desc: Start ngrok tunnel for Hub API :8080 (Billplz/Stripe → Hub inbound). Set App__ApiBaseUrl to the public URL/api/v1. See Aura idea/022-remaining/RUNBOOK-local-full-fulfillment.md
+    desc: Start ngrok for standalone Pay API :8080 (not dual-run). Prefer task tunnel:cf for Aura dual-run hop A on :8090.
     cmds:
       - |
-        echo "Starting ngrok on Hub API port 8080..."
-        echo "After tunnel is up, set Hub App__ApiBaseUrl (alias HUB_PUBLIC_URL) to:"
+        echo "Starting ngrok on Hub API port 8080 (standalone Pay, not Aura dual-run)..."
+        echo "Dual-run next to Aura uses :8090 + task tunnel:cf (pay-local.lazuar.dev)."
+        echo "After this ngrok is up, set App__ApiBaseUrl to:"
         echo "  https://{public-host}/api/v1"
         echo "Billplz callback pattern:"
         echo "  {App__ApiBaseUrl}/webhooks/payments/billplz/{tenantId}"
         echo "⚠️  Do not point Billplz at Aura legacy /webhooks/gateway/* in hub mode."
+        echo "⚠️  localhost / lazuar-local-dev.com is not hop A (CALLBACK_BASE_NOT_PUBLIC)."
         ngrok http 8080
 
   tunnel:fe:

@@ -145,7 +145,14 @@ task dev
 task fe
 ```
 
-**Dual-run next to Aura (hop A):** listen on **`:8090`** (Aura owns 8080). Billplz callbacks use **`App:ApiBaseUrl`**, which must be a **public `https://…/api/v1`** (Cloudflare tunnel to 8090). `http://localhost:8090` is not hop A — create will fail with `CALLBACK_BASE_NOT_PUBLIC` unless `App:AllowInsecureBillplzCallback=true`. Do not use a `*.lazuar.com` public base for sandbox (that host used to flip production Billplz).
+**Dual-run next to Aura (hop A):** listen on **`:8090`** (Aura owns 8080). Billplz callbacks use **`App:ApiBaseUrl`**, which must be a **public `https://…/api/v1`**.
+
+```sh
+task tunnel:cf          # named tunnel: pay-local.lazuar.dev → :8090, aura-local → :8000
+task tunnel:cf:url      # prints App__ApiBaseUrl=https://pay-local.lazuar.dev/api/v1
+```
+
+`http://localhost:8090` is not hop A — create will fail with `CALLBACK_BASE_NOT_PUBLIC` unless `App:AllowInsecureBillplzCallback=true`. Do not use a `*.lazuar.com` public base for sandbox (that host used to flip production Billplz). `task tunnel:api` is leftover ngrok on standalone `:8080`.
 
 ### Local demo accounts
 
