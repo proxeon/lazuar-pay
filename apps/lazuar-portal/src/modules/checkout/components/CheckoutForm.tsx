@@ -13,7 +13,6 @@ interface CheckoutFormProps {
   isCouponApplied: boolean;
   couponCode: string;
   quantity: number;
-  onQuantityChange: (qty: number) => void;
   onSetGuestMode: (isGuest: boolean) => void;
   onError: (errorMsg: string) => void;
 }
@@ -25,7 +24,6 @@ export function CheckoutForm({
   isCouponApplied,
   couponCode,
   quantity,
-  onQuantityChange,
   onSetGuestMode,
   onError
 }: CheckoutFormProps) {

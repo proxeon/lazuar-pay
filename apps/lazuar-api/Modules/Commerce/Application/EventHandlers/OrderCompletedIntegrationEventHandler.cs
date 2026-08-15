@@ -21,12 +21,14 @@ public class OrderCompletedIntegrationEventHandler : IIntegrationEventHandler<Or
 
     public async Task HandleAsync(OrderCompletedIntegrationEvent @event)
     {
+        var order = await _repository.GetOrderByIdAsync(@event.OrderId);
         var payloadObj = new
         {
             order_id = @event.OrderId.ToString(),
             client_profile_id = @event.ClientProfileId.ToString(),
             product_id = @event.ProductId.ToString(),
-            status = "COMPLETED"
+            status = "COMPLETED",
+            quantity = order?.Quantity ?? 1
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 

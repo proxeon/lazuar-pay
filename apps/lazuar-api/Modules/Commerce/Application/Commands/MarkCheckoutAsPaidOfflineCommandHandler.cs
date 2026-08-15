@@ -75,18 +75,21 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             throw new InvalidOperationException("Associated product not found.");
         }
 
-        var discountAmount = 0m;
+        var quantity = Math.Max(1, session.Quantity);
+        var unitDiscount = 0m;
         if (session.CouponId.HasValue)
         {
             var coupon = await _repository.GetCouponByIdAsync(session.CouponId.Value, ct);
             if (coupon != null)
             {
-                discountAmount = coupon.CalculateDiscount(product.Price);
+                unitDiscount = coupon.CalculateDiscount(product.Price);
                 coupon.ConfirmReservation();
             }
         }
 
-        var totalAmount = Math.Max(0, product.Price - discountAmount);
+        var lineGross = product.Price * quantity;
+        var lineDiscount = unitDiscount * quantity;
+        var totalAmount = Math.Max(0, lineGross - lineDiscount);
         var currency = product.Currency;
 
         session.Complete();
@@ -95,7 +98,13 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
 
         if (product.Interval == "one_time")
         {
-            var order = new Order(session.OrganizationId, session.ClientProfileId, product.Id, totalAmount, currency);
+            var order = new Order(
+                session.OrganizationId,
+                session.ClientProfileId,
+                product.Id,
+                totalAmount,
+                currency,
+                quantity);
             order.Complete();
             _repository.AddOrder(order);
             entitlementId = order.Id;

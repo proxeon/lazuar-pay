@@ -11,6 +11,7 @@ public class Order : Entity, IAggregateRoot, IMustHaveTenant
     public Guid ProductId { get; private set; }
     public decimal AmountPaid { get; private set; }
     public string Currency { get; private set; }
+    public int Quantity { get; private set; } = 1;
     public string Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
@@ -19,7 +20,13 @@ public class Order : Entity, IAggregateRoot, IMustHaveTenant
     private Order() { }
 #pragma warning restore CS8618
 
-    public Order(Guid organizationId, Guid clientProfileId, Guid productId, decimal amountPaid, string currency)
+    public Order(
+        Guid organizationId,
+        Guid clientProfileId,
+        Guid productId,
+        decimal amountPaid,
+        string currency,
+        int quantity = 1)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -27,6 +34,7 @@ public class Order : Entity, IAggregateRoot, IMustHaveTenant
         ProductId = productId;
         AmountPaid = amountPaid;
         Currency = currency.ToUpperInvariant();
+        Quantity = quantity < 1 ? 1 : quantity;
         Status = "PENDING";
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;

@@ -110,7 +110,8 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
                 session.ClientProfileId,
                 product.Id,
                 @event.AmountPaid,
-                product.Currency
+                product.Currency,
+                session.Quantity
             );
 
             order.Complete();

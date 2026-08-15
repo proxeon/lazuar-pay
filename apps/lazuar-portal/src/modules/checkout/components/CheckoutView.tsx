@@ -6,7 +6,12 @@ import { OrderSummaryCard } from "./OrderSummaryCard";
 import { PromoCodeInput } from "./PromoCodeInput";
 import { CheckoutForm } from "./CheckoutForm";
 import { validateCouponCode, type ProductDto } from "../lib/api";
-import { CheckoutContext, CheckoutAuthContext } from "../types";
+import {
+  CheckoutContext,
+  CheckoutAuthContext,
+  CHECKOUT_QUANTITY_MIN,
+  CHECKOUT_QUANTITY_MAX,
+} from "../types";
 
 interface CheckoutViewProps {
   tenantSlug: string;
@@ -24,6 +29,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   
   const [quantity, setQuantity] = useState(1);
   const [customPrice, setCustomPrice] = useState<number>(product.price);
+  const quantityAdjustable = product.pricing_model === "FIXED" && product.interval === "one_time";
   const [discountAmount, setDiscountAmount] = useState<number | null>(null);
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
@@ -64,7 +70,15 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   };
 
   const handleQuantityChange = (newQty: number) => {
-    setQuantity(newQty);
+    if (!quantityAdjustable) {
+      return;
+    }
+
+    const clamped = Math.min(
+      CHECKOUT_QUANTITY_MAX,
+      Math.max(CHECKOUT_QUANTITY_MIN, Math.trunc(newQty) || CHECKOUT_QUANTITY_MIN),
+    );
+    setQuantity(clamped);
     if (isCouponApplied) {
       handleRemoveCoupon();
     }
@@ -100,7 +114,9 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     discountAmount: discountAmount,
     finalPrice: finalPrice,
     isCouponApplied: isCouponApplied,
-    fulfillmentTargets: product.fulfillment_targets || []
+    fulfillmentTargets: product.fulfillment_targets || [],
+    quantity,
+    quantityAdjustable,
   };
 
   return (
@@ -125,8 +141,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
             authContext={authContext}
             isCouponApplied={isCouponApplied}
             couponCode={couponCode}
-            quantity={quantity}
-            onQuantityChange={handleQuantityChange}
+            quantity={quantityAdjustable ? quantity : 1}
             onSetGuestMode={handleSetGuestMode}
             onError={handleError}
           />
@@ -134,6 +149,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
         summarySlot={
           <OrderSummaryCard
             context={checkoutContext}
+            onQuantityChange={handleQuantityChange}
             onCustomPriceChange={handleCustomPriceChange}
             promoCodeSlot={
               <PromoCodeInput

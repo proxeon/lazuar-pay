@@ -24,6 +24,9 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime ExpiresAt { get; private set; }
     public bool IsB2bRequired { get; private set; }
 
+    /// <summary>Buyer quantity for product checkout. Custom sessions leave this at 1; line qty lives in jsonb.</summary>
+    public int Quantity { get; private set; } = 1;
+
     private readonly List<AdHocLineItem> _adHocLineItems = new();
     public IReadOnlyCollection<AdHocLineItem> AdHocLineItems => _adHocLineItems.AsReadOnly();
 
@@ -37,7 +40,13 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     private CheckoutSession() { }
 #pragma warning restore CS8618
 
-    public CheckoutSession(Guid organizationId, Guid clientProfileId, Guid productId, Guid? couponId, DateTime expiresAt)
+    public CheckoutSession(
+        Guid organizationId,
+        Guid clientProfileId,
+        Guid productId,
+        Guid? couponId,
+        DateTime expiresAt,
+        int quantity = 1)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -48,6 +57,7 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         Status = "OPEN";
         ExpiresAt = expiresAt;
         IsB2bRequired = false;
+        Quantity = quantity < 1 ? 1 : quantity;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -71,6 +81,7 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         Status = "OPEN";
         ExpiresAt = expiresAt;
         IsB2bRequired = isB2bRequired;
+        Quantity = 1;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
 

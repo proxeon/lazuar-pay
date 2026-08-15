@@ -1,3 +1,6 @@
+export const CHECKOUT_QUANTITY_MIN = 1;
+export const CHECKOUT_QUANTITY_MAX = 99;
+
 export interface CheckoutContext {
   itemName: string;
   audience?: string;
@@ -11,6 +14,8 @@ export interface CheckoutContext {
   finalPrice: number | null;
   isCouponApplied: boolean;
   fulfillmentTargets: string[];
+  quantity: number;
+  quantityAdjustable: boolean;
 }
 
 export interface CheckoutAuthContext {

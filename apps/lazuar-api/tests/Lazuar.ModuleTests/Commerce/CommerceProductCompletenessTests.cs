@@ -21,6 +21,7 @@ using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.EventHandlers;
+using Modules.Commerce.Infrastructure.Repositories;
 using Modules.Commerce.Infrastructure.Workers;
 using Modules.Communications.Contracts;
 using Modules.CRM.Contracts;
@@ -52,14 +53,21 @@ public class CommerceProductCompletenessTests
             new DatabaseJobTrigger());
     }
 
-    private static Product CreateProduct(Guid orgId, string interval = "mo", bool requiresPhone = false, bool requiresAddress = false, bool requiresTaxId = false, string gatewayName = "STRIPE")
+    private static Product CreateProduct(
+        Guid orgId,
+        string interval = "mo",
+        bool requiresPhone = false,
+        bool requiresAddress = false,
+        bool requiresTaxId = false,
+        string gatewayName = "STRIPE",
+        string pricingModel = "FIXED")
     {
         return new Product(
             orgId,
             "Pro Plan",
             "pro-plan",
             100m,
-            "FIXED",
+            pricingModel,
             0m,
             "MYR",
             interval,
@@ -747,7 +755,309 @@ public class CommerceProductCompletenessTests
         reloaded.VaultedTokenId.Should().Be("pm_new");
     }
 
-    private static InitiateCheckoutCommand GuestCheckoutCommand(string? couponCode) =>
+    [Test]
+    public async Task InitiateCheckout_FixedOneTime_Qty3_SendsUnitNetAndQuantity()
+    {
+        // Adapters still multiply Amount * Quantity (see GatewayCommonTests qty=2 → 2100).
+        // Pre-multiplying here would square the charge (100 × 3 × 3 = 900).
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: "one_time");
+
+        CheckoutSession? session = null;
+        GenerateCheckoutSessionQuery? payments = null;
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
+            .Do(ci => session = ci.Arg<CheckoutSession>());
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+        mediator.Send(Arg.Do<GenerateCheckoutSessionQuery>(q => payments = q), Arg.Any<CancellationToken>())
+            .Returns("https://gateway.test/pay/xyz");
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        var result = await handler.Handle(GuestCheckoutCommand(couponCode: null, quantity: 3), CancellationToken.None);
+
+        session.Should().NotBeNull();
+        session!.Quantity.Should().Be(3);
+        session.Status.Should().Be("OPEN");
+        result.IsZeroAmountBypass.Should().BeFalse();
+
+        payments.Should().NotBeNull();
+        payments!.Amount.Should().Be(100m);
+        payments.Quantity.Should().Be(3);
+        (payments.Amount * payments.Quantity).Should().Be(300m);
+        payments.Amount.Should().NotBe(300m);
+        payments.Amount.Should().NotBe(900m);
+    }
+
+    [Test]
+    public async Task InitiateCheckout_FixedOneTime_Qty3_TenPercentCoupon_SendsUnitNetNinety()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: "one_time");
+        var coupon = new Coupon(orgId, "SAVE10", "PERCENTAGE", 10m, maxUses: 10, expiresAt: null);
+
+        CheckoutSession? session = null;
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByCodeWithLockAsync(orgId, "SAVE10", Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
+            .Do(ci => session = ci.Arg<CheckoutSession>());
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://gateway.test/pay/xyz");
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        await handler.Handle(GuestCheckoutCommand("SAVE10", quantity: 3), CancellationToken.None);
+
+        session.Should().NotBeNull();
+        session!.Quantity.Should().Be(3);
+        await mediator.Received(1).Send(
+            Arg.Is<GenerateCheckoutSessionQuery>(q => q.Amount == 90m && q.Quantity == 3),
+            Arg.Any<CancellationToken>());
+    }
+
+    [TestCase(0)]
+    [TestCase(-1)]
+    [TestCase(100)]
+    public async Task InitiateCheckout_FixedOneTime_OutOfRangeQuantity_ThrowsBeforePersist(int quantity)
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: "one_time");
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        var mediator = Substitute.For<IMediator>();
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+
+        var act = async () => await handler.Handle(
+            GuestCheckoutCommand(couponCode: null, quantity: quantity),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*between 1 and 99*");
+        repository.DidNotReceive().AddCheckoutSession(Arg.Any<CheckoutSession>());
+        await mediator.DidNotReceive().Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestCase("mo", "FIXED", 2)]
+    [TestCase("mo", "FIXED", 3)]
+    [TestCase("yr", "FIXED", 2)]
+    [TestCase("yr", "FIXED", 3)]
+    [TestCase("one_time", "PWYW", 2)]
+    [TestCase("one_time", "PWYW", 3)]
+    public async Task InitiateCheckout_RecurringOrPwyw_NonOneQuantity_ThrowsAndDoesNotPersist(
+        string interval,
+        string pricingModel,
+        int quantity)
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: interval, pricingModel: pricingModel);
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        var mediator = Substitute.For<IMediator>();
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+
+        var act = async () => await handler.Handle(
+            GuestCheckoutCommand(couponCode: null, quantity: quantity),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*one-time*");
+        repository.DidNotReceive().AddCheckoutSession(Arg.Any<CheckoutSession>());
+        await mediator.DidNotReceive().Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InitiateCheckout_FixedOneTime_Qty3_PersistsSessionAndPaidOrderQuantity()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, interval: "one_time");
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var clientId = Guid.CreateVersion7();
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://gateway.test/pay/xyz");
+
+        var handler = CreateInitiateHandler(orgId, new CommerceRepository(db), mediator);
+        await handler.Handle(GuestCheckoutCommand(couponCode: null, quantity: 3), CancellationToken.None);
+
+        var session = await db.CheckoutSessions.IgnoreQueryFilters().SingleAsync();
+        session.Quantity.Should().Be(3);
+        session.Status.Should().Be("OPEN");
+        session.ProductId.Should().Be(product.Id);
+
+        var paymentHandler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        await paymentHandler.HandleAsync(CreateCommercePaymentCompleted(orgId, session.Id, amountPaid: 300m));
+
+        var reloaded = await db.CheckoutSessions.IgnoreQueryFilters().SingleAsync(s => s.Id == session.Id);
+        reloaded.Quantity.Should().Be(3);
+        reloaded.Status.Should().Be("COMPLETED");
+
+        (await db.Subscriptions.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+        var order = await db.Orders.IgnoreQueryFilters().SingleAsync();
+        order.Quantity.Should().Be(3);
+        order.AmountPaid.Should().Be(300m);
+        order.Status.Should().Be("COMPLETED");
+    }
+
+    [Test]
+    public async Task InitiateCheckout_CustomSession_StillSendsLineSumAndQuantityOne()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(
+            orgId,
+            clientId,
+            new[] { new AdHocLineItem("Consulting", 2, 250m) },
+            DateTime.UtcNow.AddDays(1),
+            isB2bRequired: false);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://gateway.test/pay/custom");
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        var command = new InitiateCheckoutCommand(
+            "acme",
+            "pro-plan",
+            "Ada",
+            "ada@example.com",
+            Phone: null,
+            TaxId: null,
+            CompanyName: null,
+            AddressLine1: null,
+            City: null,
+            PostalCode: null,
+            StateCode: null,
+            CountryCode: null,
+            Quantity: 3,
+            IsGuestCheckout: true,
+            CouponCode: null,
+            SessionId: session.Id);
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.Url.Should().Be("https://gateway.test/pay/custom");
+        await mediator.Received(1).Send(
+            Arg.Is<GenerateCheckoutSessionQuery>(q => q.Amount == 500m && q.Quantity == 1),
+            Arg.Any<CancellationToken>());
+        await repository.DidNotReceive().GetProductBySlugAsync(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InitiateCheckout_HundredPercentCoupon_Qty3_WritesZeroAmountOrderWithQuantity()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: "one_time");
+        var coupon = new Coupon(orgId, "FREE100", "PERCENTAGE", 100m, maxUses: 10, expiresAt: null);
+
+        CheckoutSession? session = null;
+        var orders = new List<Order>();
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
+            .Do(ci => session = ci.Arg<CheckoutSession>());
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.When(r => r.AddOrder(Arg.Any<Order>())).Do(ci => orders.Add(ci.Arg<Order>()));
+
+        var eventBus = Substitute.For<IEventBus>();
+        var zeroHandler = new ProcessZeroAmountCheckoutCommandHandler(repository, eventBus);
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+        mediator.Send(Arg.Any<ProcessZeroAmountCheckoutCommand>(), Arg.Any<CancellationToken>())
+            .Returns(ci => zeroHandler.Handle(
+                ci.Arg<ProcessZeroAmountCheckoutCommand>(),
+                ci.Arg<CancellationToken>()));
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        var result = await handler.Handle(GuestCheckoutCommand("FREE100", quantity: 3), CancellationToken.None);
+
+        session.Should().NotBeNull();
+        session!.Status.Should().Be("COMPLETED");
+        session.Quantity.Should().Be(3);
+        result.IsZeroAmountBypass.Should().BeTrue();
+        orders.Should().HaveCount(1);
+        orders[0].AmountPaid.Should().Be(0m);
+        orders[0].Quantity.Should().Be(3);
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<ZeroAmountCheckoutCompletedIntegrationEvent>(e =>
+            e.OriginalAmount == 300m && e.DiscountAmount == 300m));
+    }
+
+    [Test]
+    public async Task MarkCheckoutAsPaidOffline_OneTime_Qty3_WritesLineTotalOrder()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: "one_time");
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(
+            orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1), quantity: 3);
+
+        var orders = new List<Order>();
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.When(r => r.AddOrder(Arg.Any<Order>())).Do(ci => orders.Add(ci.Arg<Order>()));
+
+        var eventBus = Substitute.For<IEventBus>();
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        {
+            Id = clientId.ToString(),
+            Full_name = "Offline Buyer",
+            Email = "offline@example.com"
+        });
+
+        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(repository, eventBus, crm);
+        await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
+
+        session.Status.Should().Be("COMPLETED");
+        orders.Should().HaveCount(1);
+        orders[0].AmountPaid.Should().Be(300m);
+        orders[0].Quantity.Should().Be(3);
+        await eventBus.Received().PublishAsync(Arg.Any<OrderCompletedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task GatewayPaymentCompleted_OneTime_Qty3_WritesOrderQuantity()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, interval: "one_time");
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(
+            orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1), quantity: 3);
+
+        db.Products.Add(product);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(orgId, session.Id, amountPaid: 300m));
+
+        (await db.Subscriptions.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+        var order = await db.Orders.IgnoreQueryFilters().SingleAsync();
+        order.Quantity.Should().Be(3);
+        order.AmountPaid.Should().Be(300m);
+        order.Status.Should().Be("COMPLETED");
+    }
+
+    private static InitiateCheckoutCommand GuestCheckoutCommand(string? couponCode, int quantity = 1) =>
         new(
             "acme",
             "pro-plan",
@@ -761,9 +1071,30 @@ public class CommerceProductCompletenessTests
             PostalCode: null,
             StateCode: null,
             CountryCode: null,
-            Quantity: 1,
+            Quantity: quantity,
             IsGuestCheckout: true,
             CouponCode: couponCode);
+
+    private static InitiateCheckoutCommandHandler CreateInitiateHandler(
+        Guid orgId,
+        ICommerceRepository repository,
+        IMediator mediator)
+    {
+        var one = Substitute.For<IOneQueryService>();
+        one.GetTenantIdBySlugAsync("acme").Returns(orgId);
+
+        var comms = Substitute.For<ICommunicationsQueryService>();
+        comms.HasValidEmailConfigAsync(orgId).Returns(true);
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["App:ClientUrl"] = "https://portal.test"
+            })
+            .Build();
+
+        return new InitiateCheckoutCommandHandler(one, repository, mediator, config, comms);
+    }
 
     private static GatewayPaymentCompletedIntegrationEventHandler CreateOpenCheckoutPaymentHandler(
         CommerceDbContext db,
@@ -796,11 +1127,12 @@ public class CommerceProductCompletenessTests
         Guid orgId,
         Guid sessionId,
         string? customerId = null,
-        string? tokenId = null) =>
+        string? tokenId = null,
+        decimal amountPaid = 100m) =>
         new(
             OrganizationId: orgId,
             GatewayTransactionId: "pi_test_replay",
-            AmountPaid: 100m,
+            AmountPaid: amountPaid,
             Currency: "MYR",
             GatewayFee: 1m,
             TaxAmount: 0m,

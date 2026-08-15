@@ -172,6 +172,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.ToTable("Orders");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.AmountPaid).HasPrecision(18, 4);
+            builder.Property(x => x.Quantity).HasDefaultValue(1);
         });
 
         modelBuilder.Entity<CheckoutSession>(builder =>
@@ -182,6 +183,7 @@ public class CommerceDbContext : PlatformDbContext
 
             builder.Property(x => x.GatewayName).HasMaxLength(100);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
+            builder.Property(x => x.Quantity).HasDefaultValue(1);
 
             builder.Property(x => x.AdHocLineItems)
                 .HasField("_adHocLineItems")

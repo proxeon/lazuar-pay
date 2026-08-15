@@ -14,6 +14,10 @@ model PublicCheckoutRequestDto {
   postal_code?: string;
   state_code?: string;
   country_code?: string;
+  /**
+   * Optional quantity. Default 1. Meaningful only for FIXED one-time products (min 1, max 99).
+   * Recurring and PWYW must be 1 (or omitted).
+   */
   quantity?: int32;
   is_guest_checkout?: boolean;
   coupon_code?: string;

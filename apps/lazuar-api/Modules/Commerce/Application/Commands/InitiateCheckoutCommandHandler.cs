@@ -99,6 +99,8 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             throw new InvalidOperationException($"Product with slug '{request.ProductSlug}' not found or is inactive.");
         }
 
+        var quantity = CommerceCheckoutQuantity.NormalizeOrThrow(request.Quantity, product);
+
         EnforceCheckoutConfiguration(product, request);
 
         BillingAddressDto? billingAddress = null;
@@ -127,8 +129,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         var clientProfileId = await _mediator.Send(resolveCrmProfileCmd, ct);
 
-        decimal basePrice = product.Price * request.Quantity;
-        decimal discountAmount = 0m;
+        decimal unitDiscount = 0m;
         Guid? couponId = null;
 
         if (!string.IsNullOrWhiteSpace(request.CouponCode))
@@ -140,19 +141,21 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             }
 
             coupon.Validate(product.Price, product.Id);
-            discountAmount = coupon.CalculateDiscount(product.Price) * request.Quantity;
+            unitDiscount = coupon.CalculateDiscount(product.Price);
             coupon.Reserve();
             couponId = coupon.Id;
         }
 
-        decimal netAmount = Math.Max(0, basePrice - discountAmount);
+        var unitNet = Math.Max(0, product.Price - unitDiscount);
+        var lineNet = unitNet * quantity;
 
         var session = new CheckoutSession(
             tenantId.Value,
             clientProfileId,
             product.Id,
             couponId,
-            DateTime.UtcNow.AddHours(24)
+            DateTime.UtcNow.AddHours(24),
+            quantity
         );
 
         var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, product.Interval);
@@ -164,7 +167,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         // Same poller handle as the paid hop-2 return — buyer success must observe session COMPLETED.
         var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
 
-        if (netAmount == 0)
+        if (lineNet == 0)
         {
             var processZeroAmountCmd = new ProcessZeroAmountCheckoutCommand(tenantId.Value, session.Id);
             await _mediator.Send(processZeroAmountCmd, ct);
@@ -185,9 +188,10 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 ? null
                 : product.GatewayName;
 
+            // Amount is unit net; adapters multiply by Quantity. Do not pre-multiply.
             var gatewayQuery = new GenerateCheckoutSessionQuery(
                 tenantId.Value,
-                netAmount,
+                unitNet,
                 product.Currency,
                 product.Name,
                 request.Email,
@@ -195,7 +199,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 cancelUrl,
                 metadata,
                 product.Interval != "one_time",
-                request.Quantity,
+                quantity,
                 preferredGateway
             );
 

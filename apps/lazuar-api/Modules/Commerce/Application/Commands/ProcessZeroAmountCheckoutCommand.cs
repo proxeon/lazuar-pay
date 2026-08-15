@@ -38,7 +38,8 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         var product = await _repository.GetProductByIdAsync(session.ProductId ?? Guid.Empty, ct);
         if (product == null) throw new InvalidOperationException("Product not found.");
 
-        var discountAmount = 0m;
+        var quantity = Math.Max(1, session.Quantity);
+        var unitDiscount = 0m;
         var couponCode = "NONE";
 
         if (session.CouponId.HasValue)
@@ -46,13 +47,15 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             var coupon = await _repository.GetCouponByIdAsync(session.CouponId.Value, ct);
             if (coupon != null)
             {
-                discountAmount = coupon.CalculateDiscount(product.Price);
+                unitDiscount = coupon.CalculateDiscount(product.Price);
                 couponCode = coupon.Code;
                 coupon.ConfirmReservation();
             }
         }
 
-        var finalPrice = Math.Max(0, product.Price - discountAmount);
+        var lineGross = product.Price * quantity;
+        var lineDiscount = unitDiscount * quantity;
+        var finalPrice = Math.Max(0, lineGross - lineDiscount);
         if (finalPrice > 0)
         {
             throw new InvalidOperationException("This checkout session requires payment and cannot bypass the gateway.");
@@ -62,7 +65,13 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
 
         if (product.Interval == "one_time")
         {
-            var order = new Domain.Aggregates.Order(session.OrganizationId, session.ClientProfileId, product.Id, 0m, product.Currency);
+            var order = new Domain.Aggregates.Order(
+                session.OrganizationId,
+                session.ClientProfileId,
+                product.Id,
+                0m,
+                product.Currency,
+                quantity);
             order.Complete();
             _repository.AddOrder(order);
 
@@ -82,7 +91,14 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         }
 
         await _eventBus.PublishAsync(new ZeroAmountCheckoutCompletedIntegrationEvent(
-            session.OrganizationId, session.Id, session.ClientProfileId, product.Price, discountAmount, product.Currency, couponCode, new Dictionary<string, string>()));
+            session.OrganizationId,
+            session.Id,
+            session.ClientProfileId,
+            lineGross,
+            lineDiscount,
+            product.Currency,
+            couponCode,
+            new Dictionary<string, string>()));
 
         await _repository.SaveChangesAsync(ct);
     }
