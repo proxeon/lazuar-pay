@@ -4,6 +4,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BuildingBlocks.Application;
+using MediatR;
+using Modules.One.Application.Commands;
 using Modules.One.Domain;
 using Modules.One.Infrastructure.Configuration;
 
@@ -16,16 +18,22 @@ namespace Modules.One.Infrastructure.Workers;
 public class SystemGenesisBootstrapperJob : IHostedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHostEnvironment _environment;
     private readonly PlatformAdminSettings _settings;
+    private readonly DemoTenantSettings _demoTenant;
     private readonly ILogger<SystemGenesisBootstrapperJob> _logger;
 
     public SystemGenesisBootstrapperJob(
         IServiceScopeFactory scopeFactory,
+        IHostEnvironment environment,
         IOptions<PlatformAdminSettings> settings,
+        IOptions<DemoTenantSettings> demoTenant,
         ILogger<SystemGenesisBootstrapperJob> logger)
     {
         _scopeFactory = scopeFactory;
+        _environment = environment;
         _settings = settings.Value;
+        _demoTenant = demoTenant.Value;
         _logger = logger;
     }
 
@@ -97,6 +105,52 @@ public class SystemGenesisBootstrapperJob : IHostedService
         else
         {
             _logger.LogWarning("⚠️ PLATFORM_ADMIN_EMAILS or PLATFORM_ADMIN_PASSWORD is missing from environment. Superadmin accounts will not be seeded or updated.");
+        }
+
+        await SeedDemoTenantIfConfiguredAsync(scope.ServiceProvider, db, cancellationToken);
+    }
+
+    private async Task SeedDemoTenantIfConfiguredAsync(
+        IServiceProvider services,
+        OneDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!_environment.IsDevelopment())
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_demoTenant.Email)
+            || string.IsNullOrWhiteSpace(_demoTenant.Password)
+            || string.IsNullOrWhiteSpace(_demoTenant.WorkspaceName)
+            || string.IsNullOrWhiteSpace(_demoTenant.TenantSlug))
+        {
+            return;
+        }
+
+        var email = _demoTenant.Email.Trim().ToLowerInvariant();
+        var slug = _demoTenant.TenantSlug.Trim().ToLowerInvariant();
+
+        var userExists = await db.GlobalUsers.AnyAsync(u => u.Email == email, cancellationToken);
+        var slugExists = await db.Organizations.IgnoreQueryFilters().AnyAsync(o => o.Slug == slug, cancellationToken);
+        if (userExists || slugExists)
+        {
+            return;
+        }
+
+        var mediator = services.GetRequiredService<IMediator>();
+        var name = string.IsNullOrWhiteSpace(_demoTenant.Name) ? email.Split('@')[0] : _demoTenant.Name.Trim();
+
+        try
+        {
+            await mediator.Send(
+                new RegisterPublicUserCommand(email, _demoTenant.Password, name, _demoTenant.WorkspaceName.Trim(), slug),
+                cancellationToken);
+            _logger.LogInformation("Provisioned Development demo tenant {Email} (workspace {Slug})", email, slug);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Skipped Development demo tenant seed for {Email}", email);
         }
     }
 

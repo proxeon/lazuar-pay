@@ -66,6 +66,7 @@ public static class DependencyInjection
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<OneDbContext>>("OneEventBus");
 
+        services.Configure<DemoTenantSettings>(configuration.GetSection(DemoTenantSettings.SectionName));
         services.AddHostedService<SystemGenesisBootstrapperJob>();
         services.AddHostedService<OneInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("one");
