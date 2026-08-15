@@ -195,8 +195,10 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
 
     public Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
-        string description, string receipt, Guid tenantId, Guid? dunningCampaignId = null)
+        string description, string receipt, Guid tenantId,
+        Guid? dunningCampaignId = null, string? idempotencyKey = null)
     {
+        _ = idempotencyKey; // Razorpay recurring create has no idempotency key (best-effort).
         try
         {
             var client = GetClient(apiKey);

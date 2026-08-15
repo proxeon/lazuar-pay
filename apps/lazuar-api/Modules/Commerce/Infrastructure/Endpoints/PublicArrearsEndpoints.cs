@@ -48,6 +48,7 @@ public static class PublicArrearsEndpoints
             using var connection = sqlFactory.CreateConnection();
             var query = @"
                 SELECT s.""OrganizationId"", s.""ProductId"", s.""ClientProfileId"", s.""Status"", s.""CurrentDunningCampaignId"",
+                       s.""CurrentRenewalCheckoutUrl"", s.""CurrentRenewalCheckoutForDate"", s.""NextBillingDate"",
                        p.""Name"" as ProductName, p.""Price"", p.""Currency"", p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
@@ -60,6 +61,14 @@ public static class PublicArrearsEndpoints
             if (sub.Status != "PAST_DUE" && sub.Status != "SUSPENDED")
             {
                 return TypedResults.BadRequest("This subscription is currently active and does not require a payment update.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(sub.CurrentRenewalCheckoutUrl)
+                && sub.CurrentRenewalCheckoutForDate.HasValue
+                && sub.NextBillingDate.HasValue
+                && sub.CurrentRenewalCheckoutForDate.Value.Date == sub.NextBillingDate.Value.Date)
+            {
+                return TypedResults.Ok(new CheckoutResponse { Url = sub.CurrentRenewalCheckoutUrl, Is_zero_amount_bypass = false });
             }
 
             // Former multi-schema JOIN semantics: missing profile/org → not found.
@@ -130,6 +139,9 @@ public static class PublicArrearsEndpoints
         public Guid ClientProfileId { get; init; }
         public string Status { get; init; } = "";
         public Guid? CurrentDunningCampaignId { get; init; }
+        public string? CurrentRenewalCheckoutUrl { get; init; }
+        public DateTime? CurrentRenewalCheckoutForDate { get; init; }
+        public DateTime? NextBillingDate { get; init; }
         public string ProductName { get; init; } = "";
         public decimal Price { get; init; }
         public string Currency { get; init; } = "";

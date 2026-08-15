@@ -185,4 +185,37 @@ public class SubscriptionRecoveryTests
         sub.Status.Should().Be("ACTIVE");
         sub.IsReminderOnly.Should().BeTrue();
     }
+
+    [Test]
+    public void Activate_OneTime_LeavesNextBillingDateNull()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow, nextBillingDate: null, isReminderOnly: true);
+
+        sub.Status.Should().Be("ACTIVE");
+        sub.NextBillingDate.Should().BeNull();
+        sub.IsReminderOnly.Should().BeTrue();
+    }
+
+    [Test]
+    public void RecoverFromPayment_AndResume_ClearRenewalCheckout()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        var originalNext = DateTime.UtcNow.AddDays(-5);
+        sub.Activate(DateTime.UtcNow.AddDays(-35), originalNext);
+        sub.SetCurrentRenewalCheckout("https://pay.test/bill/1", originalNext);
+        sub.MarkAsPastDue();
+
+        sub.RecoverFromPayment(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
+
+        sub.CurrentRenewalCheckoutUrl.Should().BeNull();
+        sub.CurrentRenewalCheckoutForDate.Should().BeNull();
+
+        sub.SetCurrentRenewalCheckout("https://pay.test/bill/2", DateTime.UtcNow);
+        sub.Suspend();
+        sub.Resume(DateTime.UtcNow.AddMonths(1));
+
+        sub.CurrentRenewalCheckoutUrl.Should().BeNull();
+        sub.CurrentRenewalCheckoutForDate.Should().BeNull();
+    }
 }

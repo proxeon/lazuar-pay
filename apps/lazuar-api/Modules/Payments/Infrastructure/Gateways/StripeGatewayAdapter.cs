@@ -264,7 +264,8 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
     public async Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
-        string description, string receipt, Guid tenantId, Guid? dunningCampaignId = null)
+        string description, string receipt, Guid tenantId,
+        Guid? dunningCampaignId = null, string? idempotencyKey = null)
     {
         try
         {
@@ -294,7 +295,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 Description = description,
                 Metadata = meta
             };
-            var intent = await service.CreateAsync(options);
+            var intent = await service.CreateAsync(options, CreateOffSessionRequestOptions(idempotencyKey));
             return intent.Status == "succeeded" || intent.Status == "processing";
         }
         catch (StripeException ex)
@@ -323,6 +324,16 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             _logger.LogError(ex, "Stripe refund failed for Transaction {TransactionId}", transactionId);
             return false;
         }
+    }
+
+    internal static RequestOptions? CreateOffSessionRequestOptions(string? idempotencyKey)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return null;
+        }
+
+        return new RequestOptions { IdempotencyKey = idempotencyKey };
     }
 
     internal static void ApplySetupFutureUsage(SessionCreateOptions options, bool setupFutureUsage)

@@ -70,7 +70,8 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
                 $"Auto-renewal for subscription {@event.SubscriptionId}",
                 @event.SubscriptionId.ToString(),
                 @event.TenantId,
-                @event.DunningCampaignId);
+                @event.DunningCampaignId,
+                @event.Id.ToString());
         }
         catch (NotSupportedException ex)
         {
@@ -79,6 +80,15 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
                 "Off-session not supported for gateway {GatewayName} subscription {SubscriptionId}.",
                 @event.GatewayName, @event.SubscriptionId);
             await PublishPaymentFailedAsync(@event, failureReason: "off_session_not_supported");
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Off-session charge threw for subscription {SubscriptionId} on gateway {GatewayName}.",
+                @event.SubscriptionId, @event.GatewayName);
+            await PublishPaymentFailedAsync(@event, failureReason: "charge_exception");
             return;
         }
 

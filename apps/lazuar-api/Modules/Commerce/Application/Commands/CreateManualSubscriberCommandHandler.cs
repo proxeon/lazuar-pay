@@ -58,7 +58,7 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
             product.Id
         );
 
-        subscription.Activate(currentPeriodEnd, nextBillingDate ?? currentPeriodEnd, isReminderOnly: true);
+        subscription.Activate(currentPeriodEnd, nextBillingDate, isReminderOnly: true);
         _repository.AddSubscription(subscription);
 
         if (request.AmountPaid > 0 && request.PaymentMethod != "COMPED")

@@ -35,6 +35,12 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     /// </summary>
     public string? MetadataJson { get; private set; }
 
+    /// <summary>Hosted checkout URL minted for the current non-vaulted renewal cycle.</summary>
+    public string? CurrentRenewalCheckoutUrl { get; private set; }
+
+    /// <summary>Billing date the current renewal checkout was minted for.</summary>
+    public DateTime? CurrentRenewalCheckoutForDate { get; private set; }
+
     private readonly List<ReminderDispatchLog> _reminderLogs = new();
     public IReadOnlyCollection<ReminderDispatchLog> ReminderLogs => _reminderLogs.AsReadOnly();
 
@@ -56,7 +62,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Activate(DateTime currentPeriodEnd, DateTime nextBillingDate, bool isReminderOnly = false)
+    public void Activate(DateTime currentPeriodEnd, DateTime? nextBillingDate, bool isReminderOnly = false)
     {
         // Prevent cycle advancement if the subscription was in arrears and is just updating config
         if (Status == "PAST_DUE" || Status == "SUSPENDED")
@@ -68,6 +74,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         {
             CurrentPeriodEnd = currentPeriodEnd;
             NextBillingDate = nextBillingDate;
+            ClearCurrentRenewalCheckout();
         }
 
         Status = "ACTIVE";
@@ -103,6 +110,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         SuspendedAt = null;
         NextBillingDate = newNextBillingDate;
         ClearDunning();
+        ClearCurrentRenewalCheckout();
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -117,7 +125,22 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         NextBillingDate = nextBilling;
         SuspendedAt = null;
         ClearDunning();
+        ClearCurrentRenewalCheckout();
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetCurrentRenewalCheckout(string url, DateTime forDate)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+        CurrentRenewalCheckoutUrl = url.Trim();
+        CurrentRenewalCheckoutForDate = DateTime.SpecifyKind(forDate.Date, DateTimeKind.Utc);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearCurrentRenewalCheckout()
+    {
+        CurrentRenewalCheckoutUrl = null;
+        CurrentRenewalCheckoutForDate = null;
     }
 
     public void Cancel()

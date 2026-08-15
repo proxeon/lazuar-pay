@@ -70,7 +70,8 @@ public interface IPaymentGatewayAdapter
         string description,
         string receipt,
         Guid tenantId,
-        Guid? dunningCampaignId = null);
+        Guid? dunningCampaignId = null,
+        string? idempotencyKey = null);
 }
 
 public interface IPaymentGatewayFactory

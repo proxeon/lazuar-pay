@@ -222,8 +222,10 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
 
     public async Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount,
-        string currency, string description, string receipt, Guid tenantId, Guid? dunningCampaignId = null)
+        string currency, string description, string receipt, Guid tenantId,
+        Guid? dunningCampaignId = null, string? idempotencyKey = null)
     {
+        _ = idempotencyKey; // CHIP purchase/charge has no idempotency key (best-effort).
         try
         {
             var client = _httpFactory.CreateClient();

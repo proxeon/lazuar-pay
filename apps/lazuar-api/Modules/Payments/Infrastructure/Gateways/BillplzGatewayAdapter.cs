@@ -245,8 +245,10 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
     public Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
-        string description, string receipt, Guid tenantId, Guid? dunningCampaignId = null)
+        string description, string receipt, Guid tenantId,
+        Guid? dunningCampaignId = null, string? idempotencyKey = null)
     {
+        _ = idempotencyKey;
         _logger.LogWarning(
             "Billplz does not support vaulted off-session charges for tenant {TenantId}; skipping.",
             tenantId);

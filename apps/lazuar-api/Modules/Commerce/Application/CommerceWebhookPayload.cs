@@ -23,7 +23,8 @@ public static class CommerceWebhookPayload
         Product? product,
         string? customerEmail,
         string status,
-        bool? isFirstPayment = null)
+        bool? isFirstPayment = null,
+        string? checkoutUrl = null)
     {
         var metadata = CommerceCheckoutMetadata.Deserialize(sub.MetadataJson);
         return Build(
@@ -38,7 +39,8 @@ public static class CommerceWebhookPayload
             product?.Currency,
             product?.Interval,
             metadata,
-            isFirstPayment);
+            isFirstPayment,
+            checkoutUrl ?? sub.CurrentRenewalCheckoutUrl);
     }
 
     public static JsonElement Build(
@@ -53,7 +55,8 @@ public static class CommerceWebhookPayload
         string? currency,
         string? interval,
         IReadOnlyDictionary<string, string>? metadata,
-        bool? isFirstPayment = null)
+        bool? isFirstPayment = null,
+        string? checkoutUrl = null)
     {
         var paidThrough = nextBillingDate ?? currentPeriodEnd;
         var payload = new Dictionary<string, object?>
@@ -98,6 +101,11 @@ public static class CommerceWebhookPayload
         if (metadata != null && metadata.Count > 0)
         {
             payload["metadata"] = new Dictionary<string, string>(metadata, StringComparer.Ordinal);
+        }
+
+        if (!string.IsNullOrWhiteSpace(checkoutUrl))
+        {
+            payload["checkout_url"] = checkoutUrl;
         }
 
         return JsonSerializer.SerializeToElement(payload, Snake);

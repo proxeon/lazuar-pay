@@ -5,7 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure.Configuration;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,6 +18,7 @@ using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 using Modules.CRM.Contracts;
+using Modules.One.Contracts;
 using Modules.Payments.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Workers;
@@ -69,6 +72,9 @@ public class BillingEngineJob : BackgroundService
             var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
             var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("CommerceEventBus");
             var crm = scope.ServiceProvider.GetService<ICrmQueryService>();
+            var mediator = scope.ServiceProvider.GetService<IMediator>();
+            var one = scope.ServiceProvider.GetService<IOneQueryService>();
+            var config = scope.ServiceProvider.GetService<IConfiguration>();
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             try
@@ -92,7 +98,7 @@ public class BillingEngineJob : BackgroundService
 
                 try
                 {
-                    await ProcessOneSubscriptionAsync(db, eventBus, crm, sub, ct);
+                    await ProcessOneSubscriptionAsync(db, eventBus, crm, mediator, one, config, sub, failedIds, ct);
                     await db.SaveChangesAsync(ct);
                     if (tx != null) await tx.CommitAsync(ct);
                 }
@@ -123,7 +129,7 @@ public class BillingEngineJob : BackgroundService
             SELECT * FROM commerce."Subscriptions"
             WHERE "NextBillingDate" IS NOT NULL
               AND "NextBillingDate" <= NOW()
-              AND "Status" NOT IN ('PAST_DUE', 'SUSPENDED', 'CANCELED')
+              AND "Status" NOT IN ('PENDING', 'PAST_DUE', 'SUSPENDED', 'CANCELED')
               {excludeClause}
             ORDER BY "NextBillingDate"
             LIMIT 1
@@ -146,6 +152,7 @@ public class BillingEngineJob : BackgroundService
             .IgnoreQueryFilters()
             .Where(s => s.NextBillingDate != null
                 && s.NextBillingDate <= now
+                && s.Status != "PENDING"
                 && s.Status != "PAST_DUE"
                 && s.Status != "SUSPENDED"
                 && s.Status != "CANCELED"
@@ -158,11 +165,29 @@ public class BillingEngineJob : BackgroundService
         CommerceDbContext db,
         IEventBus eventBus,
         ICrmQueryService? crm,
+        IMediator? mediator,
+        IOneQueryService? one,
+        IConfiguration? config,
         Subscription sub,
+        HashSet<Guid> failedIds,
         CancellationToken ct)
     {
         var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
-        if (product == null) return;
+        if (product == null)
+        {
+            failedIds.Add(sub.Id);
+            _logger.LogWarning(
+                "Billing skipped subscription {Id}: product {ProductId} is missing.",
+                sub.Id, sub.ProductId);
+            return;
+        }
+
+        if (string.Equals(product.Interval, "one_time", StringComparison.OrdinalIgnoreCase))
+        {
+            failedIds.Add(sub.Id);
+            _logger.LogInformation("Billing skipped one-time subscription {Id}.", sub.Id);
+            return;
+        }
 
         var canCharge = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
                         && !sub.IsReminderOnly
@@ -201,36 +226,55 @@ public class BillingEngineJob : BackgroundService
                     "Dispatched auto-debit request for subscription {Id} (attempt {AttemptNumber}/{Max}).",
                     sub.Id, attempt.AttemptNumber, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
             }
+
+            return;
+        }
+
+        string? email = null;
+        if (crm != null)
+        {
+            var profile = await crm.GetClientProfileAsync(sub.ClientProfileId);
+            email = profile?.Email;
+        }
+
+        string? checkoutUrl = null;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            _logger.LogWarning(
+                "Subscription {Id} has no CRM email; marking PAST_DUE without a renewal checkout URL.",
+                sub.Id);
         }
         else
         {
-            sub.MarkAsPastDue();
-
-            string? email = null;
-            if (crm != null)
+            if (mediator == null || one == null)
             {
-                var profile = await crm.GetClientProfileAsync(sub.ClientProfileId);
-                email = profile?.Email;
+                throw new InvalidOperationException(
+                    "Cannot mint a renewal checkout: IMediator and IOneQueryService are required.");
             }
 
-            var payloadElement = CommerceWebhookPayload.From(sub, product, email, "PAST_DUE");
-
-            foreach (var target in product.FulfillmentTargets)
-            {
-                if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
-                {
-                    var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
-                    await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
-                        sub.OrganizationId, internalApp, "subscription.past_due", payloadElement));
-                }
-            }
-
-            await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
-                sub.OrganizationId, TargetUrl: null, "subscription.past_due", payloadElement));
-
-            _logger.LogInformation(
-                "Subscription {Id} cannot auto-debit (reminder-only, unsupported gateway, or missing vault). Marked as PAST_DUE.",
-                sub.Id);
+            checkoutUrl = await RenewalCheckoutIssuer.MintAsync(mediator, one, config, sub, product, email, ct);
+            sub.SetCurrentRenewalCheckout(checkoutUrl, sub.NextBillingDate!.Value);
         }
+
+        sub.MarkAsPastDue();
+
+        var payloadElement = CommerceWebhookPayload.From(sub, product, email, "PAST_DUE", checkoutUrl: checkoutUrl);
+
+        foreach (var target in product.FulfillmentTargets)
+        {
+            if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase))
+            {
+                var internalApp = target.Substring("internal:".Length).Trim().ToUpperInvariant();
+                await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
+                    sub.OrganizationId, internalApp, "subscription.past_due", payloadElement));
+            }
+        }
+
+        await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
+            sub.OrganizationId, TargetUrl: null, "subscription.past_due", payloadElement));
+
+        _logger.LogInformation(
+            "Subscription {Id} cannot auto-debit (reminder-only, unsupported gateway, or missing vault). Marked as PAST_DUE.",
+            sub.Id);
     }
 }

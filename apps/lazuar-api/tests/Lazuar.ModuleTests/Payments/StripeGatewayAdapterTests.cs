@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Modules.Payments.Infrastructure.Gateways;
 using NUnit.Framework;
+using Stripe;
 using Stripe.Checkout;
 
 namespace Lazuar.ModuleTests.Payments;
@@ -34,5 +35,23 @@ public class StripeGatewayAdapterTests
 
         options.PaymentIntentData!.SetupFutureUsage.Should().BeNull();
         options.CustomerCreation.Should().BeNull();
+    }
+
+    [Test]
+    public void CreateOffSessionRequestOptions_WhenKeyPresent_SetsIdempotencyKey()
+    {
+        var eventId = Guid.CreateVersion7().ToString();
+
+        var options = StripeGatewayAdapter.CreateOffSessionRequestOptions(eventId);
+
+        options.Should().NotBeNull();
+        options!.IdempotencyKey.Should().Be(eventId);
+    }
+
+    [Test]
+    public void CreateOffSessionRequestOptions_WhenMissing_ReturnsNull()
+    {
+        StripeGatewayAdapter.CreateOffSessionRequestOptions(null).Should().BeNull();
+        StripeGatewayAdapter.CreateOffSessionRequestOptions(" ").Should().BeNull();
     }
 }
