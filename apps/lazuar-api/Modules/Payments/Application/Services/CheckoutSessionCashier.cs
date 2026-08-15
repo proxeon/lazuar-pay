@@ -89,6 +89,12 @@ public sealed class CheckoutSessionCashier
 
         if (!result.Success || string.IsNullOrEmpty(result.CheckoutUrl))
         {
+            if (result.Error is not null
+                && result.Error.StartsWith(PaymentErrorCodes.CallbackBaseNotPublic, StringComparison.Ordinal))
+            {
+                throw PaymentIntegrationException.CallbackBaseNotPublic(result.Error);
+            }
+
             if (requireActiveGateway)
                 throw PaymentIntegrationException.GatewayError(result.Error);
 

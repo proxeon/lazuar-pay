@@ -37,6 +37,14 @@ public static class DependencyInjection
         services.AddScoped<IPaymentGatewayAdapter, ChipCollectGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
+        services.AddHttpClient(PublicDnsFallback.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        }).ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler
+        {
+            ConnectCallback = PublicDnsFallback.ConnectAsync,
+        });
+
         services.AddKeyedScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>("PaymentsEventBus");
 
         services.AddHostedService<PaymentsInboxConsumerJob>();

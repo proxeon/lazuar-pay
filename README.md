@@ -145,6 +145,21 @@ task dev
 task fe
 ```
 
+**Dual-run next to Aura (hop A):** listen on **`:8090`** (Aura owns 8080). Billplz callbacks use **`App:ApiBaseUrl`**, which must be a **public `https://…/api/v1`** (Cloudflare tunnel to 8090). `http://localhost:8090` is not hop A — create will fail with `CALLBACK_BASE_NOT_PUBLIC` unless `App:AllowInsecureBillplzCallback=true`. Do not use a `*.lazuar.com` public base for sandbox (that host used to flip production Billplz).
+
+### Local demo accounts
+
+Seeded on first Development boot (`task dev`) from `apps/lazuar-api/src/Lazuar.Api/appsettings.Development.json`. **Local only** — never reuse these in production.
+
+| Role | App | URL | Email | Password |
+|------|-----|-----|-------|----------|
+| Superadmin | `lazuar-admin` | http://localhost:3005/ | `admin@lazuar.com` | `Password123!` |
+| Tenant admin | `lazuar-ops` | http://localhost:3003/ | `founder@acme.test` | `Password123!` |
+
+The tenant workspace slug is **`acme`**. Superadmin can also sign in to ops (system workspace). Override the superadmin seed with `PLATFORM_ADMIN_EMAILS` / `PLATFORM_ADMIN_PASSWORD`.
+
+**Portal** (`lazuar-portal`, http://localhost:3004/) has no password login — buyers open a magic link after checkout.
+
 ### Standardized Port Mapping
 
 | App | Port | Access URL | Description |

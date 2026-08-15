@@ -58,7 +58,12 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         }
 
         var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
-        var isProd = apiBaseUrl.Contains("lazuar.com");
+        if (!BillplzPublicBase.TryResolveCallbackBase(_configuration, apiBaseUrl, out var callbackBase, out var baseError))
+        {
+            return new GatewayCheckoutResult(false, null, null, baseError);
+        }
+
+        var isProd = BillplzPublicBase.IsProductionApi(_configuration, apiBaseUrl);
         var endpoint = isProd ? ProductionApiUrl : SandboxApiUrl;
 
         metadata.TryGetValue("type", out var type);
@@ -68,12 +73,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var ref1 = subId ?? metaTenantId ?? tenantId.ToString();
         var typeValue = type ?? "payment";
         
-        var webhookUrl = $"{apiBaseUrl}/webhooks/payments/billplz/{tenantId}";
-
-        if (webhookUrl.Contains("localhost"))
-        {
-            webhookUrl = webhookUrl.Replace("localhost", "lazuar-local-dev.com");
-        }
+        var webhookUrl = $"{callbackBase}/webhooks/payments/billplz/{tenantId}";
 
         webhookUrl = $"{webhookUrl}?type={Uri.EscapeDataString(typeValue)}&reference_1={Uri.EscapeDataString(ref1)}";
 
@@ -105,8 +105,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
 
         try
         {
-            var client = _httpFactory.CreateClient();
-            client.Timeout = TimeSpan.FromSeconds(8);
+            var client = _httpFactory.CreateClient(PublicDnsFallback.HttpClientName);
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{endpoint}bills");
             request.Headers.Authorization = new AuthenticationHeaderValue(
                 "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:")));

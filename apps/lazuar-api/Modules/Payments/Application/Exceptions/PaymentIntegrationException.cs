@@ -54,6 +54,14 @@ public sealed class PaymentIntegrationException : Exception
             PaymentErrorCodes.GatewayError,
             string.IsNullOrWhiteSpace(detail) ? "Payment gateway failed to create checkout session." : detail,
             statusCode: 502);
+
+    public static PaymentIntegrationException CallbackBaseNotPublic(string? detail) =>
+        new(
+            PaymentErrorCodes.CallbackBaseNotPublic,
+            string.IsNullOrWhiteSpace(detail)
+                ? "Pay App:ApiBaseUrl must be a public https origin Billplz can POST."
+                : detail,
+            statusCode: 422);
 }
 
 public static class PaymentErrorCodes
@@ -67,6 +75,7 @@ public static class PaymentErrorCodes
     public const string InvalidRequest = "INVALID_REQUEST";
     public const string IdempotencyConflict = "IDEMPOTENCY_CONFLICT";
     public const string GatewayError = "GATEWAY_ERROR";
+    public const string CallbackBaseNotPublic = "CALLBACK_BASE_NOT_PUBLIC";
     public const string CheckoutNotFound = "CHECKOUT_NOT_FOUND";
     public const string Unauthorized = "UNAUTHORIZED";
     public const string Forbidden = "FORBIDDEN";
