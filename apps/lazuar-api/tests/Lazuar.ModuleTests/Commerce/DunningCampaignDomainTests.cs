@@ -1,5 +1,6 @@
 using System;
 using FluentAssertions;
+using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using NUnit.Framework;
 
@@ -48,52 +49,37 @@ public class DunningCampaignDomainTests
     [Test]
     public void MatchesProductAndPaymentMethod_EmptyTargetsMatchAll()
     {
+        var orgId = Guid.CreateVersion7();
         var productId = Guid.CreateVersion7();
         var campaign = new DunningCampaign(
-            Guid.CreateVersion7(),
+            orgId,
             "Org default",
             "NONE",
             gracePeriodDays: 7);
 
-        // Mirrors GatewayPaymentFailedIntegrationEventHandler / DunningEngineJob matching:
-        // empty TargetProductIds and TargetPaymentMethods → match any product/method.
-        var productOk = campaign.TargetProductIds.Count == 0 || campaign.TargetProductIds.Contains(productId);
-        var methodOk = campaign.TargetPaymentMethods.Count == 0
-                       || campaign.TargetPaymentMethods.Contains("ONLINE_GATEWAY");
-
-        productOk.Should().BeTrue();
-        methodOk.Should().BeTrue();
+        campaign.Matches(orgId, productId, DunningCampaignMatcher.OnlineGateway).Should().BeTrue();
+        campaign.Matches(orgId, productId, DunningCampaignMatcher.Manual).Should().BeTrue();
+        campaign.Matches(Guid.CreateVersion7(), productId, DunningCampaignMatcher.OnlineGateway).Should().BeFalse();
     }
 
     [Test]
     public void MatchesProductAndPaymentMethod_RespectsTargetFilters()
     {
+        var orgId = Guid.CreateVersion7();
         var productA = Guid.CreateVersion7();
         var productB = Guid.CreateVersion7();
         var campaign = new DunningCampaign(
-            Guid.CreateVersion7(),
+            orgId,
             "Gateway only",
             "SUSPEND",
             gracePeriodDays: 5,
             priorityOrder: 1,
             targetProductIds: new[] { productA },
-            targetPaymentMethods: new[] { "ONLINE_GATEWAY" });
+            targetPaymentMethods: new[] { DunningCampaignMatcher.OnlineGateway });
 
-        var matchesAOnline =
-            (campaign.TargetProductIds.Count == 0 || campaign.TargetProductIds.Contains(productA))
-            && (campaign.TargetPaymentMethods.Count == 0 || campaign.TargetPaymentMethods.Contains("ONLINE_GATEWAY"));
-
-        var matchesBOnline =
-            (campaign.TargetProductIds.Count == 0 || campaign.TargetProductIds.Contains(productB))
-            && (campaign.TargetPaymentMethods.Count == 0 || campaign.TargetPaymentMethods.Contains("ONLINE_GATEWAY"));
-
-        var matchesAManual =
-            (campaign.TargetProductIds.Count == 0 || campaign.TargetProductIds.Contains(productA))
-            && (campaign.TargetPaymentMethods.Count == 0 || campaign.TargetPaymentMethods.Contains("MANUAL"));
-
-        matchesAOnline.Should().BeTrue();
-        matchesBOnline.Should().BeFalse();
-        matchesAManual.Should().BeFalse();
+        campaign.Matches(orgId, productA, DunningCampaignMatcher.OnlineGateway).Should().BeTrue();
+        campaign.Matches(orgId, productB, DunningCampaignMatcher.OnlineGateway).Should().BeFalse();
+        campaign.Matches(orgId, productA, DunningCampaignMatcher.Manual).Should().BeFalse();
     }
 
     [Test]

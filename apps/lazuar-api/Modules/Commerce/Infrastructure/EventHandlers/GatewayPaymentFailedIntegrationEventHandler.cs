@@ -1,21 +1,23 @@
 using System;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Entities;
+using Modules.Commerce.Infrastructure.Dunning;
 using Modules.CRM.Contracts;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
 
 /// <summary>
-/// Bridges gateway payment failures into Commerce recovery: mark charge attempt failed, PAST_DUE + dunning campaign assignment.
-/// Emits <c>subscription.past_due</c> when status first changes to PAST_DUE (Stripe off-session renew fail).
+/// Bridges gateway payment failures into Commerce recovery: fail the attempt, PAST_DUE + assign, and start the dunning run.
+/// Emits <c>subscription.past_due</c> when status first changes to PAST_DUE.
 /// </summary>
 public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHandler<GatewayPaymentFailedIntegrationEvent>
 {
@@ -23,17 +25,20 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
     private readonly IEventBus _eventBus;
     private readonly ICrmQueryService _crmQueryService;
     private readonly ILogger<GatewayPaymentFailedIntegrationEventHandler> _logger;
+    private readonly IConfiguration _configuration;
 
     public GatewayPaymentFailedIntegrationEventHandler(
         CommerceDbContext dbContext,
         [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
         ICrmQueryService crmQueryService,
-        ILogger<GatewayPaymentFailedIntegrationEventHandler> logger)
+        ILogger<GatewayPaymentFailedIntegrationEventHandler> logger,
+        IConfiguration configuration)
     {
         _dbContext = dbContext;
         _eventBus = eventBus;
         _crmQueryService = crmQueryService;
         _logger = logger;
+        _configuration = configuration;
     }
 
     public async Task HandleAsync(GatewayPaymentFailedIntegrationEvent @event)
@@ -48,6 +53,7 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
 
         var sub = await _dbContext.Subscriptions
             .IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
             .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.OrganizationId == @event.OrganizationId);
 
         if (sub == null)
@@ -78,36 +84,10 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
                 sub.Id, @event.GatewayTransactionId);
         }
 
-        if (sub.CurrentDunningCampaignId == null)
-        {
-            // Same matching algorithm as DunningEngineJob: active campaigns by priority, product + payment method.
-            var campaigns = await _dbContext.DunningCampaigns
-                .IgnoreQueryFilters()
-                .Where(c => c.IsActive)
-                .OrderByDescending(c => c.PriorityOrder)
-                .ThenByDescending(c => c.CreatedAt)
-                .ToListAsync();
-
-            var inferredPaymentMethod = string.IsNullOrEmpty(sub.VaultedTokenId) ? "MANUAL" : "ONLINE_GATEWAY";
-            var campaignToAssign = campaigns.FirstOrDefault(c =>
-                c.OrganizationId == sub.OrganizationId &&
-                (c.TargetProductIds.Count == 0 || c.TargetProductIds.Contains(sub.ProductId)) &&
-                (c.TargetPaymentMethods.Count == 0 || c.TargetPaymentMethods.Contains(inferredPaymentMethod)));
-
-            if (campaignToAssign != null)
-            {
-                sub.AssignDunningCampaign(campaignToAssign.Id);
-                _logger.LogInformation(
-                    "Assigned dunning campaign {CampaignId} to subscription {SubscriptionId} after payment failure.",
-                    campaignToAssign.Id, sub.Id);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "No matching active dunning campaign for subscription {SubscriptionId} (org {OrgId}, product {ProductId}, method {Method}).",
-                    sub.Id, sub.OrganizationId, sub.ProductId, inferredPaymentMethod);
-            }
-        }
+        var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(_dbContext, CancellationToken.None);
+        var whatsAppEnabled = _configuration.GetValue("Messaging:WhatsAppEnabled", false);
+        var processor = new PastDueDunningProcessor(_logger);
+        await processor.ProcessAsync(_dbContext, _eventBus, sub, campaigns, whatsAppEnabled, CancellationToken.None);
 
         if (becamePastDue)
         {

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Infrastructure;
@@ -106,6 +107,98 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_TwoPastDue_BothGetDay0Dispatch()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var older = PastDueSub(_orgId, product.Id, daysOverdue: 5);
+        var newer = PastDueSub(_orgId, product.Id, daysOverdue: 1);
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(older, newer);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var a = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == older.Id);
+        var b = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == newer.Id);
+
+        a.CurrentDunningCampaignId.Should().Be(campaign.Id);
+        b.CurrentDunningCampaignId.Should().Be(campaign.Id);
+        a.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0 && l.TargetBillingDate.Date == older.NextBillingDate!.Value.Date);
+        b.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0 && l.TargetBillingDate.Date == newer.NextBillingDate!.Value.Date);
+        a.LastCompletedDayOffset.Should().Be(0);
+        b.LastCompletedDayOffset.Should().Be(0);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.InternalTargetApp == "COMMUNICATIONS"
+            && e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == older.Id.ToString()));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.InternalTargetApp == "COMMUNICATIONS"
+            && e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == newer.Id.ToString()));
+    }
+
+    [Test]
+    public async Task RunOnce_ProcessedId_NotRedispatchedInSameRun()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = PastDueSub(_orgId, product.Id);
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"));
+    }
+
+    [Test]
+    public async Task RunOnce_PausedRowSkipped_UnpausedSiblingStillProcessed()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var paused = PastDueSub(_orgId, product.Id, daysOverdue: 4);
+        paused.PauseDunning(DateTime.UtcNow.AddDays(1));
+        var open = PastDueSub(_orgId, product.Id, daysOverdue: 1);
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(paused, open);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var pausedReloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == paused.Id);
+        var openReloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == open.Id);
+
+        pausedReloaded.ReminderLogs.Should().BeEmpty();
+        pausedReloaded.CurrentDunningCampaignId.Should().BeNull();
+        openReloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+        openReloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == open.Id.ToString()));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == paused.Id.ToString()));
+    }
+
+    [Test]
     public async Task PastDue_AutoCharge_StripeVault_PublishesStripeGateway()
     {
         var product = CreateProduct(_orgId, "STRIPE");
@@ -128,10 +221,10 @@ public class DunningEngineJobTests
             && e.DunningCampaignId == campaign.Id));
     }
 
-    private static Subscription PastDueSub(Guid orgId, Guid productId, bool isReminderOnly = false)
+    private static Subscription PastDueSub(Guid orgId, Guid productId, bool isReminderOnly = false, int daysOverdue = 1)
     {
         var sub = new Subscription(orgId, Guid.CreateVersion7(), productId);
-        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), isReminderOnly);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.Date.AddDays(-daysOverdue), isReminderOnly);
         sub.MarkAsPastDue();
         return sub;
     }
@@ -140,6 +233,13 @@ public class DunningEngineJobTests
     {
         var campaign = new DunningCampaign(orgId, "Retry", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
         campaign.AddStep(0, "AUTO_CHARGE", null, null, null);
+        return campaign;
+    }
+
+    private static DunningCampaign Day0EmailCampaign(Guid orgId)
+    {
+        var campaign = new DunningCampaign(orgId, "Day0", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
+        campaign.AddStep(0, "EMAIL", "Past due", "Please pay", null);
         return campaign;
     }
 

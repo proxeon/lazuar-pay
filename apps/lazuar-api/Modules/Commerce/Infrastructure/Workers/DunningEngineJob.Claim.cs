@@ -28,6 +28,7 @@ public partial class DunningEngineJob
         CancellationToken ct)
     {
         var failedIds = new HashSet<Guid>();
+        var processedIds = new HashSet<Guid>();
 
         for (var i = 0; i < BatchSize; i++)
         {
@@ -37,13 +38,15 @@ public partial class DunningEngineJob
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             Subscription? sub;
+            var excludeIds = new HashSet<Guid>(failedIds);
+            excludeIds.UnionWith(processedIds);
 
             try
             {
                 if (db.Database.IsRelational())
                 {
                     tx = await db.Database.BeginTransactionAsync(ct);
-                    sub = await ClaimSubscriptionAsync(db, mode, failedIds, ct);
+                    sub = await ClaimSubscriptionAsync(db, mode, excludeIds, ct);
                     if (sub == null)
                     {
                         await tx.RollbackAsync(ct);
@@ -52,7 +55,7 @@ public partial class DunningEngineJob
                 }
                 else
                 {
-                    sub = await ClaimSubscriptionInMemoryAsync(db, mode, failedIds, ct);
+                    sub = await ClaimSubscriptionInMemoryAsync(db, mode, excludeIds, ct);
                     if (sub == null) break;
                 }
 
@@ -69,6 +72,7 @@ public partial class DunningEngineJob
 
                     await db.SaveChangesAsync(ct);
                     if (tx != null) await tx.CommitAsync(ct);
+                    processedIds.Add(sub.Id);
                 }
                 catch (Exception ex)
                 {

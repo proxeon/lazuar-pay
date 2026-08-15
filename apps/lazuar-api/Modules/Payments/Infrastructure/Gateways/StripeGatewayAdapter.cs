@@ -214,6 +214,11 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 }
             }
 
+            if (stripeEvent.Type == "payment_intent.payment_failed" && stripeEvent.Data.Object is PaymentIntent failedPi)
+            {
+                return MapPaymentIntentPaymentFailed(failedPi, stripeEvent.Id);
+            }
+
             if (stripeEvent.Type == "charge.dispute.created" && stripeEvent.Data.Object is Dispute dispute)
             {
                 var meta = new Dictionary<string, string>();
@@ -324,6 +329,32 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             _logger.LogError(ex, "Stripe refund failed for Transaction {TransactionId}", transactionId);
             return false;
         }
+    }
+
+    internal static GatewayWebhookParsedResult MapPaymentIntentPaymentFailed(PaymentIntent pi, string eventId)
+    {
+        var meta = pi.Metadata != null
+            ? new Dictionary<string, string>(pi.Metadata)
+            : new Dictionary<string, string>();
+        var amount = pi.Amount / 100m;
+        var currency = pi.Currency ?? "myr";
+
+        return new GatewayWebhookParsedResult(
+            Verified: true,
+            EventType: "PAYMENT_FAILED",
+            EventId: eventId,
+            AmountPaid: amount,
+            Currency: currency,
+            GatewayTransactionId: pi.Id,
+            Metadata: meta,
+            GatewayFee: 0,
+            TaxAmount: 0,
+            NetAmount: amount,
+            FxRate: 1,
+            BaseCurrency: currency,
+            Error: pi.LastPaymentError?.Message,
+            GatewayCustomerId: pi.CustomerId,
+            GatewayTokenId: pi.PaymentMethodId);
     }
 
     internal static RequestOptions? CreateOffSessionRequestOptions(string? idempotencyKey)

@@ -1,15 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
 using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.EventHandlers;
 using Modules.CRM.Contracts;
@@ -45,7 +48,8 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
             _db,
             _eventBus,
             Substitute.For<ICrmQueryService>(),
-            Substitute.For<ILogger<GatewayPaymentFailedIntegrationEventHandler>>());
+            Substitute.For<ILogger<GatewayPaymentFailedIntegrationEventHandler>>(),
+            new ConfigurationBuilder().AddInMemoryCollection().Build());
     }
 
     [TearDown]
@@ -262,4 +266,216 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         reloaded.Status.Should().Be("PAST_DUE");
         reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
     }
+
+    [Test]
+    public async Task HandleAsync_FirstFail_DispatchesDay0Email_DoesNotOffSession()
+    {
+        var product = CreateProduct(_orgId);
+        var dueToday = DateTime.UtcNow.Date;
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(dueToday.AddMonths(-1), dueToday);
+        sub.StoreVaultedToken("cus_test", "pm_test");
+
+        var campaign = Day0EmailCampaign(_orgId);
+        campaign.AddStep(3, "EMAIL", "Day 3", "Still due", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_fail_day0"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
+        reloaded.LastCompletedDayOffset.Should().Be(0);
+        reloaded.ReminderLogs.Should().ContainSingle(l =>
+            l.DayOffset == 0 && l.TargetBillingDate.Date == dueToday);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.InternalTargetApp == "COMMUNICATIONS"
+            && e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task HandleAsync_SecondFail_DoesNotDoubleDispatchDay0()
+    {
+        var product = CreateProduct(_orgId);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+        sub.StoreVaultedToken("cus_test", "pm_test");
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_1"));
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_2"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstAsync(s => s.Id == sub.Id);
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"));
+    }
+
+    [Test]
+    public async Task HandleAsync_AlreadyPastDueWithDay0Logged_DoesNotRedispatch()
+    {
+        var product = CreateProduct(_orgId);
+        var due = DateTime.UtcNow.Date;
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(due.AddMonths(-1), due);
+        sub.StoreVaultedToken("cus", "pm");
+        var campaign = Day0EmailCampaign(_orgId);
+        sub.MarkAsPastDue();
+        sub.AssignDunningCampaign(campaign.Id);
+        sub.RecordReminderDispatched(campaign.Steps.Single().Id, due, 0);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_again"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstAsync(s => s.Id == sub.Id);
+        reloaded.ReminderLogs.Should().HaveCount(1);
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<OutboundWebhookRequestedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task HandleAsync_Paused_AssignsButDoesNotDispatch()
+    {
+        var product = CreateProduct(_orgId);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+        sub.StoreVaultedToken("cus", "pm");
+        sub.PauseDunning(DateTime.UtcNow.AddDays(2));
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_paused"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
+        reloaded.ReminderLogs.Should().BeEmpty();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"));
+    }
+
+    [Test]
+    public async Task HandleAsync_NoMatchingCampaign_MarksPastDueWithoutComms()
+    {
+        var product = CreateProduct(_orgId);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddMonths(-1), DateTime.UtcNow);
+        sub.StoreVaultedToken("cus", "pm");
+        var otherOrg = new DunningCampaign(Guid.CreateVersion7(), "Other", "NONE", 7, 1);
+        otherOrg.AddStep(0, "EMAIL", "Hi", "Pay", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(otherOrg);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_none"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.CurrentDunningCampaignId.Should().BeNull();
+        reloaded.ReminderLogs.Should().BeEmpty();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"));
+    }
+
+    [Test]
+    public async Task HandleAsync_ThreeDaysOverdue_CatchUpDispatchesOffset0And3()
+    {
+        var product = CreateProduct(_orgId);
+        var due = DateTime.UtcNow.Date.AddDays(-3);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(due.AddMonths(-1), due);
+        sub.StoreVaultedToken("cus", "pm");
+        var campaign = Day0EmailCampaign(_orgId);
+        campaign.AddStep(3, "EMAIL", "Day 3", "Still due", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_catchup"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstAsync(s => s.Id == sub.Id);
+        reloaded.ReminderLogs.Select(l => l.DayOffset).Should().BeEquivalentTo(new[] { 0, 3 });
+        reloaded.ReminderLogs.Should().OnlyContain(l => l.TargetBillingDate.Date == due);
+        reloaded.LastCompletedDayOffset.Should().Be(3);
+
+        await _eventBus.Received(2).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"));
+    }
+
+    private GatewayPaymentFailedIntegrationEvent FailedEvent(Guid subscriptionId, string gatewayTxId) =>
+        new(
+            OrganizationId: _orgId,
+            GatewayTransactionId: gatewayTxId,
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = "commerce_subscription",
+                ["subscription_id"] = subscriptionId.ToString(),
+                ["tenant_id"] = _orgId.ToString(),
+                ["failure_reason"] = "charge_declined",
+                ["gateway_name"] = "STRIPE"
+            });
+
+    private static DunningCampaign Day0EmailCampaign(Guid orgId)
+    {
+        var campaign = new DunningCampaign(orgId, "Day0", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
+        campaign.AddStep(0, "EMAIL", "Past due", "Please pay", null);
+        return campaign;
+    }
+
+    private static Product CreateProduct(Guid orgId) =>
+        new(
+            orgId,
+            "Plan",
+            $"plan-{Guid.CreateVersion7():N}"[..20],
+            50m,
+            "FIXED",
+            0m,
+            "MYR",
+            "mo",
+            "STRIPE",
+            new CheckoutConfiguration(false, false, false),
+            Array.Empty<string>());
 }

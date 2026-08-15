@@ -110,4 +110,27 @@ public class DunningCampaign : Entity, IAggregateRoot, IMustHaveTenant
         IsActive = true;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Empty target lists match any product/method. Caller still filters org and sorts by priority.
+    /// </summary>
+    public bool Matches(Guid organizationId, Guid productId, string paymentMethod)
+    {
+        if (OrganizationId != organizationId)
+        {
+            return false;
+        }
+
+        if (_targetProductIds.Count > 0 && !_targetProductIds.Contains(productId))
+        {
+            return false;
+        }
+
+        if (_targetPaymentMethods.Count > 0 && !_targetPaymentMethods.Contains(paymentMethod))
+        {
+            return false;
+        }
+
+        return true;
+    }
 }

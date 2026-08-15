@@ -355,6 +355,74 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_NoToken_AssignsCampaignAndDispatchesDay0()
+    {
+        var product = CreateProduct(_orgId, "BILLPLZ");
+        var nextBilling = DateTime.UtcNow.AddDays(-1);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), nextBilling, isReminderOnly: true);
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
+        reloaded.LastCompletedDayOffset.Should().Be(0);
+        reloaded.ReminderLogs.Should().ContainSingle(l =>
+            l.DayOffset == 0 && l.TargetBillingDate.Date == nextBilling.Date);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.InternalTargetApp == "COMMUNICATIONS"
+            && e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+        await _eventBus.Received().PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task RunOnce_TwoNoToken_BothGetDay0()
+    {
+        var product = CreateProduct(_orgId);
+        var subA = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        subA.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-2));
+        var subB = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        subB.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(subA, subB);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var a = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == subA.Id);
+        var b = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == subB.Id);
+        a.Status.Should().Be("PAST_DUE");
+        b.Status.Should().Be("PAST_DUE");
+        a.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+        b.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == subA.Id.ToString()));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == subB.Id.ToString()));
+    }
+
+    [Test]
     public async Task RunOnce_OneTimeProduct_DoesNotPastDueOrCharge()
     {
         var oneTime = CreateProduct(_orgId, "STRIPE", "one_time");
@@ -416,6 +484,13 @@ public class BillingEngineJobTests
             new WorkspaceSnapshotDto(_orgId, "Acme", "acme", true, DateTime.UtcNow));
         _mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
             .Returns(checkoutUrl);
+    }
+
+    private static DunningCampaign Day0EmailCampaign(Guid orgId)
+    {
+        var campaign = new DunningCampaign(orgId, "Day0", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
+        campaign.AddStep(0, "EMAIL", "Past due", "Please pay", null);
+        return campaign;
     }
 
     private static Product CreateProduct(Guid orgId, string gatewayName = "STRIPE", string interval = "mo") =>

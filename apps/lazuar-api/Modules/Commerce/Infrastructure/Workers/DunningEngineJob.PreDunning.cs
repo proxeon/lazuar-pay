@@ -22,12 +22,9 @@ public partial class DunningEngineJob
         CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var inferredPaymentMethod = string.IsNullOrEmpty(sub.VaultedTokenId) ? "MANUAL" : "ONLINE_GATEWAY";
-        var campaign = campaigns.FirstOrDefault(c =>
-            c.OrganizationId == sub.OrganizationId &&
-            (c.TargetProductIds.Count == 0 || c.TargetProductIds.Contains(sub.ProductId)) &&
-            (c.TargetPaymentMethods.Count == 0 || c.TargetPaymentMethods.Contains(inferredPaymentMethod))
-        );
+        var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId);
+        var campaign = DunningCampaignMatcher.FindBest(
+            campaigns, sub.OrganizationId, sub.ProductId, inferredPaymentMethod);
 
         if (campaign == null) return;
 

@@ -17,6 +17,7 @@ using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.Commerce.Infrastructure.Dunning;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts;
@@ -257,6 +258,7 @@ public class BillingEngineJob : BackgroundService
         }
 
         sub.MarkAsPastDue();
+        await StartPastDueDunningRunAsync(db, eventBus, config, sub, ct);
 
         var payloadElement = CommerceWebhookPayload.From(sub, product, email, "PAST_DUE", checkoutUrl: checkoutUrl);
 
@@ -276,5 +278,19 @@ public class BillingEngineJob : BackgroundService
         _logger.LogInformation(
             "Subscription {Id} cannot auto-debit (reminder-only, unsupported gateway, or missing vault). Marked as PAST_DUE.",
             sub.Id);
+    }
+
+    private async Task StartPastDueDunningRunAsync(
+        CommerceDbContext db,
+        IEventBus eventBus,
+        IConfiguration? config,
+        Subscription sub,
+        CancellationToken ct)
+    {
+        await db.Entry(sub).Collection(s => s.ReminderLogs).LoadAsync(ct);
+        var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(db, ct);
+        var whatsAppEnabled = config?.GetValue("Messaging:WhatsAppEnabled", false) ?? false;
+        var processor = new PastDueDunningProcessor(_logger);
+        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct);
     }
 }
