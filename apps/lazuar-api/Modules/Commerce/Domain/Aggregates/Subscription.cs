@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BuildingBlocks.Domain;
 using Modules.Commerce.Domain.Entities;
+using Modules.Commerce.Domain.ValueObjects;
 
 namespace Modules.Commerce.Domain.Aggregates;
 
@@ -34,6 +35,12 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     /// Survives session expiry so renewals can emit metadata on subscription.* webhooks.
     /// </summary>
     public string? MetadataJson { get; private set; }
+
+    /// <summary>
+    /// Frozen campaign definition for the current PAST_DUE run. Null when not in dunning.
+    /// Written once at assign; engine must not re-read live steps/grace/final.
+    /// </summary>
+    public string? DunningCampaignSnapshotJson { get; private set; }
 
     /// <summary>Hosted checkout URL minted for the current non-vaulted renewal cycle.</summary>
     public string? CurrentRenewalCheckoutUrl { get; private set; }
@@ -155,9 +162,51 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         MarkDunningStepCompleted(dayOffset);
     }
 
+    /// <summary>
+    /// Pins a campaign id without a plan. Engine lazy-backfills JSON from the live campaign.
+    /// Production assign sites must use the snapshot overload.
+    /// </summary>
     public void AssignDunningCampaign(Guid campaignId)
     {
+        AssignDunningCampaignCore(campaignId, snapshotJson: null);
+    }
+
+    public void AssignDunningCampaign(Guid campaignId, DunningCampaignSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (snapshot.CampaignId != campaignId)
+        {
+            throw new ArgumentException("Snapshot campaign_id must match the assigned campaign.", nameof(snapshot));
+        }
+
+        AssignDunningCampaignCore(campaignId, snapshot.Serialize());
+    }
+
+    /// <summary>Writes snapshot JSON without resetting step progress (pre-migration lazy backfill).</summary>
+    public void CaptureDunningCampaignSnapshot(DunningCampaignSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (CurrentDunningCampaignId is null)
+        {
+            throw new InvalidOperationException("Cannot capture a dunning snapshot without an assigned campaign.");
+        }
+
+        if (snapshot.CampaignId != CurrentDunningCampaignId)
+        {
+            throw new ArgumentException("Snapshot campaign_id must match the assigned campaign.", nameof(snapshot));
+        }
+
+        DunningCampaignSnapshotJson = snapshot.Serialize();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public DunningCampaignSnapshot? TryGetDunningCampaignSnapshot() =>
+        DunningCampaignSnapshot.TryParse(DunningCampaignSnapshotJson);
+
+    private void AssignDunningCampaignCore(Guid campaignId, string? snapshotJson)
+    {
         CurrentDunningCampaignId = campaignId;
+        DunningCampaignSnapshotJson = snapshotJson;
         CurrentDunningStepIndex = 0;
         LastCompletedDayOffset = null;
         UpdatedAt = DateTime.UtcNow;
@@ -198,6 +247,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public void ClearDunning()
     {
         CurrentDunningCampaignId = null;
+        DunningCampaignSnapshotJson = null;
         CurrentDunningStepIndex = 0;
         LastCompletedDayOffset = null;
         DunningPausedUntil = null;

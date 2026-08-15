@@ -94,6 +94,11 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters().FirstAsync(s => s.Id == sub.Id);
         reloaded.Status.Should().Be("PAST_DUE");
         reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
+        var snapshot = reloaded.TryGetDunningCampaignSnapshot();
+        snapshot.Should().NotBeNull();
+        snapshot!.CampaignId.Should().Be(campaign.Id);
+        snapshot.GracePeriodDays.Should().Be(7);
+        snapshot.FinalAction.Should().Be("SUSPEND");
 
         await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
             e.EventType == "subscription.past_due"
@@ -244,6 +249,7 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
 
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters().FirstAsync(s => s.Id == sub.Id);
         reloaded.CurrentDunningCampaignId.Should().Be(high.Id);
+        reloaded.TryGetDunningCampaignSnapshot()!.CampaignId.Should().Be(high.Id);
     }
 
     [Test]
@@ -294,6 +300,11 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         reloaded.LastCompletedDayOffset.Should().Be(0);
         reloaded.ReminderLogs.Should().ContainSingle(l =>
             l.DayOffset == 0 && l.TargetBillingDate.Date == dueToday);
+        var snapshot = reloaded.TryGetDunningCampaignSnapshot();
+        snapshot.Should().NotBeNull();
+        snapshot!.Steps.Should().HaveCount(2);
+        snapshot.Steps.Select(s => s.DayOffset).Should().Equal(0, 3);
+        snapshot.Steps[0].EmailBody.Should().Be("Please pay");
 
         await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
             e.InternalTargetApp == "COMMUNICATIONS"
@@ -414,6 +425,50 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
         await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
             e.EventType == "subscription.past_due"));
+    }
+
+    [Test]
+    public async Task HandleAsync_AlreadyAssigned_LiveCampaignEditDoesNotRewriteSnapshot()
+    {
+        var product = CreateProduct(_orgId);
+        var due = DateTime.UtcNow.Date;
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(due.AddMonths(-1), due);
+        sub.StoreVaultedToken("cus", "pm");
+        var campaign = Day0EmailCampaign(_orgId);
+        campaign.AddStep(3, "EMAIL", "Day 3", "Still due", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_first"));
+
+        var assigned = await _db.Subscriptions.IgnoreQueryFilters().FirstAsync(s => s.Id == sub.Id);
+        var frozenJson = assigned.DunningCampaignSnapshotJson;
+        frozenJson.Should().NotBeNullOrWhiteSpace();
+        var frozen = assigned.TryGetDunningCampaignSnapshot()!;
+
+        campaign.UpdateDetails(campaign.Name, "NONE", gracePeriodDays: 1, campaign.PriorityOrder, null, null);
+        campaign.ClearSteps();
+        campaign.AddStep(0, "EMAIL", "Edited", "New body", null);
+        campaign.AddStep(1, "EMAIL", "Catch-up", "Spam", null);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_second"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstAsync(s => s.Id == sub.Id);
+        reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
+        reloaded.DunningCampaignSnapshotJson.Should().Be(frozenJson);
+        var stillFrozen = reloaded.TryGetDunningCampaignSnapshot()!;
+        stillFrozen.GracePeriodDays.Should().Be(frozen.GracePeriodDays);
+        stillFrozen.FinalAction.Should().Be(frozen.FinalAction);
+        stillFrozen.Steps.Select(s => s.DayOffset).Should().Equal(0, 3);
+        reloaded.ReminderLogs.Select(l => l.DayOffset).Should().Equal(0);
+        reloaded.ReminderLogs.Should().NotContain(l => l.DayOffset == 1);
     }
 
     [Test]

@@ -880,6 +880,221 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task Snapshot_E1_AddingDueOffsetAfterAssign_DoesNotCatchUpSpam()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5);
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var afterFirst = await ReloadSubAsync(sub.Id);
+        afterFirst.ReminderLogs.Select(l => l.DayOffset).Should().BeEquivalentTo(new[] { 0, 3 });
+        var publishesAfterFirst = CountDunningEmails();
+
+        ReplaceLiveSteps(campaign, (0, "EMAIL", "Day 0", "Please pay now", null),
+            (3, "EMAIL", "Day 3", "Still unpaid", null),
+            (5, "EMAIL", "Catch-up", "Spam me", null),
+            (7, "AUTO_CHARGE", null, null, null));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.ReminderLogs.Select(l => l.DayOffset).Should().BeEquivalentTo(new[] { 0, 3 });
+        CountDunningEmails().Should().Be(publishesAfterFirst);
+    }
+
+    [Test]
+    public async Task Snapshot_E2_DeletingUnsentOffset_StillDispatchesFromSnapshot()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5, assignSnapshot: true);
+
+        ReplaceLiveSteps(campaign, (0, "EMAIL", "Day 0", "Please pay now", null),
+            (7, "AUTO_CHARGE", null, null, null));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.ReminderLogs.Select(l => l.DayOffset).Should().BeEquivalentTo(new[] { 0, 3 });
+        await _eventBus.Received().PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subject").GetString() == "Day 3"));
+    }
+
+    [Test]
+    public async Task Snapshot_E3_EditedRemainingEmailBody_PublishesSnapshotCopy()
+    {
+        var (_, _, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5, assignSnapshot: true);
+
+        ReplaceLiveSteps(campaign, (0, "EMAIL", "Day 0", "Please pay now", null),
+            (3, "EMAIL", "Day 3", "LIVE BODY CHANGED", null),
+            (7, "AUTO_CHARGE", null, null, null));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.Received().PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("email_body").GetString() == "Still unpaid"
+            && e.Payload.GetProperty("subject").GetString() == "Day 3"));
+    }
+
+    [Test]
+    public async Task Snapshot_E4_ShrinkGraceToOverdue_DoesNotCancel()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5);
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        campaign.UpdateDetails(campaign.Name, "CANCEL", gracePeriodDays: 5, campaign.PriorityOrder, null, null);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task Snapshot_E5_ArchiveCampaign_StillDispatchesSnapshotSteps()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5, assignSnapshot: true);
+
+        campaign.Archive();
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.ReminderLogs.Select(l => l.DayOffset).Should().BeEquivalentTo(new[] { 0, 3 });
+        await _eventBus.Received().PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+    }
+
+    [Test]
+    public async Task Snapshot_E6_ClearDunningThenReassign_UsesNewLiveCampaign()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5);
+
+        await _job.RunOnceAsync(CancellationToken.None);
+        var first = await ReloadSubAsync(sub.Id);
+        first.TryGetDunningCampaignSnapshot()!.Steps.Select(s => s.DayOffset).Should().Equal(-3, 0, 3, 7);
+
+        first.RecoverFromPayment(DateTime.UtcNow, DateTime.UtcNow.Date.AddDays(-4));
+        first.MarkAsPastDue();
+        first.DunningCampaignSnapshotJson.Should().BeNull();
+        ReplaceLiveSteps(campaign, (0, "EMAIL", "New day 0", "New copy", null));
+        campaign.UpdateDetails(campaign.Name, "NONE", gracePeriodDays: 21, campaign.PriorityOrder, null, null);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reassigned = await ReloadSubAsync(sub.Id);
+        var snapshot = reassigned.TryGetDunningCampaignSnapshot();
+        snapshot.Should().NotBeNull();
+        snapshot!.CampaignId.Should().Be(campaign.Id);
+        snapshot.GracePeriodDays.Should().Be(21);
+        snapshot.FinalAction.Should().Be("NONE");
+        snapshot.Steps.Should().ContainSingle(s => s.DayOffset == 0 && s.EmailBody == "New copy");
+        reassigned.ReminderLogs.Should().Contain(l =>
+            l.DayOffset == 0 && l.TargetBillingDate.Date == reassigned.NextBillingDate!.Value.Date);
+        await _eventBus.Received().PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("email_body").GetString() == "New copy"));
+    }
+
+    [Test]
+    public async Task Snapshot_E7_IdSetJsonNull_LazyBackfillsThenExecutes()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5, assignSnapshot: false);
+        sub.AssignDunningCampaign(campaign.Id);
+        await _db.SaveChangesAsync();
+        (await ReloadSubAsync(sub.Id)).DunningCampaignSnapshotJson.Should().BeNull();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        var snapshot = reloaded.TryGetDunningCampaignSnapshot();
+        snapshot.Should().NotBeNull();
+        snapshot!.CampaignId.Should().Be(campaign.Id);
+        snapshot.Steps.Select(s => s.DayOffset).Should().Equal(-3, 0, 3, 7);
+        reloaded.ReminderLogs.Select(l => l.DayOffset).Should().BeEquivalentTo(new[] { 0, 3 });
+    }
+
+    [Test]
+    public async Task Snapshot_E8_SecondTickDoesNotReinsertSameOffset()
+    {
+        var (_, sub, _) = await SeedSnapshotRunAsync(daysOverdue: 5);
+
+        await _job.RunOnceAsync(CancellationToken.None);
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.ReminderLogs.Should().HaveCount(2);
+        reloaded.ReminderLogs.Select(l => l.DayOffset).Should().BeEquivalentTo(new[] { 0, 3 });
+        CountDunningEmails().Should().Be(2);
+    }
+
+    [Test]
+    public async Task Snapshot_E9_PreDunning_LiveAddOfNegativeOffsetAlreadyInWindow_StillFires()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(3), DateTime.UtcNow.Date.AddDays(3));
+        var campaign = new DunningCampaign(_orgId, "Pre leftover", "CANCEL", gracePeriodDays: 14, priorityOrder: 1);
+        campaign.AddStep(0, "EMAIL", "Past due", "Please pay", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+        (await ReloadSubAsync(sub.Id)).ReminderLogs.Should().BeEmpty();
+
+        campaign.AddStep(-3, "EMAIL", "Renews soon", "Your plan renews.", null);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == -3);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
+            && e.Payload.GetProperty("subject").GetString() == "Renews soon"));
+    }
+
+    [Test]
+    public async Task Snapshot_AutoCharge_UsesSnapshotStepIdAfterLiveClearSteps()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 7);
+        sub.StoreVaultedToken("cus_live", "pm_live");
+        var campaign = SnapshotCampaign(_orgId);
+        var frozenStep7 = campaign.Steps.Single(s => s.DayOffset == 7);
+        sub.AssignDunningCampaign(campaign.Id, DunningCampaignSnapshot.From(campaign));
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        ReplaceLiveSteps(campaign, (0, "EMAIL", "Edited", "gone", null));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var attempt = await _db.ChargeAttemptLogs.IgnoreQueryFilters()
+            .SingleAsync(l => l.SubscriptionId == sub.Id && l.Source == ChargeAttemptLog.SourceDunning);
+        attempt.DunningCampaignId.Should().Be(campaign.Id);
+        attempt.DunningStepId.Should().Be(frozenStep7.Id);
+    }
+
+    [Test]
     public async Task PreDunning_DoesNotAutoCharge()
     {
         var product = CreateProduct(_orgId, "STRIPE");
@@ -901,6 +1116,65 @@ public class DunningEngineJobTests
             .Should().Be(0);
         (await _db.Subscriptions.IgnoreQueryFilters().Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id))
             .ReminderLogs.Should().BeEmpty();
+    }
+
+    private async Task<(Product Product, Subscription Sub, DunningCampaign Campaign)> SeedSnapshotRunAsync(
+        int daysOverdue,
+        bool assignSnapshot = false)
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: daysOverdue);
+        sub.StoreVaultedToken("cus_live", "pm_live");
+        var campaign = SnapshotCampaign(_orgId);
+        if (assignSnapshot)
+        {
+            sub.AssignDunningCampaign(campaign.Id, DunningCampaignSnapshot.From(campaign));
+        }
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+        return (product, sub, campaign);
+    }
+
+    private async Task<Subscription> ReloadSubAsync(Guid subscriptionId) =>
+        await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .SingleAsync(s => s.Id == subscriptionId);
+
+    private int CountDunningEmails() =>
+        _eventBus.ReceivedCalls()
+            .Select(c => c.GetArguments().FirstOrDefault())
+            .OfType<FulfillmentRequestedIntegrationEvent>()
+            .Count(e => e.EventType == "reminder.dunning");
+
+    private static DunningCampaign SnapshotCampaign(Guid orgId)
+    {
+        var campaign = new DunningCampaign(orgId, "Standard Recovery Strategy", "CANCEL", gracePeriodDays: 14, priorityOrder: 1);
+        campaign.AddStep(-3, "EMAIL", "Soon", "Renews soon", null);
+        campaign.AddStep(0, "EMAIL", "Day 0", "Please pay now", null);
+        campaign.AddStep(3, "EMAIL", "Day 3", "Still unpaid", null);
+        campaign.AddStep(7, "AUTO_CHARGE", null, null, null);
+        return campaign;
+    }
+
+    private static void ReplaceLiveSteps(
+        DunningCampaign campaign,
+        params (int Offset, string Action, string? Subject, string? Email, string? WhatsApp)[] steps)
+    {
+        campaign.UpdateDetails(
+            campaign.Name,
+            campaign.FinalAction,
+            campaign.GracePeriodDays,
+            campaign.PriorityOrder,
+            campaign.TargetProductIds,
+            campaign.TargetPaymentMethods);
+        campaign.ClearSteps();
+        foreach (var step in steps)
+        {
+            campaign.AddStep(step.Offset, step.Action, step.Subject, step.Email, step.WhatsApp);
+        }
     }
 
     private static Subscription PastDueSub(Guid orgId, Guid productId, bool isReminderOnly = false, int daysOverdue = 1)

@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
-using Modules.Commerce.Domain.Entities;
 
 namespace Modules.Commerce.Infrastructure.Dunning;
 
@@ -15,7 +15,7 @@ internal static class DunningStepDispatcher
     /// When WhatsApp is not productized (Messaging:WhatsAppEnabled=false), demote WHATSAPP/ALL
     /// to email-only recovery. Pure WhatsApp steps without email copy are skipped.
     /// </summary>
-    public static string? ResolveEffectiveCommunicationAction(DunningStep step, bool whatsAppEnabled)
+    public static string? ResolveEffectiveCommunicationAction(IDunningStepCopy step, bool whatsAppEnabled)
     {
         var action = (step.ActionType ?? "EMAIL").ToUpperInvariant();
         if (action is "AUTOCHARGE" or "AUTO_CHARGE") return action;
@@ -38,7 +38,7 @@ internal static class DunningStepDispatcher
     public static async Task DispatchCommunicationStepAsync(
         CommerceDbContext db,
         Subscription sub,
-        DunningStep step,
+        IDunningStepCopy step,
         int daysOverdue,
         string effectiveActionType,
         IEventBus eventBus,

@@ -1,6 +1,7 @@
 using System;
 using FluentAssertions;
 using Modules.Commerce.Domain.Aggregates;
+using Modules.Commerce.Domain.ValueObjects;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Commerce;
@@ -35,6 +36,7 @@ public class SubscriptionRecoveryTests
         sub.CurrentPeriodEnd.Should().BeCloseTo(periodEnd, TimeSpan.FromSeconds(1));
         sub.NextBillingDate.Should().BeCloseTo(nextBilling, TimeSpan.FromSeconds(1));
         sub.CurrentDunningCampaignId.Should().BeNull();
+        sub.DunningCampaignSnapshotJson.Should().BeNull();
         sub.CurrentDunningStepIndex.Should().Be(0);
         sub.LastCompletedDayOffset.Should().BeNull();
         sub.DunningPausedUntil.Should().BeNull();
@@ -77,6 +79,7 @@ public class SubscriptionRecoveryTests
         sub.Status.Should().Be("ACTIVE");
         sub.NextBillingDate.Should().BeCloseTo(nextBilling, TimeSpan.FromSeconds(1));
         sub.CurrentDunningCampaignId.Should().BeNull();
+        sub.DunningCampaignSnapshotJson.Should().BeNull();
         sub.SuspendedAt.Should().BeNull();
     }
 
@@ -100,7 +103,9 @@ public class SubscriptionRecoveryTests
         var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow);
         sub.MarkAsPastDue();
-        sub.AssignDunningCampaign(campaignA);
+        var snapshotA = DunningCampaignSnapshot.Empty(campaignA);
+        var snapshotB = DunningCampaignSnapshot.Empty(campaignB);
+        sub.AssignDunningCampaign(campaignA, snapshotA);
         sub.MarkDunningStepCompleted(3);
         sub.PauseDunning(DateTime.UtcNow.AddDays(2));
 
@@ -108,11 +113,12 @@ public class SubscriptionRecoveryTests
         sub.CurrentDunningStepIndex.Should().Be(3);
         sub.DunningPausedUntil.Should().NotBeNull();
 
-        sub.AssignDunningCampaign(campaignB);
+        sub.AssignDunningCampaign(campaignB, snapshotB);
 
         sub.CurrentDunningCampaignId.Should().Be(campaignB);
         sub.LastCompletedDayOffset.Should().BeNull();
         sub.CurrentDunningStepIndex.Should().Be(0);
+        sub.TryGetDunningCampaignSnapshot()!.CampaignId.Should().Be(campaignB);
         // Pause is independent of reassignment (ClearDunning clears it; Assign does not).
         sub.DunningPausedUntil.Should().NotBeNull();
     }
@@ -123,13 +129,15 @@ public class SubscriptionRecoveryTests
         var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow);
         sub.MarkAsPastDue();
-        sub.AssignDunningCampaign(Guid.CreateVersion7());
+        var campaignId = Guid.CreateVersion7();
+        sub.AssignDunningCampaign(campaignId, DunningCampaignSnapshot.Empty(campaignId));
         sub.MarkDunningStepCompleted(7);
         sub.PauseDunning(DateTime.UtcNow.AddDays(1));
 
         sub.ClearDunning();
 
         sub.CurrentDunningCampaignId.Should().BeNull();
+        sub.DunningCampaignSnapshotJson.Should().BeNull();
         sub.CurrentDunningStepIndex.Should().Be(0);
         sub.LastCompletedDayOffset.Should().BeNull();
         sub.DunningPausedUntil.Should().BeNull();
@@ -168,6 +176,7 @@ public class SubscriptionRecoveryTests
 
         sub.Status.Should().Be("ACTIVE");
         sub.CurrentDunningCampaignId.Should().BeNull();
+        sub.DunningCampaignSnapshotJson.Should().BeNull();
         sub.LastCompletedDayOffset.Should().BeNull();
     }
 
@@ -247,5 +256,47 @@ public class SubscriptionRecoveryTests
 
         sub.CurrentRenewalCheckoutUrl.Should().BeNull();
         sub.CurrentRenewalCheckoutForDate.Should().BeNull();
+    }
+
+    [Test]
+    public void AssignDunningCampaign_StoresParsedSnapshot()
+    {
+        var campaign = new DunningCampaign(
+            Guid.CreateVersion7(),
+            "Standard Recovery Strategy",
+            "CANCEL",
+            gracePeriodDays: 14);
+        campaign.AddStep(0, "EMAIL", "Day 0", "Please pay", null);
+        campaign.AddStep(3, "EMAIL", "Day 3", "Still unpaid", "wa");
+        var snapshot = DunningCampaignSnapshot.From(campaign);
+
+        var sub = new Subscription(campaign.OrganizationId, Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow);
+        sub.MarkAsPastDue();
+        sub.AssignDunningCampaign(campaign.Id, snapshot);
+
+        sub.DunningCampaignSnapshotJson.Should().NotBeNullOrWhiteSpace();
+        var parsed = sub.TryGetDunningCampaignSnapshot();
+        parsed.Should().NotBeNull();
+        parsed!.CampaignId.Should().Be(campaign.Id);
+        parsed.GracePeriodDays.Should().Be(14);
+        parsed.FinalAction.Should().Be("CANCEL");
+        parsed.Steps.Should().HaveCount(2);
+        parsed.Steps[1].DayOffset.Should().Be(3);
+        parsed.Steps[1].EmailBody.Should().Be("Still unpaid");
+    }
+
+    [Test]
+    public void AssignDunningCampaign_RejectsMismatchedSnapshotCampaignId()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        var snapshot = DunningCampaignSnapshot.Empty(Guid.CreateVersion7());
+
+        var act = () => sub.AssignDunningCampaign(Guid.CreateVersion7(), snapshot);
+
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("snapshot");
+        sub.CurrentDunningCampaignId.Should().BeNull();
+        sub.DunningCampaignSnapshotJson.Should().BeNull();
     }
 }

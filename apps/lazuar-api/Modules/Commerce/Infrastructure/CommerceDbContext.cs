@@ -156,6 +156,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => x.NextBillingDate);
             builder.Property(x => x.IsReminderOnly).HasDefaultValue(false);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
+            builder.Property(x => x.DunningCampaignSnapshotJson).HasColumnType("jsonb");
             builder.Property(x => x.CurrentRenewalCheckoutUrl).HasMaxLength(2000);
 
             builder.HasMany(x => x.ReminderLogs)

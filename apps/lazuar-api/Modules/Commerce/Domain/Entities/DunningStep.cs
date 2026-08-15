@@ -1,9 +1,10 @@
 using System;
 using BuildingBlocks.Domain;
+using Modules.Commerce.Domain;
 
 namespace Modules.Commerce.Domain.Entities;
 
-public class DunningStep : Entity
+public class DunningStep : Entity, IDunningStepCopy
 {
     public Guid Id { get; private set; }
     public Guid DunningCampaignId { get; private set; }

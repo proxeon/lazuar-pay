@@ -12,6 +12,7 @@ using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.Commerce.Domain.ValueObjects;
 using Modules.Payments.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Dunning;
@@ -61,7 +62,7 @@ public sealed class PastDueDunningProcessor
 
             if (campaignToAssign != null)
             {
-                sub.AssignDunningCampaign(campaignToAssign.Id);
+                sub.AssignDunningCampaign(campaignToAssign.Id, DunningCampaignSnapshot.From(campaignToAssign));
                 _logger.LogInformation(
                     "Assigned dunning campaign {CampaignId} to subscription {SubscriptionId}.",
                     campaignToAssign.Id, sub.Id);
@@ -80,10 +81,14 @@ public sealed class PastDueDunningProcessor
             return;
         }
 
-        var campaign = campaigns.FirstOrDefault(c => c.Id == sub.CurrentDunningCampaignId);
-        if (campaign == null) return;
+        var snapshot = await ResolveSnapshotAsync(db, sub, ct);
+        if (snapshot == null)
+        {
+            return;
+        }
 
-        var dueSteps = campaign.Steps
+        var campaignId = sub.CurrentDunningCampaignId!.Value;
+        var dueSteps = snapshot.Steps
             .Where(s => s.DayOffset >= 0 && s.DayOffset <= daysOverdue)
             .Where(s => !sub.ReminderLogs.Any(l =>
                 l.DayOffset == s.DayOffset && l.TargetBillingDate.Date == targetDate))
@@ -140,7 +145,7 @@ public sealed class PastDueDunningProcessor
                         targetDate,
                         attemptNumber: nextAttempt,
                         source: ChargeAttemptLog.SourceDunning,
-                        dunningCampaignId: campaign.Id,
+                        dunningCampaignId: campaignId,
                         dunningStepId: step.Id);
                     db.ChargeAttemptLogs.Add(attempt);
                     cycleAttempts.Add(attempt);
@@ -153,7 +158,7 @@ public sealed class PastDueDunningProcessor
                         product.Currency,
                         sub.VaultedCustomerId!,
                         sub.VaultedTokenId!,
-                        DunningCampaignId: campaign.Id,
+                        DunningCampaignId: campaignId,
                         GatewayName: product.GatewayName,
                         ChargeAttemptId: attempt.Id
                     ));
@@ -198,21 +203,21 @@ public sealed class PastDueDunningProcessor
         }
 
         var terminalDay = ResolveTerminalDayOffset(
-            campaign.GracePeriodDays,
-            campaign.Steps.Select(s => s.DayOffset));
+            snapshot.GracePeriodDays,
+            snapshot.Steps.Select(s => s.DayOffset));
         if (daysOverdue < terminalDay
-            || (campaign.FinalAction != "CANCEL" && campaign.FinalAction != "SUSPEND"))
+            || (snapshot.FinalAction != "CANCEL" && snapshot.FinalAction != "SUSPEND"))
         {
             return;
         }
 
-        if (campaign.FinalAction == "CANCEL")
+        if (snapshot.FinalAction == "CANCEL")
         {
             sub.Cancel();
             LazuarMetrics.RecordDunningCancel();
             var trackedCampaign = await db.DunningCampaigns
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(c => c.Id == campaign.Id, ct);
+                .FirstOrDefaultAsync(c => c.Id == campaignId, ct);
             trackedCampaign?.RecordChurn();
             _logger.LogWarning("Subscription {Id} exhausted dunning grace period. Canceled.", sub.Id);
         }
@@ -225,7 +230,7 @@ public sealed class PastDueDunningProcessor
         var terminalProduct = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
         var targets = terminalProduct?.FulfillmentTargets.ToList() ?? new List<string>();
 
-        if (campaign.FinalAction == "CANCEL")
+        if (snapshot.FinalAction == "CANCEL")
         {
             await eventBus.PublishAsync(new SubscriptionCanceledIntegrationEvent(
                 sub.OrganizationId,
@@ -244,13 +249,13 @@ public sealed class PastDueDunningProcessor
                 targets));
         }
 
-        var eventTypeString = campaign.FinalAction == "CANCEL" ? "subscription.canceled" : "subscription.suspended";
+        var eventTypeString = snapshot.FinalAction == "CANCEL" ? "subscription.canceled" : "subscription.suspended";
         var payloadObj = new
         {
             subscription_id = sub.Id.ToString(),
             client_profile_id = sub.ClientProfileId.ToString(),
             product_id = sub.ProductId.ToString(),
-            status = campaign.FinalAction == "CANCEL" ? "CANCELED" : "SUSPENDED"
+            status = snapshot.FinalAction == "CANCEL" ? "CANCELED" : "SUSPENDED"
         };
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
@@ -263,6 +268,48 @@ public sealed class PastDueDunningProcessor
                     sub.OrganizationId, internalApp, eventTypeString, payloadElement));
             }
         }
+    }
+
+    /// <summary>
+    /// Prefer the frozen JSON. If id is set and JSON is missing/corrupt, copy the live campaign
+    /// (including archived) so pre-migration rows do not run without a plan.
+    /// </summary>
+    private async Task<DunningCampaignSnapshot?> ResolveSnapshotAsync(
+        CommerceDbContext db,
+        Subscription sub,
+        CancellationToken ct)
+    {
+        var parsed = sub.TryGetDunningCampaignSnapshot();
+        if (parsed != null && parsed.CampaignId == sub.CurrentDunningCampaignId)
+        {
+            return parsed;
+        }
+
+        if (sub.CurrentDunningCampaignId == null)
+        {
+            return null;
+        }
+
+        var live = await db.DunningCampaigns
+            .IgnoreQueryFilters()
+            .Include(c => c.Steps)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == sub.CurrentDunningCampaignId, ct);
+
+        if (live == null)
+        {
+            _logger.LogWarning(
+                "No dunning campaign {CampaignId} for subscription {SubscriptionId}; cannot backfill snapshot.",
+                sub.CurrentDunningCampaignId, sub.Id);
+            return null;
+        }
+
+        var snapshot = DunningCampaignSnapshot.From(live);
+        sub.CaptureDunningCampaignSnapshot(snapshot);
+        _logger.LogInformation(
+            "Backfilled dunning campaign snapshot for subscription {SubscriptionId} from campaign {CampaignId}.",
+            sub.Id, live.Id);
+        return snapshot;
     }
 
     /// <summary>
