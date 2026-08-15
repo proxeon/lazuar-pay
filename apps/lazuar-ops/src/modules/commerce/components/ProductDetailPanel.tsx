@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Archive, RotateCcw, Edit2, Link as LinkIcon, Lock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
-import { cn, filterHiddenFulfillmentTargets } from "../../../lib/utils";
+import { cn, filterHiddenFulfillmentTargets, gatewaySupportsOffSession } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import ProductForm from "./ProductForm";
@@ -208,7 +208,21 @@ export default function ProductDetailPanel({ product, activeWorkspaceSlug, onClo
               </div>
               <div className="col-span-2">
                 <span className="text-[#a1a1aa] block mb-1">Payment Gateway</span>
-                <span className="font-mono text-[#09090b] font-bold uppercase tracking-wider">{product.gateway_name}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[#09090b] font-bold uppercase tracking-wider">{product.gateway_name}</span>
+                  {product.interval !== "one_time" && (
+                    <span className={cn(
+                      "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest",
+                      gatewaySupportsOffSession(product.gateway_name, product.supports_off_session)
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50 text-amber-800 border-amber-200"
+                    )}>
+                      {gatewaySupportsOffSession(product.gateway_name, product.supports_off_session)
+                        ? "Auto-renew"
+                        : "Reminder-only"}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

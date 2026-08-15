@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
+import { gatewaySupportsOffSession } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import CampaignSettingsPanel from "../components/dunning/CampaignSettingsPanel";
 import CampaignTimeline from "../components/dunning/CampaignTimeline";
@@ -74,6 +75,22 @@ export default function CampaignBuilderPage() {
     }
   }, [campaign, isNew]);
 
+  const allowAutoCharge = (() => {
+    const manualOnly = targetPaymentMethods.length > 0
+      && targetPaymentMethods.every(m => m === "MANUAL");
+    if (manualOnly) return false;
+
+    const catalog = products || [];
+    if (targetProductIds.length === 0) {
+      if (catalog.length === 0) return true;
+      return catalog.some(p => gatewaySupportsOffSession(p.gateway_name, p.supports_off_session));
+    }
+
+    return catalog
+      .filter(p => targetProductIds.includes(p.id))
+      .some(p => gatewaySupportsOffSession(p.gateway_name, p.supports_off_session));
+  })();
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error("Campaign name is required.");
@@ -84,6 +101,9 @@ export default function CampaignBuilderPage() {
       }
       if (steps.some(s => s.action_type === "WHATSAPP" && !s.whatsapp_body.trim())) {
         throw new Error("All WhatsApp steps require a message body.");
+      }
+      if (steps.some(s => s.action_type === "AUTO_CHARGE") && !allowAutoCharge) {
+        throw new Error("AUTO_CHARGE is not available for Billplz / reminder-only products");
       }
 
       const formattedSteps = steps.map(s => ({
@@ -215,6 +235,7 @@ export default function CampaignBuilderPage() {
           steps={steps}
           setSteps={setSteps}
           isActionLoading={isActionLoading}
+          allowAutoCharge={allowAutoCharge}
         />
       </form>
     </PageLayout>

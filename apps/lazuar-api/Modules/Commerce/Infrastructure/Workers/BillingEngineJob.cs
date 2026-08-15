@@ -16,6 +16,7 @@ using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 using Modules.CRM.Contracts;
+using Modules.Payments.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -163,7 +164,12 @@ public class BillingEngineJob : BackgroundService
         var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
         if (product == null) return;
 
-        if (!string.IsNullOrEmpty(sub.VaultedTokenId) && !string.IsNullOrEmpty(sub.VaultedCustomerId))
+        var canCharge = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
+                        && !sub.IsReminderOnly
+                        && !string.IsNullOrEmpty(sub.VaultedTokenId)
+                        && !string.IsNullOrEmpty(sub.VaultedCustomerId);
+
+        if (canCharge)
         {
             var targetDate = sub.NextBillingDate!.Value.Date;
             // Billing owns attempt 1 only; subsequent retries are owned by dunning AUTO_CHARGE.
@@ -184,8 +190,8 @@ public class BillingEngineJob : BackgroundService
                     sub.Id,
                     product.Price,
                     product.Currency,
-                    sub.VaultedCustomerId,
-                    sub.VaultedTokenId,
+                    sub.VaultedCustomerId!,
+                    sub.VaultedTokenId!,
                     DunningCampaignId: null,
                     GatewayName: product.GatewayName,
                     ChargeAttemptId: attempt.Id
@@ -222,7 +228,9 @@ public class BillingEngineJob : BackgroundService
             await eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
                 sub.OrganizationId, TargetUrl: null, "subscription.past_due", payloadElement));
 
-            _logger.LogInformation("Subscription {Id} lacks payment method. Marked as PAST_DUE.", sub.Id);
+            _logger.LogInformation(
+                "Subscription {Id} cannot auto-debit (reminder-only, unsupported gateway, or missing vault). Marked as PAST_DUE.",
+                sub.Id);
         }
     }
 }

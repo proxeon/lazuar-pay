@@ -12,6 +12,7 @@ using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.Payments.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -131,44 +132,50 @@ public partial class DunningEngineJob
                 var attemptCount = await db.ChargeAttemptLogs.CountAsync(
                     l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate, ct);
                 var nextAttempt = attemptCount + 1;
+                var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
 
-                if (nextAttempt > ChargeAttemptLimits.MaxAttemptsPerBillingCycle
+                var cannotCharge = product == null
+                    || !PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
+                    || sub.IsReminderOnly
+                    || nextAttempt > ChargeAttemptLimits.MaxAttemptsPerBillingCycle
                     || string.IsNullOrEmpty(sub.VaultedCustomerId)
-                    || string.IsNullOrEmpty(sub.VaultedTokenId))
+                    || string.IsNullOrEmpty(sub.VaultedTokenId);
+
+                if (cannotCharge || product == null)
                 {
                     _logger.LogWarning(
-                        "Skipped auto-charge for Subscription {Id} (nextAttempt={NextAttempt}, max={Max}) due to limits or missing token. Falling back.",
-                        sub.Id, nextAttempt, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
+                        "Skipped auto-charge for Subscription {Id} (nextAttempt={NextAttempt}, max={Max}, gateway={Gateway}, reminderOnly={ReminderOnly}) due to limits, reminder-only mode, or missing token.",
+                        sub.Id,
+                        nextAttempt,
+                        ChargeAttemptLimits.MaxAttemptsPerBillingCycle,
+                        product?.GatewayName,
+                        sub.IsReminderOnly);
                 }
                 else
                 {
-                    var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
-                    if (product != null)
-                    {
-                        var attempt = new ChargeAttemptLog(
-                            sub.Id,
-                            targetDate,
-                            attemptNumber: nextAttempt,
-                            source: ChargeAttemptLog.SourceDunning,
-                            dunningCampaignId: campaign.Id,
-                            dunningStepId: step.Id);
-                        db.ChargeAttemptLogs.Add(attempt);
+                    var attempt = new ChargeAttemptLog(
+                        sub.Id,
+                        targetDate,
+                        attemptNumber: nextAttempt,
+                        source: ChargeAttemptLog.SourceDunning,
+                        dunningCampaignId: campaign.Id,
+                        dunningStepId: step.Id);
+                    db.ChargeAttemptLogs.Add(attempt);
 
-                        await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
-                            sub.OrganizationId,
-                            sub.Id,
-                            product.Price,
-                            product.Currency,
-                            sub.VaultedCustomerId,
-                            sub.VaultedTokenId,
-                            DunningCampaignId: campaign.Id,
-                            GatewayName: product.GatewayName,
-                            ChargeAttemptId: attempt.Id
-                        ));
-                        _logger.LogInformation(
-                            "Dispatched auto-charge dunning step DayOffset={DayOffset} for Subscription {Id} (attempt {AttemptNumber}/{Max}).",
-                            step.DayOffset, sub.Id, nextAttempt, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
-                    }
+                    await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
+                        sub.OrganizationId,
+                        sub.Id,
+                        product.Price,
+                        product.Currency,
+                        sub.VaultedCustomerId!,
+                        sub.VaultedTokenId!,
+                        DunningCampaignId: campaign.Id,
+                        GatewayName: product.GatewayName,
+                        ChargeAttemptId: attempt.Id
+                    ));
+                    _logger.LogInformation(
+                        "Dispatched auto-charge dunning step DayOffset={DayOffset} for Subscription {Id} (attempt {AttemptNumber}/{Max}).",
+                        step.DayOffset, sub.Id, nextAttempt, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
                 }
             }
             else

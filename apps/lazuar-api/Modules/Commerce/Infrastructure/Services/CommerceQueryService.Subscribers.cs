@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
 using Lazuar.ApiTypes;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Services;
 
 public partial class CommerceQueryService
 {
-    private record RawSubDto(
+    internal record RawSubDto(
         Guid Id, 
         Guid ClientProfileId, 
         Guid ProductId, 
@@ -23,6 +24,7 @@ public partial class CommerceQueryService
         DateTime CreatedAt,
         string? VaultedCustomerId, 
         string? VaultedTokenId,
+        bool IsReminderOnly,
         string? DunningCampaignName,
         int CurrentDunningStepIndex,
         int? LastCompletedDayOffset,
@@ -44,6 +46,7 @@ public partial class CommerceQueryService
                 p.""Name"" as ProductName, p.""Price"" as ProductPrice,
                 s.""Status"", s.""CurrentPeriodEnd"", s.""NextBillingDate"", s.""CreatedAt"",
                 s.""VaultedCustomerId"", s.""VaultedTokenId"",
+                s.""IsReminderOnly"",
                 d.""Name"" as DunningCampaignName,
                 s.""CurrentDunningStepIndex"",
                 s.""LastCompletedDayOffset"",
@@ -69,33 +72,7 @@ public partial class CommerceQueryService
         var dtos = rawSubs.Select(s =>
         {
             profileMap.TryGetValue(s.ClientProfileId, out var profile);
-            
-            var daysOverdue = (s.Status is "PAST_DUE" or "CANCELED") && s.NextBillingDate.HasValue
-                ? Math.Max(0, (int)(now - s.NextBillingDate.Value).TotalDays)
-                : (int?)null;
-
-            return new CommerceSubscriptionDto
-            {
-                Id = s.Id.ToString(),
-                Client_profile_id = s.ClientProfileId.ToString(),
-                Customer_name = profile?.Full_name ?? "Unknown",
-                Customer_email = profile?.Email ?? string.Empty,
-                Customer_phone = profile?.Phone ?? string.Empty,
-                Product_id = s.ProductId.ToString(),
-                Product_name = s.ProductName,
-                Product_price = (double)s.ProductPrice,
-                Status = s.Status,
-                Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
-                Next_billing_date = s.NextBillingDate.HasValue ? new DateTimeOffset(s.NextBillingDate.Value) : null,
-                Days_overdue = daysOverdue,
-                Vaulted_customer_id = s.VaultedCustomerId,
-                Vaulted_token_id = s.VaultedTokenId,
-                Dunning_campaign_name = s.DunningCampaignName,
-                // Prefer LastCompletedDayOffset (real progress); fall back to legacy index for pre-migration rows.
-                Current_dunning_step = s.LastCompletedDayOffset ?? s.CurrentDunningStepIndex,
-                Dunning_paused_until = s.DunningPausedUntil.HasValue ? new DateTimeOffset(s.DunningPausedUntil.Value) : null,
-                Created_at = new DateTimeOffset(s.CreatedAt)
-            };
+            return MapSubscriberDto(s, profile, now);
         });
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -111,5 +88,38 @@ public partial class CommerceQueryService
         var paginatedData = filteredList.Skip((page - 1) * limit).Take(limit);
 
         return new PaginatedResponse<CommerceSubscriptionDto>(paginatedData, totalCount, page, limit);
+    }
+
+    internal static CommerceSubscriptionDto MapSubscriberDto(
+        RawSubDto s,
+        ClientProfileDto? profile,
+        DateTime now)
+    {
+        var daysOverdue = (s.Status is "PAST_DUE" or "CANCELED") && s.NextBillingDate.HasValue
+            ? Math.Max(0, (int)(now - s.NextBillingDate.Value).TotalDays)
+            : (int?)null;
+
+        return new CommerceSubscriptionDto
+        {
+            Id = s.Id.ToString(),
+            Client_profile_id = s.ClientProfileId.ToString(),
+            Customer_name = profile?.Full_name ?? "Unknown",
+            Customer_email = profile?.Email ?? string.Empty,
+            Customer_phone = profile?.Phone ?? string.Empty,
+            Product_id = s.ProductId.ToString(),
+            Product_name = s.ProductName,
+            Product_price = (double)s.ProductPrice,
+            Status = s.Status,
+            Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
+            Next_billing_date = s.NextBillingDate.HasValue ? new DateTimeOffset(s.NextBillingDate.Value) : null,
+            Days_overdue = daysOverdue,
+            Vaulted_customer_id = s.VaultedCustomerId,
+            Vaulted_token_id = s.VaultedTokenId,
+            Is_reminder_only = s.IsReminderOnly,
+            Dunning_campaign_name = s.DunningCampaignName,
+            Current_dunning_step = s.LastCompletedDayOffset ?? s.CurrentDunningStepIndex,
+            Dunning_paused_until = s.DunningPausedUntil.HasValue ? new DateTimeOffset(s.DunningPausedUntil.Value) : null,
+            Created_at = new DateTimeOffset(s.CreatedAt)
+        };
     }
 }

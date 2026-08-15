@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Payments.Infrastructure.EventHandlers;
@@ -32,6 +34,15 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
 
     public async Task HandleAsync(ExecuteOffSessionChargeIntegrationEvent @event)
     {
+        if (!PaymentGatewayCapabilities.SupportsOffSession(@event.GatewayName))
+        {
+            _logger.LogWarning(
+                "Off-session charge skipped for subscription {SubscriptionId}: gateway {GatewayName} does not support vaulted charges.",
+                @event.SubscriptionId, @event.GatewayName);
+            await PublishPaymentFailedAsync(@event, failureReason: "off_session_not_supported");
+            return;
+        }
+
         var config = await _configRepository.GetByTenantAndGatewayAsync(@event.TenantId, @event.GatewayName);
 
         if (config == null || string.IsNullOrEmpty(config.ApiKey) || !config.IsActive)
@@ -47,16 +58,29 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
         var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
-        var success = await adapter.ChargeOffSessionAsync(
-            plainApiKey,
-            @event.GatewayCustomerId,
-            @event.GatewayTokenId,
-            @event.Amount,
-            @event.Currency,
-            $"Auto-renewal for subscription {@event.SubscriptionId}",
-            @event.SubscriptionId.ToString(),
-            @event.TenantId,
-            @event.DunningCampaignId);
+        bool success;
+        try
+        {
+            success = await adapter.ChargeOffSessionAsync(
+                plainApiKey,
+                @event.GatewayCustomerId,
+                @event.GatewayTokenId,
+                @event.Amount,
+                @event.Currency,
+                $"Auto-renewal for subscription {@event.SubscriptionId}",
+                @event.SubscriptionId.ToString(),
+                @event.TenantId,
+                @event.DunningCampaignId);
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Off-session not supported for gateway {GatewayName} subscription {SubscriptionId}.",
+                @event.GatewayName, @event.SubscriptionId);
+            await PublishPaymentFailedAsync(@event, failureReason: "off_session_not_supported");
+            return;
+        }
 
         if (!success)
         {

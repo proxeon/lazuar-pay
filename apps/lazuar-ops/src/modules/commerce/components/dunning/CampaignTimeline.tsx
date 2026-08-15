@@ -7,9 +7,10 @@ interface CampaignTimelineProps {
   steps: LocalStepState[];
   setSteps: React.Dispatch<React.SetStateAction<LocalStepState[]>>;
   isActionLoading: boolean;
+  allowAutoCharge?: boolean;
 }
 
-export default function CampaignTimeline({ steps, setSteps, isActionLoading }: CampaignTimelineProps) {
+export default function CampaignTimeline({ steps, setSteps, isActionLoading, allowAutoCharge = true }: CampaignTimelineProps) {
   const [expandedStepIndex, setExpandedStepIndex] = useState<number | null>(null);
 
   const addStep = () => {
@@ -61,6 +62,7 @@ export default function CampaignTimeline({ steps, setSteps, isActionLoading }: C
               onUpdate={updateStep}
               onRemove={removeStep}
               isActionLoading={isActionLoading}
+              allowAutoCharge={allowAutoCharge}
             />
           ))
         )}

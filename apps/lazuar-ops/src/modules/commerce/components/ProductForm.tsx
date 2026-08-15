@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { client, type components } from "../../../lib/api-client";
-import { filterHiddenFulfillmentTargets, cn } from "../../../lib/utils";
+import { filterHiddenFulfillmentTargets, cn, gatewaySupportsOffSession } from "../../../lib/utils";
 
 type ProductDto = components["schemas"]["Commerce.ProductDto"];
 type PaymentConfigDto = components["schemas"]["Commerce.PaymentConfigDto"];
@@ -132,9 +132,15 @@ export default function ProductForm({
                 ))}
               </select>
               {configuredGateways?.length === 0 && <p className="text-[10px] text-rose-600">No gateways configured in Workspace Settings.</p>}
-              {gatewayName === "BILLPLZ" && (
+              {gatewayName && !gatewaySupportsOffSession(gatewayName, initialData?.supports_off_session) && (
                 <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5 mt-1.5 leading-relaxed">
-                  Billplz is online checkout only — it cannot vault cards or run silent auto-charge / dunning retries. Use Stripe or CHIP Collect for subscription auto-renewal and AUTO_CHARGE dunning steps.
+                  {interval !== "one_time" ? (
+                    <>
+                      <strong>Reminder-only renewals.</strong> Customers pay via a hosted link each cycle. AUTO_CHARGE dunning will not run. Use Stripe or CHIP Collect for vaulted auto-renewal.
+                    </>
+                  ) : (
+                    <>Billplz is online checkout only — it cannot vault cards or run silent auto-charge / dunning retries. Use Stripe or CHIP Collect for subscription auto-renewal and AUTO_CHARGE dunning steps.</>
+                  )}
                 </p>
               )}
             </div>

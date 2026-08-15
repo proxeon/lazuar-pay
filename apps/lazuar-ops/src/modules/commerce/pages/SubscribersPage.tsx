@@ -238,7 +238,11 @@ export default function SubscribersPage() {
                     <td className="px-5 py-3.5 min-w-[200px]">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{sub.customer_name}</p>
-                        {sub.vaulted_token_id && <Zap size={12} className="text-blue-500" title="Auto-Debit Enabled" />}
+                        {sub.is_reminder_only ? (
+                          <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest bg-amber-50 text-amber-800 border-amber-200">Reminder-only</span>
+                        ) : sub.vaulted_token_id ? (
+                          <Zap size={12} className="text-blue-500" title="Auto-Debit Enabled" />
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <p className="text-[11px] text-[#71717a]">{sub.customer_email}</p>
@@ -323,7 +327,7 @@ export default function SubscribersPage() {
                 <div><span className="text-[#a1a1aa] block mb-1">Product</span><span className="font-medium text-[#09090b]">{selectedSub.product_name}</span></div>
                 <div><span className="text-[#a1a1aa] block mb-1">Status</span><span className="font-bold text-[#09090b]">{selectedSub.status.replace("_", " ")}</span></div>
                 <div><span className="text-[#a1a1aa] block mb-1">Period Ends</span><span className="font-mono text-[#52525b]">{selectedSub.current_period_end ? new Date(selectedSub.current_period_end).toLocaleDateString() : '-'}</span></div>
-                <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.vaulted_token_id ? "Active" : "None"}</span></div>
+                <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.is_reminder_only ? "Reminder-only (pay link / record payment)" : selectedSub.vaulted_token_id ? "Auto-debit active" : "None"}</span></div>
               </div>
             </div>
 

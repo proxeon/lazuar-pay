@@ -11,7 +11,7 @@ namespace Modules.Commerce.Infrastructure.Services;
 
 public partial class CommerceQueryService
 {
-    private record RawProductDto(
+    internal record RawProductDto(
         Guid Id, string Slug, string Name, decimal Price, string PricingModel, decimal MinimumPrice, string Currency, string Interval,
         bool RequiresAddress, bool RequiresTaxId, bool RequiresPhone,
         string? FulfillmentTargets, bool IsActive, string GatewayName);
@@ -56,7 +56,7 @@ public partial class CommerceQueryService
         return MapToDto(rawProduct);
     }
 
-    private static ProductDto MapToDto(RawProductDto raw)
+    internal static ProductDto MapToDto(RawProductDto raw)
     {
         var jsonOptions = new JsonSerializerOptions
         {
@@ -90,6 +90,7 @@ public partial class CommerceQueryService
             Interval = raw.Interval,
             Is_active = raw.IsActive,
             Gateway_name = raw.GatewayName,
+            Supports_off_session = Modules.Payments.Contracts.PaymentGatewayCapabilities.SupportsOffSession(raw.GatewayName),
             Checkout_configuration = new CheckoutConfigurationDto
             {
                 Requires_address = raw.RequiresAddress,

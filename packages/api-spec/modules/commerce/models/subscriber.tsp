@@ -29,6 +29,7 @@ model CommerceSubscriptionDto {
   days_overdue?: int32;
   vaulted_customer_id?: string;
   vaulted_token_id?: string;
+  is_reminder_only: boolean;
   dunning_campaign_name?: string;
   current_dunning_step?: int32;
   dunning_paused_until?: utcDateTime;

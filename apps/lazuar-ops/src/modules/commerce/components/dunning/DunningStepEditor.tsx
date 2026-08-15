@@ -14,6 +14,7 @@ interface DunningStepEditorProps {
   onUpdate: (index: number, field: keyof LocalStepState, value: any) => void;
   onRemove: (index: number) => void;
   isActionLoading: boolean;
+  allowAutoCharge?: boolean;
 }
 
 export default function DunningStepEditor({
@@ -23,7 +24,8 @@ export default function DunningStepEditor({
   onToggleExpand,
   onUpdate,
   onRemove,
-  isActionLoading
+  isActionLoading,
+  allowAutoCharge = true
 }: DunningStepEditorProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
@@ -148,7 +150,10 @@ export default function DunningStepEditor({
                 >
                   <option value="EMAIL">Send Email</option>
                   <option value="WHATSAPP">Send WhatsApp (not connected)</option>
-                  <option value="AUTO_CHARGE">Auto-Retry Card</option>
+                  {allowAutoCharge && <option value="AUTO_CHARGE">Auto-Retry Card</option>}
+                  {!allowAutoCharge && step.action_type === "AUTO_CHARGE" && (
+                    <option value="AUTO_CHARGE">Auto-Retry Card (not available)</option>
+                  )}
                 </select>
               </div>
             </div>
@@ -165,7 +170,19 @@ export default function DunningStepEditor({
               </div>
             )}
 
-            {step.action_type === "AUTO_CHARGE" && (
+            {step.action_type === "AUTO_CHARGE" && !allowAutoCharge && (
+              <div className="p-4 bg-amber-50 border border-amber-200 flex items-start gap-3 rounded-sm">
+                <CreditCard size={18} className="text-amber-700 mt-0.5 shrink-0" />
+                <div className="text-[12px] text-amber-900 leading-relaxed space-y-1">
+                  <p className="font-bold">Auto-Retry Card is not available</p>
+                  <p>
+                    Selected products are reminder-only (Billplz / offline). Change this step to email, or target a Stripe/CHIP product.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {step.action_type === "AUTO_CHARGE" && allowAutoCharge && (
               <div className="p-4 bg-blue-50 border border-blue-200 flex items-start gap-3 rounded-sm">
                 <CreditCard size={18} className="text-blue-600 mt-0.5 shrink-0" />
                 <div className="text-[12px] text-blue-800 leading-relaxed space-y-1.5">

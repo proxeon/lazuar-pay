@@ -60,10 +60,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 CancelUrl = cancelUrl,
             };
 
-            if (setupFutureUsage)
-            {
-                options.PaymentIntentData.SetupFutureUsage = "off_session";
-            }
+            ApplySetupFutureUsage(options, setupFutureUsage);
 
             var session = await service.CreateAsync(options);
             return new GatewayCheckoutResult(true, session.Url, session.Id, null);
@@ -326,6 +323,19 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             _logger.LogError(ex, "Stripe refund failed for Transaction {TransactionId}", transactionId);
             return false;
         }
+    }
+
+    internal static void ApplySetupFutureUsage(SessionCreateOptions options, bool setupFutureUsage)
+    {
+        if (!setupFutureUsage)
+        {
+            return;
+        }
+
+        options.PaymentIntentData ??= new SessionPaymentIntentDataOptions();
+        options.PaymentIntentData.SetupFutureUsage = "off_session";
+        // Without a Customer, setup_future_usage often yields no reusable PM / null session.CustomerId.
+        options.CustomerCreation = "always";
     }
 
     public async Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)

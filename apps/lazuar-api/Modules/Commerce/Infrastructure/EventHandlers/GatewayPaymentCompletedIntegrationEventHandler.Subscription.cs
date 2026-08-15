@@ -111,10 +111,10 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             ));
         }
 
-        // Store/refresh vault tokens when present (e.g. update-payment flow).
-        if (!string.IsNullOrEmpty(@event.GatewayCustomerId) && !string.IsNullOrEmpty(@event.GatewayTokenId))
+        // Stripe/CHIP update-payment may convert reminder-only → vaulted. Billplz pay-again must not.
+        if (TryVaultIds(productInfo.GatewayName, @event.GatewayCustomerId, @event.GatewayTokenId, out var vaultCustomerId, out var vaultTokenId))
         {
-            existingSub.StoreVaultedToken(@event.GatewayCustomerId, @event.GatewayTokenId);
+            existingSub.StoreVaultedToken(vaultCustomerId, vaultTokenId);
         }
 
         await MarkChargeAttemptSucceededAsync(@event, existingSub.Id);

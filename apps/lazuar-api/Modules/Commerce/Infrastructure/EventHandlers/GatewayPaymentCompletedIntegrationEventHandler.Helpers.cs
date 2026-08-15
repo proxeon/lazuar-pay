@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Modules.Commerce.Application;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
@@ -55,6 +57,31 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         );
 
         _dbContext.TransactionLogs.Add(transactionLog);
+    }
+
+    private static bool TryVaultIds(
+        string gatewayName,
+        string? customerId,
+        string? tokenId,
+        [NotNullWhen(true)] out string vaultCustomerId,
+        [NotNullWhen(true)] out string vaultTokenId)
+    {
+        vaultCustomerId = "";
+        vaultTokenId = "";
+
+        if (PaymentGatewayCapabilities.IsReminderOnlyGateway(gatewayName))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(tokenId))
+        {
+            return false;
+        }
+
+        vaultTokenId = tokenId;
+        vaultCustomerId = string.IsNullOrWhiteSpace(customerId) ? tokenId : customerId;
+        return true;
     }
 
     private static void ApplyCheckoutMetadata(

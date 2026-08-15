@@ -60,7 +60,10 @@ export default function CampaignSettingsPanel({
               {products?.map((p: any) => (
                 <label key={p.id} className="flex items-center gap-2 p-1.5 hover:bg-white cursor-pointer text-[12px] rounded-sm">
                   <input type="checkbox" checked={targetProductIds.includes(p.id)} onChange={() => toggleArrayItem(setTargetProductIds, p.id)} disabled={isActionLoading} className="rounded-sm border-[#e5e5e5]" />
-                  {p.name}
+                  <span className="flex-1">{p.name}</span>
+                  {p.gateway_name && (
+                    <span className="text-[10px] font-mono uppercase text-[#71717a]">{p.gateway_name}</span>
+                  )}
                 </label>
               ))}
             </div>
@@ -72,11 +75,11 @@ export default function CampaignSettingsPanel({
             <div className="flex flex-col gap-2 text-[12px]">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={targetPaymentMethods.includes("ONLINE_GATEWAY")} onChange={() => toggleArrayItem(setTargetPaymentMethods, "ONLINE_GATEWAY")} disabled={isActionLoading} className="rounded-sm border-[#e5e5e5]" />
-                Online Gateways (Cards/FPX)
+                Vaulted auto-debit (Stripe / CHIP)
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={targetPaymentMethods.includes("MANUAL")} onChange={() => toggleArrayItem(setTargetPaymentMethods, "MANUAL")} disabled={isActionLoading} className="rounded-sm border-[#e5e5e5]" />
-                Manual/Offline Transfers
+                Reminder-only / offline (incl. Billplz)
               </label>
             </div>
             <p className="text-[10px] text-[#71717a]">Leave empty to apply to all payment methods.</p>

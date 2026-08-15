@@ -184,4 +184,80 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
 
         factory.DidNotReceive().GetAdapter(Arg.Any<string>());
     }
+
+    [Test]
+    public async Task HandleAsync_Billplz_PublishesOffSessionNotSupported_DoesNotCallAdapter()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var subscriptionId = Guid.CreateVersion7();
+
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        var factory = Substitute.For<IPaymentGatewayFactory>();
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new ExecuteOffSessionChargeIntegrationEventHandler(
+            configRepo,
+            factory,
+            eventBus,
+            CreateVault(),
+            Substitute.For<ILogger<ExecuteOffSessionChargeIntegrationEventHandler>>());
+
+        await handler.HandleAsync(new ExecuteOffSessionChargeIntegrationEvent(
+            tenantId,
+            subscriptionId,
+            10m,
+            "MYR",
+            "cus",
+            "tok",
+            GatewayName: "BILLPLZ"));
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
+            e.Metadata["failure_reason"] == "off_session_not_supported"
+            && e.Metadata["failure_source"] == "off_session"
+            && e.Metadata["gateway_name"] == "BILLPLZ"
+            && e.Metadata["subscription_id"] == subscriptionId.ToString()));
+
+        factory.DidNotReceive().GetAdapter(Arg.Any<string>());
+        await configRepo.DidNotReceive().GetByTenantAndGatewayAsync(Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Test]
+    public async Task HandleAsync_NotSupportedException_PublishesOffSessionNotSupported()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var subscriptionId = Guid.CreateVersion7();
+
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE").Returns(config);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ChargeOffSessionAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>())
+            .Returns<bool>(_ => throw new NotSupportedException("no vault"));
+
+        var factory = Substitute.For<IPaymentGatewayFactory>();
+        factory.GetAdapter("STRIPE").Returns(adapter);
+
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new ExecuteOffSessionChargeIntegrationEventHandler(
+            configRepo,
+            factory,
+            eventBus,
+            CreateVault(),
+            Substitute.For<ILogger<ExecuteOffSessionChargeIntegrationEventHandler>>());
+
+        await handler.HandleAsync(new ExecuteOffSessionChargeIntegrationEvent(
+            tenantId,
+            subscriptionId,
+            10m,
+            "MYR",
+            "cus",
+            "pm",
+            GatewayName: "STRIPE"));
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
+            e.Metadata["failure_reason"] == "off_session_not_supported"));
+    }
 }

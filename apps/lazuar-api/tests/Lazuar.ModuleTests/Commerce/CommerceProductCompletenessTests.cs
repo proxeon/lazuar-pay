@@ -52,7 +52,7 @@ public class CommerceProductCompletenessTests
             new DatabaseJobTrigger());
     }
 
-    private static Product CreateProduct(Guid orgId, string interval = "mo", bool requiresPhone = false, bool requiresAddress = false, bool requiresTaxId = false)
+    private static Product CreateProduct(Guid orgId, string interval = "mo", bool requiresPhone = false, bool requiresAddress = false, bool requiresTaxId = false, string gatewayName = "STRIPE")
     {
         return new Product(
             orgId,
@@ -63,7 +63,7 @@ public class CommerceProductCompletenessTests
             0m,
             "MYR",
             interval,
-            "STRIPE",
+            gatewayName,
             new CheckoutConfiguration(requiresAddress, requiresTaxId, requiresPhone),
             new[] { "telegram" });
     }
@@ -222,6 +222,7 @@ public class CommerceProductCompletenessTests
         session.Status.Should().Be("COMPLETED");
         subscriptions.Should().HaveCount(1);
         subscriptions[0].Status.Should().Be("ACTIVE");
+        subscriptions[0].IsReminderOnly.Should().BeTrue();
         logs.Should().HaveCount(1);
         logs[0].Status.Should().Be("CONFIRMED");
         logs[0].RecordedByName.Should().Be("MANUAL_OFFLINE");
@@ -523,6 +524,163 @@ public class CommerceProductCompletenessTests
         (await db.Orders.IgnoreQueryFilters().CountAsync()).Should().Be(0);
     }
 
+    [Test]
+    public async Task OpenCheckout_Billplz_NoTokens_ActivatesReminderOnly()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, gatewayName: "BILLPLZ");
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+        db.Products.Add(product);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(orgId, session.Id));
+
+        var sub = await db.Subscriptions.IgnoreQueryFilters().SingleAsync();
+        sub.IsReminderOnly.Should().BeTrue();
+        sub.VaultedCustomerId.Should().BeNull();
+        sub.VaultedTokenId.Should().BeNull();
+        sub.Status.Should().Be("ACTIVE");
+    }
+
+    [Test]
+    public async Task OpenCheckout_Billplz_JunkTokens_StillReminderOnly_DoesNotStoreVault()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, gatewayName: "BILLPLZ");
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+        db.Products.Add(product);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(orgId, session.Id, "cus_junk", "tok_junk"));
+
+        var sub = await db.Subscriptions.IgnoreQueryFilters().SingleAsync();
+        sub.IsReminderOnly.Should().BeTrue();
+        sub.VaultedTokenId.Should().BeNull();
+    }
+
+    [Test]
+    public async Task OpenCheckout_Stripe_WithVaultIds_StoresVault_NotReminderOnly()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, gatewayName: "STRIPE");
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+        db.Products.Add(product);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(orgId, session.Id, "cus_1", "pm_1"));
+
+        var sub = await db.Subscriptions.IgnoreQueryFilters().SingleAsync();
+        sub.IsReminderOnly.Should().BeFalse();
+        sub.VaultedCustomerId.Should().Be("cus_1");
+        sub.VaultedTokenId.Should().Be("pm_1");
+    }
+
+    [Test]
+    public async Task OpenCheckout_Chip_TokenOnly_VaultsUsingTokenAsCustomer()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, gatewayName: "CHIP");
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+        db.Products.Add(product);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(orgId, session.Id, customerId: null, tokenId: "purchase_abc"));
+
+        var sub = await db.Subscriptions.IgnoreQueryFilters().SingleAsync();
+        sub.IsReminderOnly.Should().BeFalse();
+        sub.VaultedTokenId.Should().Be("purchase_abc");
+        sub.VaultedCustomerId.Should().Be("purchase_abc");
+    }
+
+    [Test]
+    public async Task ProcessZeroAmount_Recurring_ActivatesReminderOnly()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = new Product(
+            orgId,
+            "Free Plan",
+            "free-plan",
+            0m,
+            "FIXED",
+            0m,
+            "MYR",
+            "mo",
+            "STRIPE",
+            new CheckoutConfiguration(false, false, false),
+            new[] { "telegram" });
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+
+        Subscription? created = null;
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.When(r => r.AddSubscription(Arg.Any<Subscription>()))
+            .Do(ci => created = ci.Arg<Subscription>());
+
+        var handler = new ProcessZeroAmountCheckoutCommandHandler(repository, Substitute.For<IEventBus>());
+        await handler.Handle(new ProcessZeroAmountCheckoutCommand(orgId, session.Id), CancellationToken.None);
+
+        created.Should().NotBeNull();
+        created!.IsReminderOnly.Should().BeTrue();
+        created.Status.Should().Be("ACTIVE");
+        created.VaultedTokenId.Should().BeNull();
+    }
+
+    [Test]
+    public async Task SubscriptionPayment_Billplz_DoesNotClearReminderOnly()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, gatewayName: "BILLPLZ");
+        var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-5), isReminderOnly: true);
+        sub.MarkAsPastDue();
+        db.Products.Add(product);
+        db.Subscriptions.Add(sub);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, sub.ClientProfileId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(orgId, sub.Id, "cus_junk", "tok_junk"));
+
+        var reloaded = await db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.IsReminderOnly.Should().BeTrue();
+        reloaded.VaultedTokenId.Should().BeNull();
+    }
+
+    [Test]
+    public async Task SubscriptionPayment_Stripe_MayVaultAndClearReminderOnly()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId, gatewayName: "STRIPE");
+        var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-5), isReminderOnly: true);
+        sub.MarkAsPastDue();
+        db.Products.Add(product);
+        db.Subscriptions.Add(sub);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, sub.ClientProfileId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(orgId, sub.Id, "cus_new", "pm_new"));
+
+        var reloaded = await db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.IsReminderOnly.Should().BeFalse();
+        reloaded.VaultedCustomerId.Should().Be("cus_new");
+        reloaded.VaultedTokenId.Should().Be("pm_new");
+    }
+
     private static InitiateCheckoutCommand GuestCheckoutCommand(string? couponCode) =>
         new(
             "acme",
@@ -568,7 +726,11 @@ public class CommerceProductCompletenessTests
             db);
     }
 
-    private static GatewayPaymentCompletedIntegrationEvent CreateCommercePaymentCompleted(Guid orgId, Guid sessionId) =>
+    private static GatewayPaymentCompletedIntegrationEvent CreateCommercePaymentCompleted(
+        Guid orgId,
+        Guid sessionId,
+        string? customerId = null,
+        string? tokenId = null) =>
         new(
             OrganizationId: orgId,
             GatewayTransactionId: "pi_test_replay",
@@ -585,5 +747,7 @@ public class CommerceProductCompletenessTests
                 ["type"] = "commerce_subscription",
                 ["subscription_id"] = sessionId.ToString(),
                 ["tenant_id"] = orgId.ToString()
-            });
+            },
+            GatewayCustomerId: customerId,
+            GatewayTokenId: tokenId);
 }

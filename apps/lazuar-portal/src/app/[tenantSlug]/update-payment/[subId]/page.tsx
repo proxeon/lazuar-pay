@@ -63,8 +63,8 @@ export default async function UpdatePaymentPage({
               <div>
                 <h1 className="text-xl font-semibold text-foreground mb-2">Action Required</h1>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Your payment for <strong className="text-foreground">{data.product_name}</strong> failed. 
-                  {isSuspended ? " Your access has been temporarily suspended until the balance is cleared." : " Please update your payment method to avoid service interruption."}
+                  Payment is due for <strong className="text-foreground">{data.product_name}</strong>.
+                  {isSuspended ? " Your access has been temporarily suspended until the balance is cleared." : " Please complete payment to avoid service interruption."}
                 </p>
               </div>
             </div>
@@ -82,7 +82,7 @@ export default async function UpdatePaymentPage({
                 type="submit" 
                 className="w-full h-14 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors flex items-center justify-center gap-2"
               >
-                Update Payment Method
+                Complete Payment
               </button>
             </form>
           </div>

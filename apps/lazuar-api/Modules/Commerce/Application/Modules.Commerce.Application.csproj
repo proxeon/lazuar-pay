@@ -15,4 +15,8 @@
     <PackageReference Include="MediatR" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Lazuar.ModuleTests" />
+  </ItemGroup>
+
 </Project>

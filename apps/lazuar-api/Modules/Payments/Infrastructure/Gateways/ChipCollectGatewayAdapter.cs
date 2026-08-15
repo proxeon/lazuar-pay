@@ -193,11 +193,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 }
             }
 
-            string? tokenId = null;
-            if (root.TryGetProperty("is_recurring_token", out var isRecProp) && isRecProp.GetBoolean())
-            {
-                tokenId = purchaseId;
-            }
+            var (customerId, tokenId) = ExtractVaultIds(root);
 
             return Task.FromResult(new GatewayWebhookParsedResult(
                 Verified: true,
@@ -213,7 +209,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 FxRate: 1m,
                 BaseCurrency: currency,
                 Error: null,
-                GatewayCustomerId: null, 
+                GatewayCustomerId: customerId,
                 GatewayTokenId: tokenId
             ));
         }
@@ -346,6 +342,69 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
     public Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)
     {
         throw new InvalidOperationException("CHIP Collect does not provide a managed customer billing portal.");
+    }
+
+    /// <summary>
+    /// Recurring token from root or purchase; client.id from root.client or purchase.client.
+    /// Charge path only needs the token — if customer is missing, customer falls back to token.
+    /// </summary>
+    internal static (string? CustomerId, string? TokenId) ExtractVaultIds(JsonElement root)
+    {
+        var purchaseId = ReadString(root, "id");
+        var purchaseNode = root.TryGetProperty("purchase", out var pNode) ? pNode : default;
+
+        var isRecurring = IsTrue(root, "is_recurring_token") || IsTrue(purchaseNode, "is_recurring_token");
+        var recurringToken = ReadString(root, "recurring_token") ?? ReadString(purchaseNode, "recurring_token");
+
+        string? tokenId = null;
+        if (!string.IsNullOrWhiteSpace(recurringToken))
+        {
+            tokenId = recurringToken;
+        }
+        else if (isRecurring)
+        {
+            tokenId = purchaseId;
+        }
+
+        var customerId = ReadClientId(root) ?? ReadClientId(purchaseNode);
+        if (string.IsNullOrWhiteSpace(customerId) && !string.IsNullOrWhiteSpace(tokenId))
+        {
+            customerId = tokenId;
+        }
+
+        return (customerId, tokenId);
+    }
+
+    private static bool IsTrue(JsonElement element, string propertyName)
+    {
+        return element.ValueKind == JsonValueKind.Object
+               && element.TryGetProperty(propertyName, out var prop)
+               && prop.ValueKind == JsonValueKind.True;
+    }
+
+    private static string? ReadString(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty(propertyName, out var prop)
+            || prop.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var value = prop.GetString();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static string? ReadClientId(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object
+            || !element.TryGetProperty("client", out var client)
+            || client.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return ReadString(client, "id");
     }
 
 }

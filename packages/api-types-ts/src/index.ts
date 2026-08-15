@@ -1892,6 +1892,7 @@ export interface components {
             days_overdue?: number;
             vaulted_customer_id?: string;
             vaulted_token_id?: string;
+            is_reminder_only: boolean;
             dunning_campaign_name?: string;
             /** Format: int32 */
             current_dunning_step?: number;
@@ -2126,6 +2127,8 @@ export interface components {
             interval: string;
             is_active: boolean;
             gateway_name: string;
+            /** @description Computed from gateway_name. True only for Stripe and CHIP Collect. */
+            supports_off_session: boolean;
             fulfillment_targets: string[];
             checkout_configuration: components["schemas"]["Commerce.CheckoutConfigurationDto"];
         };

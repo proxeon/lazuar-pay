@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +22,20 @@ public class CommerceRepository : ICommerceRepository
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == id, ct);
+    }
+
+    public async Task<IReadOnlyList<Product>> GetProductsByIdsAsync(Guid organizationId, IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idList = ids.Distinct().ToList();
+        if (idList.Count == 0)
+        {
+            return Array.Empty<Product>();
+        }
+
+        return await _context.Products
+            .IgnoreQueryFilters()
+            .Where(p => p.OrganizationId == organizationId && idList.Contains(p.Id))
+            .ToListAsync(ct);
     }
 
     public async Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default)

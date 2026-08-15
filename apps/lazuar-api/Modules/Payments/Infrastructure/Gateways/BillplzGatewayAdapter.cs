@@ -247,7 +247,10 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
         string description, string receipt, Guid tenantId, Guid? dunningCampaignId = null)
     {
-        throw new NotSupportedException("Billplz does not support vaulted token off-session charges.");
+        _logger.LogWarning(
+            "Billplz does not support vaulted off-session charges for tenant {TenantId}; skipping.",
+            tenantId);
+        return Task.FromResult(false);
     }
 
     public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)

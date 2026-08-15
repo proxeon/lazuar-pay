@@ -170,4 +170,19 @@ public class SubscriptionRecoveryTests
         sub.CurrentDunningCampaignId.Should().BeNull();
         sub.LastCompletedDayOffset.Should().BeNull();
     }
+
+    [Test]
+    public void RecoverFromPayment_PreservesIsReminderOnly()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-10), isReminderOnly: true);
+        sub.MarkAsPastDue();
+
+        sub.IsReminderOnly.Should().BeTrue();
+
+        sub.RecoverFromPayment(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
+
+        sub.Status.Should().Be("ACTIVE");
+        sub.IsReminderOnly.Should().BeTrue();
+    }
 }

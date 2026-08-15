@@ -149,4 +149,22 @@ public class BillplzGatewayAdapterTests
         result.Should().NotBeNull();
         result.Success.Should().BeFalse();
     }
+
+    [Test]
+    public async Task ChargeOffSessionAsync_DoesNotThrow_ReturnsFalse()
+    {
+        var adapter = CreateAdapter();
+
+        var charged = await adapter.ChargeOffSessionAsync(
+            apiKey: "unused",
+            customerId: "cus",
+            tokenId: "tok",
+            amount: 10m,
+            currency: "MYR",
+            description: "renewal",
+            receipt: Guid.CreateVersion7().ToString(),
+            tenantId: Guid.CreateVersion7());
+
+        charged.Should().BeFalse();
+    }
 }

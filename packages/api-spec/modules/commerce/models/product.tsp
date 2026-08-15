@@ -17,6 +17,8 @@ model ProductDto {
   interval: string;
   is_active: boolean;
   gateway_name: string;
+  @doc("Computed from gateway_name. True only for Stripe and CHIP Collect.")
+  supports_off_session: boolean;
   fulfillment_targets: string[];
   checkout_configuration: CheckoutConfigurationDto;
 }

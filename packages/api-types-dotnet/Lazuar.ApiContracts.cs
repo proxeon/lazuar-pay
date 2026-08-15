@@ -1004,6 +1004,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("vaulted_token_id")]
         public string? Vaulted_token_id { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
+        public bool Is_reminder_only { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("dunning_campaign_name")]
         public string? Dunning_campaign_name { get; set; } = default!;
 
@@ -2072,6 +2075,13 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
         public string Gateway_name { get; set; } = default!;
+
+        /// <summary>
+        /// Computed from gateway_name. True only for Stripe and CHIP Collect.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("supports_off_session")]
+        public bool Supports_off_session { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();

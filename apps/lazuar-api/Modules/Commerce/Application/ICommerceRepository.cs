@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Modules.Commerce.Domain.Aggregates;
@@ -9,6 +10,7 @@ namespace Modules.Commerce.Application;
 public interface ICommerceRepository
 {
     Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<Product>> GetProductsByIdsAsync(Guid organizationId, IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default);
     Task<Coupon?> GetCouponByIdAsync(Guid id, CancellationToken ct = default);
     Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default);

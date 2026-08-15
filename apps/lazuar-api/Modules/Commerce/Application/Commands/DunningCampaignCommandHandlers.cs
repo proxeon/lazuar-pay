@@ -18,6 +18,14 @@ public class CreateDunningCampaignCommandHandler : ICommandHandler<CreateDunning
 
     public async Task<Guid> Handle(CreateDunningCampaignCommand request, CancellationToken ct)
     {
+        await DunningCampaignAutoChargeGuard.EnsureAllowedAsync(
+            _repository,
+            request.OrganizationId,
+            request.TargetProductIds,
+            request.TargetPaymentMethods,
+            request.Steps,
+            ct);
+
         var campaign = new DunningCampaign(
             request.OrganizationId,
             request.Name,
@@ -52,6 +60,14 @@ public class UpdateDunningCampaignCommandHandler : ICommandHandler<UpdateDunning
     {
         var campaign = await _repository.GetDunningCampaignByIdAsync(request.OrganizationId, request.CampaignId, ct);
         if (campaign == null) throw new InvalidOperationException("Dunning campaign not found.");
+
+        await DunningCampaignAutoChargeGuard.EnsureAllowedAsync(
+            _repository,
+            request.OrganizationId,
+            request.TargetProductIds,
+            request.TargetPaymentMethods,
+            request.Steps,
+            ct);
 
         campaign.UpdateDetails(
             request.Name,
