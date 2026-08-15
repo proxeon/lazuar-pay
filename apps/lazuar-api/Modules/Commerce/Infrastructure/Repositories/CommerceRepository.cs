@@ -86,6 +86,19 @@ public class CommerceRepository : ICommerceRepository
             .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
+    public async Task<Subscription?> GetNewestSubscriptionForClientAsync(
+        Guid organizationId,
+        Guid clientProfileId,
+        CancellationToken ct = default)
+    {
+        return await _context.Subscriptions
+            .IgnoreQueryFilters()
+            .Where(s => s.OrganizationId == organizationId && s.ClientProfileId == clientProfileId)
+            .OrderByDescending(s => s.CreatedAt)
+            .ThenByDescending(s => s.Id)
+            .FirstOrDefaultAsync(ct);
+    }
+
     public async Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Orders.FirstOrDefaultAsync(o => o.Id == id, ct);

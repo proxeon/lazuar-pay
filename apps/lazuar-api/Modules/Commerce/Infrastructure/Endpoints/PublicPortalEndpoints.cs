@@ -38,6 +38,16 @@ public static class PublicPortalEndpoints
             return TypedResults.Ok(portalData);
         });
 
+        group.MapPost("/{tenantSlug}/portal/magic-link", async Task<Ok<StatusResponse>> (
+            string tenantSlug,
+            [FromBody] RequestPortalMagicLinkRequest? body,
+            IMediator mediator) =>
+        {
+            // Always 200. Existing public-route throttle (if configured) is the only rate limit.
+            await mediator.Send(new RequestPortalMagicLinkCommand(tenantSlug, body?.Email ?? ""));
+            return TypedResults.Ok(new StatusResponse { Status = "ok" });
+        });
+
         group.MapPost("/{tenantSlug}/portal/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<string>, UnauthorizedHttpResult, NotFound>> (
             string tenantSlug,
             [FromQuery] string token,

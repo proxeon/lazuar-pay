@@ -35,7 +35,13 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
         if (string.IsNullOrEmpty(@event.CustomerEmail) || string.IsNullOrEmpty(@event.TenantSlug))
             return;
 
-        var templateName = @event.DocumentType == "Draft Quotation" ? "Quotation Ready" : "Official Receipt";
+        var templateName = @event.DocumentType switch
+        {
+            "Official Receipt" => "Official Receipt",
+            "Draft Quotation" => "Quotation Ready",
+            _ => null
+        };
+        if (templateName == null) return;
 
         var template = await _dbContext.MessageTemplates
             .IgnoreQueryFilters()
@@ -76,5 +82,6 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
             whatsappBody,
             template.Channel ?? "EMAIL"
         ));
+        await _dbContext.SaveChangesAsync();
     }
 }

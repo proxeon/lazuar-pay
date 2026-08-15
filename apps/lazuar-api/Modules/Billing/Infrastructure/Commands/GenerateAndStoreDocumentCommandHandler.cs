@@ -56,8 +56,8 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         var profile = await _dbContext.TenantBillingProfiles
             .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId, ct);
 
-        var customer = await _commerceDocumentLookup.GetCustomerByGatewayTransactionAsync(
-            request.OrganizationId, entry.ReferenceId, ct);
+        var customer = await _commerceDocumentLookup.GetCustomerForDocumentAsync(
+            request.OrganizationId, entry.ReferenceId, request.CorrelationId, ct);
         var customerName = customer?.Name ?? "Customer";
         var customerEmail = customer?.Email ?? "";
 

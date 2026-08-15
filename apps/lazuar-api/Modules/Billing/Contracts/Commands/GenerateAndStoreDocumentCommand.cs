@@ -7,7 +7,8 @@ public record GenerateAndStoreDocumentCommand(
     Guid OrganizationId,
     Guid LedgerEntryId,
     string DocumentType,
-    string? LhdnQrLink = null) : ICommand
+    string? LhdnQrLink = null,
+    string? CorrelationId = null) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

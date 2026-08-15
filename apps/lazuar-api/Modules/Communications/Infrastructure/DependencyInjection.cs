@@ -8,6 +8,7 @@ using BuildingBlocks.Infrastructure;
 using BuildingBlocks.Infrastructure.Observability;
 using Modules.Commerce.Contracts.Events;
 using Modules.Billing.Contracts.Events;
+using Modules.Payments.Contracts.Events;
 using Modules.One.Contracts;
 using Modules.CRM.Contracts;
 using Modules.Communications.Application;
@@ -52,6 +53,8 @@ public static class DependencyInjection
         services.AddTransient<DocumentPublishedIntegrationEventHandler>();
         services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
         services.AddTransient<OrderCompletedDigitalDeliveryHandler>();
+        services.AddTransient<GatewayPaymentFailedIntegrationEventHandler>();
+        services.AddTransient<PortalAccessEmailHandlers>();
 
         return services;
     }
@@ -60,12 +63,14 @@ public static class DependencyInjection
     {
         var eventBus = app.ApplicationServices.GetRequiredService<IEventBusSubscriptions>();
         eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, AppEntitlementGrantedIntegrationEventHandler>();
-        eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, LifecycleEventHandlers>();
         eventBus.Subscribe<SubscriptionCanceledIntegrationEvent, LifecycleEventHandlers>();
         eventBus.Subscribe<FulfillmentRequestedIntegrationEvent, FulfillmentRequestedIntegrationEventHandler>();
         eventBus.Subscribe<DocumentPublishedIntegrationEvent, DocumentPublishedIntegrationEventHandler>();
         eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
         eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedDigitalDeliveryHandler>();
+        eventBus.Subscribe<GatewayPaymentFailedIntegrationEvent, GatewayPaymentFailedIntegrationEventHandler>();
+        eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, PortalAccessEmailHandlers>();
+        eventBus.Subscribe<PortalMagicLinkRequestedIntegrationEvent, PortalAccessEmailHandlers>();
         return app;
     }
 }

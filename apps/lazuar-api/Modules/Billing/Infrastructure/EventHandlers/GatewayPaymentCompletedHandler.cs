@@ -86,8 +86,28 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
                 entry.Id,
-                "Official Receipt"
+                "Official Receipt",
+                CorrelationId: ResolveDocumentCorrelation(@event)
             ));
         }
+    }
+
+    private static string? ResolveDocumentCorrelation(GatewayPaymentCompletedIntegrationEvent @event)
+    {
+        if (@event.Metadata != null
+            && @event.Metadata.TryGetValue("subscription_id", out var subscriptionId)
+            && !string.IsNullOrWhiteSpace(subscriptionId))
+        {
+            return subscriptionId;
+        }
+
+        if (@event.Metadata != null
+            && @event.Metadata.TryGetValue("receipt", out var receipt)
+            && !string.IsNullOrWhiteSpace(receipt))
+        {
+            return receipt;
+        }
+
+        return null;
     }
 }

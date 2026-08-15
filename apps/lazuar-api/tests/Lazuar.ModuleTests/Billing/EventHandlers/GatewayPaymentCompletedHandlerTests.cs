@@ -50,4 +50,41 @@ public class GatewayPaymentCompletedHandlerTests
             mediator.Send(Arg.Any<GenerateAndStoreDocumentCommand>(), Arg.Any<CancellationToken>());
         });
     }
+
+    [Test]
+    public async Task HandleAsync_WhenB2C_PassesSubscriptionIdAsDocumentCorrelation()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator);
+        var sessionId = Guid.CreateVersion7();
+
+        var @event = new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: Guid.CreateVersion7(),
+            GatewayTransactionId: "txn_123",
+            AmountPaid: 100m,
+            Currency: "MYR",
+            GatewayFee: 2m,
+            TaxAmount: 0m,
+            NetAmount: 98m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string>
+            {
+                { "is_b2b_required", "false" },
+                { "subscription_id", sessionId.ToString() }
+            }
+        );
+
+        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("RCPT-2026");
+
+        await handler.HandleAsync(@event);
+
+        await mediator.Received().Send(
+            Arg.Is<GenerateAndStoreDocumentCommand>(c => c.CorrelationId == sessionId.ToString()),
+            Arg.Any<CancellationToken>());
+    }
 }

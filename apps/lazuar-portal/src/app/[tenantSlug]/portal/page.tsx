@@ -1,5 +1,6 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { serverClient } from "../../../modules/core/lib/server-client";
+import { RequestMagicLinkForm } from "../../../modules/portal/components/RequestMagicLinkForm";
 import { ShieldCheck /* [MVP-HIDE] , FileText */ } from "lucide-react";
 
 export default async function AggregatedPortalPage({
@@ -20,8 +21,9 @@ export default async function AggregatedPortalPage({
         <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
           <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Please log in using a secure magic link sent to your email to manage your subscriptions and downloads.
+            Enter the email on your subscription and we will send a secure link that expires in 24 hours.
           </p>
+          <RequestMagicLinkForm tenantSlug={tenantSlug} />
         </div>
       );
     }

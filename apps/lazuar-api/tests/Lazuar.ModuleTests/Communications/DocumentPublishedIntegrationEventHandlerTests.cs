@@ -161,6 +161,40 @@ public class DocumentPublishedIntegrationEventHandlerTests
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<DispatchMessageIntegrationEvent>());
     }
 
+    [Test]
+    public async Task DocumentPublished_TaxInvoice_DoesNotDispatchOfficialReceipt()
+    {
+        await using var db = CreateDb();
+        var orgId = Guid.CreateVersion7();
+
+        var def = DefaultMessageTemplates.GetByName("Official Receipt")!;
+        db.MessageTemplates.Add(DefaultMessageTemplates.CreateEntity(orgId, def));
+        await db.SaveChangesAsync();
+
+        var eventBus = Substitute.For<IEventBus>();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Secret"] = "test-jwt-secret-for-document-link-signing",
+                ["App:ApiBaseUrl"] = "https://api.test/api/v1"
+            })
+            .Build();
+
+        var handler = new DocumentPublishedIntegrationEventHandler(db, config, eventBus);
+
+        await handler.HandleAsync(new DocumentPublishedIntegrationEvent(
+            orgId,
+            Guid.CreateVersion7(),
+            DocumentType: "Tax Invoice",
+            StoragePath: "vault/x.pdf",
+            TenantSlug: "acme",
+            BusinessName: "Acme",
+            CustomerName: "Buyer",
+            CustomerEmail: "buyer@example.com"));
+
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<DispatchMessageIntegrationEvent>());
+    }
+
     private static CommunicationsDbContext CreateDb()
         => new(
             InMemoryDb.CreateOptions<CommunicationsDbContext>(),

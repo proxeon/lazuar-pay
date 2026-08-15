@@ -52,7 +52,8 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
         await _mediator.Send(new GenerateAndStoreDocumentCommand(
             @event.OrganizationId,
             entry.Id,
-            "Official Receipt"
+            "Official Receipt",
+            CorrelationId: @event.SubscriptionId.ToString()
         ));
     }
 }

@@ -247,7 +247,7 @@ Keys live in `one.ApiCredentials`. Scopes today: `lhdn.documents:*`, `payments.c
 | ID | Feature | Wave | Lazuar | Billplz | CHIP | HitPay | Xendit | Stripe | Paddle | Chargebee | Polar |
 |----|---------|------|--------|---------|------|--------|--------|--------|--------|-----------|-------|
 | LP-150 | BYO email (Resend) | — | Y | N | N | N | N | — | — | P | — |
-| LP-151 | Receipt / failed-pay / magic-link email | 0 | P | P | P | Y | P | Y | Y | Y | Y |
+| LP-151 | Receipt / failed-pay / magic-link email | 0 | Y | P | P | Y | P | Y | Y | Y | Y |
 | LP-152 | Editable notification templates | — | Y | N | N | P | N | P | P | Y | P |
 | LP-153 | Variable resolution actually works | 0 | P | — | — | Y | P | Y | Y | Y | Y |
 | LP-154 | Suppression (bounce / complaint) | 1 | P | N | N | P | P | Y | Y | P | P |

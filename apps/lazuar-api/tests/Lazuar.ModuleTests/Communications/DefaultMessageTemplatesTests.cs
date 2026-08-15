@@ -21,7 +21,8 @@ public class DefaultMessageTemplatesTests
             "Subscription Cancelled",
             "Digital Product Delivery",
             "Quotation Ready",
-            "Official Receipt"
+            "Official Receipt",
+            "Portal Access"
         });
 
         names.Should().NotContain("Community Welcome");
@@ -37,6 +38,7 @@ public class DefaultMessageTemplatesTests
         DefaultMessageTemplates.OrphanNames.Should().NotContain("Quotation Ready");
         DefaultMessageTemplates.OrphanNames.Should().NotContain("Official Receipt");
         DefaultMessageTemplates.OrphanNames.Should().NotContain("Digital Product Delivery");
+        DefaultMessageTemplates.OrphanNames.Should().NotContain("Portal Access");
 
         DefaultMessageTemplates.OrphanNames.Should().Contain("Abandoned Cart (12h)");
         DefaultMessageTemplates.OrphanNames.Should().Contain("Community Welcome");
@@ -60,6 +62,16 @@ public class DefaultMessageTemplatesTests
         template.EmailBody.Should().Be(def.EmailBody);
         template.WhatsAppBody.Should().Be(def.WhatsAppBody);
         template.IsDefault.Should().BeTrue();
+    }
+
+    [Test]
+    public void PortalAccess_IsEmailOnly_AndRequiresMagicLink()
+    {
+        var def = DefaultMessageTemplates.GetByName("Portal Access")!;
+        def.Channel.Should().Be("EMAIL");
+        def.RequiredVariables.Should().Contain("{{portal_magic_link}}");
+        def.EmailBody.Should().Contain("{{portal_magic_link}}");
+        def.EmailBody.Should().NotContain("download your file");
     }
 
     [Test]

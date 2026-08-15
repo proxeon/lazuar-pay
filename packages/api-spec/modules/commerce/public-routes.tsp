@@ -60,6 +60,18 @@ interface PublicCommerceOperations {
     @body body: CancelPortalRequest,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  /**
+   * Request a 24h portal magic-link email. Always 200.
+   * Sends only when the email matches a subscription in the workspace.
+   */
+  @post
+  @route("/{tenantSlug}/portal/magic-link")
+  @doc("Email a 24h portal magic link when the address matches a subscription. Always returns 200.")
+  requestPortalMagicLink(
+    @path tenantSlug: string,
+    @body body: RequestPortalMagicLinkRequest,
+  ): LazuarApi.Core.StatusResponse;
+
   /** Poll checkout session activation after payment redirect (tenant-bound; no magic token). */
   @get
   @route("/{tenantSlug}/checkout/{sessionId}/status")

@@ -26,9 +26,32 @@ public interface ICommerceDocumentLookup
         Guid organizationId,
         Guid sessionId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Resolves customer display for a Billing document. Prefers an existing transaction log
+    /// email, then checkout-session CRM (first pay), then subscription CRM (off-session / manual).
+    /// </summary>
+    Task<CommerceCustomerDisplay?> GetCustomerForDocumentAsync(
+        Guid organizationId,
+        string referenceId,
+        string? correlationId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Subscription + product snapshot for Communications (failed-pay / portal mail).
+    /// </summary>
+    Task<CommerceSubscriptionCommsContext?> GetSubscriptionCommsContextAsync(
+        Guid organizationId,
+        Guid subscriptionId,
+        CancellationToken ct = default);
 }
 
 public record CommerceCustomerDisplay(string Name, string Email);
+
+public record CommerceSubscriptionCommsContext(
+    Guid ClientProfileId,
+    string Status,
+    string? ProductName);
 
 public record DraftCheckoutSessionDisplay(
     string CustomerName,

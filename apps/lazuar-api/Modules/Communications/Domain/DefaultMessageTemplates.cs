@@ -65,6 +65,15 @@ public static class DefaultMessageTemplates
             "Hi {{customer_name}},\n\nThank you for your payment. Your official receipt and tax invoice (if applicable) have been generated. You can download the document securely using the link below:\n\n[Download Receipt]({{document_link}})\n\n— {{business_name}}",
             "Hi {{customer_name}}, thank you for your payment to {{business_name}}. You can download your official receipt here: {{document_link}}",
             ["{{document_link}}"],
+            ["{{customer_name}}", "{{business_name}}"]),
+
+        new Definition(
+            "Portal Access",
+            "EMAIL",
+            "Access your {{business_name}} dashboard",
+            "Hi {{customer_name}},\n\nUse the secure link below to open your dashboard. This link expires in 24 hours.\n\n[Open Dashboard]({{portal_magic_link}})\n\n— {{business_name}}",
+            "",
+            ["{{portal_magic_link}}"],
             ["{{customer_name}}", "{{business_name}}"])
     ];
 

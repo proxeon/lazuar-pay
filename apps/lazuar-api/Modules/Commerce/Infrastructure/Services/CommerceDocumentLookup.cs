@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts;
 using Modules.CRM.Contracts;
@@ -18,13 +20,16 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 {
     private readonly ISqlConnectionFactory _connectionFactory;
     private readonly ICrmQueryService _crmQueryService;
+    private readonly CommerceDbContext _dbContext;
 
     public CommerceDocumentLookup(
         [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
-        ICrmQueryService crmQueryService)
+        ICrmQueryService crmQueryService,
+        CommerceDbContext dbContext)
     {
         _connectionFactory = connectionFactory;
         _crmQueryService = crmQueryService;
+        _dbContext = dbContext;
     }
 
     public async Task<CommerceCustomerDisplay?> GetCustomerByGatewayTransactionAsync(
@@ -79,5 +84,131 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
             CustomerName: profile?.Full_name ?? "Customer",
             CustomerEmail: profile?.Email ?? "",
             AdHocLineItemsJson: (string?)sessionData.AdHocLineItems);
+    }
+
+    public async Task<CommerceCustomerDisplay?> GetCustomerForDocumentAsync(
+        Guid organizationId,
+        string referenceId,
+        string? correlationId,
+        CancellationToken ct = default)
+    {
+        var fromLog = await FindCustomerOnTransactionLogAsync(organizationId, referenceId, ct);
+        if (fromLog != null && !string.IsNullOrWhiteSpace(fromLog.Email))
+        {
+            return fromLog;
+        }
+
+        foreach (var candidate in DistinctGuidCandidates(correlationId, referenceId))
+        {
+            var fromSession = await FindCustomerOnCheckoutSessionAsync(organizationId, candidate, ct);
+            if (fromSession != null && !string.IsNullOrWhiteSpace(fromSession.Email))
+            {
+                return fromSession;
+            }
+
+            var fromSubscription = await FindCustomerOnSubscriptionAsync(organizationId, candidate, ct);
+            if (fromSubscription != null && !string.IsNullOrWhiteSpace(fromSubscription.Email))
+            {
+                return fromSubscription;
+            }
+        }
+
+        return fromLog;
+    }
+
+    public async Task<CommerceSubscriptionCommsContext?> GetSubscriptionCommsContextAsync(
+        Guid organizationId,
+        Guid subscriptionId,
+        CancellationToken ct = default)
+    {
+        var sub = await _dbContext.Subscriptions
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.OrganizationId == organizationId, ct);
+
+        if (sub == null) return null;
+
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+
+        return new CommerceSubscriptionCommsContext(sub.ClientProfileId, sub.Status, product?.Name);
+    }
+
+    private async Task<CommerceCustomerDisplay?> FindCustomerOnTransactionLogAsync(
+        Guid organizationId,
+        string referenceId,
+        CancellationToken ct)
+    {
+        var log = await _dbContext.TransactionLogs
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                t => t.OrganizationId == organizationId
+                     && (t.ExternalReference == referenceId || t.Id.ToString() == referenceId),
+                ct);
+
+        if (log == null) return null;
+
+        return new CommerceCustomerDisplay(
+            string.IsNullOrWhiteSpace(log.CustomerName) ? "Customer" : log.CustomerName,
+            log.CustomerEmail ?? "");
+    }
+
+    private async Task<CommerceCustomerDisplay?> FindCustomerOnCheckoutSessionAsync(
+        Guid organizationId,
+        Guid sessionId,
+        CancellationToken ct)
+    {
+        var session = await _dbContext.CheckoutSessions
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId, ct);
+
+        if (session == null) return null;
+
+        return await FromCrmAsync(session.ClientProfileId);
+    }
+
+    private async Task<CommerceCustomerDisplay?> FindCustomerOnSubscriptionAsync(
+        Guid organizationId,
+        Guid subscriptionId,
+        CancellationToken ct)
+    {
+        var sub = await _dbContext.Subscriptions
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.OrganizationId == organizationId, ct);
+
+        if (sub == null) return null;
+
+        return await FromCrmAsync(sub.ClientProfileId);
+    }
+
+    private async Task<CommerceCustomerDisplay?> FromCrmAsync(Guid clientProfileId)
+    {
+        if (clientProfileId == Guid.Empty) return null;
+
+        var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        if (profile == null) return null;
+
+        return new CommerceCustomerDisplay(
+            string.IsNullOrWhiteSpace(profile.Full_name) ? "Customer" : profile.Full_name,
+            profile.Email ?? "");
+    }
+
+    private static IEnumerable<Guid> DistinctGuidCandidates(string? correlationId, string referenceId)
+    {
+        var seen = new HashSet<Guid>();
+        if (Guid.TryParse(correlationId, out var correlation) && seen.Add(correlation))
+        {
+            yield return correlation;
+        }
+
+        if (Guid.TryParse(referenceId, out var reference) && seen.Add(reference))
+        {
+            yield return reference;
+        }
     }
 }

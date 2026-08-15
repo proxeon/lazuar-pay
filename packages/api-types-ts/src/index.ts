@@ -1692,6 +1692,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/commerce/{tenantSlug}/portal/magic-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Email a 24h portal magic link when the address matches a subscription. Always returns 200. */
+        post: operations["PublicCommerceOperations_requestPortalMagicLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/commerce/{tenantSlug}/products/{slug}": {
         parameters: {
             query?: never;
@@ -2200,6 +2217,9 @@ export interface components {
             subscription_id?: string;
             /** Format: double */
             tax_amount?: number;
+        };
+        "Commerce.RequestPortalMagicLinkRequest": {
+            email: string;
         };
         "Commerce.SavePaymentConfigRequestDto": {
             gateway_type: string;
@@ -11751,6 +11771,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicCommerceOperations_requestPortalMagicLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Commerce.RequestPortalMagicLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
                 };
             };
         };

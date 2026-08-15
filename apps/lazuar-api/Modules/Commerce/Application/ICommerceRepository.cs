@@ -17,6 +17,7 @@ public interface ICommerceRepository
     Task<Coupon?> GetCouponByCodeWithLockAsync(Guid organizationId, string code, CancellationToken ct = default);
     Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default);
     Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Subscription?> GetNewestSubscriptionForClientAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default);
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
     Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid id, CancellationToken ct = default);
     Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default);

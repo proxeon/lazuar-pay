@@ -26,16 +26,24 @@ public class AppEntitlementGrantedIntegrationEventHandler : IIntegrationEventHan
     {
         if (@event.AppId != "COMMUNITY" && @event.AppId != "COMMERCE" && @event.AppId != "VAULT") return;
 
-        var hasTemplates = await _dbContext.MessageTemplates
+        var existingNames = await _dbContext.MessageTemplates
             .IgnoreQueryFilters()
-            .AnyAsync(t => t.OrganizationId == @event.TenantId);
+            .Where(t => t.OrganizationId == @event.TenantId)
+            .Select(t => t.Name)
+            .ToListAsync();
 
-        if (!hasTemplates)
+        var missing = DefaultMessageTemplates.All
+            .Where(d => existingNames.All(n => !string.Equals(n, d.Name, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        if (missing.Count == 0) return;
+
+        foreach (var definition in missing)
         {
-            var templates = DefaultMessageTemplates.CreateAllForTenant(@event.TenantId).ToList();
-            _dbContext.MessageTemplates.AddRange(templates);
-            await _eventBus.PublishAsync(new DefaultTemplatesSeededIntegrationEvent(@event.TenantId));
-            await _dbContext.SaveChangesAsync();
+            _dbContext.MessageTemplates.Add(DefaultMessageTemplates.CreateEntity(@event.TenantId, definition));
         }
+
+        await _eventBus.PublishAsync(new DefaultTemplatesSeededIntegrationEvent(@event.TenantId));
+        await _dbContext.SaveChangesAsync();
     }
 }

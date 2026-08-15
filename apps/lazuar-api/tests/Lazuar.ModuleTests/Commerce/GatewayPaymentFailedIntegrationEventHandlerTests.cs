@@ -274,6 +274,20 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
     }
 
     [Test]
+    public async Task HandleAsync_DoesNotPublishDispatchMessage()
+    {
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), _productId);
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow);
+        sub.StoreVaultedToken("c", "t");
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(FailedEvent(sub.Id, "pi_no_comms"));
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<Modules.Messaging.Contracts.DispatchMessageIntegrationEvent>());
+    }
+
+    [Test]
     public async Task HandleAsync_FirstFail_DispatchesDay0Email_DoesNotOffSession()
     {
         var product = CreateProduct(_orgId);

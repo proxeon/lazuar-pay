@@ -1,10 +1,13 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
 using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Modules.Communications.Contracts.Events;
+using Modules.Communications.Domain;
+using Modules.Communications.Domain.Aggregates;
 using Modules.Communications.Infrastructure;
 using Modules.Communications.Infrastructure.EventHandlers;
 using Modules.One.Contracts;
@@ -57,6 +60,63 @@ public class AppEntitlementGrantedIntegrationEventHandlerTests
         await handler.HandleAsync(new AppEntitlementGrantedIntegrationEvent(tenantId, "COMMERCE"));
         await handler.HandleAsync(new AppEntitlementGrantedIntegrationEvent(tenantId, "COMMERCE"));
 
+        (await db.OutboxMessages.CountAsync()).Should().Be(1);
+    }
+
+    [Test]
+    public async Task Entitlement_EmptyOrg_SeedsFullCatalogIncludingPortalAccess()
+    {
+        await using var db = new CommunicationsDbContext(
+            InMemoryDb.CreateOptions<CommunicationsDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
+
+        var tenantId = Guid.CreateVersion7();
+        var handler = new AppEntitlementGrantedIntegrationEventHandler(
+            db,
+            new OutboxEventBus<CommunicationsDbContext>(db));
+
+        await handler.HandleAsync(new AppEntitlementGrantedIntegrationEvent(tenantId, "COMMERCE"));
+
+        var names = await db.MessageTemplates.IgnoreQueryFilters()
+            .Where(t => t.OrganizationId == tenantId)
+            .Select(t => t.Name)
+            .ToListAsync();
+
+        names.Should().BeEquivalentTo(DefaultMessageTemplates.All.Select(d => d.Name));
+        names.Should().Contain("Portal Access");
+    }
+
+    [Test]
+    public async Task Entitlement_OrphanOnlyOrg_InsertsMissingCatalogNames()
+    {
+        await using var db = new CommunicationsDbContext(
+            InMemoryDb.CreateOptions<CommunicationsDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
+
+        var tenantId = Guid.CreateVersion7();
+        db.MessageTemplates.Add(new MessageTemplate(
+            tenantId, "Community Welcome", "EMAIL", "Welcome", "Hi", "", true));
+        await db.SaveChangesAsync();
+
+        var handler = new AppEntitlementGrantedIntegrationEventHandler(
+            db,
+            new OutboxEventBus<CommunicationsDbContext>(db));
+
+        await handler.HandleAsync(new AppEntitlementGrantedIntegrationEvent(tenantId, "COMMERCE"));
+
+        var names = await db.MessageTemplates.IgnoreQueryFilters()
+            .Where(t => t.OrganizationId == tenantId)
+            .Select(t => t.Name)
+            .ToListAsync();
+
+        names.Should().Contain("Community Welcome");
+        names.Should().Contain("Official Receipt");
+        names.Should().Contain("Portal Access");
+        names.Should().Contain("Payment Failed");
         (await db.OutboxMessages.CountAsync()).Should().Be(1);
     }
 }

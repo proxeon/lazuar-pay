@@ -34,5 +34,7 @@ public class CommerceDocumentLookupBoundaryTests
         Assert.That(text, Does.Contain("ICrmQueryService"));
         Assert.That(text, Does.Contain("GetClientProfileAsync"));
         Assert.That(text, Does.Contain("ClientProfileId"));
+        Assert.That(text, Does.Contain("GetCustomerForDocumentAsync"));
+        Assert.That(text, Does.Contain("Subscriptions"));
     }
 }

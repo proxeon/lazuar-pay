@@ -34,6 +34,10 @@ model CancelPortalRequest {
   subscription_id: string; // GUID
 }
 
+model RequestPortalMagicLinkRequest {
+  email: string;
+}
+
 model ArrearsSummaryDto {
   product_name: string;
   amount: float64;

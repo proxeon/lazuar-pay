@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\One\Contracts\Modules.One.Contracts.csproj" />
     <ProjectReference Include="..\..\Messaging\Contracts\Modules.Messaging.Contracts.csproj" />
     <ProjectReference Include="..\..\Billing\Contracts\Modules.Billing.Contracts.csproj" />
+    <ProjectReference Include="..\..\Payments\Contracts\Modules.Payments.Contracts.csproj" />
     <ProjectReference Include="..\Application\Modules.Communications.Application.csproj" />
   </ItemGroup>
 
