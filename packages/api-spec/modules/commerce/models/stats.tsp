@@ -20,6 +20,10 @@ model CommerceStatsDto {
   churn_rate_percentage: float64;
   average_revenue_per_user: float64;
   total_revenue_collected: float64;
+  /** Lifetime SUM of commerce.DunningCampaigns.RecoveredRevenue (not monthly). */
+  recovered_revenue: float64;
+  /** Lifetime SUM of commerce.DunningCampaigns.SavedSubscriptions. */
+  saved_subscriptions: int32;
   cash_flow_trend: CashFlowTrendDto[];
   payment_methods: PaymentMethodDto[];
 }

@@ -1870,6 +1870,16 @@ export interface components {
             average_revenue_per_user: number;
             /** Format: double */
             total_revenue_collected: number;
+            /**
+             * Format: double
+             * @description Lifetime SUM of commerce.DunningCampaigns.RecoveredRevenue (not monthly).
+             */
+            recovered_revenue: number;
+            /**
+             * Format: int32
+             * @description Lifetime SUM of commerce.DunningCampaigns.SavedSubscriptions.
+             */
+            saved_subscriptions: number;
             cash_flow_trend: components["schemas"]["Commerce.CashFlowTrendDto"][];
             payment_methods: components["schemas"]["Commerce.PaymentMethodDto"][];
         };

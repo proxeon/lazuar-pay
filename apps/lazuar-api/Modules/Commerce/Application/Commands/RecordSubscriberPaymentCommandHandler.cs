@@ -66,6 +66,11 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
         var wasSuspended = subscription.Status == "SUSPENDED";
         var wasInArrears = subscription.Status is "PAST_DUE" or "SUSPENDED";
 
+        // Capture before Resume / RecoverFromPayment / ClearDunning.
+        var recoveryCampaignId = DunningRecoveryAttribution.ResolveCampaignId(
+            wasInArrears,
+            subscription.CurrentDunningCampaignId);
+
         var periodEnd = DateTime.UtcNow;
         var nextBilling = product.Interval == "yr"
             ? DateTime.UtcNow.AddYears(1)
@@ -84,6 +89,12 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
             // ACTIVE renewal: advance period and clear any residual dunning pause.
             subscription.Activate(periodEnd, nextBilling, subscription.IsReminderOnly);
             subscription.ClearDunning();
+        }
+
+        if (recoveryCampaignId is Guid campaignId && amount > 0 && method != "COMPED")
+        {
+            var campaign = await _repository.GetDunningCampaignByIdAsync(request.OrganizationId, campaignId, ct);
+            campaign?.RecordRecovery(amount);
         }
 
         var clientProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);

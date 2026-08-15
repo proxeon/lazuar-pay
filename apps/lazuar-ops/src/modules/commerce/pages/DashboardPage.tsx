@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, CreditCard, Mail } from "lucide-react";
+import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, CreditCard, Mail, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { client } from "../../../lib/api-client";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -69,6 +69,7 @@ export default function DashboardPage() {
     { label: "Active Subscribers", value: stats?.active_subscribers || 0, icon: Users },
     { label: "Past Due", value: stats?.past_due_subscribers || 0, icon: AlertTriangle, alert: (stats?.past_due_subscribers || 0) > 0 },
     { label: "Cancellation Rate", value: `${stats?.churn_rate_percentage || 0}%`, icon: Activity },
+    { label: "Recovered (lifetime)", value: formatMYR(stats?.recovered_revenue || 0), icon: RotateCcw },
   ];
 
   // FIX: Check if the array is empty or if no gateways have a valid API key
@@ -113,7 +114,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {topMetrics.map((kpi, i) => (
             <div key={i} className={cn(
               "bg-white border p-4 flex flex-col justify-between",
@@ -132,6 +133,12 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+        <p className="text-[10px] text-[#71717a] -mt-2">
+          Recovered is campaign-lifetime cash collected while PAST_DUE or SUSPENDED, not this month.{" "}
+          <Link to="/commerce/dunning-campaigns" className="underline underline-offset-2 hover:text-[#09090b]">
+            Dunning Campaigns
+          </Link>
+        </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 bg-white border border-[#e5e5e5] p-5 flex flex-col h-[320px]">

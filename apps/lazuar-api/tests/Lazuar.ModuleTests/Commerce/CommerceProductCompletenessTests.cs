@@ -318,15 +318,17 @@ public class CommerceProductCompletenessTests
         var orgId = Guid.CreateVersion7();
         var product = CreateProduct(orgId);
         var clientId = Guid.CreateVersion7();
+        var campaign = new DunningCampaign(orgId, "Default recovery", "SUSPEND", 7);
         var sub = new Subscription(orgId, clientId, product.Id);
         sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-10));
         sub.MarkAsPastDue();
-        sub.AssignDunningCampaign(Guid.CreateVersion7());
+        sub.AssignDunningCampaign(campaign.Id);
 
         var logs = new List<CommerceTransactionLog>();
         var repository = Substitute.For<ICommerceRepository>();
         repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
         repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetDunningCampaignByIdAsync(orgId, campaign.Id, Arg.Any<CancellationToken>()).Returns(campaign);
         repository.When(r => r.AddTransactionLog(Arg.Any<CommerceTransactionLog>())).Do(ci => logs.Add(ci.Arg<CommerceTransactionLog>()));
 
         var eventBus = Substitute.For<IEventBus>();
@@ -344,10 +346,74 @@ public class CommerceProductCompletenessTests
 
         sub.Status.Should().Be("ACTIVE");
         sub.CurrentDunningCampaignId.Should().BeNull();
+        campaign.RecoveredRevenue.Should().Be(100m);
+        campaign.SavedSubscriptions.Should().Be(1);
         logs.Should().HaveCount(1);
         logs[0].RecordedByName.Should().Be("BANK_TRANSFER");
         await eventBus.Received().PublishAsync(Arg.Any<ManualSubscriberEnrolledIntegrationEvent>());
         await eventBus.Received().PublishAsync(Arg.Any<SubscriptionActivatedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task RecordSubscriberPayment_FromPastDue_Comped_DoesNotRecordRecovery()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId);
+        var clientId = Guid.CreateVersion7();
+        var campaign = new DunningCampaign(orgId, "Default recovery", "SUSPEND", 7);
+        var sub = new Subscription(orgId, clientId, product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-10));
+        sub.MarkAsPastDue();
+        sub.AssignDunningCampaign(campaign.Id);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetDunningCampaignByIdAsync(orgId, campaign.Id, Arg.Any<CancellationToken>()).Returns(campaign);
+
+        var handler = new RecordSubscriberPaymentCommandHandler(
+            repository,
+            Substitute.For<IEventBus>(),
+            Substitute.For<ICrmQueryService>());
+        await handler.Handle(new RecordSubscriberPaymentCommand(
+            orgId, sub.Id, 100m, "COMPED", null), CancellationToken.None);
+
+        sub.Status.Should().Be("ACTIVE");
+        sub.CurrentDunningCampaignId.Should().BeNull();
+        campaign.RecoveredRevenue.Should().Be(0);
+        campaign.SavedSubscriptions.Should().Be(0);
+        await repository.DidNotReceive().GetDunningCampaignByIdAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task RecordSubscriberPayment_FromActive_DoesNotRecordRecovery()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId);
+        var clientId = Guid.CreateVersion7();
+        var campaign = new DunningCampaign(orgId, "Stale assignment", "SUSPEND", 7);
+        var sub = new Subscription(orgId, clientId, product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-20), DateTime.UtcNow.AddDays(-1));
+        sub.AssignDunningCampaign(campaign.Id);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetDunningCampaignByIdAsync(orgId, campaign.Id, Arg.Any<CancellationToken>()).Returns(campaign);
+
+        var handler = new RecordSubscriberPaymentCommandHandler(
+            repository,
+            Substitute.For<IEventBus>(),
+            Substitute.For<ICrmQueryService>());
+        await handler.Handle(new RecordSubscriberPaymentCommand(
+            orgId, sub.Id, 100m, "BANK_TRANSFER", "TRX-ACTIVE"), CancellationToken.None);
+
+        sub.Status.Should().Be("ACTIVE");
+        campaign.RecoveredRevenue.Should().Be(0);
+        campaign.SavedSubscriptions.Should().Be(0);
+        await repository.DidNotReceive().GetDunningCampaignByIdAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

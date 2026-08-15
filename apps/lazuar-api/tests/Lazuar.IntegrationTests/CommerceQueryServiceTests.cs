@@ -124,4 +124,32 @@ public class CommerceQueryServiceTests
         dead.Status.Should().NotBe("COMPLETED");
         dead.Token.Should().BeNull();
     }
+
+    [Test]
+    public async Task GetStatsAsync_SumsCampaignRecoveredRevenueAndSavedSubscriptions()
+    {
+        var orgId = Guid.CreateVersion7();
+        var otherOrgId = Guid.CreateVersion7();
+
+        var first = new DunningCampaign(orgId, "Primary", "SUSPEND", 7);
+        first.RecordRecovery(100m);
+        var second = new DunningCampaign(orgId, "Secondary", "NONE", 14);
+        second.RecordRecovery(10m);
+        second.RecordRecovery(10.5m);
+        var otherOrg = new DunningCampaign(otherOrgId, "Other", "CANCEL", 7);
+        otherOrg.RecordRecovery(999m);
+        otherOrg.RecordRecovery(1m);
+        otherOrg.RecordRecovery(1m);
+
+        _dbContext.DunningCampaigns.AddRange(first, second, otherOrg);
+        await _dbContext.SaveChangesAsync();
+
+        var stats = await _queryService.GetStatsAsync(orgId);
+        stats.Recovered_revenue.Should().Be(120.5);
+        stats.Saved_subscriptions.Should().Be(3);
+
+        var empty = await _queryService.GetStatsAsync(Guid.CreateVersion7());
+        empty.Recovered_revenue.Should().Be(0);
+        empty.Saved_subscriptions.Should().Be(0);
+    }
 }

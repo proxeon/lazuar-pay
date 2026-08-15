@@ -14,6 +14,8 @@ public partial class CommerceQueryService
 
     private record TxRevenueDto(decimal Amount, string Status, DateTime CreatedAt, string RecordedByName);
 
+    private record DunningRecoveryStatsDto(decimal RecoveredRevenue, int SavedSubscriptions);
+
     public async Task<CommerceStatsDto> GetStatsAsync(Guid organizationId)
     {
         using var connection = _connectionFactory.CreateConnection();
@@ -86,6 +88,16 @@ public partial class CommerceQueryService
             .OrderByDescending(p => p.Total_amount)
             .ToList();
 
+        const string recoverySql = @"
+            SELECT COALESCE(SUM(""RecoveredRevenue""), 0) AS ""RecoveredRevenue"",
+                   CAST(COALESCE(SUM(""SavedSubscriptions""), 0) AS integer) AS ""SavedSubscriptions""
+            FROM commerce.""DunningCampaigns""
+            WHERE ""OrganizationId"" = @OrgId";
+
+        var recovery = await connection.QuerySingleAsync<DunningRecoveryStatsDto>(
+            recoverySql,
+            new { OrgId = organizationId });
+
         return new CommerceStatsDto
         {
             Mrr = (double)mrr,
@@ -96,6 +108,8 @@ public partial class CommerceQueryService
             Churn_rate_percentage = churnRate,
             Average_revenue_per_user = arpu,
             Total_revenue_collected = (double)totalRevenue,
+            Recovered_revenue = (double)recovery.RecoveredRevenue,
+            Saved_subscriptions = recovery.SavedSubscriptions,
             Cash_flow_trend = cashFlowTrend,
             Payment_methods = paymentMethods
         };

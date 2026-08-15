@@ -38,19 +38,10 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         var wasSuspended = existingSub.Status == "SUSPENDED";
 
         // Capture campaign id before ClearDunning (Resume / RecoverFromPayment).
-        Guid? recoveryCampaignId = null;
-        if (wasInArrears)
-        {
-            if (@event.Metadata.TryGetValue("dunning_campaign_id", out var dunningCampaignIdStr)
-                && Guid.TryParse(dunningCampaignIdStr, out var fromMetadata))
-            {
-                recoveryCampaignId = fromMetadata;
-            }
-            else
-            {
-                recoveryCampaignId = existingSub.CurrentDunningCampaignId;
-            }
-        }
+        var recoveryCampaignId = DunningRecoveryAttribution.ResolveCampaignId(
+            wasInArrears,
+            existingSub.CurrentDunningCampaignId,
+            @event.Metadata);
 
         var periodEnd = DateTime.UtcNow;
         var updatedNextBilling = productInfo.Interval == "yr"

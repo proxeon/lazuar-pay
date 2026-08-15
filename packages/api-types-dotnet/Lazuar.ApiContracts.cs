@@ -924,6 +924,20 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("total_revenue_collected")]
         public double Total_revenue_collected { get; set; } = default!;
 
+        /// <summary>
+        /// Lifetime SUM of commerce.DunningCampaigns.RecoveredRevenue (not monthly).
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("recovered_revenue")]
+        public double Recovered_revenue { get; set; } = default!;
+
+        /// <summary>
+        /// Lifetime SUM of commerce.DunningCampaigns.SavedSubscriptions.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("saved_subscriptions")]
+        public int Saved_subscriptions { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("cash_flow_trend")]
         public System.Collections.Generic.List<CashFlowTrendDto> Cash_flow_trend { get; set; } = new System.Collections.Generic.List<CashFlowTrendDto>();
 
