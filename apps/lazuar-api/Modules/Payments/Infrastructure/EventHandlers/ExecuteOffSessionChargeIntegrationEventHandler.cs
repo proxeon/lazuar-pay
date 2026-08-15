@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
+using Modules.Payments.Infrastructure.Gateways;
 
 namespace Modules.Payments.Infrastructure.EventHandlers;
 
@@ -56,11 +57,14 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
         }
 
         var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
-        var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
         bool success;
         try
         {
+            var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
+            var idempotencyKey = @event.ChargeAttemptId.HasValue
+                ? StripeGatewayAdapter.FormatOffSessionIdempotencyKey(@event.ChargeAttemptId.Value)
+                : @event.Id.ToString();
             success = await adapter.ChargeOffSessionAsync(
                 plainApiKey,
                 @event.GatewayCustomerId,
@@ -71,7 +75,8 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
                 @event.SubscriptionId.ToString(),
                 @event.TenantId,
                 @event.DunningCampaignId,
-                @event.Id.ToString());
+                idempotencyKey,
+                @event.ChargeAttemptId);
         }
         catch (NotSupportedException ex)
         {

@@ -214,6 +214,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 }
             }
 
+            // AUTO_CHARGE / billing off-session: processing → issuer fail must MarkFailed or a later offset stays blocked.
             if (stripeEvent.Type == "payment_intent.payment_failed" && stripeEvent.Data.Object is PaymentIntent failedPi)
             {
                 return MapPaymentIntentPaymentFailed(failedPi, stripeEvent.Id);
@@ -270,24 +271,15 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     public async Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
         string description, string receipt, Guid tenantId,
-        Guid? dunningCampaignId = null, string? idempotencyKey = null)
+        Guid? dunningCampaignId = null, string? idempotencyKey = null,
+        Guid? chargeAttemptId = null)
     {
         try
         {
             var client = new StripeClient(apiKey);
             var service = new PaymentIntentService(client);
-
-            var meta = new Dictionary<string, string>
-            {
-                ["type"] = "commerce_subscription",
-                ["subscription_id"] = receipt,
-                ["tenant_id"] = tenantId.ToString(),
-                ["receipt"] = receipt
-            };
-            if (dunningCampaignId.HasValue)
-            {
-                meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
-            }
+            var meta = BuildOffSessionMetadata(receipt, tenantId, dunningCampaignId, chargeAttemptId);
+            var resolvedKey = ResolveOffSessionIdempotencyKey(chargeAttemptId, idempotencyKey);
 
             var options = new PaymentIntentCreateOptions
             {
@@ -300,7 +292,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 Description = description,
                 Metadata = meta
             };
-            var intent = await service.CreateAsync(options, CreateOffSessionRequestOptions(idempotencyKey));
+            var intent = await service.CreateAsync(options, CreateOffSessionRequestOptions(resolvedKey));
             return intent.Status == "succeeded" || intent.Status == "processing";
         }
         catch (StripeException ex)
@@ -355,6 +347,47 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             Error: pi.LastPaymentError?.Message,
             GatewayCustomerId: pi.CustomerId,
             GatewayTokenId: pi.PaymentMethodId);
+    }
+
+    internal const string OffSessionIdempotencyKeyPrefix = "lazuar-offsession:";
+
+    internal static string FormatOffSessionIdempotencyKey(Guid chargeAttemptId) =>
+        OffSessionIdempotencyKeyPrefix + chargeAttemptId.ToString();
+
+    internal static string? ResolveOffSessionIdempotencyKey(Guid? chargeAttemptId, string? fallbackKey)
+    {
+        if (chargeAttemptId is { } id && id != Guid.Empty)
+        {
+            return FormatOffSessionIdempotencyKey(id);
+        }
+
+        return string.IsNullOrWhiteSpace(fallbackKey) ? null : fallbackKey;
+    }
+
+    internal static Dictionary<string, string> BuildOffSessionMetadata(
+        string receipt,
+        Guid tenantId,
+        Guid? dunningCampaignId,
+        Guid? chargeAttemptId)
+    {
+        var meta = new Dictionary<string, string>
+        {
+            ["type"] = "commerce_subscription",
+            ["subscription_id"] = receipt,
+            ["tenant_id"] = tenantId.ToString(),
+            ["receipt"] = receipt
+        };
+        if (dunningCampaignId.HasValue)
+        {
+            meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+        }
+
+        if (chargeAttemptId.HasValue)
+        {
+            meta["charge_attempt_id"] = chargeAttemptId.Value.ToString();
+        }
+
+        return meta;
     }
 
     internal static RequestOptions? CreateOffSessionRequestOptions(string? idempotencyKey)

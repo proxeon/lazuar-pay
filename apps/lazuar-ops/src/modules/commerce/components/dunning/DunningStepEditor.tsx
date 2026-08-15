@@ -189,6 +189,7 @@ export default function DunningStepEditor({
                   <p>
                     The system will silently request the Payment Gateway (Stripe/CHIP) to charge the customer's vaulted card.
                     Lazuar limits retries to a maximum of 4 attempts per billing cycle to prevent gateway fraud flags.
+                    One action per day-offset — put email on a different day than auto-retry.
                   </p>
                   <p className="text-amber-800 bg-amber-50/80 border border-amber-200 rounded-sm px-2 py-1.5">
                     <strong>Billplz limitation:</strong> Billplz does not support off-session auto-charge. Products on Billplz will skip silent retries — use email/WhatsApp steps with an update-payment link, or switch the product gateway to Stripe/CHIP for vaulted renewals.

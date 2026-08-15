@@ -223,7 +223,8 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
     public async Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount,
         string currency, string description, string receipt, Guid tenantId,
-        Guid? dunningCampaignId = null, string? idempotencyKey = null)
+        Guid? dunningCampaignId = null, string? idempotencyKey = null,
+        Guid? chargeAttemptId = null)
     {
         _ = idempotencyKey; // CHIP purchase/charge has no idempotency key (best-effort).
         try
@@ -257,6 +258,11 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             if (dunningCampaignId.HasValue)
             {
                 meta["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+            }
+
+            if (chargeAttemptId.HasValue)
+            {
+                meta["charge_attempt_id"] = chargeAttemptId.Value.ToString();
             }
 
             var amountInCents = GatewayCommon.ToMinorUnitsRounded(amount);

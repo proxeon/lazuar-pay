@@ -85,6 +85,31 @@ public class DunningCampaignCommandHandlerTests
     }
 
     [Test]
+    public async Task GenerateDefaults_EmptyOrg_IncludesAutoChargeAt1And5_SecondCallIsNoOp()
+    {
+        var orgId = Guid.CreateVersion7();
+        var repo = Substitute.For<ICommerceRepository>();
+        repo.HasAnyDunningCampaignAsync(orgId, Arg.Any<CancellationToken>()).Returns(false, true);
+
+        DunningCampaign? saved = null;
+        repo.When(r => r.AddDunningCampaign(Arg.Any<DunningCampaign>()))
+            .Do(ci => saved = ci.Arg<DunningCampaign>());
+
+        var handler = new GenerateDefaultDunningCampaignsCommandHandler(repo);
+        await handler.Handle(new GenerateDefaultDunningCampaignsCommand(orgId), CancellationToken.None);
+        await handler.Handle(new GenerateDefaultDunningCampaignsCommand(orgId), CancellationToken.None);
+
+        saved.Should().NotBeNull();
+        saved!.Steps.Should().Contain(s => s.DayOffset == -3 && s.ActionType == "EMAIL");
+        saved.Steps.Should().Contain(s => s.DayOffset == 0 && s.ActionType == "EMAIL");
+        saved.Steps.Should().Contain(s => s.DayOffset == 3 && s.ActionType == "WHATSAPP");
+        saved.Steps.Should().Contain(s => s.DayOffset == 1 && s.ActionType == "AUTO_CHARGE");
+        saved.Steps.Should().Contain(s => s.DayOffset == 5 && s.ActionType == "AUTO_CHARGE");
+        repo.Received(1).AddDunningCampaign(Arg.Any<DunningCampaign>());
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task Update_AutoCharge_OnlyBillplz_Throws()
     {
         var orgId = Guid.CreateVersion7();

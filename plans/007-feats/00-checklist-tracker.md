@@ -147,7 +147,7 @@ Statuses we persist: `PENDING`, `ACTIVE`, `PAST_DUE`, `SUSPENDED`, `CANCELED`. `
 |----|---------|------|--------|---------|------|--------|--------|--------|--------|-----------|-------|
 | LP-070 | Campaign builder (schedule + actions) | — | Y | N | N | P | P | P | P | Y | P |
 | LP-071 | Auto-enter PAST_DUE on failed renewal | 0 | P | N | N | P | Y | Y | Y | Y | Y |
-| LP-072 | Off-session retry (AUTO_CHARGE) | 0 | P | N | P | P | Y | Y | Y | Y | Y |
+| LP-072 | Off-session retry (AUTO_CHARGE) | 0 | Y | N | P | P | Y | Y | Y | Y | Y |
 | LP-073 | Email recovery sequence | 0 | P | P | P | P | P | Y | Y | Y | Y |
 | LP-074 | WhatsApp recovery sequence | 4 | N | N | N | P | P | N | N | N | N |
 | LP-075 | Magic update-payment link | — | Y | N | N | P | P | Y | Y | Y | Y |

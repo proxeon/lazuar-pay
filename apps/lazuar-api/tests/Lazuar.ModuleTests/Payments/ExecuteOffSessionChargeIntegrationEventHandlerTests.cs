@@ -10,6 +10,7 @@ using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Events;
 using Modules.Payments.Domain.Aggregates;
 using Modules.Payments.Infrastructure.EventHandlers;
+using Modules.Payments.Infrastructure.Gateways;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -43,6 +44,7 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
         string? capturedReceipt = null;
         Guid? capturedCampaignId = null;
         string? capturedIdempotencyKey = null;
+        Guid? capturedChargeAttemptId = null;
 
         var adapter = Substitute.For<IPaymentGatewayAdapter>();
         adapter.ChargeOffSessionAsync(
@@ -55,13 +57,15 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
                 Arg.Any<string>(),
                 Arg.Any<Guid>(),
                 Arg.Any<Guid?>(),
-                Arg.Any<string?>())
+                Arg.Any<string?>(),
+                Arg.Any<Guid?>())
             .Returns(ci =>
             {
                 capturedReceipt = ci.ArgAt<string>(6);
                 capturedTenantId = ci.ArgAt<Guid>(7);
                 capturedCampaignId = ci.ArgAt<Guid?>(8);
                 capturedIdempotencyKey = ci.ArgAt<string?>(9);
+                capturedChargeAttemptId = ci.ArgAt<Guid?>(10);
                 return true;
             });
 
@@ -93,7 +97,9 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
         capturedReceipt.Should().Be(subscriptionId.ToString());
         capturedTenantId.Should().Be(tenantId);
         capturedCampaignId.Should().Be(campaignId);
-        capturedIdempotencyKey.Should().Be(evt.Id.ToString());
+        capturedChargeAttemptId.Should().Be(chargeAttemptId);
+        capturedIdempotencyKey.Should().Be(
+            StripeGatewayAdapter.FormatOffSessionIdempotencyKey(chargeAttemptId));
 
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentFailedIntegrationEvent>());
     }
@@ -114,7 +120,8 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
         adapter.ChargeOffSessionAsync(
                 Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<string?>())
+                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<string?>(),
+                Arg.Any<Guid?>())
             .Returns(false);
 
         var factory = Substitute.For<IPaymentGatewayFactory>();
@@ -239,7 +246,8 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
         adapter.ChargeOffSessionAsync(
                 Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<string?>())
+                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<string?>(),
+                Arg.Any<Guid?>())
             .Returns<bool>(_ => throw new NotSupportedException("no vault"));
 
         var factory = Substitute.For<IPaymentGatewayFactory>();
@@ -280,7 +288,8 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
         adapter.ChargeOffSessionAsync(
                 Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<string?>())
+                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<string?>(),
+                Arg.Any<Guid?>())
             .Returns<bool>(_ => throw new InvalidOperationException("transport timeout"));
 
         var factory = Substitute.For<IPaymentGatewayFactory>();
@@ -307,6 +316,42 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
         await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
             e.Metadata["failure_reason"] == "charge_exception"
             && e.Metadata["failure_source"] == "off_session"
+            && e.Metadata["subscription_id"] == subscriptionId.ToString()));
+    }
+
+    [Test]
+    public async Task HandleAsync_FactoryThrows_PublishesChargeException_DoesNotRethrow()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var subscriptionId = Guid.CreateVersion7();
+
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE").Returns(config);
+
+        var factory = Substitute.For<IPaymentGatewayFactory>();
+        factory.GetAdapter("STRIPE").Returns(_ => throw new InvalidOperationException("unknown gateway"));
+
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new ExecuteOffSessionChargeIntegrationEventHandler(
+            configRepo,
+            factory,
+            eventBus,
+            CreateVault(),
+            Substitute.For<ILogger<ExecuteOffSessionChargeIntegrationEventHandler>>());
+
+        var act = () => handler.HandleAsync(new ExecuteOffSessionChargeIntegrationEvent(
+            tenantId,
+            subscriptionId,
+            10m,
+            "MYR",
+            "cus",
+            "pm",
+            GatewayName: "STRIPE"));
+
+        await act.Should().NotThrowAsync();
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
+            e.Metadata["failure_reason"] == "charge_exception"
             && e.Metadata["subscription_id"] == subscriptionId.ToString()));
     }
 }

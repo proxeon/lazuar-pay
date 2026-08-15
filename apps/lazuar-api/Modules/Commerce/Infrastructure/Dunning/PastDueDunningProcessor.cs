@@ -154,14 +154,19 @@ public sealed class PastDueDunningProcessor
             .OrderBy(s => s.DayOffset)
             .ToList();
 
+        var cycleAttempts = await db.ChargeAttemptLogs
+            .Where(l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate)
+            .ToListAsync(ct);
+        var publishedOffSessionThisTick = false;
+
         foreach (var step in dueSteps)
         {
+            var consumeOffset = true;
+
             if (step.ActionType == "AUTOCHARGE" || step.ActionType == "AUTO_CHARGE")
             {
-                var attemptCount = await db.ChargeAttemptLogs.CountAsync(
-                    l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate, ct);
-                var nextAttempt = attemptCount + 1;
                 var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+                var nextAttempt = cycleAttempts.Count + 1;
 
                 var cannotCharge = product == null
                     || !PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
@@ -169,6 +174,10 @@ public sealed class PastDueDunningProcessor
                     || nextAttempt > ChargeAttemptLimits.MaxAttemptsPerBillingCycle
                     || string.IsNullOrEmpty(sub.VaultedCustomerId)
                     || string.IsNullOrEmpty(sub.VaultedTokenId);
+
+                var hasInFlightOrSettled = publishedOffSessionThisTick
+                    || cycleAttempts.Any(l => l.Status == ChargeAttemptLog.StatusPending)
+                    || cycleAttempts.Any(l => l.Status == ChargeAttemptLog.StatusSucceeded);
 
                 if (cannotCharge || product == null)
                 {
@@ -180,6 +189,14 @@ public sealed class PastDueDunningProcessor
                         product?.GatewayName,
                         sub.IsReminderOnly);
                 }
+                else if (hasInFlightOrSettled)
+                {
+                    // Do not burn the DayOffset while a PI is processing / already paid this cycle.
+                    consumeOffset = false;
+                    _logger.LogInformation(
+                        "Deferred auto-charge for Subscription {Id} DayOffset={DayOffset}: in-flight PENDING, SUCCEEDED, or already charged this tick.",
+                        sub.Id, step.DayOffset);
+                }
                 else
                 {
                     var attempt = new ChargeAttemptLog(
@@ -190,6 +207,8 @@ public sealed class PastDueDunningProcessor
                         dunningCampaignId: campaign.Id,
                         dunningStepId: step.Id);
                     db.ChargeAttemptLogs.Add(attempt);
+                    cycleAttempts.Add(attempt);
+                    publishedOffSessionThisTick = true;
 
                     await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                         sub.OrganizationId,
@@ -226,7 +245,10 @@ public sealed class PastDueDunningProcessor
                 }
             }
 
-            sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
+            if (consumeOffset)
+            {
+                sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
+            }
         }
     }
 }

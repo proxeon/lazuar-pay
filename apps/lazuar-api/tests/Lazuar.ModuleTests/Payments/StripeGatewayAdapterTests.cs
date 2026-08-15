@@ -51,6 +51,45 @@ public class StripeGatewayAdapterTests
     }
 
     [Test]
+    public void ResolveOffSessionIdempotencyKey_PrefersChargeAttemptId()
+    {
+        var attemptId = Guid.CreateVersion7();
+        var fallback = Guid.CreateVersion7().ToString();
+
+        var key = StripeGatewayAdapter.ResolveOffSessionIdempotencyKey(attemptId, fallback);
+
+        key.Should().Be("lazuar-offsession:" + attemptId);
+        StripeGatewayAdapter.FormatOffSessionIdempotencyKey(attemptId)
+            .Should().Be(key);
+    }
+
+    [Test]
+    public void ResolveOffSessionIdempotencyKey_FallsBackWhenAttemptMissing()
+    {
+        StripeGatewayAdapter.ResolveOffSessionIdempotencyKey(null, "evt_1")
+            .Should().Be("evt_1");
+        StripeGatewayAdapter.ResolveOffSessionIdempotencyKey(null, " ")
+            .Should().BeNull();
+    }
+
+    [Test]
+    public void BuildOffSessionMetadata_IncludesChargeAttemptId()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var campaignId = Guid.CreateVersion7();
+        var attemptId = Guid.CreateVersion7();
+        var receipt = Guid.CreateVersion7().ToString();
+
+        var meta = StripeGatewayAdapter.BuildOffSessionMetadata(receipt, tenantId, campaignId, attemptId);
+
+        meta["type"].Should().Be("commerce_subscription");
+        meta["subscription_id"].Should().Be(receipt);
+        meta["tenant_id"].Should().Be(tenantId.ToString());
+        meta["dunning_campaign_id"].Should().Be(campaignId.ToString());
+        meta["charge_attempt_id"].Should().Be(attemptId.ToString());
+    }
+
+    [Test]
     public void CreateOffSessionRequestOptions_WhenMissing_ReturnsNull()
     {
         StripeGatewayAdapter.CreateOffSessionRequestOptions(null).Should().BeNull();

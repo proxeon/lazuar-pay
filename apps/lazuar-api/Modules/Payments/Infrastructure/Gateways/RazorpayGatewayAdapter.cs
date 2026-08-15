@@ -196,7 +196,8 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
     public Task<bool> ChargeOffSessionAsync(
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
         string description, string receipt, Guid tenantId,
-        Guid? dunningCampaignId = null, string? idempotencyKey = null)
+        Guid? dunningCampaignId = null, string? idempotencyKey = null,
+        Guid? chargeAttemptId = null)
     {
         _ = idempotencyKey; // Razorpay recurring create has no idempotency key (best-effort).
         try
@@ -213,6 +214,11 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             if (dunningCampaignId.HasValue)
             {
                 notes["dunning_campaign_id"] = dunningCampaignId.Value.ToString();
+            }
+
+            if (chargeAttemptId.HasValue)
+            {
+                notes["charge_attempt_id"] = chargeAttemptId.Value.ToString();
             }
 
             var orderReq = new Dictionary<string, object>

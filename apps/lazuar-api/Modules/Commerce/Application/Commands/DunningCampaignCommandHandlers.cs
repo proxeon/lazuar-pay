@@ -157,6 +157,10 @@ public class GenerateDefaultDunningCampaignsCommandHandler : ICommandHandler<Gen
             null, 
             "Hey {{customer_name}}, your {{plan_name}} subscription is past due. You can securely update your payment method to restore access here: {{update_payment_link}}");
 
+        // Billing owns attempt 1; dunning retries before grace 7. Billplz products skip via capabilities.
+        campaign.AddStep(1, "AUTO_CHARGE", null, null, null);
+        campaign.AddStep(5, "AUTO_CHARGE", null, null, null);
+
         _repository.AddDunningCampaign(campaign);
         await _repository.SaveChangesAsync(ct);
     }
