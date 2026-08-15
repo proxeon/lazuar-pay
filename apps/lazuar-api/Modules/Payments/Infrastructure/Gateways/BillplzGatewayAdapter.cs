@@ -106,6 +106,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         try
         {
             var client = _httpFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(8);
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{endpoint}bills");
             request.Headers.Authorization = new AuthenticationHeaderValue(
                 "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{apiKey}:")));
