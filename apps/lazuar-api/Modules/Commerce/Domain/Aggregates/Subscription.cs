@@ -18,6 +18,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public string? VaultedCustomerId { get; private set; }
     public string? VaultedTokenId { get; private set; }
     public bool IsReminderOnly { get; private set; }
+    public bool CancelAtPeriodEnd { get; private set; }
     
     public Guid? CurrentDunningCampaignId { get; private set; }
     /// <summary>Legacy progress field; kept in sync with <see cref="LastCompletedDayOffset"/> for compatibility.</summary>
@@ -63,6 +64,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         ProductId = productId;
         Status = "PENDING";
         IsReminderOnly = false;
+        CancelAtPeriodEnd = false;
         CurrentDunningStepIndex = 0;
         LastCompletedDayOffset = null;
         CreatedAt = DateTime.UtcNow;
@@ -116,6 +118,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         Status = "ACTIVE";
         SuspendedAt = null;
         NextBillingDate = newNextBillingDate;
+        ClearScheduledCancel();
         ClearDunning();
         ClearCurrentRenewalCheckout();
         UpdatedAt = DateTime.UtcNow;
@@ -131,6 +134,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         CurrentPeriodEnd = periodEnd;
         NextBillingDate = nextBilling;
         SuspendedAt = null;
+        ClearScheduledCancel();
         ClearDunning();
         ClearCurrentRenewalCheckout();
         UpdatedAt = DateTime.UtcNow;
@@ -150,9 +154,26 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         CurrentRenewalCheckoutForDate = null;
     }
 
+    public void ScheduleCancelAtPeriodEnd()
+    {
+        if (Status != "ACTIVE")
+            throw new InvalidOperationException($"Cannot schedule cancel from status '{Status}'.");
+        if (NextBillingDate is null || NextBillingDate.Value <= DateTime.UtcNow)
+            throw new InvalidOperationException("No remaining paid period.");
+        CancelAtPeriodEnd = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearScheduledCancel()
+    {
+        CancelAtPeriodEnd = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void Cancel()
     {
         Status = "CANCELED";
+        CancelAtPeriodEnd = false;
         UpdatedAt = DateTime.UtcNow;
     }
 

@@ -186,6 +186,31 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task PreDunning_FlaggedActiveDueInThreeDays_DoesNotDispatchEmail()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var flagged = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        flagged.Activate(DateTime.UtcNow.AddDays(3), DateTime.UtcNow.Date.AddDays(3));
+        flagged.ScheduleCancelAtPeriodEnd();
+        var campaign = new DunningCampaign(_orgId, "Pre", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
+        campaign.AddStep(-3, "EMAIL", "Renews soon", "Your plan renews.", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(flagged);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == flagged.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.CancelAtPeriodEnd.Should().BeTrue();
+        reloaded.ReminderLogs.Should().BeEmpty();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task PastDue_EmailStep_NoMatchingCampaign_DoesNotPublish()
     {
         var product = CreateProduct(_orgId, "STRIPE");

@@ -30,6 +30,7 @@ model CommerceSubscriptionDto {
   vaulted_customer_id?: string;
   vaulted_token_id?: string;
   is_reminder_only: boolean;
+  cancel_at_period_end: boolean;
   dunning_campaign_name?: string;
   current_dunning_step?: int32;
   dunning_paused_until?: utcDateTime;
@@ -63,4 +64,9 @@ model CreateManualSubscriberDto {
   send_welcome_email?: boolean = true;
   start_date?: utcDateTime;
   next_billing_date?: utcDateTime;
+}
+
+@summary("Ops cancel. Omitted / empty body is immediate. Period-end only when at_period_end is true and a paid period remains.")
+model CancelSubscriberRequest {
+  at_period_end?: boolean = false;
 }

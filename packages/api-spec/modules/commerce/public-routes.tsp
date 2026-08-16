@@ -53,11 +53,20 @@ interface PublicCommerceOperations {
 
   @post
   @route("/{tenantSlug}/portal/cancel")
-  @doc("Customer-initiated cancel via portal magic token.")
+  @doc("Customer-initiated cancel via portal magic token. Defaults to cancel at period end.")
   cancelPortalSubscription(
     @path tenantSlug: string,
     @query token: string,
     @body body: CancelPortalRequest,
+  ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/{tenantSlug}/portal/keep")
+  @doc("Undo a scheduled period-end cancel while the subscription is still ACTIVE.")
+  keepPortalSubscription(
+    @path tenantSlug: string,
+    @query token: string,
+    @body body: KeepPortalRequest,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
   /**

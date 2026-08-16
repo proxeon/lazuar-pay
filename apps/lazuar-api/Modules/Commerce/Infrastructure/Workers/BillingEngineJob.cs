@@ -190,6 +190,21 @@ public class BillingEngineJob : BackgroundService
             return;
         }
 
+        if (sub.CancelAtPeriodEnd)
+        {
+            sub.Cancel();
+            await eventBus.PublishAsync(new SubscriptionCanceledIntegrationEvent(
+                sub.OrganizationId,
+                sub.Id,
+                sub.ClientProfileId,
+                sub.ProductId,
+                product.FulfillmentTargets.ToList()));
+            _logger.LogInformation(
+                "Finalized scheduled cancel for subscription {Id} at period end.",
+                sub.Id);
+            return;
+        }
+
         var canCharge = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
                         && !sub.IsReminderOnly
                         && !string.IsNullOrEmpty(sub.VaultedTokenId)

@@ -38,6 +38,7 @@ public class CommerceHonestyDtoTests
             null,
             null,
             true,
+            true,
             null,
             0,
             null,
@@ -45,5 +46,25 @@ public class CommerceHonestyDtoTests
 
         var dto = CommerceQueryService.MapSubscriberDto(raw, profile: null, DateTime.UtcNow);
         dto.Is_reminder_only.Should().BeTrue();
+        dto.Cancel_at_period_end.Should().BeTrue();
+    }
+
+    [Test]
+    public void PortalMap_UsesNextBillingDateAsPaidThrough_AndCancelAtPeriodEnd()
+    {
+        var subscribeInstant = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var paidThrough = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var raw = new CommerceQueryService.RawPortalSubDto(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            "Plan",
+            "ACTIVE",
+            paidThrough,
+            true);
+
+        var dto = CommerceQueryService.MapPortalSubscription(raw);
+        dto.Current_period_end.Should().Be(new DateTimeOffset(paidThrough));
+        dto.Current_period_end.Should().NotBe(new DateTimeOffset(subscribeInstant));
+        dto.Cancel_at_period_end.Should().BeTrue();
     }
 }

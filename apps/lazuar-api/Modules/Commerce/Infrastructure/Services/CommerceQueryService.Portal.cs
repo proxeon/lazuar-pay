@@ -9,7 +9,13 @@ namespace Modules.Commerce.Infrastructure.Services;
 
 public partial class CommerceQueryService
 {
-    private record RawPortalSubDto(Guid Id, Guid ProductId, string ProductName, string Status, DateTime? CurrentPeriodEnd);
+    internal record RawPortalSubDto(
+        Guid Id,
+        Guid ProductId,
+        string ProductName,
+        string Status,
+        DateTime? CurrentPeriodEnd,
+        bool CancelAtPeriodEnd);
     private record RawPortalOrderDto(Guid Id, Guid ProductId, string ProductName, string Status, DateTime CreatedAt);
 
     public async Task<AggregatedPortalDataResponse?> GetPortalDataAsync(Guid organizationId, Guid referenceSubscriptionId)
@@ -26,7 +32,8 @@ public partial class CommerceQueryService
         if (clientProfileId == null) return null;
 
         const string subsSql = @"
-            SELECT s.""Id"", s.""ProductId"", p.""Name"" as ProductName, s.""Status"", s.""CurrentPeriodEnd""
+            SELECT s.""Id"", s.""ProductId"", p.""Name"" as ProductName, s.""Status"",
+                   s.""NextBillingDate"" as CurrentPeriodEnd, s.""CancelAtPeriodEnd""
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
             WHERE s.""ClientProfileId"" = @ProfileId AND s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'
@@ -45,14 +52,7 @@ public partial class CommerceQueryService
 
         return new AggregatedPortalDataResponse
         {
-            Subscriptions = subs.Select(s => new PortalSubscriptionDto
-            {
-                Id = s.Id.ToString(),
-                Product_id = s.ProductId.ToString(),
-                Product_name = s.ProductName,
-                Status = s.Status,
-                Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null
-            }).ToList(),
+            Subscriptions = subs.Select(MapPortalSubscription).ToList(),
             Orders = orders.Select(o => new PortalOrderDto
             {
                 Id = o.Id.ToString(),
@@ -63,4 +63,14 @@ public partial class CommerceQueryService
             }).ToList()
         };
     }
+
+    internal static PortalSubscriptionDto MapPortalSubscription(RawPortalSubDto s) => new()
+    {
+        Id = s.Id.ToString(),
+        Product_id = s.ProductId.ToString(),
+        Product_name = s.ProductName,
+        Status = s.Status,
+        Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
+        Cancel_at_period_end = s.CancelAtPeriodEnd
+    };
 }

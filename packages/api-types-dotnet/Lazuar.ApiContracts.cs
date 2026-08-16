@@ -27,6 +27,76 @@ namespace Lazuar.ApiTypes
     
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateSaasCheckoutRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("return_url")]
+        public string Return_url { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateSaasCheckoutRequestDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateSaasCheckoutRequestDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CreateSaasCheckoutResponseDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkout_url")]
+        public string Checkout_url { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CreateSaasCheckoutResponseDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CreateSaasCheckoutResponseDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateTopUpRequestDto
     {
 
@@ -432,6 +502,53 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SaasPlanDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("code")]
+        public string Code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount_myr")]
+        public double Amount_myr { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("interval")]
+        public string Interval { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static SaasPlanDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<SaasPlanDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class TenantBillingAddressDto
     {
 
@@ -620,6 +737,56 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WorkspaceSaasSubscriptionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("organization_id")]
+        public string Organization_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("plan")]
+        public SaasPlanDto Plan { get; set; } = new SaasPlanDto();
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_period_start")]
+        public System.DateTimeOffset? Current_period_start { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_period_end")]
+        public System.DateTimeOffset? Current_period_end { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("next_invoice_at")]
+        public System.DateTimeOffset? Next_invoice_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static WorkspaceSaasSubscriptionDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<WorkspaceSaasSubscriptionDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class AggregatedPortalDataResponse
     {
 
@@ -708,6 +875,13 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("subscription_id")]
         public string Subscription_id { get; set; } = default!;
 
+        /// <summary>
+        /// Default true. Immediate if false, or if there is no remaining paid period.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("at_period_end")]
+        public bool? At_period_end { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -731,6 +905,41 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<CancelPortalRequest>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CancelSubscriberRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("at_period_end")]
+        public bool? At_period_end { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static CancelSubscriberRequest FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<CancelSubscriberRequest>(data, options);
 
         }
 
@@ -1020,6 +1229,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
         public bool Is_reminder_only { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cancel_at_period_end")]
+        public bool Cancel_at_period_end { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("dunning_campaign_name")]
         public string? Dunning_campaign_name { get; set; } = default!;
@@ -1791,6 +2003,41 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class KeepPortalRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("subscription_id")]
+        public string Subscription_id { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static KeepPortalRequest FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<KeepPortalRequest>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PauseDunningRequestDto
     {
 
@@ -2025,8 +2272,15 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("status")]
         public string Status { get; set; } = default!;
 
+        /// <summary>
+        /// Paid-through instant (`NextBillingDate`).
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("current_period_end")]
         public System.DateTimeOffset? Current_period_end { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cancel_at_period_end")]
+        public bool Cancel_at_period_end { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2173,6 +2427,11 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("country_code")]
         public string? Country_code { get; set; } = default!;
+
+        /// <summary>
+        /// Optional quantity. Default 1. Meaningful only for FIXED one-time products (min 1, max 99).
+        /// <br/>Recurring and PWYW must be 1 (or omitted).
+        /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("quantity")]
         public int? Quantity { get; set; } = default!;

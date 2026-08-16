@@ -1,33 +1,30 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Commands;
 using Modules.One.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 
-public class CancelPortalSubscriptionCommandHandler : ICommandHandler<CancelPortalSubscriptionCommand, string>
+public class KeepPortalSubscriptionCommandHandler : ICommandHandler<KeepPortalSubscriptionCommand>
 {
     private readonly IOneQueryService _oneQueryService;
     private readonly IMagicLinkTokenService _tokenService;
     private readonly ICommerceRepository _repository;
-    private readonly IEventBus _eventBus;
 
-    public CancelPortalSubscriptionCommandHandler(
+    public KeepPortalSubscriptionCommandHandler(
         IOneQueryService oneQueryService,
         IMagicLinkTokenService tokenService,
-        ICommerceRepository repository,
-        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus)
+        ICommerceRepository repository)
     {
         _oneQueryService = oneQueryService;
         _tokenService = tokenService;
         _repository = repository;
-        _eventBus = eventBus;
     }
 
-    public async Task<string> Handle(CancelPortalSubscriptionCommand request, CancellationToken ct)
+    public async Task Handle(KeepPortalSubscriptionCommand request, CancellationToken ct)
     {
         var subscription = await PortalSubscriptionAccess.ResolveOwnedAsync(
             _oneQueryService,
@@ -38,12 +35,12 @@ public class CancelPortalSubscriptionCommandHandler : ICommandHandler<CancelPort
             request.SubscriptionId,
             ct);
 
-        return await SubscriptionCancelApplier.ApplyAndPersistAsync(
-            _repository,
-            _eventBus,
-            subscription,
-            request.AtPeriodEnd,
-            canceledStatus: "canceled",
-            ct);
+        if (subscription.Status == "CANCELED")
+        {
+            throw new InvalidOperationException("Subscription is already canceled.");
+        }
+
+        subscription.ClearScheduledCancel();
+        await _repository.SaveChangesAsync(ct);
     }
 }

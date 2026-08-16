@@ -103,6 +103,7 @@ public partial class DunningEngineJob
             ClaimMode.PreDunning => $"""
                 SELECT s.* FROM commerce."Subscriptions" s
                 WHERE s."Status" = 'ACTIVE'
+                  AND s."CancelAtPeriodEnd" IS NOT TRUE
                   AND s."NextBillingDate" IS NOT NULL
                   AND s."NextBillingDate" > NOW()
                   AND s."NextBillingDate" <= NOW() + INTERVAL '14 days'
@@ -152,6 +153,7 @@ public partial class DunningEngineJob
         {
             ClaimMode.PreDunning => query.Where(s =>
                 s.Status == "ACTIVE"
+                && !s.CancelAtPeriodEnd
                 && s.NextBillingDate != null
                 && s.NextBillingDate > now
                 && s.NextBillingDate <= now.AddDays(14)),

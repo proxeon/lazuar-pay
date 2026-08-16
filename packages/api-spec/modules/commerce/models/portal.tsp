@@ -5,7 +5,9 @@ model PortalSubscriptionDto {
   product_id: string; // GUID
   product_name: string;
   status: string;
+  /** Paid-through instant (`NextBillingDate`). */
   current_period_end?: utcDateTime;
+  cancel_at_period_end: boolean;
 }
 
 model PortalOrderDto {
@@ -32,6 +34,12 @@ model GenerateCustomerPortalResponseDto {
 
 model CancelPortalRequest {
   subscription_id: string; // GUID
+  /** Default true. Immediate if false, or if there is no remaining paid period. */
+  at_period_end?: boolean = true;
+}
+
+model KeepPortalRequest {
+  subscription_id: string;
 }
 
 model RequestPortalMagicLinkRequest {

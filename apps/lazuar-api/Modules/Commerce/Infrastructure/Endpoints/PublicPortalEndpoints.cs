@@ -66,8 +66,47 @@ public static class PublicPortalEndpoints
 
             try
             {
-                await mediator.Send(new CancelPortalSubscriptionCommand(tenantSlug, token, subscriptionId));
-                return TypedResults.Ok(new StatusResponse { Status = "canceled" });
+                var status = await mediator.Send(new CancelPortalSubscriptionCommand(
+                    tenantSlug,
+                    token,
+                    subscriptionId,
+                    body.At_period_end ?? true));
+                return TypedResults.Ok(new StatusResponse { Status = status });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return TypedResults.Unauthorized();
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound();
+            }
+            catch (Exception ex)
+            {
+                return TypedResults.BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
+        });
+
+        group.MapPost("/{tenantSlug}/portal/keep", async Task<Results<Ok<StatusResponse>, BadRequest<string>, UnauthorizedHttpResult, NotFound>> (
+            string tenantSlug,
+            [FromQuery] string token,
+            [FromBody] KeepPortalRequest body,
+            IMediator mediator) =>
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return TypedResults.Unauthorized();
+            }
+
+            if (body == null || string.IsNullOrWhiteSpace(body.Subscription_id) || !Guid.TryParse(body.Subscription_id, out var subscriptionId))
+            {
+                return TypedResults.BadRequest("subscription_id is required and must be a valid GUID.");
+            }
+
+            try
+            {
+                await mediator.Send(new KeepPortalSubscriptionCommand(tenantSlug, token, subscriptionId));
+                return TypedResults.Ok(new StatusResponse { Status = "kept" });
             }
             catch (UnauthorizedAccessException)
             {

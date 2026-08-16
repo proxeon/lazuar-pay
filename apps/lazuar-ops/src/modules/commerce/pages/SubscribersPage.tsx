@@ -97,8 +97,17 @@ export default function SubscribersPage() {
       if (action === "cancel") {
         const { error } = await client.POST("/admin/commerce/subscribers/{id}/cancel", {
           params: { path: { id: selectedSub.id } },
+          body: { at_period_end: payload?.at_period_end === true },
         });
         if (error) throw new Error(error.detail || "Cancel failed");
+        return;
+      }
+
+      if (action === "keep") {
+        const { error } = await client.POST("/admin/commerce/subscribers/{id}/keep", {
+          params: { path: { id: selectedSub.id } },
+        });
+        if (error) throw new Error(error.detail || "Keep failed");
         return;
       }
 
@@ -160,7 +169,13 @@ export default function SubscribersPage() {
       } else if (variables.action === "dunning/resume") {
         setSelectedSub(prev => prev ? { ...prev, dunning_paused_until: undefined } : null);
       } else if (variables.action === "cancel") {
-        setSelectedSub(prev => prev ? { ...prev, status: "CANCELED" } : null);
+        if (variables.payload?.at_period_end) {
+          setSelectedSub(prev => prev ? { ...prev, cancel_at_period_end: true } : null);
+        } else {
+          setSelectedSub(prev => prev ? { ...prev, status: "CANCELED", cancel_at_period_end: false } : null);
+        }
+      } else if (variables.action === "keep") {
+        setSelectedSub(prev => prev ? { ...prev, cancel_at_period_end: false } : null);
       }
     },
     onError: (err: any) => toast.error("Action Failed", { description: err.message })
@@ -254,14 +269,21 @@ export default function SubscribersPage() {
                       <p className="text-[10px] font-mono text-[#71717a]">RM {sub.product_price?.toFixed(2)}</p>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={cn(
-                        "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
-                        sub.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                        sub.status === "PAST_DUE" ? "bg-rose-50 text-rose-700 border-rose-200" :
-                        "bg-zinc-100 text-zinc-600 border-zinc-200"
-                      )}>
-                        {sub.status.replace("_", " ")}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn(
+                          "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
+                          sub.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          sub.status === "PAST_DUE" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                          "bg-zinc-100 text-zinc-600 border-zinc-200"
+                        )}>
+                          {sub.status.replace("_", " ")}
+                        </span>
+                        {sub.cancel_at_period_end && (
+                          <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap bg-amber-50 text-amber-800 border-amber-200">
+                            Cancels
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-right font-mono text-[#52525b] text-[11px] whitespace-nowrap">
                       {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('en-GB') : '-'}
@@ -325,7 +347,13 @@ export default function SubscribersPage() {
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Subscription Details</h3>
               <div className="grid grid-cols-2 gap-4 text-[12px]">
                 <div><span className="text-[#a1a1aa] block mb-1">Product</span><span className="font-medium text-[#09090b]">{selectedSub.product_name}</span></div>
-                <div><span className="text-[#a1a1aa] block mb-1">Status</span><span className="font-bold text-[#09090b]">{selectedSub.status.replace("_", " ")}</span></div>
+                <div>
+                  <span className="text-[#a1a1aa] block mb-1">Status</span>
+                  <span className="font-bold text-[#09090b]">
+                    {selectedSub.status.replace("_", " ")}
+                    {selectedSub.cancel_at_period_end ? " · cancels at period end" : ""}
+                  </span>
+                </div>
                 <div><span className="text-[#a1a1aa] block mb-1">Period Ends</span><span className="font-mono text-[#52525b]">{selectedSub.current_period_end ? new Date(selectedSub.current_period_end).toLocaleDateString() : '-'}</span></div>
                 <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.is_reminder_only ? "Reminder-only (pay link / record payment)" : selectedSub.vaulted_token_id ? "Auto-debit active" : "None"}</span></div>
               </div>
@@ -381,9 +409,19 @@ export default function SubscribersPage() {
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
-                <button onClick={() => { if (window.confirm("Are you sure you want to cancel this subscription?")) actionMutation.mutate({ action: "cancel" }); }} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <button onClick={() => { if (window.confirm("Cancel this subscription immediately? Access ends now.")) actionMutation.mutate({ action: "cancel", payload: { at_period_end: false } }); }} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                   {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
                 </button>
+                {selectedSub.status === "ACTIVE" && selectedSub.next_billing_date && new Date(selectedSub.next_billing_date).getTime() > Date.now() && !selectedSub.cancel_at_period_end && (
+                  <button onClick={() => { if (window.confirm("Cancel at period end? Access continues until the paid-through date.")) actionMutation.mutate({ action: "cancel", payload: { at_period_end: true } }); }} disabled={activeAction !== null} className="h-8 col-span-2 border border-amber-200 bg-white text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                    {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel at period end
+                  </button>
+                )}
+                {selectedSub.cancel_at_period_end && selectedSub.status !== "CANCELED" && (
+                  <button onClick={() => actionMutation.mutate({ action: "keep" })} disabled={activeAction !== null} className="h-8 col-span-2 border border-emerald-200 bg-emerald-50 text-[10px] font-bold uppercase tracking-widest text-emerald-800 hover:bg-emerald-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                    {activeAction === "keep" && <Loader2 size={12} className="animate-spin" />} Keep plan
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     if (!selectedSub) return;

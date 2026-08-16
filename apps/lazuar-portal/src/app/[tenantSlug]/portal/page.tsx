@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { serverClient } from "../../../modules/core/lib/server-client";
 import { RequestMagicLinkForm } from "../../../modules/portal/components/RequestMagicLinkForm";
 import { ShieldCheck /* [MVP-HIDE] , FileText */ } from "lucide-react";
+
+function formatPaidThrough(value?: string | null) {
+  if (!value) return null;
+  return new Date(value).toLocaleDateString();
+}
 
 export default async function AggregatedPortalPage({
   params,
@@ -56,7 +62,10 @@ export default async function AggregatedPortalPage({
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {commerceData.subscriptions.map(sub => {
-              const isActive = sub.status === "ACTIVE" || sub.status === "PAST_DUE";
+              const paidThrough = formatPaidThrough(sub.current_period_end);
+              const isHealthyActive = sub.status === "ACTIVE" && !sub.cancel_at_period_end;
+              const isFlagged = sub.status === "ACTIVE" && sub.cancel_at_period_end;
+              const isPastDue = sub.status === "PAST_DUE";
 
               return (
                 <div key={sub.id} className="bg-card border border-border/60 shadow-sm p-6 rounded-none flex flex-col md:flex-row gap-6 justify-between">
@@ -66,10 +75,25 @@ export default async function AggregatedPortalPage({
                       <span className="text-[10px] font-bold uppercase tracking-widest bg-secondary text-foreground px-2 py-0.5 border border-border">
                         {sub.status.replace("_", " ")}
                       </span>
+                      {isFlagged && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-800 px-2 py-0.5 border border-amber-200">
+                          Cancels {paidThrough ? `on ${paidThrough}` : "at period end"}
+                        </span>
+                      )}
                     </div>
-                    {sub.current_period_end && (
+                    {paidThrough && (
                       <p className="text-xs text-muted-foreground font-mono mb-4">
-                        Renews/Expires: {new Date(sub.current_period_end).toLocaleDateString()}
+                        {isFlagged ? "Access until" : "Renews/Expires"}: {paidThrough}
+                      </p>
+                    )}
+                    {isHealthyActive && paidThrough && (
+                      <p className="text-xs text-muted-foreground">
+                        Cancel at period end keeps access until {paidThrough}. No further charges after that.
+                      </p>
+                    )}
+                    {isPastDue && (
+                      <p className="text-xs text-muted-foreground">
+                        This plan is past due. Canceling now ends access immediately.
                       </p>
                     )}
                   </div>
@@ -80,16 +104,59 @@ export default async function AggregatedPortalPage({
                       <FileText size={12} /> Download Tax Invoice
                     </a>
                     */}
-                    {isActive && (
+                    {isHealthyActive && (
+                      <>
+                        <form action={async () => {
+                          "use server";
+                          await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
+                            params: { path: { tenantSlug }, query: { token: token ?? "" } },
+                            body: { subscription_id: sub.id, at_period_end: true }
+                          });
+                          revalidatePath(`/${tenantSlug}/portal`);
+                        }}>
+                          <button className="h-9 px-4 border border-red-200 bg-background text-red-600 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors rounded-none">
+                            Cancel Plan
+                          </button>
+                        </form>
+                        <form action={async () => {
+                          "use server";
+                          await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
+                            params: { path: { tenantSlug }, query: { token: token ?? "" } },
+                            body: { subscription_id: sub.id, at_period_end: false }
+                          });
+                          revalidatePath(`/${tenantSlug}/portal`);
+                        }}>
+                          <button className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-red-600 transition-colors">
+                            Cancel immediately
+                          </button>
+                        </form>
+                      </>
+                    )}
+                    {isFlagged && (
+                      <form action={async () => {
+                        "use server";
+                        await serverClient.POST("/public/commerce/{tenantSlug}/portal/keep", {
+                          params: { path: { tenantSlug }, query: { token: token ?? "" } },
+                          body: { subscription_id: sub.id }
+                        });
+                        revalidatePath(`/${tenantSlug}/portal`);
+                      }}>
+                        <button className="h-9 px-4 border border-emerald-200 bg-background text-emerald-700 text-[11px] font-bold uppercase tracking-widest hover:bg-emerald-50 transition-colors rounded-none">
+                          Keep plan
+                        </button>
+                      </form>
+                    )}
+                    {isPastDue && (
                       <form action={async () => {
                         "use server";
                         await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
                           params: { path: { tenantSlug }, query: { token: token ?? "" } },
-                          body: { subscription_id: sub.id }
+                          body: { subscription_id: sub.id, at_period_end: false }
                         });
+                        revalidatePath(`/${tenantSlug}/portal`);
                       }}>
                         <button className="h-9 px-4 border border-red-200 bg-background text-red-600 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors rounded-none">
-                          Cancel Plan
+                          Cancel immediately
                         </button>
                       </form>
                     )}

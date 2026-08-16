@@ -81,13 +81,33 @@ public static class SubscriberEndpoints
 
         group.MapPost("/subscribers/{id:guid}/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             Guid id,
+            CancelSubscriberRequest? body,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
             try
             {
-                await mediator.Send(new CancelAdminSubscriptionCommand(ctx.TenantId, id));
-                return TypedResults.Ok(new StatusResponse { Status = "CANCELED" });
+                var status = await mediator.Send(new CancelAdminSubscriptionCommand(
+                    ctx.TenantId,
+                    id,
+                    body?.At_period_end ?? false));
+                return TypedResults.Ok(new StatusResponse { Status = status });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+            }
+        });
+
+        group.MapPost("/subscribers/{id:guid}/keep", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new KeepAdminSubscriptionCommand(ctx.TenantId, id));
+                return TypedResults.Ok(new StatusResponse { Status = "kept" });
             }
             catch (InvalidOperationException ex)
             {

@@ -117,6 +117,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/billing/saas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminBillingOperations_getWorkspaceSaasSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/billing/saas/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminBillingOperations_createSaasCheckoutSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/billing/summary": {
         parameters: {
             query?: never;
@@ -384,6 +416,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Cancel now (default) or schedule cancel at period end. */
         post: operations["AdminCommerceOperations_cancelSubscriber"];
         delete?: never;
         options?: never;
@@ -417,6 +450,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["AdminCommerceOperations_resumeSubscriberDunning"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/commerce/subscribers/{id}/keep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Undo a scheduled period-end cancel. */
+        post: operations["AdminCommerceOperations_keepSubscriber"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1684,8 +1734,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Customer-initiated cancel via portal magic token. */
+        /** @description Customer-initiated cancel via portal magic token. Defaults to cancel at period end. */
         post: operations["PublicCommerceOperations_cancelPortalSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/commerce/{tenantSlug}/portal/keep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Undo a scheduled period-end cancel while the subscription is still ACTIVE. */
+        post: operations["PublicCommerceOperations_keepPortalSubscription"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1747,6 +1814,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        "Billing.CreateSaasCheckoutRequestDto": {
+            return_url: string;
+        };
+        "Billing.CreateSaasCheckoutResponseDto": {
+            checkout_url: string;
+        };
         "Billing.CreateTopUpRequestDto": {
             /** Format: double */
             amount_myr: number;
@@ -1823,6 +1896,14 @@ export interface components {
             net_profit: number;
             currency: string;
         };
+        "Billing.SaasPlanDto": {
+            code: string;
+            name: string;
+            /** Format: double */
+            amount_myr: number;
+            interval: string;
+            currency: string;
+        };
         "Billing.TenantBillingAddressDto": {
             line1: string;
             line2?: string;
@@ -1851,6 +1932,17 @@ export interface components {
             logo_url?: string;
             address?: components["schemas"]["Billing.TenantBillingAddressDto"];
         };
+        "Billing.WorkspaceSaasSubscriptionDto": {
+            organization_id: string;
+            plan: components["schemas"]["Billing.SaasPlanDto"];
+            status: string;
+            /** Format: date-time */
+            current_period_start?: string;
+            /** Format: date-time */
+            current_period_end?: string;
+            /** Format: date-time */
+            next_invoice_at?: string;
+        };
         "Commerce.AggregatedPortalDataResponse": {
             subscriptions: components["schemas"]["Commerce.PortalSubscriptionDto"][];
             orders: components["schemas"]["Commerce.PortalOrderDto"][];
@@ -1864,6 +1956,16 @@ export interface components {
         };
         "Commerce.CancelPortalRequest": {
             subscription_id: string;
+            /**
+             * @description Default true. Immediate if false, or if there is no remaining paid period.
+             * @default true
+             */
+            at_period_end: boolean;
+        };
+        /** Ops cancel. Omitted / empty body is immediate. Period-end only when at_period_end is true and a paid period remains. */
+        "Commerce.CancelSubscriberRequest": {
+            /** @default false */
+            at_period_end: boolean;
         };
         "Commerce.CashFlowTrendDto": {
             month: string;
@@ -1937,6 +2039,7 @@ export interface components {
             vaulted_customer_id?: string;
             vaulted_token_id?: string;
             is_reminder_only: boolean;
+            cancel_at_period_end: boolean;
             dunning_campaign_name?: string;
             /** Format: int32 */
             current_dunning_step?: number;
@@ -2110,6 +2213,9 @@ export interface components {
         "Commerce.GenerateCustomerPortalResponseDto": {
             url: string;
         };
+        "Commerce.KeepPortalRequest": {
+            subscription_id: string;
+        };
         "Commerce.PauseDunningRequestDto": {
             /** Format: date-time */
             pause_until: string;
@@ -2155,8 +2261,12 @@ export interface components {
             product_id: string;
             product_name: string;
             status: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Paid-through instant (`NextBillingDate`).
+             */
             current_period_end?: string;
+            cancel_at_period_end: boolean;
         };
         "Commerce.ProductDto": {
             id: string;
@@ -2190,7 +2300,11 @@ export interface components {
             postal_code?: string;
             state_code?: string;
             country_code?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Optional quantity. Default 1. Meaningful only for FIXED one-time products (min 1, max 99).
+             *     Recurring and PWYW must be 1 (or omitted).
+             */
             quantity?: number;
             is_guest_checkout?: boolean;
             coupon_code?: string;
@@ -3587,6 +3701,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminBillingOperations_getWorkspaceSaasSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Billing.WorkspaceSaasSubscriptionDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminBillingOperations_createSaasCheckoutSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Billing.CreateSaasCheckoutRequestDto"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Billing.CreateSaasCheckoutResponseDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -5421,7 +5669,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Commerce.CancelSubscriberRequest"];
+            };
+        };
         responses: {
             /** @description The request has succeeded. */
             200: {
@@ -5551,6 +5803,73 @@ export interface operations {
         };
     };
     AdminCommerceOperations_resumeSubscriberDunning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommerceOperations_keepSubscriber: {
         parameters: {
             query?: never;
             header?: never;
@@ -11716,6 +12035,79 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Commerce.CancelPortalRequest"];
+            };
+        };
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicCommerceOperations_keepPortalSubscription: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path: {
+                tenantSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Commerce.KeepPortalRequest"];
             };
         };
         responses: {

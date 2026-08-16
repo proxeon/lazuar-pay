@@ -472,6 +472,90 @@ public class BillingEngineJobTests
             .Status.Should().Be("PAST_DUE");
     }
 
+    [Test]
+    public async Task RunOnce_FlaggedDueVaulted_CancelsWithoutCharge_SiblingStillCharges()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var flagged = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        flagged.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        flagged.StoreVaultedToken("cus_flagged", "pm_flagged");
+
+        var sibling = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sibling.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        sibling.StoreVaultedToken("cus_sib", "pm_sib");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(flagged, sibling);
+        await _db.SaveChangesAsync();
+        _db.Entry(flagged).Property(s => s.CancelAtPeriodEnd).CurrentValue = true;
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var canceled = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == flagged.Id);
+        canceled.Status.Should().Be("CANCELED");
+        canceled.CancelAtPeriodEnd.Should().BeFalse();
+        (await _db.ChargeAttemptLogs.IgnoreQueryFilters().CountAsync(l => l.SubscriptionId == flagged.Id))
+            .Should().Be(0);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<SubscriptionCanceledIntegrationEvent>(e =>
+            e.SubscriptionId == flagged.Id));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == flagged.Id));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sibling.Id));
+    }
+
+    [Test]
+    public async Task RunOnce_FlaggedDueReminderOnly_CancelsWithoutMintOrPastDue()
+    {
+        var product = CreateProduct(_orgId, "BILLPLZ");
+        var flagged = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        flagged.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), isReminderOnly: true);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(flagged);
+        await _db.SaveChangesAsync();
+        _db.Entry(flagged).Property(s => s.CancelAtPeriodEnd).CurrentValue = true;
+        await _db.SaveChangesAsync();
+
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/should-not-mint");
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == flagged.Id);
+        reloaded.Status.Should().Be("CANCELED");
+        reloaded.CancelAtPeriodEnd.Should().BeFalse();
+        reloaded.CurrentRenewalCheckoutUrl.Should().BeNull();
+
+        await _mediator.DidNotReceive().Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"));
+        await _eventBus.Received(1).PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task RunOnce_FlaggedFutureNextBilling_Untouched()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var flagged = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        flagged.Activate(DateTime.UtcNow.AddMonths(1), DateTime.UtcNow.AddDays(10));
+        flagged.ScheduleCancelAtPeriodEnd();
+        flagged.StoreVaultedToken("cus_future", "pm_future");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(flagged);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == flagged.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.CancelAtPeriodEnd.Should().BeTrue();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
     private void ArrangeMint(string email, string checkoutUrl)
     {
         _crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns(new ClientProfileDto

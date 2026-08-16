@@ -118,7 +118,15 @@ interface AdminCommerceOperations {
 
   @post
   @route("/subscribers/{id}/cancel")
-  cancelSubscriber(@path id: string):
+  @doc("Cancel now (default) or schedule cancel at period end.")
+  cancelSubscriber(@path id: string, @body body?: CancelSubscriberRequest):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/keep")
+  @doc("Undo a scheduled period-end cancel.")
+  keepSubscriber(@path id: string):
     | LazuarApi.Core.StatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
