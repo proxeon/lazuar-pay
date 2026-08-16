@@ -30,7 +30,7 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
     queryKey: ["commerce-products-lookup"],
     queryFn: async () => {
       const { data } = await client.GET("/admin/commerce/products");
-      return data || [];
+      return (data || []).filter((p: ProductDto) => p.is_active && (p.interval === "mo" || p.interval === "yr"));
     }
   });
 
@@ -102,7 +102,14 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
                   </div>
                   <div className="space-y-1.5 col-span-2 sm:col-span-1">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Target Product *</label>
-                    <select required value={productId} onChange={e => setProductId(e.target.value)} disabled={createMutation.isPending || isProductsLoading} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
+                    <select required value={productId} onChange={e => {
+                      const id = e.target.value;
+                      setProductId(id);
+                      const selected = products?.find((p: ProductDto) => p.id === id);
+                      if (selected && paymentMethod !== "COMPED") {
+                        setAmountPaid(String(selected.price));
+                      }
+                    }} disabled={createMutation.isPending || isProductsLoading} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
                       <option value="" disabled>Select a product...</option>
                       {products?.map((p: ProductDto) => <option key={p.id} value={p.id}>{p.name} (RM {p.price})</option>)}
                     </select>
@@ -114,10 +121,19 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">2. Financials</label>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Payment Method *</label>
-                  <select value={paymentMethod} onChange={e => { setPaymentMethod(e.target.value); if (e.target.value === "COMPED") setAmountPaid("0"); }} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
+                  <select value={paymentMethod} onChange={e => {
+                    const next = e.target.value;
+                    setPaymentMethod(next);
+                    if (next === "COMPED") {
+                      setAmountPaid("0");
+                    } else {
+                      const selected = products?.find((p: ProductDto) => p.id === productId);
+                      if (selected) setAmountPaid(String(selected.price));
+                    }
+                  }} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
                     <option value="BANK_TRANSFER">Bank Transfer (Manual)</option>
                     <option value="CASH">Cash</option>
-                    <option value="COMPED">Complimentary (Free Access)</option>
+                    <option value="COMPED">Complimentary — grants one period, then they come due.</option>
                   </select>
                 </div>
                 
@@ -136,7 +152,7 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
                 <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-sm">
                   <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-amber-800 leading-relaxed">
-                    This user will not have an auto-debit card on file. They will automatically be flagged as <strong>Reminder Only</strong> and will receive manual payment links upon renewal.
+                    This user will not have an auto-debit card on file. They are flagged as <strong>Reminder Only</strong>. We will email a hosted payment link each cycle (no auto-debit).
                   </p>
                 </div>
               </div>
@@ -146,7 +162,7 @@ export default function CreateSubscriberModal({ onClose }: CreateSubscriberModal
                 
                 <label className="flex items-center gap-2 cursor-pointer mt-2 w-fit">
                   <input type="checkbox" checked={sendWelcomeEmail} onChange={e => setSendWelcomeEmail(e.target.checked)} disabled={createMutation.isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
-                  <span className="text-[12px] font-medium text-[#09090b]">Send automated Welcome Email & Access Links</span>
+                  <span className="text-[12px] font-medium text-[#09090b]">Email a portal access link.</span>
                 </label>
 
                 <div className="grid grid-cols-2 gap-4 pt-2">

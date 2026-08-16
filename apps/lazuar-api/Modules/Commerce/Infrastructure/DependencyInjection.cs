@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<GatewayPaymentFailedIntegrationEventHandler>();
         services.AddTransient<GatewayRefundCompletedIntegrationEventHandler>();
+        services.AddTransient<GatewayRefundFailedIntegrationEventHandler>();
         services.AddTransient<OrderCompletedIntegrationEventHandler>();
         services.AddTransient<SubscriptionLifecycleIntegrationEventHandlers>();
         services.AddTransient<DefaultTemplatesSeededIntegrationEventHandler>();
@@ -72,6 +73,7 @@ public static class DependencyInjection
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayPaymentFailedIntegrationEvent, GatewayPaymentFailedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedIntegrationEventHandler>();
+        eventBus.Subscribe<GatewayRefundFailedIntegrationEvent, GatewayRefundFailedIntegrationEventHandler>();
         eventBus.Subscribe<OrderCompletedIntegrationEvent, OrderCompletedIntegrationEventHandler>();
         eventBus.Subscribe<SubscriptionActivatedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<SubscriptionSuspendedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();

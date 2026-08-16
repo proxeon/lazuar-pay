@@ -12,7 +12,8 @@ public record RecordSubscriberPaymentCommand(
     Guid SubscriptionId,
     decimal Amount,
     string PaymentMethod,
-    string? ReferenceNumber) : ICommand
+    string? ReferenceNumber,
+    DateTime? NextBillingDate = null) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

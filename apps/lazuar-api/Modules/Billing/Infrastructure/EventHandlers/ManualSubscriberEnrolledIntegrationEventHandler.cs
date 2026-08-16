@@ -24,7 +24,10 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
     public async Task HandleAsync(ManualSubscriberEnrolledIntegrationEvent @event)
     {
         var referenceType = LedgerReferenceTypes.ManualEnrollment;
-        var referenceId = @event.SubscriptionId.ToString();
+        // Per-payment key (tx log id). Empty Guid is an in-flight outbox event from before LP-065.
+        var referenceId = @event.TransactionLogId != Guid.Empty
+            ? @event.TransactionLogId.ToString()
+            : @event.SubscriptionId.ToString();
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
             return;
@@ -33,7 +36,7 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
             @event.OrganizationId,
             referenceType,
             referenceId,
-            $"Manual subscription logged for customer: {@event.ClientProfileId}",
+            $"{@event.PaymentMethod} payment logged for customer: {@event.ClientProfileId}",
             "B2C");
 
         entry.AddLine(AccountTypes.AssetCash, @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);

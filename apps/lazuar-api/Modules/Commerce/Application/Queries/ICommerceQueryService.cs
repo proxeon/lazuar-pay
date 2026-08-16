@@ -17,7 +17,7 @@ public interface ICommerceQueryService
     Task<IEnumerable<DunningCampaignDto>> GetDunningCampaignsAsync(Guid organizationId);
     
     Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null);
-    Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? paymentMethod, string? searchTerm = null);
+    Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? gatewayName, string? searchTerm = null, Guid? subscriptionId = null);
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
     Task<CommerceStatsDto> GetStatsAsync(Guid organizationId);
     /// <summary>

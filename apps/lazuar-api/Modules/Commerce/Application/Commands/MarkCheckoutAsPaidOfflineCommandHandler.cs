@@ -95,6 +95,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         session.Complete();
 
         Guid entitlementId;
+        Guid? subscriptionId = null;
 
         if (product.Interval == "one_time")
         {
@@ -124,6 +125,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             subscription.SetMetadataJson(session.MetadataJson);
             _repository.AddSubscription(subscription);
             entitlementId = subscription.Id;
+            subscriptionId = subscription.Id;
 
             await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
                 session.OrganizationId,
@@ -135,17 +137,20 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         }
 
         var externalRef = $"OFFLINE-{session.Id:N}"[..36];
-        _repository.AddTransactionLog(new CommerceTransactionLog(
+        var txLog = new CommerceTransactionLog(
             session.OrganizationId,
             totalAmount,
             feeAmount: 0m,
             currency,
-            "CONFIRMED",
+            CommerceTransactionLog.StatusConfirmed,
             customerName,
             customerEmail,
             product.Name,
             recordedByName: "MANUAL_OFFLINE",
-            externalReference: externalRef));
+            externalReference: externalRef,
+            gatewayName: "OFFLINE",
+            subscriptionId: subscriptionId);
+        _repository.AddTransactionLog(txLog);
 
         if (totalAmount > 0)
         {
@@ -157,7 +162,8 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
                 totalAmount,
                 currency,
                 "MANUAL_OFFLINE",
-                $"Manual settlement for session {session.Id}"));
+                $"Manual settlement for session {session.Id}",
+                txLog.Id));
         }
 
         await _repository.SaveChangesAsync(ct);
@@ -175,21 +181,23 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         session.Complete();
 
         var externalRef = $"OFFLINE-{session.Id:N}"[..36];
-        _repository.AddTransactionLog(new CommerceTransactionLog(
+        var txLog = new CommerceTransactionLog(
             session.OrganizationId,
             totalAmount,
             feeAmount: 0m,
             currency,
-            "CONFIRMED",
+            CommerceTransactionLog.StatusConfirmed,
             customerName,
             customerEmail,
             productName: "Custom Payment Request",
             recordedByName: "MANUAL_OFFLINE",
-            externalReference: externalRef));
+            externalReference: externalRef,
+            gatewayName: "OFFLINE");
+        _repository.AddTransactionLog(txLog);
 
         if (totalAmount > 0)
         {
-            // Ledger path only — SubscriptionId field carries session id as stable reference.
+            // Ledger path only — event.SubscriptionId carries session id as stable CRM correlation.
             await _eventBus.PublishAsync(new ManualSubscriberEnrolledIntegrationEvent(
                 session.OrganizationId,
                 session.Id,
@@ -198,7 +206,8 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
                 totalAmount,
                 currency,
                 "MANUAL_OFFLINE",
-                $"Manual settlement for session {session.Id}"));
+                $"Manual settlement for session {session.Id}",
+                txLog.Id));
         }
 
         await _repository.SaveChangesAsync(ct);

@@ -32,7 +32,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
 
         if (type == "custom_payment_link")
         {
-            await LogTransactionAsync(@event, session.ClientProfileId, "Custom Payment Request", "SYSTEM");
+            await LogTransactionAsync(@event, session.ClientProfileId, "Custom Payment Request", "SYSTEM", session.GatewayName);
 
             var payloadObj = new
             {
@@ -74,6 +74,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             return;
         }
 
+        Guid? subscriptionId = null;
         if (product.Interval != "one_time")
         {
             var subscription = new Subscription(
@@ -93,6 +94,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             }
 
             _repository.AddSubscription(subscription);
+            subscriptionId = subscription.Id;
 
             await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
                 subscription.OrganizationId,
@@ -126,7 +128,8 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             ));
         }
 
-        await LogTransactionAsync(@event, session.ClientProfileId, product.Name, "SYSTEM");
+        var gatewayName = !string.IsNullOrWhiteSpace(product.GatewayName) ? product.GatewayName : session.GatewayName;
+        await LogTransactionAsync(@event, session.ClientProfileId, product.Name, "SYSTEM", gatewayName, subscriptionId);
         await _repository.SaveChangesAsync();
     }
 }

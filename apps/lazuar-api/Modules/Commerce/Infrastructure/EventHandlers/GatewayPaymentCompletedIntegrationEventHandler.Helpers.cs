@@ -37,7 +37,13 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         return false;
     }
 
-    private async Task LogTransactionAsync(GatewayPaymentCompletedIntegrationEvent @event, Guid clientProfileId, string productName, string recordedBy)
+    private async Task LogTransactionAsync(
+        GatewayPaymentCompletedIntegrationEvent @event,
+        Guid clientProfileId,
+        string productName,
+        string recordedBy,
+        string? gatewayName,
+        Guid? subscriptionId = null)
     {
         var clientProfile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
         var customerName = clientProfile?.Full_name ?? "Unknown Customer";
@@ -48,13 +54,14 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             @event.AmountPaid,
             @event.GatewayFee,
             @event.Currency,
-            "CONFIRMED",
+            CommerceTransactionLog.StatusConfirmed,
             customerName,
             customerEmail,
             productName,
             recordedBy,
-            @event.GatewayTransactionId
-        );
+            @event.GatewayTransactionId,
+            gatewayName,
+            subscriptionId);
 
         _dbContext.TransactionLogs.Add(transactionLog);
     }

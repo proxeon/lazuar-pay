@@ -255,6 +255,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.OrganizationId);
             builder.HasIndex(x => x.CreatedAt);
+            builder.HasIndex(x => new { x.OrganizationId, x.SubscriptionId, x.CreatedAt });
             builder.Property(x => x.Amount).HasPrecision(18, 4);
             builder.Property(x => x.FeeAmount).HasPrecision(18, 4);
             builder.Property(x => x.NetAmount).HasPrecision(18, 4);
@@ -265,6 +266,9 @@ public class CommerceDbContext : PlatformDbContext
             builder.Property(x => x.ProductName).HasMaxLength(255);
             builder.Property(x => x.RecordedByName).HasMaxLength(255);
             builder.Property(x => x.ExternalReference).HasMaxLength(255);
+            builder.Property(x => x.GatewayName).HasMaxLength(32);
+            builder.Property(x => x.RefundedAmount).HasPrecision(18, 4).HasDefaultValue(0m);
+            builder.Property(x => x.RefundReason).HasMaxLength(255);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

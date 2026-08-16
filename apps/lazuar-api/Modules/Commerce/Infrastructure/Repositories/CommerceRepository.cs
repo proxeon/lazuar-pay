@@ -111,6 +111,55 @@ public class CommerceRepository : ICommerceRepository
             .FirstOrDefaultAsync(t => t.Id == id, ct);
     }
 
+    public async Task<IReadOnlyList<CommerceTransactionLog>> GetTransactionLogsByCustomerEmailAsync(
+        Guid organizationId,
+        string customerEmail,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(customerEmail))
+        {
+            return Array.Empty<CommerceTransactionLog>();
+        }
+
+        var normalized = customerEmail.Trim().ToLowerInvariant();
+        return await _context.TransactionLogs
+            .IgnoreQueryFilters()
+            .Where(t => t.OrganizationId == organizationId && t.CustomerEmail == normalized)
+            .ToListAsync(ct);
+    }
+
+    public async Task<CommerceTransactionLog?> GetConfirmedTransactionLogByReferenceAsync(
+        Guid organizationId,
+        Guid subscriptionId,
+        string externalReference,
+        CancellationToken ct = default)
+    {
+        return await _context.TransactionLogs
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                t => t.OrganizationId == organizationId
+                    && t.SubscriptionId == subscriptionId
+                    && t.ExternalReference == externalReference
+                    && t.Status == CommerceTransactionLog.StatusConfirmed,
+                ct);
+    }
+
+    public async Task<bool> HasActiveSubscriptionAsync(
+        Guid organizationId,
+        Guid clientProfileId,
+        Guid productId,
+        CancellationToken ct = default)
+    {
+        return await _context.Subscriptions
+            .IgnoreQueryFilters()
+            .AnyAsync(
+                s => s.OrganizationId == organizationId
+                    && s.ClientProfileId == clientProfileId
+                    && s.ProductId == productId
+                    && s.Status == "ACTIVE",
+                ct);
+    }
+
     public async Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default)
     {
         return await _context.ChargeAttemptLogs

@@ -20,6 +20,20 @@ public interface ICommerceRepository
     Task<Subscription?> GetNewestSubscriptionForClientAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default);
     Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
     Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<CommerceTransactionLog>> GetTransactionLogsByCustomerEmailAsync(
+        Guid organizationId,
+        string customerEmail,
+        CancellationToken ct = default);
+    Task<CommerceTransactionLog?> GetConfirmedTransactionLogByReferenceAsync(
+        Guid organizationId,
+        Guid subscriptionId,
+        string externalReference,
+        CancellationToken ct = default);
+    Task<bool> HasActiveSubscriptionAsync(
+        Guid organizationId,
+        Guid clientProfileId,
+        Guid productId,
+        CancellationToken ct = default);
     Task<bool> HasChargeAttemptAsync(Guid subscriptionId, DateTime targetDate, CancellationToken ct = default);
     
     Task<DunningCampaign?> GetDunningCampaignByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);

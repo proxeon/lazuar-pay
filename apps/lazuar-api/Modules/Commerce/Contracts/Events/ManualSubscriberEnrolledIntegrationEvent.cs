@@ -11,7 +11,8 @@ public record ManualSubscriberEnrolledIntegrationEvent(
     decimal AmountPaid,
     string Currency,
     string PaymentMethod,
-    string? ReferenceNumber
+    string? ReferenceNumber,
+    Guid TransactionLogId = default
 ) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

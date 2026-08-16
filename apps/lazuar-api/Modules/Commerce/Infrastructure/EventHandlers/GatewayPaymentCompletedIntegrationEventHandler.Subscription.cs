@@ -110,7 +110,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
 
         await MarkChargeAttemptSucceededAsync(@event, existingSub.Id);
 
-        await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM");
+        await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM", productInfo.GatewayName, existingSub.Id);
         await _repository.SaveChangesAsync();
     }
 

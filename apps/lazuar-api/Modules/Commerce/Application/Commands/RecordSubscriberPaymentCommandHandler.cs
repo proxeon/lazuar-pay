@@ -51,47 +51,51 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
             throw new InvalidOperationException("Record-payment is only supported for recurring subscriptions.");
         }
 
-        var amount = request.Amount;
-        var method = (request.PaymentMethod ?? "MANUAL").Trim().ToUpperInvariant();
-        if (method == "COMPED")
-        {
-            amount = 0m;
-        }
-
+        var method = OfflinePaymentMethods.Normalize(request.PaymentMethod);
+        var amount = method == OfflinePaymentMethods.Comped ? 0m : request.Amount;
         if (amount < 0)
         {
             throw new InvalidOperationException("Payment amount cannot be negative.");
         }
 
+        var clerkRef = string.IsNullOrWhiteSpace(request.ReferenceNumber)
+            ? null
+            : request.ReferenceNumber.Trim();
+        if (clerkRef != null)
+        {
+            var existing = await _repository.GetConfirmedTransactionLogByReferenceAsync(
+                request.OrganizationId,
+                subscription.Id,
+                clerkRef,
+                ct);
+            if (existing != null)
+            {
+                return;
+            }
+        }
+
         var wasSuspended = subscription.Status == "SUSPENDED";
         var wasInArrears = subscription.Status is "PAST_DUE" or "SUSPENDED";
 
-        // Capture before Resume / RecoverFromPayment / ClearDunning.
         var recoveryCampaignId = DunningRecoveryAttribution.ResolveCampaignId(
             wasInArrears,
             subscription.CurrentDunningCampaignId);
 
         var periodEnd = DateTime.UtcNow;
-        var nextBilling = product.Interval == "yr"
-            ? DateTime.UtcNow.AddYears(1)
-            : DateTime.UtcNow.AddMonths(1);
+        var nextBilling = request.NextBillingDate
+            ?? (product.Interval == "yr" ? periodEnd.AddYears(1) : periodEnd.AddMonths(1));
 
-        if (wasSuspended)
-        {
-            subscription.Resume(nextBilling);
-        }
-        else if (subscription.Status == "PAST_DUE")
+        if (wasInArrears)
         {
             subscription.RecoverFromPayment(periodEnd, nextBilling);
         }
         else
         {
-            // ACTIVE renewal: advance period and clear any residual dunning pause.
             subscription.Activate(periodEnd, nextBilling, subscription.IsReminderOnly);
             subscription.ClearDunning();
         }
 
-        if (recoveryCampaignId is Guid campaignId && amount > 0 && method != "COMPED")
+        if (recoveryCampaignId is Guid campaignId && amount > 0 && method != OfflinePaymentMethods.Comped)
         {
             var campaign = await _repository.GetDunningCampaignByIdAsync(request.OrganizationId, campaignId, ct);
             campaign?.RecordRecovery(amount);
@@ -101,25 +105,23 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
         var customerName = clientProfile?.Full_name ?? "Unknown Customer";
         var customerEmail = clientProfile?.Email ?? string.Empty;
 
-        var externalRef = string.IsNullOrWhiteSpace(request.ReferenceNumber)
-            ? $"MANUAL-{subscription.Id:N}"[..32]
-            : request.ReferenceNumber.Trim();
-
         var txLog = new CommerceTransactionLog(
             subscription.OrganizationId,
             amount,
             feeAmount: 0m,
             product.Currency,
-            "CONFIRMED",
+            CommerceTransactionLog.StatusConfirmed,
             customerName,
             customerEmail,
             product.Name,
             recordedByName: method,
-            externalReference: externalRef);
+            externalReference: clerkRef,
+            gatewayName: "OFFLINE",
+            subscriptionId: subscription.Id);
 
         _repository.AddTransactionLog(txLog);
 
-        if (amount > 0 && method != "COMPED")
+        if (amount > 0 && method != OfflinePaymentMethods.Comped)
         {
             await _eventBus.PublishAsync(new ManualSubscriberEnrolledIntegrationEvent(
                 subscription.OrganizationId,
@@ -129,7 +131,8 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
                 amount,
                 product.Currency,
                 method,
-                request.ReferenceNumber));
+                clerkRef,
+                txLog.Id));
         }
 
         if (wasSuspended)
@@ -141,7 +144,7 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
                 subscription.ProductId,
                 product.FulfillmentTargets.ToList()));
         }
-        else if (wasInArrears || amount > 0)
+        else if (wasInArrears)
         {
             await _eventBus.PublishAsync(new SubscriptionActivatedIntegrationEvent(
                 subscription.OrganizationId,

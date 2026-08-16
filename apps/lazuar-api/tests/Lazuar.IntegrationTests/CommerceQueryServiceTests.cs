@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
@@ -151,5 +152,33 @@ public class CommerceQueryServiceTests
         var empty = await _queryService.GetStatsAsync(Guid.CreateVersion7());
         empty.Recovered_revenue.Should().Be(0);
         empty.Saved_subscriptions.Should().Be(0);
+    }
+
+    [Test]
+    public async Task GetTransactionsAsync_SubscriptionId_ReturnsOnlyThatSubscriptionsLogs()
+    {
+        var orgId = Guid.CreateVersion7();
+        var subA = Guid.CreateVersion7();
+        var subB = Guid.CreateVersion7();
+
+        _dbContext.TransactionLogs.AddRange(
+            new Modules.Commerce.Domain.Entities.CommerceTransactionLog(
+                orgId, 150m, 0m, "MYR", "CONFIRMED", "A", "a@example.com", "Plan",
+                "BANK_TRANSFER", "REF-A", subscriptionId: subA),
+            new Modules.Commerce.Domain.Entities.CommerceTransactionLog(
+                orgId, 80m, 0m, "MYR", "CONFIRMED", "B", "b@example.com", "Plan",
+                "CASH", "REF-B", subscriptionId: subB),
+            new Modules.Commerce.Domain.Entities.CommerceTransactionLog(
+                orgId, 40m, 0m, "MYR", "CONFIRMED", "A", "a@example.com", "Plan",
+                "BANK_TRANSFER", "REF-A2", subscriptionId: subA));
+        await _dbContext.SaveChangesAsync();
+
+        var filtered = await _queryService.GetTransactionsAsync(orgId, 1, 50, null, null, "b@example.com", subA);
+        filtered.Data.Should().HaveCount(2);
+        filtered.Data.Select(t => t.External_reference).Should().BeEquivalentTo("REF-A", "REF-A2");
+
+        var other = await _queryService.GetTransactionsAsync(orgId, 1, 50, null, null, null, subB);
+        other.Data.Should().HaveCount(1);
+        other.Data.Single().External_reference.Should().Be("REF-B");
     }
 }
