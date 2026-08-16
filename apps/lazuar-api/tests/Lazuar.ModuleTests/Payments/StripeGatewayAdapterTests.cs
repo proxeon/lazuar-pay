@@ -98,7 +98,8 @@ public class StripeGatewayAdapterTests
         {
             "BillplzGatewayAdapter.cs",
             "ChipCollectGatewayAdapter.cs",
-            "RazorpayGatewayAdapter.cs"
+            "RazorpayGatewayAdapter.cs",
+            "XenditGatewayAdapter.cs"
         })
         {
             var path = Path.Combine(gatewaysDir, file);
@@ -196,7 +197,8 @@ public class StripeGatewayAdapterTests
             "StripeGatewayAdapter.cs",
             "BillplzGatewayAdapter.cs",
             "ChipCollectGatewayAdapter.cs",
-            "RazorpayGatewayAdapter.cs"
+            "RazorpayGatewayAdapter.cs",
+            "XenditGatewayAdapter.cs"
         })
         {
             var path = Path.Combine(gatewaysDir, file);

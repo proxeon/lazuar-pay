@@ -96,10 +96,10 @@ Local names **not** given a column (see reports 02, 05, 10): ToyyibPay, SenangPa
 | LP-030 | Cards Visa/Mastercard | — | W | P | Y | Y | Y | Y | Y | W | Y |
 | LP-031 | FPX one-time (retail) | — | W | Y | Y | Y | Y | Y | N | W | N |
 | LP-032 | FPX e-mandate (true auto-debit) | 4 | N | N | N | N | Y | N | N | W | N |
-| LP-033 | DuitNow QR | 4 | N | P | P | Y | Y | N | N | W | N |
-| LP-034 | Touch ’n Go eWallet | 4 | N | P | P | Y | Y | N | N | W | N |
-| LP-035 | GrabPay | 4 | N | P | P | Y | Y | P | N | W | N |
-| LP-036 | ShopeePay / Boost | 4 | N | N | P | Y | Y | N | N | W | N |
+| LP-033 | DuitNow QR | 4 | W | P | P | Y | Y | N | N | W | N |
+| LP-034 | Touch ’n Go eWallet | 4 | W | P | P | Y | Y | N | N | W | N |
+| LP-035 | GrabPay | 4 | W | P | P | Y | Y | P | N | W | N |
+| LP-036 | ShopeePay / Boost | 4 | W | N | P | Y | Y | N | N | W | N |
 | LP-037 | Apple Pay / Google Pay | 1 | W | N | P | P | P | Y | P | W | P |
 | LP-038 | PayPal | 4 | N | N | N | P | P | N | P | W | P |
 | LP-039 | BNPL (Atome / Grab PayLater) | R | R | N | N | Y | Y | N | N | W | N |
@@ -107,12 +107,12 @@ Local names **not** given a column (see reports 02, 05, 10): ToyyibPay, SenangPa
 | LP-041 | Stripe adapter | — | Y | — | — | — | — | — | — | W | — |
 | LP-042 | Billplz adapter | — | Y | — | — | — | — | — | — | W | — |
 | LP-043 | CHIP Collect adapter | — | Y | — | — | — | — | — | — | W | — |
-| LP-044 | Razorpay / Curlec adapter | 4 | P | — | — | — | — | — | — | W | — |
-| LP-045 | Xendit adapter | 4 | N | — | — | — | — | — | — | W | — |
+| LP-044 | Razorpay / Curlec adapter | 4 | W | — | — | — | — | — | — | W | — |
+| LP-045 | Xendit adapter | 4 | W | — | — | — | — | — | — | W | — |
 | LP-046 | 3-D Secure / SCA | 1 | W | P | P | Y | Y | Y | Y | W | Y |
 | LP-047 | Saved card / tokenization / off-session | 0 | P | N | P | P | Y | Y | Y | Y | Y |
 
-Billplz cannot vault; ops product form already warns. Off-session today is Stripe/CHIP-shaped. FPX e-mandate is Curlec/Xendit, not us.
+Billplz cannot vault; ops product form already warns. Off-session today is Stripe/CHIP-shaped. FPX e-mandate (`SupportsEmandate`) is still false — no mandate token soak. DuitNow/wallets are hosted-page wraps on Xendit/CHIP/Billplz, not Lazuar pixels.
 
 ---
 
@@ -182,7 +182,7 @@ Adapters implement `IssueRefundAsync` (Billplz stays `false`; mark-refunded is t
 
 | ID | Feature | Wave | Lazuar | Billplz | CHIP | HitPay | Xendit | Stripe | Paddle | Chargebee | Polar |
 |----|---------|------|--------|---------|------|--------|--------|--------|--------|-----------|-------|
-| LP-100 | Commercial receipt / PDF | — | P | P | P | Y | Y | Y | Y | Y | Y |
+| LP-100 | Commercial receipt / PDF | — | Y | P | P | Y | Y | Y | Y | Y | Y |
 | LP-101 | Sequential document numbers | 2 | P | P | P | Y | Y | Y | Y | Y | Y |
 | LP-102 | Quotes / proforma / custom checkout session | 2 | B | N | N | Y | Y | Y | P | Y | N |
 | LP-103 | Tax invoice (commercial) | 2 | B | N | N | Y | Y | Y | Y | Y | Y |

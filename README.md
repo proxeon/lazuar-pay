@@ -3,7 +3,7 @@
 
 > **A Sovereign Checkout, Billing, and Compliance Engine for Asian Creators and B2B SaaS Founders.**
 
-Lazuar is an API-first, Headless Commerce platform built on a strict .NET 10 Modular Monolith. We provide the enterprise-grade financial infrastructure—multi-gateway orchestration, double-entry ledgers, automated WhatsApp dunning, and LHDN tax e-Invoicing—so you don't have to.
+Lazuar is an API-first, Headless Commerce platform built on a strict .NET 10 Modular Monolith. We provide checkout, subscriptions, a double-entry ledger, email recovery, and Malaysia MyInvois (LHDN) e-invoicing for tenants who configure it.
 
 We actively avoid the "CMS Trap." We don't build website builders, and we don't force you to migrate your domains. You build your beautiful landing pages on Framer, Webflow, Astro, or custom Next.js apps. We simply power the "Buy Now" button.
 
@@ -15,7 +15,7 @@ We actively avoid the "CMS Trap." We don't build website builders, and we don't 
 | **Historical ambition** | ADR 014 (apps catalog), ADR 020 (integration roadmap) | Useful roadmap context only. Do not implement “15 apps,” community DRM, or link-in-bio from those docs without an explicit reverse of ADR 021/023. |
 | **API contracts** | `packages/api-spec` + `task gen` | OpenAPI clients must match Minimal API; see `docs/contracts/openapi-vs-minimal-api.md`. |
 
-**Honest capability today:** BYOK gateways + commerce subscriptions + double-entry billing ledger + email dunning templates + LHDN **backend** pipeline. Billplz renewals = emailed hosted link, not silent charge. WhatsApp dunning and full compliance UI are roadmap (Phase D), not guaranteed demoable surfaces on every deploy.
+**Honest capability today:** BYOK Stripe / Billplz / CHIP / Razorpay + commerce subscriptions + double-entry billing ledger + **email** dunning + LHDN submit/poll when configured. Billplz renewals = emailed hosted link, not silent charge. Official Receipts (`RCPT-`) are payment receipts, **not** MyInvois tax invoices. WhatsApp dunning, Xero/QuickBooks sync, and Xendit are **not** shipping until their adapters exist.
 
 ---
 
@@ -33,8 +33,8 @@ We actively avoid the "CMS Trap." We don't build website builders, and we don't 
                                  │    Ledger         │── Success ───▶ │    (Secure R2 PDF / │
   ┌─────────────┐                │                   │                │     App Webhooks)   │
   │ SaaS Pricing│── Buy Link ───▶│ 3. Automated      │                │                   │
-  │ Table       │                │    Compliance     │── Failure ───▶ │ 💬 WhatsApp       │
-  └─────────────┘                │                   │                │    (Smart Dunning)  │
+  │ Table       │                │    Compliance     │── Failure ───▶ │ ✉️ Email          │
+  └─────────────┘                │                   │                │    (dunning)        │
                                  │ 4. Dunning Engine │                └───────────────────┘
   ┌─────────────┐                │    & Retries      │
   │ Custom      │── API Call ───▶└───────────────────┘
@@ -62,7 +62,7 @@ We do not act as a Merchant of Record (MoR) and we do not take 8% transaction fe
 To the Ledger, all money looks the same. Whether a customer pays via Stripe, FPX, or Bitcoin, the `Billing` module executes strict double-entry bookkeeping (`Cash` + `Fee` - `Gross Revenue` - `Tax` = `0`). This isolates exact gateway fees and tax liabilities, giving founders a true "Net Cash in Bank" metric.
 
 ### 4. Prepaid Utility Wallet
-Automated compliance tasks (LHDN XML e-Invoicing) and retention actions (WhatsApp dunning messages) deduct micro-credits from a prepaid `TenantCreditBalance` wallet. This allows Lazuar to monetize infrastructure usage heavily without taxing the creator's gross sales volume.
+Live LHDN MyInvois submissions deduct micro-credits from a prepaid `TenantCreditBalance` wallet. Console/stub WhatsApp is **not** billed. We do not take a GMV cut.
 
 ---
 
@@ -71,10 +71,10 @@ Automated compliance tasks (LHDN XML e-Invoicing) and retention actions (WhatsAp
 The platform is designed to replace the fragmented, manual workflows currently crippling Asian creators and B2B founders.
 
 ### Phase 1: The "Un-Fireable" Core (Current)
-*   **Local Asian Gateways (BYOK):** Billplz, Fiuu, CHIP, Xendit, Razorpay (Zero-fee, localized checkouts).
-*   **Government Tax Compliance:** Malaysia LHDN, India GSTN, Indonesia Coretax (Automated legal survival).
-*   **Global Cloud Accounting Sync:** Xero, QuickBooks (Internal CFO integration).
-*   **Native WhatsApp Dunning:** Meta Cloud API (Automated revenue recovery engine via chat).
+*   **Local Asian Gateways (BYOK):** Stripe, Billplz, CHIP, Razorpay/Curlec. Xendit is a planned wrap, not a live adapter.
+*   **Government Tax Compliance:** Malaysia MyInvois (LHDN) when the tenant configures keys. India GSTN / Indonesia Coretax are not scheduled.
+*   **Official Receipt + tax invoice:** `RCPT-` payment receipts and `INV-` tax invoices are different documents. Receipts are not e-invoices.
+*   **Not shipping:** Xero/QuickBooks sync, Meta Cloud WhatsApp dunning, homemade FPX e-mandate.
 
 ### Phase 2: High-Ticket & Asset Fulfillment
 *   **Escrow for High-Ticket B2B:** Escrow.com API (Eliminates trust friction for 5-figure deals).

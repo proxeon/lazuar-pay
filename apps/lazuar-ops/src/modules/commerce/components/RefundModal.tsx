@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
 import { remainingAmount, type TransactionLogDto } from "./transactionStatus";
 
-const API_GATEWAYS = ["STRIPE", "CHIP", "RAZORPAY"] as const;
-const GATEWAY_OPTIONS = ["STRIPE", "CHIP", "RAZORPAY", "BILLPLZ"] as const;
+const API_GATEWAYS = ["STRIPE", "CHIP", "RAZORPAY", "XENDIT"] as const;
+const GATEWAY_OPTIONS = ["STRIPE", "CHIP", "RAZORPAY", "XENDIT", "BILLPLZ"] as const;
 
 interface RefundModalProps {
   transaction: TransactionLogDto;

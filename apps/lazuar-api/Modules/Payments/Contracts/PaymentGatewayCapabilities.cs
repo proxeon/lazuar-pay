@@ -18,7 +18,34 @@ public static class PaymentGatewayCapabilities
     public static bool SupportsApiRefund(string? gatewayName)
     {
         var g = Normalize(gatewayName);
-        return g is "STRIPE" or "CHIP" or "RAZORPAY";
+        return g is "STRIPE" or "CHIP" or "RAZORPAY" or "XENDIT";
+    }
+
+    /// <summary>Hosted Xendit invoice / CHIP collect may show DuitNow QR. We do not render QR ourselves.</summary>
+    public static bool SupportsDuitNowQr(string? gatewayName)
+    {
+        var g = Normalize(gatewayName);
+        return g is "XENDIT" or "CHIP" or "BILLPLZ";
+    }
+
+    /// <summary>Wallets appear on the processor hosted page when the merchant enables them there.</summary>
+    public static bool SupportsHostedWallet(string? gatewayName, string? wallet)
+    {
+        var g = Normalize(gatewayName);
+        if (g is not ("XENDIT" or "CHIP"))
+        {
+            return false;
+        }
+
+        var w = Normalize(wallet);
+        return w is "GRABPAY" or "SHOPEEPAY" or "TNG" or "TOUCHNGO" or "BOOST" or "DUITNOW";
+    }
+
+    /// <summary>True FPX auto-debit. Off until Curlec/Xendit mandate tokens soak.</summary>
+    public static bool SupportsEmandate(string? gatewayName)
+    {
+        _ = gatewayName;
+        return false;
     }
 
     public static bool RequiresMarkRefunded(string? gatewayName)

@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentGatewayAdapter, BillplzGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, RazorpayGatewayAdapter>();
         services.AddScoped<IPaymentGatewayAdapter, ChipCollectGatewayAdapter>();
+        services.AddScoped<IPaymentGatewayAdapter, XenditGatewayAdapter>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
 
         services.AddHttpClient(PublicDnsFallback.HttpClientName, client =>

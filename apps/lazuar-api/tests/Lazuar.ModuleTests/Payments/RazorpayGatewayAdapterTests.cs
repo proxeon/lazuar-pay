@@ -95,5 +95,67 @@ public class RazorpayGatewayAdapterTests
         result.EventType.Should().Be("PAYMENT_COMPLETED");
         result.EventId.Should().Be("evt_rzp_1");
         result.GatewayTransactionId.Should().Be("pay_abc123");
+        result.Currency.Should().Be("INR");
+    }
+
+    [Test]
+    public async Task ParseWebhook_PaymentFailed_MapsPaymentFailed()
+    {
+        var body = """
+            {
+              "event": "payment.failed",
+              "payload": {
+                "payment": {
+                  "entity": {
+                    "id": "pay_fail1",
+                    "amount": 5000,
+                    "currency": "MYR",
+                    "notes": { "subscription_id": "sub-1" }
+                  }
+                }
+              }
+            }
+            """;
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-Razorpay-Signature"] = Sign(body),
+            ["X-Razorpay-Event-Id"] = "evt_fail_1"
+        };
+
+        var result = await CreateAdapter().ParseWebhookAsync("key:secret", WebhookSecret, body, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_FAILED");
+        result.GatewayTransactionId.Should().Be("pay_fail1");
+        result.Metadata.Should().ContainKey("subscription_id");
+    }
+
+    [Test]
+    public async Task ParseWebhook_CapturedWithoutCurrency_DoesNotInventMyr()
+    {
+        var body = """
+            {
+              "event": "payment.captured",
+              "payload": {
+                "payment": {
+                  "entity": {
+                    "id": "pay_noccy",
+                    "amount": 10000
+                  }
+                }
+              }
+            }
+            """;
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-Razorpay-Signature"] = Sign(body),
+            ["X-Razorpay-Event-Id"] = "evt_noccy"
+        };
+
+        var result = await CreateAdapter().ParseWebhookAsync("key:secret", WebhookSecret, body, headers);
+
+        result.Verified.Should().BeFalse();
+        result.Error.Should().Contain("currency");
+        result.Currency.Should().NotBe("MYR");
     }
 }

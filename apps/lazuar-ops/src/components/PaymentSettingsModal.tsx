@@ -12,7 +12,7 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   const [isSaving, setIsSaving] = useState(false);
   
   const [configs, setConfigs] = useState<any[]>([]);
-  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP">("BILLPLZ");
+  const [gatewayType, setGatewayType] = useState<"STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP" | "XENDIT">("BILLPLZ");
   
   const [apiKey, setApiKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState(""); 
@@ -128,7 +128,8 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                       <option value="CHIP">CHIP Collect (Malaysia)</option>
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
-                      <option value="RAZORPAY">Razorpay (Global)</option>
+                      <option value="RAZORPAY">Razorpay / Curlec (MY e-mandate + cards)</option>
+                      <option value="XENDIT">Xendit (SEA hosted invoice + wallets)</option>
                     </select>
                   </div>
                 </div>

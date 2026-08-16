@@ -180,12 +180,23 @@ public class BaseInvoiceDocument : IDocument
     {
         container.Row(row =>
         {
-            row.RelativeItem().AlignBottom().Text(x =>
+            row.RelativeItem().AlignBottom().Column(column =>
             {
-                x.Span("Page ");
-                x.CurrentPageNumber();
-                x.Span(" of ");
-                x.TotalPages();
+                if (string.Equals(_model.DocumentType, "Official Receipt", StringComparison.OrdinalIgnoreCase))
+                {
+                    column.Item().PaddingBottom(6).Text(
+                            "Payment receipt. Not an LHDN e-invoice.")
+                        .FontSize(8)
+                        .FontColor(Colors.Grey.Darken1);
+                }
+
+                column.Item().Text(x =>
+                {
+                    x.Span("Page ");
+                    x.CurrentPageNumber();
+                    x.Span(" of ");
+                    x.TotalPages();
+                });
             });
 
             if (!string.IsNullOrEmpty(_model.LhdnQrLink))

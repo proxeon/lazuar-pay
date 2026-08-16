@@ -28,7 +28,8 @@ public static class InvoiceDocumentFactory
             InvoiceNumber = string.IsNullOrWhiteSpace(invoiceNumber) ? "PENDING" : invoiceNumber,
             IssueDate = issueDate,
             CompanyName = FirstNonEmpty(profile?.LegalName, workspace?.Name, "Merchant"),
-            CompanyTin = string.IsNullOrWhiteSpace(profile?.Tin) ? "TIN not on file" : profile.Tin,
+            CompanyTin = NullIfWhiteSpace(profile?.Tin) ?? "",
+            Notes = OfficialReceiptDisclaimer(documentType),
             CompanyRegistrationNumber = NullIfWhiteSpace(profile?.RegistrationNumber),
             CompanySstNumber = NullIfWhiteSpace(profile?.SstRegistrationNumber),
             CompanyAddress = FormatSellerAddress(profile?.Address),
@@ -85,4 +86,9 @@ public static class InvoiceDocumentFactory
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    internal static string? OfficialReceiptDisclaimer(string documentType) =>
+        string.Equals(documentType, "Official Receipt", StringComparison.OrdinalIgnoreCase)
+            ? "This Official Receipt confirms payment. It is not a validated MyInvois tax invoice."
+            : null;
 }

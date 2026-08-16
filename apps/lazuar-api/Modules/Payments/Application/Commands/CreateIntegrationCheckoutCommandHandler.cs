@@ -16,7 +16,7 @@ public class CreateIntegrationCheckoutCommandHandler
 {
     private static readonly HashSet<string> AllowedGateways = new(StringComparer.OrdinalIgnoreCase)
     {
-        "STRIPE", "BILLPLZ", "CHIP", "RAZORPAY"
+        "STRIPE", "BILLPLZ", "CHIP", "RAZORPAY", "XENDIT"
     };
 
     private readonly IIntegrationCheckoutSessionRepository _sessions;
@@ -60,7 +60,7 @@ public class CreateIntegrationCheckoutCommandHandler
             if (!AllowedGateways.Contains(gatewayPreferred))
             {
                 throw PaymentIntegrationException.InvalidRequest(
-                    "gateway_name must be one of STRIPE, BILLPLZ, CHIP, RAZORPAY.");
+                    "gateway_name must be one of STRIPE, BILLPLZ, CHIP, RAZORPAY, XENDIT.");
             }
         }
 

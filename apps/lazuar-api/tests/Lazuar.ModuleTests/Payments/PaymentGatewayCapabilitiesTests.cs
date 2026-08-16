@@ -24,6 +24,7 @@ public class PaymentGatewayCapabilitiesTests
     [TestCase("STRIPE", true)]
     [TestCase("CHIP", true)]
     [TestCase("RAZORPAY", true)]
+    [TestCase("XENDIT", true)]
     [TestCase("BILLPLZ", false)]
     [TestCase(null, false)]
     [TestCase("", false)]
@@ -46,5 +47,15 @@ public class PaymentGatewayCapabilitiesTests
     public void RequiresMarkRefunded_OfflineAndBillplz(string? gateway, bool expected)
     {
         PaymentGatewayCapabilities.RequiresMarkRefunded(gateway).Should().Be(expected);
+    }
+
+    [Test]
+    public void Xendit_IsReminderOnly_AndHostsWallets()
+    {
+        PaymentGatewayCapabilities.SupportsOffSession("XENDIT").Should().BeFalse();
+        PaymentGatewayCapabilities.SupportsEmandate("XENDIT").Should().BeFalse();
+        PaymentGatewayCapabilities.SupportsDuitNowQr("XENDIT").Should().BeTrue();
+        PaymentGatewayCapabilities.SupportsHostedWallet("XENDIT", "GRABPAY").Should().BeTrue();
+        PaymentGatewayCapabilities.SupportsHostedWallet("BILLPLZ", "GRABPAY").Should().BeFalse();
     }
 }

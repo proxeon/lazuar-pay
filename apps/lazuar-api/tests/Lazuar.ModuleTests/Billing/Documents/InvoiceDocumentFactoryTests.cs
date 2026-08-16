@@ -61,6 +61,32 @@ public class InvoiceDocumentFactoryTests
 
         model.CompanyName.Should().Be("Studio Nine");
         model.CompanyName.Should().NotBe("Lazuar Merchant");
-        model.CompanyTin.Should().Be("TIN not on file");
+        model.CompanyTin.Should().BeEmpty();
+        model.Notes.Should().Contain("not a validated MyInvois tax invoice");
+    }
+
+    [Test]
+    public void CreateHeader_TaxInvoice_DoesNotAddReceiptDisclaimer()
+    {
+        var profile = new TenantBillingProfile(Guid.CreateVersion7(), "Acme Sdn Bhd", "C12345678901");
+        var model = InvoiceDocumentFactory.CreateHeader(
+            "Tax Invoice",
+            "INV-2026-00001",
+            DateTime.UtcNow,
+            profile,
+            workspace: null,
+            customer: null,
+            logoBytes: null);
+
+        model.CompanyTin.Should().Be("C12345678901");
+        model.Notes.Should().BeNull();
+    }
+
+    [Test]
+    public void OfficialReceiptDisclaimer_OnlyForReceipts()
+    {
+        InvoiceDocumentFactory.OfficialReceiptDisclaimer("Official Receipt")
+            .Should().Contain("Official Receipt");
+        InvoiceDocumentFactory.OfficialReceiptDisclaimer("Tax Invoice").Should().BeNull();
     }
 }

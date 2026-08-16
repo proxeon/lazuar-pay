@@ -116,6 +116,7 @@ export default function TransactionsPage() {
               <option value="CHIP">CHIP</option>
               <option value="BILLPLZ">BILLPLZ</option>
               <option value="RAZORPAY">RAZORPAY</option>
+              <option value="XENDIT">XENDIT</option>
               <option value="OFFLINE">OFFLINE</option>
             </select>
             <button

@@ -11,8 +11,8 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  type GatewayType = "STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP";
-  const GATEWAYS: GatewayType[] = ["STRIPE", "BILLPLZ", "RAZORPAY", "CHIP"];
+  type GatewayType = "STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP" | "XENDIT";
+  const GATEWAYS: GatewayType[] = ["STRIPE", "BILLPLZ", "RAZORPAY", "CHIP", "XENDIT"];
   const parseGateway = (value: string | undefined | null): GatewayType =>
     GATEWAYS.includes(value as GatewayType) ? (value as GatewayType) : "BILLPLZ";
 
@@ -134,7 +134,8 @@ export default function PaymentSettingsModal({ onClose }: PaymentSettingsModalPr
                       <option value="CHIP">CHIP Collect (Malaysia)</option>
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
-                      <option value="RAZORPAY">Razorpay (Global)</option>
+                      <option value="RAZORPAY">Razorpay / Curlec (MY e-mandate + cards)</option>
+                      <option value="XENDIT">Xendit (SEA hosted invoice + wallets)</option>
                     </select>
                   </div>
                   <div className="space-y-1.5">

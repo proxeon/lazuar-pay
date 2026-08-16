@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
 import PageLayout from "../../core/components/PageLayout";
 
-type GatewayType = "STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP";
+type GatewayType = "STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP" | "XENDIT";
 
 type PaymentConfigRow = {
   gateway_type: string;
@@ -207,7 +207,8 @@ export default function PaymentSettingsPage() {
                       <option value="CHIP">CHIP Collect (Malaysia)</option>
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
-                      <option value="RAZORPAY">Razorpay (Global)</option>
+                      <option value="RAZORPAY">Razorpay / Curlec (MY e-mandate + cards)</option>
+                      <option value="XENDIT">Xendit (SEA hosted invoice + wallets)</option>
                     </select>
                   </div>
                   <div className="space-y-1.5 flex items-end">

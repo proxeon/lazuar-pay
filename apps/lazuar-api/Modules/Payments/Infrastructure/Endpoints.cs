@@ -15,7 +15,8 @@ public static class Endpoints
         "STRIPE",
         "BILLPLZ",
         "RAZORPAY",
-        "CHIP"
+        "CHIP",
+        "XENDIT"
     };
 
     public static IEndpointRouteBuilder MapPaymentsEndpoints(this IEndpointRouteBuilder endpoints)
