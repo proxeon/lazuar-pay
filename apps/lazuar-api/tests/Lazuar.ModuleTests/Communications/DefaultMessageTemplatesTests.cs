@@ -22,7 +22,8 @@ public class DefaultMessageTemplatesTests
             "Digital Product Delivery",
             "Quotation Ready",
             "Official Receipt",
-            "Portal Access"
+            "Portal Access",
+            "Invoice Reminder"
         });
 
         names.Should().NotContain("Community Welcome");

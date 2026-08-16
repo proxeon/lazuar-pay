@@ -113,7 +113,7 @@ public static class TransactionEndpoints
                     Detail = ex.Message
                 });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         return group;
     }

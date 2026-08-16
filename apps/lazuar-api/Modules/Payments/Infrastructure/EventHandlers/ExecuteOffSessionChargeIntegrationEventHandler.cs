@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Modules.Payments.Application;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
@@ -87,6 +88,16 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
             await PublishPaymentFailedAsync(@event, failureReason: "off_session_not_supported");
             return;
         }
+        catch (OffSessionDeclinedException ex)
+        {
+            var declineCode = string.IsNullOrWhiteSpace(ex.DeclineCode) ? "charge_declined" : ex.DeclineCode;
+            _logger.LogError(
+                ex,
+                "Off-session charge declined for subscription {SubscriptionId} on gateway {GatewayName} ({DeclineCode}).",
+                @event.SubscriptionId, @event.GatewayName, declineCode);
+            await PublishPaymentFailedAsync(@event, failureReason: declineCode, declineCode: ex.DeclineCode);
+            return;
+        }
         catch (Exception ex)
         {
             _logger.LogError(
@@ -104,7 +115,10 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
         }
     }
 
-    private async Task PublishPaymentFailedAsync(ExecuteOffSessionChargeIntegrationEvent @event, string failureReason)
+    private async Task PublishPaymentFailedAsync(
+        ExecuteOffSessionChargeIntegrationEvent @event,
+        string failureReason,
+        string? declineCode = null)
     {
         var metadata = new Dictionary<string, string>
         {
@@ -116,6 +130,11 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
             ["failure_reason"] = failureReason,
             ["gateway_name"] = @event.GatewayName
         };
+
+        if (!string.IsNullOrWhiteSpace(declineCode))
+        {
+            metadata["decline_code"] = declineCode;
+        }
 
         if (@event.DunningCampaignId.HasValue)
         {

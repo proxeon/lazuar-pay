@@ -48,7 +48,7 @@ public static class DunningCampaignEndpoints
             
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/dunning-campaigns/defaults", async Task<Ok<StatusResponse>> (
             IExecutionContextAccessor ctx, 
@@ -56,7 +56,7 @@ public static class DunningCampaignEndpoints
         {
             await mediator.Send(new GenerateDefaultDunningCampaignsCommand(ctx.TenantId));
             return TypedResults.Ok(new StatusResponse { Status = "generated" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPut("/dunning-campaigns/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id, 
@@ -80,7 +80,7 @@ public static class DunningCampaignEndpoints
                 targetProductIds, req.Target_payment_methods, steps, req.Is_active));
             
             return TypedResults.Ok(new StatusResponse { Status = "updated" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapDelete("/dunning-campaigns/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id, 
@@ -89,7 +89,7 @@ public static class DunningCampaignEndpoints
         {
             await mediator.Send(new DeleteDunningCampaignCommand(ctx.TenantId, id));
             return TypedResults.Ok(new StatusResponse { Status = "deleted" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         return group;
     }

@@ -254,4 +254,10 @@ interface AdminCommerceOperations {
   getCustomCheckouts(@query page?: int32 = 1, @query limit?: int32 = 50):
     | LazuarApi.Core.PaginatedResponse<CustomCheckoutDto>
     | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
+  @route("/disputes")
+  getCommerceDisputes(@query page?: int32 = 1, @query limit?: int32 = 50):
+    | LazuarApi.Core.PaginatedResponse<CommerceDisputeDto>
+    | LazuarApi.Core.ProblemDetailsResponse;
 }

@@ -79,6 +79,20 @@ public static class AuthAndCorsExtensions
                 policy.RequireRole("SUPER_ADMIN", "ADMIN");
             });
 
+            // Operate commerce (products, subscribers, refunds) but not keys / gateways / members.
+            options.AddPolicy("OrgMember", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole("SUPER_ADMIN", "ADMIN", "MEMBER");
+            });
+
+            // GET / list — Viewer included.
+            options.AddPolicy("OrgRead", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole("SUPER_ADMIN", "ADMIN", "MEMBER", "VIEWER");
+            });
+
             // LHDN document write (submit / cancel): human admins bypass; API_CLIENT needs write scope.
             options.AddPolicy("IntegrationLhdnDocumentsWrite", policy =>
             {

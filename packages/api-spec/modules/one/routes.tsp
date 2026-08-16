@@ -150,6 +150,15 @@ interface OneOperations {
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
+  @get
+  @route("/workspaces/{id}/audit")
+  getWorkspaceAudit(
+    @path id: string,
+    @query page?: int32 = 1,
+    @query limit?: int32 = 50,
+  ): LazuarApi.Core.PaginatedResponse<AuditEventDto> | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
   @post
   @route("/workspaces/invites/accept")
   acceptWorkspaceInvitation(@body body: AcceptWorkspaceInvitationDto):

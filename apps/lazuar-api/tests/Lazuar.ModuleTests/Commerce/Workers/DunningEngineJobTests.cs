@@ -656,6 +656,35 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task PastDue_HardDecline_DoesNotCharge_ConsumesOffset()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = PastDueSub(_orgId, product.Id);
+        sub.StoreVaultedToken("cus_live", "pm_live");
+        var campaign = AutoChargeCampaign(_orgId, dayOffset: 1);
+        var target = sub.NextBillingDate!.Value.Date;
+        var hard = FailedBillingAttempt(sub.Id, target);
+        hard.MarkFailed("stolen_card", "STRIPE", "stolen_card", "hard");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        _db.ChargeAttemptLogs.Add(hard);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+        var attempts = await _db.ChargeAttemptLogs.IgnoreQueryFilters()
+            .Where(l => l.SubscriptionId == sub.Id)
+            .ToListAsync();
+        attempts.Should().Contain(l => l.Status == ChargeAttemptLog.StatusSkipped
+            && l.FailureReason == "hard_decline_skip");
+        (await _db.Subscriptions.IgnoreQueryFilters().Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id))
+            .ReminderLogs.Should().ContainSingle(l => l.DayOffset == 1);
+    }
+
+    [Test]
     public async Task PastDue_AlreadyDispatchedOffset_IsIdempotent()
     {
         var product = CreateProduct(_orgId, "STRIPE");

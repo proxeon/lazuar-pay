@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Commands;
+using Modules.One.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -11,13 +12,16 @@ public class CancelAdminSubscriptionCommandHandler : ICommandHandler<CancelAdmin
 {
     private readonly ICommerceRepository _repository;
     private readonly IEventBus _eventBus;
+    private readonly IAuditRecorder? _auditRecorder;
 
     public CancelAdminSubscriptionCommandHandler(
         ICommerceRepository repository,
-        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus)
+        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
+        IAuditRecorder? auditRecorder = null)
     {
         _repository = repository;
         _eventBus = eventBus;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task<string> Handle(CancelAdminSubscriptionCommand request, CancellationToken ct)
@@ -28,12 +32,25 @@ public class CancelAdminSubscriptionCommandHandler : ICommandHandler<CancelAdmin
             throw new InvalidOperationException("Subscription not found.");
         }
 
-        return await SubscriptionCancelApplier.ApplyAndPersistAsync(
+        var status = await SubscriptionCancelApplier.ApplyAndPersistAsync(
             _repository,
             _eventBus,
             subscription,
             request.AtPeriodEnd,
             canceledStatus: "CANCELED",
             ct);
+
+        if (_auditRecorder != null)
+        {
+            await _auditRecorder.RecordAsync(
+                request.OrganizationId,
+                "subscriber.canceled",
+                "subscription",
+                request.SubscriptionId.ToString(),
+                new { at_period_end = request.AtPeriodEnd, status },
+                ct: ct);
+        }
+
+        return status;
     }
 }

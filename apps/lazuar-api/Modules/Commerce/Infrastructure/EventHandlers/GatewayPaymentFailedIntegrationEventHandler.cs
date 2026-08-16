@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Infrastructure.Dunning;
 using Modules.CRM.Contracts;
@@ -123,14 +124,18 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         string? failureReason = null;
         string? gatewayName = null;
         string? gatewayResponseCode = null;
+        string? declineCode = null;
         if (@event.Metadata != null)
         {
             @event.Metadata.TryGetValue("failure_reason", out failureReason);
             @event.Metadata.TryGetValue("gateway_name", out gatewayName);
             @event.Metadata.TryGetValue("gateway_response_code", out gatewayResponseCode);
+            @event.Metadata.TryGetValue("decline_code", out declineCode);
         }
 
-        attempt.MarkFailed(failureReason, gatewayName, gatewayResponseCode);
+        var classifyFrom = declineCode ?? gatewayResponseCode ?? failureReason;
+        var declineClass = DeclineClassifier.Classify(classifyFrom);
+        attempt.MarkFailed(failureReason, gatewayName, gatewayResponseCode ?? declineCode, declineClass);
         _logger.LogInformation(
             "Marked ChargeAttemptLog {AttemptId} FAILED for subscription {SubscriptionId} (attempt {AttemptNumber}).",
             attempt.Id, subscriptionId, attempt.AttemptNumber);

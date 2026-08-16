@@ -28,7 +28,7 @@ public class CommerceEndpointsAuthorizationTests
         builder.Services.AddSingleton(Substitute.For<global::BuildingBlocks.Application.IExecutionContextAccessor>());
 
         var app = builder.Build();
-        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgAdmin");
+        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgRead");
         adminGroup.MapPaymentConfigEndpoints();
 
         return ((IEndpointRouteBuilder)app).DataSources
@@ -59,7 +59,7 @@ public class CommerceEndpointsAuthorizationTests
         builder.Services.AddSingleton(Substitute.For<Modules.Commerce.Application.Queries.ICommerceQueryService>());
 
         var app = builder.Build();
-        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgAdmin");
+        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgRead");
         adminGroup.MapSubscriberEndpoints();
 
         var endpoints = ((IEndpointRouteBuilder)app).DataSources
@@ -95,5 +95,73 @@ public class CommerceEndpointsAuthorizationTests
         Assert.That(putConfig, Is.Not.Null, "PUT payment-config not found.");
         AssertPolicy(getConfig, "OrgAdmin", "GET /admin/commerce/payment-config");
         AssertPolicy(putConfig, "OrgAdmin", "PUT /admin/commerce/payment-config");
+    }
+
+    [Test]
+    public void MapCommerceEndpoints_ProductPost_Requires_OrgMember()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddSingleton(Substitute.For<IMediator>());
+        builder.Services.AddSingleton(Substitute.For<global::BuildingBlocks.Application.IExecutionContextAccessor>());
+        builder.Services.AddSingleton(Substitute.For<Modules.Commerce.Application.Queries.ICommerceQueryService>());
+        var app = builder.Build();
+        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgRead");
+        adminGroup.MapProductEndpoints();
+
+        var endpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(ds => ds.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
+
+        var post = endpoints.Single(e =>
+            e.RoutePattern.RawText == "/admin/commerce/products" && HasMethod(e, "POST"));
+        AssertPolicy(post, "OrgMember", "POST /admin/commerce/products");
+
+        var get = endpoints.Single(e =>
+            e.RoutePattern.RawText == "/admin/commerce/products" && HasMethod(e, "GET"));
+        AssertPolicy(get, "OrgRead", "GET /admin/commerce/products");
+    }
+
+    [Test]
+    public void MapCommerceEndpoints_Refund_Requires_OrgMember()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddSingleton(Substitute.For<IMediator>());
+        builder.Services.AddSingleton(Substitute.For<global::BuildingBlocks.Application.IExecutionContextAccessor>());
+        builder.Services.AddSingleton(Substitute.For<Modules.Commerce.Application.Queries.ICommerceQueryService>());
+        var app = builder.Build();
+        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgRead");
+        adminGroup.MapTransactionEndpoints();
+
+        var endpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(ds => ds.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
+
+        var refund = endpoints.Single(e =>
+            e.RoutePattern.RawText!.Contains("refund", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "POST"));
+        AssertPolicy(refund, "OrgMember", "POST /admin/commerce/transactions/{id}/refund");
+    }
+
+    [Test]
+    public void MapCommerceEndpoints_GetSubscribers_Requires_OrgRead()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddSingleton(Substitute.For<IMediator>());
+        builder.Services.AddSingleton(Substitute.For<global::BuildingBlocks.Application.IExecutionContextAccessor>());
+        builder.Services.AddSingleton(Substitute.For<Modules.Commerce.Application.Queries.ICommerceQueryService>());
+        var app = builder.Build();
+        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgRead");
+        adminGroup.MapSubscriberEndpoints();
+
+        var endpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(ds => ds.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
+
+        var list = endpoints.Single(e =>
+            e.RoutePattern.RawText == "/admin/commerce/subscribers" && HasMethod(e, "GET"));
+        AssertPolicy(list, "OrgRead", "GET /admin/commerce/subscribers");
     }
 }

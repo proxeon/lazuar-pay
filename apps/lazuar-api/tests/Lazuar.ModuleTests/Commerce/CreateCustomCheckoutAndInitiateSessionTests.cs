@@ -58,6 +58,41 @@ public class CreateCustomCheckoutAndInitiateSessionTests
     }
 
     [Test]
+    public async Task CreateCustomCheckout_Net30_SetsDueAtAbout30Days()
+    {
+        var orgId = Guid.CreateVersion7();
+        CheckoutSession? captured = null;
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
+            .Do(ci => captured = ci.Arg<CheckoutSession>());
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(Guid.CreateVersion7());
+        mediator.Send(Arg.Any<GetPaymentConfigQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new List<PaymentConfigDto>());
+        mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("QT-2026-00002");
+
+        var before = DateTime.UtcNow;
+        var handler = new CreateCustomCheckoutCommandHandler(repository, mediator);
+        await handler.Handle(new CreateCustomCheckoutCommand(
+            orgId,
+            "buyer@example.com",
+            "Buyer",
+            new List<CustomLineItemData> { new("Design", 1, 500m) },
+            null,
+            false,
+            null,
+            null,
+            "net_30"), CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.DueAt.Should().NotBeNull();
+        captured.DueAt!.Value.Should().BeCloseTo(before.AddDays(30), TimeSpan.FromMinutes(2));
+        captured.ExpiresAt.Should().BeOnOrAfter(captured.DueAt.Value.AddDays(14).AddMinutes(-1));
+    }
+
+    [Test]
     public async Task InitiateCheckout_SessionId_StampsB2bMetadataAndRequiresTin()
     {
         var orgId = Guid.CreateVersion7();

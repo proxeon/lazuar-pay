@@ -49,7 +49,7 @@ public static class CouponEndpoints
 
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPut("/coupons/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id,
@@ -77,7 +77,7 @@ public static class CouponEndpoints
 
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "updated" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapDelete("/coupons/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id,
@@ -87,7 +87,7 @@ public static class CouponEndpoints
             var command = new DeleteCouponCommand(ctx.TenantId, id);
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "deleted" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         return group;
     }

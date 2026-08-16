@@ -151,7 +151,7 @@ Statuses we persist: `PENDING`, `ACTIVE`, `TRIALING`, `PAST_DUE`, `SUSPENDED`, `
 | LP-073 | Email recovery sequence | 0 | P | P | P | P | P | Y | Y | Y | Y |
 | LP-074 | WhatsApp recovery sequence | 4 | N | N | N | P | P | N | N | N | N |
 | LP-075 | Magic update-payment link | — | Y | N | N | P | P | Y | Y | Y | Y |
-| LP-076 | Hard vs soft decline handling | 3 | N | N | N | N | P | Y | P | Y | P |
+| LP-076 | Hard vs soft decline handling | 3 | Y | N | N | N | P | Y | P | Y | P |
 | LP-077 | Recovered-revenue metrics | 0 | P | N | N | P | P | Y | Y | Y | P |
 | LP-078 | Terminal action (suspend / cancel) | 0 | Y | N | N | P | Y | Y | Y | Y | Y |
 | LP-079 | Campaign snapshot (don’t mutate in-flight) | 0 | Y | — | — | N | N | Y | P | Y | N |
@@ -169,7 +169,7 @@ WhatsApp transport is `ConsoleMessagingService` (log only). `Messaging:WhatsAppE
 | LP-091 | Refund full | 1 | Y | P | Y | Y | Y | Y | Y | Y | Y |
 | LP-092 | Refund partial | 1 | Y | N | P | Y | Y | Y | Y | Y | Y |
 | LP-093 | Refund UI in merchant console | 1 | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| LP-094 | Disputes / chargebacks as first-class | 3 | P | N | N | P | P | Y | Y | P | Y |
+| LP-094 | Disputes / chargebacks as first-class | 3 | Y | N | N | P | P | Y | Y | P | Y |
 | LP-095 | Settlement / payout reports | R | R | Y | Y | Y | Y | Y | Y | — | Y |
 | LP-096 | Multi-currency + FX | 4 | P | N | P | P | Y | Y | Y | Y | Y |
 | LP-097 | Reconciliation export (CSV) | 1 | N | Y | Y | Y | Y | Y | Y | Y | Y |
@@ -187,7 +187,7 @@ Adapters implement `IssueRefundAsync` (Billplz stays `false`; mark-refunded is t
 | LP-102 | Quotes / proforma / custom checkout session | 2 | B | N | N | Y | Y | Y | P | Y | N |
 | LP-103 | Tax invoice (commercial) | 2 | B | N | N | Y | Y | Y | Y | Y | Y |
 | LP-104 | Credit / debit / refund notes | 2 | B | N | N | P | P | Y | Y | Y | P |
-| LP-105 | Payment terms / due date / AR reminders | 3 | N | Y | N | Y | Y | Y | P | Y | N |
+| LP-105 | Payment terms / due date / AR reminders | 3 | Y | Y | N | Y | Y | Y | P | Y | N |
 | LP-106 | Buyer download of documents | 2 | B | P | P | Y | P | Y | Y | Y | Y |
 | LP-107 | PDF branding | 2 | P | N | N | Y | P | Y | Y | Y | P |
 
@@ -267,8 +267,8 @@ Keys live in `one.ApiCredentials`. Scopes today: `lhdn.documents:*`, `payments.c
 | LP-163 | Transaction log | — | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 | LP-164 | Subscriber list + detail | — | Y | N | N | Y | Y | Y | Y | Y | Y |
 | LP-165 | Cohort / geo analytics | 4 | N | N | N | N | P | Y | P | Y | P |
-| LP-166 | Staff roles beyond admin | 3 | P | P | P | Y | Y | Y | Y | Y | P |
-| LP-167 | Audit log | 3 | N | N | N | P | Y | Y | P | Y | P |
+| LP-166 | Staff roles beyond admin | 3 | Y | P | P | Y | Y | Y | Y | Y | P |
+| LP-167 | Audit log | 3 | Y | N | N | P | Y | Y | P | Y | P |
 | LP-168 | CRM (profiles, notes, segments) | R | P | N | N | P | N | P | P | P | N |
 | LP-169 | Multi-workspace | — | Y | P | P | Y | Y | Y | Y | Y | Y |
 

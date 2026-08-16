@@ -1,5 +1,6 @@
 // apps/lazuar-api/Modules/Payments/Infrastructure/Gateways/StripeGatewayAdapter.cs
 using Microsoft.Extensions.Logging;
+using Modules.Payments.Application;
 using Modules.Payments.Application.Ports;
 using Stripe;
 using Stripe.Checkout;
@@ -267,7 +268,8 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         catch (StripeException ex)
         {
             _logger.LogError(ex, "Stripe off-session charge failed for customer {CustomerId}", customerId);
-            return false;
+            var declineCode = ex.StripeError?.DeclineCode ?? ex.StripeError?.Code;
+            throw new OffSessionDeclinedException(declineCode, ex.StripeError?.Message ?? ex.Message);
         }
     }
 
@@ -299,6 +301,12 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         var meta = pi.Metadata != null
             ? new Dictionary<string, string>(pi.Metadata)
             : new Dictionary<string, string>();
+        var declineCode = pi.LastPaymentError?.DeclineCode;
+        if (!string.IsNullOrWhiteSpace(declineCode))
+        {
+            meta["decline_code"] = declineCode;
+        }
+
         var amount = pi.Amount / 100m;
         var currency = pi.Currency ?? "myr";
 

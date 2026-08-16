@@ -8,6 +8,7 @@ using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Entities;
 using Modules.CRM.Contracts;
+using Modules.One.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -16,15 +17,18 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
     private readonly ICommerceRepository _repository;
     private readonly IEventBus _eventBus;
     private readonly ICrmQueryService _crmQueryService;
+    private readonly IAuditRecorder? _auditRecorder;
 
     public RecordSubscriberPaymentCommandHandler(
         ICommerceRepository repository,
         [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
-        ICrmQueryService crmQueryService)
+        ICrmQueryService crmQueryService,
+        IAuditRecorder? auditRecorder = null)
     {
         _repository = repository;
         _eventBus = eventBus;
         _crmQueryService = crmQueryService;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task Handle(RecordSubscriberPaymentCommand request, CancellationToken ct)
@@ -156,5 +160,16 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
         }
 
         await _repository.SaveChangesAsync(ct);
+
+        if (_auditRecorder != null)
+        {
+            await _auditRecorder.RecordAsync(
+                request.OrganizationId,
+                "subscriber.payment_recorded",
+                "subscription",
+                request.SubscriptionId.ToString(),
+                new { amount, method, transaction_id = txLog.Id.ToString() },
+                ct: ct);
+        }
     }
 }

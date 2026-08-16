@@ -8,6 +8,7 @@ public class ChargeAttemptLog : Entity
     public const string StatusPending = "PENDING";
     public const string StatusSucceeded = "SUCCEEDED";
     public const string StatusFailed = "FAILED";
+    public const string StatusSkipped = "SKIPPED";
 
     public const string SourceBilling = "BILLING";
     public const string SourceDunning = "DUNNING";
@@ -22,6 +23,7 @@ public class ChargeAttemptLog : Entity
     public string? GatewayName { get; private set; }
     public string? GatewayResponseCode { get; private set; }
     public string? FailureReason { get; private set; }
+    public string? DeclineClass { get; private set; }
     public DateTime? CompletedAt { get; private set; }
     public Guid? DunningCampaignId { get; private set; }
     public Guid? DunningStepId { get; private set; }
@@ -65,13 +67,15 @@ public class ChargeAttemptLog : Entity
         GatewayName = gatewayName ?? GatewayName;
         GatewayResponseCode = gatewayResponseCode ?? GatewayResponseCode;
         FailureReason = null;
+        DeclineClass = null;
         CompletedAt = DateTime.UtcNow;
     }
 
     public void MarkFailed(
         string? failureReason = null,
         string? gatewayName = null,
-        string? gatewayResponseCode = null)
+        string? gatewayResponseCode = null,
+        string? declineClass = null)
     {
         if (Status == StatusSucceeded)
         {
@@ -82,6 +86,20 @@ public class ChargeAttemptLog : Entity
         FailureReason = failureReason;
         GatewayName = gatewayName ?? GatewayName;
         GatewayResponseCode = gatewayResponseCode ?? GatewayResponseCode;
+        DeclineClass = string.IsNullOrWhiteSpace(declineClass) ? DeclineClass : declineClass.Trim().ToLowerInvariant();
+        CompletedAt = DateTime.UtcNow;
+    }
+
+    public void MarkSkipped(string? reason = null, string? declineClass = null)
+    {
+        if (Status == StatusSucceeded)
+        {
+            return;
+        }
+
+        Status = StatusSkipped;
+        FailureReason = reason;
+        DeclineClass = string.IsNullOrWhiteSpace(declineClass) ? DeclineClass : declineClass.Trim().ToLowerInvariant();
         CompletedAt = DateTime.UtcNow;
     }
 }

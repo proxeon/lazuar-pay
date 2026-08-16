@@ -1,7 +1,8 @@
 // apps/lazuar-api/Modules/One/Application/Commands/InviteUserToWorkspaceCommand.cs
 using BuildingBlocks.Application;
-using Modules.Ops.Contracts;
+using Modules.One.Contracts;
 using Modules.One.Domain;
+using Modules.Ops.Contracts;
 
 namespace Modules.One.Application.Commands;
 
@@ -15,18 +16,27 @@ public class InviteUserToWorkspaceCommandHandler : ICommandHandler<InviteUserToW
 {
     private readonly IOneRepository _repository;
     private readonly ITokenGeneratorService _tokenGenerator;
+    private readonly IAuditRecorder? _auditRecorder;
 
-    public InviteUserToWorkspaceCommandHandler(IOneRepository repository, ITokenGeneratorService tokenGenerator)
+    public InviteUserToWorkspaceCommandHandler(
+        IOneRepository repository,
+        ITokenGeneratorService tokenGenerator,
+        IAuditRecorder? auditRecorder = null)
     {
         _repository = repository;
         _tokenGenerator = tokenGenerator;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task<Guid> Handle(InviteUserToWorkspaceCommand request, CancellationToken ct)
     {
         var membership = await _repository.GetMembershipAsync(request.InviterUserId, request.OrganizationId, ct);
-        if (membership == null || membership.Role != "ADMIN")
+        var inviter = await _repository.GetUserByIdAsync(request.InviterUserId, ct);
+        var canInvite = WorkspaceStaffRoles.CanManageMembers(membership?.Role) || inviter?.IsSystemAdmin == true;
+        if (!canInvite)
             throw new InvalidOperationException("Unauthorized to invite users.");
+
+        var role = WorkspaceStaffRoles.NormalizeInvitedRole(request.Role);
 
         var existingMember = await _repository.GetUserByEmailAsync(request.Email, ct);
         if (existingMember != null)
@@ -41,13 +51,26 @@ public class InviteUserToWorkspaceCommandHandler : ICommandHandler<InviteUserToW
         var invitation = new WorkspaceInvitation(
             request.OrganizationId,
             request.Email,
-            request.Role,
+            role,
             token.TokenHash,
             token.PlainToken,
             expiry);
 
         _repository.AddWorkspaceInvitation(invitation);
         await _repository.SaveChangesAsync(ct);
+
+        if (_auditRecorder != null)
+        {
+            await _auditRecorder.RecordAsync(
+                request.OrganizationId,
+                "member.invited",
+                "invitation",
+                invitation.Id.ToString(),
+                new { email = invitation.Email, role },
+                request.InviterUserId,
+                inviter?.Email,
+                ct);
+        }
 
         return invitation.Id;
     }

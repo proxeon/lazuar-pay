@@ -327,6 +327,24 @@ public class StripeGatewayAdapterTests
         parsed.GatewayTokenId.Should().Be("pm_1");
     }
 
+    [Test]
+    public void MapPaymentIntentPaymentFailed_CopiesDeclineCode()
+    {
+        var pi = new PaymentIntent
+        {
+            Id = "pi_stolen",
+            Amount = 1000,
+            Currency = "myr",
+            LastPaymentError = new StripeError { DeclineCode = "stolen_card", Message = "Your card was stolen." }
+        };
+
+        var parsed = StripeGatewayAdapter.MapPaymentIntentPaymentFailed(pi, "evt_stolen");
+
+        parsed.Metadata.Should().ContainKey("decline_code");
+        parsed.Metadata["decline_code"].Should().Be("stolen_card");
+        parsed.Error.Should().Contain("stolen");
+    }
+
     private const string WebhookSecret = "whsec_test_lp090";
     private const string StripeApiVersion = "2025-03-31.basil";
 

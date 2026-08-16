@@ -10,6 +10,7 @@ public class CommerceTransactionLog : Entity, IMustHaveTenant
     public const string StatusPartiallyRefunded = "PARTIALLY_REFUNDED";
     public const string StatusRefunded = "REFUNDED";
     public const string StatusRefundFailed = "REFUND_FAILED";
+    public const string StatusDisputed = "DISPUTED";
 
     public Guid Id { get; private set; }
     public Guid OrganizationId { get; set; }
@@ -129,6 +130,11 @@ public class CommerceTransactionLog : Entity, IMustHaveTenant
         }
 
         Status = StatusRefunded;
+    }
+
+    public void MarkDisputed()
+    {
+        Status = StatusDisputed;
     }
 
     public void Anonymize(Guid clientProfileId)

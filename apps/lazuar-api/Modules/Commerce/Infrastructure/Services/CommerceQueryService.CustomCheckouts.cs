@@ -17,6 +17,7 @@ public partial class CommerceQueryService
         Guid ClientProfileId,
         string Status,
         DateTime ExpiresAt,
+        DateTime? DueAt,
         bool IsB2bRequired,
         string AdHocLineItems,
         DateTime CreatedAt,
@@ -33,7 +34,7 @@ public partial class CommerceQueryService
 
         const string sql = @"
             SELECT 
-                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"", c.""DocumentNumber"",
+                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""DueAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"", c.""DocumentNumber"",
                 (COUNT(*) OVER())::int AS ""TotalCount""
             FROM commerce.""CheckoutSessions"" c
             WHERE c.""OrganizationId"" = @OrgId AND c.""ProductId"" IS NULL
@@ -73,6 +74,7 @@ public partial class CommerceQueryService
                 Client_email = profile?.Email,
                 Status = c.Status,
                 Expires_at = new DateTimeOffset(c.ExpiresAt),
+                Due_at = c.DueAt.HasValue ? new DateTimeOffset(c.DueAt.Value) : null,
                 Is_b2b_required = c.IsB2bRequired,
                 Line_items = lineItems,
                 Total_amount = (double)totalAmount,
@@ -91,7 +93,7 @@ public partial class CommerceQueryService
 
         const string sql = @"
             SELECT 
-                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"", c.""DocumentNumber"", 1 AS ""TotalCount""
+                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""DueAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"", c.""DocumentNumber"", 1 AS ""TotalCount""
             FROM commerce.""CheckoutSessions"" c
             WHERE c.""OrganizationId"" = @OrgId AND c.""Id"" = @SessionId AND c.""ProductId"" IS NULL
             LIMIT 1;";
@@ -117,6 +119,7 @@ public partial class CommerceQueryService
             Client_email = profile?.Email,
             Status = rawCheckout.Status,
             Expires_at = new DateTimeOffset(rawCheckout.ExpiresAt),
+            Due_at = rawCheckout.DueAt.HasValue ? new DateTimeOffset(rawCheckout.DueAt.Value) : null,
             Is_b2b_required = rawCheckout.IsB2bRequired,
             Line_items = lineItems,
             Total_amount = (double)totalAmount,
@@ -124,4 +127,52 @@ public partial class CommerceQueryService
             Document_number = rawCheckout.DocumentNumber
         };
     }
+
+    public async Task<PaginatedResponse<CommerceDisputeDto>> GetDisputesAsync(Guid organizationId, int page, int limit)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        int offset = (page - 1) * limit;
+        const string sql = @"
+            SELECT
+                d.""Id"", d.""GatewayTransactionId"", d.""Amount"", d.""Currency"", d.""Status"",
+                d.""SubscriptionId"", d.""CheckoutSessionId"", d.""CreatedAt"",
+                (COUNT(*) OVER())::int AS ""TotalCount""
+            FROM commerce.""Disputes"" d
+            WHERE d.""OrganizationId"" = @OrgId
+            ORDER BY d.""CreatedAt"" DESC
+            LIMIT @Limit OFFSET @Offset;";
+
+        var rows = (await connection.QueryAsync<RawDisputeDto>(sql, new { OrgId = organizationId, Limit = limit, Offset = offset })).ToList();
+        if (!rows.Any())
+        {
+            return new PaginatedResponse<CommerceDisputeDto>(Enumerable.Empty<CommerceDisputeDto>(), 0, page, limit);
+        }
+
+        var dtos = rows.Select(r => new CommerceDisputeDto
+        {
+            Id = r.Id.ToString(),
+            Gateway_transaction_id = r.GatewayTransactionId,
+            Amount = (double)r.Amount,
+            Currency = r.Currency,
+            Status = r.Status,
+            Subscription_id = r.SubscriptionId?.ToString(),
+            Checkout_session_id = r.CheckoutSessionId?.ToString(),
+            Created_at = new DateTimeOffset(r.CreatedAt)
+        }).ToList();
+
+        return new PaginatedResponse<CommerceDisputeDto>(dtos, rows[0].TotalCount, page, limit);
+    }
+
+    private record RawDisputeDto(
+        Guid Id,
+        string GatewayTransactionId,
+        decimal Amount,
+        string Currency,
+        string Status,
+        Guid? SubscriptionId,
+        Guid? CheckoutSessionId,
+        DateTime CreatedAt,
+        int TotalCount);
 }

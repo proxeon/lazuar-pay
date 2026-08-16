@@ -18,6 +18,7 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [terms, setTerms] = useState("due_on_receipt");
   const [isB2bRequired, setIsB2bRequired] = useState(false);
   const [lineItems, setLineItems] = useState<CustomLineItemDto[]>([
     { description: "", quantity: 1, unit_price: 0 }
@@ -31,6 +32,7 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
     setClientName("");
     setClientEmail("");
     setExpiresAt("");
+    setTerms("due_on_receipt");
     setIsB2bRequired(false);
     setLineItems([{ description: "", quantity: 1, unit_price: 0 }]);
   };
@@ -89,12 +91,13 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
       client_email: clientEmail.trim().toLowerCase(),
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : undefined,
       is_b2b_required: isB2bRequired,
+      terms,
       line_items: lineItems.map(li => ({
         description: li.description.trim(),
         quantity: Number(li.quantity),
         unit_price: Number(li.unit_price)
       }))
-    });
+    } as CreateCustomCheckoutRequestDto);
   };
 
   if (!isOpen) return null;
@@ -162,6 +165,15 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] block border-b border-[#f4f4f5] pb-1.5">3. Link Settings</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Payment terms</label>
+                    <select value={terms} onChange={e => setTerms(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50">
+                      <option value="due_on_receipt">Due on receipt</option>
+                      <option value="net_7">Net 7</option>
+                      <option value="net_15">Net 15</option>
+                      <option value="net_30">Net 30</option>
+                    </select>
+                  </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Expires At (Optional)</label>
                     <input type="datetime-local" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} disabled={createMutation.isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#09090b] disabled:opacity-50" />

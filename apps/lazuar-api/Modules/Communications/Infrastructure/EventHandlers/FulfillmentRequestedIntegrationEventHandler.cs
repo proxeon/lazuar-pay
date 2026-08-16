@@ -47,7 +47,10 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
 
     public async Task HandleAsync(FulfillmentRequestedIntegrationEvent @event)
     {
-        if (@event.InternalTargetApp != "COMMUNICATIONS" || (@event.EventType != "reminder.due" && @event.EventType != "reminder.dunning"))
+        if (@event.InternalTargetApp != "COMMUNICATIONS"
+            || (@event.EventType != "reminder.due"
+                && @event.EventType != "reminder.dunning"
+                && @event.EventType != "invoice.reminder"))
         {
             return;
         }
@@ -55,6 +58,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         using var doc = JsonDocument.Parse(@event.Payload.GetRawText());
         var root = doc.RootElement;
         var isDunning = @event.EventType == "reminder.dunning";
+        var isInvoiceReminder = @event.EventType == "invoice.reminder";
         var subIdStr = root.TryGetProperty("subscription_id", out var sidProp) ? sidProp.GetString() ?? "" : "";
         var rawClientProfileId = root.TryGetProperty("client_profile_id", out var clientProfileIdProp)
             ? clientProfileIdProp.GetString()
@@ -62,7 +66,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
 
         if (!Guid.TryParse(rawClientProfileId, out var clientProfileId))
         {
-            if (!isDunning) return;
+            if (!isDunning && !isInvoiceReminder) return;
             _logger.LogError(
                 "Dunning hydrate failed: missing client_profile_id. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
                 @event.OrganizationId, subIdStr, rawClientProfileId);
@@ -73,7 +77,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
         if (profile == null)
         {
-            if (!isDunning) return;
+            if (!isDunning && !isInvoiceReminder) return;
             _logger.LogError(
                 "Dunning hydrate failed: CRM profile missing. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
                 @event.OrganizationId, subIdStr, clientProfileId);
@@ -82,7 +86,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         }
 
         var toEmail = profile.Email ?? "";
-        if (isDunning && string.IsNullOrWhiteSpace(toEmail))
+        if ((isDunning || isInvoiceReminder) && string.IsNullOrWhiteSpace(toEmail))
         {
             _logger.LogError(
                 "Dunning hydrate failed: profile email empty. OrganizationId={OrganizationId} SubscriptionId={SubscriptionId} ClientProfileId={ClientProfileId}",
@@ -104,6 +108,10 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         var links = MessageLinkBuilder.Build(portalBase, workspaceSlug, subIdStr, magicToken);
         var hostedCheckoutUrl = ReadOptionalString(root, "checkout_url");
         var renewalLink = hostedCheckoutUrl ?? links.RenewalLink;
+        var dueAt = root.TryGetProperty("due_at", out var dueProp)
+            ? MessageTemplateHydrator.FormatPeriodEnd(
+                dueProp.ValueKind == JsonValueKind.String ? dueProp.GetString() : dueProp.ToString())
+            : "";
 
         var planName = root.TryGetProperty("plan_name", out var planProp) ? planProp.GetString() ?? "" : "";
         var amount = MessageTemplateHydrator.FormatMoney(ReadNumericString(root, "amount"));
@@ -134,6 +142,22 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
             emailBody = root.TryGetProperty("email_body", out var ebProp) ? ebProp.GetString() ?? "" : "";
             whatsappBody = root.TryGetProperty("whatsapp_body", out var wbProp) ? wbProp.GetString() ?? "" : "";
         }
+        else if (isInvoiceReminder)
+        {
+            var template = await _repository.GetTemplateByNameAsync(@event.OrganizationId, "Invoice Reminder");
+            if (template == null)
+            {
+                _logger.LogWarning(
+                    "Invoice reminder skipped: template missing. OrganizationId={OrganizationId} SessionId={SessionId}",
+                    @event.OrganizationId, subIdStr);
+                return;
+            }
+
+            subject = template.Subject;
+            emailBody = template.EmailBody;
+            whatsappBody = template.WhatsAppBody;
+            channel = template.Channel;
+        }
         else
         {
             if (!root.TryGetProperty("template_id", out var templateIdProp) || !Guid.TryParse(templateIdProp.GetString(), out var templateId)) return;
@@ -157,7 +181,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
             TotalPrice: totalPrice,
             Currency: currency,
             DaysOverdue: daysOverdue,
-            CurrentPeriodEnd: currentPeriodEnd,
+            CurrentPeriodEnd: string.IsNullOrEmpty(dueAt) ? currentPeriodEnd : dueAt,
             RenewalLink: renewalLink,
             PortalMagicLink: links.PortalMagicLink,
             UpdatePaymentLink: links.UpdatePaymentLink);

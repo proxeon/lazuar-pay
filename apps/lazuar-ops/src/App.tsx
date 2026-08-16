@@ -25,6 +25,9 @@ import BillingProfilePage from "./modules/workspace/pages/BillingProfilePage";
 import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 import PaymentSettingsPage from "./modules/workspace/pages/PaymentSettingsPage";
 import EmailSettingsPage from "./modules/workspace/pages/EmailSettingsPage";
+import TeamPage from "./modules/workspace/pages/TeamPage";
+import AuditLogPage from "./modules/workspace/pages/AuditLogPage";
+import DisputesPage from "./modules/commerce/pages/DisputesPage";
 import QuotesPage from "./modules/invoicing/pages/QuotesPage";
 import TaxInvoicesPage from "./modules/invoicing/pages/TaxInvoicesPage";
 import CreditNotesPage from "./modules/invoicing/pages/CreditNotesPage";
@@ -212,6 +215,7 @@ export default function App() {
         <Route path="/commerce/products" element={<ProductsPage />} />
         <Route path="/commerce/subscribers" element={<SubscribersPage />} />
         <Route path="/commerce/transactions" element={<TransactionsPage />} />
+        <Route path="/commerce/disputes" element={<DisputesPage />} />
         <Route path="/commerce/coupons" element={<CouponsPage />} />
         <Route path="/commerce/dunning-campaigns" element={<DunningCampaignsPage />} />
         <Route path="/commerce/dunning-campaigns/new" element={<CampaignBuilderPage />} />
@@ -223,6 +227,8 @@ export default function App() {
         <Route path="/developer/logs" element={<DeliveryLogsPage />} />
         
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
+        <Route path="/workspace/team" element={<TeamPage />} />
+        <Route path="/workspace/audit" element={<AuditLogPage />} />
         <Route path="/workspace/billing-profile" element={<BillingProfilePage />} />
         <Route path="/workspace/payment-gateways" element={<PaymentSettingsPage />} />
         <Route path="/workspace/email" element={<EmailSettingsPage />} />

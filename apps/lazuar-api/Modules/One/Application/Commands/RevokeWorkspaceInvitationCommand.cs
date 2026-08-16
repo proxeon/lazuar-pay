@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
 
@@ -22,7 +23,8 @@ public class RevokeWorkspaceInvitationCommandHandler : ICommandHandler<RevokeWor
     public async Task Handle(RevokeWorkspaceInvitationCommand request, CancellationToken ct)
     {
         var membership = await _repository.GetMembershipAsync(request.RequesterUserId, request.OrganizationId, ct);
-        if (membership == null || membership.Role != "ADMIN")
+        var requester = await _repository.GetUserByIdAsync(request.RequesterUserId, ct);
+        if (!WorkspaceStaffRoles.CanManageMembers(membership?.Role) && requester?.IsSystemAdmin != true)
         {
             throw new InvalidOperationException("Unauthorized to manage invitations.");
         }

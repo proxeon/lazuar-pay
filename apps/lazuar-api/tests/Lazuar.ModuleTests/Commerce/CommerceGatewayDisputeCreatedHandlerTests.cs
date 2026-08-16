@@ -1,0 +1,143 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using BuildingBlocks.Application;
+using BuildingBlocks.Infrastructure;
+using FluentAssertions;
+using Lazuar.TestSupport;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Modules.Commerce.Domain.Aggregates;
+using Modules.Commerce.Domain.Entities;
+using Modules.Commerce.Domain.ValueObjects;
+using Modules.Commerce.Infrastructure;
+using Modules.Commerce.Infrastructure.EventHandlers;
+using Modules.Payments.Contracts;
+using Modules.Payments.Contracts.Events;
+using NSubstitute;
+using NUnit.Framework;
+
+namespace Lazuar.ModuleTests.Commerce;
+
+[TestFixture]
+public class CommerceGatewayDisputeCreatedHandlerTests
+{
+    private CommerceDbContext _db = null!;
+    private IEventBus _eventBus = null!;
+    private CommerceGatewayDisputeCreatedHandler _handler = null!;
+    private Guid _orgId;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _orgId = Guid.CreateVersion7();
+        _db = new CommerceDbContext(
+            InMemoryDb.CreateOptions<CommerceDbContext>(),
+            FakeExecutionContextAccessor.EmptyTenant(),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
+        _eventBus = Substitute.For<IEventBus>();
+        _handler = new CommerceGatewayDisputeCreatedHandler(
+            _db,
+            _eventBus,
+            NullLogger<CommerceGatewayDisputeCreatedHandler>.Instance);
+    }
+
+    [TearDown]
+    public void TearDown() => _db.Dispose();
+
+    [Test]
+    public async Task Replay_SameGatewayTransactionId_PersistsOneRow()
+    {
+        var sub = ActiveSub();
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        var evt = Dispute("pi_dup", subscriptionId: sub.Id);
+        await _handler.HandleAsync(evt);
+        await _handler.HandleAsync(evt);
+
+        (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(1);
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        await _eventBus.Received(1).PublishAsync(Arg.Any<GatewayRefundCompletedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task UtilityType_NoOps()
+    {
+        await _handler.HandleAsync(Dispute(
+            "pi_util",
+            type: PlatformCheckoutTypes.UtilityCreditTopup));
+
+        (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayRefundCompletedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task PlatformSaasFee_NoOps()
+    {
+        await _handler.HandleAsync(Dispute(
+            "pi_saas",
+            type: PlatformCheckoutTypes.PlatformSaasFee));
+
+        (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+    }
+
+    [Test]
+    public async Task Subscription_IsNotCanceled()
+    {
+        var sub = ActiveSub();
+        var log = new CommerceTransactionLog(
+            _orgId, 50m, 0m, "MYR", CommerceTransactionLog.StatusConfirmed,
+            "Buyer", "buyer@example.com", "Plan", "STRIPE", "pi_sub", "STRIPE", sub.Id);
+        _db.Subscriptions.Add(sub);
+        _db.TransactionLogs.Add(log);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(Dispute("pi_sub", subscriptionId: sub.Id));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().NotBe("CANCELED");
+        reloaded.Status.Should().Be("ACTIVE");
+        var dispute = await _db.Disputes.IgnoreQueryFilters().SingleAsync();
+        dispute.SubscriptionId.Should().Be(sub.Id);
+        dispute.Status.Should().Be(CommerceDispute.StatusOpen);
+        (await _db.TransactionLogs.IgnoreQueryFilters().SingleAsync(l => l.Id == log.Id))
+            .Status.Should().Be(CommerceTransactionLog.StatusDisputed);
+    }
+
+    [Test]
+    public async Task NoMetadata_PersistsDispute_NoSubMutation()
+    {
+        var sub = ActiveSub();
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(new GatewayDisputeCreatedIntegrationEvent(
+            _orgId, "pi_none", 10m, "MYR", new Dictionary<string, string>()));
+
+        (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(1);
+        (await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id))
+            .Status.Should().Be("ACTIVE");
+    }
+
+    private Subscription ActiveSub()
+    {
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow.AddMonths(1), DateTime.UtcNow.AddMonths(1));
+        return sub;
+    }
+
+    private GatewayDisputeCreatedIntegrationEvent Dispute(
+        string gatewayTxId,
+        Guid? subscriptionId = null,
+        string? type = "commerce_subscription")
+    {
+        var meta = new Dictionary<string, string>();
+        if (type != null) meta["type"] = type;
+        if (subscriptionId.HasValue) meta["subscription_id"] = subscriptionId.Value.ToString();
+        return new GatewayDisputeCreatedIntegrationEvent(_orgId, gatewayTxId, 50m, "MYR", meta);
+    }
+}

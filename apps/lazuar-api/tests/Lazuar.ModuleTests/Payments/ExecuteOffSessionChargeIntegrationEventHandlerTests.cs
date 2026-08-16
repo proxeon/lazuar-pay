@@ -6,6 +6,7 @@ using BuildingBlocks.Infrastructure;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Modules.Payments.Application;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Events;
 using Modules.Payments.Domain.Aggregates;
@@ -352,6 +353,39 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
         await act.Should().NotThrowAsync();
         await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
             e.Metadata["failure_reason"] == "charge_exception"
+            && e.Metadata["subscription_id"] == subscriptionId.ToString()));
+    }
+
+    [Test]
+    public async Task HandleAsync_OffSessionDeclined_PassesStripeDeclineCode()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var subscriptionId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE").Returns(config);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ChargeOffSessionAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<decimal>(), Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<string?>(),
+                Arg.Any<Guid?>())
+            .Returns<bool>(_ => throw new OffSessionDeclinedException("stolen_card"));
+
+        var factory = Substitute.For<IPaymentGatewayFactory>();
+        factory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new ExecuteOffSessionChargeIntegrationEventHandler(
+            configRepo, factory, eventBus, CreateVault(),
+            Substitute.For<ILogger<ExecuteOffSessionChargeIntegrationEventHandler>>());
+
+        await handler.HandleAsync(new ExecuteOffSessionChargeIntegrationEvent(
+            tenantId, subscriptionId, 10m, "MYR", "cus", "pm", GatewayName: "STRIPE"));
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
+            e.Metadata["failure_reason"] == "stolen_card"
+            && e.Metadata["decline_code"] == "stolen_card"
             && e.Metadata["subscription_id"] == subscriptionId.ToString()));
     }
 }

@@ -5,6 +5,7 @@ using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Domain.Entities;
+using Modules.One.Contracts;
 using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
 
@@ -14,13 +15,16 @@ public class RecordRefundCommandHandler : ICommandHandler<RecordRefundCommand, s
 {
     private readonly ICommerceRepository _repository;
     private readonly IEventBus _eventBus;
+    private readonly IAuditRecorder? _auditRecorder;
 
     public RecordRefundCommandHandler(
         ICommerceRepository repository,
-        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus)
+        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
+        IAuditRecorder? auditRecorder = null)
     {
         _repository = repository;
         _eventBus = eventBus;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task<string> Handle(RecordRefundCommand request, CancellationToken ct)
@@ -97,6 +101,7 @@ public class RecordRefundCommandHandler : ICommandHandler<RecordRefundCommand, s
                 TaxAmount: request.TaxAmount,
                 IsFullRefund: isFullRefund));
             await _repository.SaveChangesAsync(ct);
+            await RecordAuditAsync(request, amount, "refunded", ct);
             return "refunded";
         }
 
@@ -117,7 +122,24 @@ public class RecordRefundCommandHandler : ICommandHandler<RecordRefundCommand, s
             TaxAmount: request.TaxAmount,
             IsFullRefund: isFullRefund));
         await _repository.SaveChangesAsync(ct);
+        await RecordAuditAsync(request, amount, "refund_requested", ct);
         return "refund_requested";
+    }
+
+    private async Task RecordAuditAsync(RecordRefundCommand request, decimal amount, string status, CancellationToken ct)
+    {
+        if (_auditRecorder == null)
+        {
+            return;
+        }
+
+        await _auditRecorder.RecordAsync(
+            request.OrganizationId,
+            "refund.created",
+            "transaction",
+            request.TransactionLogId.ToString(),
+            new { amount, status, reason = request.Reason },
+            ct: ct);
     }
 
     private static bool IsRefundableSourceStatus(string status) =>

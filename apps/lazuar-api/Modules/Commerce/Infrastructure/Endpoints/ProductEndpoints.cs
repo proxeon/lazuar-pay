@@ -63,7 +63,7 @@ public static class ProductEndpoints
             var productId = await mediator.Send(command);
 
             return TypedResults.Ok(new IdResponse { Id = productId.ToString() });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPut("/products/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id,
@@ -96,7 +96,7 @@ public static class ProductEndpoints
             await mediator.Send(command);
 
             return TypedResults.Ok(new StatusResponse { Status = "updated" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapDelete("/products/{id:guid}", async Task<Ok<StatusResponse>> (
             Guid id,
@@ -106,7 +106,7 @@ public static class ProductEndpoints
             await mediator.Send(new ArchiveProductCommand(ctx.TenantId, id));
 
             return TypedResults.Ok(new StatusResponse { Status = "archived" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/products/{id:guid}/restore", async Task<Ok<StatusResponse>> (
             Guid id,
@@ -116,7 +116,7 @@ public static class ProductEndpoints
             await mediator.Send(new RestoreProductCommand(ctx.TenantId, id));
 
             return TypedResults.Ok(new StatusResponse { Status = "restored" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         return group;
     }

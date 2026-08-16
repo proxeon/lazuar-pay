@@ -16,7 +16,9 @@ public static class PaymentConfigEndpoints
 {
     public static RouteGroupBuilder MapPaymentConfigEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/payment-config", async Task<Ok<IEnumerable<PaymentConfigDto>>> (
+        var admin = group.MapGroup("").RequireAuthorization("OrgAdmin");
+
+        admin.MapGet("/payment-config", async Task<Ok<IEnumerable<PaymentConfigDto>>> (
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
         {
@@ -25,7 +27,7 @@ public static class PaymentConfigEndpoints
             return TypedResults.Ok(configs);
         });
 
-        group.MapPut("/payment-config", async Task<Ok<StatusResponse>> (
+        admin.MapPut("/payment-config", async Task<Ok<StatusResponse>> (
             SavePaymentConfigRequestDto req, 
             IExecutionContextAccessor ctx, 
             IMediator mediator) =>

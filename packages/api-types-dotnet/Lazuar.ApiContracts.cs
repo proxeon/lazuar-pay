@@ -1533,6 +1533,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
         public string? Gateway_name { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("due_at")]
+        public System.DateTimeOffset? Due_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("terms")]
+        public string? Terms { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -1778,6 +1784,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("expires_at")]
         public System.DateTimeOffset Expires_at { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("due_at")]
+        public System.DateTimeOffset? Due_at { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("is_b2b_required")]
         public bool Is_b2b_required { get; set; } = default!;
 
@@ -1828,6 +1837,84 @@ namespace Lazuar.ApiTypes
 
             return System.Text.Json.JsonSerializer.Deserialize<CustomCheckoutDto>(data, options);
 
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CommerceDisputeDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_transaction_id")]
+        public string Gateway_transaction_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("subscription_id")]
+        public string? Subscription_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkout_session_id")]
+        public string? Checkout_session_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuditEventDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("actor_user_id")]
+        public string? Actor_user_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("actor_email")]
+        public string? Actor_email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("action")]
+        public string Action { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("entity_type")]
+        public string Entity_type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("entity_id")]
+        public string Entity_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("metadata_json")]
+        public string? Metadata_json { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
         }
 
     }

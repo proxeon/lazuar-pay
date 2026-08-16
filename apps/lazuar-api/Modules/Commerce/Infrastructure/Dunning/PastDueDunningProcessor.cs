@@ -116,11 +116,31 @@ public sealed class PastDueDunningProcessor
                     || string.IsNullOrEmpty(sub.VaultedCustomerId)
                     || string.IsNullOrEmpty(sub.VaultedTokenId);
 
+                var hasHardDecline = cycleAttempts.Any(l =>
+                    l.Status == ChargeAttemptLog.StatusFailed
+                    && string.Equals(l.DeclineClass, DeclineClassifier.Hard, StringComparison.OrdinalIgnoreCase));
+
                 var hasInFlightOrSettled = publishedOffSessionThisTick
                     || cycleAttempts.Any(l => l.Status == ChargeAttemptLog.StatusPending)
                     || cycleAttempts.Any(l => l.Status == ChargeAttemptLog.StatusSucceeded);
 
-                if (cannotCharge || product == null)
+                if (hasHardDecline)
+                {
+                    var skipped = new ChargeAttemptLog(
+                        sub.Id,
+                        targetDate,
+                        attemptNumber: nextAttempt,
+                        source: ChargeAttemptLog.SourceDunning,
+                        dunningCampaignId: campaignId,
+                        dunningStepId: step.Id);
+                    skipped.MarkSkipped("hard_decline_skip", DeclineClassifier.Hard);
+                    db.ChargeAttemptLogs.Add(skipped);
+                    cycleAttempts.Add(skipped);
+                    _logger.LogInformation(
+                        "Skipped auto-charge for Subscription {Id} DayOffset={DayOffset}: cycle already has a hard decline.",
+                        sub.Id, step.DayOffset);
+                }
+                else if (cannotCharge || product == null)
                 {
                     _logger.LogWarning(
                         "Skipped auto-charge for Subscription {Id} (nextAttempt={NextAttempt}, max={Max}, gateway={Gateway}, reminderOnly={ReminderOnly}) due to limits, reminder-only mode, or missing token.",

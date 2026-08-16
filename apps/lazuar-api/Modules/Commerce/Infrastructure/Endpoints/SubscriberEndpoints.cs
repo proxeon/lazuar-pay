@@ -83,7 +83,7 @@ public static class SubscriberEndpoints
               {
                   return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
               }
-          });
+          }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/portal-link", async (
             GenerateCustomerPortalRequestDto req,
@@ -93,7 +93,7 @@ public static class SubscriberEndpoints
               var query = new GenerateCustomerPortalQuery(ctx.TenantId, req.Customer_email, req.Return_url);
               var url = await mediator.Send(query);
               return TypedResults.Ok(new GenerateCustomerPortalResponseDto { Url = url });
-          });
+          }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/cancel", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             Guid id,
@@ -113,7 +113,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/keep", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             Guid id,
@@ -129,7 +129,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/record-payment", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             Guid id,
@@ -152,7 +152,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/change-plan", async Task<Results<Ok<PlanChangePreviewDto>, BadRequest<StatusResponse>>> (
             Guid id,
@@ -250,7 +250,7 @@ public static class SubscriberEndpoints
         {
             await mediator.Send(new PauseSubscriberDunningCommand(ctx.TenantId, id, req.Pause_until.UtcDateTime));
             return TypedResults.Ok(new StatusResponse { Status = "paused" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/dunning/resume", async Task<Ok<StatusResponse>> (
             Guid id,
@@ -259,7 +259,7 @@ public static class SubscriberEndpoints
         {
             await mediator.Send(new ResumeSubscriberDunningCommand(ctx.TenantId, id));
             return TypedResults.Ok(new StatusResponse { Status = "resumed" });
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/anonymize", async Task<Results<Ok<StatusResponse>, NotFound<StatusResponse>>> (
             Guid id,
@@ -276,7 +276,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.NotFound(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgAdmin");
 
         return group;
     }

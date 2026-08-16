@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.One.Contracts;
 using Modules.One.Contracts.Events;
 
 namespace Modules.One.Application.Commands;
@@ -16,13 +17,16 @@ public class RevokeApiCredentialCommandHandler : ICommandHandler<RevokeApiCreden
 {
     private readonly IOneRepository _repository;
     private readonly IEventBus _eventBus;
+    private readonly IAuditRecorder? _auditRecorder;
 
     public RevokeApiCredentialCommandHandler(
         IOneRepository repository,
-        [FromKeyedServices("OneEventBus")] IEventBus eventBus)
+        [FromKeyedServices("OneEventBus")] IEventBus eventBus,
+        IAuditRecorder? auditRecorder = null)
     {
         _repository = repository;
         _eventBus = eventBus;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task Handle(RevokeApiCredentialCommand request, CancellationToken ct)
@@ -43,5 +47,16 @@ public class RevokeApiCredentialCommandHandler : ICommandHandler<RevokeApiCreden
 
         await _eventBus.PublishAsync(new ApiKeyRevokedIntegrationEvent(credential.OrganizationId, credential.KeyHash));
         await _repository.SaveChangesAsync(ct);
+
+        if (_auditRecorder != null)
+        {
+            await _auditRecorder.RecordAsync(
+                request.OrganizationId,
+                "api_key.revoked",
+                "api_credential",
+                credential.Id.ToString(),
+                new { name = credential.Name, hint = credential.KeyHint },
+                ct: ct);
+        }
     }
 }

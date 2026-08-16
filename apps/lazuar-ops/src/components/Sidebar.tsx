@@ -252,6 +252,7 @@ export default function Sidebar({
                   { label: "Checkout Links", href: "/commerce/products" },
                   { label: "Subscribers", href: "/commerce/subscribers" },
                   { label: "Transaction Logs", href: "/commerce/transactions" },
+                  { label: "Disputes", href: "/commerce/disputes" },
                   { label: "Promotions", href: "/commerce/coupons" },
                   { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" },
                   { label: "Notification Templates", href: "/commerce/templates" }
@@ -265,6 +266,8 @@ export default function Sidebar({
                   { label: "Delivery Logs", href: "/developer/logs" }
                 ] : [
                   { label: "General Settings", href: "/workspace/general" },
+                  { label: "Team", href: "/workspace/team" },
+                  { label: "Audit log", href: "/workspace/audit" },
                   { label: "Legal & Billing", href: "/workspace/billing-profile" },
                   { label: "Payment Gateways", href: "/workspace/payment-gateways" },
                   { label: "Plan & billing", href: "/workspace/billing" },

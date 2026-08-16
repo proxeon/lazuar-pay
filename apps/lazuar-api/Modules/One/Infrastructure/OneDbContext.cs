@@ -23,6 +23,7 @@ public class OneDbContext : PlatformDbContext
     public DbSet<TenantWebhookEndpoint> TenantWebhookEndpoints { get; set; } = null!;
     public DbSet<WebhookDeliveryOutbox> WebhookDeliveryOutboxes { get; set; } = null!;
     public DbSet<ApiCredential> ApiCredentials { get; set; } = null!;
+    public DbSet<AuditEvent> AuditEvents { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -135,6 +136,18 @@ public class OneDbContext : PlatformDbContext
             builder.Property(x => x.Name).IsRequired();
             builder.Property(x => x.Prefix).IsRequired();
             builder.Property(x => x.KeyHash).IsRequired();
+        });
+
+        modelBuilder.Entity<AuditEvent>(builder =>
+        {
+            builder.ToTable("AuditEvents");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
+            builder.Property(x => x.ActorEmail).HasMaxLength(255);
+            builder.Property(x => x.Action).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.EntityType).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.EntityId).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

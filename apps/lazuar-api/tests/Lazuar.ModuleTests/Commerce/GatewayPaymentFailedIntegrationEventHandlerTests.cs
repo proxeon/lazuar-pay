@@ -145,10 +145,26 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
         failed.FailureReason.Should().Be("charge_declined");
         failed.GatewayName.Should().Be("STRIPE");
         failed.GatewayResponseCode.Should().Be("card_declined");
+        failed.DeclineClass.Should().Be("soft");
         failed.CompletedAt.Should().NotBeNull();
 
         var stillPending = await _db.ChargeAttemptLogs.FirstAsync(l => l.Id == attempt1.Id);
         stillPending.Status.Should().Be(ChargeAttemptLog.StatusPending);
+
+        var hardEvent = new GatewayPaymentFailedIntegrationEvent(
+            OrganizationId: _orgId,
+            GatewayTransactionId: "off_session_hard:" + sub.Id,
+            Metadata: new Dictionary<string, string>
+            {
+                ["subscription_id"] = sub.Id.ToString(),
+                ["charge_attempt_id"] = attempt1.Id.ToString(),
+                ["failure_reason"] = "stolen_card",
+                ["decline_code"] = "stolen_card",
+                ["gateway_name"] = "STRIPE"
+            });
+        await _handler.HandleAsync(hardEvent);
+        var hardFailed = await _db.ChargeAttemptLogs.FirstAsync(l => l.Id == attempt1.Id);
+        hardFailed.DeclineClass.Should().Be("hard");
 
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters().FirstAsync(s => s.Id == sub.Id);
         reloaded.Status.Should().Be("PAST_DUE");

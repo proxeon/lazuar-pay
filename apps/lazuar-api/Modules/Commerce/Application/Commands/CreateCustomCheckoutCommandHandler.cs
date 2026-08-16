@@ -36,7 +36,17 @@ public class CreateCustomCheckoutCommandHandler : ICommandHandler<CreateCustomCh
 
         var clientProfileId = await _mediator.Send(resolveCrmProfileCmd, ct);
 
-        var expiresAt = request.ExpiresAt ?? DateTime.UtcNow.AddDays(30);
+        var now = DateTime.UtcNow;
+        var expiresAt = request.ExpiresAt ?? now.AddDays(30);
+        var dueAt = ResolveDueAt(now, request.DueAt, request.Terms);
+        if (dueAt.HasValue)
+        {
+            var linkFloor = dueAt.Value.AddDays(14);
+            if (expiresAt < linkFloor)
+            {
+                expiresAt = linkFloor;
+            }
+        }
 
         var domainLineItems = request.LineItems
             .Select(x => new AdHocLineItem(x.Description, x.Quantity, x.UnitPrice))
@@ -61,6 +71,10 @@ public class CreateCustomCheckoutCommandHandler : ICommandHandler<CreateCustomCh
             new GenerateNextSequenceNumberCommand(request.OrganizationId, DocumentSeries.QuotePrefix()),
             ct);
         session.AssignDocumentNumber(quoteNumber);
+        if (dueAt.HasValue)
+        {
+            session.SetDueAt(dueAt);
+        }
 
         _repository.AddCheckoutSession(session);
         await _repository.SaveChangesAsync(ct);
@@ -85,5 +99,25 @@ public class CreateCustomCheckoutCommandHandler : ICommandHandler<CreateCustomCh
         return string.IsNullOrWhiteSpace(firstActive?.Gateway_type)
             ? null
             : firstActive.Gateway_type.Trim().ToUpperInvariant();
+    }
+
+    internal static DateTime? ResolveDueAt(DateTime now, DateTime? dueAt, string? terms)
+    {
+        if (dueAt.HasValue)
+        {
+            return dueAt.Value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(dueAt.Value, DateTimeKind.Utc)
+                : dueAt.Value.ToUniversalTime();
+        }
+
+        var normalized = (terms ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "due_on_receipt" => now,
+            "net_7" => now.AddDays(7),
+            "net_15" => now.AddDays(15),
+            "net_30" => now.AddDays(30),
+            _ => null
+        };
     }
 }

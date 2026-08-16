@@ -34,4 +34,5 @@ public interface ICommerceQueryService
 
     Task<PaginatedResponse<CustomCheckoutDto>> GetCustomCheckoutsAsync(Guid organizationId, int page, int limit);
     Task<CustomCheckoutDto?> GetCustomCheckoutBySessionIdAsync(Guid organizationId, Guid sessionId);
+    Task<PaginatedResponse<CommerceDisputeDto>> GetDisputesAsync(Guid organizationId, int page, int limit);
 }

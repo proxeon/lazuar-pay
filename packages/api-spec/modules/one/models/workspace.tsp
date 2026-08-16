@@ -72,3 +72,14 @@ model ToggleAppEntitlementRequestDto {
 model WorkspaceAppDto {
   app_id: string;
 }
+
+model AuditEventDto {
+  id: string;
+  actor_user_id?: string;
+  actor_email?: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  metadata_json?: string;
+  created_at: utcDateTime;
+}

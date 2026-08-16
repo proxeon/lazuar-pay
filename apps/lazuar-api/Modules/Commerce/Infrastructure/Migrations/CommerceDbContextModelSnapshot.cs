@@ -598,6 +598,10 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DeclineClass")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<Guid?>("DunningCampaignId")
                         .HasColumnType("uuid");
 
@@ -729,6 +733,53 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.ToTable("TransactionLogs", "commerce");
                 });
 
+            modelBuilder.Entity("Modules.Commerce.Domain.Entities.CommerceDispute", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid?>("CheckoutSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("GatewayTransactionId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("SubscriptionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("OrganizationId", "GatewayTransactionId")
+                        .IsUnique();
+
+                    b.ToTable("Disputes", "commerce");
+                });
+
             modelBuilder.Entity("Modules.Commerce.Domain.Entities.DunningStep", b =>
                 {
                     b.Property<Guid>("Id")
@@ -789,6 +840,29 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("ReminderDispatchLogs", "commerce");
+                });
+
+            modelBuilder.Entity("Modules.Commerce.Domain.Entities.InvoiceReminderDispatchLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DayOffset")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("DispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId", "DayOffset")
+                        .IsUnique();
+
+                    b.ToTable("InvoiceReminderDispatchLogs", "commerce");
                 });
 
             modelBuilder.Entity("Modules.Commerce.Domain.Aggregates.Product", b =>

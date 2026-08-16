@@ -22,6 +22,7 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     
     public string Status { get; private set; }
     public DateTime ExpiresAt { get; private set; }
+    public DateTime? DueAt { get; private set; }
     public bool IsB2bRequired { get; private set; }
 
     /// <summary>Per-org sequential quote number (<c>QT-yyyy-#####</c>). Allocated once.</summary>
@@ -31,9 +32,6 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     public int Quantity { get; private set; } = 1;
 
     public Guid? PriceId { get; private set; }
-
-    /// <summary>Reserved for scheduled / quote due dates (LP-105).</summary>
-    public DateTime? DueAt { get; private set; }
 
     public string? IdempotencyKey { get; private set; }
     public string? RequestFingerprint { get; private set; }
@@ -170,6 +168,21 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         }
 
         DocumentNumber = documentNumber.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetDueAt(DateTime? dueAt)
+    {
+        DueAt = dueAt;
+        if (dueAt.HasValue)
+        {
+            var linkFloor = dueAt.Value.AddDays(14);
+            if (ExpiresAt < linkFloor)
+            {
+                ExpiresAt = linkFloor;
+            }
+        }
+
         UpdatedAt = DateTime.UtcNow;
     }
 }

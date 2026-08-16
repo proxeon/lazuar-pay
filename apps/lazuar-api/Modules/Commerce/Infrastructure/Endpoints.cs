@@ -20,7 +20,7 @@ public static class Endpoints
 {
     public static IEndpointRouteBuilder MapCommerceEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var adminGroup = endpoints.MapGroup("/admin/commerce").RequireAuthorization("OrgAdmin");
+        var adminGroup = endpoints.MapGroup("/admin/commerce").RequireAuthorization("OrgRead");
         var publicGroup = endpoints.MapGroup("/public/commerce");
 
         adminGroup.MapProductEndpoints();
@@ -46,12 +46,14 @@ public static class Endpoints
                 lineItems,
                 req.Expires_at?.UtcDateTime,
                 req.Is_b2b_required,
-                string.IsNullOrWhiteSpace(req.Gateway_name) ? null : req.Gateway_name
+                string.IsNullOrWhiteSpace(req.Gateway_name) ? null : req.Gateway_name,
+                req.Due_at?.UtcDateTime,
+                string.IsNullOrWhiteSpace(req.Terms) ? null : req.Terms
             );
 
             var id = await mediator.Send(command);
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
-        });
+        }).RequireAuthorization("OrgMember");
 
         adminGroup.MapPost("/checkouts/{id:guid}/mark-paid", async Task<Ok<StatusResponse>> (
             Guid id,
@@ -60,6 +62,18 @@ public static class Endpoints
         {
             await mediator.Send(new MarkCheckoutAsPaidOfflineCommand(ctx.TenantId, id));
             return TypedResults.Ok(new StatusResponse { Status = "completed" });
+        }).RequireAuthorization("OrgMember");
+
+        adminGroup.MapGet("/disputes", async Task<Ok<PaginatedResponse<CommerceDisputeDto>>> (
+            [FromQuery] int page,
+            [FromQuery] int limit,
+            IExecutionContextAccessor ctx,
+            ICommerceQueryService queryService) =>
+        {
+            var p = page < 1 ? 1 : page;
+            var l = limit < 1 || limit > 100 ? 50 : limit;
+            var response = await queryService.GetDisputesAsync(ctx.TenantId, p, l);
+            return TypedResults.Ok(response);
         });
 
         adminGroup.MapGet("/custom-checkouts", async Task<Ok<PaginatedResponse<CustomCheckoutDto>>> (

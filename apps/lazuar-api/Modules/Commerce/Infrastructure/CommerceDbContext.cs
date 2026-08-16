@@ -29,6 +29,8 @@ public class CommerceDbContext : PlatformDbContext
     public DbSet<DunningStep> DunningSteps { get; set; } = null!;
     public DbSet<ReminderDispatchLog> ReminderDispatchLogs { get; set; } = null!;
     public DbSet<CommerceTransactionLog> TransactionLogs { get; set; } = null!;
+    public DbSet<CommerceDispute> Disputes { get; set; } = null!;
+    public DbSet<InvoiceReminderDispatchLog> InvoiceReminderDispatchLogs { get; set; } = null!;
 
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -53,6 +55,14 @@ public class CommerceDbContext : PlatformDbContext
         }
 
         foreach (var entry in ChangeTracker.Entries<ReminderDispatchLog>())
+        {
+            if (entry.State == EntityState.Modified)
+            {
+                entry.State = EntityState.Added;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<InvoiceReminderDispatchLog>())
         {
             if (entry.State == EntityState.Modified)
             {
@@ -197,6 +207,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => x.Status);
 
             builder.Property(x => x.GatewayName).HasMaxLength(100);
+            builder.Property(x => x.DueAt).HasColumnType("timestamp with time zone");
             builder.Property(x => x.DocumentNumber).HasMaxLength(40);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
             builder.Property(x => x.Quantity).HasDefaultValue(1);
@@ -235,7 +246,27 @@ public class CommerceDbContext : PlatformDbContext
             builder.Property(x => x.GatewayName).HasMaxLength(100);
             builder.Property(x => x.GatewayResponseCode).HasMaxLength(100);
             builder.Property(x => x.FailureReason).HasMaxLength(500);
+            builder.Property(x => x.DeclineClass).HasMaxLength(16);
             builder.Property(x => x.AttemptNumber).HasDefaultValue(1);
+        });
+
+        modelBuilder.Entity<CommerceDispute>(builder =>
+        {
+            builder.ToTable("Disputes");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.OrganizationId, x.GatewayTransactionId }).IsUnique();
+            builder.HasIndex(x => x.CreatedAt);
+            builder.Property(x => x.GatewayTransactionId).HasMaxLength(255).IsRequired();
+            builder.Property(x => x.Amount).HasPrecision(18, 4);
+            builder.Property(x => x.Currency).HasMaxLength(10);
+            builder.Property(x => x.Status).HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<InvoiceReminderDispatchLog>(builder =>
+        {
+            builder.ToTable("InvoiceReminderDispatchLogs");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.SessionId, x.DayOffset }).IsUnique();
         });
 
         modelBuilder.Entity<DunningCampaign>(builder =>

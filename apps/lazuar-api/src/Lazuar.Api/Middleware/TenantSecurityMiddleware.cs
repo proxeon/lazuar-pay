@@ -74,7 +74,7 @@ public class TenantSecurityMiddleware
         {
             context.Items["TenantId"] = resolvedTenantId.Value;
 
-            if (!isExempt && context.User.Identity?.IsAuthenticated == true)
+            if (context.User.Identity?.IsAuthenticated == true)
             {
                 var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -82,7 +82,12 @@ public class TenantSecurityMiddleware
                 {
                     var role = await oneQueryService.GetTenantRoleAsync(userId, resolvedTenantId.Value);
 
-                    if (string.IsNullOrEmpty(role))
+                    if (!string.IsNullOrEmpty(role))
+                    {
+                        var identity = context.User.Identity as ClaimsIdentity;
+                        identity?.AddClaim(new Claim(ClaimTypes.Role, role));
+                    }
+                    else if (!isExempt)
                     {
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         context.Response.ContentType = "application/json";
@@ -96,11 +101,6 @@ public class TenantSecurityMiddleware
 
                         await context.Response.WriteAsync(error);
                         return;
-                    }
-                    else
-                    {
-                        var identity = context.User.Identity as ClaimsIdentity;
-                        identity?.AddClaim(new Claim(ClaimTypes.Role, role));
                     }
                 }
             }

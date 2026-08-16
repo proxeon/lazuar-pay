@@ -74,7 +74,16 @@ public static class DefaultMessageTemplates
             "Hi {{customer_name}},\n\nUse the secure link below to open your dashboard. This link expires in 24 hours.\n\n[Open Dashboard]({{portal_magic_link}})\n\n— {{business_name}}",
             "",
             ["{{portal_magic_link}}"],
-            ["{{customer_name}}", "{{business_name}}"])
+            ["{{customer_name}}", "{{business_name}}"]),
+
+        new Definition(
+            "Invoice Reminder",
+            "EMAIL",
+            "Payment reminder from {{business_name}}",
+            "Hi {{customer_name}},\n\nThis is a reminder that payment for {{plan_name}} ({{amount}} {{currency}}) is due on {{current_period_end}}.\n\nYou can pay securely using the link below:\n\n[Pay now]({{checkout_url}})\n\n— {{business_name}}",
+            "Hi {{customer_name}}, payment for {{plan_name}} is due {{current_period_end}}. Pay here: {{checkout_url}}",
+            ["{{checkout_url}}"],
+            ["{{customer_name}}", "{{business_name}}", "{{plan_name}}", "{{amount}}", "{{currency}}", "{{current_period_end}}"])
     ];
 
     /// <summary>

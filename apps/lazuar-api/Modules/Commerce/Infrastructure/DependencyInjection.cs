@@ -55,6 +55,7 @@ public static class DependencyInjection
         services.AddHostedService<BillingEngineJob>();
         services.AddHostedService<DunningEngineJob>();
         services.AddHostedService<CheckoutSessionExpiryJob>();
+        services.AddHostedService<InvoiceReminderJob>();
 
         services.AddTransient<GatewayPaymentCompletedIntegrationEventHandler>();
         services.AddTransient<GatewayPaymentFailedIntegrationEventHandler>();
@@ -64,6 +65,7 @@ public static class DependencyInjection
         services.AddTransient<SubscriptionLifecycleIntegrationEventHandlers>();
         services.AddTransient<DefaultTemplatesSeededIntegrationEventHandler>();
         services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
+        services.AddTransient<CommerceGatewayDisputeCreatedHandler>();
 
         return services;
     }
@@ -82,6 +84,7 @@ public static class DependencyInjection
         eventBus.Subscribe<SubscriptionResumedIntegrationEvent, SubscriptionLifecycleIntegrationEventHandlers>();
         eventBus.Subscribe<DefaultTemplatesSeededIntegrationEvent, DefaultTemplatesSeededIntegrationEventHandler>();
         eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
+        eventBus.Subscribe<GatewayDisputeCreatedIntegrationEvent, CommerceGatewayDisputeCreatedHandler>();
         return app;
     }
 }

@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Modules.One.Application.Commands;
@@ -93,7 +94,7 @@ public static class WorkspaceEndpoints
         {
             var inviteId = await mediator.Send(new InviteUserToWorkspaceCommand(id, ctx.UserId, req.Email, req.Role));
             return TypedResults.Ok(new IdResponse { Id = inviteId.ToString() });
-        }).RequireAuthorization();
+        }).RequireAuthorization("OrgAdmin");
 
         group.MapGet("/workspaces/{id:guid}/invites", async Task<Results<Ok<ICollection<WorkspaceInvitationDto>>, UnauthorizedHttpResult>> (Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
         {
@@ -109,13 +110,13 @@ public static class WorkspaceEndpoints
         {
             await mediator.Send(new RevokeWorkspaceInvitationCommand(id, ctx.UserId, inviteId));
             return TypedResults.Ok(new StatusResponse { Status = "revoked" });
-        }).RequireAuthorization();
+        }).RequireAuthorization("OrgAdmin");
 
         group.MapDelete("/workspaces/{id:guid}/members/{userId:guid}", async Task<Ok<StatusResponse>> (Guid id, Guid userId, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             await mediator.Send(new RemoveWorkspaceMemberCommand(id, ctx.UserId, userId));
             return TypedResults.Ok(new StatusResponse { Status = "removed" });
-        }).RequireAuthorization();
+        }).RequireAuthorization("OrgAdmin");
 
         group.MapPost("/workspaces/invites/accept", async Task<Ok<StatusResponse>> (AcceptWorkspaceInvitationDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
@@ -161,6 +162,43 @@ public static class WorkspaceEndpoints
             var entitlements = await db.TenantMemberships.IgnoreQueryFilters().Where(m => m.GlobalUserId == ctx.UserId)
                 .Join(db.Organizations.IgnoreQueryFilters(), m => m.OrganizationId, o => o.Id, (m, o) => new EntitlementDto { Workspace_id = o.Id.ToString(), Workspace_name = o.Name, Workspace_slug = o.Slug, Role = m.Role }).ToListAsync();
             return TypedResults.Ok((ICollection<EntitlementDto>)entitlements);
+        }).RequireAuthorization();
+
+        group.MapGet("/workspaces/{id:guid}/audit", async Task<Results<Ok<PaginatedResponse<AuditEventDto>>, UnauthorizedHttpResult, ForbidHttpResult>> (
+            Guid id,
+            [FromQuery] int page,
+            [FromQuery] int limit,
+            IExecutionContextAccessor ctx,
+            IOneQueryService queryService,
+            OneDbContext db) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Forbid();
+
+            var p = page < 1 ? 1 : page;
+            var l = limit < 1 || limit > 100 ? 50 : limit;
+            var query = db.AuditEvents.IgnoreQueryFilters().Where(e => e.OrganizationId == id);
+            var total = await query.CountAsync();
+            var rows = await query
+                .OrderByDescending(e => e.CreatedAt)
+                .Skip((p - 1) * l)
+                .Take(l)
+                .ToListAsync();
+
+            var dtos = rows.Select(e => new AuditEventDto
+            {
+                Id = e.Id.ToString(),
+                Actor_user_id = e.ActorUserId?.ToString(),
+                Actor_email = e.ActorEmail,
+                Action = e.Action,
+                Entity_type = e.EntityType,
+                Entity_id = e.EntityId,
+                Metadata_json = e.MetadataJson,
+                Created_at = new DateTimeOffset(e.CreatedAt, TimeSpan.Zero)
+            }).ToList();
+
+            return TypedResults.Ok(new PaginatedResponse<AuditEventDto>(dtos, total, p, l));
         }).RequireAuthorization();
 
         return group;

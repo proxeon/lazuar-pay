@@ -277,6 +277,26 @@ public class ApiKeyAuthenticationTests
     }
 
     [Test]
+    public async Task OrgMember_Allows_Member_OrgAdmin_Denies()
+    {
+        var auth = BuildAuthorizationService();
+        var member = Principal(role: "MEMBER");
+        Assert.That((await auth.AuthorizeAsync(member, null, "OrgMember")).Succeeded, Is.True);
+        Assert.That((await auth.AuthorizeAsync(member, null, "OrgAdmin")).Succeeded, Is.False);
+        Assert.That((await auth.AuthorizeAsync(member, null, "OrgRead")).Succeeded, Is.True);
+    }
+
+    [Test]
+    public async Task OrgRead_Allows_Viewer_OrgMember_Denies()
+    {
+        var auth = BuildAuthorizationService();
+        var viewer = Principal(role: "VIEWER");
+        Assert.That((await auth.AuthorizeAsync(viewer, null, "OrgRead")).Succeeded, Is.True);
+        Assert.That((await auth.AuthorizeAsync(viewer, null, "OrgMember")).Succeeded, Is.False);
+        Assert.That((await auth.AuthorizeAsync(viewer, null, "OrgAdmin")).Succeeded, Is.False);
+    }
+
+    [Test]
     public async Task IntegrationWrite_Policy_Allows_ApiClient_With_Write_Scope()
     {
         var auth = BuildAuthorizationService();
@@ -475,6 +495,18 @@ public class ApiKeyAuthenticationTests
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole("SUPER_ADMIN", "ADMIN");
+            });
+
+            options.AddPolicy("OrgMember", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole("SUPER_ADMIN", "ADMIN", "MEMBER");
+            });
+
+            options.AddPolicy("OrgRead", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole("SUPER_ADMIN", "ADMIN", "MEMBER", "VIEWER");
             });
 
             options.AddPolicy("IntegrationLhdnDocumentsWrite", policy =>
