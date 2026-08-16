@@ -142,19 +142,19 @@ public class GenerateDefaultDunningCampaignsCommandHandler : ICommandHandler<Gen
             7, 
             0);
 
-        campaign.AddStep(-3, "EMAIL", 
-            "Upcoming renewal for {{plan_name}}", 
-            "Your {{plan_name}} subscription will renew in 3 days. Ensure your payment method is up to date here: {{update_payment_link}}", 
+        campaign.AddStep(-3, "EMAIL",
+            "Upcoming renewal for {{plan_name}}",
+            "{{plan_name}} renews on {{current_period_end}}. If we don't have a card on file, we will email a payment link on the due date.",
             null);
-            
-        campaign.AddStep(0, "EMAIL", 
-            "Action Required: {{plan_name}} renewal due today", 
-            "Your {{plan_name}} subscription is due today. To maintain access, please update your payment method here: {{update_payment_link}}", 
+
+        campaign.AddStep(0, "EMAIL",
+            "{{plan_name}} is due — pay this cycle",
+            "{{plan_name}} is due today ({{amount}} {{currency}}). [Pay now]({{renewal_link}})",
             null);
-            
+
         campaign.AddStep(3, "EMAIL",
-            "Your {{plan_name}} subscription is past due",
-            "Hey {{customer_name}}, your {{plan_name}} subscription is past due. You can securely update your payment method to restore access here: {{update_payment_link}}",
+            "{{plan_name}} is still unpaid",
+            "Still unpaid. [Pay this cycle]({{renewal_link}})",
             null);
 
         // Billing owns attempt 1; dunning retries before grace 7. Billplz products skip via capabilities.

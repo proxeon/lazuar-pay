@@ -9,6 +9,7 @@ export interface CheckoutContext {
   minimumPrice: number;
   currentPrice: number;
   interval?: string;
+  supportsOffSession?: boolean;
   currency: string;
   discountAmount: number | null;
   finalPrice: number | null;

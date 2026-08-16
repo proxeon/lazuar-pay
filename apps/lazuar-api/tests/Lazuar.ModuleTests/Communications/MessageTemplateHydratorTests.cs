@@ -45,14 +45,14 @@ public class MessageTemplateHydratorTests
         const string template =
             "{{customer_name}}|{{customer_email}}|{{customer_phone}}|{{business_name}}|{{plan_name}}|" +
             "{{amount}}|{{total_price}}|{{currency}}|{{days_overdue}}|{{current_period_end}}|" +
-            "{{renewal_link}}|{{portal_magic_link}}|{{update_payment_link}}";
+            "{{renewal_link}}|{{checkout_url}}|{{portal_magic_link}}|{{update_payment_link}}";
 
         var result = MessageTemplateHydrator.Populate(template, Sample);
 
         result.Should().Be(
             "Aisha Merchant|aisha@example.com|+60123456789|Acme Studio|Premium Mastermind|" +
             "99.00|99.00|MYR|3|31 Dec 2026|" +
-            "https://portal.test/acme/update-payment/sub-1|https://portal.test/acme/portal?token=magic|https://portal.test/acme/update-payment/sub-1");
+            "https://portal.test/acme/update-payment/sub-1|https://portal.test/acme/update-payment/sub-1|https://portal.test/acme/portal?token=magic|https://portal.test/acme/update-payment/sub-1");
     }
 
     [Test]
@@ -82,11 +82,11 @@ public class MessageTemplateHydratorTests
         string[] copy =
         [
             "Upcoming renewal for {{plan_name}}",
-            "Your {{plan_name}} subscription will renew in 3 days. Ensure your payment method is up to date here: {{update_payment_link}}",
-            "Action Required: {{plan_name}} renewal due today",
-            "Your {{plan_name}} subscription is due today. To maintain access, please update your payment method here: {{update_payment_link}}",
-            "Your {{plan_name}} subscription is past due",
-            "Hey {{customer_name}}, your {{plan_name}} subscription is past due. You can securely update your payment method to restore access here: {{update_payment_link}}"
+            "{{plan_name}} renews on {{current_period_end}}. If we don't have a card on file, we will email a payment link on the due date.",
+            "{{plan_name}} is due — pay this cycle",
+            "{{plan_name}} is due today ({{amount}} {{currency}}). [Pay now]({{renewal_link}})",
+            "{{plan_name}} is still unpaid",
+            "Still unpaid. [Pay this cycle]({{renewal_link}})"
         ];
 
         foreach (var template in copy)
@@ -130,6 +130,16 @@ public class MessageTemplateHydratorTests
         preview.Should().NotContain("{{");
     }
 
+    [Test]
+    public void PopulatePreview_CheckoutUrl_MatchesRenewalLink()
+    {
+        var preview = MessageTemplateHydrator.PopulatePreview("{{checkout_url}}|{{renewal_link}}");
+        var parts = preview.Split('|');
+        parts.Should().HaveCount(2);
+        parts[0].Should().Be(parts[1]);
+        parts[0].Should().Contain("/update-payment/");
+    }
+
     private static void AssertNoKnownTags(string populated)
     {
         populated.Should().NotContain("{{customer_name}}");
@@ -143,6 +153,7 @@ public class MessageTemplateHydratorTests
         populated.Should().NotContain("{{days_overdue}}");
         populated.Should().NotContain("{{current_period_end}}");
         populated.Should().NotContain("{{renewal_link}}");
+        populated.Should().NotContain("{{checkout_url}}");
         populated.Should().NotContain("{{portal_magic_link}}");
         populated.Should().NotContain("{{update_payment_link}}");
     }

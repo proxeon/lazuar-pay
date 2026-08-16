@@ -15,7 +15,7 @@ We actively avoid the "CMS Trap." We don't build website builders, and we don't 
 | **Historical ambition** | ADR 014 (apps catalog), ADR 020 (integration roadmap) | Useful roadmap context only. Do not implement “15 apps,” community DRM, or link-in-bio from those docs without an explicit reverse of ADR 021/023. |
 | **API contracts** | `packages/api-spec` + `task gen` | OpenAPI clients must match Minimal API; see `docs/contracts/openapi-vs-minimal-api.md`. |
 
-**Honest capability today:** BYOK gateways + commerce subscriptions + double-entry billing ledger + email dunning templates + LHDN **backend** pipeline. WhatsApp dunning and full compliance UI are roadmap (Phase D), not guaranteed demoable surfaces on every deploy.
+**Honest capability today:** BYOK gateways + commerce subscriptions + double-entry billing ledger + email dunning templates + LHDN **backend** pipeline. Billplz renewals = emailed hosted link, not silent charge. WhatsApp dunning and full compliance UI are roadmap (Phase D), not guaranteed demoable surfaces on every deploy.
 
 ---
 

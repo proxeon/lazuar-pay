@@ -110,6 +110,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     minimumPrice: product.minimum_price,
     currentPrice: basePriceForQuantity,
     interval: product.interval,
+    supportsOffSession: product.supports_off_session,
     currency: product.currency,
     discountAmount: discountAmount,
     finalPrice: finalPrice,

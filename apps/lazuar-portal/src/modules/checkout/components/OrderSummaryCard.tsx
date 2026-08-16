@@ -14,6 +14,8 @@ interface OrderSummaryCardProps {
 
 export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChange, promoCodeSlot }: OrderSummaryCardProps) {
   const finalPriceToDisplay = context.finalPrice !== null ? context.finalPrice : context.currentPrice;
+  const intervalLabel = context.interval === "mo" ? "month" : context.interval === "yr" ? "year" : null;
+  const isRecurring = intervalLabel !== null;
   const discountLabel = context.quantity > 1 && context.isCouponApplied
     ? `Discount (per item × ${context.quantity})`
     : "Discount";
@@ -122,14 +124,30 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
         </div>
       )}
 
-      <div className="bg-secondary/40 border border-border/60 p-4 rounded-none mt-4">
+      <div className="bg-secondary/40 border border-border/60 p-4 rounded-none mt-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-base font-semibold text-foreground">Total Due Today</span>
           <span className="text-xl font-bold tracking-tighter text-foreground">
             {context.currency} {finalPriceToDisplay.toFixed(2)}
           </span>
         </div>
+        {isRecurring && (
+          <p className="text-xs text-muted-foreground">
+            then {context.currency} {finalPriceToDisplay.toFixed(2)} / {intervalLabel}
+          </p>
+        )}
       </div>
+
+      {isRecurring && context.supportsOffSession === false && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 leading-relaxed">
+          <strong>Not auto-debit.</strong> We email a new payment link each cycle.
+        </p>
+      )}
+      {isRecurring && context.supportsOffSession && (
+        <p className="text-xs text-muted-foreground">
+          Your card will be saved for renewals.
+        </p>
+      )}
     </div>
   );
 }

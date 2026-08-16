@@ -35,6 +35,24 @@ internal static class DunningStepDispatcher
         return action;
     }
 
+    /// <summary>
+    /// Hosted pay-this-cycle URL only when it was minted for the current <see cref="Subscription.NextBillingDate"/>.
+    /// </summary>
+    public static string? ResolveLiveRenewalCheckoutUrl(Subscription sub)
+    {
+        if (string.IsNullOrWhiteSpace(sub.CurrentRenewalCheckoutUrl)
+            || !sub.CurrentRenewalCheckoutForDate.HasValue
+            || !sub.NextBillingDate.HasValue)
+        {
+            return null;
+        }
+
+        if (sub.CurrentRenewalCheckoutForDate.Value.Date != sub.NextBillingDate.Value.Date)
+            return null;
+
+        return sub.CurrentRenewalCheckoutUrl;
+    }
+
     public static async Task DispatchCommunicationStepAsync(
         CommerceDbContext db,
         Subscription sub,
@@ -45,6 +63,7 @@ internal static class DunningStepDispatcher
         CancellationToken ct)
     {
         var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+        var checkoutUrl = ResolveLiveRenewalCheckoutUrl(sub) ?? string.Empty;
 
         var payloadObj = new
         {
@@ -62,7 +81,8 @@ internal static class DunningStepDispatcher
             days_overdue = daysOverdue,
             current_period_end = sub.NextBillingDate.HasValue
                 ? sub.NextBillingDate.Value.ToString("yyyy-MM-dd")
-                : string.Empty
+                : string.Empty,
+            checkout_url = checkoutUrl
         };
 
         var payloadElement = JsonSerializer.SerializeToElement(payloadObj, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });

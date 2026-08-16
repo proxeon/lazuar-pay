@@ -102,6 +102,8 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         }
 
         var links = MessageLinkBuilder.Build(portalBase, workspaceSlug, subIdStr, magicToken);
+        var hostedCheckoutUrl = ReadOptionalString(root, "checkout_url");
+        var renewalLink = hostedCheckoutUrl ?? links.RenewalLink;
 
         var planName = root.TryGetProperty("plan_name", out var planProp) ? planProp.GetString() ?? "" : "";
         var amount = MessageTemplateHydrator.FormatMoney(ReadNumericString(root, "amount"));
@@ -156,7 +158,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
             Currency: currency,
             DaysOverdue: daysOverdue,
             CurrentPeriodEnd: currentPeriodEnd,
-            RenewalLink: links.RenewalLink,
+            RenewalLink: renewalLink,
             PortalMagicLink: links.PortalMagicLink,
             UpdatePaymentLink: links.UpdatePaymentLink);
 
@@ -187,6 +189,18 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
 
         await _eventBus.PublishAsync(dispatchEvent);
         await _db.SaveChangesAsync();
+    }
+
+    private static string? ReadOptionalString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var prop)) return null;
+        var value = prop.ValueKind switch
+        {
+            JsonValueKind.String => prop.GetString(),
+            JsonValueKind.Null => null,
+            _ => prop.ToString()
+        };
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private static string ReadNumericString(JsonElement root, string propertyName)

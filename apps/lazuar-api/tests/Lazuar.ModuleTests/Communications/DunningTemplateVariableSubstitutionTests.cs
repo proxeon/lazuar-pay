@@ -342,24 +342,101 @@ public class DunningTemplateVariableSubstitutionTests
     }
 
     [Test]
+    public async Task HandleAsync_Dunning_CheckoutUrl_PrefersHostedBillForRenewalLink()
+    {
+        await using var db = CreateDb();
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var subscriptionId = Guid.CreateVersion7();
+        const string hosted = "https://www.billplz-sandbox.com/bills/renew-1";
+
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        var one = Substitute.For<IOneQueryService>();
+        one.GetWorkspaceByIdAsync(orgId).Returns(
+            new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(db, crm, one, eventBus, Substitute.For<IMagicLinkTokenService>());
+
+        var payload = JsonSerializer.SerializeToElement(new
+        {
+            client_profile_id = clientId.ToString(),
+            subscription_id = subscriptionId.ToString(),
+            checkout_url = hosted,
+            action_type = "EMAIL",
+            subject = "Due",
+            email_body = "Pay {{renewal_link}} Update {{update_payment_link}} Alias {{checkout_url}}"
+        });
+
+        await handler.HandleAsync(new FulfillmentRequestedIntegrationEvent(
+            orgId, "COMMUNICATIONS", "reminder.dunning", payload));
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
+            e.HtmlEmailBody != null
+            && e.HtmlEmailBody.Contains(hosted)
+            && e.HtmlEmailBody.Contains($"/update-payment/{subscriptionId}")
+            && e.HtmlEmailBody.Contains("{{renewal_link}}") == false
+            && e.HtmlEmailBody.Contains("{{update_payment_link}}") == false
+            && e.HtmlEmailBody.Contains("{{checkout_url}}") == false));
+    }
+
+    [Test]
+    public async Task HandleAsync_Dunning_WithoutCheckoutUrl_RenewalLinkFallsBackToUpdatePaymentPage()
+    {
+        await using var db = CreateDb();
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var subscriptionId = Guid.CreateVersion7();
+
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        var one = Substitute.For<IOneQueryService>();
+        one.GetWorkspaceByIdAsync(orgId).Returns(
+            new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(db, crm, one, eventBus, Substitute.For<IMagicLinkTokenService>());
+
+        var payload = JsonSerializer.SerializeToElement(new
+        {
+            client_profile_id = clientId.ToString(),
+            subscription_id = subscriptionId.ToString(),
+            action_type = "EMAIL",
+            subject = "Due",
+            email_body = "Pay {{renewal_link}} Update {{update_payment_link}}"
+        });
+
+        await handler.HandleAsync(new FulfillmentRequestedIntegrationEvent(
+            orgId, "COMMUNICATIONS", "reminder.dunning", payload));
+
+        var expectedPage = $"https://portal.test/acme/update-payment/{subscriptionId}";
+        await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
+            e.HtmlEmailBody != null
+            && e.HtmlEmailBody.Contains(expectedPage)
+            && e.HtmlEmailBody.Contains("billplz") == false
+            && e.HtmlEmailBody.Contains("{{renewal_link}}") == false
+            && e.HtmlEmailBody.Contains("{{update_payment_link}}") == false));
+    }
+
+    [Test]
     public void DefaultDunningCopy_WithHydrator_LeavesNoRawPlaceholder()
     {
         var ctx = new MessageTemplateContext(
             "Aisha", "a@x.com", "+60", "Acme", "Founders Mastermind",
             "99.00", "99.00", "MYR", "0", "31 Dec 2026",
-            "https://portal.test/acme/update-payment/s",
+            "https://www.billplz-sandbox.com/bills/renew-1",
             "https://portal.test/acme/portal?token=t",
             "https://portal.test/acme/update-payment/s");
 
         var subject = MessageTemplateHydrator.Populate(
-            "Action Required: {{plan_name}} renewal due today", ctx);
+            "{{plan_name}} is due — pay this cycle", ctx);
         var body = MessageTemplateHydrator.Populate(
-            "Your {{plan_name}} subscription is due today. To maintain access, please update your payment method here: {{update_payment_link}}",
+            "{{plan_name}} is due today ({{amount}} {{currency}}). [Pay now]({{renewal_link}})",
             ctx);
 
-        subject.Should().Be("Action Required: Founders Mastermind renewal due today");
+        subject.Should().Be("Founders Mastermind is due — pay this cycle");
         body.Should().Contain("Founders Mastermind");
-        body.Should().Contain("https://portal.test/acme/update-payment/s");
+        body.Should().Contain("https://www.billplz-sandbox.com/bills/renew-1");
+        body.Should().NotContain("update your payment method");
         subject.Should().NotContain("{{");
         body.Should().NotContain("{{");
     }

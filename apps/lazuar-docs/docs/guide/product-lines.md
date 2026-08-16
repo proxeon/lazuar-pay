@@ -60,6 +60,8 @@ See [Payment flow](/integrations/payment-flow).
 - Public checkout links for **Hub** sellables
 - Dunning / portal flows tied to Commerce subscriptions
 
+Commerce subscriptions have two renewal modes. Stripe and CHIP Collect can vault and auto-debit. Billplz (and any `supports_off_session=false` rail) is **pay-link each cycle**: we email a new hosted bill; there is no silent charge.
+
 ## Email provider note
 
 Email / Resend configuration may gate **Commerce** product activation in some flows.  

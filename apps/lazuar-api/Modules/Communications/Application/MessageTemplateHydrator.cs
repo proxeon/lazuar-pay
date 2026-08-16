@@ -74,6 +74,7 @@ public static class MessageTemplateHydrator
             .Replace("{{days_overdue}}", ctx.DaysOverdue, StringComparison.OrdinalIgnoreCase)
             .Replace("{{current_period_end}}", ctx.CurrentPeriodEnd, StringComparison.OrdinalIgnoreCase)
             .Replace("{{renewal_link}}", ctx.RenewalLink, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{checkout_url}}", ctx.RenewalLink, StringComparison.OrdinalIgnoreCase)
             .Replace("{{portal_magic_link}}", ctx.PortalMagicLink, StringComparison.OrdinalIgnoreCase)
             .Replace("{{update_payment_link}}", ctx.UpdatePaymentLink, StringComparison.OrdinalIgnoreCase);
     }

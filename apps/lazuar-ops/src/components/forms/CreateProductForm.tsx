@@ -101,15 +101,19 @@ export default function CreateProductForm({ prefillData, onSubmit, onCancel }: C
                 ))}
               </select>
               {configuredGateways?.length === 0 && <p className="text-[10px] text-rose-600">No gateways configured in Workspace Settings.</p>}
-              {gatewayName && !gatewaySupportsOffSession(gatewayName) && (
+              {gatewayName && interval !== "one_time" && !gatewaySupportsOffSession(gatewayName) && (
+                <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5 mt-1.5 leading-relaxed">
+                  <strong>Collection mode: pay link each cycle.</strong> We email a hosted Billplz/CHIP/Stripe page every period. No card is stored. AUTO_CHARGE will not run.
+                </p>
+              )}
+              {gatewayName && interval !== "one_time" && gatewaySupportsOffSession(gatewayName) && (
+                <p className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-sm px-2 py-1.5 mt-1.5 leading-relaxed">
+                  <strong>Auto-debit:</strong> card is saved for renewals.
+                </p>
+              )}
+              {gatewayName && interval === "one_time" && !gatewaySupportsOffSession(gatewayName) && (
                 <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5 mt-1.5 leading-relaxed">
-                  {interval !== "one_time" ? (
-                    <>
-                      <strong>Reminder-only renewals.</strong> Customers pay via a hosted link each cycle. AUTO_CHARGE dunning will not run. Use Stripe or CHIP Collect for vaulted auto-renewal.
-                    </>
-                  ) : (
-                    <>Billplz is online checkout only — it cannot vault cards or run silent auto-charge / dunning retries. Use Stripe or CHIP Collect for subscription auto-renewal and AUTO_CHARGE dunning steps.</>
-                  )}
+                  Hosted checkout only — this gateway cannot vault a card.
                 </p>
               )}
             </div>

@@ -96,7 +96,8 @@ public class CommunicationsQueryService : ICommunicationsQueryService
                     new TemplateVariableDto { Tag = "{{days_overdue}}", Description = "Calendar days past NextBillingDate. Pre-dunning is 0." },
                     new TemplateVariableDto { Tag = "{{current_period_end}}", Description = "Next billing / paid-through date (NextBillingDate)." },
                     new TemplateVariableDto { Tag = "{{update_payment_link}}", Description = "Hosted update-payment URL for this subscription." },
-                    new TemplateVariableDto { Tag = "{{renewal_link}}", Description = "Same as update-payment link (recovery checkout)." },
+                    new TemplateVariableDto { Tag = "{{renewal_link}}", Description = "Hosted pay-this-cycle checkout when minted; otherwise the update-payment page." },
+                    new TemplateVariableDto { Tag = "{{checkout_url}}", Description = "Same as renewal_link (hosted bill when minted)." },
                     new TemplateVariableDto { Tag = "{{portal_magic_link}}", Description = "Secure, 24-hour auto-login link to the subscriber portal (dunning and lifecycle)." }
                 }
             },

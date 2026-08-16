@@ -100,13 +100,25 @@ public class DunningCampaignCommandHandlerTests
         await handler.Handle(new GenerateDefaultDunningCampaignsCommand(orgId), CancellationToken.None);
 
         saved.Should().NotBeNull();
-        saved!.Steps.Should().Contain(s => s.DayOffset == -3 && s.ActionType == "EMAIL");
-        saved.Steps.Should().Contain(s => s.DayOffset == 0 && s.ActionType == "EMAIL");
+        saved!.Steps.Should().Contain(s =>
+            s.DayOffset == -3
+            && s.ActionType == "EMAIL"
+            && !string.IsNullOrWhiteSpace(s.EmailBody)
+            && !s.EmailBody!.Contains("{{update_payment_link}}")
+            && s.EmailBody.Contains("{{current_period_end}}"));
+        saved.Steps.Should().Contain(s =>
+            s.DayOffset == 0
+            && s.ActionType == "EMAIL"
+            && s.EmailBody != null
+            && s.EmailBody.Contains("{{renewal_link}}")
+            && !s.EmailBody.Contains("update your payment method", StringComparison.OrdinalIgnoreCase)
+            && s.Subject != null
+            && s.Subject.Contains("pay this cycle"));
         saved.Steps.Should().Contain(s =>
             s.DayOffset == 3
             && s.ActionType == "EMAIL"
             && !string.IsNullOrWhiteSpace(s.EmailBody)
-            && s.EmailBody!.Contains("{{update_payment_link}}"));
+            && s.EmailBody!.Contains("{{renewal_link}}"));
         saved.Steps.Should().Contain(s => s.DayOffset == 1 && s.ActionType == "AUTO_CHARGE");
         saved.Steps.Should().Contain(s => s.DayOffset == 5 && s.ActionType == "AUTO_CHARGE");
         repo.Received(1).AddDunningCampaign(Arg.Any<DunningCampaign>());

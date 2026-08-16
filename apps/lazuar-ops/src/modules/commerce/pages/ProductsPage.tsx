@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { client, type EntitlementDto, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
-import { cn, filterHiddenFulfillmentTargets } from "../../../lib/utils";
+import { cn, collectionModeLabel, filterHiddenFulfillmentTargets } from "../../../lib/utils";
 import CreateProductModal from "../components/CreateProductModal";
 import ProductDetailPanel from "../components/ProductDetailPanel";
 import QuickCopy from "../../core/components/QuickCopy";
@@ -137,24 +137,27 @@ export default function ProductsPage() {
             <table className="w-full text-left text-[13px] min-w-[800px]">
               <thead className="bg-[#fafafa] border-b border-[#e5e5e5] select-none">
                 <tr>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[35%]">Link Details</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Pricing Model</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Price (MYR)</th>
-                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Billing Interval</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[30%]">Link Details</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[16%]">Pricing Model</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[12%]">Price (MYR)</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[12%]">Billing Interval</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Collection</th>
                   <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f4f4f5]">
                 {isLoading ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
+                  <tr><td colSpan={6} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
                 ) : products?.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-[13px] text-[#71717a]">
+                    <td colSpan={6} className="py-12 text-center text-[13px] text-[#71717a]">
                       No checkout links found. Click "Create Link" to build one.
                     </td>
                   </tr>
                 ) : (
-                  products?.map((product: ProductDto) => (
+                  products?.map((product: ProductDto) => {
+                    const collectionMode = collectionModeLabel(product.interval, product.gateway_name, product.supports_off_session);
+                    return (
                     <tr 
                       key={product.id} 
                       onClick={() => setSelectedProduct(product)}
@@ -187,6 +190,20 @@ export default function ProductsPage() {
                         {product.interval}
                       </td>
                       <td className="px-5 py-4">
+                        {collectionMode ? (
+                          <span className={cn(
+                            "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
+                            collectionMode === "Auto-renew"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-amber-50 text-amber-800 border-amber-200"
+                          )}>
+                            {collectionMode}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-[#a1a1aa]">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
                         <span className={cn(
                           "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap inline-block",
                           product.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-zinc-100 text-zinc-500 border-zinc-200"
@@ -195,7 +212,8 @@ export default function ProductsPage() {
                         </span>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

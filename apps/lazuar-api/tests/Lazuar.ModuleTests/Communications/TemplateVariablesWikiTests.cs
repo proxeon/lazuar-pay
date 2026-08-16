@@ -18,10 +18,10 @@ public class TemplateVariablesWikiTests
             Substitute.For<ISqlConnectionFactory>(),
             Substitute.For<ISecretVault>());
 
-        var tags = (await svc.GetTemplateVariablesAsync())
+        var items = (await svc.GetTemplateVariablesAsync())
             .SelectMany(c => c.Items)
-            .Select(i => i.Tag)
             .ToList();
+        var tags = items.Select(i => i.Tag).ToList();
 
         tags.Should().Contain("{{business_name}}");
         tags.Should().Contain("{{amount}}");
@@ -29,8 +29,13 @@ public class TemplateVariablesWikiTests
         tags.Should().Contain("{{days_overdue}}");
         tags.Should().Contain("{{update_payment_link}}");
         tags.Should().Contain("{{renewal_link}}");
+        tags.Should().Contain("{{checkout_url}}");
         tags.Should().Contain("{{current_period_end}}");
         tags.Should().NotContain("{{meeting_link}}");
         tags.Should().NotContain("{{group_link}}");
+
+        var renewal = items.Should().ContainSingle(i => i.Tag == "{{renewal_link}}").Subject;
+        renewal.Description.Should().Contain("Hosted pay-this-cycle");
+        renewal.Description.Should().NotContain("Same as update-payment link");
     }
 }

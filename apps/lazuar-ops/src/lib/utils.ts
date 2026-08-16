@@ -20,3 +20,13 @@ export function gatewaySupportsOffSession(
   const g = (gatewayName ?? "").trim().toUpperCase();
   return g === "STRIPE" || g === "CHIP";
 }
+
+/** Recurring collection mode. One-time products have no renewal rail. */
+export function collectionModeLabel(
+  interval?: string | null,
+  gatewayName?: string | null,
+  supportsOffSession?: boolean | null
+): "Auto-renew" | "Reminder-only" | null {
+  if (!interval || interval === "one_time") return null;
+  return gatewaySupportsOffSession(gatewayName, supportsOffSession) ? "Auto-renew" : "Reminder-only";
+}
