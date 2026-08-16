@@ -8,8 +8,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Modules.Commerce.Application;
 using Modules.Commerce.Application.Queries;
 using Modules.Commerce.Contracts.Commands;
+using ProblemDetails = Microsoft.AspNetCore.Mvc.ProblemDetails;
 
 namespace Modules.Commerce.Infrastructure;
 
@@ -23,17 +25,20 @@ public static class TransactionEndpoints
             [FromQuery] int limit,
             [FromQuery] string? status,
             [FromQuery] string? payment_method,
+            [FromQuery] string? gateway_name,
+            [FromQuery] string? subscription_id,
             IExecutionContextAccessor ctx,
             ICommerceQueryService queryService) =>
         {
             var p = page < 1 ? 1 : page;
             var l = limit < 1 || limit > 100 ? 50 : limit;
-            var response = await queryService.GetTransactionsAsync(ctx.TenantId, p, l, status, payment_method, search);
+            _ = payment_method;
+            Guid? subscriptionId = Guid.TryParse(subscription_id, out var sid) ? sid : null;
+            var response = await queryService.GetTransactionsAsync(ctx.TenantId, p, l, status, gateway_name, search, subscriptionId);
             return TypedResults.Ok(response);
         });
 
-        // Thin ops endpoint: publishes GatewayRefundRequested for Payments to execute at the gateway.
-        group.MapPost("/transactions/{id:guid}/refund", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
+        group.MapPost("/transactions/{id:guid}/refund", async Task<Results<Ok<StatusResponse>, BadRequest<ProblemDetails>>> (
             Guid id,
             RecordRefundRequestDto? req,
             IExecutionContextAccessor ctx,
@@ -50,19 +55,35 @@ public static class TransactionEndpoints
                 decimal? amount = req?.Amount is double a ? (decimal)a : null;
                 decimal taxAmount = req?.Tax_amount is double t ? (decimal)t : 0m;
 
-                await mediator.Send(new RecordRefundCommand(
+                var status = await mediator.Send(new RecordRefundCommand(
                     ctx.TenantId,
                     id,
                     amount,
                     req?.Gateway_name,
                     subscriptionId,
-                    taxAmount));
+                    taxAmount,
+                    req?.Mark_refunded == true,
+                    req?.Reason));
 
-                return TypedResults.Ok(new StatusResponse { Status = "refund_requested" });
+                return TypedResults.Ok(new StatusResponse { Status = status });
+            }
+            catch (RefundRejectedException ex)
+            {
+                return TypedResults.BadRequest(new ProblemDetails
+                {
+                    Status = 400,
+                    Title = ex.Code,
+                    Detail = ex.Message
+                });
             }
             catch (InvalidOperationException ex)
             {
-                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+                return TypedResults.BadRequest(new ProblemDetails
+                {
+                    Status = 400,
+                    Title = "REFUND_REJECTED",
+                    Detail = ex.Message
+                });
             }
         });
 

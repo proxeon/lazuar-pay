@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, ArrowLeft, ArrowRight, ShieldCheck, User, Search } from "lucide-react";
@@ -8,6 +8,7 @@ import PageLayout from "../../core/components/PageLayout";
 import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
 import TransactionDetailPanel from "../components/TransactionDetailPanel";
+import { statusBadgeClass, statusLabel } from "../components/transactionStatus";
 
 type TransactionLogDto = components["schemas"]["Commerce.TransactionLogDto"];
 
@@ -33,15 +34,27 @@ export default function TransactionsPage() {
             limit,
             search: debouncedSearchTerm || undefined,
             status: statusFilter === "ALL" ? undefined : statusFilter,
-            payment_method: methodFilter === "ALL" ? undefined : methodFilter
+            gateway_name: methodFilter === "ALL" ? undefined : methodFilter
           } 
         }
       });
       if (error) throw new Error(error.detail);
       return data;
     },
-    enabled: !!activeWorkspaceId
+    enabled: !!activeWorkspaceId,
+    refetchInterval: (query) => {
+      const rows = query.state.data?.data ?? [];
+      return rows.some((tx) => tx.status === "REFUND_PENDING") || selectedTransaction?.status === "REFUND_PENDING" ? 2000 : false;
+    }
   });
+
+  useEffect(() => {
+    if (!selectedTransaction || !response?.data) return;
+    const next = response.data.find((tx) => tx.id === selectedTransaction.id);
+    if (next && (next.status !== selectedTransaction.status || next.refunded_amount !== selectedTransaction.refunded_amount)) {
+      setSelectedTransaction(next);
+    }
+  }, [response, selectedTransaction]);
 
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => {
@@ -85,7 +98,10 @@ export default function TransactionsPage() {
             >
               <option value="ALL">ALL STATUSES</option>
               <option value="CONFIRMED">CONFIRMED</option>
+              <option value="REFUND_PENDING">PENDING REFUND</option>
+              <option value="PARTIALLY_REFUNDED">PARTIALLY REFUNDED</option>
               <option value="REFUNDED">REFUNDED</option>
+              <option value="REFUND_FAILED">REFUND FAILED</option>
             </select>
             
             <select 
@@ -93,11 +109,12 @@ export default function TransactionsPage() {
               onChange={(e) => handleFilterChange(setMethodFilter, e.target.value)}
               className="h-8 px-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-[#e5e5e5] text-[#09090b] focus:outline-none focus:border-[#09090b]"
             >
-              <option value="ALL">ALL METHODS</option>
-              <option value="ONLINE_GATEWAY">ONLINE GATEWAY</option>
-              <option value="BANK_TRANSFER">BANK TRANSFER</option>
-              <option value="CASH">CASH</option>
-              <option value="COMPED">COMPED</option>
+              <option value="ALL">ALL GATEWAYS</option>
+              <option value="STRIPE">STRIPE</option>
+              <option value="CHIP">CHIP</option>
+              <option value="BILLPLZ">BILLPLZ</option>
+              <option value="RAZORPAY">RAZORPAY</option>
+              <option value="OFFLINE">OFFLINE</option>
             </select>
           </div>
           
@@ -148,19 +165,24 @@ export default function TransactionsPage() {
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <p className={cn(
                           "font-mono font-bold text-[13px]",
-                          tx.status === "REFUNDED" ? "text-amber-600" : "text-[#09090b]"
+                          tx.status === "REFUNDED" ? "text-amber-600 line-through" : "text-[#09090b]"
                         )}>
                           RM {tx.amount.toFixed(2)}
                         </p>
+                        {(tx.refunded_amount ?? 0) > 0 && tx.status !== "REFUNDED" && (
+                          <p className="text-[10px] font-mono text-amber-700 mt-0.5">− RM {tx.refunded_amount.toFixed(2)}</p>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span className={cn(
                           "text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest",
-                          tx.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                          statusBadgeClass(tx.status)
                         )}>
-                          {tx.status}
+                          {statusLabel(tx.status, tx.refunded_amount)}
                         </span>
-                        <p className="text-[10px] text-[#71717a] font-medium mt-1.5">{tx.payment_method}</p>
+                        <p className="text-[10px] text-[#71717a] font-medium mt-1.5">
+                          {tx.recorded_by_name}{tx.gateway_name ? ` · ${tx.gateway_name}` : ""}
+                        </p>
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex flex-col gap-1">

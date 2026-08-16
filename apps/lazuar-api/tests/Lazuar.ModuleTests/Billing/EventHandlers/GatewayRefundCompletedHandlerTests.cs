@@ -147,4 +147,20 @@ public class GatewayRefundCompletedHandlerTests
                 .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
             Is.EqualTo(1));
     }
+
+    [Test]
+    public async Task TwoAttempts_TwoLedgerRows()
+    {
+        const string tx = "txn_two";
+        await SeedOriginalPaymentAsync(tx, gross: 100m, tax: 8m);
+        var paymentRecordId = Guid.CreateVersion7();
+
+        await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 54m));
+        await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 54m));
+
+        Assert.That(
+            await _db.LedgerEntries.IgnoreQueryFilters()
+                .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
+            Is.EqualTo(2));
+    }
 }

@@ -282,7 +282,9 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 PaymentIntent = transactionId,
                 Amount = (long)(amount * 100)
             };
-            var refund = await service.CreateAsync(options);
+            var refund = await service.CreateAsync(
+                options,
+                new RequestOptions { IdempotencyKey = FormatRefundIdempotencyKey(transactionId, amount) });
             return refund.Status == "succeeded" || refund.Status == "pending";
         }
         catch (StripeException ex)
@@ -316,6 +318,14 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             Error: pi.LastPaymentError?.Message,
             GatewayCustomerId: pi.CustomerId,
             GatewayTokenId: pi.PaymentMethodId);
+    }
+
+    internal const string RefundIdempotencyKeyPrefix = "lazuar-refund:";
+
+    internal static string FormatRefundIdempotencyKey(string transactionId, decimal amount)
+    {
+        var amountMinor = (long)(amount * 100);
+        return RefundIdempotencyKeyPrefix + transactionId + ":" + amountMinor;
     }
 
     internal const string OffSessionIdempotencyKeyPrefix = "lazuar-offsession:";

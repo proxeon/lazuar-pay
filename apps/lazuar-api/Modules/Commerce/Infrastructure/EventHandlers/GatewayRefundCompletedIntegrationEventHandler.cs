@@ -1,6 +1,8 @@
+using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Modules.Commerce.Domain.Entities;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Commerce.Infrastructure.EventHandlers;
@@ -25,10 +27,18 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
                     || l.ExternalReference == paymentRecordId
                     || l.Id == @event.PaymentRecordId));
 
-        if (existingLog != null)
+        if (existingLog == null)
         {
-            existingLog.TransitionToRefunded();
-            await _dbContext.SaveChangesAsync();
+            return;
         }
+
+        // Pending is the apply lock. Mark-refunded already applied; redelivery is a no-op.
+        if (!string.Equals(existingLog.Status, CommerceTransactionLog.StatusRefundPending, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        existingLog.ApplyRefund(@event.RefundedAmount);
+        await _dbContext.SaveChangesAsync();
     }
 }

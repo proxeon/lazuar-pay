@@ -61,7 +61,8 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
                 Currency: @event.Currency,
                 RefundedFee: refundedFee,
                 NetRefundedAmount: netRefunded,
-                TaxAmount: @event.TaxAmount
+                TaxAmount: @event.TaxAmount,
+                IsFullRefund: @event.IsFullRefund
             ));
         }
         else

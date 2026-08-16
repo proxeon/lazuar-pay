@@ -38,6 +38,14 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
     public async Task HandleAsync(GatewayRefundCompletedIntegrationEvent @event)
     {
+        if (!@event.IsFullRefund)
+        {
+            _logger.LogInformation(
+                "Skipping LHDN cancel/CN for partial refund PaymentRecordId {PaymentRecordId}.",
+                @event.PaymentRecordId);
+            return;
+        }
+
         var originalDocument = await _repository.GetTaxDocumentByInternalIdAsync(@event.OrganizationId, @event.PaymentRecordId.ToString());
 
         if (originalDocument == null || originalDocument.ValidationStatus != "VALID" || string.IsNullOrEmpty(originalDocument.LhdnUuid))

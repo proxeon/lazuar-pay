@@ -4,8 +4,9 @@ using BuildingBlocks.Application;
 namespace Modules.Commerce.Contracts.Commands;
 
 /// <summary>
-/// Ops-initiated refund: publishes <c>GatewayRefundRequestedIntegrationEvent</c> for the Payments module.
-/// Prefer loading a commerce transaction log id so amount/currency/gateway tx id are taken from the ledger.
+/// Ops-initiated refund. API rails publish <c>GatewayRefundRequested</c>; mark-refunded
+/// rails apply immediately and publish <c>GatewayRefundCompleted</c> (no adapter).
+/// Returns <c>refund_requested</c> or <c>refunded</c>.
 /// </summary>
 public record RecordRefundCommand(
     Guid OrganizationId,
@@ -13,7 +14,9 @@ public record RecordRefundCommand(
     decimal? Amount = null,
     string? GatewayName = null,
     Guid? SubscriptionId = null,
-    decimal TaxAmount = 0m) : ICommand
+    decimal TaxAmount = 0m,
+    bool MarkRefunded = false,
+    string? Reason = null) : ICommand<string>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

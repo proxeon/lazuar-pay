@@ -27,7 +27,8 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
             return;
 
         var referenceType = LedgerReferenceTypes.GatewayRefund;
-        var referenceId = @event.PaymentRecordId.ToString();
+        // Per refund attempt (event id), not per capture. A second slice must post a new row.
+        var referenceId = @event.PaymentRecordId.ToString("N") + ":" + @event.Id.ToString("N");
 
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
             return;
