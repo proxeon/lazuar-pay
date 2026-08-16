@@ -46,27 +46,43 @@ public static class SubscriberEndpoints
               return Results.File(bytes, "text/csv", $"subscribers_export_{DateTime.UtcNow:yyyyMMdd}.csv");
           });
 
-        group.MapPost("/subscribers", async (
+        group.MapPost("/subscribers", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             CreateManualSubscriberDto req,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
           {
-              var command = new CreateManualSubscriberCommand(
-                  ctx.TenantId,
-                  req.Name,
-                  req.Email,
-                  req.Phone,
-                  Guid.Parse(req.Product_id),
-                  req.Payment_method,
-                  (decimal)req.Amount_paid,
-                  req.Reference_number,
-                  req.Send_welcome_email ?? true,
-                  req.Start_date?.UtcDateTime,
-                  req.Next_billing_date?.UtcDateTime
-              );
+              try
+              {
+                  if (!Guid.TryParse(req.Product_id, out var productId))
+                  {
+                      return TypedResults.BadRequest(new StatusResponse { Status = "Invalid product_id." });
+                  }
 
-              await mediator.Send(command);
-              return TypedResults.Ok(new StatusResponse { Status = "enrolled" });
+                  var command = new CreateManualSubscriberCommand(
+                      ctx.TenantId,
+                      req.Name,
+                      req.Email,
+                      req.Phone,
+                      productId,
+                      req.Payment_method,
+                      (decimal)req.Amount_paid,
+                      req.Reference_number,
+                      req.Send_welcome_email ?? true,
+                      req.Start_date?.UtcDateTime,
+                      req.Next_billing_date?.UtcDateTime
+                  );
+
+                  await mediator.Send(command);
+                  return TypedResults.Ok(new StatusResponse { Status = "enrolled" });
+              }
+              catch (InvalidOperationException ex)
+              {
+                  return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+              }
+              catch (FormatException ex)
+              {
+                  return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+              }
           });
 
         group.MapPost("/subscribers/portal-link", async (
@@ -128,7 +144,8 @@ public static class SubscriberEndpoints
                     id,
                     (decimal)req.Amount,
                     req.Payment_method,
-                    req.Reference_number));
+                    req.Reference_number,
+                    req.Next_billing_date?.UtcDateTime));
                 return TypedResults.Ok(new StatusResponse { Status = "payment_recorded" });
             }
             catch (InvalidOperationException ex)
@@ -154,6 +171,23 @@ public static class SubscriberEndpoints
         {
             await mediator.Send(new ResumeSubscriberDunningCommand(ctx.TenantId, id));
             return TypedResults.Ok(new StatusResponse { Status = "resumed" });
+        });
+
+        group.MapPost("/subscribers/{id:guid}/anonymize", async Task<Results<Ok<StatusResponse>, NotFound<StatusResponse>>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new AnonymizeSubscriberCommand(ctx.TenantId, id));
+                return TypedResults.Ok(new StatusResponse { Status = "anonymized" });
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound(new StatusResponse { Status = ex.Message });
+            }
         });
 
         return group;

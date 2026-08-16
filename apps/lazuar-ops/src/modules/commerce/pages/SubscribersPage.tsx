@@ -10,6 +10,11 @@ import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
 import { useDebounce } from "../../../hooks/use-debounce";
 import CreateSubscriberModal from "../components/CreateSubscriberModal";
+import RefundModal from "../components/RefundModal";
+import { canRefund, remainingAmount, statusBadgeClass, statusLabel } from "../components/transactionStatus";
+import type { components } from "../../../lib/api-client";
+
+type TransactionLogDto = components["schemas"]["Commerce.TransactionLogDto"];
 
 export default function SubscribersPage() {
   const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
@@ -29,7 +34,7 @@ export default function SubscribersPage() {
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("BANK_TRANSFER");
 
-  const [refundModal, setRefundModal] = useState({ isOpen: false, paymentId: "", reason: "" });
+  const [refundTransaction, setRefundTransaction] = useState<TransactionLogDto | null>(null);
   const [pauseDunningModal, setPauseDunningModal] = useState({ isOpen: false, date: "" });
 
   const { data: subscribersData, isLoading } = useQuery({
@@ -49,12 +54,16 @@ export default function SubscribersPage() {
     queryFn: async () => {
       if (!selectedSub) return null;
       const { data, error } = await client.GET("/admin/commerce/transactions", {
-        params: { query: { page: 1, limit: 20, search: selectedSub.customer_email } }
+        params: { query: { page: 1, limit: 20, subscription_id: selectedSub.id } }
       });
       if (error) throw new Error(error.detail);
       return data;
     },
-    enabled: !!selectedSub && !!activeWorkspaceId
+    enabled: !!selectedSub && !!activeWorkspaceId,
+    refetchInterval: (query) => {
+      const rows = query.state.data?.data ?? [];
+      return rows.some((tx) => tx.status === "REFUND_PENDING") ? 2000 : false;
+    }
   });
 
   const handleExport = async () => {
@@ -84,15 +93,6 @@ export default function SubscribersPage() {
   const actionMutation = useMutation({
     mutationFn: async ({ action, payload }: { action: string, payload?: any }) => {
       if (!selectedSub) throw new Error("No subscriber selected.");
-
-      if (action === "refund") {
-        const { error } = await client.POST("/admin/commerce/transactions/{id}/refund", {
-          params: { path: { id: payload.payment_record_id } },
-          body: { subscription_id: selectedSub.id },
-        });
-        if (error) throw new Error(error.detail || "Refund failed");
-        return;
-      }
 
       if (action === "cancel") {
         const { error } = await client.POST("/admin/commerce/subscribers/{id}/cancel", {
@@ -141,28 +141,41 @@ export default function SubscribersPage() {
         return;
       }
 
+      if (action === "anonymize") {
+        const { error } = await client.POST("/admin/commerce/subscribers/{id}/anonymize", {
+          params: { path: { id: selectedSub.id } },
+        });
+        if (error) throw new Error(error.detail || "Anonymize failed");
+        return;
+      }
+
       throw new Error(`Unknown subscriber action: ${action}`);
     },
     onMutate: (variables) => {
-      const actionKey = variables.action === "refund" ? `refund-${variables.payload.payment_record_id}` : variables.action;
+      const actionKey = variables.action;
       setActiveAction(actionKey);
     },
     onSettled: () => {
       setActiveAction(null);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       toast.success(`Action successfully executed.`);
-      queryClient.invalidateQueries({ queryKey: ["commerce-subscribers"] });
-      queryClient.invalidateQueries({ queryKey: ["commerce-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["commerce-stats"] });
-      
+      await queryClient.invalidateQueries({ queryKey: ["commerce-subscribers"] });
+      await queryClient.invalidateQueries({ queryKey: ["commerce-payments"] });
+      await queryClient.invalidateQueries({ queryKey: ["commerce-stats"] });
+
       if (variables.action === "record-payment") {
         setIsPaymentModalOpen(false);
         setPaymentAmount("");
         setPaymentRef("");
-        setSelectedSub(prev => prev ? { ...prev, status: "ACTIVE" } : null);
-      } else if (variables.action === "refund") {
-        setRefundModal({ isOpen: false, paymentId: "", reason: "" });
+        const cached = queryClient.getQueriesData<{ data?: CommerceSubscriptionDto[] }>({ queryKey: ["commerce-subscribers"] });
+        for (const [, data] of cached) {
+          const match = data?.data?.find((s) => s.id === selectedSub?.id);
+          if (match) {
+            setSelectedSub(match);
+            break;
+          }
+        }
       } else if (variables.action === "dunning/pause") {
         setPauseDunningModal({ isOpen: false, date: "" });
         setSelectedSub(prev => prev ? { ...prev, dunning_paused_until: new Date(variables.payload.pause_until).toISOString() } : null);
@@ -176,6 +189,15 @@ export default function SubscribersPage() {
         }
       } else if (variables.action === "keep") {
         setSelectedSub(prev => prev ? { ...prev, cancel_at_period_end: false } : null);
+      } else if (variables.action === "anonymize") {
+        setSelectedSub(prev => prev ? {
+          ...prev,
+          customer_name: "Anonymized User",
+          customer_email: `deleted_${prev.client_profile_id}@localhost`,
+          customer_phone: "",
+          status: "CANCELED",
+          cancel_at_period_end: false,
+        } : null);
       }
     },
     onError: (err: any) => toast.error("Action Failed", { description: err.message })
@@ -239,7 +261,7 @@ export default function SubscribersPage() {
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Customer</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Product</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px]">Status</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] text-right">Period End</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] text-right">Paid through / Next due</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
@@ -286,7 +308,7 @@ export default function SubscribersPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-right font-mono text-[#52525b] text-[11px] whitespace-nowrap">
-                      {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('en-GB') : '-'}
+                      {sub.next_billing_date ? new Date(sub.next_billing_date).toLocaleDateString('en-GB') : '-'}
                       <ArrowRightCircle size={14} className="inline ml-3 text-[#d4d4d8] group-hover:text-[#09090b] transition-colors" />
                     </td>
                   </tr>
@@ -354,8 +376,25 @@ export default function SubscribersPage() {
                     {selectedSub.cancel_at_period_end ? " · cancels at period end" : ""}
                   </span>
                 </div>
-                <div><span className="text-[#a1a1aa] block mb-1">Period Ends</span><span className="font-mono text-[#52525b]">{selectedSub.current_period_end ? new Date(selectedSub.current_period_end).toLocaleDateString() : '-'}</span></div>
+                <div>
+                  <span className="text-[#a1a1aa] block mb-1">Paid through / Next due</span>
+                  <span className="font-mono text-[#52525b]">{selectedSub.next_billing_date ? new Date(selectedSub.next_billing_date).toLocaleDateString() : '-'}</span>
+                  {selectedSub.current_period_end && (
+                    <span className="block text-[10px] text-[#a1a1aa] mt-0.5">Period started {new Date(selectedSub.current_period_end).toLocaleDateString()}</span>
+                  )}
+                </div>
                 <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.is_reminder_only ? "Reminder-only (pay link / record payment)" : selectedSub.vaulted_token_id ? "Auto-debit active" : "None"}</span></div>
+                {selectedSub.current_renewal_checkout_url && (
+                  <div className="col-span-2">
+                    <span className="text-[#a1a1aa] block mb-1">Pay this cycle</span>
+                    <div className="flex items-center gap-2">
+                      <a href={selectedSub.current_renewal_checkout_url} target="_blank" rel="noopener noreferrer" className="font-mono text-[11px] text-blue-600 hover:opacity-85 underline underline-offset-2 truncate">
+                        {selectedSub.current_renewal_checkout_url}
+                      </a>
+                      <QuickCopy text={selectedSub.current_renewal_checkout_url} iconSize={11} className="hover:bg-[#fafafa]" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -408,7 +447,28 @@ export default function SubscribersPage() {
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Operations</h3>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setIsPaymentModalOpen(true)} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
+                {selectedSub.current_renewal_checkout_url && selectedSub.is_reminder_only && (selectedSub.status === "PAST_DUE" || selectedSub.status === "SUSPENDED") && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(selectedSub.current_renewal_checkout_url!);
+                        toast.success("Pay link copied to clipboard");
+                      } catch {
+                        toast.error("Could not copy pay link");
+                      }
+                    }}
+                    disabled={activeAction !== null}
+                    className="h-8 col-span-2 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-800 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                  >
+                    Copy pay link
+                  </button>
+                )}
+                <button onClick={() => {
+                  setPaymentAmount(selectedSub.product_price != null ? String(selectedSub.product_price) : "");
+                  setPaymentMethod("BANK_TRANSFER");
+                  setPaymentRef("");
+                  setIsPaymentModalOpen(true);
+                }} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50">Log Payment</button>
                 <button onClick={() => { if (window.confirm("Cancel this subscription immediately? Access ends now.")) actionMutation.mutate({ action: "cancel", payload: { at_period_end: false } }); }} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                   {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
                 </button>
@@ -423,30 +483,45 @@ export default function SubscribersPage() {
                   </button>
                 )}
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (!selectedSub) return;
-                    setActiveAction("portal-link");
-                    try {
-                      const returnUrl = window.location.origin;
-                      const { data, error } = await client.POST("/admin/commerce/subscribers/portal-link", {
-                        body: { customer_email: selectedSub.customer_email, return_url: returnUrl },
-                      });
-                      if (error) throw new Error(error.detail || "Failed to generate portal link");
-                      if (data?.url) {
-                        await navigator.clipboard.writeText(data.url);
-                        toast.success("Stripe portal link copied to clipboard");
-                      }
-                    } catch (err: any) {
-                      toast.error("Portal link failed", { description: err.message });
-                    } finally {
-                      setActiveAction(null);
-                    }
+                    const ok = window.confirm(
+                      `Anonymize ${selectedSub.customer_email}?\n\nThis cannot be undone. Subscriptions cancel. Emails stop.`,
+                    );
+                    if (ok) actionMutation.mutate({ action: "anonymize" });
                   }}
-                  disabled={activeAction !== null || !selectedSub.customer_email}
-                  className="h-8 col-span-2 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  disabled={activeAction !== null}
+                  className="h-8 col-span-2 border border-rose-200 bg-rose-50 text-[10px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {activeAction === "portal-link" && <Loader2 size={12} className="animate-spin" />} Copy Portal Link
+                  {activeAction === "anonymize" && <Loader2 size={12} className="animate-spin" />} Anonymize
                 </button>
+                {!selectedSub.is_reminder_only && (
+                  <button
+                    onClick={async () => {
+                      if (!selectedSub) return;
+                      setActiveAction("portal-link");
+                      try {
+                        const returnUrl = window.location.origin;
+                        const { data, error } = await client.POST("/admin/commerce/subscribers/portal-link", {
+                          body: { customer_email: selectedSub.customer_email, return_url: returnUrl },
+                        });
+                        if (error) throw new Error(error.detail || "Failed to generate portal link");
+                        if (data?.url) {
+                          await navigator.clipboard.writeText(data.url);
+                          toast.success("Stripe portal link copied to clipboard");
+                        }
+                      } catch (err: any) {
+                        toast.error("Portal link failed", { description: err.message });
+                      } finally {
+                        setActiveAction(null);
+                      }
+                    }}
+                    disabled={activeAction !== null || !selectedSub.customer_email}
+                    className="h-8 col-span-2 border border-[#e5e5e5] bg-white text-[10px] font-bold uppercase tracking-widest text-[#09090b] hover:bg-[#f4f4f5] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {activeAction === "portal-link" && <Loader2 size={12} className="animate-spin" />} Copy Portal Link
+                  </button>
+                )}
               </div>
             </div>
 
@@ -456,23 +531,31 @@ export default function SubscribersPage() {
                 <div className="flex justify-center p-4"><Loader2 className="animate-spin text-[#a1a1aa]" size={16} /></div>
               ) : (
                 <div className="space-y-2">
-                  {paymentsData?.data?.map((payment: any) => {
-                    const isRefunding = activeAction === `refund-${payment.id}`;
+                  {paymentsData?.data?.map((payment) => {
+                    const refundable = canRefund(payment);
                     return (
                       <div key={payment.id} className="p-3 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between rounded-sm">
                         <div className="flex flex-col gap-1">
-                          <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.recorded_by_name || "GATEWAY"}</span></p>
+                          <p className="text-[12px] font-bold text-[#09090b]">RM {payment.amount.toFixed(2)} <span className="font-normal text-[#71717a]">via {payment.recorded_by_name || "GATEWAY"}{payment.gateway_name ? ` · ${payment.gateway_name}` : ""}</span></p>
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-mono font-bold text-[#09090b]">{payment.id.substring(0,8)}</span>
+                            <span className={cn("text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest", statusBadgeClass(payment.status))}>
+                              {statusLabel(payment.status, payment.refunded_amount)}
+                            </span>
                           </div>
+                          {(payment.refunded_amount ?? 0) > 0 && payment.status !== "REFUNDED" && (
+                            <p className="text-[10px] font-mono text-amber-700">Remaining RM {remainingAmount(payment).toFixed(2)}</p>
+                          )}
                           <p className="text-[10px] font-mono text-[#a1a1aa] mt-0.5">{new Date(payment.created_at).toLocaleString('en-GB')}</p>
                         </div>
-                        {payment.status === "CONFIRMED" && payment.amount > 0 && (
-                          <button onClick={() => setRefundModal({ isOpen: true, paymentId: payment.id, reason: "" })} disabled={activeAction !== null} className="text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 flex items-center gap-1">
-                            {isRefunding && <Loader2 size={10} className="animate-spin" />} Refund
+                        {payment.status === "REFUND_PENDING" && (
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Refund in progress</span>
+                        )}
+                        {refundable && (
+                          <button onClick={() => setRefundTransaction(payment)} disabled={activeAction !== null} className="text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 flex items-center gap-1">
+                            {payment.status === "PARTIALLY_REFUNDED" ? "Refund rest" : payment.status === "REFUND_FAILED" ? "Retry" : "Refund"}
                           </button>
                         )}
-                        {payment.status === "REFUNDED" && <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600 border border-amber-200 bg-amber-50 px-1.5 py-0.5">Refunded</span>}
                       </div>
                     );
                   })}
@@ -497,6 +580,7 @@ export default function SubscribersPage() {
               <button type="button" onClick={() => setIsPaymentModalOpen(false)} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50 p-1"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-4">
+              <p className="text-[12px] text-[#52525b] leading-relaxed">This grants one period from today.</p>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Amount Paid (MYR) *</label>
                 <input required type="number" step="0.01" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
@@ -551,29 +635,12 @@ export default function SubscribersPage() {
         </div>
       )}
 
-      {refundModal.isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setRefundModal({ isOpen: false, paymentId: "", reason: "" })} />
-          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "refund", payload: { payment_record_id: refundModal.paymentId, reason: refundModal.reason }}); }} className="relative bg-white border border-rose-200 shadow-2xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-rose-200 bg-rose-50 flex items-center justify-between">
-              <h3 className="text-[13px] font-bold uppercase tracking-widest text-rose-700">Issue Refund</h3>
-              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="text-rose-400 hover:text-rose-700 disabled:opacity-50 p-1"><X size={16} /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <p className="text-[12px] text-[#52525b] leading-relaxed">You are about to issue a full refund for this transaction. This action cannot be undone.</p>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Reason (Optional)</label>
-                <input type="text" value={refundModal.reason} onChange={e => setRefundModal({ ...refundModal, reason: e.target.value })} disabled={activeAction !== null} placeholder="e.g. Customer requested cancellation" className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
-              </div>
-            </div>
-            <div className="p-4 border-t border-rose-100 bg-rose-50/50 flex justify-end gap-2">
-              <button type="button" onClick={() => setRefundModal({ isOpen: false, paymentId: "", reason: "" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] hover:text-[#09090b] border border-[#e5e5e5] bg-white transition-colors disabled:opacity-50 rounded-sm">Cancel</button>
-              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-rose-600 text-white text-[11px] font-bold uppercase tracking-widest hover:bg-rose-700 disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
-                {activeAction === "refund" && <Loader2 size={13} className="animate-spin" />} Process Refund
-              </button>
-            </div>
-          </form>
-        </div>
+      {refundTransaction && selectedSub && (
+        <RefundModal
+          transaction={refundTransaction}
+          subscriptionId={selectedSub.id}
+          onClose={() => setRefundTransaction(null)}
+        />
       )}
     </PageLayout>
   );

@@ -5,6 +5,7 @@ model RecordPaymentRequestDto {
   amount: float64;
   payment_method: string;
   reference_number?: string;
+  next_billing_date?: utcDateTime;
 }
 
 model RecordRefundRequestDto {
@@ -12,6 +13,8 @@ model RecordRefundRequestDto {
   gateway_name?: string;
   subscription_id?: string;
   tax_amount?: float64;
+  mark_refunded?: boolean;
+  reason?: string;
 }
 
 model CommerceSubscriptionDto {
@@ -30,6 +33,8 @@ model CommerceSubscriptionDto {
   vaulted_customer_id?: string;
   vaulted_token_id?: string;
   is_reminder_only: boolean;
+  @doc("Hosted pay-this-cycle checkout when minted for the current due date; null when cleared.")
+  current_renewal_checkout_url?: string;
   cancel_at_period_end: boolean;
   dunning_campaign_name?: string;
   current_dunning_step?: int32;
@@ -50,6 +55,10 @@ model TransactionLogDto {
   product_name?: string;
   recorded_by_name: string;
   external_reference?: string;
+  gateway_name?: string;
+  refunded_amount: float64;
+  remaining_amount: float64;
+  supports_api_refund: boolean;
 }
 
 @summary("Input details required to manually enroll a subscriber via admin dashboard.")

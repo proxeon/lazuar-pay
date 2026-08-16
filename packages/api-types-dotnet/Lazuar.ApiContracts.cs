@@ -1230,6 +1230,13 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
         public bool Is_reminder_only { get; set; } = default!;
 
+        /// <summary>
+        /// Hosted pay-this-cycle checkout when minted for the current due date; null when cleared.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_renewal_checkout_url")]
+        public string? Current_renewal_checkout_url { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("cancel_at_period_end")]
         public bool Cancel_at_period_end { get; set; } = default!;
 
@@ -2492,6 +2499,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("reference_number")]
         public string? Reference_number { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("next_billing_date")]
+        public System.DateTimeOffset? Next_billing_date { get; set; } = default!;
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2535,6 +2545,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("tax_amount")]
         public double? Tax_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("mark_refunded")]
+        public bool? Mark_refunded { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2783,6 +2799,18 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("external_reference")]
         public string? External_reference { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gateway_name")]
+        public string? Gateway_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("refunded_amount")]
+        public double Refunded_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("remaining_amount")]
+        public double Remaining_amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supports_api_refund")]
+        public bool Supports_api_refund { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

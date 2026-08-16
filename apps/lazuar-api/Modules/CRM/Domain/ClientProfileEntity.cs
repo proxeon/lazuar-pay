@@ -16,6 +16,13 @@ public class ClientProfileEntity : Entity, IMustHaveTenant
     public BillingAddress? Address { get; set; }
     public bool ConsentedToMarketing { get; set; } = false;
 
+    public bool IsAnonymized() => IsAnonymizedEmail(Email);
+
+    public static bool IsAnonymizedEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email)
+        && email.StartsWith("deleted_", StringComparison.OrdinalIgnoreCase)
+        && email.EndsWith("@localhost", StringComparison.OrdinalIgnoreCase);
+
     public void Anonymize()
     {
         FullName = "Anonymized User";

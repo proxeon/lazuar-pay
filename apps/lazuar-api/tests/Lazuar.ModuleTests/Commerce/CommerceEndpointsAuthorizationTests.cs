@@ -51,6 +51,32 @@ public class CommerceEndpointsAuthorizationTests
             .Any(m => string.Equals(m, method, System.StringComparison.OrdinalIgnoreCase)) == true;
 
     [Test]
+    public void MapCommerceEndpoints_AnonymizeSubscriber_Requires_OrgAdmin()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddSingleton(Substitute.For<IMediator>());
+        builder.Services.AddSingleton(Substitute.For<global::BuildingBlocks.Application.IExecutionContextAccessor>());
+        builder.Services.AddSingleton(Substitute.For<Modules.Commerce.Application.Queries.ICommerceQueryService>());
+
+        var app = builder.Build();
+        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgAdmin");
+        adminGroup.MapSubscriberEndpoints();
+
+        var endpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(ds => ds.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
+
+        var anonymize = endpoints.SingleOrDefault(e =>
+            e.RoutePattern.RawText is { } raw
+            && raw.Contains("anonymize", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "POST"));
+
+        Assert.That(anonymize, Is.Not.Null, "POST subscribers/{id}/anonymize not found.");
+        AssertPolicy(anonymize, "OrgAdmin", "POST /admin/commerce/subscribers/{id}/anonymize");
+    }
+
+    [Test]
     public void MapCommerceEndpoints_PaymentConfig_Requires_OrgAdmin()
     {
         var endpoints = MapPaymentConfigAdminGroup();

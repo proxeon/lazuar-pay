@@ -148,6 +148,13 @@ interface AdminCommerceOperations {
     | LazuarApi.Core.StatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
+  @post
+  @route("/subscribers/{id}/anonymize")
+  @doc("PDPA wipe: anonymize the buyer on this subscription. Cancels their subscriptions and stops email. Idempotent.")
+  anonymizeSubscriber(@path id: string):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
   @get
   @route("/transactions")
   getTransactions(
@@ -156,6 +163,8 @@ interface AdminCommerceOperations {
     @query limit?: int32 = 50,
     @query status?: string,
     @query payment_method?: string,
+    @query subscription_id?: string,
+    @query gateway_name?: string,
   ):
     | LazuarApi.Core.PaginatedResponse<TransactionLogDto>
     | LazuarApi.Core.ProblemDetailsResponse;

@@ -135,7 +135,7 @@ Billplz cannot vault; ops product form already warns. Off-session today is Strip
 | LP-062 | Setup fee / add-ons | 3 | N | N | N | P | P | Y | P | Y | P |
 | LP-063 | Multiple prices per product | 3 | N | N | N | Y | Y | Y | Y | Y | Y |
 | LP-064 | Import existing subscribers | 4 | N | N | N | Y | P | P | P | Y | P |
-| LP-065 | Offline / manual payment sub | 1 | P | Y | N | Y | P | P | P | Y | N |
+| LP-065 | Offline / manual payment sub | 1 | Y | Y | N | Y | P | P | P | Y | N |
 
 Statuses we persist: `PENDING`, `ACTIVE`, `PAST_DUE`, `SUSPENDED`, `CANCELED`. `TRIALING` is referenced in anonymize code only.
 
@@ -166,15 +166,15 @@ WhatsApp transport is `ConsoleMessagingService` (log only). `Messaging:WhatsAppE
 | ID | Feature | Wave | Lazuar | Billplz | CHIP | HitPay | Xendit | Stripe | Paddle | Chargebee | Polar |
 |----|---------|------|--------|---------|------|--------|--------|--------|--------|-----------|-------|
 | LP-090 | Inbound webhook verify + idempotency | 0 | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| LP-091 | Refund full | 1 | P | P | Y | Y | Y | Y | Y | Y | Y |
-| LP-092 | Refund partial | 1 | P | N | P | Y | Y | Y | Y | Y | Y |
-| LP-093 | Refund UI in merchant console | 1 | N | Y | Y | Y | Y | Y | Y | Y | Y |
+| LP-091 | Refund full | 1 | Y | P | Y | Y | Y | Y | Y | Y | Y |
+| LP-092 | Refund partial | 1 | Y | N | P | Y | Y | Y | Y | Y | Y |
+| LP-093 | Refund UI in merchant console | 1 | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 | LP-094 | Disputes / chargebacks as first-class | 3 | P | N | N | P | P | Y | Y | P | Y |
 | LP-095 | Settlement / payout reports | R | R | Y | Y | Y | Y | Y | Y | — | Y |
 | LP-096 | Multi-currency + FX | 4 | P | N | P | P | Y | Y | Y | Y | Y |
 | LP-097 | Reconciliation export (CSV) | 1 | N | Y | Y | Y | Y | Y | Y | Y | Y |
 
-Adapters implement `IssueRefundAsync` (Billplz stubbed/limited). Stripe dispute event is parsed. No ops refund button.
+Adapters implement `IssueRefundAsync` (Billplz stays `false`; mark-refunded is the SOP). Stripe dispute event is parsed. Ops refund modal is honest (pending / partial / mark-refunded).
 
 ---
 
@@ -212,7 +212,7 @@ Ops invoicing routes (Quotes, Tax Invoices, Credit Notes) exist and are **unrout
 | LP-120 | Stripe Tax / Avalara-class global tax | R | R | N | N | N | N | Y | Y | Y | Y |
 | LP-121 | Xero / QuickBooks sync | 4 | N | N | N | Y | P | Y | P | Y | N |
 | LP-122 | Merchant legal profile (TIN, BRN, address) | 2 | B | N | N | P | P | Y | Y | Y | Y |
-| LP-123 | PDPA buyer-data deletion / anonymize | 1 | P | P | P | P | P | Y | Y | P | P |
+| LP-123 | PDPA buyer-data deletion / anonymize | 1 | Y | P | P | P | P | Y | Y | P | P |
 
 StoreHub / AutoCount / Xero / MyInvois portal would score **Y** on LP-110–114 and **N** on checkout/dunning. They are the compliance-only column we did not add.
 

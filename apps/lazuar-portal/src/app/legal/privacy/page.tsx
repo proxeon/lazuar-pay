@@ -9,7 +9,7 @@ export default function PrivacyPolicyPage() {
   return (
     <article className="prose prose-sm prose-neutral dark:prose-invert max-w-none font-sans">
       <h1 className="text-2xl font-semibold tracking-tight mb-2 text-foreground">Privacy Policy</h1>
-      <p className="text-xs font-mono text-muted-foreground mb-8 uppercase tracking-widest">Last updated: June 2026</p>
+      <p className="text-xs font-mono text-muted-foreground mb-8 uppercase tracking-widest">Last updated: August 2026</p>
 
       <p className="lead text-muted-foreground">
         This Privacy Policy explains how your personal data is collected, processed, and protected when you use the Lazuar platform to interact with Creators.
@@ -48,6 +48,9 @@ export default function PrivacyPolicyPage() {
       </p>
       <p>
         Alternatively, you may contact <strong>privacy@lazuar.com</strong>, and we will formally forward your deletion request to the respective Creator for authorization and execution.
+      </p>
+      <p>
+        Creators can anonymize a buyer from Subscribers → Anonymize.
       </p>
     </article>
   );

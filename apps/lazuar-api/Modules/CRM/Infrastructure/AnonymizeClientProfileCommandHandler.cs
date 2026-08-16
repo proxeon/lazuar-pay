@@ -24,11 +24,17 @@ public class AnonymizeClientProfileCommandHandler : ICommandHandler<AnonymizeCli
     public async Task Handle(AnonymizeClientProfileCommand request, CancellationToken cancellationToken)
     {
         var profile = await _dbContext.ClientProfiles
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == request.ClientProfileId && p.OrganizationId == request.OrganizationId, cancellationToken);
 
         if (profile == null)
         {
             throw new InvalidOperationException("Client profile not found.");
+        }
+
+        if (profile.IsAnonymized())
+        {
+            return;
         }
 
         // Capture contact details before wipe so downstream consumers can suppress/cancel.

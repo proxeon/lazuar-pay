@@ -18,7 +18,7 @@ The `CRM` (Customer Relationship Management) module acts as the centralized, ten
 
 CRM is a **documented 3-layer exception**: `Contracts` + `Domain` + `Infrastructure` only — **no `Application` project**. Command handlers, query service, and workers live in Infrastructure. Host MediatR registers only the Infrastructure assembly for CRM (`ModulesWithoutApplication` in architecture tests).
 
-Do not invent an Application layer without an intentional epic (ports extraction + architecture-test update). The module is internal-only (no HTTP `Endpoints.cs`); other modules use `ICrmQueryService` / commands via Contracts.
+Do not invent an Application layer without an intentional epic (ports extraction + architecture-test update). The module is internal-only (no HTTP `Endpoints.cs`); other modules use `ICrmQueryService` / commands via Contracts. Merchants trigger PDPA wipe via Commerce `POST /admin/commerce/subscribers/{id}/anonymize` (OrgAdmin), which sends `AnonymizeClientProfileCommand`.
 
 ## 4. Key Domain Aggregates & Entities
 * **`ClientProfileEntity`**: The core aggregate representing a customer within a specific tenant. Contains `FullName`, `Email`, `Phone`, `ConsentedToMarketing`, and an optional `GlobalUserId` link to the `One` module.

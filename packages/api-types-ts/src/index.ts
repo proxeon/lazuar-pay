@@ -407,6 +407,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/commerce/subscribers/{id}/anonymize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description PDPA wipe: anonymize the buyer on this subscription. Cancels their subscriptions and stops email. Idempotent. */
+        post: operations["AdminCommerceOperations_anonymizeSubscriber"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/commerce/subscribers/{id}/cancel": {
         parameters: {
             query?: never;
@@ -2039,6 +2056,8 @@ export interface components {
             vaulted_customer_id?: string;
             vaulted_token_id?: string;
             is_reminder_only: boolean;
+            /** @description Hosted pay-this-cycle checkout when minted for the current due date; null when cleared. */
+            current_renewal_checkout_url?: string;
             cancel_at_period_end: boolean;
             dunning_campaign_name?: string;
             /** Format: int32 */
@@ -2323,6 +2342,8 @@ export interface components {
             amount: number;
             payment_method: string;
             reference_number?: string;
+            /** Format: date-time */
+            next_billing_date?: string;
         };
         "Commerce.RecordRefundRequestDto": {
             /** Format: double */
@@ -2331,6 +2352,8 @@ export interface components {
             subscription_id?: string;
             /** Format: double */
             tax_amount?: number;
+            mark_refunded?: boolean;
+            reason?: string;
         };
         "Commerce.RequestPortalMagicLinkRequest": {
             email: string;
@@ -2390,6 +2413,12 @@ export interface components {
             product_name?: string;
             recorded_by_name: string;
             external_reference?: string;
+            gateway_name?: string;
+            /** Format: double */
+            refunded_amount: number;
+            /** Format: double */
+            remaining_amount: number;
+            supports_api_refund: boolean;
         };
         "Commerce.UpdateCouponRequestDto": {
             code?: string;
@@ -5660,6 +5689,73 @@ export interface operations {
             };
         };
     };
+    AdminCommerceOperations_anonymizeSubscriber: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     AdminCommerceOperations_cancelSubscriber: {
         parameters: {
             query?: never;
@@ -6015,6 +6111,8 @@ export interface operations {
                 limit?: number;
                 status?: string;
                 payment_method?: string;
+                subscription_id?: string;
+                gateway_name?: string;
             };
             header?: never;
             path?: never;
