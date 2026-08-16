@@ -19,7 +19,7 @@ internal static class SubscriptionCancelDecision
             return Outcome.AlreadyCanceled;
         }
 
-        if (subscription.Status is not ("ACTIVE" or "PAST_DUE" or "SUSPENDED"))
+        if (subscription.Status is not ("ACTIVE" or "PAST_DUE" or "SUSPENDED" or "TRIALING"))
         {
             throw new InvalidOperationException(
                 $"Subscription cannot be canceled from status '{subscription.Status}'.");
@@ -32,7 +32,7 @@ internal static class SubscriptionCancelDecision
                 return Outcome.Scheduled;
             }
 
-            if (subscription.Status == "ACTIVE"
+            if (subscription.Status is "ACTIVE" or "TRIALING"
                 && subscription.NextBillingDate is { } next
                 && next > DateTime.UtcNow)
             {

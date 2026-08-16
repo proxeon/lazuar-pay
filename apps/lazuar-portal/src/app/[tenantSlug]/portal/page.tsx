@@ -70,8 +70,10 @@ export default async function AggregatedPortalPage({
           <div className="grid grid-cols-1 gap-4">
             {commerceData.subscriptions.map(sub => {
               const paidThrough = formatPaidThrough(sub.current_period_end);
+              const isActiveOrTrialing = sub.status === "ACTIVE" || sub.status === "TRIALING";
               const isHealthyActive = sub.status === "ACTIVE" && !sub.cancel_at_period_end;
-              const isFlagged = sub.status === "ACTIVE" && sub.cancel_at_period_end;
+              const isHealthyForCancel = isActiveOrTrialing && !sub.cancel_at_period_end;
+              const isFlagged = isActiveOrTrialing && sub.cancel_at_period_end;
               const isPastDue = sub.status === "PAST_DUE";
 
               return (
@@ -98,7 +100,7 @@ export default async function AggregatedPortalPage({
                         {isFlagged ? "Access until" : "Renews/Expires"}: {paidThrough}
                       </p>
                     )}
-                    {isHealthyActive && paidThrough && (
+                    {isHealthyForCancel && paidThrough && (
                       <p className="text-xs text-muted-foreground">
                         Cancel at period end keeps access until {paidThrough}. No further charges after that.
                       </p>
@@ -125,7 +127,7 @@ export default async function AggregatedPortalPage({
                         <FileText size={12} /> {sub.document_label || "Download receipt"}
                       </a>
                     )}
-                    {isHealthyActive && (
+                    {isHealthyForCancel && (
                       <>
                         <form action={async () => {
                           "use server";

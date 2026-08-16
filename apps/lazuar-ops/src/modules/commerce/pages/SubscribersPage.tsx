@@ -663,7 +663,7 @@ export default function SubscribersPage() {
                 <button onClick={() => { if (window.confirm("Cancel this subscription immediately? Access ends now.")) actionMutation.mutate({ action: "cancel", payload: { at_period_end: false } }); }} disabled={activeAction !== null || selectedSub.status === "CANCELED"} className="h-8 border border-amber-200 bg-amber-50 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                   {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel Sub
                 </button>
-                {selectedSub.status === "ACTIVE" && selectedSub.next_billing_date && new Date(selectedSub.next_billing_date).getTime() > Date.now() && !selectedSub.cancel_at_period_end && (
+                {(selectedSub.status === "ACTIVE" || selectedSub.status === "TRIALING") && selectedSub.next_billing_date && new Date(selectedSub.next_billing_date).getTime() > Date.now() && !selectedSub.cancel_at_period_end && (
                   <button onClick={() => { if (window.confirm("Cancel at period end? Access continues until the paid-through date.")) actionMutation.mutate({ action: "cancel", payload: { at_period_end: true } }); }} disabled={activeAction !== null} className="h-8 col-span-2 border border-amber-200 bg-white text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                     {activeAction === "cancel" && <Loader2 size={12} className="animate-spin" />} Cancel at period end
                   </button>

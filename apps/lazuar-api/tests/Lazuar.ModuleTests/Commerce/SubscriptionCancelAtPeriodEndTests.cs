@@ -224,6 +224,56 @@ public class SubscriptionCancelAtPeriodEndTests
     }
 
     [Test]
+    public async Task Admin_Trialing_Immediate_CancelsAndPublishesEvent()
+    {
+        var (orgId, _, sub, repository, eventBus) = ArrangeTrialing();
+        var handler = new CancelAdminSubscriptionCommandHandler(repository, eventBus);
+
+        var status = await handler.Handle(
+            new CancelAdminSubscriptionCommand(orgId, sub.Id, AtPeriodEnd: false),
+            CancellationToken.None);
+
+        status.Should().Be("CANCELED");
+        sub.Status.Should().Be("CANCELED");
+        sub.CancelAtPeriodEnd.Should().BeFalse();
+        await eventBus.Received(1).PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await repository.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Admin_Trialing_AtPeriodEnd_Future_StaysTrialingNoEvent()
+    {
+        var (orgId, _, sub, repository, eventBus) = ArrangeTrialing();
+        var handler = new CancelAdminSubscriptionCommandHandler(repository, eventBus);
+
+        var status = await handler.Handle(
+            new CancelAdminSubscriptionCommand(orgId, sub.Id, AtPeriodEnd: true),
+            CancellationToken.None);
+
+        status.Should().Be("scheduled");
+        sub.Status.Should().Be("TRIALING");
+        sub.CancelAtPeriodEnd.Should().BeTrue();
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await repository.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Admin_Pending_StillRejected()
+    {
+        var (orgId, _, sub, repository, eventBus) = ArrangePending();
+        var handler = new CancelAdminSubscriptionCommandHandler(repository, eventBus);
+
+        var act = async () => await handler.Handle(
+            new CancelAdminSubscriptionCommand(orgId, sub.Id, AtPeriodEnd: false),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*PENDING*");
+        sub.Status.Should().Be("PENDING");
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+        await repository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task Portal_Schedule_SameAsAdminAfterTokenChecks()
     {
         var (orgId, _, sub, repository, eventBus) = ArrangeAdmin();
@@ -279,6 +329,39 @@ public class SubscriptionCancelAtPeriodEndTests
             new CheckoutConfiguration(false, false, false), Array.Empty<string>());
         var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
         sub.Activate(DateTime.UtcNow, nextBilling ?? DateTime.UtcNow.AddMonths(1));
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+
+        return (orgId, product, sub, repository, Substitute.For<IEventBus>());
+    }
+
+    private static (Guid OrgId, Product Product, Subscription Sub, ICommerceRepository Repository, IEventBus EventBus)
+        ArrangeTrialing()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = new Product(
+            orgId, "Plan", "plan", 10m, "FIXED", 0m, "MYR", "mo", "STRIPE",
+            new CheckoutConfiguration(false, false, false), Array.Empty<string>());
+        var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
+        sub.ActivateTrial(DateTime.UtcNow.AddDays(14), reminderOnly: false);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+
+        return (orgId, product, sub, repository, Substitute.For<IEventBus>());
+    }
+
+    private static (Guid OrgId, Product Product, Subscription Sub, ICommerceRepository Repository, IEventBus EventBus)
+        ArrangePending()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = new Product(
+            orgId, "Plan", "plan", 10m, "FIXED", 0m, "MYR", "mo", "STRIPE",
+            new CheckoutConfiguration(false, false, false), Array.Empty<string>());
+        var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
 
         var repository = Substitute.For<ICommerceRepository>();
         repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
