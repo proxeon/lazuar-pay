@@ -131,6 +131,7 @@ public class BillingEngineJob : BackgroundService
             WHERE "NextBillingDate" IS NOT NULL
               AND "NextBillingDate" <= NOW()
               AND "Status" NOT IN ('PENDING', 'PAST_DUE', 'SUSPENDED', 'CANCELED')
+              AND ("CollectionPausedUntil" IS NULL OR "CollectionPausedUntil" <= NOW())
               {excludeClause}
             ORDER BY "NextBillingDate"
             LIMIT 1
@@ -157,6 +158,7 @@ public class BillingEngineJob : BackgroundService
                 && s.Status != "PAST_DUE"
                 && s.Status != "SUSPENDED"
                 && s.Status != "CANCELED"
+                && (s.CollectionPausedUntil == null || s.CollectionPausedUntil <= now)
                 && !excludeIds.Contains(s.Id))
             .OrderBy(s => s.NextBillingDate)
             .FirstOrDefaultAsync(ct);
@@ -192,6 +194,7 @@ public class BillingEngineJob : BackgroundService
 
         if (sub.IsCollectionPaused(DateTime.UtcNow))
         {
+            failedIds.Add(sub.Id);
             _logger.LogInformation("Billing skipped collection-paused subscription {Id} until {Until}.", sub.Id, sub.CollectionPausedUntil);
             return;
         }

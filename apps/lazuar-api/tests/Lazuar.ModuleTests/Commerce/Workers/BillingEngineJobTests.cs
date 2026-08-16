@@ -601,6 +601,106 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_CollectionPausedDue_SiblingStillProcessed()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var pausedDue = DateTime.UtcNow.AddDays(-2);
+        var paused = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        paused.Activate(DateTime.UtcNow.AddDays(-40), pausedDue);
+        paused.StoreVaultedToken("cus_paused", "pm_paused");
+        paused.PauseCollection(DateTime.UtcNow.AddDays(10));
+
+        var sibling = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sibling.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        sibling.StoreVaultedToken("cus_sib", "pm_sib");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(paused, sibling);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var pausedReloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == paused.Id);
+        pausedReloaded.Status.Should().Be("ACTIVE");
+        pausedReloaded.NextBillingDate.Should().BeCloseTo(pausedDue, TimeSpan.FromSeconds(1));
+        (await _db.ChargeAttemptLogs.IgnoreQueryFilters().CountAsync(l => l.SubscriptionId == paused.Id))
+            .Should().Be(0);
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == paused.Id));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sibling.Id));
+    }
+
+    [Test]
+    public async Task RunOnce_CollectionPaused_SecondCycleDoesNotStarveSibling()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var pausedDue = DateTime.UtcNow.AddDays(-2);
+        var paused = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        paused.Activate(DateTime.UtcNow.AddDays(-40), pausedDue);
+        paused.StoreVaultedToken("cus_paused", "pm_paused");
+        paused.PauseCollection(DateTime.UtcNow.AddDays(10));
+
+        var sibling = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sibling.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        sibling.StoreVaultedToken("cus_sib", "pm_sib");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(paused, sibling);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var pausedReloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == paused.Id);
+        pausedReloaded.Status.Should().Be("ACTIVE");
+        pausedReloaded.NextBillingDate.Should().BeCloseTo(pausedDue, TimeSpan.FromSeconds(1));
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sibling.Id));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == paused.Id));
+    }
+
+    [Test]
+    public async Task RunOnce_FiftyPausedDue_DoesNotBlockOneSibling()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var paused = new List<Subscription>(50);
+        for (var i = 0; i < 50; i++)
+        {
+            var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+            sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-3).AddMinutes(-i));
+            sub.StoreVaultedToken($"cus_paused_{i}", $"pm_paused_{i}");
+            sub.PauseCollection(DateTime.UtcNow.AddDays(10));
+            paused.Add(sub);
+        }
+
+        var sibling = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sibling.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        sibling.StoreVaultedToken("cus_sib", "pm_sib");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(paused);
+        _db.Subscriptions.Add(sibling);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        foreach (var sub in paused)
+        {
+            var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+            reloaded.Status.Should().Be("ACTIVE");
+        }
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            paused.Select(p => p.Id).Contains(e.SubscriptionId)));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sibling.Id));
+    }
+
+    [Test]
     public async Task RunOnce_AppliesPendingProductThenChargesNewPrice()
     {
         var basic = CreateProduct(_orgId, "STRIPE");
