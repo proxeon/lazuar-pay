@@ -100,7 +100,7 @@ Local names **not** given a column (see reports 02, 05, 10): ToyyibPay, SenangPa
 | LP-034 | Touch ’n Go eWallet | 4 | N | P | P | Y | Y | N | N | W | N |
 | LP-035 | GrabPay | 4 | N | P | P | Y | Y | P | N | W | N |
 | LP-036 | ShopeePay / Boost | 4 | N | N | P | Y | Y | N | N | W | N |
-| LP-037 | Apple Pay / Google Pay | 1 | N | N | P | P | P | Y | P | W | P |
+| LP-037 | Apple Pay / Google Pay | 1 | W | N | P | P | P | Y | P | W | P |
 | LP-038 | PayPal | 4 | N | N | N | P | P | N | P | W | P |
 | LP-039 | BNPL (Atome / Grab PayLater) | R | R | N | N | Y | Y | N | N | W | N |
 | LP-040 | Multi-gateway per tenant (BYOK pick) | — | Y | N | N | N | N | N | N | Y | N |

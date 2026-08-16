@@ -27,40 +27,9 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         {
             var client = new StripeClient(apiKey);
             var service = new SessionService(client);
-            metadata["tenant_id"] = tenantId.ToString();
-
-            var options = new SessionCreateOptions
-            {
-                Mode = "payment",
-                CustomerEmail = !string.IsNullOrWhiteSpace(customerEmail) ? customerEmail : null,
-                LineItems = new List<SessionLineItemOptions>
-                {
-                    new SessionLineItemOptions
-                    {
-                        PriceData = new SessionLineItemPriceDataOptions
-                        {
-                            Currency = currency.ToLowerInvariant(),
-                            UnitAmountDecimal = amount * 100,
-                            ProductData = new SessionLineItemPriceDataProductDataOptions
-                            {
-                                Name = string.IsNullOrWhiteSpace(productName) ? GatewayCommon.DefaultProductName : productName
-                            },
-                        },
-                        Quantity = quantity,
-                    }
-                },
-                Metadata = metadata,
-                // Copy session metadata onto the PaymentIntent so payment_intent.succeeded
-                // carries checkout_id / M2M keys even when that event arrives first.
-                PaymentIntentData = new SessionPaymentIntentDataOptions
-                {
-                    Metadata = metadata
-                },
-                SuccessUrl = successUrl,
-                CancelUrl = cancelUrl,
-            };
-
-            ApplySetupFutureUsage(options, setupFutureUsage);
+            var options = CreateCheckoutSessionOptions(
+                tenantId, amount, currency, productName, customerEmail,
+                successUrl, cancelUrl, metadata, setupFutureUsage, quantity);
 
             var session = await service.CreateAsync(options);
             return new GatewayCheckoutResult(true, session.Url, session.Id, null);
@@ -398,6 +367,81 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         }
 
         return new RequestOptions { IdempotencyKey = idempotencyKey };
+    }
+
+    internal const string CardPaymentMethodType = "card";
+
+    // Wallets (Apple Pay / Google Pay) ride on card. Listing apple_pay/google_pay is invalid.
+    // This list replaces Dashboard dynamic PMs for the session; the child PI inherits it.
+    internal static void ApplyCardWalletPaymentMethodTypes(SessionCreateOptions options)
+    {
+        options.PaymentMethodTypes = new List<string> { CardPaymentMethodType };
+    }
+
+    /// <summary>
+    /// Keep an existing paying <c>tenant_id</c> (platform charges). Stamp the adapter
+    /// tenant as <c>platform_tenant_id</c> when it differs so system checkout does not
+    /// overwrite the workspace that must be activated.
+    /// </summary>
+    internal static void ApplyPayingTenantMetadata(Dictionary<string, string> metadata, Guid adapterTenantId)
+    {
+        var adapterId = adapterTenantId.ToString();
+        if (!metadata.TryGetValue("tenant_id", out var existing) || string.IsNullOrWhiteSpace(existing))
+        {
+            metadata["tenant_id"] = adapterId;
+            return;
+        }
+
+        if (!string.Equals(existing, adapterId, StringComparison.OrdinalIgnoreCase))
+            metadata["platform_tenant_id"] = adapterId;
+    }
+
+    internal static SessionCreateOptions CreateCheckoutSessionOptions(
+        Guid tenantId,
+        decimal amount,
+        string currency,
+        string productName,
+        string customerEmail,
+        string successUrl,
+        string cancelUrl,
+        Dictionary<string, string> metadata,
+        bool setupFutureUsage = false,
+        int quantity = 1)
+    {
+        ApplyPayingTenantMetadata(metadata, tenantId);
+
+        var options = new SessionCreateOptions
+        {
+            Mode = "payment",
+            CustomerEmail = !string.IsNullOrWhiteSpace(customerEmail) ? customerEmail : null,
+            LineItems = new List<SessionLineItemOptions>
+            {
+                new SessionLineItemOptions
+                {
+                    PriceData = new SessionLineItemPriceDataOptions
+                    {
+                        Currency = currency.ToLowerInvariant(),
+                        UnitAmountDecimal = amount * 100,
+                        ProductData = new SessionLineItemPriceDataProductDataOptions
+                        {
+                            Name = string.IsNullOrWhiteSpace(productName) ? GatewayCommon.DefaultProductName : productName
+                        },
+                    },
+                    Quantity = quantity,
+                }
+            },
+            Metadata = metadata,
+            PaymentIntentData = new SessionPaymentIntentDataOptions
+            {
+                Metadata = metadata
+            },
+            SuccessUrl = successUrl,
+            CancelUrl = cancelUrl,
+        };
+
+        ApplyCardWalletPaymentMethodTypes(options);
+        ApplySetupFutureUsage(options, setupFutureUsage);
+        return options;
     }
 
     internal static void ApplySetupFutureUsage(SessionCreateOptions options, bool setupFutureUsage)

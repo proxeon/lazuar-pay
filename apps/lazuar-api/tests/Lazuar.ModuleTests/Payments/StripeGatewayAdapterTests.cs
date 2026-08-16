@@ -16,6 +16,138 @@ namespace Lazuar.ModuleTests.Payments;
 public class StripeGatewayAdapterTests
 {
     [Test]
+    public void ApplyCardWalletPaymentMethodTypes_SetsCardOnly()
+    {
+        var options = new SessionCreateOptions();
+
+        StripeGatewayAdapter.ApplyCardWalletPaymentMethodTypes(options);
+
+        options.PaymentMethodTypes.Should().Equal(StripeGatewayAdapter.CardPaymentMethodType);
+        options.PaymentMethodTypes.Should().HaveCount(1);
+        options.PaymentMethodTypes.Should().NotContain("apple_pay");
+        options.PaymentMethodTypes.Should().NotContain("google_pay");
+        options.PaymentMethodTypes.Should().NotContain("fpx");
+    }
+
+    [Test]
+    public void ApplyCardWalletPaymentMethodTypes_DoesNotTouchPaymentIntentData()
+    {
+        var withoutPi = new SessionCreateOptions();
+        StripeGatewayAdapter.ApplyCardWalletPaymentMethodTypes(withoutPi);
+        withoutPi.PaymentIntentData.Should().BeNull();
+
+        var metadata = new Dictionary<string, string> { ["checkout_id"] = "cs_meta" };
+        var withPi = new SessionCreateOptions
+        {
+            PaymentIntentData = new SessionPaymentIntentDataOptions
+            {
+                Metadata = metadata
+            }
+        };
+
+        StripeGatewayAdapter.ApplyCardWalletPaymentMethodTypes(withPi);
+        StripeGatewayAdapter.ApplySetupFutureUsage(withPi, setupFutureUsage: true);
+
+        withPi.PaymentMethodTypes.Should().Equal(StripeGatewayAdapter.CardPaymentMethodType);
+        withPi.PaymentIntentData.Should().NotBeNull();
+        withPi.PaymentIntentData!.Metadata.Should().BeSameAs(metadata);
+        withPi.PaymentIntentData.SetupFutureUsage.Should().Be("off_session");
+        withPi.CustomerCreation.Should().Be("always");
+    }
+
+    [Test]
+    public void CreateCheckoutSessionOptions_IncludesCard_NotApplePay()
+    {
+        var metadata = new Dictionary<string, string> { ["checkout_id"] = "cs_lp037" };
+
+        var options = StripeGatewayAdapter.CreateCheckoutSessionOptions(
+            Guid.CreateVersion7(),
+            25m,
+            "MYR",
+            "Widget",
+            "buyer@example.com",
+            "https://ok.example/success",
+            "https://ok.example/cancel",
+            metadata,
+            setupFutureUsage: true);
+
+        options.PaymentMethodTypes.Should().Contain(StripeGatewayAdapter.CardPaymentMethodType);
+        options.PaymentMethodTypes.Should().Equal(StripeGatewayAdapter.CardPaymentMethodType);
+        options.PaymentMethodTypes.Should().NotContain("apple_pay");
+        options.PaymentMethodTypes.Should().NotContain("google_pay");
+        options.PaymentIntentData.Should().NotBeNull();
+        options.PaymentIntentData!.SetupFutureUsage.Should().Be("off_session");
+    }
+
+    [Test]
+    public void NonStripeAdapters_DoNotSendApplePayOrPaymentMethodTypes()
+    {
+        var gatewaysDir = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "Payments", "Infrastructure", "Gateways"));
+
+        foreach (var file in new[]
+        {
+            "BillplzGatewayAdapter.cs",
+            "ChipCollectGatewayAdapter.cs",
+            "RazorpayGatewayAdapter.cs"
+        })
+        {
+            var path = Path.Combine(gatewaysDir, file);
+            System.IO.File.Exists(path).Should().BeTrue($"Missing adapter: {path}");
+
+            var src = System.IO.File.ReadAllText(path);
+            src.Should().NotContain("apple_pay");
+            src.Should().NotContain("google_pay");
+            src.Should().NotContain("PaymentMethodTypes");
+            src.Should().NotContain("payment_method_types");
+        }
+    }
+
+    [Test]
+    public void ApplyPayingTenantMetadata_PreservesPayingTenant_AndStampsPlatformTenant()
+    {
+        var paying = Guid.CreateVersion7();
+        var system = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var metadata = new Dictionary<string, string> { ["tenant_id"] = paying.ToString() };
+
+        StripeGatewayAdapter.ApplyPayingTenantMetadata(metadata, system);
+
+        metadata["tenant_id"].Should().Be(paying.ToString());
+        metadata["platform_tenant_id"].Should().Be(system.ToString());
+    }
+
+    [Test]
+    public void CreateCheckoutSessionOptions_HasNoApplicationFeeOrTransfer_AndKeepsPayingTenant()
+    {
+        var paying = Guid.CreateVersion7();
+        var system = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        var metadata = new Dictionary<string, string>
+        {
+            ["type"] = "platform_saas_fee",
+            ["tenant_id"] = paying.ToString()
+        };
+
+        var options = StripeGatewayAdapter.CreateCheckoutSessionOptions(
+            system,
+            99m,
+            "MYR",
+            "Hub Starter (monthly)",
+            "ada@example.com",
+            "https://ok",
+            "https://cancel",
+            metadata);
+
+        options.PaymentIntentData.Should().NotBeNull();
+        options.PaymentIntentData!.ApplicationFeeAmount.Should().BeNull();
+        options.PaymentIntentData.TransferData.Should().BeNull();
+        options.Metadata!["tenant_id"].Should().Be(paying.ToString());
+        options.Metadata["platform_tenant_id"].Should().Be(system.ToString());
+        options.PaymentIntentData.Metadata!["tenant_id"].Should().Be(paying.ToString());
+    }
+
+    [Test]
     public void ApplySetupFutureUsage_WhenTrue_SetsOffSessionAndAlwaysCreatesCustomer()
     {
         var options = new SessionCreateOptions
