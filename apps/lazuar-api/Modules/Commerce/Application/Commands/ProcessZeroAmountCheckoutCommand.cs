@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Events;
-using Modules.Payments.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -86,7 +85,6 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         {
             var subscription = new Domain.Aggregates.Subscription(session.OrganizationId, session.ClientProfileId, product.Id);
             var interval = chosen?.Interval ?? product.Interval;
-            var reminderOnly = !PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName);
             SubscriptionActivation.Start(
                 subscription,
                 product,

@@ -285,18 +285,19 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         if (lineNet == 0)
         {
-            var vaultingTrial = isTrial && PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName);
-            if (vaultingTrial)
+            var vaultingRecurring = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
+                && resolved.Interval is "mo" or "yr";
+            if (vaultingRecurring)
             {
                 var cancelUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}?cancelled=true";
-                var trialMetadata = CommerceCheckoutMetadata.MergeClientIntoGateway(
+                var vaultMetadata = CommerceCheckoutMetadata.MergeClientIntoGateway(
                     request.Metadata,
                     tenantId.Value,
                     session.Id,
                     isB2bRequired);
-                trialMetadata["client_profile_id"] = clientProfileId.ToString();
-                trialMetadata["type"] = "trial";
-                var trialQuery = new GenerateCheckoutSessionQuery(
+                vaultMetadata["client_profile_id"] = clientProfileId.ToString();
+                vaultMetadata["type"] = isTrial ? "trial" : "commerce_subscription";
+                var vaultQuery = new GenerateCheckoutSessionQuery(
                     tenantId.Value,
                     0m,
                     product.Currency,
@@ -304,15 +305,15 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                     request.Email,
                     successUrl,
                     cancelUrl,
-                    trialMetadata,
+                    vaultMetadata,
                     true,
                     quantity,
                     string.IsNullOrWhiteSpace(product.GatewayName) ? null : product.GatewayName
                 );
-                var trialUrl = await _mediator.Send(trialQuery, ct);
-                session.SetGatewayCheckoutUrl(trialUrl);
+                var vaultUrl = await _mediator.Send(vaultQuery, ct);
+                session.SetGatewayCheckoutUrl(vaultUrl);
                 await _repository.SaveChangesAsync(ct);
-                return new CheckoutResultDto(trialUrl, false);
+                return new CheckoutResultDto(vaultUrl, false);
             }
 
             var processZeroAmountCmd = new ProcessZeroAmountCheckoutCommand(tenantId.Value, session.Id);

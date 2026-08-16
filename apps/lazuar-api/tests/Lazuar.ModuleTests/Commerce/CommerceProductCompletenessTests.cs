@@ -427,11 +427,92 @@ public class CommerceProductCompletenessTests
     }
 
     [Test]
-    public async Task InitiateCheckout_ZeroAmountCoupon_ReturnsSuccessUrlWithSessionId_AndCompletesSession()
+    public async Task InitiateCheckout_HundredPercentCoupon_StripeMonthly_MintsHop2SetupSession()
     {
         var orgId = Guid.CreateVersion7();
         var clientId = Guid.CreateVersion7();
         var product = CreateProduct(orgId);
+        var coupon = new Coupon(orgId, "FREE100", "PERCENTAGE", 100m, maxUses: 10, expiresAt: null);
+
+        CheckoutSession? session = null;
+        GenerateCheckoutSessionQuery? payments = null;
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
+            .Do(ci => session = ci.Arg<CheckoutSession>());
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+        mediator.Send(Arg.Do<GenerateCheckoutSessionQuery>(q => payments = q), Arg.Any<CancellationToken>())
+            .Returns("https://checkout.stripe.test/cs_setup");
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        var result = await handler.Handle(GuestCheckoutCommand("FREE100"), CancellationToken.None);
+
+        session.Should().NotBeNull();
+        session!.Status.Should().Be("OPEN");
+        result.IsZeroAmountBypass.Should().BeFalse();
+        result.Url.Should().Be("https://checkout.stripe.test/cs_setup");
+
+        payments.Should().NotBeNull();
+        payments!.Amount.Should().Be(0m);
+        payments.SetupFutureUsage.Should().BeTrue();
+        payments.Metadata.Should().ContainKey("type");
+        payments.Metadata["type"].Should().Be("commerce_subscription");
+
+        await mediator.DidNotReceive().Send(
+            Arg.Any<ProcessZeroAmountCheckoutCommand>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InitiateCheckout_HundredPercentCoupon_BillplzMonthly_StillBypasses()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, gatewayName: "BILLPLZ");
+        var coupon = new Coupon(orgId, "FREE100", "PERCENTAGE", 100m, maxUses: 10, expiresAt: null);
+
+        CheckoutSession? session = null;
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
+            .Do(ci => session = ci.Arg<CheckoutSession>());
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+
+        var eventBus = Substitute.For<IEventBus>();
+        var zeroHandler = new ProcessZeroAmountCheckoutCommandHandler(repository, eventBus);
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+        mediator.Send(Arg.Any<ProcessZeroAmountCheckoutCommand>(), Arg.Any<CancellationToken>())
+            .Returns(ci => zeroHandler.Handle(
+                ci.Arg<ProcessZeroAmountCheckoutCommand>(),
+                ci.Arg<CancellationToken>()));
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        var result = await handler.Handle(GuestCheckoutCommand("FREE100"), CancellationToken.None);
+
+        session.Should().NotBeNull();
+        result.IsZeroAmountBypass.Should().BeTrue();
+        result.Url.Should().Be($"https://portal.test/acme/checkout/pro-plan/success?sub_id={session!.Id}");
+        session.Status.Should().Be("COMPLETED");
+        await mediator.DidNotReceive().Send(
+            Arg.Any<GenerateCheckoutSessionQuery>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InitiateCheckout_ZeroAmountCoupon_ReturnsSuccessUrlWithSessionId_AndCompletesSession()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: "one_time");
         var coupon = new Coupon(orgId, "FREE100", "PERCENTAGE", 100m, maxUses: 10, expiresAt: null);
 
         CheckoutSession? session = null;

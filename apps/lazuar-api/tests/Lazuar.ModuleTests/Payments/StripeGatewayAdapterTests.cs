@@ -213,6 +213,32 @@ public class StripeGatewayAdapterTests
     }
 
     [Test]
+    public void CreateCheckoutSessionOptions_ZeroAmountWithSetup_UsesSetupMode()
+    {
+        var metadata = new Dictionary<string, string> { ["type"] = "commerce_subscription" };
+
+        var options = StripeGatewayAdapter.CreateCheckoutSessionOptions(
+            Guid.CreateVersion7(),
+            0m,
+            "MYR",
+            "Membership",
+            "buyer@example.com",
+            "https://ok.example/success",
+            "https://ok.example/cancel",
+            metadata,
+            setupFutureUsage: true);
+
+        options.Mode.Should().Be("setup");
+        options.PaymentIntentData.Should().BeNull();
+        options.LineItems.Should().BeNull();
+        options.SetupIntentData.Should().NotBeNull();
+        options.SetupIntentData!.Metadata.Should().BeSameAs(metadata);
+        options.CustomerCreation.Should().Be("always");
+        options.Currency.Should().Be("myr");
+        options.PaymentMethodTypes.Should().Equal(StripeGatewayAdapter.CardPaymentMethodType);
+    }
+
+    [Test]
     public void ApplySetupFutureUsage_WhenTrue_SetsOffSessionAndAlwaysCreatesCustomer()
     {
         var options = new SessionCreateOptions
@@ -398,6 +424,51 @@ public class StripeGatewayAdapterTests
     }
 
     [Test]
+    public async Task ParseWebhook_CheckoutSessionCompleted_SetupIntentWithoutPi_ExtractsCustomerAndPaymentMethod()
+    {
+        var json = SetupSessionCompletedJson("evt_cs_setup", "cs_setup_1", "seti_1", "cus_setup_1", "pm_setup_1");
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", WebhookSecret, json, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.EventId.Should().Be("evt_cs_setup");
+        result.GatewayTransactionId.Should().Be("seti_1");
+        result.AmountPaid.Should().Be(0m);
+        result.GatewayCustomerId.Should().Be("cus_setup_1");
+        result.GatewayTokenId.Should().Be("pm_setup_1");
+    }
+
+    [Test]
+    public void ReadSetupSessionVaultIds_WhenSetupIntentAndNoPi_ExtractsCustomerAndPaymentMethod()
+    {
+        var session = new Session
+        {
+            Id = "cs_setup_1",
+            CustomerId = "cus_setup_1",
+            SetupIntentId = "seti_1",
+            SetupIntent = new SetupIntent
+            {
+                Id = "seti_1",
+                CustomerId = "cus_setup_1",
+                PaymentMethodId = "pm_setup_1"
+            }
+        };
+
+        string? customerId = session.CustomerId;
+        string? paymentMethodId = null;
+        StripeGatewayAdapter.ReadSetupSessionVaultIds(session, ref customerId, ref paymentMethodId);
+
+        customerId.Should().Be("cus_setup_1");
+        paymentMethodId.Should().Be("pm_setup_1");
+    }
+
+    [Test]
     public async Task ParseWebhook_PaymentIntentSucceeded_UsesPaymentIntentId()
     {
         var json = PaymentIntentSucceededJson("evt_pi_1", "pi_test_1");
@@ -445,6 +516,41 @@ public class StripeGatewayAdapterTests
         result.EventType.Should().Be("customer.updated");
         result.EventId.Should().Be("evt_unmapped");
     }
+
+    private static string SetupSessionCompletedJson(
+        string eventId,
+        string sessionId,
+        string setupIntentId,
+        string customerId,
+        string paymentMethodId) =>
+        $$"""
+        {
+          "id": "{{eventId}}",
+          "object": "event",
+          "api_version": "{{StripeApiVersion}}",
+          "request": null,
+          "type": "checkout.session.completed",
+          "data": {
+            "object": {
+              "id": "{{sessionId}}",
+              "object": "checkout.session",
+              "mode": "setup",
+              "amount_total": null,
+              "currency": "myr",
+              "customer": "{{customerId}}",
+              "payment_intent": null,
+              "setup_intent": {
+                "id": "{{setupIntentId}}",
+                "object": "setup_intent",
+                "customer": "{{customerId}}",
+                "payment_method": "{{paymentMethodId}}",
+                "status": "succeeded"
+              },
+              "metadata": {}
+            }
+          }
+        }
+        """;
 
     private static string SessionCompletedJson(string eventId, string sessionId, string paymentIntentId) =>
         $$"""

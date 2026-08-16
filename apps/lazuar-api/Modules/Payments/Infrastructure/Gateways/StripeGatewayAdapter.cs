@@ -101,6 +101,29 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                             _logger.LogWarning(ex, "Failed to fetch Stripe balance transaction for fee extraction.");
                         }
                     }
+                    else
+                    {
+                        ReadSetupSessionVaultIds(session, ref customerId, ref paymentMethodId);
+                        if (string.IsNullOrEmpty(paymentMethodId)
+                            && !string.IsNullOrEmpty(session.SetupIntentId))
+                        {
+                            try
+                            {
+                                var client = new StripeClient(apiKey);
+                                var siService = new SetupIntentService(client);
+                                var si = await siService.GetAsync(session.SetupIntentId, new SetupIntentGetOptions
+                                {
+                                    Expand = new List<string> { "payment_method" }
+                                });
+                                paymentMethodId = si.PaymentMethodId;
+                                customerId ??= si.CustomerId;
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to fetch Stripe SetupIntent for payment method extraction.");
+                            }
+                        }
+                    }
 
                     decimal netAmount = amount - gatewayFee;
 
@@ -110,7 +133,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         EventId: stripeEvent.Id,
                         AmountPaid: amount,
                         Currency: session.Currency ?? "myr",
-                        GatewayTransactionId: session.PaymentIntentId ?? session.Id,
+                        GatewayTransactionId: session.PaymentIntentId ?? session.SetupIntentId ?? session.Id,
                         Metadata: meta,
                         GatewayFee: gatewayFee,
                         TaxAmount: taxAmount,
@@ -428,6 +451,27 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     {
         ApplyPayingTenantMetadata(metadata, tenantId);
 
+        // $0 + vault: Checkout setup mode (SetupIntent). A $0 PaymentIntent is invalid.
+        if (amount == 0 && setupFutureUsage)
+        {
+            var setupOptions = new SessionCreateOptions
+            {
+                Mode = "setup",
+                Currency = currency.ToLowerInvariant(),
+                CustomerEmail = !string.IsNullOrWhiteSpace(customerEmail) ? customerEmail : null,
+                Metadata = metadata,
+                SetupIntentData = new SessionSetupIntentDataOptions
+                {
+                    Metadata = metadata
+                },
+                SuccessUrl = successUrl,
+                CancelUrl = cancelUrl,
+                CustomerCreation = "always",
+            };
+            ApplyCardWalletPaymentMethodTypes(setupOptions);
+            return setupOptions;
+        }
+
         var options = new SessionCreateOptions
         {
             Mode = "payment",
@@ -460,6 +504,19 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         ApplyCardWalletPaymentMethodTypes(options);
         ApplySetupFutureUsage(options, setupFutureUsage);
         return options;
+    }
+
+    /// <summary>
+    /// Setup-mode <c>checkout.session.completed</c> has a SetupIntent and no PaymentIntent.
+    /// Customer + PM may already be expanded on the event object.
+    /// </summary>
+    internal static void ReadSetupSessionVaultIds(
+        Session session,
+        ref string? customerId,
+        ref string? paymentMethodId)
+    {
+        customerId ??= session.CustomerId ?? session.SetupIntent?.CustomerId;
+        paymentMethodId ??= session.SetupIntent?.PaymentMethodId;
     }
 
     internal static void ApplySetupFutureUsage(SessionCreateOptions options, bool setupFutureUsage)
