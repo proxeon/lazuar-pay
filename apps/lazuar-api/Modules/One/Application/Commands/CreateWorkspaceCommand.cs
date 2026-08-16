@@ -39,13 +39,14 @@ public class CreateWorkspaceCommandHandler : ICommandHandler<CreateWorkspaceComm
             throw new InvalidOperationException("User not found.");
         }
 
-        var isSlugUnique = await _repository.IsSlugUniqueAsync(request.Slug, ct);
+        var slug = request.Slug.Trim().ToLowerInvariant();
+        var isSlugUnique = await _repository.IsSlugUniqueAsync(slug, ct);
         if (!isSlugUnique)
         {
             throw new InvalidOperationException("The requested workspace slug is already taken. Please choose another.");
         }
 
-        var organization = new Organization(request.Name, request.Slug);
+        var organization = new Organization(request.Name, slug);
         _repository.AddOrganization(organization);
 
         var membership = new TenantMembership(request.OwnerUserId, organization.Id, "ADMIN");

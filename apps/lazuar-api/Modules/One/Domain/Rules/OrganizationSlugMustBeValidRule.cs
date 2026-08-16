@@ -7,12 +7,15 @@ namespace Modules.One.Domain.Rules;
 public class OrganizationSlugMustBeValidRule : IBusinessRule
 {
     private readonly string _slug;
-    private static readonly HashSet<string> ReservedSlugs = new(System.StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ReservedSlugs = new(StringComparer.OrdinalIgnoreCase)
     {
         "api", "app", "admin", "dashboard", "portal", "system",
         "www", "support", "help", "mail", "blog", "docs",
         "stripe", "billplz", "lazuar", "one", "auth", "login"
     };
+
+    /// <summary>Reserved workspace slugs (system / product hosts). Tests iterate this set.</summary>
+    public static IReadOnlyCollection<string> Reserved => ReservedSlugs;
 
     private static readonly Regex SlugRegex = new Regex(@"^[a-z0-9-]+$", RegexOptions.Compiled);
 

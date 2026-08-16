@@ -1,47 +1,19 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { client } from "../lib/api-client";
+import { slugify, validateSlug } from "../lib/workspace-slug";
 
 type AuthMode = "signin" | "signup";
 
-/** Align with OrganizationSlugMustBeValidRule on the API. */
-const RESERVED_SLUGS = new Set([
-  "api", "app", "admin", "dashboard", "portal", "system",
-  "www", "support", "help", "mail", "blog", "docs",
-  "stripe", "billplz", "lazuar", "one", "auth", "login",
-]);
-
-/** Normalize workspace name / slug edits to a valid tenant slug. */
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function validateSlug(slug: string): string | null {
-  if (!slug || slug.length < 3) {
-    return "Workspace slug must be at least 3 characters (e.g. acme-corp).";
-  }
-  if (slug.length > 63) {
-    return "Workspace slug must be at most 63 characters.";
-  }
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-    return "Use only lowercase letters, numbers, and single hyphens (no leading/trailing hyphens).";
-  }
-  if (RESERVED_SLUGS.has(slug)) {
-    return `"${slug}" is reserved. Choose another workspace slug.`;
-  }
-  return null;
-}
+const LEGAL_TERMS_HREF = "/portal/legal/terms";
+const LEGAL_PRIVACY_HREF = "/portal/legal/privacy";
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const location = useLocation();
+  const forcedSignup = location.pathname.endsWith("/signup") || searchParams.get("mode") === "signup";
+  const [mode, setMode] = useState<AuthMode>(forcedSignup ? "signup" : "signin");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,10 +24,15 @@ export default function LoginPage() {
   const [tenantSlug, setTenantSlug] = useState("");
   /** When true, typing workspace name no longer overwrites a hand-edited slug */
   const [slugTouched, setSlugTouched] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     localStorage.removeItem("ops_active_workspace_id");
   }, []);
+
+  useEffect(() => {
+    setMode(forcedSignup ? "signup" : "signin");
+  }, [forcedSignup]);
 
   const handleWorkspaceNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -121,6 +98,12 @@ export default function LoginPage() {
       return;
     }
 
+    if (!acceptedTerms) {
+      setError("You must accept the Terms of Service and Privacy Policy.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { error: registerError } = await client.POST("/one/public/register", {
         body: {
@@ -129,6 +112,7 @@ export default function LoginPage() {
           name: email.split("@")[0],
           workspace_name: workspaceName.trim(),
           tenant_slug: slug,
+          accepted_terms: true,
         },
       });
 
@@ -198,12 +182,17 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-8 text-center">
+              <div className="mt-8 text-center space-y-2">
                 <p className="text-[12px] text-[#71717a]">
                   Don't have an account?{" "}
-                  <button onClick={() => setMode("signup")} className="text-[#09090b] font-semibold hover:underline">
+                  <Link to="/signup" className="text-[#09090b] font-semibold hover:underline">
                     Sign up
-                  </button>
+                  </Link>
+                </p>
+                <p className="text-[12px] text-[#71717a]">
+                  <Link to="/pricing" className="text-[#09090b] font-semibold hover:underline">
+                    See pricing
+                  </Link>
                 </p>
               </div>
             </div>
@@ -283,21 +272,47 @@ export default function LoginPage() {
                   />
                 </div>
 
+                <label className="flex items-start gap-2.5 pt-1">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded-none border-[#e5e5e5]"
+                  />
+                  <span className="text-[12px] text-[#71717a] leading-relaxed">
+                    I agree to the{" "}
+                    <a href={LEGAL_TERMS_HREF} target="_blank" rel="noreferrer" className="text-[#09090b] font-semibold hover:underline">
+                      Terms of Service
+                    </a>{" "}
+                    and{" "}
+                    <a href={LEGAL_PRIVACY_HREF} target="_blank" rel="noreferrer" className="text-[#09090b] font-semibold hover:underline">
+                      Privacy Policy
+                    </a>
+                    . Platform use is covered by these pages until a merchant MSA exists.
+                  </span>
+                </label>
+
                 <button
                   type="submit"
                   disabled={isLoading}
                   className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2"
                 >
-                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Continue"}
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Create workspace"}
                 </button>
               </form>
 
-              <div className="mt-8 text-center">
+              <div className="mt-8 text-center space-y-2">
                 <p className="text-[12px] text-[#71717a]">
                   Already have an account?{" "}
-                  <button onClick={() => setMode("signin")} className="text-[#09090b] font-semibold hover:underline">
+                  <Link to="/login" className="text-[#09090b] font-semibold hover:underline">
                     Sign in
-                  </button>
+                  </Link>
+                </p>
+                <p className="text-[12px] text-[#71717a]">
+                  <Link to="/pricing" className="text-[#09090b] font-semibold hover:underline">
+                    See pricing
+                  </Link>
                 </p>
               </div>
             </div>

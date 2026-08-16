@@ -5,7 +5,14 @@ using BuildingBlocks.Application;
 
 namespace Modules.One.Application.Commands;
 
-public record UpdateWorkspaceCommand(Guid OrganizationId, Guid RequesterUserId, string Name, string Slug) : ICommand
+public record UpdateWorkspaceCommand(
+    Guid OrganizationId,
+    Guid RequesterUserId,
+    string Name,
+    string Slug,
+    string? LogoUrl = null,
+    string? PrimaryColor = null,
+    bool UpdateBranding = false) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }
@@ -34,6 +41,10 @@ public class UpdateWorkspaceCommandHandler : ICommandHandler<UpdateWorkspaceComm
         }
 
         organization.UpdateDetails(request.Name, request.Slug);
+        if (request.UpdateBranding)
+        {
+            organization.UpdateBranding(request.LogoUrl, request.PrimaryColor);
+        }
 
         await _repository.SaveChangesAsync(ct);
     }

@@ -13,7 +13,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Modules.One.Application.Commands;
+using Modules.One.Application.Queries;
 using Modules.One.Domain;
+using Modules.One.Infrastructure.Services;
 
 namespace Modules.One.Infrastructure;
 
@@ -21,12 +23,19 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/public/register", async Task<Ok<LoginResponse>> (
+        group.MapGet("/public/pricing", async Task<Ok<PublicPricingDto>> (IMediator mediator) =>
+        {
+            var pricing = await mediator.Send(new GetPublicPricingQuery());
+            return TypedResults.Ok(pricing);
+        });
+
+        group.MapPost("/public/register", async Task<IResult> (
             [FromBody] PublicRegisterRequestDto req,
             IConfiguration config,
             OneDbContext db,
             IMediator mediator,
-            HttpContext ctx) =>
+            HttpContext ctx,
+            PublicRegisterRateLimiter rateLimiter) =>
         {
             var email = req.Email?.Trim().ToLowerInvariant();
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(req.Password))
@@ -34,6 +43,23 @@ public static class AuthEndpoints
 
             if (string.IsNullOrEmpty(req.Workspace_name) || string.IsNullOrEmpty(req.Tenant_slug))
                 throw new InvalidOperationException("Workspace name and slug are required.");
+
+            if (req.Accepted_terms != true)
+                throw new InvalidOperationException("You must accept the Terms of Service and Privacy Policy.");
+
+            var clientKey = ResolveRegisterClientKey(ctx, email);
+            if (!await rateLimiter.TryAcquireAsync(clientKey, ctx.RequestAborted))
+            {
+                ctx.Response.Headers.RetryAfter = "600";
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status429TooManyRequests,
+                        Title = "Too Many Requests",
+                        Detail = "Too many signup attempts. Retry later."
+                    },
+                    statusCode: StatusCodes.Status429TooManyRequests);
+            }
 
             var userId = await mediator.Send(new RegisterPublicUserCommand(email, req.Password, req.Name, req.Workspace_name, req.Tenant_slug));
             var user = await db.GlobalUsers.FindAsync(userId);
@@ -138,6 +164,22 @@ public static class AuthEndpoints
         }).RequireAuthorization();
 
         return group;
+    }
+
+    internal static string ResolveRegisterClientKey(HttpContext ctx, string email)
+    {
+        var ip = ctx.Connection.RemoteIpAddress?.ToString();
+        if (ctx.Request.Headers.TryGetValue("X-Forwarded-For", out var forwarded))
+        {
+            var first = forwarded.ToString().Split(',')[0].Trim();
+            if (!string.IsNullOrEmpty(first))
+            {
+                ip = first;
+            }
+        }
+
+        ip ??= "unknown";
+        return $"email:{email}|ip:{ip}";
     }
 
     private static void IssueCookie(HttpContext ctx, GlobalUser user, IConfiguration config)

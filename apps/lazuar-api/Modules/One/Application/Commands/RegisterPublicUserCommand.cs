@@ -51,10 +51,11 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
         var passwordHash = _passwordService.Hash(request.Password);
         var name = string.IsNullOrWhiteSpace(request.Name) ? email.Split('@')[0] : request.Name.Trim();
 
+        // Validate slug before tracking a user so reserved/malformed slugs write nothing.
+        var organization = new Organization(request.WorkspaceName, slug);
+
         var user = new GlobalUser(email, name, passwordHash, isSystemAdmin: false);
         _repository.AddGlobalUser(user);
-
-        var organization = new Organization(request.WorkspaceName, slug);
         _repository.AddOrganization(organization);
 
         var membership = new TenantMembership(user.Id, organization.Id, "ADMIN");

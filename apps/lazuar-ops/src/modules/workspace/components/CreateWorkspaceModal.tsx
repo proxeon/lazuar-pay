@@ -3,6 +3,7 @@ import { Loader2, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
+import { slugify, validateSlug } from "../../../lib/workspace-slug";
 
 interface CreateWorkspaceModalProps {
   onClose: () => void;
@@ -17,27 +18,33 @@ export default function CreateWorkspaceModal({ onClose, onSuccess }: CreateWorks
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setName(val);
-    setSlug(val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+    setSlug(slugify(val));
   };
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      const normalized = slugify(slug);
+      setSlug(normalized);
+      const slugError = validateSlug(normalized);
+      if (slugError) throw new Error(slugError);
+      if (!name.trim()) throw new Error("Workspace name is required.");
+
       const { data, error } = await client.POST("/one/workspaces", {
         body: {
           name: name.trim(),
-          slug: slug.trim(),
+          slug: normalized,
           provision_apps: ["OPS", "BILLING", "PAYMENTS", "CRM", "LHDN"]
         }
       });
       if (error) throw new Error(error.detail);
       return data.id;
     },
-    onSuccess: (newId) => {
+    onSuccess: async (newId) => {
       toast.success("Workspace created successfully");
-      queryClient.invalidateQueries({ queryKey: ["entitlements"] });
+      await queryClient.invalidateQueries({ queryKey: ["entitlements"] });
       onSuccess(newId);
     },
-    onError: (err: any) => toast.error(err.message || "Failed to create workspace")
+    onError: (err: Error) => toast.error(err.message || "Failed to create workspace")
   });
 
   return (
@@ -64,7 +71,10 @@ export default function CreateWorkspaceModal({ onClose, onSuccess }: CreateWorks
             </div>
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Workspace Slug *</label>
-              <input required type="text" value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} disabled={createMutation.isPending} className="w-full h-9 border border-[#e5e5e5] bg-[#fafafa] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" placeholder="acme-corp" />
+              <input required type="text" minLength={3} maxLength={63} value={slug} onChange={(e) => setSlug(slugify(e.target.value))} disabled={createMutation.isPending} className="w-full h-9 border border-[#e5e5e5] bg-[#fafafa] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" placeholder="acme-corp" />
+              <p className="text-[11px] text-[#a1a1aa]">
+                3–63 chars: a–z, 0–9, hyphens. Not reserved (login, admin, portal, …).
+              </p>
             </div>
           </div>
           <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">

@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
+import PricingPage from "./components/PricingPage";
+import EmptyWorkspaceState from "./components/EmptyWorkspaceState";
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
 import DashboardPage from "./modules/commerce/pages/DashboardPage";
@@ -116,17 +118,10 @@ function OpsLayout() {
 
   if (user && entitlements?.length === 0) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#f5f5f5] gap-4">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-rose-600">
-          Access Denied: No active workspace entitlements found.
-        </span>
-        <button 
-          onClick={handleLogout} 
-          className="h-9 px-6 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none hover:bg-[#27272a] transition-colors"
-        >
-          Log Out
-        </button>
-      </div>
+      <EmptyWorkspaceState
+        onWorkspaceCreated={handleWorkspaceChange}
+        onLogout={handleLogout}
+      />
     );
   }
 
@@ -172,13 +167,44 @@ function OpsLayout() {
  * Re-mount by adding Route entries + Sidebar links; do not delete backends.
  * See docs/contracts/openapi-vs-minimal-api.md and ADR 023.
  */
+function HomeRedirect() {
+  const [dest, setDest] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await client.GET("/one/auth/me");
+        if (cancelled) return;
+        setDest(!error && data ? "/commerce/dashboard" : "/pricing");
+      } catch {
+        if (!cancelled) setDest("/pricing");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!dest) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] text-[11px] font-bold uppercase tracking-widest text-[#71717a]">
+        Loading…
+      </div>
+    );
+  }
+
+  return <Navigate to={dest} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<HomeRedirect />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/signup" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route element={<OpsLayout />}>
-        <Route path="/" element={<Navigate to="/commerce/dashboard" replace />} />
-        
         <Route path="/commerce/dashboard" element={<DashboardPage />} />
         <Route path="/commerce/products" element={<ProductsPage />} />
         <Route path="/commerce/subscribers" element={<SubscribersPage />} />

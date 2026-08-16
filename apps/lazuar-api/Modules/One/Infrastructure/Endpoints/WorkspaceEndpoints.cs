@@ -24,12 +24,41 @@ public static class WorkspaceEndpoints
             return TypedResults.Ok(new IdResponse { Id = id.ToString() });
         }).RequireAuthorization();
 
+        group.MapGet("/workspaces/{id:guid}", async Task<Results<Ok<WorkspaceDto>, UnauthorizedHttpResult, NotFound>> (
+            Guid id, IExecutionContextAccessor ctx, IOneQueryService queryService) =>
+        {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
+
+            var workspace = await queryService.GetWorkspaceByIdAsync(id);
+            if (workspace == null) return TypedResults.NotFound();
+
+            return TypedResults.Ok(new WorkspaceDto
+            {
+                Id = workspace.Id.ToString(),
+                Name = workspace.Name,
+                Slug = workspace.Slug,
+                Is_active = workspace.IsActive,
+                Created_at = new DateTimeOffset(workspace.CreatedAt),
+                Logo_url = workspace.LogoUrl,
+                Primary_color = workspace.PrimaryColor
+            });
+        }).RequireAuthorization();
+
         group.MapPut("/workspaces/{id:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (
             Guid id, UpdateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
 
-            await mediator.Send(new UpdateWorkspaceCommand(id, ctx.UserId, req.Name, req.Slug));
+            await mediator.Send(new UpdateWorkspaceCommand(
+                id,
+                ctx.UserId,
+                req.Name,
+                req.Slug,
+                req.Logo_url,
+                req.Primary_color,
+                UpdateBranding: true));
             return TypedResults.Ok(new StatusResponse { Status = "updated" });
         }).RequireAuthorization();
 
