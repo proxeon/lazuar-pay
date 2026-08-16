@@ -15,4 +15,11 @@ public class ConsoleMessagingServiceTests
         var act = async () => await sut.SendMessageAsync("+60123456789", "hello");
         await act.Should().NotThrowAsync();
     }
+
+    [Test]
+    public void IsBillable_IsFalse()
+    {
+        var sut = new ConsoleMessagingService(NullLogger<ConsoleMessagingService>.Instance);
+        sut.IsBillable.Should().BeFalse();
+    }
 }

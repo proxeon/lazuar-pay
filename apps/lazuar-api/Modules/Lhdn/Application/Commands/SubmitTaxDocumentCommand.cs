@@ -58,8 +58,9 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
     {
         var isTestMode = _executionContext.IsTestMode;
         var lhdnCost = _creditCostService.GetCost(CreditAction.LhdnSubmit);
+        var shouldMeter = !isTestMode && lhdnCost > 0;
 
-        if (!isTestMode)
+        if (shouldMeter)
         {
             var hasCredits = await _billingQueryService.HasSufficientCreditsAsync(request.OrganizationId, lhdnCost);
             if (!hasCredits)
@@ -136,9 +137,10 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
         }
 
         // Deduct credits for the submission. Idempotent on the LHDN idempotency key (or document id),
-        // so a retried command cannot double-charge. Test mode is exempt. The document is already
-        // persisted; a deduction failure is logged rather than failing the submission.
-        if (!isTestMode)
+        // so a retried command cannot double-charge. Test mode and a configured cost of 0 skip
+        // Deduct (domain forbids Deduct(0)). The document is already persisted; a deduction
+        // failure is logged rather than failing the submission.
+        if (shouldMeter)
         {
             try
             {

@@ -56,7 +56,7 @@ export default function BillingSettingsPage() {
   return (
     <PageLayout
       title="Platform Billing"
-      description="Manage your utility credits for automated LHDN tax submissions and WhatsApp dunning messages."
+      description="Prepaid credits for live-key LHDN e-invoice submits. WhatsApp recovery is not billed (not connected)."
       breadcrumbs={[{ label: "Workspace" }, { label: "Platform Billing" }]}
     >
       <div className="max-w-xl bg-white border border-[#e5e5e5] p-8 md:p-12 flex flex-col items-center justify-center text-center">
@@ -68,7 +68,7 @@ export default function BillingSettingsPage() {
           {isLoading ? <Loader2 size={32} className="animate-spin mx-auto text-[#a1a1aa]" /> : balanceData?.available_credits || 0}
         </div>
         <p className="text-[13px] text-[#71717a] leading-relaxed mb-8 max-w-sm">
-          Credits are consumed automatically when the system performs high-value background tasks like tax e-Invoicing or sending WhatsApp recovery messages.
+          Credits are deducted only when a live LHDN e-invoice submit is accepted. WhatsApp is not connected and is not billed.
         </p>
 
         <form onSubmit={handleTopUp} className="w-full max-w-sm space-y-4">

@@ -15,6 +15,8 @@ public sealed class ConsoleMessagingService : IMessagingService
         _logger = logger;
     }
 
+    public bool IsBillable => false;
+
     public Task SendMessageAsync(string recipient, string text)
     {
         _logger.LogInformation("[Local Dispatch] [MESSAGING/SMS] To: {Recipient} | Text: {Text}", recipient, text);

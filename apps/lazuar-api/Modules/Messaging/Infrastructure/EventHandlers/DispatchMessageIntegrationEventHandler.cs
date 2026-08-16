@@ -11,6 +11,7 @@ using Modules.Billing.Contracts;
 using Modules.Communications.Contracts;
 using Modules.Messaging.Contracts;
 using Modules.Messaging.Domain;
+using Modules.Messaging.Infrastructure.Messaging;
 
 namespace Modules.Messaging.Infrastructure.EventHandlers;
 
@@ -82,6 +83,9 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         }
 
         var whatsappCost = _creditCostService.GetCost(CreditAction.WhatsAppSend);
+        // Console stub (and any other non-billable transport) must not invent a meter.
+        if (_messagingService is ConsoleMessagingService || !_messagingService.IsBillable)
+            whatsappCost = 0;
         var billedViaHold = @event.CreditHoldId.HasValue;
         var whatsAppBlockedByCredits = false;
 

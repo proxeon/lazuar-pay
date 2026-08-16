@@ -108,6 +108,43 @@ public class LhdnSingleCreditPathTests
             Arg.Any<CancellationToken>());
     }
 
+    [Test]
+    public async Task Handle_LhdnCostZero_DoesNotDeductOrPrecheck()
+    {
+        var orgId = Guid.CreateVersion7();
+        _creditCostService.GetCost(CreditAction.LhdnSubmit).Returns(0);
+        ArrangeValidSubmit(orgId);
+
+        await _handler.Handle(new SubmitTaxDocumentCommand(orgId, "idem-zero", BuildPayload()), CancellationToken.None);
+
+        _creditCostService.Received(1).GetCost(CreditAction.LhdnSubmit);
+        await _billingQueryService.DidNotReceive()
+            .HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>());
+        await _mediator.DidNotReceive().Send(
+            Arg.Is<DeductTenantCreditCommand>(c => c.Amount == 0),
+            Arg.Any<CancellationToken>());
+        await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Handle_LiveMode_CostGreaterThanZero_StillDeducts()
+    {
+        var orgId = Guid.CreateVersion7();
+        var idempotencyKey = "idem-live-positive";
+        _creditCostService.GetCost(CreditAction.LhdnSubmit).Returns(3);
+        ArrangeValidSubmit(orgId);
+
+        await _handler.Handle(new SubmitTaxDocumentCommand(orgId, idempotencyKey, BuildPayload()), CancellationToken.None);
+
+        await _mediator.Received(1).Send(
+            Arg.Is<DeductTenantCreditCommand>(c =>
+                c.OrganizationId == orgId
+                && c.Amount > 0
+                && c.Amount == 3
+                && c.IdempotencyKey == $"lhdn:{idempotencyKey}"),
+            Arg.Any<CancellationToken>());
+    }
+
     private void ArrangeValidSubmit(Guid orgId)
     {
         var config = new LhdnTenantConfig(orgId, false, "C1234567890", "BRN", "20200101");

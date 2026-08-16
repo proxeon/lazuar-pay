@@ -44,7 +44,7 @@ public class CreditCostService : ICreditCostService
         _starterGrant = opts.StarterGrant;
     }
 
-    public int GetCost(CreditAction action) => _costs.TryGetValue(action, out var cost) ? cost : 1;
+    public int GetCost(CreditAction action) => _costs.TryGetValue(action, out var cost) ? cost : 0;
 
     public IReadOnlyList<CreditPackage> GetPackages() => _packages.AsReadOnly();
 

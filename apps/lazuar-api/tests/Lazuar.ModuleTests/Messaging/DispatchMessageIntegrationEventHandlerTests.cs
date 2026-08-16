@@ -6,11 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Billing.Contracts;
+using Modules.Billing.Contracts.Commands;
 using Modules.Communications.Contracts;
 using Modules.Messaging.Application;
 using Modules.Messaging.Contracts;
 using Modules.Messaging.Infrastructure;
 using Modules.Messaging.Infrastructure.EventHandlers;
+using Modules.Messaging.Infrastructure.Messaging;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -56,16 +58,23 @@ public class DispatchMessageIntegrationEventHandlerTests
         _creditCost.GetCost(CreditAction.WhatsAppSend).Returns(0);
         _suppression.IsSuppressedAsync(Arg.Any<Guid>(), Arg.Any<string>()).Returns(false);
 
+        _sut = CreateSut();
+    }
+
+    private DispatchMessageIntegrationEventHandler CreateSut(
+        IMessagingService? messaging = null,
+        bool whatsAppEnabled = false)
+    {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Messaging:WhatsAppEnabled"] = "false"
+                ["Messaging:WhatsAppEnabled"] = whatsAppEnabled ? "true" : "false"
             })
             .Build();
 
-        _sut = new DispatchMessageIntegrationEventHandler(
+        return new DispatchMessageIntegrationEventHandler(
             _email,
-            _messaging,
+            messaging ?? _messaging,
             _billing,
             _creditCost,
             _suppression,
@@ -121,6 +130,8 @@ public class DispatchMessageIntegrationEventHandlerTests
             null);
 
         await _messaging.DidNotReceive().SendMessageAsync(Arg.Any<string>(), Arg.Any<string>());
+        await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
+        _creditCost.DidNotReceive().GetCost(CreditAction.EmailSend);
 
         var log = await _db.MessageDeliveryLogs.SingleAsync();
         log.Status.Should().Be("SENT");
@@ -254,9 +265,98 @@ public class DispatchMessageIntegrationEventHandlerTests
         await _sut.HandleAsync(evt);
 
         await _messaging.DidNotReceive().SendMessageAsync(Arg.Any<string>(), Arg.Any<string>());
+        await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
         var log = await _db.MessageDeliveryLogs.SingleAsync();
         log.Status.Should().Be("SKIPPED");
         log.Channel.Should().Be("WHATSAPP");
+        log.Error.Should().Contain("WhatsApp channel disabled");
+    }
+
+    [Test]
+    public async Task HandleAsync_WhatsAppEnabled_ConsoleTransport_DoesNotDeduct()
+    {
+        var orgId = Guid.CreateVersion7();
+        _creditCost.GetCost(CreditAction.WhatsAppSend).Returns(2);
+        _billing.HasSufficientCreditsAsync(orgId, 2).Returns(true);
+
+        var console = new ConsoleMessagingService(NullLogger<ConsoleMessagingService>.Instance);
+        var sut = CreateSut(messaging: console, whatsAppEnabled: true);
+
+        var evt = new DispatchMessageIntegrationEvent(
+            OrganizationId: orgId,
+            ToEmail: "",
+            ToPhone: "+6012",
+            Subject: "",
+            HtmlEmailBody: null,
+            PlainTextPhoneBody: "hi",
+            Channel: "WHATSAPP");
+
+        await sut.HandleAsync(evt);
+
+        console.Should().BeOfType<ConsoleMessagingService>();
+        console.IsBillable.Should().BeFalse();
+        _creditCost.Received().GetCost(CreditAction.WhatsAppSend);
+        await _mediator.DidNotReceive().Send(
+            Arg.Is<DeductTenantCreditCommand>(c => c.Amount == 2 || c.Amount == 0),
+            Arg.Any<CancellationToken>());
+        await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
+        await _billing.DidNotReceive().HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>());
+
+        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        log.Status.Should().Be("SENT");
+        log.Channel.Should().Be("WHATSAPP");
+    }
+
+    [Test]
+    public async Task HandleAsync_WhatsAppEnabled_CostZero_SubstituteTransport_DoesNotDeduct()
+    {
+        var orgId = Guid.CreateVersion7();
+        _creditCost.GetCost(CreditAction.WhatsAppSend).Returns(0);
+        var sut = CreateSut(whatsAppEnabled: true);
+
+        var evt = new DispatchMessageIntegrationEvent(
+            OrganizationId: orgId,
+            ToEmail: "",
+            ToPhone: "+6012",
+            Subject: "",
+            HtmlEmailBody: null,
+            PlainTextPhoneBody: "hi",
+            Channel: "WHATSAPP");
+
+        await sut.HandleAsync(evt);
+
+        await _messaging.Received(1).SendMessageAsync("+6012", "hi");
+        await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
+        await _billing.DidNotReceive().HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>());
+
+        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        log.Status.Should().Be("SENT");
+        log.Channel.Should().Be("WHATSAPP");
+    }
+
+    [Test]
+    public async Task HandleAsync_WhatsAppDisabled_CostTwo_DoesNotDeduct()
+    {
+        var orgId = Guid.CreateVersion7();
+        _creditCost.GetCost(CreditAction.WhatsAppSend).Returns(2);
+        var sut = CreateSut(whatsAppEnabled: false);
+
+        var evt = new DispatchMessageIntegrationEvent(
+            OrganizationId: orgId,
+            ToEmail: "",
+            ToPhone: "+6012",
+            Subject: "",
+            HtmlEmailBody: null,
+            PlainTextPhoneBody: "hi",
+            Channel: "WHATSAPP");
+
+        await sut.HandleAsync(evt);
+
+        await _messaging.DidNotReceive().SendMessageAsync(Arg.Any<string>(), Arg.Any<string>());
+        await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
+
+        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        log.Status.Should().Be("SKIPPED");
         log.Error.Should().Contain("WhatsApp channel disabled");
     }
 }
