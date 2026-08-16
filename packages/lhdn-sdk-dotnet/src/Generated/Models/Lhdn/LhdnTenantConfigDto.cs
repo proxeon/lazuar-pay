@@ -103,6 +103,14 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
 #else
         public string Postal { get; set; }
 #endif
+        /// <summary>Off or Auto.</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? Signing { get; set; }
+#nullable restore
+#else
+        public string Signing { get; set; }
+#endif
         /// <summary>The state property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -110,6 +118,14 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
 #nullable restore
 #else
         public string State { get; set; }
+#endif
+        /// <summary>unsigned_v1.0 or signed_v1.1_json</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? SubmissionKind { get; set; }
+#nullable restore
+#else
+        public string SubmissionKind { get; set; }
 #endif
         /// <summary>The supplier_tin property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
@@ -158,7 +174,9 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
                 { "msic_code", n => { MsicCode = n.GetStringValue(); } },
                 { "myinvois_client_id", n => { MyinvoisClientId = n.GetStringValue(); } },
                 { "postal", n => { Postal = n.GetStringValue(); } },
+                { "signing", n => { Signing = n.GetStringValue(); } },
                 { "state", n => { State = n.GetStringValue(); } },
+                { "submission_kind", n => { SubmissionKind = n.GetStringValue(); } },
                 { "supplier_tin", n => { SupplierTin = n.GetStringValue(); } },
             };
         }
@@ -183,7 +201,9 @@ namespace Lazuar.Lhdn.Sdk.Generated.Models.Lhdn
             writer.WriteStringValue("msic_code", MsicCode);
             writer.WriteStringValue("myinvois_client_id", MyinvoisClientId);
             writer.WriteStringValue("postal", Postal);
+            writer.WriteStringValue("signing", Signing);
             writer.WriteStringValue("state", State);
+            writer.WriteStringValue("submission_kind", SubmissionKind);
             writer.WriteStringValue("supplier_tin", SupplierTin);
             writer.WriteAdditionalData(AdditionalData);
         }

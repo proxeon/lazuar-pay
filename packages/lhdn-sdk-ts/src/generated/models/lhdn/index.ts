@@ -205,7 +205,9 @@ export function deserializeIntoLhdnTenantConfigDto(lhdnTenantConfigDto: Partial<
         "msic_code": n => { lhdnTenantConfigDto.msicCode = n.getStringValue(); },
         "myinvois_client_id": n => { lhdnTenantConfigDto.myinvoisClientId = n.getStringValue(); },
         "postal": n => { lhdnTenantConfigDto.postal = n.getStringValue(); },
+        "signing": n => { lhdnTenantConfigDto.signing = n.getStringValue(); },
         "state": n => { lhdnTenantConfigDto.state = n.getStringValue(); },
+        "submission_kind": n => { lhdnTenantConfigDto.submissionKind = n.getStringValue(); },
         "supplier_tin": n => { lhdnTenantConfigDto.supplierTin = n.getStringValue(); },
     }
 }
@@ -493,9 +495,17 @@ export interface LhdnTenantConfigDto extends AdditionalDataHolder, Parsable {
      */
     postal?: string | null;
     /**
+     * Off or Auto.
+     */
+    signing?: string | null;
+    /**
      * The state property
      */
     state?: string | null;
+    /**
+     * unsigned_v1.0 or signed_v1.1_json
+     */
+    submissionKind?: string | null;
     /**
      * The supplier_tin property
      */
@@ -608,7 +618,9 @@ export function serializeLhdnTenantConfigDto(writer: SerializationWriter, lhdnTe
     writer.writeStringValue("msic_code", lhdnTenantConfigDto.msicCode);
     writer.writeStringValue("myinvois_client_id", lhdnTenantConfigDto.myinvoisClientId);
     writer.writeStringValue("postal", lhdnTenantConfigDto.postal);
+    writer.writeStringValue("signing", lhdnTenantConfigDto.signing);
     writer.writeStringValue("state", lhdnTenantConfigDto.state);
+    writer.writeStringValue("submission_kind", lhdnTenantConfigDto.submissionKind);
     writer.writeStringValue("supplier_tin", lhdnTenantConfigDto.supplierTin);
     writer.writeAdditionalData(lhdnTenantConfigDto.additionalData);
 }

@@ -15,6 +15,7 @@ import "./modules/ops/routes.tsp";
 import "./modules/commerce/models.tsp";
 import "./modules/commerce/admin-routes.tsp";
 import "./modules/commerce/public-routes.tsp";
+import "./modules/commerce/integration-routes.tsp";
 
 import "./modules/communications/models.tsp";
 import "./modules/communications/admin-routes.tsp";

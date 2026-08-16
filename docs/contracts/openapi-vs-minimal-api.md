@@ -63,6 +63,7 @@ These exist on the host but are **not** required in the public TypeSpec surface,
 | `POST /messaging/notify` | Authenticated internal fan-in (not third-party product surface) |
 | `GET /messaging/delivery-logs` | Ops-adjacent messaging diagnostics |
 | `GET /public/communications/unsubscribe` | HTML email compliance link (browser GET) |
+| `POST /public/communications/unsubscribe` | RFC 8058 one-click List-Unsubscribe twin of the HTML GET |
 | `POST /public/communications/webhooks/resend` | Resend/Svix machine webhook |
 | `DELETE /admin/communications/templates/legacy-cleanup` | Temporary ops utility |
 | Host health / swagger static | Infrastructure (outside `/api/v1`; not in honesty scrape) |

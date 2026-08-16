@@ -52,6 +52,10 @@ impl_only:
     reason: HTML email compliance link (browser GET); not a typed product API
 
   - method: POST
+    path: /public/communications/unsubscribe
+    reason: RFC 8058 one-click List-Unsubscribe twin of the HTML GET; not a typed product API
+
+  - method: POST
     path: /public/communications/webhooks/resend
     reason: Resend/Svix machine webhook; provider-signed
 
