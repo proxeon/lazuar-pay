@@ -9,6 +9,10 @@ type AuthMode = "signin" | "signup";
 const LEGAL_TERMS_HREF = "/portal/legal/terms";
 const LEGAL_PRIVACY_HREF = "/portal/legal/privacy";
 
+function isSafeReturnUrl(value: string): boolean {
+  return value.startsWith("/") && !value.startsWith("//");
+}
+
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -25,6 +29,12 @@ export default function LoginPage() {
   /** When true, typing workspace name no longer overwrites a hand-edited slug */
   const [slugTouched, setSlugTouched] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const rawReturnUrl = searchParams.get("returnUrl");
+  const returnUrl = rawReturnUrl && isSafeReturnUrl(rawReturnUrl) ? rawReturnUrl : null;
+  const signupHref = returnUrl ? `/signup?returnUrl=${encodeURIComponent(returnUrl)}` : "/signup";
+  const loginHref = returnUrl ? `/login?returnUrl=${encodeURIComponent(returnUrl)}` : "/login";
+  const inviteReturn = returnUrl?.startsWith("/accept-invite") ?? false;
 
   useEffect(() => {
     localStorage.removeItem("ops_active_workspace_id");
@@ -59,12 +69,7 @@ export default function LoginPage() {
 
       if (apiError) throw new Error(apiError.detail || "Invalid credentials.");
 
-      const returnUrl = searchParams.get("returnUrl");
-      if (returnUrl) {
-        window.location.href = returnUrl;
-      } else {
-        window.location.href = "/commerce/dashboard";
-      }
+      window.location.href = returnUrl ?? "/commerce/dashboard";
     } catch (err: any) {
       setError(err.message || "Invalid credentials.");
     } finally {
@@ -118,12 +123,7 @@ export default function LoginPage() {
 
       if (registerError) throw new Error(registerError.detail || "Registration failed.");
 
-      const returnUrl = searchParams.get("returnUrl");
-      if (returnUrl) {
-        window.location.href = returnUrl;
-      } else {
-        window.location.href = "/commerce/dashboard";
-      }
+      window.location.href = returnUrl ?? "/commerce/dashboard";
     } catch (err: any) {
       setError(err.message || "Registration failed.");
     } finally {
@@ -145,7 +145,9 @@ export default function LoginPage() {
             <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <div className="text-center mb-8">
                 <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Sign in to Lazuar</h1>
-                <p className="text-[13px] text-[#71717a] mt-1.5">Welcome back to your ecosystem.</p>
+                <p className="text-[13px] text-[#71717a] mt-1.5">
+                  {inviteReturn ? "Sign in with the invited email." : "Welcome back to your ecosystem."}
+                </p>
               </div>
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -185,7 +187,7 @@ export default function LoginPage() {
               <div className="mt-8 text-center space-y-2">
                 <p className="text-[12px] text-[#71717a]">
                   Don't have an account?{" "}
-                  <Link to="/signup" className="text-[#09090b] font-semibold hover:underline">
+                  <Link to={signupHref} className="text-[#09090b] font-semibold hover:underline">
                     Sign up
                   </Link>
                 </p>
@@ -202,7 +204,11 @@ export default function LoginPage() {
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="text-center mb-8">
                 <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Create Account</h1>
-                <p className="text-[13px] text-[#71717a] mt-1.5">Register a global identity and workspace.</p>
+                <p className="text-[13px] text-[#71717a] mt-1.5">
+                  {inviteReturn
+                    ? "Sign in with the invited email."
+                    : "Register a global identity and workspace."}
+                </p>
               </div>
 
               <form onSubmit={handleSignUpSubmit} className="space-y-4">
@@ -305,7 +311,7 @@ export default function LoginPage() {
               <div className="mt-8 text-center space-y-2">
                 <p className="text-[12px] text-[#71717a]">
                   Already have an account?{" "}
-                  <Link to="/login" className="text-[#09090b] font-semibold hover:underline">
+                  <Link to={loginHref} className="text-[#09090b] font-semibold hover:underline">
                     Sign in
                   </Link>
                 </p>

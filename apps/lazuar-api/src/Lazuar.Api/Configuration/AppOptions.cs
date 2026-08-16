@@ -10,6 +10,11 @@ public sealed class AppOptions
     public string ClientUrl { get; init; } = "http://localhost:3020";
 
     /// <summary>
+    /// Staff ops console URL (workspace invite accept, typically port 3003).
+    /// </summary>
+    public string OpsUrl { get; init; } = "http://localhost:3003";
+
+    /// <summary>
     /// Base URL of the API (used for constructing webhook callback URLs and magic-link redirect URIs).
     /// </summary>
     public string ApiBaseUrl { get; init; } = "http://localhost:8080/api/v1";

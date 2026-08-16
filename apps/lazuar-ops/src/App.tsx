@@ -26,6 +26,7 @@ import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 import PaymentSettingsPage from "./modules/workspace/pages/PaymentSettingsPage";
 import EmailSettingsPage from "./modules/workspace/pages/EmailSettingsPage";
 import TeamPage from "./modules/workspace/pages/TeamPage";
+import AcceptInvitePage from "./modules/workspace/pages/AcceptInvitePage";
 import AuditLogPage from "./modules/workspace/pages/AuditLogPage";
 import DisputesPage from "./modules/commerce/pages/DisputesPage";
 import QuotesPage from "./modules/invoicing/pages/QuotesPage";
@@ -64,7 +65,7 @@ function OpsLayout() {
       try {
         const { data, error } = await client.GET("/one/auth/me");
         if (error || !data) {
-          navigate(`/login?returnUrl=${encodeURIComponent(location.pathname)}`);
+          navigate(`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`);
           return;
         }
         setUser(data);
@@ -75,7 +76,7 @@ function OpsLayout() {
       }
     }
     verifySession();
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, location.search]);
 
   const { data: entitlements, isLoading: isEntitlementsLoading } = useQuery({
     queryKey: ["entitlements"],
@@ -210,6 +211,7 @@ export default function App() {
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/signup" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route element={<OpsLayout />}>
         <Route path="/commerce/dashboard" element={<DashboardPage />} />
         <Route path="/commerce/products" element={<ProductsPage />} />

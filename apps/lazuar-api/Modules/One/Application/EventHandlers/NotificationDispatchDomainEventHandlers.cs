@@ -64,7 +64,7 @@ Welcome to Lazuar! Please verify your email address by clicking the link below:
 
     public async Task Handle(WorkspaceInvitationCreatedDomainEvent notification, CancellationToken ct)
     {
-        var acceptLink = $"{_linkService.GetClientBaseUrl()}/accept-invite?token={notification.PlainToken}";
+        var acceptLink = $"{_linkService.GetOpsBaseUrl()}/accept-invite?token={notification.PlainToken}";
         var subject = "You've been invited to join a workspace";
 
         var rawMarkdown = $@"Hi,
