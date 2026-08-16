@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Infrastructure.Dunning;
 
@@ -18,7 +19,8 @@ public partial class DunningEngineJob
         int daysOverdue,
         string effectiveActionType,
         IEventBus eventBus,
-        CancellationToken ct) =>
+        CancellationToken ct,
+        IBillingQueryService? billing = null) =>
         DunningStepDispatcher.DispatchCommunicationStepAsync(
-            db, sub, step, daysOverdue, effectiveActionType, eventBus, ct);
+            db, sub, step, daysOverdue, effectiveActionType, eventBus, ct, billing);
 }

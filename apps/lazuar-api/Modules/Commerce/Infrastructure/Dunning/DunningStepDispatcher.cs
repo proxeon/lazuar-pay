@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Modules.Billing.Contracts;
+using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
@@ -60,10 +62,14 @@ internal static class DunningStepDispatcher
         int daysOverdue,
         string effectiveActionType,
         IEventBus eventBus,
-        CancellationToken ct)
+        CancellationToken ct,
+        IBillingQueryService? billing = null)
     {
         var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
         var checkoutUrl = ResolveLiveRenewalCheckoutUrl(sub) ?? string.Empty;
+        var amount = product == null
+            ? 0m
+            : await SubscriptionBillingAmount.Gross(sub, product, billing);
 
         var payloadObj = new
         {
@@ -75,8 +81,8 @@ internal static class DunningStepDispatcher
             email_body = step.EmailBody,
             whatsapp_body = effectiveActionType == "EMAIL" ? string.Empty : step.WhatsAppBody,
             plan_name = product?.Name ?? string.Empty,
-            amount = product?.Price ?? 0m,
-            total_price = product?.Price ?? 0m,
+            amount,
+            total_price = amount,
             currency = product?.Currency ?? string.Empty,
             days_overdue = daysOverdue,
             current_period_end = sub.NextBillingDate.HasValue

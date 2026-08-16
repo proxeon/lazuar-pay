@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Infrastructure.Dunning;
 
@@ -18,9 +19,10 @@ public partial class DunningEngineJob
         List<DunningCampaign> campaigns,
         Subscription sub,
         bool whatsAppEnabled,
-        CancellationToken ct)
+        CancellationToken ct,
+        IBillingQueryService? billing = null)
     {
         var processor = new PastDueDunningProcessor(_logger);
-        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct);
+        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct, billing);
     }
 }

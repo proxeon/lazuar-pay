@@ -8,6 +8,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Application.Observability;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
@@ -48,7 +49,8 @@ public sealed class PastDueDunningProcessor
         Subscription sub,
         IReadOnlyList<DunningCampaign> campaigns,
         bool whatsAppEnabled,
-        CancellationToken ct)
+        CancellationToken ct,
+        IBillingQueryService? billing = null)
     {
         var now = DateTime.UtcNow;
         var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId);
@@ -174,7 +176,7 @@ public sealed class PastDueDunningProcessor
                     await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                         sub.OrganizationId,
                         sub.Id,
-                        Modules.Commerce.Application.SubscriptionBillingAmount.Line(sub, product),
+                        await Modules.Commerce.Application.SubscriptionBillingAmount.Gross(sub, product, billing),
                         product.Currency,
                         sub.VaultedCustomerId!,
                         sub.VaultedTokenId!,
@@ -208,7 +210,7 @@ public sealed class PastDueDunningProcessor
                     else
                     {
                         await DunningStepDispatcher.DispatchCommunicationStepAsync(
-                            db, sub, step, daysOverdue, effectiveAction, eventBus, ct);
+                            db, sub, step, daysOverdue, effectiveAction, eventBus, ct, billing);
                         _logger.LogInformation(
                             "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id} as {Action}.",
                             step.DayOffset, sub.Id, effectiveAction);

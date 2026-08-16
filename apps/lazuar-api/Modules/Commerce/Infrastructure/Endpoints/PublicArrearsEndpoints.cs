@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Application;
 using Modules.Commerce.Contracts;
 using Modules.CRM.Contracts;
@@ -27,6 +28,7 @@ public static class PublicArrearsEndpoints
         group.MapGet("/checkout/{subId:guid}/arrears", async Task<Results<Ok<ArrearsSummaryDto>, NotFound, UnauthorizedHttpResult>> (
             Guid subId,
             [FromQuery] string token,
+            HttpContext http,
             IMagicLinkTokenService tokenService,
             ICommerceRepository repository,
             [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory sqlFactory) =>
@@ -39,8 +41,8 @@ public static class PublicArrearsEndpoints
             using var connection = sqlFactory.CreateConnection();
             var query = @"
                 SELECT p.""Name"" as ProductName,
-                       (CASE WHEN s.""UnitAmount"" > 0 THEN s.""UnitAmount"" ELSE p.""Price"" END)
-                           * GREATEST(s.""Quantity"", 1) as Amount,
+                       s.""OrganizationId"", s.""UnitAmount"", s.""Quantity"", p.""Price"",
+                       p.""SstTaxType"", p.""SstRatePercent"",
                        p.""Currency"", s.""Status"",
                        p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
@@ -51,10 +53,13 @@ public static class PublicArrearsEndpoints
                 connection, query, new { SubId = subId });
             if (row == null) return TypedResults.NotFound();
 
+            var billing = http.RequestServices.GetService<IBillingQueryService>();
+            var amount = await ResolveGrossAsync(billing, row.OrganizationId, row.UnitAmount, row.Quantity, row.Price, row.SstTaxType, row.SstRatePercent);
+
             var dto = new ArrearsSummaryDto
             {
                 Product_name = row.ProductName,
-                Amount = (double)row.Amount,
+                Amount = (double)amount,
                 Currency = row.Currency,
                 Status = row.Status,
                 Is_reminder_only = PaymentGatewayCapabilities.IsReminderOnlyGateway(row.ProductGatewayName)
@@ -71,7 +76,8 @@ public static class PublicArrearsEndpoints
             IMagicLinkTokenService tokenService,
             ICommerceRepository repository,
             IMediator mediator,
-            IConfiguration config) =>
+            IConfiguration config,
+            HttpContext http) =>
         {
             if (!await ArrearsAccess.IsAuthorizedAsync(tokenService, repository, token, subId))
             {
@@ -84,8 +90,8 @@ public static class PublicArrearsEndpoints
                 SELECT s.""OrganizationId"", s.""ProductId"", s.""ClientProfileId"", s.""Status"", s.""CurrentDunningCampaignId"",
                        s.""CurrentRenewalCheckoutUrl"", s.""CurrentRenewalCheckoutForDate"", s.""NextBillingDate"",
                        p.""Name"" as ProductName,
-                       (CASE WHEN s.""UnitAmount"" > 0 THEN s.""UnitAmount"" ELSE p.""Price"" END)
-                           * GREATEST(s.""Quantity"", 1) as Price,
+                       s.""UnitAmount"", s.""Quantity"", p.""Price"",
+                       p.""SstTaxType"", p.""SstRatePercent"",
                        p.""Currency"", p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
@@ -134,7 +140,17 @@ public static class PublicArrearsEndpoints
             var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}?token={token}";
 
             var isActiveUpdate = sub.Status == "ACTIVE";
-            var chargeAmount = isActiveUpdate ? 1m : sub.Price;
+            var billing = http.RequestServices.GetService<IBillingQueryService>();
+            var chargeAmount = isActiveUpdate
+                ? 1m
+                : await ResolveGrossAsync(
+                    billing,
+                    sub.OrganizationId,
+                    sub.UnitAmount,
+                    sub.Quantity,
+                    sub.Price,
+                    sub.SstTaxType,
+                    sub.SstRatePercent);
 
             var metadata = new Dictionary<string, string>
             {
@@ -198,10 +214,29 @@ public static class PublicArrearsEndpoints
         return group;
     }
 
+    private static async Task<decimal> ResolveGrossAsync(
+        IBillingQueryService? billing,
+        Guid organizationId,
+        decimal unitAmount,
+        int quantity,
+        decimal productPrice,
+        string? sstTaxType,
+        decimal sstRatePercent)
+    {
+        var unitNet = unitAmount > 0 ? unitAmount : productPrice;
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, organizationId);
+        return SubscriptionBillingAmount.Gross(unitNet, quantity, sstTaxType, sstRatePercent, merchantHasSst);
+    }
+
     private sealed class ArrearsGetRow
     {
         public string ProductName { get; init; } = "";
-        public decimal Amount { get; init; }
+        public Guid OrganizationId { get; init; }
+        public decimal UnitAmount { get; init; }
+        public int Quantity { get; init; }
+        public decimal Price { get; init; }
+        public string? SstTaxType { get; init; }
+        public decimal SstRatePercent { get; init; }
         public string Currency { get; init; } = "";
         public string Status { get; init; } = "";
         public string? ProductGatewayName { get; init; }
@@ -221,7 +256,11 @@ public static class PublicArrearsEndpoints
         public DateTime? CurrentRenewalCheckoutForDate { get; init; }
         public DateTime? NextBillingDate { get; init; }
         public string ProductName { get; init; } = "";
+        public decimal UnitAmount { get; init; }
+        public int Quantity { get; init; }
         public decimal Price { get; init; }
+        public string? SstTaxType { get; init; }
+        public decimal SstRatePercent { get; init; }
         public string Currency { get; init; } = "";
         public string? ProductGatewayName { get; init; }
     }

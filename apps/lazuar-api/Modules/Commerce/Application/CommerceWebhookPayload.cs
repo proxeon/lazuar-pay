@@ -24,7 +24,8 @@ public static class CommerceWebhookPayload
         string? customerEmail,
         string status,
         bool? isFirstPayment = null,
-        string? checkoutUrl = null)
+        string? checkoutUrl = null,
+        bool merchantHasSst = false)
     {
         var metadata = CommerceCheckoutMetadata.Deserialize(sub.MetadataJson);
         return Build(
@@ -35,7 +36,7 @@ public static class CommerceWebhookPayload
             sub.NextBillingDate,
             sub.CurrentPeriodEnd,
             customerEmail,
-            status == "TRIALING" ? 0m : LineAmount(sub, product),
+            status == "TRIALING" ? 0m : LineAmount(sub, product, merchantHasSst),
             product?.Currency,
             product?.Interval,
             metadata,
@@ -43,15 +44,19 @@ public static class CommerceWebhookPayload
             checkoutUrl ?? sub.CurrentRenewalCheckoutUrl);
     }
 
-    private static decimal? LineAmount(Subscription sub, Product? product)
+    private static decimal? LineAmount(Subscription sub, Product? product, bool merchantHasSst)
     {
-        if (product == null && sub.UnitAmount <= 0)
+        if (product == null)
         {
-            return null;
+            if (sub.UnitAmount <= 0)
+            {
+                return null;
+            }
+
+            return sub.UnitAmount * Math.Max(1, sub.Quantity);
         }
 
-        var unit = sub.UnitAmount > 0 ? sub.UnitAmount : product?.Price ?? 0m;
-        return unit * Math.Max(1, sub.Quantity);
+        return SubscriptionBillingAmount.Gross(sub, product, merchantHasSst);
     }
 
     public static JsonElement Build(

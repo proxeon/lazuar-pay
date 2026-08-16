@@ -21,6 +21,7 @@ using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.Workers;
+using Modules.Billing.Contracts;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts.Events;
@@ -42,6 +43,7 @@ public class BillingEngineJobTests
     private ICrmQueryService _crm = null!;
     private IOneQueryService _one = null!;
     private IMagicLinkTokenService _tokens = null!;
+    private IBillingQueryService _billing = null!;
     private Guid _orgId = Guid.Empty;
 
     [SetUp]
@@ -62,6 +64,8 @@ public class BillingEngineJobTests
         _one = Substitute.For<IOneQueryService>();
         _tokens = Substitute.For<IMagicLinkTokenService>();
         _tokens.GenerateToken(Arg.Any<Guid>()).Returns("mint-token");
+        _billing = Substitute.For<IBillingQueryService>();
+        _billing.GetBillingProfileAsync(Arg.Any<Guid>()).Returns((TenantBillingProfileDto?)null);
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -76,6 +80,7 @@ public class BillingEngineJobTests
         services.AddSingleton(_crm);
         services.AddSingleton(_one);
         services.AddSingleton(_tokens);
+        services.AddSingleton(_billing);
         services.AddSingleton<IConfiguration>(config);
         _sp = services.BuildServiceProvider();
 
@@ -746,6 +751,33 @@ public class BillingEngineJobTests
 
         await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
             e.SubscriptionId == sub.Id && e.Amount == 150m));
+    }
+
+    [Test]
+    public async Task RunOnce_SstStub_OffSessionChargesGross108()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        product.SetSst("02", 8m);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), false, 1, 100m);
+        sub.StoreVaultedToken("cus_sst", "pm_sst");
+
+        _billing.GetBillingProfileAsync(_orgId).Returns(new TenantBillingProfileDto
+        {
+            Legal_name = "Acme",
+            Tin = "C12345678901",
+            Sst_registration_number = "W10-1234-12345678"
+        });
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        sub.UnitAmount.Should().Be(100m);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sub.Id && e.Amount == 108m));
     }
 
     private void ArrangeMint(string email, string checkoutUrl)

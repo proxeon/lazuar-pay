@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
@@ -27,19 +28,22 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
     private readonly ICrmQueryService _crmQueryService;
     private readonly ILogger<GatewayPaymentFailedIntegrationEventHandler> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IBillingQueryService? _billingQueryService;
 
     public GatewayPaymentFailedIntegrationEventHandler(
         CommerceDbContext dbContext,
         [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
         ICrmQueryService crmQueryService,
         ILogger<GatewayPaymentFailedIntegrationEventHandler> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IBillingQueryService? billingQueryService = null)
     {
         _dbContext = dbContext;
         _eventBus = eventBus;
         _crmQueryService = crmQueryService;
         _logger = logger;
         _configuration = configuration;
+        _billingQueryService = billingQueryService;
     }
 
     public async Task HandleAsync(GatewayPaymentFailedIntegrationEvent @event)
@@ -88,7 +92,8 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(_dbContext, CancellationToken.None);
         var whatsAppEnabled = _configuration.GetValue("Messaging:WhatsAppEnabled", false);
         var processor = new PastDueDunningProcessor(_logger);
-        await processor.ProcessAsync(_dbContext, _eventBus, sub, campaigns, whatsAppEnabled, CancellationToken.None);
+        await processor.ProcessAsync(
+            _dbContext, _eventBus, sub, campaigns, whatsAppEnabled, CancellationToken.None, _billingQueryService);
 
         if (becamePastDue)
         {
@@ -104,7 +109,10 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == sub.ProductId);
         var profile = await _crmQueryService.GetClientProfileAsync(sub.ClientProfileId);
-        var payload = CommerceWebhookPayload.From(sub, product, profile?.Email, "PAST_DUE");
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+            _billingQueryService, sub.OrganizationId);
+        var payload = CommerceWebhookPayload.From(
+            sub, product, profile?.Email, "PAST_DUE", merchantHasSst: merchantHasSst);
 
         await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
             sub.OrganizationId, TargetUrl: null, "subscription.past_due", payload));

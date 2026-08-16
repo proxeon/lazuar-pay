@@ -7,6 +7,7 @@ using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
@@ -35,6 +36,7 @@ public partial class DunningEngineJob
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
             var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("CommerceEventBus");
+            var billing = scope.ServiceProvider.GetService<IBillingQueryService>();
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             Subscription? sub;
@@ -63,11 +65,11 @@ public partial class DunningEngineJob
                 {
                     if (mode == ClaimMode.PreDunning)
                     {
-                        await ProcessPreDunningSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct);
+                        await ProcessPreDunningSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct, billing);
                     }
                     else
                     {
-                        await ProcessPastDueSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct);
+                        await ProcessPastDueSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct, billing);
                     }
 
                     await db.SaveChangesAsync(ct);

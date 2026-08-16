@@ -19,6 +19,7 @@ using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Infrastructure.Dunning;
+using Modules.Billing.Contracts;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts;
@@ -78,6 +79,7 @@ public class BillingEngineJob : BackgroundService
             var one = scope.ServiceProvider.GetService<IOneQueryService>();
             var config = scope.ServiceProvider.GetService<IConfiguration>();
             var tokens = scope.ServiceProvider.GetService<IMagicLinkTokenService>();
+            var billing = scope.ServiceProvider.GetService<IBillingQueryService>();
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             try
@@ -101,7 +103,7 @@ public class BillingEngineJob : BackgroundService
 
                 try
                 {
-                    await ProcessOneSubscriptionAsync(db, eventBus, crm, mediator, one, config, tokens, sub, failedIds, ct);
+                    await ProcessOneSubscriptionAsync(db, eventBus, crm, mediator, one, config, tokens, billing, sub, failedIds, ct);
                     await db.SaveChangesAsync(ct);
                     if (tx != null) await tx.CommitAsync(ct);
                 }
@@ -174,6 +176,7 @@ public class BillingEngineJob : BackgroundService
         IOneQueryService? one,
         IConfiguration? config,
         IMagicLinkTokenService? tokens,
+        IBillingQueryService? billing,
         Subscription sub,
         HashSet<Guid> failedIds,
         CancellationToken ct)
@@ -239,7 +242,8 @@ public class BillingEngineJob : BackgroundService
         }
 
         sub.ApplyPendingQuantity();
-        var chargeAmount = SubscriptionBillingAmount.Line(sub, product);
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, sub.OrganizationId);
+        var chargeAmount = SubscriptionBillingAmount.Gross(sub, product, merchantHasSst);
 
         var canCharge = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
                         && !sub.IsReminderOnly
@@ -304,14 +308,16 @@ public class BillingEngineJob : BackgroundService
                     "Cannot mint a renewal checkout: IMediator, IOneQueryService, and IMagicLinkTokenService are required.");
             }
 
-            checkoutUrl = await RenewalCheckoutIssuer.MintAsync(mediator, one, config, tokens, sub, product, email, ct);
+            checkoutUrl = await RenewalCheckoutIssuer.MintAsync(
+                mediator, one, config, tokens, sub, product, email, ct, billing);
             sub.SetCurrentRenewalCheckout(checkoutUrl, sub.NextBillingDate!.Value);
         }
 
         sub.MarkAsPastDue();
-        await StartPastDueDunningRunAsync(db, eventBus, config, sub, ct);
+        await StartPastDueDunningRunAsync(db, eventBus, config, billing, sub, ct);
 
-        var payloadElement = CommerceWebhookPayload.From(sub, product, email, "PAST_DUE", checkoutUrl: checkoutUrl);
+        var payloadElement = CommerceWebhookPayload.From(
+            sub, product, email, "PAST_DUE", checkoutUrl: checkoutUrl, merchantHasSst: merchantHasSst);
 
         foreach (var target in product.FulfillmentTargets)
         {
@@ -335,6 +341,7 @@ public class BillingEngineJob : BackgroundService
         CommerceDbContext db,
         IEventBus eventBus,
         IConfiguration? config,
+        IBillingQueryService? billing,
         Subscription sub,
         CancellationToken ct)
     {
@@ -342,6 +349,6 @@ public class BillingEngineJob : BackgroundService
         var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(db, ct);
         var whatsAppEnabled = config?.GetValue("Messaging:WhatsAppEnabled", false) ?? false;
         var processor = new PastDueDunningProcessor(_logger);
-        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct);
+        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct, billing);
     }
 }

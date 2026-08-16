@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Contracts.Events;
 using Modules.CRM.Contracts;
 
@@ -17,15 +18,18 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
     private readonly IEventBus _eventBus;
     private readonly ICommerceRepository _repository;
     private readonly ICrmQueryService _crmQueryService;
+    private readonly IBillingQueryService? _billingQueryService;
 
     public SubscriptionLifecycleIntegrationEventHandlers(
         [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
         ICommerceRepository repository,
-        ICrmQueryService crmQueryService)
+        ICrmQueryService crmQueryService,
+        IBillingQueryService? billingQueryService = null)
     {
         _eventBus = eventBus;
         _repository = repository;
         _crmQueryService = crmQueryService;
+        _billingQueryService = billingQueryService;
     }
 
     public Task HandleAsync(SubscriptionActivatedIntegrationEvent @event) =>
@@ -103,7 +107,10 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         if (sub != null)
         {
             var payloadStatus = eventType == "subscription.activated" ? sub.Status : status;
-            return CommerceWebhookPayload.From(sub, product, email, payloadStatus, isFirstPayment);
+            var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+                _billingQueryService, sub.OrganizationId);
+            return CommerceWebhookPayload.From(
+                sub, product, email, payloadStatus, isFirstPayment, merchantHasSst: merchantHasSst);
         }
 
         return CommerceWebhookPayload.Build(

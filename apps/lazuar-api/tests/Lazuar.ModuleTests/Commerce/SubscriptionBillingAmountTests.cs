@@ -1,0 +1,90 @@
+using System;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Lazuar.ApiTypes;
+using Modules.Billing.Contracts;
+using Modules.Commerce.Application;
+using Modules.Commerce.Domain.Aggregates;
+using Modules.Commerce.Domain.ValueObjects;
+using NSubstitute;
+using NUnit.Framework;
+
+namespace Lazuar.ModuleTests.Commerce;
+
+[TestFixture]
+public class SubscriptionBillingAmountTests
+{
+    [Test]
+    public async Task Gross_SstRegistered_Unit100_Rate8_Is108()
+    {
+        var (sub, product) = Create(unitAmount: 100m, quantity: 1);
+        var billing = SstBilling(sub.OrganizationId, "W10-1234-12345678");
+
+        (await SubscriptionBillingAmount.Gross(sub, product, billing)).Should().Be(108m);
+
+        var breakdown = await SubscriptionBillingAmount.GrossBreakdown(sub, product, billing);
+        breakdown.UnitNet.Should().Be(100m);
+        breakdown.UnitTax.Should().Be(8m);
+        breakdown.UnitGross.Should().Be(108m);
+        breakdown.Seats.Should().Be(1);
+        breakdown.Gross.Should().Be(108m);
+        breakdown.TaxType.Should().Be("02");
+        sub.UnitAmount.Should().Be(100m);
+    }
+
+    [Test]
+    public async Task Gross_SstRegistered_Qty3_Is324()
+    {
+        var (sub, product) = Create(unitAmount: 100m, quantity: 3);
+        var billing = SstBilling(sub.OrganizationId, "W10-1234-12345678");
+
+        (await SubscriptionBillingAmount.Gross(sub, product, billing)).Should().Be(324m);
+        (await SubscriptionBillingAmount.GrossBreakdown(sub, product, billing)).Gross.Should().Be(324m);
+        SubscriptionBillingAmount.Line(sub, product).Should().Be(300m);
+        sub.UnitAmount.Should().Be(100m);
+    }
+
+    [Test]
+    public async Task Gross_NoSst_Is100()
+    {
+        var (sub, product) = Create(unitAmount: 100m, quantity: 1);
+
+        (await SubscriptionBillingAmount.Gross(sub, product, billing: null)).Should().Be(100m);
+        SubscriptionBillingAmount.Line(sub, product).Should().Be(100m);
+        sub.UnitAmount.Should().Be(100m);
+    }
+
+    private static (Subscription Sub, Product Product) Create(decimal unitAmount, int quantity)
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = new Product(
+            orgId,
+            "Plan",
+            $"plan-{Guid.CreateVersion7():N}"[..20],
+            unitAmount,
+            "FIXED",
+            0m,
+            "MYR",
+            "mo",
+            "STRIPE",
+            new CheckoutConfiguration(false, false, false),
+            Array.Empty<string>());
+        product.SetSst("02", 8m);
+
+        var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1), false, quantity, unitAmount);
+        return (sub, product);
+    }
+
+    private static IBillingQueryService SstBilling(Guid organizationId, string sstNumber)
+    {
+        var billing = Substitute.For<IBillingQueryService>();
+        billing.GetBillingProfileAsync(organizationId).Returns(new TenantBillingProfileDto
+        {
+            Legal_name = "Acme",
+            Tin = "C12345678901",
+            Sst_registration_number = sstNumber
+        });
+        return billing;
+    }
+}

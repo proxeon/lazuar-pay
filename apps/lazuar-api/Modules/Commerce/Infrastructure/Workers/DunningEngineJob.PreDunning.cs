@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.Logging;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
@@ -19,7 +20,8 @@ public partial class DunningEngineJob
         List<DunningCampaign> campaigns,
         Subscription sub,
         bool whatsAppEnabled,
-        CancellationToken ct)
+        CancellationToken ct,
+        IBillingQueryService? billing = null)
     {
         var now = DateTime.UtcNow;
         var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId);
@@ -52,7 +54,7 @@ public partial class DunningEngineJob
                 continue;
             }
 
-            await DispatchCommunicationStepAsync(db, sub, step, daysOverdue: 0, effectiveAction, eventBus, ct);
+            await DispatchCommunicationStepAsync(db, sub, step, daysOverdue: 0, effectiveAction, eventBus, ct, billing);
             sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
             _logger.LogInformation(
                 "Dispatched pre-dunning step DayOffset={DayOffset} ({StepId}) for Subscription {SubId} as {Action}.",

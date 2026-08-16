@@ -227,16 +227,14 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         }
 
         var unitNet = isTrial ? 0m : Math.Max(0, resolved.Amount - unitDiscount);
-        var merchantHasSst = false;
-        if (_billingQueryService != null)
-        {
-            var profile = await _billingQueryService.GetBillingProfileAsync(tenantId.Value);
-            merchantHasSst = !string.IsNullOrWhiteSpace(profile?.Sst_registration_number);
-        }
-
-        var (sstType, unitTax) = SstTaxMath.Compute(product.SstTaxType, product.SstRatePercent, unitNet, merchantHasSst);
-        var unitGross = unitNet + unitTax;
-        var lineNet = unitGross * quantity;
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+            _billingQueryService, tenantId.Value);
+        var breakdown = SubscriptionBillingAmount.GrossBreakdown(
+            unitNet, quantity, product.SstTaxType, product.SstRatePercent, merchantHasSst);
+        var sstType = breakdown.TaxType;
+        var unitTax = breakdown.UnitTax;
+        var unitGross = breakdown.UnitGross;
+        var lineNet = breakdown.Gross;
 
         var session = new CheckoutSession(
             tenantId.Value,

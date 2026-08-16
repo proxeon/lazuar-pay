@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.Extensions.Configuration;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Contracts;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.One.Contracts;
@@ -24,7 +25,8 @@ public static class RenewalCheckoutIssuer
         Subscription sub,
         Product product,
         string customerEmail,
-        CancellationToken ct)
+        CancellationToken ct,
+        IBillingQueryService? billing = null)
     {
         ArgumentNullException.ThrowIfNull(mediator);
         ArgumentNullException.ThrowIfNull(one);
@@ -51,7 +53,7 @@ public static class RenewalCheckoutIssuer
 
         var url = await mediator.Send(new GenerateCheckoutSessionQuery(
             sub.OrganizationId,
-            SubscriptionBillingAmount.Line(sub, product),
+            await SubscriptionBillingAmount.Gross(sub, product, billing),
             product.Currency,
             product.Name,
             customerEmail,
