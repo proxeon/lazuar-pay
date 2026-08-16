@@ -124,6 +124,11 @@ export default function PaymentSettingsPage() {
       return;
     }
 
+    if (gatewayType === "XENDIT" && !hasApiKey && !apiKey.trim()) {
+      toast.error("API Key is required for first-time Xendit configuration.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const { error } = await client.PUT("/platform/payment-config", {
@@ -202,7 +207,7 @@ export default function PaymentSettingsPage() {
                       <option value="CHIP">CHIP Collect (Malaysia)</option>
                       <option value="BILLPLZ">Billplz (Malaysia)</option>
                       <option value="STRIPE">Stripe (Global)</option>
-                      <option value="RAZORPAY">Razorpay / Curlec (MY e-mandate + cards)</option>
+                      <option value="RAZORPAY">Razorpay / Curlec (cards; reminder-only until token soak)</option>
                       <option value="XENDIT">Xendit (SEA hosted invoice + wallets)</option>
                     </select>
                   </div>
@@ -367,6 +372,39 @@ export default function PaymentSettingsPage() {
                         placeholder={hasWebhookSecret ? "Leave blank to keep existing" : "Your custom webhook secret"}
                         className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]"
                       />
+                    </div>
+                  </>
+                )}
+
+                {gatewayType === "XENDIT" && (
+                  <>
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-none text-[12px] text-amber-900 leading-relaxed">
+                      <strong>Hosted invoice only.</strong> Xendit is reminder-only. We create a hosted invoice and email the link. No silent auto-charge, no FPX e-mandate.
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">
+                        Secret API Key{hasApiKey ? ` · stored ${apiKeyHint ?? ""}` : ""}
+                      </label>
+                      <input
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder={hasApiKey ? "Leave blank to keep existing" : "xnd_development_… or xnd_production_…"}
+                        className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[#09090b]">
+                        Callback token (x-callback-token){hasWebhookSecret ? ` · stored ${webhookHint ?? ""}` : ""}
+                      </label>
+                      <input
+                        type="password"
+                        value={webhookSecret}
+                        onChange={(e) => setWebhookSecret(e.target.value)}
+                        placeholder={hasWebhookSecret ? "Leave blank to keep existing" : "Xendit dashboard callback token"}
+                        className="w-full h-10 border border-[#e5e5e5] px-3 font-mono text-[13px] focus:outline-none focus:border-[#09090b]"
+                      />
+                      <p className="text-[10px] text-[#a1a1aa] mt-1">Must match the x-callback-token Xendit sends on invoice webhooks.</p>
                     </div>
                   </>
                 )}
