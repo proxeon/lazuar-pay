@@ -37,9 +37,14 @@ public class ResolveClientProfileCommandHandler : ICommandHandler<ResolveClientP
                 existingProfile.Phone = phoneNormalized;
                 isModified = true;
             }
+            if (string.IsNullOrWhiteSpace(existingProfile.CompanyName) && !string.IsNullOrWhiteSpace(request.CompanyName))
+            {
+                existingProfile.CompanyName = request.CompanyName.Trim();
+                isModified = true;
+            }
             if (string.IsNullOrWhiteSpace(existingProfile.Tin) && !string.IsNullOrWhiteSpace(request.Tin))
             {
-                existingProfile.Tin = request.Tin;
+                existingProfile.Tin = request.Tin.Trim();
                 isModified = true;
             }
             if (string.IsNullOrWhiteSpace(existingProfile.IdType) && !string.IsNullOrWhiteSpace(request.IdType))
@@ -95,7 +100,8 @@ public class ResolveClientProfileCommandHandler : ICommandHandler<ResolveClientP
             FullName = request.FullName.Trim(),
             Email = emailNormalized,
             Phone = phoneNormalized,
-            Tin = request.Tin,
+            CompanyName = string.IsNullOrWhiteSpace(request.CompanyName) ? null : request.CompanyName.Trim(),
+            Tin = string.IsNullOrWhiteSpace(request.Tin) ? null : request.Tin.Trim(),
             IdType = request.IdType,
             IdValue = request.IdValue,
             Address = address,

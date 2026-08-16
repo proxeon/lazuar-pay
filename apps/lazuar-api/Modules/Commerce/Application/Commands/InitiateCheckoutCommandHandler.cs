@@ -13,6 +13,7 @@ using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts.Queries;
 using Modules.Communications.Contracts;
+using Modules.Billing.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -23,19 +24,22 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
     private readonly IMediator _mediator;
     private readonly IConfiguration _configuration;
     private readonly ICommunicationsQueryService _communicationsQueryService;
+    private readonly IBillingQueryService? _billingQueryService;
 
     public InitiateCheckoutCommandHandler(
         IOneQueryService oneQueryService,
         ICommerceRepository repository,
         IMediator mediator,
         IConfiguration configuration,
-        ICommunicationsQueryService communicationsQueryService)
+        ICommunicationsQueryService communicationsQueryService,
+        IBillingQueryService? billingQueryService = null)
     {
         _oneQueryService = oneQueryService;
         _repository = repository;
         _mediator = mediator;
         _configuration = configuration;
         _communicationsQueryService = communicationsQueryService;
+        _billingQueryService = billingQueryService;
     }
 
     public async Task<CheckoutResultDto> Handle(InitiateCheckoutCommand request, CancellationToken ct)
@@ -100,8 +104,40 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             {
                 { "type", "custom_payment_link" },
                 { "subscription_id", existingSession.Id.ToString() },
-                { "tenant_id", tenantId.Value.ToString() }
+                { "tenant_id", tenantId.Value.ToString() },
+                { "is_b2b_required", existingSession.IsB2bRequired ? "true" : "false" }
             };
+
+            if (existingSession.IsB2bRequired)
+            {
+                if (string.IsNullOrWhiteSpace(request.TaxId))
+                {
+                    throw new InvalidOperationException("This payment request requires a tax ID.");
+                }
+
+                BillingAddressDto? customBillingAddress = null;
+                if (!string.IsNullOrEmpty(request.AddressLine1))
+                {
+                    customBillingAddress = new BillingAddressDto
+                    {
+                        Line1 = request.AddressLine1,
+                        City = request.City ?? "",
+                        Postal_code = request.PostalCode ?? "",
+                        State_code = request.StateCode ?? "",
+                        Country_code = request.CountryCode ?? "MYS"
+                    };
+                }
+
+                await _mediator.Send(new ResolveClientProfileCommand(
+                    tenantId.Value,
+                    request.Name,
+                    request.Email,
+                    request.Phone ?? "",
+                    request.TaxId,
+                    null,
+                    request.CompanyName,
+                    customBillingAddress), ct);
+            }
 
             // Prefer gateway stored on the custom session; Payments falls back to first active → BILLPLZ.
             var customGatewayQuery = new GenerateCheckoutSessionQuery(
@@ -119,6 +155,8 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             );
 
             var customCheckoutUrl = await _mediator.Send(customGatewayQuery, ct);
+            existingSession.SetGatewayCheckoutUrl(customCheckoutUrl);
+            await _repository.SaveChangesAsync(ct);
             return new CheckoutResultDto(customCheckoutUrl, false);
         }
 
@@ -150,10 +188,11 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             request.Name,
             request.Email,
             request.Phone ?? "",
-            request.TaxId,
-            null,
-            request.CompanyName,
-            billingAddress
+            Tin: request.TaxId,
+            IdType: request.IdType,
+            IdValue: request.IdValue,
+            BillingAddress: billingAddress,
+            CompanyName: request.CompanyName
         );
 
         var clientProfileId = await _mediator.Send(resolveCrmProfileCmd, ct);
@@ -176,7 +215,16 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         }
 
         var unitNet = Math.Max(0, product.Price - unitDiscount);
-        var lineNet = unitNet * quantity;
+        var merchantHasSst = false;
+        if (_billingQueryService != null)
+        {
+            var profile = await _billingQueryService.GetBillingProfileAsync(tenantId.Value);
+            merchantHasSst = !string.IsNullOrWhiteSpace(profile?.Sst_registration_number);
+        }
+
+        var (sstType, unitTax) = SstTaxMath.Compute(product.SstTaxType, product.SstRatePercent, unitNet, merchantHasSst);
+        var unitGross = unitNet + unitTax;
+        var lineNet = unitGross * quantity;
 
         var session = new CheckoutSession(
             tenantId.Value,
@@ -187,7 +235,12 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             quantity
         );
 
+        var isB2bRequired = !string.IsNullOrWhiteSpace(request.TaxId);
         var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, product.Interval);
+        if (isB2bRequired)
+        {
+            persistMeta["is_b2b_required"] = "true";
+        }
         session.SetMetadataJson(CommerceCheckoutMetadata.Serialize(persistMeta));
         session.SetIdempotency(idempotencyKey, fingerprint);
 
@@ -235,17 +288,25 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             var metadata = CommerceCheckoutMetadata.MergeClientIntoGateway(
                 request.Metadata,
                 tenantId.Value,
-                session.Id);
+                session.Id,
+                isB2bRequired);
+            metadata["client_profile_id"] = clientProfileId.ToString();
+            if (unitTax > 0)
+            {
+                metadata["sst_tax_type"] = sstType;
+                metadata["sst_tax_amount"] = (unitTax * quantity).ToString("0.00");
+                metadata["sst_rate_percent"] = product.SstRatePercent.ToString("0.##");
+            }
 
             // Product gateway when set; Payments resolves first active → BILLPLZ if blank (legacy rows).
             var preferredGateway = string.IsNullOrWhiteSpace(product.GatewayName)
                 ? null
                 : product.GatewayName;
 
-            // Amount is unit net; adapters multiply by Quantity. Do not pre-multiply.
+            // Amount is unit price (net + SST); adapters multiply by Quantity. Do not pre-multiply.
             var gatewayQuery = new GenerateCheckoutSessionQuery(
                 tenantId.Value,
-                unitNet,
+                unitGross,
                 product.Currency,
                 product.Name,
                 request.Email,
@@ -281,6 +342,16 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         if (config.RequiresTaxId && string.IsNullOrWhiteSpace(request.TaxId))
         {
             throw new InvalidOperationException("This product requires a tax ID at checkout.");
+        }
+
+        if (config.RequiresTaxId && (string.IsNullOrWhiteSpace(request.IdType) || string.IsNullOrWhiteSpace(request.IdValue)))
+        {
+            throw new InvalidOperationException("This product requires buyer ID type and ID value (BRN / NRIC / PASSPORT / ARMY).");
+        }
+
+        if (config.RequiresTaxId && string.IsNullOrWhiteSpace(request.CompanyName))
+        {
+            throw new InvalidOperationException("This product requires a company name at checkout.");
         }
 
         if (config.RequiresAddress)

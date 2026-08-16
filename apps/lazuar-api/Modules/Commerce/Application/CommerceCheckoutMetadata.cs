@@ -42,7 +42,8 @@ public static class CommerceCheckoutMetadata
     public static Dictionary<string, string> MergeClientIntoGateway(
         IReadOnlyDictionary<string, string>? client,
         Guid tenantId,
-        Guid sessionId)
+        Guid sessionId,
+        bool isB2bRequired = false)
     {
         var result = CopyClient(client);
 
@@ -58,6 +59,10 @@ public static class CommerceCheckoutMetadata
 
         result["subscription_id"] = sessionId.ToString();
         result["tenant_id"] = tenantId.ToString();
+        if (isB2bRequired)
+        {
+            result["is_b2b_required"] = "true";
+        }
         return result;
     }
 

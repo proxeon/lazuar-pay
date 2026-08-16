@@ -10,6 +10,7 @@ public class ClientProfileEntity : Entity, IMustHaveTenant
     public string FullName { get; set; } = "";
     public string Email { get; set; } = "";
     public string Phone { get; set; } = "";
+    public string? CompanyName { get; set; }
     public string? Tin { get; set; }
     public string? IdType { get; set; }
     public string? IdValue { get; set; }
@@ -28,6 +29,7 @@ public class ClientProfileEntity : Entity, IMustHaveTenant
         FullName = "Anonymized User";
         Email = $"deleted_{Id}@localhost";
         Phone = "";
+        CompanyName = null;
         Tin = null;
         IdType = null;
         IdValue = null;

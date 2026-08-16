@@ -42,7 +42,21 @@ export default function ProductForm({
   const [gatewayName, setGatewayName] = useState(initialData?.gateway_name || "");
 
   const [reqAddress, setReqAddress] = useState(initialData?.checkout_configuration?.requires_address ?? false);
+  const [reqTaxId, setReqTaxId] = useState(initialData?.checkout_configuration?.requires_tax_id ?? false);
   const [reqPhone, setReqPhone] = useState(initialData?.checkout_configuration?.requires_phone ?? false);
+  const [sstType, setSstType] = useState(initialData?.sst_tax_type || "06");
+  const [sstRate, setSstRate] = useState(initialData?.sst_rate_percent ?? 0);
+
+  const { data: billingProfile } = useQuery({
+    queryKey: ["billing-profile"],
+    queryFn: async () => {
+      const { data, error, response } = await client.GET("/admin/billing/profile");
+      if (response.status === 404) return null;
+      if (error) throw new Error(error.detail);
+      return data;
+    }
+  });
+  const hasSst = !!billingProfile?.sst_registration_number;
 
   const [isActive, setIsActive] = useState(initialData?.is_active ?? hasValidEmailConfig);
 
@@ -77,8 +91,10 @@ export default function ProductForm({
       gateway_name: gatewayName,
       is_active: isActive,
       requires_address: reqAddress,
-      requires_tax_id: false,
+      requires_tax_id: reqTaxId,
       requires_phone: reqPhone,
+      sst_tax_type: hasSst ? sstType : "06",
+      sst_rate_percent: hasSst && sstType === "02" ? Number(sstRate) : 0,
       fulfillment_targets: targets, 
     });
   };
@@ -179,10 +195,46 @@ export default function ProductForm({
               <input type="checkbox" checked={reqAddress} onChange={e => setReqAddress(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require Full Billing Address</span>
             </label>
+            <label className="flex items-start gap-2 cursor-pointer w-fit">
+              <input type="checkbox" checked={reqTaxId} onChange={e => setReqTaxId(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b] mt-0.5" />
+              <span>
+                <span className="text-[12px] font-medium text-[#09090b] block">Require Company Name &amp; Tax ID (LHDN B2B)</span>
+                <span className="text-[11px] text-[#71717a] block mt-0.5">Collects buyer company + TIN. We do not validate the TIN at checkout.</span>
+              </span>
+            </label>
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={reqPhone} onChange={e => setReqPhone(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require WhatsApp Number</span>
             </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <label className="space-y-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">SST on this product</span>
+                <select
+                  value={hasSst ? sstType : "06"}
+                  onChange={e => setSstType(e.target.value)}
+                  disabled={isPending || !hasSst}
+                  className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
+                >
+                  <option value="06">06 — Not applicable</option>
+                  <option value="02">02 — Service Tax</option>
+                </select>
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">SST rate %</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  value={sstRate}
+                  onChange={e => setSstRate(Number(e.target.value))}
+                  disabled={isPending || !hasSst || sstType !== "02"}
+                  className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50"
+                />
+              </label>
+            </div>
+            {!hasSst && (
+              <p className="text-[11px] text-[#71717a]">Add an SST registration number on Legal &amp; Billing before marking service tax.</p>
+            )}
           </div>
         </div>
 

@@ -41,6 +41,7 @@ public class CrmQueryService : ICrmQueryService
             Full_name = entity.FullName,
             Email = entity.Email,
             Phone = entity.Phone,
+            Company_name = entity.CompanyName,
             Global_user_id = entity.GlobalUserId?.ToString(),
             Tin = entity.Tin,
             Id_type = entity.IdType,

@@ -38,15 +38,20 @@
 			<cac:PartyIdentification>
 				<cbc:ID schemeID="{{ supplier.id_type }}">{{ supplier.id_value }}</cbc:ID>
 			</cac:PartyIdentification>
+			{{ if supplier.sst_number }}
+			<cac:PartyIdentification>
+				<cbc:ID schemeID="SST">{{ supplier.sst_number }}</cbc:ID>
+			</cac:PartyIdentification>
+			{{ end }}
 			<cac:PostalAddress>
-				<cbc:CityName>Kuala Lumpur</cbc:CityName>
-				<cbc:PostalZone>50480</cbc:PostalZone>
-				<cbc:CountrySubentityCode>14</cbc:CountrySubentityCode>
+				<cbc:CityName>{{ supplier.city | xml_escape }}</cbc:CityName>
+				<cbc:PostalZone>{{ supplier.postal_code }}</cbc:PostalZone>
+				<cbc:CountrySubentityCode>{{ supplier.state_code }}</cbc:CountrySubentityCode>
 				<cac:AddressLine>
-					<cbc:Line>Lot 66</cbc:Line>
+					<cbc:Line>{{ supplier.address_line1 | xml_escape }}</cbc:Line>
 				</cac:AddressLine>
 				<cac:Country>
-					<cbc:IdentificationCode listID="ISO3166-1" listAgencyID="6">MYS</cbc:IdentificationCode>
+					<cbc:IdentificationCode listID="ISO3166-1" listAgencyID="6">{{ supplier.country_code }}</cbc:IdentificationCode>
 				</cac:Country>
 			</cac:PostalAddress>
 			<cac:PartyLegalEntity>

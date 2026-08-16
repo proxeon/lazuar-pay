@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckoutAuthContext } from "../types";
 import { interpolateNodes, useCheckoutT } from "../i18n/CheckoutI18n";
 import { IdentityBanner } from "./IdentityBanner";
-import { submitCheckout, PublicCheckoutRequestDto, ProductDto } from "../lib/api";
+import { submitCheckout, validateTin, PublicCheckoutRequestDto, ProductDto } from "../lib/api";
 
 interface CheckoutFormProps {
   tenantSlug: string;
@@ -36,11 +36,11 @@ export function CheckoutForm({
   const [name, setName] = useState(authContext.userName || "");
   const [email, setEmail] = useState(authContext.userEmail || "");
   const [phone, setPhone] = useState("");
-  
-  // [MVP-HIDE]
-  // const [isCompany, setIsCompany] = useState(false);
-  // const [companyName, setCompanyName] = useState("");
-  // const [taxId, setTaxId] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [idType, setIdType] = useState("BRN");
+  const [idValue, setIdValue] = useState("");
+  const [tinHint, setTinHint] = useState<string | null>(null);
 
   const [addressLine1, setAddressLine1] = useState("");
   const [city, setCity] = useState("");
@@ -72,8 +72,10 @@ export function CheckoutForm({
       name: name,
       email: email,
       phone: config.requires_phone ? phone : undefined,
-      company_name: undefined, // [MVP-HIDE] config.requires_tax_id && isCompany ? companyName : undefined,
-      tax_id: undefined, // [MVP-HIDE] config.requires_tax_id && isCompany ? taxId : undefined,
+      company_name: config.requires_tax_id ? companyName : undefined,
+      tax_id: config.requires_tax_id ? taxId : undefined,
+      id_type: config.requires_tax_id ? idType : undefined,
+      id_value: config.requires_tax_id ? idValue : undefined,
       address_line1: config.requires_address ? addressLine1 : undefined,
       city: config.requires_address ? city : undefined,
       postal_code: config.requires_address ? postalCode : undefined,
@@ -85,6 +87,22 @@ export function CheckoutForm({
     };
 
     try {
+      if (config.requires_tax_id) {
+        try {
+          const tin = await validateTin(tenantSlug, taxId, idType, idValue);
+          if (!tin.is_valid) {
+            onError("This TIN / ID pair is not valid in MyInvois.");
+            setIsSubmitting(false);
+            return;
+          }
+          setTinHint(tin.taxpayer_name ? `Matched: ${tin.taxpayer_name}` : "TIN is valid.");
+        } catch (err: any) {
+          onError(err.message || "Could not validate TIN.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const result = await submitCheckout(payload);
 
       // Zero-amount already settled server-side; navigate to the initiate URL (includes sub_id).
@@ -170,40 +188,70 @@ export function CheckoutForm({
       {(config.requires_tax_id || config.requires_address) && (
         <div className="space-y-4 border-b border-border/60 pb-6">
           <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("form.billingDetails")}</h3>
-          
-          {/* [MVP-HIDE]
-          {config.requires_tax_id && (
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 cursor-pointer w-fit group">
-                <input 
-                  type="checkbox" 
-                  checked={isCompany} 
-                  onChange={e => setIsCompany(e.target.checked)} 
-                  className="rounded-sm border-border/60 bg-background text-foreground focus:ring-foreground" 
-                />
-                <span className="text-sm font-medium text-foreground group-hover:text-foreground/80 transition-colors">I am buying on behalf of a company</span>
-              </label>
 
-              {isCompany && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Company Name *</label>
-                    <input required type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">Tax Identification Number (TIN) *</label>
-                    <input required type="text" value={taxId} onChange={e => setTaxId(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="e.g. C12345678" />
-                  </div>
-                </div>
-              )}
+          {config.requires_tax_id && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="company-name" className="text-sm font-semibold text-foreground">{t("form.companyName")}</label>
+                <input
+                  id="company-name"
+                  name="organization"
+                  autoComplete="organization"
+                  required
+                  type="text"
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="tax-id" className="text-sm font-semibold text-foreground">{t("form.taxId")}</label>
+                <input
+                  id="tax-id"
+                  name="tax-id"
+                  required
+                  type="text"
+                  value={taxId}
+                  onChange={e => setTaxId(e.target.value)}
+                  className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                  placeholder={t("form.taxIdPlaceholder")}
+                />
+                <p className="text-[11px] text-muted-foreground">{t("form.taxIdHint")}</p>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="id-type" className="text-sm font-semibold text-foreground">ID type</label>
+                <select
+                  id="id-type"
+                  required
+                  value={idType}
+                  onChange={e => setIdType(e.target.value)}
+                  className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                >
+                  <option value="BRN">BRN</option>
+                  <option value="NRIC">NRIC</option>
+                  <option value="PASSPORT">PASSPORT</option>
+                  <option value="ARMY">ARMY</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="id-value" className="text-sm font-semibold text-foreground">ID value</label>
+                <input
+                  id="id-value"
+                  required
+                  type="text"
+                  value={idValue}
+                  onChange={e => setIdValue(e.target.value)}
+                  className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                  placeholder="SSM / NRIC / passport no."
+                />
+                {tinHint && <p className="text-[11px] text-emerald-700">{tinHint}</p>}
+              </div>
             </div>
           )}
-          */}
 
           {config.requires_address && (
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                {/* [MVP-HIDE] <label className="text-sm font-semibold text-foreground">{isCompany ? "Company Address *" : "Billing Address *"}</label> */}
                 <label htmlFor="address-line1" className="text-sm font-semibold text-foreground">{t("form.billingAddress")}</label>
                 <input
                   id="address-line1"

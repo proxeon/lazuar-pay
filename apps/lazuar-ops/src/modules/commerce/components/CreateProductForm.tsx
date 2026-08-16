@@ -11,7 +11,7 @@ export default function CreateProductForm({ prefillData, onSubmit, onCancel }: C
   const [interval, setInterval] = useState(prefillData?.interval || "one_time");
 
   const [requiresAddress, setRequiresAddress] = useState(prefillData?.requiresAddress ?? false);
-  // [MVP-HIDE] const [requiresTaxId, setRequiresTaxId] = useState(prefillData?.requiresTaxId ?? false);
+  const [requiresTaxId, setRequiresTaxId] = useState(prefillData?.requiresTaxId ?? false);
   const [requiresPhone, setRequiresPhone] = useState(prefillData?.requiresPhone ?? false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -25,7 +25,7 @@ export default function CreateProductForm({ prefillData, onSubmit, onCancel }: C
       currency: "MYR",
       interval,
       requiresAddress,
-      requiresTaxId: false, // [MVP-HIDE]
+      requiresTaxId,
       requiresPhone,
       fulfillmentTargets: []
     });
@@ -81,12 +81,10 @@ export default function CreateProductForm({ prefillData, onSubmit, onCancel }: C
               <input type="checkbox" checked={requiresAddress} onChange={e => setRequiresAddress(e.target.checked)} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require Full Billing Address</span>
             </label>
-            {/* [MVP-HIDE]
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={requiresTaxId} onChange={e => setRequiresTaxId(e.target.checked)} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
-              <span className="text-[12px] font-medium text-[#09090b]">Require Company Name & Tax ID (LHDN B2B)</span>
+              <span className="text-[12px] font-medium text-[#09090b]">Require Company Name &amp; Tax ID (LHDN B2B)</span>
             </label>
-            */}
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={requiresPhone} onChange={e => setRequiresPhone(e.target.checked)} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require WhatsApp Number</span>

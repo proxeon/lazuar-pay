@@ -18,6 +18,7 @@ public class ClientProfileConfiguration : IEntityTypeConfiguration<ClientProfile
         builder.Property(x => x.FullName).IsRequired().HasMaxLength(255);
         builder.Property(x => x.Email).IsRequired().HasMaxLength(255);
         builder.Property(x => x.Phone).IsRequired().HasMaxLength(50);
+        builder.Property(x => x.CompanyName).HasMaxLength(200);
         builder.Property(x => x.Tin).HasMaxLength(20);
         builder.Property(x => x.IdType).HasMaxLength(10);
         builder.Property(x => x.IdValue).HasMaxLength(50);

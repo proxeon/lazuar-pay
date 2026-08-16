@@ -9,7 +9,8 @@ import {
   ChevronDown,
   ShoppingCart,
   Zap,
-  ChevronsUpDown
+  ChevronsUpDown,
+  FileText
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { AuthUser } from "../lib/api-client";
@@ -24,6 +25,7 @@ interface SidebarProps {
 
 const MODULES = [
   { id: "commerce", title: "Commerce", basePath: ["/commerce"], icon: ShoppingCart },
+  { id: "invoicing", title: "Invoicing", basePath: ["/invoicing"], icon: FileText },
   { id: "developer", title: "Developer", basePath: ["/developer"], icon: Zap },
   { id: "workspace", title: "Workspace", basePath: ["/workspace"], icon: Settings }
 ];
@@ -253,12 +255,17 @@ export default function Sidebar({
                   { label: "Promotions", href: "/commerce/coupons" },
                   { label: "Dunning Campaigns", href: "/commerce/dunning-campaigns" },
                   { label: "Notification Templates", href: "/commerce/templates" }
+                ] : mod.id === "invoicing" ? [
+                  { label: "Quotes", href: "/invoicing/quotes" },
+                  { label: "Sales documents", href: "/invoicing/tax-invoices" },
+                  { label: "Credit Notes", href: "/invoicing/credit-notes" }
                 ] : mod.id === "developer" ? [
                   { label: "API Keys", href: "/developer/api-keys" },
                   { label: "Outbound Webhooks", href: "/developer/webhooks" },
                   { label: "Delivery Logs", href: "/developer/logs" }
                 ] : [
                   { label: "General Settings", href: "/workspace/general" },
+                  { label: "Legal & Billing", href: "/workspace/billing-profile" },
                   { label: "Payment Gateways", href: "/workspace/payment-gateways" },
                   { label: "Plan & billing", href: "/workspace/billing" },
                   { label: "Email Provider", href: "/workspace/email" },

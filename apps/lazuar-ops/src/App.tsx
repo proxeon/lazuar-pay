@@ -21,9 +21,13 @@ import DeveloperSettingsPage from "./modules/workspace/pages/DeveloperSettingsPa
 import DeliveryLogsPage from "./modules/workspace/pages/DeliveryLogsPage";
 import ApiKeysPage from "./modules/workspace/pages/ApiKeysPage";
 import BillingSettingsPage from "./modules/workspace/pages/BillingSettingsPage";
+import BillingProfilePage from "./modules/workspace/pages/BillingProfilePage";
 import UtilityLedgerPage from "./modules/workspace/pages/UtilityLedgerPage";
 import PaymentSettingsPage from "./modules/workspace/pages/PaymentSettingsPage";
 import EmailSettingsPage from "./modules/workspace/pages/EmailSettingsPage";
+import QuotesPage from "./modules/invoicing/pages/QuotesPage";
+import TaxInvoicesPage from "./modules/invoicing/pages/TaxInvoicesPage";
+import CreditNotesPage from "./modules/invoicing/pages/CreditNotesPage";
 
 export interface OpsOutletContext {
   activeWorkspaceId: string | null;
@@ -159,10 +163,9 @@ function OpsLayout() {
 /**
  * Ops routes (Pure CaaS MVP — ADR 023).
  *
- * Intentionally unrouted "floating islands" (code retained for Phase 2 / D.3):
- * - modules/invoicing/* (quotes, tax invoices, credit notes)
- * - modules/workspace/pages/BillingProfilePage (legal/TIN profile)
+ * Intentionally unrouted "floating islands":
  * - components/OpsChatWorkspace + ConversationsDirectory (ops AI chat)
+ * Legal & Billing profile is remounted (LP-122). Invoicing pages remounted (Wave 2).
  *
  * Re-mount by adding Route entries + Sidebar links; do not delete backends.
  * See docs/contracts/openapi-vs-minimal-api.md and ADR 023.
@@ -220,16 +223,17 @@ export default function App() {
         <Route path="/developer/logs" element={<DeliveryLogsPage />} />
         
         <Route path="/workspace/general" element={<GeneralSettingsPage />} />
+        <Route path="/workspace/billing-profile" element={<BillingProfilePage />} />
         <Route path="/workspace/payment-gateways" element={<PaymentSettingsPage />} />
         <Route path="/workspace/email" element={<EmailSettingsPage />} />
         <Route path="/workspace/billing" element={<BillingSettingsPage />} />
         <Route path="/workspace/ledger" element={<UtilityLedgerPage />} />
 
-        {/* [MVP-HIDE] ADR 023 — re-enable for Compliance CaaS resurface (Phase D.3)
-        <Route path="/workspace/billing-profile" element={<BillingProfilePage />} />
         <Route path="/invoicing/quotes" element={<QuotesPage />} />
         <Route path="/invoicing/tax-invoices" element={<TaxInvoicesPage />} />
         <Route path="/invoicing/credit-notes" element={<CreditNotesPage />} />
+
+        {/* [MVP-HIDE] ADR 023 — ops chat remains disconnected
         <Route path="/ops/chat" element={<OpsChatWorkspace />} />
         */}
       </Route>

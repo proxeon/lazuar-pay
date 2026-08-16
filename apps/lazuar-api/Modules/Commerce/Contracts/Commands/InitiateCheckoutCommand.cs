@@ -22,7 +22,9 @@ public record InitiateCheckoutCommand(
     string? CouponCode,
     Guid? SessionId = null,
     IReadOnlyDictionary<string, string>? Metadata = null,
-    string? IdempotencyKey = null
+    string? IdempotencyKey = null,
+    string? IdType = null,
+    string? IdValue = null
 ) : ICommand<CheckoutResultDto>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
