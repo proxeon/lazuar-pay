@@ -23,6 +23,9 @@ public class InvoiceDocumentModel
     public decimal Discount { get; set; }
     public decimal Tax { get; set; }
     public decimal Total { get; set; }
+    public bool ShowZeroTax { get; set; }
+    public string TaxLabel { get; set; } = "Tax:";
+    public string? Notes { get; set; }
 
     public string? LhdnUuid { get; set; }
     public string? LhdnQrLink { get; set; }

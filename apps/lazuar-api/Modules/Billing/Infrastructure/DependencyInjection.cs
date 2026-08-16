@@ -54,9 +54,11 @@ public static class DependencyInjection
         services.AddScoped<IBillingQueryService, BillingQueryService>();
         services.AddSingleton<ICreditCostService, CreditCostService>();
         services.Configure<CreditCostOptions>(configuration.GetSection("Credits"));
+        services.Configure<SaasOptions>(configuration.GetSection("Saas"));
 
         services.AddTransient<GatewayPaymentCompletedHandler>();
         services.AddTransient<PlatformTopUpEventHandler>();
+        services.AddTransient<PlatformSaasFeeHandler>();
         services.AddTransient<GatewayRefundCompletedHandler>();
         services.AddTransient<InvoiceIssuedHandler>();
         services.AddTransient<CommissionAccruedHandler>();
@@ -89,6 +91,7 @@ public static class DependencyInjection
         
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, GatewayPaymentCompletedHandler>();
         eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, PlatformTopUpEventHandler>();
+        eventBus.Subscribe<GatewayPaymentCompletedIntegrationEvent, PlatformSaasFeeHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedHandler>();
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedHandler>();
         eventBus.Subscribe<CommissionAccruedIntegrationEvent, CommissionAccruedHandler>();

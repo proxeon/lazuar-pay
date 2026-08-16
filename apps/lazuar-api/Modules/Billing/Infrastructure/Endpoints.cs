@@ -12,6 +12,7 @@ public static class Endpoints
 
         admin.MapAdminLedgerEndpoints();
         admin.MapAdminCreditsEndpoints();
+        admin.MapAdminSaasEndpoints();
         admin.MapAdminProfileEndpoints();
         publicGroup.MapPublicBillingEndpoints();
 

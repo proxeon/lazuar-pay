@@ -10,6 +10,7 @@ using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure.Services;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
@@ -43,8 +44,17 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
 
     public async Task HandleAsync(GatewayDisputeCreatedIntegrationEvent @event)
     {
+        if (!@event.Metadata.TryGetValue("type", out var type))
+            return;
+
+        if (type == PlatformCheckoutTypes.PlatformSaasFee)
+        {
+            await MarkSaasPastDueAsync(@event);
+            return;
+        }
+
         // Utility-credit top-ups only — commerce chargebacks are intentionally out of scope for MVP.
-        if (!@event.Metadata.TryGetValue("type", out var type) || type != "utility_credit_topup")
+        if (type != PlatformCheckoutTypes.UtilityCreditTopup)
             return;
 
         if (!@event.Metadata.TryGetValue("tenant_id", out var tenantIdStr) || !Guid.TryParse(tenantIdStr, out var tenantId))
@@ -70,6 +80,31 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
         }
 
         await ReverseUtilityTopUpLedgerAsync(tenantId, @event);
+    }
+
+    private async Task MarkSaasPastDueAsync(GatewayDisputeCreatedIntegrationEvent @event)
+    {
+        if (!@event.Metadata.TryGetValue("tenant_id", out var tenantIdStr)
+            || !Guid.TryParse(tenantIdStr, out var tenantId))
+            return;
+
+        var subscription = await _dbContext.WorkspaceSaasSubscriptions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.OrganizationId == tenantId);
+
+        if (subscription == null)
+        {
+            _logger.LogWarning(
+                "Hub SaaS dispute {GatewayTxId} has no subscription for tenant {TenantId}; credits unchanged.",
+                @event.GatewayTransactionId, tenantId);
+            return;
+        }
+
+        subscription.MarkPastDue();
+        await _dbContext.SaveChangesAsync();
+        _logger.LogWarning(
+            "Marked Hub SaaS subscription PAST_DUE for tenant {TenantId} after dispute {GatewayTxId}; credits unchanged.",
+            tenantId, @event.GatewayTransactionId);
     }
 
     private async Task ReverseUtilityTopUpLedgerAsync(Guid tenantId, GatewayDisputeCreatedIntegrationEvent @event)

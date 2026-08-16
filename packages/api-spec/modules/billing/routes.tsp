@@ -61,6 +61,18 @@ interface AdminBillingOperations {
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
+  @route("/saas")
+  getWorkspaceSaasSubscription():
+    | WorkspaceSaasSubscriptionDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/saas/checkout")
+  createSaasCheckoutSession(@body body: CreateSaasCheckoutRequestDto):
+    | CreateSaasCheckoutResponseDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
   @route("/profile")
   getBillingProfile():
     | TenantBillingProfileDto

@@ -125,6 +125,37 @@ public class ChargebackClawbackHandlerTests
     }
 
     [Test]
+    public async Task PlatformSaasFeeDispute_MarksPastDue_DoesNotClawCredits()
+    {
+        var sub = new WorkspaceSaasSubscription(_tenantId, "hub_starter");
+        sub.ActivateFromPayment(DateTime.UtcNow, "mo", "txn_saas_cb");
+        _db.WorkspaceSaasSubscriptions.Add(sub);
+        var wallet = new TenantCreditBalance(_tenantId);
+        wallet.TopUp(50, "starter");
+        _db.TenantCreditBalances.Add(wallet);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(new GatewayDisputeCreatedIntegrationEvent(
+            OrganizationId: _tenantId,
+            GatewayTransactionId: "txn_saas_cb",
+            AmountDisputed: 99m,
+            Currency: "MYR",
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = "platform_saas_fee",
+                ["tenant_id"] = _tenantId.ToString()
+            }));
+
+        var updated = await _db.WorkspaceSaasSubscriptions.IgnoreQueryFilters()
+            .SingleAsync(s => s.OrganizationId == _tenantId);
+        Assert.That(updated.Status, Is.EqualTo(WorkspaceSaasStatuses.PastDue));
+        var credits = await _db.TenantCreditBalances.IgnoreQueryFilters()
+            .SingleAsync(w => w.OrganizationId == _tenantId);
+        Assert.That(credits.AvailableCredits, Is.EqualTo(50));
+        await _mediator.DidNotReceive().Send(Arg.Any<ClawbackCreditsCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task NonUtility_IsNoOp()
     {
         var @event = new GatewayDisputeCreatedIntegrationEvent(

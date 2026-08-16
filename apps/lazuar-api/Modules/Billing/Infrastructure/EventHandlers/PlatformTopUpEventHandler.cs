@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure.Services;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
@@ -24,7 +25,7 @@ public class PlatformTopUpEventHandler : IIntegrationEventHandler<GatewayPayment
 
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
     {
-        if (!@event.Metadata.TryGetValue("type", out var type) || type != "utility_credit_topup")
+        if (!@event.Metadata.TryGetValue("type", out var type) || type != PlatformCheckoutTypes.UtilityCreditTopup)
             return;
 
         if (!@event.Metadata.TryGetValue("tenant_id", out var tenantIdStr) || !Guid.TryParse(tenantIdStr, out var targetTenantId))

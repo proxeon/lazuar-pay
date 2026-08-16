@@ -67,6 +67,31 @@ model TopUpResponseDto {
   checkout_url: string;
 }
 
+model SaasPlanDto {
+  code: string;
+  name: string;
+  amount_myr: float64;
+  interval: string;
+  currency: string;
+}
+
+model WorkspaceSaasSubscriptionDto {
+  organization_id: string;
+  plan: SaasPlanDto;
+  status: string;
+  current_period_start?: utcDateTime;
+  current_period_end?: utcDateTime;
+  next_invoice_at?: utcDateTime;
+}
+
+model CreateSaasCheckoutRequestDto {
+  return_url: string;
+}
+
+model CreateSaasCheckoutResponseDto {
+  checkout_url: string;
+}
+
 model TenantBillingAddressDto {
   line1: string;
   line2?: string;

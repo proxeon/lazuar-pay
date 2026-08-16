@@ -89,6 +89,33 @@ public class BillplzGatewayAdapterTests
     }
 
     [Test]
+    public async Task ParseWebhook_PlatformSaasFee_MapsReference1ToTenantId()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["id"] = "bill_saas_1",
+            ["paid"] = "true",
+            ["state"] = "paid",
+            ["paid_amount"] = "9900",
+            ["reference_1"] = tenantId.ToString(),
+            ["reference_2"] = "platform_saas_fee"
+        };
+        form["x_signature"] = ComputeXSignature(form, WebhookSecret);
+
+        var result = await CreateAdapter().ParseWebhookAsync(
+            "unused",
+            WebhookSecret,
+            ToFormBody(form),
+            new Dictionary<string, string>());
+
+        result.Verified.Should().BeTrue();
+        result.Metadata.Should().ContainKey("type").WhoseValue.Should().Be("platform_saas_fee");
+        result.Metadata.Should().ContainKey("tenant_id").WhoseValue.Should().Be(tenantId.ToString());
+        result.Metadata.Should().NotContainKey("subscription_id");
+    }
+
+    [Test]
     public async Task ParseWebhook_WithoutQueryCheckoutId_NoCheckoutIdInMetadata()
     {
         var form = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

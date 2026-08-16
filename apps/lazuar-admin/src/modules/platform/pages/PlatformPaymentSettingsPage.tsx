@@ -259,9 +259,9 @@ export default function PaymentSettingsPage() {
                 {gatewayType === "BILLPLZ" && (
                   <>
                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-none text-[12px] text-amber-900 leading-relaxed">
-                      <strong>Offline / hosted checkout only.</strong> Billplz cannot vault payment methods or run silent
-                      auto-charge (subscription renewals, dunning AUTO_CHARGE). Customers must complete each payment on
-                      Billplz’s hosted page. Use Stripe or CHIP Collect when you need recurring auto-charge.
+                      <strong>Pay-link renewals.</strong> Billplz cannot vault. Each cycle we create a hosted bill and
+                      email it. There is no silent auto-charge (subscription renewals, dunning AUTO_CHARGE). Use Stripe
+                      or CHIP Collect when you need recurring auto-debit.
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">Collection ID</label>
@@ -305,6 +305,12 @@ export default function PaymentSettingsPage() {
 
                 {gatewayType === "STRIPE" && (
                   <>
+                    <p className="text-[10px] text-[#a1a1aa] leading-relaxed">
+                      Apple Pay and Google Pay appear on Stripe-hosted Checkout when the Stripe account can take cards
+                      and the buyer’s device supports them. Enable cards in Stripe Dashboard → Payment methods. Not
+                      available on Billplz. Domain verification is only needed if you host wallet buttons yourself
+                      (Lazuar does not).
+                    </p>
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-[#09090b]">
                         Secret Key{hasSecretKey ? ` · stored ${secretKeyHint ?? ""}` : ""}

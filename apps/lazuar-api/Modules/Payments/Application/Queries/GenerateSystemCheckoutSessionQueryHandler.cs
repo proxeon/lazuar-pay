@@ -1,9 +1,12 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Modules.Payments.Application.Ports;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Queries;
+using Modules.Payments.Domain.Aggregates;
 
 namespace Modules.Payments.Application.Queries;
 
@@ -25,27 +28,21 @@ public class GenerateSystemCheckoutSessionQueryHandler : IQueryHandler<GenerateS
 
     public async Task<string> Handle(GenerateSystemCheckoutSessionQuery request, CancellationToken cancellationToken)
     {
-        var systemId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-        var config = await _configRepository.GetByTenantAndGatewayAsync(systemId, request.GatewayName, cancellationToken);
-
-        if (config == null || string.IsNullOrEmpty(config.ApiKey))
+        if (request.Metadata == null
+            || !request.Metadata.TryGetValue("type", out var checkoutType)
+            || string.IsNullOrWhiteSpace(checkoutType))
         {
-            throw new InvalidOperationException($"Platform payment gateway '{request.GatewayName}' is not configured.");
+            throw new InvalidOperationException("Platform checkout metadata 'type' is required.");
         }
 
-        if (!config.IsActive)
-        {
-            throw new InvalidOperationException($"Platform payment gateway '{request.GatewayName}' is disabled.");
-        }
+        var systemId = PlatformCheckoutTypes.SystemOrganizationId;
+        var config = await ResolvePlatformGatewayAsync(systemId, request.GatewayName, cancellationToken);
 
-        var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
+        var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey!);
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
         if (!request.Metadata.ContainsKey("tenant_id"))
             request.Metadata.Add("tenant_id", request.TenantId.ToString());
-
-        if (!request.Metadata.ContainsKey("type"))
-            request.Metadata.Add("type", "utility_credit_topup");
 
         var result = await adapter.GenerateCheckoutAsync(
             plainApiKey,
@@ -67,5 +64,33 @@ public class GenerateSystemCheckoutSessionQueryHandler : IQueryHandler<GenerateS
         }
 
         return result.CheckoutUrl;
+    }
+
+    private async Task<TenantPaymentConfiguration> ResolvePlatformGatewayAsync(
+        Guid systemId,
+        string? gatewayName,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(gatewayName))
+        {
+            var named = await _configRepository.GetByTenantAndGatewayAsync(systemId, gatewayName, cancellationToken);
+            if (named == null || string.IsNullOrEmpty(named.ApiKey))
+                throw new InvalidOperationException($"Platform payment gateway '{gatewayName}' is not configured.");
+            if (!named.IsActive)
+                throw new InvalidOperationException($"Platform payment gateway '{gatewayName}' is disabled.");
+            return named;
+        }
+
+        var all = await _configRepository.GetAllByTenantIdAsync(systemId, cancellationToken);
+        var firstActive = all
+            .Where(c => c.IsActive && !string.IsNullOrEmpty(c.ApiKey))
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.GatewayType, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+        if (firstActive == null)
+            throw new InvalidOperationException("Platform payment gateway is not configured.");
+
+        return firstActive;
     }
 }

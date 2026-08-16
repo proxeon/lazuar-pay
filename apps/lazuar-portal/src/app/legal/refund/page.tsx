@@ -35,7 +35,7 @@ export default function RefundPolicyPage() {
       
       <h2 className="text-foreground border-b border-border/60 pb-2 mt-8">4. Managing Your Subscription</h2>
       <p>
-        While we cannot issue refunds for past charges, you maintain full control over future charges. You can cancel your recurring subscription at any time by logging into your secure Buyer Dashboard via the magic link provided in your email. Canceling your subscription will immediately stop all future automated charges.
+        While we cannot issue refunds for past charges, you maintain full control over future renewals. You can cancel your recurring subscription at any time by logging into your secure Buyer Dashboard via the magic link provided in your email. Canceling at period end stops future renewals (auto-debit or further pay-link emails) and leaves access in place until the paid-through date. Canceling immediately ends access now.
       </p>
     </article>
   );

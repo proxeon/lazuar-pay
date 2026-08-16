@@ -260,6 +260,7 @@ export default function Sidebar({
                 ] : [
                   { label: "General Settings", href: "/workspace/general" },
                   { label: "Payment Gateways", href: "/workspace/payment-gateways" },
+                  { label: "Plan & billing", href: "/workspace/billing" },
                   { label: "Email Provider", href: "/workspace/email" },
                 ]
               }

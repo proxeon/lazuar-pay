@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
+using Modules.Payments.Contracts;
 
 namespace Modules.Payments.Infrastructure.Gateways;
 
@@ -203,7 +204,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             
             if (!string.IsNullOrEmpty(reference1)) 
             {
-                if (reference2 == "utility_credit_topup")
+                if (PlatformCheckoutTypes.IsPlatformCollected(reference2))
                     metadata["tenant_id"] = reference1;
                 else
                     metadata["subscription_id"] = reference1;
@@ -264,6 +265,10 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         return Task.FromResult(false);
     }
 
+    /// <summary>
+    /// Billplz has no bill-refund API. A Payment Order is a new disbursement, not a reversal.
+    /// Commerce must mark-refunded instead of calling this adapter.
+    /// </summary>
     public Task<bool> IssueRefundAsync(string apiKey, string transactionId, decimal amount)
     {
         return Task.FromResult(false);

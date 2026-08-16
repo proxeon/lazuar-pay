@@ -57,6 +57,7 @@ public static class LedgerReferenceTypes
     public const string ManualEnrollment = "MANUAL_ENROLLMENT";
     public const string SystemCreditTopup = "SYSTEM_CREDIT_TOPUP";
     public const string SystemCreditChargeback = "SYSTEM_CREDIT_CHARGEBACK";
+    public const string SystemSaasFee = "SYSTEM_SAAS_FEE";
     public const string LhdnCancellation = "LHDN_CANCELLATION";
     public const string InvoiceIssued = "INVOICE_ISSUED";
     public const string ZeroAmountCheckout = "ZERO_AMOUNT_CHECKOUT";

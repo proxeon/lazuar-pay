@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Modules.Billing.Contracts;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Queries;
 
 namespace Modules.Billing.Infrastructure;
@@ -44,7 +45,7 @@ public static class AdminCreditsEndpoints
 
             var metadata = new Dictionary<string, string>
             {
-                { "type", "utility_credit_topup" },
+                { "type", PlatformCheckoutTypes.UtilityCreditTopup },
                 { "tenant_id", ctx.TenantId.ToString() }
             };
 

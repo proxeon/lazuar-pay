@@ -47,8 +47,10 @@ public class BaseInvoiceDocument : IDocument
                 }
                 
                 column.Item().Text(_model.CompanyName).FontSize(14).SemiBold();
-                column.Item().Text($"TIN: {_model.CompanyTin}").FontSize(10).FontColor(Colors.Grey.Darken2);
-                column.Item().Text(_model.CompanyAddress).FontSize(10).FontColor(Colors.Grey.Darken2);
+                if (!string.IsNullOrWhiteSpace(_model.CompanyTin))
+                    column.Item().Text($"TIN: {_model.CompanyTin}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                if (!string.IsNullOrWhiteSpace(_model.CompanyAddress))
+                    column.Item().Text(_model.CompanyAddress).FontSize(10).FontColor(Colors.Grey.Darken2);
             });
 
             row.ConstantItem(200).AlignRight().Column(column =>
@@ -83,6 +85,11 @@ public class BaseInvoiceDocument : IDocument
             });
 
             column.Item().Element(ComposeTable);
+
+            if (!string.IsNullOrWhiteSpace(_model.Notes))
+            {
+                column.Item().PaddingTop(16).Text(_model.Notes).FontSize(9).FontColor(Colors.Grey.Darken2);
+            }
 
             if (!string.IsNullOrEmpty(_model.LhdnUuid))
             {
@@ -134,11 +141,11 @@ public class BaseInvoiceDocument : IDocument
                     });
                 }
 
-                if (_model.Tax > 0)
+                if (_model.Tax > 0 || _model.ShowZeroTax)
                 {
                     column.Item().Row(row =>
                     {
-                        row.RelativeItem().AlignRight().Text("Tax:").SemiBold();
+                        row.RelativeItem().AlignRight().Text(_model.TaxLabel).SemiBold();
                         row.ConstantItem(80).AlignRight().Text($"{_model.Currency} {_model.Tax:F2}");
                     });
                 }

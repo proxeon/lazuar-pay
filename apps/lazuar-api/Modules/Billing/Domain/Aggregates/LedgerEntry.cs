@@ -78,6 +78,19 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
         ConsolidationStatus = ConsolidationStatuses.Pending;
     }
 
+    /// <summary>
+    /// Customer-facing Hub SaaS invoice number. Does not mark the row as a tenant B2C receipt
+    /// and does not start MyInvois consolidation.
+    /// </summary>
+    public void AssignPlatformDocumentNumber(string invoiceNumber)
+    {
+        if (string.IsNullOrWhiteSpace(invoiceNumber))
+            throw new ArgumentException("Invoice number is required.", nameof(invoiceNumber));
+
+        CustomerDocumentNumber ??= invoiceNumber;
+        TaxInvoiceId ??= invoiceNumber;
+    }
+
     /// <summary>Marks B2B (or other non-consolidatable) sales so the consolidation job skips them.</summary>
     public void MarkConsolidationNotRequired()
     {

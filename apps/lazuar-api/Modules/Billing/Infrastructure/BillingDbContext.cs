@@ -18,6 +18,7 @@ public class BillingDbContext : PlatformDbContext
     public DbSet<CreditDeductionIdempotencyLog> CreditDeductionIdempotencyLogs { get; set; } = null!;
     public DbSet<TenantBillingProfile> TenantBillingProfiles { get; set; } = null!;
     public DbSet<DocumentSequence> DocumentSequences { get; set; } = null!;
+    public DbSet<WorkspaceSaasSubscription> WorkspaceSaasSubscriptions { get; set; } = null!;
     
     public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
     public DbSet<InboxMessage> InboxMessages { get; set; } = null!;
@@ -163,6 +164,16 @@ public class BillingDbContext : PlatformDbContext
             builder.ToTable("DocumentSequences");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => new { x.OrganizationId, x.Prefix }).IsUnique();
+        });
+
+        modelBuilder.Entity<WorkspaceSaasSubscription>(builder =>
+        {
+            builder.ToTable("WorkspaceSaasSubscriptions");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => x.OrganizationId).IsUnique();
+            builder.Property(x => x.PlanCode).HasMaxLength(50);
+            builder.Property(x => x.Status).HasMaxLength(20);
+            builder.Property(x => x.LastGatewayTransactionId).HasMaxLength(200);
         });
 
         modelBuilder.Entity<OutboxMessage>(builder =>

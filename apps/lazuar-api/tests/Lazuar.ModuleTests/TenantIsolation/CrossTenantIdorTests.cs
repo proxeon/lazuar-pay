@@ -56,6 +56,56 @@ public class CrossTenantIdorTests
     }
 
     [Test]
+    public async Task CancelAdminSubscription_ForeignOrg_AtPeriodEnd_ThrowsNotFound()
+    {
+        var ownerOrg = Guid.CreateVersion7();
+        var attackerOrg = Guid.CreateVersion7();
+        var product = CreateProduct(ownerOrg);
+        var sub = new Subscription(ownerOrg, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+
+        var handler = new CancelAdminSubscriptionCommandHandler(
+            repository, Substitute.For<IEventBus>());
+
+        var act = async () => await handler.Handle(
+            new CancelAdminSubscriptionCommand(attackerOrg, sub.Id, AtPeriodEnd: true),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*not found*");
+        sub.Status.Should().Be("ACTIVE");
+        sub.CancelAtPeriodEnd.Should().BeFalse();
+        await repository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task KeepAdminSubscription_ForeignOrg_ThrowsNotFound()
+    {
+        var ownerOrg = Guid.CreateVersion7();
+        var attackerOrg = Guid.CreateVersion7();
+        var product = CreateProduct(ownerOrg);
+        var sub = new Subscription(ownerOrg, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
+        sub.ScheduleCancelAtPeriodEnd();
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+
+        var handler = new KeepAdminSubscriptionCommandHandler(repository);
+
+        var act = async () => await handler.Handle(
+            new KeepAdminSubscriptionCommand(attackerOrg, sub.Id), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*not found*");
+        sub.CancelAtPeriodEnd.Should().BeTrue();
+        await repository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task RecordRefund_ForeignOrg_ThrowsNotFound()
     {
         var ownerOrg = Guid.CreateVersion7();

@@ -13,4 +13,4 @@ public record GenerateSystemCheckoutSessionQuery(
     string SuccessUrl,
     string CancelUrl,
     Dictionary<string, string> Metadata,
-    string GatewayName = "BILLPLZ") : IQuery<string>;
+    string? GatewayName = null) : IQuery<string>;

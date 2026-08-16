@@ -59,5 +59,18 @@ public class LedgerEntryAndAccountTypesTests
         Assert.That(AccountTypes.ContraRevenueRefunds, Is.EqualTo("CONTRA_REVENUE_REFUNDS"));
         Assert.That(AccountTypes.ExpenseGatewayFee, Is.EqualTo("EXPENSE_GATEWAY_FEE"));
         Assert.That(LedgerReferenceTypes.SystemCreditChargeback, Is.EqualTo("SYSTEM_CREDIT_CHARGEBACK"));
+        Assert.That(LedgerReferenceTypes.SystemSaasFee, Is.EqualTo("SYSTEM_SAAS_FEE"));
+    }
+
+    [Test]
+    public void AssignPlatformDocumentNumber_DoesNotStartB2cConsolidation()
+    {
+        var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.SystemSaasFee, "tx1", "hub", "B2B");
+        entry.AssignPlatformDocumentNumber("SAAS-2026-00001");
+        entry.MarkConsolidationNotRequired();
+
+        Assert.That(entry.CustomerDocumentNumber, Is.EqualTo("SAAS-2026-00001"));
+        Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.NotRequired));
+        Assert.That(entry.LhdnValidationStatus, Is.Null);
     }
 }
