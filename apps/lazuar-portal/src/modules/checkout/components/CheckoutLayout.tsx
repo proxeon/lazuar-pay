@@ -8,8 +8,8 @@ interface CheckoutLayoutProps {
 
 export function CheckoutLayout({ formSlot, summarySlot }: CheckoutLayoutProps) {
   return (
-    <div className="flex flex-col-reverse lg:flex-row gap-6 items-start">
-      <div className="flex-1 w-full bg-card border border-border/60 shadow-sm p-6 sm:p-8 rounded-none">
+    <div className="flex flex-col-reverse lg:flex-row gap-4 lg:gap-6 items-start">
+      <div className="flex-1 w-full bg-card border border-border/60 shadow-sm p-4 sm:p-6 lg:p-8 rounded-none">
         {formSlot}
       </div>
       <div className="w-full lg:w-[380px] shrink-0">

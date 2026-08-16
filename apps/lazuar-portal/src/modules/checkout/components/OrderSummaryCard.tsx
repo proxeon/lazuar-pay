@@ -47,7 +47,7 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
       <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("summary.title")}</h3>
       
       <div className="pb-4 border-b border-border/40">
-        <h4 className="text-lg font-semibold text-foreground leading-tight mb-1">{context.itemName}</h4>
+        <h4 className="text-lg font-semibold text-foreground leading-tight mb-1 min-w-0 break-words">{context.itemName}</h4>
         {context.audience && <p className="text-sm text-muted-foreground">{context.audience}</p>}
       </div>
 
@@ -77,7 +77,7 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
                     onQuantityChange?.(val);
                   }
                 }}
-                className="h-8 w-12 border-x border-border/60 bg-background px-1 text-center text-sm focus:outline-none"
+                className="h-8 w-12 border-x border-border/60 bg-background px-1 text-center text-base focus:outline-none"
               />
               <button
                 type="button"
@@ -92,8 +92,8 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="text-sm text-muted-foreground min-w-0 break-words">
             {context.quantityAdjustable && context.quantity > 1
               ? t("summary.unitTimesQty", { amount: money(context.basePrice), n: context.quantity })
               : t("summary.subtotal")}
@@ -102,13 +102,14 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
              <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-muted-foreground">{currencySymbol(locale, context.currency || "MYR")}</span>
                 <input 
-                  type="number" 
+                  type="number"
+                  inputMode="decimal"
                   min={context.minimumPrice}
                   step="1"
                   value={context.currentPrice.toString()}
                   onChange={handlePriceInput}
                   onBlur={handlePriceBlur}
-                  className="w-20 h-8 border border-border/60 bg-background px-2 text-sm text-right focus:outline-none focus:border-foreground"
+                  className="w-24 h-11 border border-border/60 bg-background px-2 text-base text-right focus:outline-none focus:border-foreground"
                 />
              </div>
           ) : (
@@ -119,8 +120,8 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
         </div>
         
         {context.isCouponApplied && context.discountAmount !== null && (
-          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
-            <span className="text-sm font-medium">{discountLabel}</span>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-emerald-600 dark:text-emerald-400">
+            <span className="text-sm font-medium min-w-0 break-words">{discountLabel}</span>
             <span className="text-sm font-bold">- {money(context.discountAmount)}</span>
           </div>
         )}
@@ -133,9 +134,9 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
       )}
 
       <div className="bg-secondary/40 border border-border/60 p-4 rounded-none mt-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-base font-semibold text-foreground">{t("summary.total")}</span>
-          <span className="text-xl font-bold tracking-tighter text-foreground">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="text-base font-semibold text-foreground min-w-0 break-words">{t("summary.total")}</span>
+          <span className="text-xl font-bold tracking-tighter text-foreground tabular-nums shrink-0">
             {money(finalPriceToDisplay)}
           </span>
         </div>

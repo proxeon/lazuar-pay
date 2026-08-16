@@ -25,7 +25,7 @@ export const en = {
   "form.state": "State",
   "form.country": "Country Code (e.g. MY)",
   "form.consent":
-    "By proceeding, you agree to Lazuar's {terms} and {privacy}, and acknowledge that your purchase is a direct transaction with the Creator.",
+    "By proceeding, you agree to Lazuar's {terms} and {privacy}, and acknowledge that your purchase is a direct transaction with {seller}.",
   "form.consentTerms": "Terms of Service",
   "form.consentPrivacy": "Privacy Policy",
   "cta.proceed": "Proceed to Payment",
@@ -122,7 +122,7 @@ export const ms: Record<MessageKey, string> = {
   "form.state": "Negeri",
   "form.country": "Kod negara (cth. MY)",
   "form.consent":
-    "Dengan meneruskan, anda bersetuju dengan {terms} dan {privacy} Lazuar, dan mengakui bahawa pembelian ini ialah transaksi terus dengan Pencipta.",
+    "Dengan meneruskan, anda bersetuju dengan {terms} dan {privacy} Lazuar, dan mengakui bahawa pembelian ini ialah transaksi terus dengan {seller}.",
   "form.consentTerms": "Terma Perkhidmatan",
   "form.consentPrivacy": "Dasar Privasi",
   "cta.proceed": "Teruskan ke Pembayaran",

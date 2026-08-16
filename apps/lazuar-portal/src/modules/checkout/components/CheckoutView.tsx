@@ -20,9 +20,10 @@ interface CheckoutViewProps {
   product: ProductDto;
   initialAuthContext: CheckoutAuthContext;
   isCancelled?: boolean;
+  workspaceName?: string;
 }
 
-export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancelled }: CheckoutViewProps) {
+export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancelled, workspaceName }: CheckoutViewProps) {
   const { t } = useCheckoutT();
   const [authContext, setAuthContext] = useState<CheckoutAuthContext>(initialAuthContext);
   const [couponCode, setCouponCode] = useState("");
@@ -120,15 +121,15 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-8 md:py-12">
+    <div className="w-full max-w-5xl mx-auto px-4 py-4 sm:py-8 md:py-12">
       {isCancelled && !globalError && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium break-words">
           {t("banner.cancelled")}
         </div>
       )}
 
       {globalError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 text-sm font-medium break-words">
           {globalError}
         </div>
       )}
@@ -142,6 +143,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
             isCouponApplied={isCouponApplied}
             couponCode={couponCode}
             quantity={quantityAdjustable ? quantity : 1}
+            workspaceName={workspaceName}
             onSetGuestMode={handleSetGuestMode}
             onError={handleError}
           />

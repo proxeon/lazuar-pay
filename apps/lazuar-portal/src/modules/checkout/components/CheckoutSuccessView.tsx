@@ -77,8 +77,8 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
 
   if (status === "ERROR") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full text-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 w-full">
+        <div className="bg-card border border-border/60 shadow-sm p-6 sm:p-8 md:p-12 rounded-none max-w-md w-full text-center">
           <svg className="h-8 w-8 text-rose-500 mx-auto mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -95,8 +95,8 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
 
   if (status === "VERIFYING") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full text-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 w-full">
+        <div className="bg-card border border-border/60 shadow-sm p-6 sm:p-8 md:p-12 rounded-none max-w-md w-full text-center">
           <svg className="animate-spin h-8 w-8 text-muted-foreground mx-auto mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
@@ -111,8 +111,8 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
 
   if (status === "EXPIRED") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full text-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 w-full">
+        <div className="bg-card border border-border/60 shadow-sm p-6 sm:p-8 md:p-12 rounded-none max-w-md w-full text-center">
           <svg className="h-8 w-8 text-rose-500 mx-auto mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -134,8 +134,8 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
 
   if (status === "TIMEOUT") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full text-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 w-full">
+        <div className="bg-card border border-border/60 shadow-sm p-6 sm:p-8 md:p-12 rounded-none max-w-md w-full text-center">
           <div className="flex items-center justify-center w-16 h-16 bg-amber-50 dark:bg-amber-950/30 rounded-full mx-auto mb-6">
             <svg className="h-8 w-8 text-amber-600 dark:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -166,8 +166,8 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full text-center">
+    <div className="flex-1 flex flex-col items-center justify-center p-4 w-full">
+      <div className="bg-card border border-border/60 shadow-sm p-6 sm:p-8 md:p-12 rounded-none max-w-md w-full text-center">
         <div className="flex items-center justify-center w-16 h-16 bg-emerald-50 dark:bg-emerald-950/30 rounded-full mx-auto mb-6">
           <svg 
             className="h-8 w-8 text-emerald-600 dark:text-emerald-500" 

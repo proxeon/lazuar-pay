@@ -5,6 +5,7 @@ import { CheckoutView } from "../../../../modules/checkout/components/CheckoutVi
 import { getCheckoutLocale } from "../../../../modules/checkout/i18n/getCheckoutLocale";
 import { t } from "../../../../modules/checkout/i18n/translate";
 import { CheckoutAuthContext } from "../../../../modules/checkout/types";
+import { fetchWorkspaceBranding } from "../../../../modules/core/lib/branding";
 
 export async function generateMetadata({
   params,
@@ -66,12 +67,15 @@ export default async function UniversalCheckoutPage({
     }
   }
 
+  const branding = await fetchWorkspaceBranding(tenantSlug);
+
   return (
     <CheckoutView 
       tenantSlug={tenantSlug} 
       product={product} 
       initialAuthContext={authContext}
       isCancelled={isCancelled}
+      workspaceName={branding?.name}
     />
   );
 }

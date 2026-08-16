@@ -31,9 +31,25 @@ export async function validateCouponCode(tenantSlug: string, productSlug: string
   return data;
 }
 
+function checkoutIdempotencyKey(tenantSlug: string, productSlug: string) {
+  const storageKey = `lazuar-checkout-idem:${tenantSlug}:${productSlug}`;
+  try {
+    const existing = sessionStorage.getItem(storageKey);
+    if (existing) return existing;
+    const next = crypto.randomUUID();
+    sessionStorage.setItem(storageKey, next);
+    return next;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
 export async function submitCheckout(payload: PublicCheckoutRequestDto) {
   const { data, error } = await browserClient.POST("/public/commerce/checkout", {
-    body: payload
+    body: payload,
+    headers: {
+      "Idempotency-Key": checkoutIdempotencyKey(payload.tenant_slug, payload.product_slug),
+    },
   });
 
   if (error || !data) {

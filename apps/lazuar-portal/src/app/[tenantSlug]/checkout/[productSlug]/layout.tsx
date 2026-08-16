@@ -4,6 +4,7 @@ import { CheckoutHeader, CheckoutI18nProvider } from "../../../../modules/checko
 import { getCheckoutLocale } from "../../../../modules/checkout/i18n/getCheckoutLocale";
 import { t } from "../../../../modules/checkout/i18n/translate";
 import { serverClient } from "../../../../modules/core/lib/server-client";
+import { fetchWorkspaceBranding } from "../../../../modules/core/lib/branding";
 
 export async function generateMetadata({
   params,
@@ -21,7 +22,12 @@ export async function generateMetadata({
     return { title: t(locale, "meta.title") };
   }
 
-  return { title: t(locale, "meta.checkoutTitle", { product: product.name }) };
+  const branding = await fetchWorkspaceBranding(tenantSlug);
+  return {
+    title: branding?.name
+      ? `${product.name} · ${branding.name}`
+      : t(locale, "meta.checkoutTitle", { product: product.name }),
+  };
 }
 
 export default async function BlindCheckoutLayout({
@@ -31,14 +37,15 @@ export default async function BlindCheckoutLayout({
   children: ReactNode;
   params: Promise<{ tenantSlug: string; productSlug: string }>;
 }) {
-  await params;
+  const { tenantSlug } = await params;
   const locale = await getCheckoutLocale();
+  const branding = await fetchWorkspaceBranding(tenantSlug);
 
   return (
     <CheckoutI18nProvider locale={locale}>
-      <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
-        <CheckoutHeader />
-        <main className="flex-1 w-full">
+      <div className="flex flex-1 flex-col min-h-0 bg-zinc-50 dark:bg-black">
+        <CheckoutHeader workspaceName={branding?.name} logoUrl={branding?.logo_url} />
+        <main className="flex-1 flex flex-col w-full min-h-0">
           {children}
         </main>
       </div>

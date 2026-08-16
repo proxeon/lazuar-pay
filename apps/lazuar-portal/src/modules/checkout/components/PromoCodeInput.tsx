@@ -40,25 +40,29 @@ export function PromoCodeInput({
       <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
         {t("promo.label")}
       </label>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={code}
-          onChange={(e) => {
-            setCode(e.target.value.toUpperCase());
-            if (isApplied) {
-              onRemove();
-            }
-          }}
-          placeholder={t("promo.placeholder")}
-          disabled={isValidating}
-          className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm font-mono uppercase shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground disabled:opacity-50"
-        />
+      <div className="flex gap-2 min-w-0">
+        <div className="min-w-0 flex-1">
+          <input
+            type="text"
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value.toUpperCase());
+              if (isApplied) {
+                onRemove();
+              }
+            }}
+            placeholder={t("promo.placeholder")}
+            disabled={isValidating}
+            autoComplete="off"
+            autoCapitalize="characters"
+            className="flex h-11 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base font-mono uppercase shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground disabled:opacity-50"
+          />
+        </div>
         {isApplied ? (
           <button
             type="button"
             onClick={handleRemoveClick}
-            className="h-10 px-4 border border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-none text-xs font-bold uppercase tracking-widest transition-colors"
+            className="h-11 px-4 shrink-0 border border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-none text-xs font-bold uppercase tracking-widest transition-colors"
           >
             {t("promo.remove")}
           </button>
@@ -67,7 +71,7 @@ export function PromoCodeInput({
             type="button"
             onClick={handleApplyClick}
             disabled={isValidating || !code.trim()}
-            className="h-10 px-4 border border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-none text-xs font-bold uppercase tracking-widest disabled:opacity-50 transition-colors flex items-center justify-center min-w-[70px]"
+            className="h-11 px-4 shrink-0 border border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-none text-xs font-bold uppercase tracking-widest disabled:opacity-50 transition-colors flex items-center justify-center min-w-[70px]"
           >
             {isValidating ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

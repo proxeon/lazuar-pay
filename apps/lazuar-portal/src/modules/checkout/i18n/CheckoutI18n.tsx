@@ -104,12 +104,27 @@ export function useCheckoutT(): CheckoutI18nValue {
   return ctx;
 }
 
-export function CheckoutHeader() {
+export function CheckoutHeader({
+  workspaceName,
+  logoUrl,
+}: {
+  workspaceName?: string | null;
+  logoUrl?: string | null;
+}) {
   const { t, locale, setLocale } = useCheckoutT();
 
   return (
     <header className="sticky top-0 z-40 w-full bg-card border-b border-border/60">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-end gap-4">
+      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+        <div className="min-w-0 flex items-center">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt={workspaceName || ""} className="max-h-8 max-w-[180px] object-contain" />
+          ) : (
+            <span className="text-sm font-semibold truncate">{workspaceName}</span>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-4 shrink-0">
         <div
           className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest"
           role="group"
@@ -156,9 +171,10 @@ export function CheckoutHeader() {
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
-          <span className="text-xs font-semibold uppercase tracking-widest">
+          <span className="hidden sm:inline text-xs font-semibold uppercase tracking-widest">
             {t("chrome.poweredBy")}
           </span>
+        </div>
         </div>
       </div>
     </header>

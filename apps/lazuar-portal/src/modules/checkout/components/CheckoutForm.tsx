@@ -14,6 +14,7 @@ interface CheckoutFormProps {
   isCouponApplied: boolean;
   couponCode: string;
   quantity: number;
+  workspaceName?: string;
   onSetGuestMode: (isGuest: boolean) => void;
   onError: (errorMsg: string) => void;
 }
@@ -25,6 +26,7 @@ export function CheckoutForm({
   isCouponApplied,
   couponCode,
   quantity,
+  workspaceName,
   onSetGuestMode,
   onError
 }: CheckoutFormProps) {
@@ -120,11 +122,14 @@ export function CheckoutForm({
           <input
             id="name" 
             type="text" 
+            name="name"
+            autoComplete="name"
+            autoCapitalize="words"
             required
             value={name} 
             onChange={e => setName(e.target.value)}
             disabled={isProfileLocked}
-            className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-foreground"
+            className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-foreground"
           />
         </div>
 
@@ -132,12 +137,14 @@ export function CheckoutForm({
           <label htmlFor="email" className="text-sm font-semibold text-foreground">{t("form.email")}</label>
           <input
             id="email" 
-            type="email" 
+            type="email"
+            name="email"
+            autoComplete="email"
             required
             value={email} 
             onChange={e => setEmail(e.target.value)}
             disabled={isProfileLocked}
-            className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-foreground"
+            className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-foreground"
           />
         </div>
 
@@ -146,11 +153,13 @@ export function CheckoutForm({
             <label htmlFor="phone" className="text-sm font-semibold text-foreground">{t("form.phone")}</label>
             <input
               id="phone" 
-              type="tel" 
+              type="tel"
+              name="tel"
+              autoComplete="tel"
               required
               value={phone} 
               onChange={e => setPhone(e.target.value)}
-              className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+              className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
               placeholder={t("form.phonePlaceholder")}
             />
             <p className="text-[11px] text-muted-foreground">{t("form.phoneHint")}</p>
@@ -195,23 +204,78 @@ export function CheckoutForm({
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 {/* [MVP-HIDE] <label className="text-sm font-semibold text-foreground">{isCompany ? "Company Address *" : "Billing Address *"}</label> */}
-                <label className="text-sm font-semibold text-foreground">{t("form.billingAddress")}</label>
-                <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.street")} />
+                <label htmlFor="address-line1" className="text-sm font-semibold text-foreground">{t("form.billingAddress")}</label>
+                <input
+                  id="address-line1"
+                  name="address-line1"
+                  autoComplete="address-line1"
+                  required
+                  type="text"
+                  value={addressLine1}
+                  onChange={e => setAddressLine1(e.target.value)}
+                  className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                  placeholder={t("form.street")}
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <input required type="text" value={city} onChange={e => setCity(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.city")} />
+                  <label htmlFor="city" className="text-sm font-semibold text-foreground">{t("form.city")}</label>
+                  <input
+                    id="city"
+                    name="address-level2"
+                    autoComplete="address-level2"
+                    required
+                    type="text"
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                    className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                    placeholder={t("form.city")}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <input required type="text" value={postalCode} onChange={e => setPostalCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.postal")} />
+                  <label htmlFor="postal-code" className="text-sm font-semibold text-foreground">{t("form.postal")}</label>
+                  <input
+                    id="postal-code"
+                    name="postal-code"
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                    required
+                    type="text"
+                    value={postalCode}
+                    onChange={e => setPostalCode(e.target.value)}
+                    className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                    placeholder={t("form.postal")}
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <input required type="text" value={stateCode} onChange={e => setStateCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.state")} />
+                  <label htmlFor="state" className="text-sm font-semibold text-foreground">{t("form.state")}</label>
+                  <input
+                    id="state"
+                    name="address-level1"
+                    autoComplete="address-level1"
+                    required
+                    type="text"
+                    value={stateCode}
+                    onChange={e => setStateCode(e.target.value)}
+                    className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                    placeholder={t("form.state")}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <input required type="text" value={countryCode} onChange={e => setCountryCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.country")} />
+                  <label htmlFor="country" className="text-sm font-semibold text-foreground">{t("form.country")}</label>
+                  <input
+                    id="country"
+                    name="country"
+                    autoComplete="country"
+                    required
+                    type="text"
+                    value={countryCode}
+                    onChange={e => setCountryCode(e.target.value)}
+                    className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-base shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
+                    placeholder={t("form.country")}
+                  />
                 </div>
               </div>
             </div>
@@ -232,12 +296,14 @@ export function CheckoutForm({
                 {t("form.consentPrivacy")}
               </Link>
             ),
+            seller: workspaceName || tenantSlug,
           })}
         </p>
         <button 
           type="submit" 
           disabled={isSubmitting} 
-          className="w-full h-14 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none disabled:opacity-50 transition-colors flex items-center justify-center"
+          className="w-full h-14 text-sm font-bold tracking-wide uppercase text-background hover:opacity-90 rounded-none disabled:opacity-50 transition-colors flex items-center justify-center bg-foreground"
+          style={{ backgroundColor: "var(--brand, var(--foreground))" }}
         >
           {isSubmitting ? (
             <>
