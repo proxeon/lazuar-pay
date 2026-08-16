@@ -232,7 +232,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             return Task.FromResult(new GatewayWebhookParsedResult(
                 Verified: true,
                 EventType: isPaid ? "PAYMENT_COMPLETED" : "PAYMENT_FAILED",
-                EventId: billId,
+                EventId: $"{(isPaid ? "PAYMENT_COMPLETED" : "PAYMENT_FAILED")}:{billId}",
                 AmountPaid: paidAmountMyr,
                 Currency: "MYR",
                 GatewayTransactionId: billId,

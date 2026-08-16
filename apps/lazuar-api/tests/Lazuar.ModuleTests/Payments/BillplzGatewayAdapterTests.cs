@@ -82,6 +82,7 @@ public class BillplzGatewayAdapterTests
 
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.EventId.Should().Be("PAYMENT_COMPLETED:bill_abc123");
         result.GatewayTransactionId.Should().Be("bill_abc123");
         result.Metadata.Should().ContainKey("checkout_id")
             .WhoseValue.Should().Be("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
@@ -276,7 +277,7 @@ public class BillplzGatewayAdapterTests
 
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("PAYMENT_FAILED");
-        result.EventId.Should().Be("bill_unpaid_1");
+        result.EventId.Should().Be("PAYMENT_FAILED:bill_unpaid_1");
         result.GatewayTransactionId.Should().Be("bill_unpaid_1");
     }
 }

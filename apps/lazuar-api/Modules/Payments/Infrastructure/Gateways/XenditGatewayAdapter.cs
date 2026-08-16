@@ -321,7 +321,7 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         return new GatewayWebhookParsedResult(
             Verified: true,
             EventType: mapped,
-            EventId: invoiceId,
+            EventId: $"{mapped}:{invoiceId}",
             AmountPaid: amount,
             Currency: currency.Trim().ToUpperInvariant(),
             GatewayTransactionId: invoiceId,

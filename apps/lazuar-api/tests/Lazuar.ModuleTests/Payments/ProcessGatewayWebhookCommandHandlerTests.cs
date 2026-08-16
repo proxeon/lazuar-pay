@@ -486,6 +486,127 @@ public class ProcessGatewayWebhookCommandHandlerTests
     }
 
     [Test]
+    public async Task Handle_FailThenPay_SameObject_PublishesFailedAndCompleted()
+    {
+        var tenantId = Guid.CreateVersion7();
+        const string objectId = "purch_retry_1";
+        const string provider = "CHIP";
+
+        var config = new TenantPaymentConfiguration(tenantId, provider, "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, provider, Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logs = new List<PaymentWebhookLog>();
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        logRepo.GetByEventIdAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(logs.FirstOrDefault(l =>
+                l.EventId == ci.ArgAt<string>(0) && l.Provider == ci.ArgAt<string>(1))));
+        logRepo.GetByBusinessKeyAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(logs.FirstOrDefault(l =>
+                l.BusinessKey == ci.ArgAt<string>(0) && l.Provider == ci.ArgAt<string>(1))));
+        logRepo.When(r => r.Add(Arg.Any<PaymentWebhookLog>()))
+            .Do(ci => logs.Add(ci.Arg<PaymentWebhookLog>()));
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.GatewayType.Returns(provider);
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(
+                new GatewayWebhookParsedResult(
+                    true, "PAYMENT_FAILED", $"PAYMENT_FAILED:{objectId}", 0m, "MYR", objectId,
+                    new Dictionary<string, string>(), 0, 0, 0, 1, "MYR", null),
+                new GatewayWebhookParsedResult(
+                    true, "PAYMENT_COMPLETED", $"PAYMENT_COMPLETED:{objectId}", 10m, "MYR", objectId,
+                    new Dictionary<string, string>(), 0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter(provider).Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, provider, "{\"event_type\":\"purchase.payment_failure\"}", new Dictionary<string, string>()),
+            CancellationToken.None);
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, provider, "{\"event_type\":\"purchase.paid\"}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        Assert.That(logs.Count, Is.EqualTo(2));
+        Assert.That(logs.Select(l => l.EventId), Is.EquivalentTo(new[]
+        {
+            $"PAYMENT_FAILED:{objectId}",
+            $"PAYMENT_COMPLETED:{objectId}"
+        }));
+        Assert.That(logs.Select(l => l.BusinessKey), Is.EquivalentTo(new[]
+        {
+            $"PAYMENT_FAILED:{objectId}",
+            $"PAYMENT_COMPLETED:{objectId}"
+        }));
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
+            e.GatewayTransactionId == objectId));
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentCompletedIntegrationEvent>(e =>
+            e.GatewayTransactionId == objectId));
+    }
+
+    [Test]
+    public async Task Handle_DuplicatePaid_SameObject_PublishesCompletedOnce()
+    {
+        var tenantId = Guid.CreateVersion7();
+        const string objectId = "purch_paid_1";
+        const string provider = "CHIP";
+        const string eventId = $"PAYMENT_COMPLETED:{objectId}";
+
+        var config = new TenantPaymentConfiguration(tenantId, provider, "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, provider, Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logs = new List<PaymentWebhookLog>();
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        logRepo.GetByEventIdAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(logs.FirstOrDefault(l =>
+                l.EventId == ci.ArgAt<string>(0) && l.Provider == ci.ArgAt<string>(1))));
+        logRepo.GetByBusinessKeyAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(logs.FirstOrDefault(l =>
+                l.BusinessKey == ci.ArgAt<string>(0) && l.Provider == ci.ArgAt<string>(1))));
+        logRepo.TryRequeueDeadOutboxAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(OutboxRequeueResult.AlreadyActive);
+        logRepo.When(r => r.Add(Arg.Any<PaymentWebhookLog>()))
+            .Do(ci => logs.Add(ci.Arg<PaymentWebhookLog>()));
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.GatewayType.Returns(provider);
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_COMPLETED", eventId, 10m, "MYR", objectId,
+                new Dictionary<string, string>(), 0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter(provider).Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        var command = new ProcessGatewayWebhookCommand(
+            tenantId, provider, "{\"event_type\":\"purchase.paid\"}", new Dictionary<string, string>());
+        await handler.Handle(command, CancellationToken.None);
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.That(logs.Count, Is.EqualTo(1));
+        Assert.That(logs[0].EventId, Is.EqualTo(eventId));
+        Assert.That(logs[0].BusinessKey, Is.EqualTo($"PAYMENT_COMPLETED:{objectId}"));
+        logRepo.Received(1).Add(Arg.Any<PaymentWebhookLog>());
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentCompletedIntegrationEvent>(e =>
+            e.GatewayTransactionId == objectId));
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentFailedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task Handle_UnverifiedParse_DoesNotPublishGatewayPaymentCompleted()
     {
         var tenantId = Guid.CreateVersion7();

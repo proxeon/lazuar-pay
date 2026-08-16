@@ -137,7 +137,7 @@ public class ChipCollectGatewayAdapterTests
 
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("PAYMENT_COMPLETED");
-        result.EventId.Should().Be("purch_root_1");
+        result.EventId.Should().Be("PAYMENT_COMPLETED:purch_root_1");
         result.GatewayTransactionId.Should().Be("purch_root_1");
         Guid.TryParse(result.EventId, out _).Should().BeFalse();
     }
@@ -156,7 +156,7 @@ public class ChipCollectGatewayAdapterTests
 
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("PAYMENT_COMPLETED");
-        result.EventId.Should().Be("purch_nested_9");
+        result.EventId.Should().Be("PAYMENT_COMPLETED:purch_nested_9");
         result.GatewayTransactionId.Should().Be("purch_nested_9");
     }
 
@@ -206,7 +206,7 @@ public class ChipCollectGatewayAdapterTests
 
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("PAYMENT_FAILED");
-        result.EventId.Should().Be("purch_fail_1");
+        result.EventId.Should().Be("PAYMENT_FAILED:purch_fail_1");
         result.GatewayTransactionId.Should().Be("purch_fail_1");
     }
 

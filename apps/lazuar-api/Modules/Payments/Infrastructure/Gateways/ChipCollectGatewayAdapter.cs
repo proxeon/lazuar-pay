@@ -174,7 +174,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                     "Missing stable CHIP purchase id"));
             }
 
-            var eventId = purchaseId;
+            var eventId = $"{mappedEventType}:{purchaseId}";
 
             var purchaseNode = root.TryGetProperty("purchase", out var pNode) ? pNode : default;
             var amountCents = purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("total", out var tProp) ? tProp.GetDecimal() : 0m;

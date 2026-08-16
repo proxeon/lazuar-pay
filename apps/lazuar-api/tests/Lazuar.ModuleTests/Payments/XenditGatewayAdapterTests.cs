@@ -50,6 +50,7 @@ public class XenditGatewayAdapterTests
 
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.EventId.Should().Be("PAYMENT_COMPLETED:inv_paid_1");
         result.GatewayTransactionId.Should().Be("inv_paid_1");
         result.AmountPaid.Should().Be(50m);
         result.Currency.Should().Be("MYR");
@@ -69,6 +70,8 @@ public class XenditGatewayAdapterTests
 
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("PAYMENT_FAILED");
+        result.EventId.Should().Be("PAYMENT_FAILED:inv_exp");
+        result.GatewayTransactionId.Should().Be("inv_exp");
         result.Currency.Should().Be("IDR");
     }
 
