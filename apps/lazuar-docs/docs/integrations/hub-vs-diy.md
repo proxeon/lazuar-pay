@@ -64,7 +64,7 @@ Hub cashier
 | Topic | Note |
 |-------|------|
 | Processor fees | Unchanged — merchant pays gateway fees either way |
-| Hub product pricing | Separate from GMV; commercial terms outside this tech guide |
+| Hub product pricing | Separate from GMV; listed on the Hub host at `/pricing` (do not copy numbers here) |
 | Eng time | DIY costs ongoing adapter + verify maintenance |
 | Incident debug | DIY: provider logs only; Hub: Ops delivery logs + session |
 

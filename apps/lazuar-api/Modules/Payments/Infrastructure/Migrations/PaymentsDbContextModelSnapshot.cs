@@ -117,6 +117,13 @@ namespace Modules.Payments.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasDefaultValue("test");
+
                     b.Property<string>("GatewayType")
                         .IsRequired()
                         .HasMaxLength(50)

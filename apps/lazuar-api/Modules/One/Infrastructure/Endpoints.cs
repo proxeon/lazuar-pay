@@ -18,6 +18,8 @@ public static class Endpoints
         group.MapApiCredentialEndpoints();
         group.MapIntegrationProvisionEndpoints();
 
+        endpoints.MapPublicWorkspaceBrandingEndpoints();
+
         return endpoints;
     }
 }

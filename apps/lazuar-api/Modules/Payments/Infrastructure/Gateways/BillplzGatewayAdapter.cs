@@ -64,7 +64,8 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             return new GatewayCheckoutResult(false, null, null, baseError);
         }
 
-        var isProd = BillplzPublicBase.IsProductionApi(_configuration, apiBaseUrl);
+        metadata.TryGetValue("hub_payment_environment", out var configEnvironment);
+        var isProd = BillplzPublicBase.IsProductionApi(_configuration, apiBaseUrl, configEnvironment);
         var endpoint = isProd ? ProductionApiUrl : SandboxApiUrl;
 
         metadata.TryGetValue("type", out var type);

@@ -47,7 +47,9 @@ GET  /api/v1/one/api-keys
 DELETE /api/v1/one/api-keys/{id}
 ```
 
-Omit scopes on mint → may default to **LHDN** scopes (legacy behavior). Always pass **explicit** payment scopes for cashier apps.
+`scopes` is **required**. Omitting it or sending `[]` returns **400**. There is no implicit LHDN default. Ops and provision always send an explicit array.
+
+Commerce subscription admin (list / get / cancel): `commerce.subscriptions:read` and `commerce.subscriptions:write` (write implies read).
 
 ## Rotation (today)
 

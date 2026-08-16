@@ -36,7 +36,7 @@ public static class ApiCredentialEndpoints
             try
             {
                 var createdBy = ctx.UserId == Guid.Empty ? (Guid?)null : ctx.UserId;
-                // Null/omitted scopes → LHDN document defaults; empty/unknown → 400.
+                // Null/omitted/empty/unknown scopes → 400. No implicit LHDN default.
                 IReadOnlyList<string>? scopes = req.Scopes is null ? null : req.Scopes.ToList();
                 var created = await credentials.GenerateAsync(
                     ctx.TenantId,

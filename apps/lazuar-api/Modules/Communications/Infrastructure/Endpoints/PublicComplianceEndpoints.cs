@@ -59,6 +59,34 @@ public static class PublicComplianceEndpoints
             return Results.Content(UnsubscribeHtml, "text/html", Encoding.UTF8);
         });
 
+        // RFC 8058 one-click POST to the same List-Unsubscribe URL.
+        group.MapPost("/unsubscribe", async (
+            HttpRequest request,
+            IConfiguration config,
+            ISuppressionService suppression,
+            ILoggerFactory loggerFactory) =>
+        {
+            var logger = loggerFactory.CreateLogger("PublicComplianceEndpoints");
+            var org = request.Query["org"].ToString();
+            var email = request.Query["email"].ToString();
+            var sig = request.Query["sig"].ToString();
+
+            if (!Guid.TryParse(org, out var orgId) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(sig))
+                return Results.BadRequest("Invalid unsubscribe link.");
+
+            var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+            var expected = ComputeSig(secret, $"{orgId}:{email}");
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(sig.ToLowerInvariant())))
+            {
+                return Results.BadRequest("Invalid unsubscribe link.");
+            }
+
+            await suppression.SuppressAsync(orgId, email, "UNSUBSCRIBE", "list_unsubscribe_one_click");
+            logger.LogInformation("Tenant {OrganizationId}: {Email} unsubscribed via one-click POST.", orgId, email);
+            return Results.Ok();
+        });
+
         // Resend (Svix-signed) webhook for bounce/complaint events.
         group.MapPost("/webhooks/resend", async (
             HttpRequest request,
@@ -109,38 +137,15 @@ public static class PublicComplianceEndpoints
 
             try
             {
-                using var doc = JsonDocument.Parse(rawBody);
-                var root = doc.RootElement;
-                var type = root.TryGetProperty("type", out var typeProp) ? typeProp.GetString() ?? "" : "";
-
-                var reason = type switch
+                if (!ResendWebhookParser.TryParseSuppression(rawBody, out var type, out var recipient, out var orgId))
                 {
-                    "email.bounced" => "BOUNCE",
-                    "email.complained" => "COMPLAINT",
-                    _ => null
-                };
-                if (reason == null) return Results.Ok(); // not a suppression-worthy event
-
-                var data = root.TryGetProperty("data", out var d) ? d : root;
-
-                // Extract recipient email.
-                string? recipient = null;
-                if (data.TryGetProperty("email", out var emailEl) && emailEl.TryGetProperty("to", out var toEl) && toEl.GetArrayLength() > 0)
-                    recipient = toEl[0].GetString();
-                recipient ??= data.TryGetProperty("recipient", out var recipEl) ? recipEl.GetString() : null;
-                if (string.IsNullOrWhiteSpace(recipient)) return Results.Ok();
-
-                // Extract org from the "org" tag (set on send by Messaging ResendEmailService — tag name frozen).
-                Guid? orgId = null;
-                if (data.TryGetProperty("tags", out var tagsEl) && tagsEl.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var tag in tagsEl.EnumerateArray())
-                    {
-                        var name = tag.TryGetProperty("name", out var n) ? n.GetString() : null;
-                        var value = tag.TryGetProperty("value", out var v) ? v.GetString() : null;
-                        if (name == "org" && Guid.TryParse(value, out var g)) { orgId = g; break; }
-                    }
+                    logger.LogWarning("Failed to parse Resend webhook payload.");
+                    return Results.Ok();
                 }
+
+                var reason = ResendWebhookParser.MapReason(type);
+                if (reason == null) return Results.Ok();
+                if (string.IsNullOrWhiteSpace(recipient)) return Results.Ok();
 
                 if (orgId.HasValue)
                 {

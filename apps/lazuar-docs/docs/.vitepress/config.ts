@@ -22,6 +22,7 @@ const sidebar = [
     collapsed: false,
     items: [
       { text: "Overview", link: "/integrations/" },
+      { text: "Hosted Commerce checkout", link: "/integrations/hosted-checkout" },
       { text: "Payment flow", link: "/integrations/payment-flow" },
       { text: "Payments cashier (M2M)", link: "/integrations/payments-cashier" },
       { text: "Provision a workspace", link: "/integrations/provision" },
@@ -84,7 +85,7 @@ export default defineConfig({
     search: { provider: "local" },
     outline: { level: [2, 3] },
     footer: {
-      message: "Internal / draft integrator guides — refine before public publish.",
+      message: "v1 guides — Payments cashier + hosted Commerce checkout. OpenAPI is reference, not onboarding.",
       copyright: "Lazuar",
     },
     editLink: false,

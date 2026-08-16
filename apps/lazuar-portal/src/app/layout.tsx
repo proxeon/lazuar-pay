@@ -43,7 +43,7 @@ export default async function RootLayout({
           {children}
         </div>
 
-        <footer className="w-full py-6 border-t border-border/60 bg-card mt-auto shrink-0">
+        <footer className="w-full pt-4 sm:pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-[max(1.5rem,env(safe-area-inset-bottom))] border-t border-border/60 bg-card mt-auto shrink-0">
           <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-muted-foreground">
             <p>{t(locale, "footer.copyright", { year })}</p>
             <div className="flex items-center gap-4 sm:gap-6">

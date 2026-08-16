@@ -33,7 +33,9 @@ features:
 
 | If you want to… | Read |
 |-----------------|------|
+| Sell a Hub product pay link | [Hosted Commerce checkout](/integrations/hosted-checkout) |
 | Charge a variable amount from any backend | [Payments cashier](/integrations/payments-cashier) |
+| See which events exist in v1 | [Event catalog](/reference/events) |
 | See who owns each step | [Architecture: who does what](/guide/architecture-who-does-what) |
 | Compare Hub vs embedding Billplz/Stripe | [Hub vs DIY](/integrations/hub-vs-diy) |
 | Understand Payments vs Commerce vs LHDN | [Product lines](/guide/product-lines) |
@@ -44,7 +46,7 @@ features:
 
 ## Status
 
-These guides are **drafts for refinement**. Runtime APIs live in the monorepo; Scalar OpenAPI is under **lazuar-developers** (`/payments`). Orientation pages (architecture, cashier, checklists) live here; machine-readable contracts stay in developers/OpenAPI. Update guides as contracts change. Includes a runnable sample under monorepo `examples/hub-cashier-next` (port **3020**).
+**v1** — Payments cashier + hosted Commerce checkout. Runtime APIs live in the monorepo; Scalar OpenAPI (lazuar-developers) is **schema reference**, not onboarding. Update these guides in the same PR as contract or event-catalog changes. Sample: `examples/hub-cashier-next` (port **3020**).
 
 ## Local preview
 

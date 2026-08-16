@@ -1,12 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, CreditCard, Mail, RotateCcw } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Users, DollarSign, Activity, AlertTriangle, Package, Loader2, CreditCard, Mail, RotateCcw, CheckCircle2, Copy } from "lucide-react";
+import { Link, useOutletContext } from "react-router-dom";
+import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 
+const CHECKLIST_DISMISS_KEY = "lazuar-getting-started-dismissed-until";
+
 export default function DashboardPage() {
+  const { entitlements, activeWorkspaceId } = useOutletContext<{
+    entitlements?: { workspace_id: string; workspace_slug?: string }[];
+    activeWorkspaceId?: string;
+  }>();
+  const workspaceSlug = entitlements?.find((e) => e.workspace_id === activeWorkspaceId)?.workspace_slug;
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["commerce-stats"],
     queryFn: async () => {
@@ -72,9 +80,24 @@ export default function DashboardPage() {
     { label: "Recovered (lifetime)", value: formatMYR(stats?.recovered_revenue || 0), icon: RotateCcw },
   ];
 
-  // FIX: Check if the array is empty or if no gateways have a valid API key
-  const showGatewayWarning = paymentConfigError || !paymentConfigs || paymentConfigs.length === 0 || !paymentConfigs.some(c => c.is_active && (c.has_api_key || c.has_secret_key));
-  const showEmailWarning = emailConfigError || !emailConfig || !emailConfig.is_active || emailConfig.has_api_key === false;
+  const gatewayReady = !paymentConfigError && !!paymentConfigs?.some((c) => c.is_active && (c.has_api_key || c.has_secret_key));
+  const emailReady = !emailConfigError && !!emailConfig && emailConfig.is_active && emailConfig.has_api_key !== false;
+  const firstProduct = (products || [])[0] as { slug?: string } | undefined;
+  const productReady = (products || []).length > 0;
+  const linkReady = productReady && !!workspaceSlug && !!firstProduct?.slug;
+  const checkoutOrigin = (import.meta.env.VITE_PORTAL_URL as string | undefined) || "http://localhost:3004";
+  const checkoutUrl = linkReady ? `${checkoutOrigin.replace(/\/$/, "")}/${workspaceSlug}/checkout/${firstProduct!.slug}` : "";
+  const allStepsDone = gatewayReady && emailReady && productReady && linkReady;
+  const dismissedUntil = Number(localStorage.getItem(CHECKLIST_DISMISS_KEY) || 0);
+  const showChecklist = !allStepsDone && Date.now() > dismissedUntil;
+
+  const checklist = [
+    { label: "Workspace created", done: true, href: null as string | null },
+    { label: "Payment gateway (BYOK)", done: gatewayReady, href: "/workspace/payment-gateways" },
+    { label: "Email (Resend) — required for paid checkout", done: emailReady, href: "/workspace/email" },
+    { label: "First product", done: productReady, href: "/commerce/products" },
+    { label: "Share checkout link", done: linkReady, href: null as string | null },
+  ];
 
   return (
     <PageLayout 
@@ -83,34 +106,63 @@ export default function DashboardPage() {
       breadcrumbs={[{ label: "Commerce" }, { label: "Dashboard" }]}
     >
       <div className="space-y-6">
-        
-        {showGatewayWarning && (
-          <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-200">
-            <div className="flex items-center gap-3">
-              <AlertTriangle size={18} className="text-rose-600" />
+        {showChecklist && (
+          <div className="bg-white border border-[#e5e5e5] p-5 space-y-3">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[13px] font-bold text-rose-800">Action Required: Payment Gateway Not Configured</p>
-                <p className="text-[12px] text-rose-700 mt-0.5">Your checkout links cannot accept payments. Customers will be unable to purchase your products.</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-[#09090b]">Getting started</p>
+                <p className="text-[12px] text-[#71717a] mt-1">
+                  Signup → gateway → Resend → product → openable pay link. Test cards: Stripe test mode / Billplz sandbox.
+                </p>
               </div>
+              <button
+                type="button"
+                className="text-[10px] font-bold uppercase tracking-widest text-[#a1a1aa] hover:text-[#09090b]"
+                onClick={() => {
+                  localStorage.setItem(CHECKLIST_DISMISS_KEY, String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+                  window.location.reload();
+                }}
+              >
+                Dismiss 30 days
+              </button>
             </div>
-            <Link to="/workspace/payment-gateways" className="h-8 px-4 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
-              <CreditCard size={14} /> Configure Now
-            </Link>
-          </div>
-        )}
-
-        {showEmailWarning && (
-          <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200">
-            <div className="flex items-center gap-3">
-              <AlertTriangle size={18} className="text-amber-600" />
-              <div>
-                <p className="text-[13px] font-bold text-amber-800">Action Required: Configure Email Provider</p>
-                <p className="text-[12px] text-amber-700 mt-0.5">You must connect a Resend API key to activate checkout links and send automated receipts.</p>
-              </div>
-            </div>
-            <Link to="/workspace/email" className="h-8 px-4 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
-              <Mail size={14} /> Connect Email
-            </Link>
+            <ol className="space-y-2">
+              {checklist.map((step, i) => (
+                <li key={step.label} className="flex items-center justify-between gap-3 text-[13px]">
+                  <span className="flex items-center gap-2">
+                    {step.done ? (
+                      <CheckCircle2 size={14} className="text-emerald-600" />
+                    ) : i === 1 ? (
+                      <CreditCard size={14} className="text-rose-500" />
+                    ) : i === 2 ? (
+                      <Mail size={14} className="text-amber-600" />
+                    ) : (
+                      <AlertTriangle size={14} className="text-amber-500" />
+                    )}
+                    <span className={step.done ? "text-[#52525b]" : "text-[#09090b] font-medium"}>
+                      {i + 1}. {step.label}
+                    </span>
+                  </span>
+                  {!step.done && step.href && (
+                    <Link to={step.href} className="text-[10px] font-bold uppercase tracking-widest underline">
+                      Open
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ol>
+            {linkReady && (
+              <button
+                type="button"
+                className="h-8 px-3 border border-[#e5e5e5] text-[11px] font-bold uppercase tracking-widest inline-flex items-center gap-1.5 hover:border-[#09090b]"
+                onClick={() => {
+                  void navigator.clipboard.writeText(checkoutUrl);
+                  toast.success("Checkout link copied.");
+                }}
+              >
+                <Copy size={12} /> Copy pay link
+              </button>
+            )}
           </div>
         )}
 

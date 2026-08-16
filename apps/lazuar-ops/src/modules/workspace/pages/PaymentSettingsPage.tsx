@@ -16,6 +16,7 @@ type PaymentConfigRow = {
   webhook_secret_hint?: string | null;
   has_secret_key?: boolean;
   secret_key_hint?: string | null;
+  environment?: string | null;
 };
 
 export default function PaymentSettingsPage() {
@@ -36,6 +37,7 @@ export default function PaymentSettingsPage() {
   const [webhookHint, setWebhookHint] = useState<string | null>(null);
   const [hasSecretKey, setHasSecretKey] = useState(false);
   const [secretKeyHint, setSecretKeyHint] = useState<string | null>(null);
+  const [environment, setEnvironment] = useState<"test" | "live">("test");
 
   const applyConfig = (current: PaymentConfigRow | undefined) => {
     setCollectionId(current?.merchant_id || "");
@@ -46,6 +48,7 @@ export default function PaymentSettingsPage() {
     setWebhookHint(current?.webhook_secret_hint ?? null);
     setHasSecretKey(Boolean(current?.has_secret_key));
     setSecretKeyHint(current?.secret_key_hint ?? null);
+    setEnvironment(current?.environment === "live" ? "live" : "test");
     // Never populate password fields with stored secrets (masked GET).
     setApiKey("");
     setWebhookSecret("");
@@ -133,7 +136,8 @@ export default function PaymentSettingsPage() {
           secret_key: secretKey.trim() || undefined,
           webhook_secret: webhookSecret.trim() || undefined,
           collection_id: collectionId.trim() || undefined,
-          is_active: isActive
+          is_active: isActive,
+          environment
         }
       });
 
@@ -150,7 +154,8 @@ export default function PaymentSettingsPage() {
           has_webhook_secret: hasWebhookSecret || Boolean(webhookSecret.trim()),
           api_key_hint: apiKeyHint,
           secret_key_hint: secretKeyHint,
-          webhook_secret_hint: webhookHint
+          webhook_secret_hint: webhookHint,
+          environment
         };
         if (existing) {
           return prev.map((c) => (c.gateway_type === gatewayType ? next : c));
@@ -215,6 +220,20 @@ export default function PaymentSettingsPage() {
                       />
                       Gateway active (soft-disable keeps credentials)
                     </label>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-[11px] font-semibold text-[#09090b]">Processor environment</label>
+                    <select
+                      value={environment}
+                      onChange={(e) => setEnvironment(e.target.value as "test" | "live")}
+                      className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b]"
+                    >
+                      <option value="test">Test / sandbox (Billplz sandbox, Stripe sk_test_)</option>
+                      <option value="live">Live (Billplz www, Stripe sk_live_)</option>
+                    </select>
+                    <p className="text-[11px] text-[#71717a]">
+                      Hub hostname does not pick Billplz sandbox vs live. A test API key cannot use a live config.
+                    </p>
                   </div>
                 </div>
               </div>

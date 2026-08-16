@@ -27,6 +27,10 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     /// <summary>Buyer quantity for product checkout. Custom sessions leave this at 1; line qty lives in jsonb.</summary>
     public int Quantity { get; private set; } = 1;
 
+    public string? IdempotencyKey { get; private set; }
+    public string? RequestFingerprint { get; private set; }
+    public string? GatewayCheckoutUrl { get; private set; }
+
     private readonly List<AdHocLineItem> _adHocLineItems = new();
     public IReadOnlyCollection<AdHocLineItem> AdHocLineItems => _adHocLineItems.AsReadOnly();
 
@@ -59,6 +63,29 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         IsB2bRequired = false;
         Quantity = quantity < 1 ? 1 : quantity;
         CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetIdempotency(string? key, string? fingerprint)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        IdempotencyKey = key.Trim();
+        RequestFingerprint = fingerprint;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetGatewayCheckoutUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        GatewayCheckoutUrl = url.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
 

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Queries;
 
 namespace Modules.Commerce.Infrastructure;
@@ -27,13 +28,25 @@ public static class PublicArrearsEndpoints
         {
             using var connection = sqlFactory.CreateConnection();
             var query = @"
-                SELECT p.""Name"" as ProductName, p.""Price"" as Amount, p.""Currency"", s.""Status""
+                SELECT p.""Name"" as ProductName, p.""Price"" as Amount, p.""Currency"", s.""Status"",
+                       p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
                 WHERE s.""Id"" = @SubId LIMIT 1";
 
-            var result = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<ArrearsSummaryDto>(connection, query, new { SubId = subId });
-            return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
+            var row = await Dapper.SqlMapper.QuerySingleOrDefaultAsync<ArrearsGetRow>(
+                connection, query, new { SubId = subId });
+            if (row == null) return TypedResults.NotFound();
+
+            var dto = new ArrearsSummaryDto
+            {
+                Product_name = row.ProductName,
+                Amount = (double)row.Amount,
+                Currency = row.Currency,
+                Status = row.Status,
+                Is_reminder_only = PaymentGatewayCapabilities.IsReminderOnlyGateway(row.ProductGatewayName)
+            };
+            return TypedResults.Ok(dto);
         });
 
         group.MapPost("/checkout/{subId:guid}/update-payment", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
@@ -58,17 +71,31 @@ public static class PublicArrearsEndpoints
                 connection, query, new { SubId = subId });
 
             if (sub == null) return TypedResults.BadRequest("Subscription not found.");
-            if (sub.Status != "PAST_DUE" && sub.Status != "SUSPENDED")
+            if (sub.Status == "CANCELED")
             {
-                return TypedResults.BadRequest("This subscription is currently active and does not require a payment update.");
+                return TypedResults.BadRequest("This subscription is canceled.");
             }
 
-            if (!string.IsNullOrWhiteSpace(sub.CurrentRenewalCheckoutUrl)
-                && sub.CurrentRenewalCheckoutForDate.HasValue
-                && sub.NextBillingDate.HasValue
-                && sub.CurrentRenewalCheckoutForDate.Value.Date == sub.NextBillingDate.Value.Date)
+            var reminderOnly = PaymentGatewayCapabilities.IsReminderOnlyGateway(sub.ProductGatewayName);
+            if (sub.Status == "ACTIVE" && reminderOnly)
             {
-                return TypedResults.Ok(new CheckoutResponse { Url = sub.CurrentRenewalCheckoutUrl, Is_zero_amount_bypass = false });
+                return TypedResults.BadRequest("REMINDER_ONLY: This plan is paid by invoice each cycle. No card on file.");
+            }
+
+            if (sub.Status != "PAST_DUE" && sub.Status != "SUSPENDED" && sub.Status != "ACTIVE")
+            {
+                return TypedResults.BadRequest("This subscription cannot update a payment method.");
+            }
+
+            var cached = !string.IsNullOrWhiteSpace(sub.CurrentRenewalCheckoutUrl)
+                && sub.CurrentRenewalCheckoutForDate.HasValue
+                && (sub.Status == "ACTIVE"
+                    ? sub.CurrentRenewalCheckoutForDate.Value.Date == DateTime.UtcNow.Date
+                    : sub.NextBillingDate.HasValue
+                      && sub.CurrentRenewalCheckoutForDate.Value.Date == sub.NextBillingDate.Value.Date);
+            if (cached)
+            {
+                return TypedResults.Ok(new CheckoutResponse { Url = sub.CurrentRenewalCheckoutUrl!, Is_zero_amount_bypass = false });
             }
 
             // Former multi-schema JOIN semantics: missing profile/org → not found.
@@ -82,12 +109,20 @@ public static class PublicArrearsEndpoints
             var successUrl = $"{clientUrl}/{workspace.Slug}/portal";
             var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}";
 
+            var isActiveUpdate = sub.Status == "ACTIVE";
+            var chargeAmount = isActiveUpdate ? 1m : sub.Price;
+
             var metadata = new Dictionary<string, string>
             {
                 { "type", "commerce_subscription" },
                 { "subscription_id", subId.ToString() },
                 { "tenant_id", sub.OrganizationId.ToString() }
             };
+
+            if (isActiveUpdate)
+            {
+                metadata["update_payment"] = "1";
+            }
 
             if (sub.CurrentDunningCampaignId != null)
             {
@@ -105,9 +140,9 @@ public static class PublicArrearsEndpoints
             {
                 var checkoutQuery = new GenerateCheckoutSessionQuery(
                     sub.OrganizationId,
-                    sub.Price,
+                    chargeAmount,
                     sub.Currency,
-                    sub.ProductName,
+                    isActiveUpdate ? $"{sub.ProductName} (verification)" : sub.ProductName,
                     profile.Email,
                     successUrl,
                     cancelUrl,
@@ -118,6 +153,16 @@ public static class PublicArrearsEndpoints
                 );
 
                 var checkoutUrl = await mediator.Send(checkoutQuery);
+
+                if (isActiveUpdate)
+                {
+                    await Dapper.SqlMapper.ExecuteAsync(connection, @"
+                        UPDATE commerce.""Subscriptions""
+                        SET ""CurrentRenewalCheckoutUrl"" = @Url, ""CurrentRenewalCheckoutForDate"" = @ForDate
+                        WHERE ""Id"" = @SubId",
+                        new { Url = checkoutUrl, ForDate = DateTime.UtcNow.Date, SubId = subId });
+                }
+
                 return TypedResults.Ok(new CheckoutResponse { Url = checkoutUrl, Is_zero_amount_bypass = false });
             }
             catch (Exception ex)
@@ -127,6 +172,15 @@ public static class PublicArrearsEndpoints
         });
 
         return group;
+    }
+
+    private sealed class ArrearsGetRow
+    {
+        public string ProductName { get; init; } = "";
+        public decimal Amount { get; init; }
+        public string Currency { get; init; } = "";
+        public string Status { get; init; } = "";
+        public string? ProductGatewayName { get; init; }
     }
 
     /// <summary>

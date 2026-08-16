@@ -21,7 +21,8 @@ public record InitiateCheckoutCommand(
     bool IsGuestCheckout,
     string? CouponCode,
     Guid? SessionId = null,
-    IReadOnlyDictionary<string, string>? Metadata = null
+    IReadOnlyDictionary<string, string>? Metadata = null,
+    string? IdempotencyKey = null
 ) : ICommand<CheckoutResultDto>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

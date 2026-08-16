@@ -125,17 +125,6 @@ public static class AuthAndCorsExtensions
                             || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite))));
             });
 
-            // Optional: payment connection status (no secrets). Do NOT attach to payment-config write.
-            options.AddPolicy("IntegrationPaymentsConfigRead", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(ctx =>
-                    ctx.User.IsInRole("SUPER_ADMIN")
-                    || ctx.User.IsInRole("ADMIN")
-                    || (ctx.User.IsInRole("API_CLIENT")
-                        && ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsConfigRead)));
-            });
-
             // Optional: manage outbound webhook endpoints via API (console/OrgAdmin remains primary v1).
             options.AddPolicy("IntegrationWebhooksEndpointsManage", policy =>
             {
@@ -154,8 +143,28 @@ public static class AuthAndCorsExtensions
                 policy.RequireAssertion(ctx =>
                     ctx.User.IsInRole("API_CLIENT")
                     && (ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite)
-                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead)
-                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsConfigRead)));
+                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead)));
+            });
+
+            options.AddPolicy("IntegrationCommerceSubscriptionsWrite", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && ctx.User.HasClaim("scope", PlatformApiScopes.CommerceSubscriptionsWrite)));
+            });
+
+            options.AddPolicy("IntegrationCommerceSubscriptionsRead", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && (ctx.User.HasClaim("scope", PlatformApiScopes.CommerceSubscriptionsRead)
+                            || ctx.User.HasClaim("scope", PlatformApiScopes.CommerceSubscriptionsWrite))));
             });
         });
 

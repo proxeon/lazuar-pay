@@ -75,6 +75,18 @@ public class CommerceRepository : ICommerceRepository
         return await _context.CheckoutSessions.FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
+    public async Task<CheckoutSession?> GetCheckoutSessionByIdempotencyKeyAsync(
+        Guid organizationId,
+        string idempotencyKey,
+        CancellationToken ct = default)
+    {
+        return await _context.CheckoutSessions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                s => s.OrganizationId == organizationId && s.IdempotencyKey == idempotencyKey,
+                ct);
+    }
+
     public async Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default)
     {
         var local = _context.Subscriptions.Local.FirstOrDefault(s => s.Id == id);

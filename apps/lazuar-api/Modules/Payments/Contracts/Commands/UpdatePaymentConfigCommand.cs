@@ -11,7 +11,8 @@ public record UpdatePaymentConfigCommand(
     [property: JsonPropertyName("collection_id")] string? MerchantId,
     string? WebhookSecret,
     string? SecretKey,
-    bool? IsActive = null) : ICommand
+    bool? IsActive = null,
+    string? Environment = null) : ICommand
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

@@ -110,15 +110,11 @@ Outbound Payments events are an **envelope** plus nested `data` — not a flat t
 
 Header `X-Lazuar-Event` mirrors the event type for quick routing; still parse the body.
 
-## Events (Payments M2M)
+## Events
 
-| Event | Meaning |
-|-------|---------|
-| `payment.completed` | Money captured / paid — unlock domain |
-| `payment.failed` | Payment failed — do **not** unlock |
-| `payment.refunded` | Maturing — do not assume full support for M2M yet |
+Normative list (Payments, Commerce, LHDN, and names that are **not** in v1): **[Event catalog (v1)](/reference/events)**. This page is how to verify hop 2, not a second catalog.
 
-Commerce lifecycle events (`subscription.*`, `order.completed`) are a **different** product surface.
+`payment.refunded` is **not** shipped. Commerce `subscription.*` / `order.completed` are a different product family — do not mix them with cashier `payment.*`.
 
 ## Registration
 

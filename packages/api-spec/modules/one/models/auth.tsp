@@ -11,6 +11,8 @@ model PublicRegisterRequestDto {
   name?: string;
   workspace_name: string;
   tenant_slug: string;
+  /** Clickwrap. Public register rejects the request when this is not true. */
+  accepted_terms?: boolean;
 }
 
 model LoginResponse {

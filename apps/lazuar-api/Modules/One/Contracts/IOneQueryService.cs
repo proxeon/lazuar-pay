@@ -7,7 +7,15 @@ using Lazuar.ApiTypes;
 
 namespace Modules.One.Contracts;
 
-public record WorkspaceSnapshotDto(Guid Id, string Name, string Slug, bool IsActive, DateTime CreatedAt);
+public record WorkspaceSnapshotDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    bool IsActive,
+    DateTime CreatedAt,
+    string? LogoUrl = null,
+    string? PrimaryColor = null);
+public record WorkspaceBrandingDto(string Name, string Slug, string? LogoUrl, string? PrimaryColor);
 public record WorkspaceMemberSnapshotDto(Guid Id, Guid GlobalUserId, string Name, string Email, string Role, DateTime JoinedAt);
 public record WorkspaceInvitationSnapshotDto(Guid Id, string Email, string Role, string Status, DateTime ExpiresAt);
 public record WorkspaceEntitlementSnapshotDto(string AppId, bool IsActive);
@@ -26,6 +34,7 @@ public interface IOneQueryService
 {
     Task<WorkspaceSnapshotDto?> GetWorkspaceByIdAsync(Guid tenantId);
     Task<WorkspaceSnapshotDto?> GetWorkspaceBySlugAsync(string slug);
+    Task<WorkspaceBrandingDto?> GetPublicBrandingBySlugAsync(string slug);
     Task<IEnumerable<WorkspaceSnapshotDto>> GetWorkspacesAsync();
     Task<Guid?> GetTenantIdBySlugAsync(string slug);
     Task<bool> HasTenantAccessAsync(Guid globalUserId, Guid tenantId);

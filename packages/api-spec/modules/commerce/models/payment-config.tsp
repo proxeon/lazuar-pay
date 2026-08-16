@@ -23,6 +23,8 @@ model PaymentConfigDto {
   has_secret_key: boolean;
   /** Masked hint for the secret key. */
   secret_key_hint?: string;
+  /** test or live. Owns Billplz sandbox vs www. */
+  environment?: string;
 }
 
 model SavePaymentConfigRequestDto {
@@ -36,4 +38,5 @@ model SavePaymentConfigRequestDto {
   secret_key?: string;
   /** Soft-disable without deleting credentials. Defaults to true on create. */
   is_active?: boolean;
+  environment?: string;
 }

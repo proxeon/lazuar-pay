@@ -16,6 +16,7 @@ public class TenantPaymentConfigurationConfig : IEntityTypeConfiguration<TenantP
 
         builder.Property(x => x.GatewayType).HasMaxLength(50);
         builder.Property(x => x.IsActive).HasDefaultValue(true);
+        builder.Property(x => x.Environment).HasMaxLength(8).HasDefaultValue("test");
     }
 }
 

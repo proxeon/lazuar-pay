@@ -27,11 +27,13 @@ Your app                  Lazuar Hub                 Gateway
 | Step | Guide |
 |------|--------|
 | 1. Choose product | [Product lines](/guide/product-lines) |
-| 2. Full money path | [Payment flow](/integrations/payment-flow) |
+| Hosted product link | [Hosted Commerce checkout](/integrations/hosted-checkout) |
+| 2. Full money path (cashier) | [Payment flow](/integrations/payment-flow) |
 | 3. Provision | [Provision a workspace](/integrations/provision) |
 | 4. Keys | [API keys & scopes](/integrations/api-keys) |
 | 5. Checkout | [Create a checkout](/integrations/create-checkout) |
 | 6. Webhooks | [Webhooks](/integrations/webhooks) |
+| Events that exist | [Event catalog (v1)](/reference/events) |
 | 7. Environments | [Environments & public URLs](/integrations/environments) |
 | Full cashier | [Payments cashier](/integrations/payments-cashier) |
 | Prove second app | [Second-app checklist](/integrations/second-app-checklist) |
@@ -48,4 +50,4 @@ Your app                  Lazuar Hub                 Gateway
 
 ## Status
 
-**Draft.** Runtime is production-capable for first-party apps (e.g. Aura). Multi-app self-serve polish continues (generic provision, OpenAPI, guides).
+**v1.** Runtime is production-capable for first-party apps (e.g. Aura) and hosted Commerce links. OpenAPI stays reference.

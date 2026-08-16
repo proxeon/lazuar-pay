@@ -406,8 +406,7 @@ public class ApiKeyAuthenticationTests
         foreach (var scope in new[]
                  {
                      PlatformApiScopes.PaymentsCheckoutsWrite,
-                     PlatformApiScopes.PaymentsCheckoutsRead,
-                     PlatformApiScopes.PaymentsConfigRead
+                     PlatformApiScopes.PaymentsCheckoutsRead
                  })
         {
             var apiClient = Principal(role: "API_CLIENT", scopes: [scope]);
@@ -451,20 +450,18 @@ public class ApiKeyAuthenticationTests
     }
 
     [Test]
-    public async Task Payments_Config_Read_Policy_Allows_Scoped_Client_Only()
+    public async Task Commerce_Subscriptions_Write_Implies_Read_And_Denies_Payments_Only()
     {
         var auth = BuildAuthorizationService();
-        var withScope = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.PaymentsConfigRead]);
-        var without = Principal(
-            role: "API_CLIENT",
-            scopes: [PlatformApiScopes.PaymentsCheckoutsWrite]);
+        var write = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.CommerceSubscriptionsWrite]);
+        var read = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.CommerceSubscriptionsRead]);
+        var payments = Principal(role: "API_CLIENT", scopes: [PlatformApiScopes.PaymentsCheckoutsWrite]);
 
-        Assert.That(
-            (await auth.AuthorizeAsync(withScope, null, "IntegrationPaymentsConfigRead")).Succeeded,
-            Is.True);
-        Assert.That(
-            (await auth.AuthorizeAsync(without, null, "IntegrationPaymentsConfigRead")).Succeeded,
-            Is.False);
+        Assert.That((await auth.AuthorizeAsync(write, null, "IntegrationCommerceSubscriptionsWrite")).Succeeded, Is.True);
+        Assert.That((await auth.AuthorizeAsync(write, null, "IntegrationCommerceSubscriptionsRead")).Succeeded, Is.True);
+        Assert.That((await auth.AuthorizeAsync(read, null, "IntegrationCommerceSubscriptionsWrite")).Succeeded, Is.False);
+        Assert.That((await auth.AuthorizeAsync(read, null, "IntegrationCommerceSubscriptionsRead")).Succeeded, Is.True);
+        Assert.That((await auth.AuthorizeAsync(payments, null, "IntegrationCommerceSubscriptionsRead")).Succeeded, Is.False);
     }
 
     /// <summary>Mirrors host policies in Program.cs (OrgAdmin vs Integration*).</summary>
@@ -522,16 +519,6 @@ public class ApiKeyAuthenticationTests
                             || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite))));
             });
 
-            options.AddPolicy("IntegrationPaymentsConfigRead", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(ctx =>
-                    ctx.User.IsInRole("SUPER_ADMIN")
-                    || ctx.User.IsInRole("ADMIN")
-                    || (ctx.User.IsInRole("API_CLIENT")
-                        && ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsConfigRead)));
-            });
-
             options.AddPolicy("IntegrationWebhooksEndpointsManage", policy =>
             {
                 policy.RequireAuthenticatedUser();
@@ -548,8 +535,28 @@ public class ApiKeyAuthenticationTests
                 policy.RequireAssertion(ctx =>
                     ctx.User.IsInRole("API_CLIENT")
                     && (ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsWrite)
-                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead)
-                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsConfigRead)));
+                        || ctx.User.HasClaim("scope", PlatformApiScopes.PaymentsCheckoutsRead)));
+            });
+
+            options.AddPolicy("IntegrationCommerceSubscriptionsWrite", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && ctx.User.HasClaim("scope", PlatformApiScopes.CommerceSubscriptionsWrite)));
+            });
+
+            options.AddPolicy("IntegrationCommerceSubscriptionsRead", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx =>
+                    ctx.User.IsInRole("SUPER_ADMIN")
+                    || ctx.User.IsInRole("ADMIN")
+                    || (ctx.User.IsInRole("API_CLIENT")
+                        && (ctx.User.HasClaim("scope", PlatformApiScopes.CommerceSubscriptionsRead)
+                            || ctx.User.HasClaim("scope", PlatformApiScopes.CommerceSubscriptionsWrite))));
             });
         });
         services.AddSingleton<IAuthorizationHandler, PassThroughHandler>();

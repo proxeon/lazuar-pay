@@ -38,6 +38,7 @@ public class CommerceHonestyDtoTests
             null,
             null,
             true,
+            "https://pay.test/bills/renew-1",
             true,
             null,
             0,
@@ -46,6 +47,7 @@ public class CommerceHonestyDtoTests
 
         var dto = CommerceQueryService.MapSubscriberDto(raw, profile: null, DateTime.UtcNow);
         dto.Is_reminder_only.Should().BeTrue();
+        dto.Current_renewal_checkout_url.Should().Be("https://pay.test/bills/renew-1");
         dto.Cancel_at_period_end.Should().BeTrue();
     }
 
@@ -60,11 +62,63 @@ public class CommerceHonestyDtoTests
             "Plan",
             "ACTIVE",
             paidThrough,
-            true);
+            true,
+            false);
 
         var dto = CommerceQueryService.MapPortalSubscription(raw);
         dto.Current_period_end.Should().Be(new DateTimeOffset(paidThrough));
         dto.Current_period_end.Should().NotBe(new DateTimeOffset(subscribeInstant));
         dto.Cancel_at_period_end.Should().BeTrue();
+    }
+
+    [Test]
+    public void TransactionMap_IncludesGatewayRefundFields()
+    {
+        var raw = new CommerceQueryService.RawGlobalTxDto(
+            Guid.CreateVersion7(),
+            100m,
+            2m,
+            98m,
+            "MYR",
+            "PARTIALLY_REFUNDED",
+            DateTime.UtcNow,
+            "Alice",
+            "a@b.com",
+            "Plan",
+            "SYSTEM",
+            "pi_1",
+            "STRIPE",
+            40m,
+            1);
+
+        var dto = CommerceQueryService.MapTransactionLog(raw);
+        dto.Gateway_name.Should().Be("STRIPE");
+        dto.Refunded_amount.Should().Be(40d);
+        dto.Remaining_amount.Should().Be(60d);
+        dto.Supports_api_refund.Should().BeTrue();
+        dto.Recorded_by_name.Should().Be("SYSTEM");
+    }
+
+    [Test]
+    public void TransactionMap_Billplz_DoesNotSupportApiRefund()
+    {
+        var raw = new CommerceQueryService.RawGlobalTxDto(
+            Guid.CreateVersion7(),
+            50m,
+            0m,
+            50m,
+            "MYR",
+            "CONFIRMED",
+            DateTime.UtcNow,
+            "Bob",
+            "b@b.com",
+            "Plan",
+            "SYSTEM",
+            "bill_1",
+            "BILLPLZ",
+            0m,
+            1);
+
+        CommerceQueryService.MapTransactionLog(raw).Supports_api_refund.Should().BeFalse();
     }
 }

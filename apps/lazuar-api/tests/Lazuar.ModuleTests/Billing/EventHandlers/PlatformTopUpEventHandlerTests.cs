@@ -10,6 +10,7 @@ using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure;
 using Modules.Billing.Infrastructure.EventHandlers;
 using Modules.Billing.Infrastructure.Services;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
 using NUnit.Framework;
 
@@ -152,5 +153,41 @@ public class PlatformTopUpEventHandlerTests
         await _handler.HandleAsync(@event);
 
         Assert.That(await _dbContext.LedgerEntries.IgnoreQueryFilters().CountAsync(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task HandleAsync_PlatformSaasFee_DoesNotGrantCredits()
+    {
+        var wallet = new TenantCreditBalance(_tenantId);
+        wallet.TopUp(50, "starter");
+        _dbContext.TenantCreditBalances.Add(wallet);
+        await _dbContext.SaveChangesAsync();
+
+        var @event = new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: PlatformCheckoutTypes.SystemOrganizationId,
+            GatewayTransactionId: "txn_saas_no_credits",
+            AmountPaid: 50m,
+            Currency: "MYR",
+            GatewayFee: 0,
+            TaxAmount: 0,
+            NetAmount: 50m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = PlatformCheckoutTypes.PlatformSaasFee,
+                ["tenant_id"] = _tenantId.ToString()
+            });
+
+        await _handler.HandleAsync(@event);
+
+        var credits = await _dbContext.TenantCreditBalances.IgnoreQueryFilters()
+            .SingleAsync(w => w.OrganizationId == _tenantId);
+        Assert.That(credits.AvailableCredits, Is.EqualTo(50));
+        Assert.That(
+            await _dbContext.LedgerEntries.IgnoreQueryFilters()
+                .CountAsync(e => e.ReferenceType == "SYSTEM_CREDIT_TOPUP"),
+            Is.EqualTo(0));
     }
 }

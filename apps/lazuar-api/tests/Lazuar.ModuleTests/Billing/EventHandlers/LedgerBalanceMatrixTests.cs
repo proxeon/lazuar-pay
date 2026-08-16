@@ -130,7 +130,7 @@ public class LedgerBalanceMatrixTests
 
         var refundHandler = new GatewayRefundCompletedHandler(_repo, _db);
         var paymentRecordId = Guid.CreateVersion7();
-        await refundHandler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
+        var refundEvent = new GatewayRefundCompletedIntegrationEvent(
             OrganizationId: _orgId,
             SubscriptionId: Guid.CreateVersion7(),
             PaymentRecordId: paymentRecordId,
@@ -139,19 +139,11 @@ public class LedgerBalanceMatrixTests
             Currency: "MYR",
             RefundedFee: 0m,
             NetRefundedAmount: 108m,
-            TaxAmount: 0m));
+            TaxAmount: 0m);
 
-        // Second delivery must not double-post
-        await refundHandler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
-            OrganizationId: _orgId,
-            SubscriptionId: Guid.CreateVersion7(),
-            PaymentRecordId: paymentRecordId,
-            GatewayTransactionId: "pi_refund_1",
-            RefundedAmount: 108m,
-            Currency: "MYR",
-            RefundedFee: 0m,
-            NetRefundedAmount: 108m,
-            TaxAmount: 0m));
+        await refundHandler.HandleAsync(refundEvent);
+        // Same event id is one attempt; redelivery must not double-post.
+        await refundHandler.HandleAsync(refundEvent);
 
         var entries = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines).ToListAsync();
         Assert.That(entries, Has.Count.EqualTo(2));

@@ -17,6 +17,11 @@ interface OneOperations {
     | LoginResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
+  @get
+  @route("/public/pricing")
+  @doc("Anonymous Hub price card. gmv_take_percent is always 0. Hub plan amount comes from Saas:Plan (LP-004).")
+  getPublicPricing(): PublicPricingDto | LazuarApi.Core.ProblemDetailsResponse;
+
   @post
   @route("/auth/login")
   login(@body body: LoginRequest):
@@ -88,6 +93,11 @@ interface OneOperations {
   createWorkspace(@body body: CreateWorkspaceRequestDto):
     | LazuarApi.Core.IdResponse
     | LazuarApi.Core.ProblemDetailsResponse;
+
+  @useAuth(BearerAuth)
+  @get
+  @route("/workspaces/{id}")
+  getWorkspace(@path id: string): WorkspaceDto | LazuarApi.Core.ProblemDetailsResponse;
 
   @useAuth(BearerAuth)
   @put
@@ -263,5 +273,15 @@ interface OneOperations {
   @route("/integrations/workspaces/provision")
   provisionWorkspace(@body body: ProvisionWorkspaceRequestDto):
     | ProvisionWorkspaceResponseDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+}
+
+@route("/public/one")
+interface PublicOneOperations {
+  @get
+  @route("/{tenantSlug}/branding")
+  @doc("Public checkout branding. 404 if slug unknown or inactive. No TIN / legal name.")
+  getPublicWorkspaceBranding(@path tenantSlug: string):
+    | PublicWorkspaceBrandingDto
     | LazuarApi.Core.ProblemDetailsResponse;
 }

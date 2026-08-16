@@ -74,6 +74,7 @@ public static class ModuleRegistrationExtensions
         apiGroup.MapBillingEndpoints();
         apiGroup.MapLhdnEndpoints();
         apiGroup.MapCommerceEndpoints();
+        apiGroup.MapCommerceIntegrationEndpoints();
         apiGroup.MapCommunicationsEndpoints();
 
         var platformGroup = app.MapGroup("/api/v1/platform")

@@ -56,7 +56,7 @@ public class DispatchMessageIntegrationEventHandlerTests
         _mediator = Substitute.For<IMediator>();
 
         _creditCost.GetCost(CreditAction.WhatsAppSend).Returns(0);
-        _suppression.IsSuppressedAsync(Arg.Any<Guid>(), Arg.Any<string>()).Returns(false);
+        _suppression.IsSuppressedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<SuppressionLane>()).Returns(false);
 
         _sut = CreateSut();
     }
@@ -217,7 +217,7 @@ public class DispatchMessageIntegrationEventHandlerTests
     public async Task HandleAsync_SuppressedAddress_SkipsEmailAndDoesNotSend()
     {
         var orgId = Guid.CreateVersion7();
-        _suppression.IsSuppressedAsync(orgId, "user@example.com").Returns(true);
+        _suppression.IsSuppressedAsync(orgId, "user@example.com", SuppressionLane.Transactional).Returns(true);
         _comms.GetEmailConfigCredentialsAsync(orgId).Returns(new TenantEmailCredentials(
             "tenant_key",
             "from@tenant.test",

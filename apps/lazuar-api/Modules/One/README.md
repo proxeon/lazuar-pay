@@ -7,7 +7,7 @@ The `One` module is the central nervous system of the Lazuar platform. It acts a
 * **Global Authentication:** Managing master user credentials (`GlobalUser`), JWT generation, password hashing (BCrypt), and email verification flows.
 * **Workspace Provisioning:** Creating and managing tenant organizations (`Organization`), including slug validation and archival.
 * **Entitlement Management:** Toggling access to specific ecosystem apps (e.g., `COMMERCE`, `OPS`, `BILLING`) per workspace via `TenantAppEntitlement`. Legacy app IDs such as `COMMUNITY` / `VAULT` may still appear in older rows or handlers but those modules are removed (ADR 022).
-* **Onboarding Queue:** Managing the B2B application and approval flow (`AppAccessRequest`) for new Superadmin-led workspace provisioning.
+* **Public self-serve signup:** `POST /one/public/register` creates the user, first workspace, ADMIN membership, and core entitlements immediately. There is no Superadmin approval queue.
 * **Workspace Invitations:** Generating secure, time-bound magic links to invite staff/admins to existing workspaces.
 * **Identity Synchronization:** Broadcasting profile updates so downstream modules (like `CRM`) can keep localized tenant records in sync with the global master identity.
 
@@ -22,7 +22,6 @@ The `One` module is the central nervous system of the Lazuar platform. It acts a
 * **`TenantMembership`**: The junction entity linking a `GlobalUser` to an `Organization` with a specific `Role` (e.g., `ADMIN`, `CLIENT`).
 * **`TenantAppEntitlement`**: Tracks which ecosystem modules are actively provisioned and billed for a specific workspace.
 * **`WorkspaceInvitation`**: Time-bound, cryptographically hashed invitation tokens for onboarding new staff.
-* **`AppAccessRequest`**: The aggregate managing the "Request Access" onboarding queue for prospective Superadmin approval.
 
 ## 5. Integration Events
 ### Published
@@ -64,7 +63,6 @@ All tables reside in the isolated `one` schema.
 * `one.TenantMemberships`
 * `one.TenantAppEntitlements`
 * `one.WorkspaceInvitations`
-* `one.AppAccessRequests`
 * `one.ApiCredentials` — **platform API keys** (SSoT mint/list/revoke)
 * `one.TenantWebhookEndpoints` / `one.WebhookDeliveryOutboxes`
 * `one.OutboxMessages` / `one.InboxMessages`

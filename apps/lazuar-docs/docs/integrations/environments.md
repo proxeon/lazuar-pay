@@ -82,7 +82,17 @@ ngrok http 8080
 
 **Billplz lock-in:** Old bills keep the callback URL from creation time. After changing `App:ApiBaseUrl` or tunnel host, **create new checkouts/bills** — do not expect old sandbox bills to hit the new public base.
 
-**Billplz sandbox vs live is not the K1 prefix.** Hub calls `https://www.billplz-sandbox.com` unless `App:ApiBaseUrl` contains `lazuar.com`, in which case it calls production Billplz. A `sk_live_` integrator key against a non-prod Hub still hits Billplz **sandbox**. Aura may warn: “Billplz environment follows Hub base URL, not the key prefix.”
+**Billplz sandbox vs live is the workspace payment-config environment**, not the Hub hostname.
+
+| Rule | Host |
+|------|------|
+| Config `environment=test` (or new row default) | `https://www.billplz-sandbox.com` |
+| Config `environment=live` | `https://www.billplz.com` |
+| Ops override `App:BillplzEnvironment` = `sandbox` / `production` | Wins over the config flag |
+| `sk_test_` K1 + config `live` (or inverse) | `409 KEY_MODE_MISMATCH` — no bill is created |
+| Hosted Commerce (no K1) | Uses the config flag only |
+
+Do **not** infer Billplz from `App:ApiBaseUrl` containing `lazuar.com` (that would send `pay-local.lazuar.com` live). Stripe still matches K1 vs K2 `sk_test_` / `sk_live_` prefixes.
 
 Full ops runbook (Aura dual-stack): monorepo `idea/022-remaining/RUNBOOK-local-full-fulfillment.md` if present, or Hub Taskfile `tunnel:api`.
 

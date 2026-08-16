@@ -47,7 +47,8 @@ public class GetPaymentConfigQueryHandler : IQueryHandler<GetPaymentConfigQuery,
                 Webhook_secret_hint = webhookHint,
                 // Stripe secret is stored in ApiKey column.
                 Has_secret_key = hasApiKey,
-                Secret_key_hint = apiHint
+                Secret_key_hint = apiHint,
+                Environment = string.IsNullOrWhiteSpace(config.Environment) ? "test" : config.Environment
             };
         });
     }

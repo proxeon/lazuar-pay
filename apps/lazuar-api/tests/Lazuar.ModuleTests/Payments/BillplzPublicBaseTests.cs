@@ -40,13 +40,17 @@ public class BillplzPublicBaseTests
     }
 
     [Test]
-    public void PayLocalLazuarCom_IsSandbox_NotProduction()
+    public void HubHostname_DoesNotForce_LiveBillplz()
     {
         var cfg = new ConfigurationBuilder().AddInMemoryCollection().Build();
         BillplzPublicBase.IsProductionApi(cfg, "https://pay-local.lazuar.com/api/v1")
             .Should().BeFalse();
-        BillplzPublicBase.IsProductionApi(cfg, "https://api.lazuar.com/api/v1")
+        BillplzPublicBase.IsProductionApi(cfg, "https://hub.lazuar.com/api/v1")
+            .Should().BeFalse();
+        BillplzPublicBase.IsProductionApi(cfg, "https://hub.lazuar.com/api/v1", "live")
             .Should().BeTrue();
+        BillplzPublicBase.IsProductionApi(cfg, "https://hub.lazuar.com/api/v1", "test")
+            .Should().BeFalse();
     }
 
     [Test]

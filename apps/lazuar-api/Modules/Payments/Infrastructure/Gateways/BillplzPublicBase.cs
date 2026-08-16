@@ -19,7 +19,7 @@ internal static class BillplzPublicBase
         "hub.lazuar.com",
     };
 
-    public static bool IsProductionApi(IConfiguration config, string? apiBaseUrl)
+    public static bool IsProductionApi(IConfiguration config, string? apiBaseUrl, string? configEnvironment = null)
     {
         var explicitEnv = config["App:BillplzEnvironment"];
         if (string.Equals(explicitEnv, "production", StringComparison.OrdinalIgnoreCase)
@@ -29,9 +29,17 @@ internal static class BillplzPublicBase
             || string.Equals(explicitEnv, "test", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        if (!Uri.TryCreate((apiBaseUrl ?? "").Trim(), UriKind.Absolute, out var uri))
+        if (string.Equals(configEnvironment, "live", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(configEnvironment, "production", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (string.Equals(configEnvironment, "test", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(configEnvironment, "sandbox", StringComparison.OrdinalIgnoreCase))
             return false;
-        return ProductionHosts.Contains(uri.Host);
+
+        // Do not infer from Hub hostname (pay-local.lazuar.com must never go live).
+        _ = apiBaseUrl;
+        _ = ProductionHosts;
+        return false;
     }
 
     public static bool AllowInsecureCallback(IConfiguration config) =>

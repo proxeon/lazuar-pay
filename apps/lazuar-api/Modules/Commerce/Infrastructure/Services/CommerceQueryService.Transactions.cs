@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
 using Lazuar.ApiTypes;
+using Modules.Commerce.Application;
 using Modules.Payments.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Services;
@@ -91,6 +93,55 @@ public partial class CommerceQueryService
         }
 
         return new PaginatedResponse<TransactionLogDto>(rawTx.Select(MapTransactionLog), totalCount, page, limit);
+    }
+
+    public async Task<(IReadOnlyList<TransactionExportCsv.Row> Rows, bool Truncated)> ExportTransactionsAsync(
+        Guid organizationId,
+        DateTime fromUtc,
+        DateTime toUtc,
+        string? status)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT
+                t.""Id"",
+                t.""CreatedAt"",
+                t.""Status"",
+                t.""Amount"",
+                t.""FeeAmount"",
+                t.""NetAmount"",
+                t.""Currency"",
+                t.""CustomerName"",
+                t.""CustomerEmail"",
+                t.""ProductName"",
+                COALESCE(NULLIF(t.""RecordedByName"", ''), 'GATEWAY') as ""RecordedBy"",
+                t.""ExternalReference""
+            FROM commerce.""TransactionLogs"" t
+            WHERE t.""OrganizationId"" = @OrgId
+            AND t.""CreatedAt"" >= @FromUtc
+            AND t.""CreatedAt"" <= @ToUtc
+            AND (@Status IS NULL OR t.""Status"" = @Status)
+            ORDER BY t.""CreatedAt"" DESC
+            LIMIT @Limit;";
+
+        var rows = (await connection.QueryAsync<TransactionExportCsv.Row>(sql, new
+        {
+            OrgId = organizationId,
+            FromUtc = fromUtc,
+            ToUtc = toUtc,
+            Status = string.IsNullOrWhiteSpace(status) ? null : status.Trim(),
+            Limit = TransactionExportCsv.HardCap + 1
+        })).ToList();
+
+        var truncated = rows.Count > TransactionExportCsv.HardCap;
+        if (truncated)
+        {
+            rows = rows.Take(TransactionExportCsv.HardCap).ToList();
+        }
+
+        return (rows, truncated);
     }
 
     internal static TransactionLogDto MapTransactionLog(RawGlobalTxDto t)

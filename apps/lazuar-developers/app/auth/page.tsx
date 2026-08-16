@@ -24,12 +24,16 @@ const SCOPE_ROWS = [
     purpose: "Poll checkout status (write also implies read)",
   },
   {
-    scope: "payments.config:read",
-    purpose: "Optional — connection status only (no secrets)",
-  },
-  {
     scope: "webhooks.endpoints:manage",
     purpose: "Optional — register outbound webhook URLs via API",
+  },
+  {
+    scope: "commerce.subscriptions:read",
+    purpose: "List / get Hub Commerce subscriptions (M2M)",
+  },
+  {
+    scope: "commerce.subscriptions:write",
+    purpose: "Cancel Hub Commerce subscriptions (implies read)",
   },
 ] as const;
 
@@ -82,7 +86,7 @@ export default function AuthGuidePage() {
 
       <GuideSection title="Scope catalog">
         <p className="mb-4">
-          Platform keys store one or more scopes. Policies on integration routes require the matching
+          Platform keys store one or more scopes. API clients must send <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">scopes</code> on mint — there is no default. Policies on integration routes require the matching
           claim. Write scopes typically imply read for the same resource family.
         </p>
         <div className="overflow-x-auto border border-[#e5e5e5]">

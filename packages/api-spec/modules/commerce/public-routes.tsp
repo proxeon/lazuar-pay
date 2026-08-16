@@ -35,8 +35,11 @@ interface PublicCommerceOperations {
   /** Start checkout; returns payment gateway redirect / session details. */
   @post
   @route("/checkout")
-  @doc("Initiate public checkout for a product (subscription or one-time). Primary integrator write path.")
-  initiateCheckout(@body body: PublicCheckoutRequestDto):
+  @doc("Initiate public checkout for a product (subscription or one-time). Optional Idempotency-Key replays the same session.")
+  initiateCheckout(
+    @header("Idempotency-Key") idempotencyKey?: string,
+    @body body: PublicCheckoutRequestDto,
+  ):
     | CheckoutResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
@@ -114,8 +117,11 @@ interface PublicCommerceOperations {
 
   @post
   @route("/checkout/{subId}/update-payment")
-  @doc("Start update-payment / recovery checkout for a past-due subscription.")
-  updatePayment(@path subId: string):
+  @doc("Start update-payment. PAST_DUE/SUSPENDED charges the due amount. ACTIVE vaulted uses a verification amount. ACTIVE reminder-only returns 400 REMINDER_ONLY.")
+  updatePayment(
+    @header("Idempotency-Key") idempotencyKey?: string,
+    @path subId: string,
+  ):
     | CheckoutResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 }

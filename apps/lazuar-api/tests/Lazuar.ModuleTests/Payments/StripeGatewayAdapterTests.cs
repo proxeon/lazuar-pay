@@ -16,6 +16,13 @@ namespace Lazuar.ModuleTests.Payments;
 public class StripeGatewayAdapterTests
 {
     [Test]
+    public void FormatRefundIdempotencyKey_UsesTransactionAndMinorAmount()
+    {
+        StripeGatewayAdapter.FormatRefundIdempotencyKey("pi_abc", 12.34m)
+            .Should().Be("lazuar-refund:pi_abc:1234");
+    }
+
+    [Test]
     public void ApplyCardWalletPaymentMethodTypes_SetsCardOnly()
     {
         var options = new SessionCreateOptions();
@@ -145,6 +152,62 @@ public class StripeGatewayAdapterTests
         options.Metadata!["tenant_id"].Should().Be(paying.ToString());
         options.Metadata["platform_tenant_id"].Should().Be(system.ToString());
         options.PaymentIntentData.Metadata!["tenant_id"].Should().Be(paying.ToString());
+        options.PaymentIntentData.Metadata["platform_tenant_id"].Should().Be(system.ToString());
+    }
+
+    [Test]
+    public void CreateCheckoutSessionOptions_TenantGmvCheckout_HasZeroPlatformFee_AndKeepsPayingTenant()
+    {
+        var tenant = Guid.CreateVersion7();
+        var metadata = new Dictionary<string, string>
+        {
+            ["type"] = "commerce_subscription",
+            ["tenant_id"] = tenant.ToString()
+        };
+
+        var options = StripeGatewayAdapter.CreateCheckoutSessionOptions(
+            tenant,
+            80m,
+            "MYR",
+            "Membership",
+            "buyer@example.com",
+            "https://ok",
+            "https://cancel",
+            metadata);
+
+        options.PaymentIntentData.Should().NotBeNull();
+        options.PaymentIntentData!.ApplicationFeeAmount.Should().BeNull();
+        options.PaymentIntentData.TransferData.Should().BeNull();
+        options.Metadata!["tenant_id"].Should().Be(tenant.ToString());
+        options.PaymentIntentData.Metadata!["tenant_id"].Should().Be(tenant.ToString());
+        options.Metadata.Should().NotContainKey("platform_tenant_id");
+    }
+
+    [Test]
+    public void PaymentAdapters_DoNotSetConnectApplicationFeeOrTransfer()
+    {
+        var gatewaysDir = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "Payments", "Infrastructure", "Gateways"));
+
+        foreach (var file in new[]
+        {
+            "StripeGatewayAdapter.cs",
+            "BillplzGatewayAdapter.cs",
+            "ChipCollectGatewayAdapter.cs",
+            "RazorpayGatewayAdapter.cs"
+        })
+        {
+            var path = Path.Combine(gatewaysDir, file);
+            System.IO.File.Exists(path).Should().BeTrue($"Missing adapter: {path}");
+
+            var src = System.IO.File.ReadAllText(path);
+            src.Should().NotContain("ApplicationFeeAmount");
+            src.Should().NotContain("application_fee");
+            src.Should().NotContain("TransferData");
+            src.Should().NotContain("transfer_data");
+        }
     }
 
     [Test]

@@ -92,6 +92,12 @@ public partial class CommerceQueryService
         return new PaginatedResponse<CommerceSubscriptionDto>(paginatedData, totalCount, page, limit);
     }
 
+    public async Task<CommerceSubscriptionDto?> GetSubscriberByIdAsync(Guid organizationId, Guid subscriptionId)
+    {
+        var page = await GetSubscribersAsync(organizationId, page: 1, limit: 10_000);
+        return page.Data.FirstOrDefault(s => s.Id == subscriptionId.ToString());
+    }
+
     internal static CommerceSubscriptionDto MapSubscriberDto(
         RawSubDto s,
         ClientProfileDto? profile,

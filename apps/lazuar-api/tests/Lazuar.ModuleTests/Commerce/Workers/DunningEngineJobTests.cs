@@ -104,7 +104,50 @@ public class DunningEngineJobTests
             && e.Payload.GetProperty("total_price").GetDecimal() == 50m
             && e.Payload.GetProperty("current_period_end").GetString() == sub.NextBillingDate!.Value.ToString("yyyy-MM-dd")
             && e.Payload.GetProperty("client_profile_id").GetString() == sub.ClientProfileId.ToString()
-            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
+            && e.Payload.GetProperty("checkout_url").GetString() == ""));
+    }
+
+    [Test]
+    public async Task PastDue_Day0Email_IncludesCheckoutUrl_WhenMintedForCurrentDueDate()
+    {
+        var product = CreateProduct(_orgId, "BILLPLZ");
+        var sub = PastDueSub(_orgId, product.Id, isReminderOnly: true, daysOverdue: 0);
+        sub.SetCurrentRenewalCheckout("https://www.billplz-sandbox.com/bills/renew-1", sub.NextBillingDate!.Value);
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
+            && e.Payload.GetProperty("checkout_url").GetString() == "https://www.billplz-sandbox.com/bills/renew-1"));
+    }
+
+    [Test]
+    public async Task PastDue_Day0Email_OmitsCheckoutUrl_WhenMintedForDifferentDate()
+    {
+        var product = CreateProduct(_orgId, "BILLPLZ");
+        var sub = PastDueSub(_orgId, product.Id, isReminderOnly: true, daysOverdue: 0);
+        sub.SetCurrentRenewalCheckout("https://www.billplz-sandbox.com/bills/stale", sub.NextBillingDate!.Value.AddDays(-30));
+        var campaign = Day0EmailCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
+            && e.Payload.GetProperty("checkout_url").GetString() == ""));
     }
 
     [Test]

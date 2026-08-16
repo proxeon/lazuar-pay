@@ -8,6 +8,7 @@ model PortalSubscriptionDto {
   /** Paid-through instant (`NextBillingDate`). */
   current_period_end?: utcDateTime;
   cancel_at_period_end: boolean;
+  is_reminder_only: boolean;
 }
 
 model PortalOrderDto {
@@ -51,4 +52,5 @@ model ArrearsSummaryDto {
   amount: float64;
   currency: string;
   status: string;
+  is_reminder_only: boolean;
 }

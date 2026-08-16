@@ -840,6 +840,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("status")]
         public string Status { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
+        public bool Is_reminder_only { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2147,6 +2150,10 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("secret_key_hint")]
         public string? Secret_key_hint { get; set; } = default!;
 
+        /// <summary>test or live. Owns Billplz sandbox vs www.</summary>
+        [System.Text.Json.Serialization.JsonPropertyName("environment")]
+        public string? Environment { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2288,6 +2295,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("cancel_at_period_end")]
         public bool Cancel_at_period_end { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
+        public bool Is_reminder_only { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2652,6 +2662,9 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("is_active")]
         public bool? Is_active { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("environment")]
+        public string? Environment { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -5839,6 +5852,159 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PublicCreditPackageDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount_myr")]
+        public double Amount_myr { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("credits")]
+        public int Credits { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PublicCreditPackageDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PublicCreditPackageDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PublicHubPlanDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("code")]
+        public string Code { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount_myr")]
+        public double Amount_myr { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("interval")]
+        public string Interval { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PublicHubPlanDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PublicHubPlanDto>(data, options);
+
+        }
+
+    }
+
+    /// <summary>
+    /// Honest Hub commercial card. `gmv_take_percent` is always 0.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PublicPricingDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("gmv_take_percent")]
+        public double Gmv_take_percent { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("starter_credits")]
+        public int Starter_credits { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("packages")]
+        public System.Collections.Generic.List<PublicCreditPackageDto> Packages { get; set; } = new System.Collections.Generic.List<PublicCreditPackageDto>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_rate")]
+        public double Sst_rate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_note")]
+        public string Sst_note { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkout_is_free")]
+        public bool Checkout_is_free { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lhdn_credits_live")]
+        public bool Lhdn_credits_live { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_credits_live")]
+        public bool Whatsapp_credits_live { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lhdn_submit_credits")]
+        public int Lhdn_submit_credits { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("whatsapp_send_credits")]
+        public int Whatsapp_send_credits { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hub_plan")]
+        public PublicHubPlanDto Hub_plan { get; set; } = new PublicHubPlanDto();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PublicPricingDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PublicPricingDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PublicRegisterRequestDto
     {
 
@@ -5856,6 +6022,13 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("tenant_slug")]
         public string Tenant_slug { get; set; } = default!;
+
+        /// <summary>
+        /// Clickwrap. Public register rejects the request when this is not true.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("accepted_terms")]
+        public bool? Accepted_terms { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -6166,6 +6339,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("slug")]
         public string Slug { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("logo_url")]
+        public string? Logo_url { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("primary_color")]
+        public string? Primary_color { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -6399,6 +6578,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("logo_url")]
+        public string? Logo_url { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("primary_color")]
+        public string? Primary_color { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

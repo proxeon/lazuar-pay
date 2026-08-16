@@ -13,7 +13,8 @@ Related monorepo sources of truth:
 | Concern | Source |
 |---------|--------|
 | OpenAPI / TypeSpec | `packages/api-spec/` |
-| Live payments quickstart (engineers) | `docs/payments-integration-quickstart.md` |
+| Outbound event catalog (human SSoT) | `docs/reference/events.md` — update in the **same PR** as a new event type |
+| Live payments quickstart (engineers) | `docs/payments-integration-quickstart.md` (stub → VitePress cashier) |
 | Curl harness | `plans/006-sample/harness/second-app-proof.md` |
 | Sample cashier app | `examples/hub-cashier-next` (port **3020**) |
 | Architecture ADRs | `docs/architecture-decision-log/` |

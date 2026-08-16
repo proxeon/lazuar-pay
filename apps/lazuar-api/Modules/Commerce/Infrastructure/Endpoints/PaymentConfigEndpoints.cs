@@ -37,7 +37,8 @@ public static class PaymentConfigEndpoints
                 req.Collection_id,
                 req.Webhook_secret,
                 req.Secret_key,
-                req.Is_active);
+                req.Is_active,
+                req.Environment);
             
             await mediator.Send(command);
             return TypedResults.Ok(new StatusResponse { Status = "saved" });

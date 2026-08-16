@@ -38,7 +38,12 @@ public class GenerateAndListApiCredentialsTests
         var orgId = Guid.CreateVersion7();
         var userId = Guid.CreateVersion7();
         var result = await handler.Handle(
-            new GenerateApiCredentialCommand(orgId, "Integration", IsTestMode: true, CreatedByUserId: userId),
+            new GenerateApiCredentialCommand(
+                orgId,
+                "Integration",
+                IsTestMode: true,
+                CreatedByUserId: userId,
+                Scopes: PlatformApiScopes.Split(PlatformApiScopes.DefaultDocumentScopes)),
             CancellationToken.None);
 
         Assert.That(result.Name, Is.EqualTo("Integration"));
@@ -72,7 +77,11 @@ public class GenerateAndListApiCredentialsTests
 
         var generate = new GenerateApiCredentialCommandHandler(repo, tokens);
         var created = await generate.Handle(
-            new GenerateApiCredentialCommand(orgId, "Once", IsTestMode: false),
+            new GenerateApiCredentialCommand(
+                orgId,
+                "Once",
+                IsTestMode: false,
+                Scopes: PlatformApiScopes.Split(PlatformApiScopes.DefaultDocumentScopes)),
             CancellationToken.None);
 
         Assert.That(created.PlainKey, Does.StartWith("sk_live_"));
@@ -272,32 +281,50 @@ public class GenerateAndListApiCredentialsTests
     }
 
     [Test]
-    public async Task GenerateApiCredential_Omit_Scopes_Uses_Lhdn_Document_Default()
+    public void GenerateApiCredential_Omit_Scopes_Throws()
     {
         var repo = Substitute.For<IOneRepository>();
         var tokens = Substitute.For<ITokenGeneratorService>();
         tokens.GenerateSecureToken(40).Returns(new GeneratedToken("defaultscopesabcdefghij1234567890ab", "hash"));
         tokens.HashToken(Arg.Any<string>()).Returns(ci => $"hash:{ci.Arg<string>()}");
 
-        ApiCredential? saved = null;
-        repo.When(r => r.AddApiCredential(Arg.Any<ApiCredential>()))
-            .Do(ci => saved = ci.Arg<ApiCredential>());
+        var handler = new GenerateApiCredentialCommandHandler(repo, tokens);
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await handler.Handle(
+                new GenerateApiCredentialCommand(Guid.CreateVersion7(), "Compat", IsTestMode: true, Scopes: null),
+                CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("At least one scope"));
+        repo.DidNotReceive().AddApiCredential(Arg.Any<ApiCredential>());
+    }
+
+    [Test]
+    public void GenerateApiCredential_PaymentsConfigRead_Is_Unknown()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.GenerateSecureToken(40).Returns(new GeneratedToken("abcdefghij1234567890abcdefghij1234567890", "hash"));
+        tokens.HashToken(Arg.Any<string>()).Returns("hash");
 
         var handler = new GenerateApiCredentialCommandHandler(repo, tokens);
-        var result = await handler.Handle(
-            new GenerateApiCredentialCommand(Guid.CreateVersion7(), "Compat", IsTestMode: true, Scopes: null),
-            CancellationToken.None);
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await handler.Handle(
+                new GenerateApiCredentialCommand(
+                    Guid.CreateVersion7(),
+                    "Config",
+                    IsTestMode: true,
+                    Scopes: ["payments.config:read"]),
+                CancellationToken.None));
 
-        Assert.That(result.Scopes, Is.EqualTo(PlatformApiScopes.DefaultDocumentScopes));
-        Assert.That(saved!.Scopes, Is.EqualTo(PlatformApiScopes.DefaultDocumentScopes));
+        Assert.That(ex!.Message, Does.Contain("Unknown API scope").And.Contain("payments.config:read"));
     }
 
     [Test]
     public void NormalizeAndValidate_Rejects_Unknown_And_Accepts_Catalog()
     {
         Assert.That(
-            PlatformApiScopes.NormalizeAndValidate(null),
-            Is.EqualTo(PlatformApiScopes.DefaultDocumentScopes));
+            () => PlatformApiScopes.NormalizeAndValidate(null),
+            Throws.TypeOf<InvalidOperationException>().With.Message.Contains("At least one scope"));
 
         Assert.That(
             PlatformApiScopes.NormalizeAndValidate(

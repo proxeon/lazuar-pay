@@ -26,7 +26,7 @@ public class OneQueryService : IOneQueryService
         return await _context.Organizations
             .AsNoTracking()
             .Where(o => o.Id == tenantId)
-            .Select(o => new WorkspaceSnapshotDto(o.Id, o.Name, o.Slug, o.IsActive, o.CreatedAt))
+            .Select(o => new WorkspaceSnapshotDto(o.Id, o.Name, o.Slug, o.IsActive, o.CreatedAt, o.LogoUrl, o.PrimaryColor))
             .FirstOrDefaultAsync();
     }
 
@@ -36,7 +36,17 @@ public class OneQueryService : IOneQueryService
         return await _context.Organizations
             .AsNoTracking()
             .Where(o => o.Slug == normalizedSlug)
-            .Select(o => new WorkspaceSnapshotDto(o.Id, o.Name, o.Slug, o.IsActive, o.CreatedAt))
+            .Select(o => new WorkspaceSnapshotDto(o.Id, o.Name, o.Slug, o.IsActive, o.CreatedAt, o.LogoUrl, o.PrimaryColor))
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<WorkspaceBrandingDto?> GetPublicBrandingBySlugAsync(string slug)
+    {
+        var normalizedSlug = slug.ToLower().Trim();
+        return await _context.Organizations
+            .AsNoTracking()
+            .Where(o => o.Slug == normalizedSlug && o.IsActive)
+            .Select(o => new WorkspaceBrandingDto(o.Name, o.Slug, o.LogoUrl, o.PrimaryColor))
             .FirstOrDefaultAsync();
     }
 
@@ -45,7 +55,7 @@ public class OneQueryService : IOneQueryService
         return await _context.Organizations
             .AsNoTracking()
             .OrderByDescending(o => o.CreatedAt)
-            .Select(o => new WorkspaceSnapshotDto(o.Id, o.Name, o.Slug, o.IsActive, o.CreatedAt))
+            .Select(o => new WorkspaceSnapshotDto(o.Id, o.Name, o.Slug, o.IsActive, o.CreatedAt, o.LogoUrl, o.PrimaryColor))
             .ToListAsync();
     }
 

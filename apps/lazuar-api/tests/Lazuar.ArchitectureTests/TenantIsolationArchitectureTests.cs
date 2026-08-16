@@ -96,9 +96,11 @@ public class TenantIsolationArchitectureTests
     {
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/health")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/public/commerce/checkout")), Is.True);
+        Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/public/one/acme/branding")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/webhooks/payments/stripe")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/auth/login")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/public/register")), Is.True);
+        Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/public/pricing")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/workspaces")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/me/entitlements")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/integrations/workspaces/provision")), Is.True);

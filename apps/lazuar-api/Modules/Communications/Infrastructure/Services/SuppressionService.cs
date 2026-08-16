@@ -16,12 +16,35 @@ public class SuppressionService : ISuppressionService
         _dbContext = dbContext;
     }
 
-    public async Task<bool> IsSuppressedAsync(Guid organizationId, string email)
+    public Task<bool> IsSuppressedAsync(Guid organizationId, string email) =>
+        IsSuppressedAsync(organizationId, email, SuppressionLane.Marketing);
+
+    public async Task<bool> IsSuppressedAsync(Guid organizationId, string email, SuppressionLane lane)
     {
         if (string.IsNullOrWhiteSpace(email)) return false;
         var normalized = email.Trim().ToLowerInvariant();
-        return await _dbContext.SuppressionEntries
-            .AnyAsync(s => s.OrganizationId == organizationId && s.Email == normalized);
+        var reasons = await _dbContext.SuppressionEntries
+            .IgnoreQueryFilters()
+            .Where(s => s.OrganizationId == organizationId && s.Email == normalized)
+            .Select(s => s.Reason)
+            .ToListAsync();
+
+        if (reasons.Count == 0) return false;
+
+        foreach (var reason in reasons)
+        {
+            if (reason is "BOUNCE" or "COMPLAINT" or "ANONYMIZED")
+            {
+                return true;
+            }
+
+            if (lane == SuppressionLane.Marketing && reason == "UNSUBSCRIBE")
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task SuppressAsync(Guid organizationId, string email, string reason, string? source = null)
@@ -30,6 +53,7 @@ public class SuppressionService : ISuppressionService
         var normalized = email.Trim().ToLowerInvariant();
 
         var exists = await _dbContext.SuppressionEntries
+            .IgnoreQueryFilters()
             .AnyAsync(s => s.OrganizationId == organizationId && s.Email == normalized);
         if (exists) return;
 

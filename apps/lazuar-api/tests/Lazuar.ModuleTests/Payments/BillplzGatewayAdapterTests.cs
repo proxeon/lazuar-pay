@@ -178,6 +178,13 @@ public class BillplzGatewayAdapterTests
     }
 
     [Test]
+    public async Task IssueRefundAsync_AlwaysReturnsFalse()
+    {
+        var refunded = await CreateAdapter().IssueRefundAsync("unused", "bill_1", 10m);
+        refunded.Should().BeFalse();
+    }
+
+    [Test]
     public async Task ChargeOffSessionAsync_DoesNotThrow_ReturnsFalse()
     {
         var adapter = CreateAdapter();

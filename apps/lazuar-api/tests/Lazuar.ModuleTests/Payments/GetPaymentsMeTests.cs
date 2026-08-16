@@ -111,7 +111,7 @@ public class GetPaymentsMeTests
             });
 
         var result = await new GetPaymentsMeQueryHandler(repo).Handle(
-            new GetPaymentsMeQuery(OrgId, KeyId, true, [PlatformApiScopes.PaymentsConfigRead], "n"),
+            new GetPaymentsMeQuery(OrgId, KeyId, true, [PlatformApiScopes.PaymentsCheckoutsRead], "n"),
             CancellationToken.None);
 
         result.HasActiveGateway.Should().BeTrue();

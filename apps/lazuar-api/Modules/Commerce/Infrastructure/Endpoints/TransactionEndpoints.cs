@@ -19,6 +19,34 @@ public static class TransactionEndpoints
 {
     public static RouteGroupBuilder MapTransactionEndpoints(this RouteGroupBuilder group)
     {
+        group.MapGet("/transactions/export", async (
+            [FromQuery] DateTimeOffset? from,
+            [FromQuery] DateTimeOffset? to,
+            [FromQuery] string? status,
+            IExecutionContextAccessor ctx,
+            ICommerceQueryService queryService,
+            HttpResponse response) =>
+        {
+            var toUtc = (to ?? DateTimeOffset.UtcNow).UtcDateTime;
+            var fromUtc = (from ?? new DateTimeOffset(toUtc.AddDays(-31), TimeSpan.Zero)).UtcDateTime;
+            if (fromUtc > toUtc)
+            {
+                (fromUtc, toUtc) = (toUtc, fromUtc);
+            }
+
+            var (rows, truncated) = await queryService.ExportTransactionsAsync(
+                ctx.TenantId, fromUtc, toUtc, status);
+            if (truncated)
+            {
+                response.Headers["X-Export-Truncated"] = "true";
+            }
+
+            var csv = TransactionExportCsv.Build(rows);
+            var bytes = TransactionExportCsv.ToUtf8Bom(csv);
+            var name = $"transactions_{fromUtc:yyyyMMdd}_{toUtc:yyyyMMdd}.csv";
+            return Results.File(bytes, "text/csv", name);
+        });
+
         group.MapGet("/transactions", async Task<Ok<PaginatedResponse<TransactionLogDto>>> (
             [FromQuery] string? search,
             [FromQuery] int page,

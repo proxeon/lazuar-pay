@@ -146,6 +146,14 @@ export default async function AggregatedPortalPage({
                         </button>
                       </form>
                     )}
+                    {(isHealthyActive || isPastDue || isFlagged) && !(sub as { is_reminder_only?: boolean }).is_reminder_only && (
+                      <a
+                        href={`/${tenantSlug}/update-payment/${sub.id}`}
+                        className="h-9 px-4 border border-border bg-background text-[11px] font-bold uppercase tracking-widest hover:bg-secondary transition-colors rounded-none inline-flex items-center"
+                      >
+                        Update payment method
+                      </a>
+                    )}
                     {isPastDue && (
                       <form action={async () => {
                         "use server";

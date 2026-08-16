@@ -35,7 +35,7 @@ export function CommunityPortalView({ tenantSlug, subscription: initialSubscript
     try {
       const { error: apiError } = await browserClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
         params: { path: { tenantSlug }, query: { token } },
-        body: { subscription_id: sub.id }
+        body: { subscription_id: sub.id, at_period_end: true }
       });
 
       if (apiError) throw new Error(apiError.detail || "Failed to cancel subscription.");

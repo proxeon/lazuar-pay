@@ -36,7 +36,13 @@ const SCOPE_CATALOG = [
     scopes: [
       { id: "payments.checkouts:write", label: "Write", hint: "Create M2M checkouts" },
       { id: "payments.checkouts:read", label: "Read", hint: "Poll checkout status" },
-      { id: "payments.config:read", label: "Config read", hint: "Connection status only" },
+    ],
+  },
+  {
+    group: "Commerce subscriptions",
+    scopes: [
+      { id: "commerce.subscriptions:read", label: "Read", hint: "List / get Hub subscriptions" },
+      { id: "commerce.subscriptions:write", label: "Write", hint: "Cancel (implies read)" },
     ],
   },
   {
@@ -280,7 +286,9 @@ export default function ApiKeysPage() {
                       <td className="px-5 py-4">
                         <div className="flex flex-wrap gap-1 max-w-[280px]">
                           {(key.scopes ?? []).length === 0 ? (
-                            <span className="text-[11px] text-[#a1a1aa]">—</span>
+                            <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-amber-50 text-amber-800 border border-amber-200">
+                              Legacy unscoped / LHDN default
+                            </span>
                           ) : (
                             (key.scopes ?? []).map((scope) => (
                               <span
@@ -495,8 +503,9 @@ export default function ApiKeysPage() {
                       </div>
                     </div>
                     <p className="text-[12px] text-[#71717a] leading-relaxed">
-                      Keys never mint other keys or write payment-config secrets. Choose the minimum
-                      product scopes your integration needs.
+                      Keys never mint other keys or write payment-config secrets. API clients must
+                      send <span className="font-mono">scopes</span> — there is no default. Choose
+                      the minimum product scopes your integration needs.
                     </p>
                     <div className="space-y-3 border border-[#e5e5e5] p-3 bg-[#fafafa]/40">
                       {SCOPE_CATALOG.map((group) => (

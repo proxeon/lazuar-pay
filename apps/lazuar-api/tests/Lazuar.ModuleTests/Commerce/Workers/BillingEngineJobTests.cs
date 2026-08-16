@@ -368,12 +368,15 @@ public class BillingEngineJobTests
         _db.DunningCampaigns.Add(campaign);
         await _db.SaveChangesAsync();
 
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
+
         await _job.RunOnceAsync(CancellationToken.None);
 
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
             .Include(s => s.ReminderLogs)
             .SingleAsync(s => s.Id == sub.Id);
         reloaded.Status.Should().Be("PAST_DUE");
+        reloaded.CurrentRenewalCheckoutUrl.Should().Be("https://pay.test/bills/renew-1");
         reloaded.CurrentDunningCampaignId.Should().Be(campaign.Id);
         reloaded.LastCompletedDayOffset.Should().Be(0);
         reloaded.ReminderLogs.Should().ContainSingle(l =>
@@ -382,7 +385,8 @@ public class BillingEngineJobTests
         await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
             e.InternalTargetApp == "COMMUNICATIONS"
             && e.EventType == "reminder.dunning"
-            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
+            && e.Payload.GetProperty("checkout_url").GetString() == "https://pay.test/bills/renew-1"));
         await _eventBus.Received().PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
             e.EventType == "subscription.past_due"));
         await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());

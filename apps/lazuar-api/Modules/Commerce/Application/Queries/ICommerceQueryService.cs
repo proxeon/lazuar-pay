@@ -17,7 +17,13 @@ public interface ICommerceQueryService
     Task<IEnumerable<DunningCampaignDto>> GetDunningCampaignsAsync(Guid organizationId);
     
     Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(Guid organizationId, int page, int limit, string? searchTerm = null);
+    Task<CommerceSubscriptionDto?> GetSubscriberByIdAsync(Guid organizationId, Guid subscriptionId);
     Task<PaginatedResponse<TransactionLogDto>> GetTransactionsAsync(Guid organizationId, int page, int limit, string? status, string? gatewayName, string? searchTerm = null, Guid? subscriptionId = null);
+    Task<(IReadOnlyList<TransactionExportCsv.Row> Rows, bool Truncated)> ExportTransactionsAsync(
+        Guid organizationId,
+        DateTime fromUtc,
+        DateTime toUtc,
+        string? status);
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
     Task<CommerceStatsDto> GetStatsAsync(Guid organizationId);
     /// <summary>

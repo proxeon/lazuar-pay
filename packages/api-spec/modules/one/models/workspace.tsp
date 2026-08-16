@@ -9,6 +9,10 @@ model CreateWorkspaceRequestDto {
 model UpdateWorkspaceRequestDto {
   name: string;
   slug: string;
+  /** Hosted checkout logo (https). Empty/null clears. */
+  logo_url?: string;
+  /** Hosted checkout accent `#RRGGBB`. Empty/null clears. */
+  primary_color?: string;
 }
 
 model WorkspaceDto {
@@ -17,6 +21,15 @@ model WorkspaceDto {
   slug: string;
   is_active: boolean;
   created_at: utcDateTime;
+  logo_url?: string;
+  primary_color?: string;
+}
+
+model PublicWorkspaceBrandingDto {
+  name: string;
+  slug: string;
+  logo_url?: string;
+  primary_color?: string;
 }
 
 model WorkspaceMemberDto {

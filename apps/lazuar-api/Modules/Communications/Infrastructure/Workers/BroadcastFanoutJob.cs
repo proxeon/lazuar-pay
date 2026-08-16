@@ -159,7 +159,7 @@ public class BroadcastFanoutJob : BackgroundService
 
                 foreach (var recipient in recipients)
                 {
-                    if (await suppression.IsSuppressedAsync(broadcast.OrganizationId, recipient.Email))
+                    if (await suppression.IsSuppressedAsync(broadcast.OrganizationId, recipient.Email, SuppressionLane.Marketing))
                     {
                         broadcast.RecordSuppressed();
                         continue;

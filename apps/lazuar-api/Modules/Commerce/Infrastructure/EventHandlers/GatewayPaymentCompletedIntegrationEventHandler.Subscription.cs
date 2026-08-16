@@ -34,6 +34,23 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             return;
         }
 
+        var isMethodUpdateOnly = @event.Metadata != null
+            && @event.Metadata.TryGetValue("update_payment", out var updateFlag)
+            && updateFlag == "1"
+            && existingSub.Status == "ACTIVE";
+
+        if (isMethodUpdateOnly)
+        {
+            if (TryVaultIds(productInfo.GatewayName, @event.GatewayCustomerId, @event.GatewayTokenId, out var updateCustomerId, out var updateTokenId))
+            {
+                existingSub.StoreVaultedToken(updateCustomerId, updateTokenId);
+            }
+
+            await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM", productInfo.GatewayName, existingSub.Id);
+            await _repository.SaveChangesAsync();
+            return;
+        }
+
         var wasInArrears = existingSub.Status is "PAST_DUE" or "SUSPENDED";
         var wasSuspended = existingSub.Status == "SUSPENDED";
 

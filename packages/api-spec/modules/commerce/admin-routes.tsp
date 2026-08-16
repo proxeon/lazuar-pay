@@ -156,6 +156,15 @@ interface AdminCommerceOperations {
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @get
+  @route("/transactions/export")
+  @doc("UTF-8 CSV of transaction logs. Default last 31 days. Cap 50000. Match external_reference to the gateway id. Fees are Hub-recorded.")
+  exportTransactions(
+    @query from?: utcDateTime,
+    @query to?: utcDateTime,
+    @query status?: string,
+  ): string | LazuarApi.Core.ProblemDetailsResponse;
+
+  @get
   @route("/transactions")
   getTransactions(
     @query search?: string,

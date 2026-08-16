@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using BuildingBlocks.Domain;
 using Modules.One.Domain.Events;
 using Modules.One.Domain.Rules;
@@ -16,6 +17,10 @@ public class Organization : Entity, IAggregateRoot
     public Guid Id { get; private set; }
     public string Name { get; private set; }
     public string Slug { get; private set; }
+    /// <summary>Optional https logo for hosted checkout. Not the billing-profile legal logo.</summary>
+    public string? LogoUrl { get; private set; }
+    /// <summary>Optional <c>#RRGGBB</c> accent for hosted checkout CTA.</summary>
+    public string? PrimaryColor { get; private set; }
     public bool IsActive { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
@@ -53,6 +58,47 @@ public class Organization : Entity, IAggregateRoot
         UpdatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new OrganizationUpdatedDomainEvent(Id, Name, Slug));
+    }
+
+    /// <summary>Set or clear checkout branding. Empty / null clears. Does not raise workspace-updated (name/slug only).</summary>
+    public void UpdateBranding(string? logoUrl, string? primaryColor)
+    {
+        LogoUrl = NormalizeLogoUrl(logoUrl);
+        PrimaryColor = NormalizePrimaryColor(primaryColor);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public static string? NormalizeLogoUrl(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var trimmed = raw.Trim();
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        {
+            throw new InvalidOperationException("logo_url must be an http(s) URL.");
+        }
+
+        return uri.ToString();
+    }
+
+    public static string? NormalizePrimaryColor(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var trimmed = raw.Trim();
+        if (!Regex.IsMatch(trimmed, "^#[0-9A-Fa-f]{6}$"))
+        {
+            throw new InvalidOperationException("primary_color must be #RRGGBB.");
+        }
+
+        return trimmed.ToUpperInvariant();
     }
 
     /// <summary>

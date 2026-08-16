@@ -1,5 +1,6 @@
 using System;
 using BuildingBlocks.Domain;
+using Modules.Payments.Domain;
 
 namespace Modules.Payments.Domain.Aggregates;
 
@@ -20,6 +21,9 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
     /// <summary>When false, credentials are retained but the gateway is not used for new checkouts/charges.</summary>
     public bool IsActive { get; private set; }
 
+    /// <summary><c>test</c> or <c>live</c>. Owns Billplz host selection. New rows default test.</summary>
+    public string Environment { get; private set; } = PaymentGatewayEnvironment.Test;
+
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -33,7 +37,8 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
         string? encryptedApiKey,
         string? encryptedWebhookSecret,
         string? merchantId,
-        bool isActive = true)
+        bool isActive = true,
+        string environment = PaymentGatewayEnvironment.Test)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -42,6 +47,7 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
         WebhookSecret = encryptedWebhookSecret;
         MerchantId = merchantId;
         IsActive = isActive;
+        Environment = PaymentGatewayEnvironment.Normalize(environment);
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -51,13 +57,18 @@ public class TenantPaymentConfiguration : Entity, IAggregateRoot, IMustHaveTenan
         string? encryptedApiKey,
         string? encryptedWebhookSecret,
         string? merchantId,
-        bool isActive)
+        bool isActive,
+        string? environment = null)
     {
         GatewayType = gatewayType.ToUpperInvariant();
         ApiKey = encryptedApiKey;
         WebhookSecret = encryptedWebhookSecret;
         MerchantId = merchantId;
         IsActive = isActive;
+        if (environment != null)
+        {
+            Environment = PaymentGatewayEnvironment.Normalize(environment);
+        }
         UpdatedAt = DateTime.UtcNow;
     }
 

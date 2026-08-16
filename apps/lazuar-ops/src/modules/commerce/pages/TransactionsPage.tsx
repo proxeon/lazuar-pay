@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, ArrowRight, ShieldCheck, User, Search } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, ShieldCheck, User, Search, Download } from "lucide-react";
+import { API_URL } from "../../../lib/api-client";
+import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
@@ -71,7 +73,7 @@ export default function TransactionsPage() {
   return (
     <PageLayout 
       title="Transaction Logs" 
-      description="Audit global financial movements, manual payments, and automated system charges."
+      description="Audit Hub-recorded money rows. Match external_reference to Billplz bill id / Stripe PaymentIntent / CHIP id. Fees are Hub-recorded, not the bank payout file."
       breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Transactions" }]}
     >
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full min-h-[600px]">
@@ -116,6 +118,36 @@ export default function TransactionsPage() {
               <option value="RAZORPAY">RAZORPAY</option>
               <option value="OFFLINE">OFFLINE</option>
             </select>
+            <button
+              type="button"
+              className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest bg-white border border-[#e5e5e5] inline-flex items-center gap-1.5 hover:border-[#09090b]"
+              onClick={async () => {
+                const to = new Date();
+                const from = new Date(to.getTime() - 31 * 24 * 60 * 60 * 1000);
+                const params = new URLSearchParams({
+                  from: from.toISOString(),
+                  to: to.toISOString(),
+                });
+                if (statusFilter !== "ALL") params.set("status", statusFilter);
+                const res = await fetch(`${API_URL}/admin/commerce/transactions/export?${params}`, {
+                  credentials: "include",
+                  headers: { "X-Tenant-Id": activeWorkspaceId || "" },
+                });
+                if (!res.ok) {
+                  toast.error("Export failed.");
+                  return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `transactions_${from.toISOString().slice(0, 10)}_${to.toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download size={12} /> CSV
+            </button>
           </div>
           
           <div className="text-[11px] text-[#71717a] font-mono">

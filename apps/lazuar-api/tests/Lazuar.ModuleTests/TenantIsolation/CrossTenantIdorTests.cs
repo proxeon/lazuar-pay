@@ -106,6 +106,35 @@ public class CrossTenantIdorTests
     }
 
     [Test]
+    public async Task AnonymizeSubscriber_ForeignOrg_ThrowsNotFound()
+    {
+        var ownerOrg = Guid.CreateVersion7();
+        var attackerOrg = Guid.CreateVersion7();
+        var product = CreateProduct(ownerOrg);
+        var sub = new Subscription(ownerOrg, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+
+        var mediator = Substitute.For<IMediator>();
+        var handler = new AnonymizeSubscriberCommandHandler(
+            repository,
+            Substitute.For<Modules.CRM.Contracts.ICrmQueryService>(),
+            mediator);
+
+        var act = async () => await handler.Handle(
+            new AnonymizeSubscriberCommand(attackerOrg, sub.Id), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*not found*");
+        await mediator.DidNotReceive().Send(
+            Arg.Any<Modules.CRM.Contracts.AnonymizeClientProfileCommand>(),
+            Arg.Any<CancellationToken>());
+        await repository.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task RecordRefund_ForeignOrg_ThrowsNotFound()
     {
         var ownerOrg = Guid.CreateVersion7();

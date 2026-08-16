@@ -75,7 +75,7 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
             wantsWhatsApp = false;
         }
 
-        if (wantsEmail && !isSystemTenant && await _suppressionService.IsSuppressedAsync(@event.OrganizationId, @event.ToEmail))
+        if (wantsEmail && !isSystemTenant && await _suppressionService.IsSuppressedAsync(@event.OrganizationId, @event.ToEmail, SuppressionLane.Transactional))
         {
             _logger.LogInformation("Skipping email to {Email} for tenant {OrganizationId}: address is suppressed.", @event.ToEmail, @event.OrganizationId);
             await LogDeliveryAsync(@event.OrganizationId, "EMAIL", @event.ToEmail!, "SKIPPED", null, "Address suppressed", @event.Id);

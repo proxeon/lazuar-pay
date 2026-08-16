@@ -17,7 +17,7 @@ public static class PublicCheckoutEndpoints
 {
     public static RouteGroupBuilder MapPublicCheckoutEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
+        group.MapPost("/checkout", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>, Conflict<string>>> (
             [FromBody] PublicCheckoutRequestDto req,
             IOneQueryService oneQueryService,
             IMediator mediator,
@@ -36,6 +36,10 @@ public static class PublicCheckoutEndpoints
                 httpContext.Items["TenantId"] = tenantId.Value;
             }
 
+            var idempotencyKey = httpContext.Request.Headers.TryGetValue("Idempotency-Key", out var header)
+                ? header.ToString()
+                : null;
+
             var command = new InitiateCheckoutCommand(
                 req.Tenant_slug,
                 req.Product_slug,
@@ -53,7 +57,8 @@ public static class PublicCheckoutEndpoints
                 req.Is_guest_checkout ?? false,
                 req.Coupon_code,
                 parsedSessionId,
-                req.Metadata
+                req.Metadata,
+                idempotencyKey
             );
 
             try
@@ -67,6 +72,10 @@ public static class PublicCheckoutEndpoints
                 };
 
                 return TypedResults.Ok(response);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.StartsWith("IDEMPOTENCY_CONFLICT", StringComparison.Ordinal))
+            {
+                return TypedResults.Conflict(ex.Message);
             }
             catch (Exception ex)
             {

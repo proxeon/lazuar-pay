@@ -52,6 +52,8 @@ public class OneDbContext : PlatformDbContext
                 .HasFilter("\"ExternalProduct\" IS NOT NULL AND \"ExternalOrgId\" IS NOT NULL");
             builder.Property(x => x.ExternalProduct).HasMaxLength(64);
             builder.Property(x => x.ExternalOrgId).HasMaxLength(128);
+            builder.Property(x => x.LogoUrl).HasColumnType("text");
+            builder.Property(x => x.PrimaryColor).HasMaxLength(7);
         });
 
         modelBuilder.Entity<GlobalUser>(builder =>

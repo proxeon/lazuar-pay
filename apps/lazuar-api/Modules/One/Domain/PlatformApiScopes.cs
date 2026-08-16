@@ -19,12 +19,14 @@ public static class PlatformApiScopes
     public const string PaymentsCheckoutsRead = "payments.checkouts:read";
     public const string PaymentsCheckoutsWrite = "payments.checkouts:write";
 
-    // --- Optional catalog entries ---
-    public const string PaymentsConfigRead = "payments.config:read";
     public const string WebhooksEndpointsManage = "webhooks.endpoints:manage";
 
+    // --- Commerce subscriptions (M2M admin) ---
+    public const string CommerceSubscriptionsRead = "commerce.subscriptions:read";
+    public const string CommerceSubscriptionsWrite = "commerce.subscriptions:write";
+
     /// <summary>
-    /// Default scopes when mint request omits scopes (backward-compatible LHDN matrix).
+    /// Legacy LHDN pair. Kept for existing rows and explicit LHDN UI mint. Never implied on omit.
     /// </summary>
     public const string DefaultDocumentScopes = LhdnDocumentsWrite + " " + LhdnDocumentsRead;
 
@@ -44,8 +46,9 @@ public static class PlatformApiScopes
         LhdnDocumentsRead,
         PaymentsCheckoutsWrite,
         PaymentsCheckoutsRead,
-        PaymentsConfigRead,
-        WebhooksEndpointsManage
+        WebhooksEndpointsManage,
+        CommerceSubscriptionsRead,
+        CommerceSubscriptionsWrite
     ];
 
     private static readonly HashSet<string> KnownScopeSet = new(AllKnownScopes, StringComparer.Ordinal);
@@ -56,8 +59,7 @@ public static class PlatformApiScopes
     /// <summary>
     /// Normalize and validate requested scopes.
     /// <list type="bullet">
-    /// <item><description><c>null</c> / omitted → <see cref="DefaultDocumentScopes"/> (LHDN compat)</description></item>
-    /// <item><description>empty after trim → reject (never mint claimless keys)</description></item>
+    /// <item><description><c>null</c> / omitted / empty → reject (no implicit LHDN default)</description></item>
     /// <item><description>unknown string → reject with stable detail</description></item>
     /// </list>
     /// Returns space-separated string for storage.
@@ -66,7 +68,8 @@ public static class PlatformApiScopes
     {
         if (scopes is null)
         {
-            return DefaultDocumentScopes;
+            throw new InvalidOperationException(
+                "At least one scope is required. API clients must send scopes; there is no default.");
         }
 
         var list = new List<string>();
@@ -97,7 +100,7 @@ public static class PlatformApiScopes
         if (list.Count == 0)
         {
             throw new InvalidOperationException(
-                "At least one scope is required when scopes is provided. Omit scopes to use the LHDN document default.");
+                "At least one scope is required. API clients must send scopes; there is no default.");
         }
 
         return string.Join(" ", list);
@@ -132,6 +135,9 @@ public static class PlatformApiScopes
     /// </summary>
     public static bool HasAnyPaymentsScope(string? scopes) =>
         HasScope(scopes, PaymentsCheckoutsWrite)
-        || HasScope(scopes, PaymentsCheckoutsRead)
-        || HasScope(scopes, PaymentsConfigRead);
+        || HasScope(scopes, PaymentsCheckoutsRead);
+
+    public static bool HasAnyCommerceSubscriptionsScope(string? scopes) =>
+        HasScope(scopes, CommerceSubscriptionsWrite)
+        || HasScope(scopes, CommerceSubscriptionsRead);
 }

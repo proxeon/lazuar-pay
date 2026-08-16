@@ -1,74 +1,72 @@
 import Link from "next/link";
 
+const DOCS = process.env.NEXT_PUBLIC_DOCS_URL || "http://localhost:5180";
+
 const guides = [
   {
-    href: "/quickstart",
-    title: "Quickstart (LHDN)",
-    blurb: "Submit your first e-invoice with curl or the LHDN SDK, then verify signatures.",
+    href: `${DOCS}/integrations/`,
+    title: "How to integrate",
+    blurb: "Start in the VitePress guides. OpenAPI below is the schema, not onboarding.",
+    external: true,
+  },
+  {
+    href: `${DOCS}/integrations/hosted-checkout`,
+    title: "Hosted Commerce checkout",
+    blurb: "Signup → BYOK + Resend → product link → fulfill on order.completed / subscription.activated.",
+    external: true,
   },
   {
     href: "/payments-cashier",
     title: "Payments cashier",
     blurb: "Provision a workspace, mint a key, create an M2M checkout, verify payment webhooks.",
+    external: false,
   },
   {
-    href: "/auth",
-    title: "Authentication",
-    blurb: "API keys (Bearer sk_) for machines. JWT only for human sessions — never in ERP.",
-  },
-  {
-    href: "/webhooks",
-    title: "Event catalog",
-    blurb: "Outbound webhook events, headers, and X-Lazuar-Signature verification.",
+    href: "/quickstart",
+    title: "LHDN quickstart",
+    blurb: "Submit your first e-invoice with curl or the LHDN SDK, then verify signatures.",
+    external: false,
   },
 ] as const;
 
-const products = [
-  {
-    href: "/lhdn",
-    title: "LHDN Gateway",
-    blurb:
-      "Malaysian e-Invoicing compliance. Submit clean JSON; we handle UBL 2.1 XML and PKI signatures.",
-    badge: "Primary",
-    audience: "external" as const,
-  },
+const reference = [
   {
     href: "/payments",
     title: "Payments (M2M cashier)",
     blurb:
-      "Ad-hoc amount checkouts for any server app. Scoped keys, idempotency, payment.completed / payment.failed webhooks. Not Commerce product catalog.",
+      "Ad-hoc amount checkouts. Scoped keys, idempotency, payment.completed / payment.failed. Not Commerce catalog.",
     badge: "Cashier",
-    audience: "external" as const,
   },
   {
-    href: "/one",
-    title: "Lazuar One (Core)",
-    blurb:
-      "Global identity, workspace provisioning, authentication, and platform-level entitlements.",
-    badge: "Platform",
-    audience: "external" as const,
+    href: "/lhdn",
+    title: "LHDN Gateway",
+    blurb: "Malaysian e-Invoicing. Submit JSON; we handle UBL 2.1 XML and PKI signatures.",
+    badge: "Primary",
   },
   {
     href: "/commerce",
-    title: "Commerce",
+    title: "Commerce OpenAPI",
     blurb:
-      "Integrator v1: public checkout/portal routes + workspace webhooks for unlock/revoke. Admin product CRUD is console-only (no M2M admin keys yet).",
-    badge: "v1",
-    audience: "external" as const,
+      "Hosted checkout is a guide, not this Scalar admin tree. Public buy links + webhooks; M2M list/get/cancel is /integrations/commerce/subscriptions.",
+    badge: "Reference",
+  },
+] as const;
+
+const advanced = [
+  {
+    href: "/one",
+    title: "Lazuar One (Core)",
+    blurb: "Identity, workspace provision, API keys. Not a checkout onboarding path.",
   },
   {
     href: "/billing",
     title: "Billing",
-    blurb: "Ledger, credits, packages, and billing operations for workspaces (console / admin).",
-    badge: "Admin",
-    audience: "external" as const,
+    blurb: "Ledger, credits, packages (console / admin).",
   },
   {
     href: "/ops",
     title: "Ops Console API",
-    blurb: "Internal operator surfaces used by the Lazuar console. Not for external integrators.",
-    badge: "Internal",
-    audience: "internal" as const,
+    blurb: "Internal operator surfaces. Not for external integrators.",
   },
 ] as const;
 
@@ -78,7 +76,8 @@ export default function DeveloperHub() {
       <div className="max-w-2xl w-full text-center space-y-4 mb-12">
         <h1 className="text-3xl font-bold tracking-tight">Lazuar Developer Hub</h1>
         <p className="text-[#71717a] text-sm leading-relaxed">
-          Integration guides and product APIs. Create keys in Ops → Developer → API Keys, call with{" "}
+          How to integrate starts in the guides. OpenAPI is the schema. Create keys in Ops →
+          Developer → API Keys, call with{" "}
           <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">Bearer sk_…</code>, receive
           signed webhooks.
         </p>
@@ -88,7 +87,7 @@ export default function DeveloperHub() {
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] mb-4">
           Start here
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {guides.map((g) => (
             <Link
               key={g.href}
@@ -98,7 +97,33 @@ export default function DeveloperHub() {
               <h3 className="font-bold uppercase tracking-widest text-[12px] mb-2">{g.title}</h3>
               <p className="text-[#71717a] text-[13px] leading-relaxed flex-1">{g.blurb}</p>
               <span className="mt-4 text-[11px] font-bold tracking-widest uppercase text-[#09090b] group-hover:underline">
-                Open →
+                {g.external ? "Open guide →" : "Open →"}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="w-full max-w-3xl mb-12">
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] mb-4">
+          API reference (not onboarding)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {reference.map((m) => (
+            <Link
+              key={m.href}
+              href={m.href}
+              className="group flex flex-col bg-white border border-[#e5e5e5] p-6 transition-all hover:border-[#09090b] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold uppercase tracking-widest text-[12px]">{m.title}</h2>
+                <span className="text-[10px] px-2 py-1 font-mono bg-[#f4f4f5] text-[#71717a]">
+                  {m.badge}
+                </span>
+              </div>
+              <p className="text-[#71717a] text-[13px] leading-relaxed mb-6 flex-1">{m.blurb}</p>
+              <span className="text-[11px] font-bold tracking-widest uppercase text-[#09090b] group-hover:underline">
+                View schema →
               </span>
             </Link>
           ))}
@@ -107,35 +132,17 @@ export default function DeveloperHub() {
 
       <section className="w-full max-w-3xl">
         <h2 className="text-[11px] font-bold uppercase tracking-widest text-[#71717a] mb-4">
-          API references
+          Reference (advanced)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {products.map((m) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {advanced.map((m) => (
             <Link
               key={m.href}
               href={m.href}
-              className={`group flex flex-col bg-white border p-6 transition-all hover:border-[#09090b] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] ${
-                m.audience === "internal" ? "border-dashed border-[#d4d4d8] opacity-90" : "border-[#e5e5e5]"
-              }`}
+              className="group flex flex-col bg-white border border-dashed border-[#d4d4d8] p-5 opacity-90 transition-all hover:border-[#09090b] hover:opacity-100"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold uppercase tracking-widest text-[12px]">{m.title}</h2>
-                <span
-                  className={`text-[10px] px-2 py-1 font-mono ${
-                    m.badge === "Primary"
-                      ? "bg-[#09090b] text-white"
-                      : m.badge === "Internal"
-                        ? "bg-[#f4f4f5] text-[#a1a1aa]"
-                        : "bg-[#f4f4f5] text-[#71717a]"
-                  }`}
-                >
-                  {m.badge}
-                </span>
-              </div>
-              <p className="text-[#71717a] text-[13px] leading-relaxed mb-6 flex-1">{m.blurb}</p>
-              <span className="text-[11px] font-bold tracking-widest uppercase text-[#09090b] group-hover:underline">
-                View Reference →
-              </span>
+              <h3 className="font-bold uppercase tracking-widest text-[12px] mb-2">{m.title}</h3>
+              <p className="text-[#71717a] text-[13px] leading-relaxed flex-1">{m.blurb}</p>
             </Link>
           ))}
         </div>

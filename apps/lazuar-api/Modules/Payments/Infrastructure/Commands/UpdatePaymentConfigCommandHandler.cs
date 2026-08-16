@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using BuildingBlocks.Application;
 using BuildingBlocks.Domain;
 using Modules.Payments.Contracts.Commands;
+using Modules.Payments.Domain;
 using Modules.Payments.Domain.Aggregates;
 
 namespace Modules.Payments.Infrastructure.Commands;
@@ -93,6 +94,14 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
 
         var isActive = request.IsActive ?? config?.IsActive ?? true;
 
+        var environment = request.Environment;
+        if (string.IsNullOrWhiteSpace(environment))
+        {
+            environment = PaymentGatewayEnvironment.InferFromStripeShapedKey(resolvedPlainApiKey)
+                ?? config?.Environment
+                ?? PaymentGatewayEnvironment.Test;
+        }
+
         // Automatically fetch RSA Public Key and register webhooks when a new CHIP key is supplied
         if (gatewayType == "CHIP" &&
             !SecretVaultExtensions.IsKeepExistingSecret(request.ApiKey) &&
@@ -157,7 +166,8 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
                 encryptedApiKey,
                 encryptedWebhook,
                 finalMerchantId,
-                isActive);
+                isActive,
+                environment);
             _context.TenantPaymentConfigurations.Add(config);
         }
         else
@@ -167,7 +177,8 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
                 encryptedApiKey ?? config.ApiKey,
                 encryptedWebhook ?? config.WebhookSecret,
                 finalMerchantId,
-                isActive);
+                isActive,
+                environment);
         }
 
         await _context.SaveChangesAsync(ct);

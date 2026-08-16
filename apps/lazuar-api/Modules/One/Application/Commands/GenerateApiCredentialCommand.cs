@@ -47,7 +47,7 @@ public class GenerateApiCredentialCommandHandler : ICommandHandler<GenerateApiCr
         var keyHint = fullPlainToken.Length >= 4
             ? fullPlainToken[^4..]
             : fullPlainToken;
-        // null scopes → LHDN document default; empty/unknown → InvalidOperationException (400).
+        // null / empty / unknown → InvalidOperationException (400). Callers must send explicit scopes.
         var scopes = PlatformApiScopes.NormalizeAndValidate(request.Scopes);
 
         var credential = new ApiCredential(

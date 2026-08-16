@@ -61,7 +61,7 @@ Local names **not** given a column (see reports 02, 05, 10): ToyyibPay, SenangPa
 | LP-003 | Licensed acquirer / holds settlement | R | R | Y | Y | Y | Y | Y | Y | N | Y |
 | LP-004 | SaaS fee (not take-rate on GMV) | 1 | P | N | N | N | N | P | N | Y | N |
 | LP-005 | Prepaid utility credits (LHDN / WhatsApp) | 1 | P | N | N | N | N | N | N | N | N |
-| LP-006 | Public self-serve signup + pricing page | 1 | N | Y | Y | Y | Y | Y | Y | Y | Y |
+| LP-006 | Public self-serve signup + pricing page | 1 | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 | LP-007 | KYC onboarding (for *their* acquiring) | R | R | Y | Y | Y | Y | Y | Y | — | Y |
 
 ---
@@ -80,8 +80,8 @@ Local names **not** given a column (see reports 02, 05, 10): ToyyibPay, SenangPa
 | LP-017 | Custom domain on checkout | 3 | N | N | N | Y | P | Y | Y | Y | Y |
 | LP-018 | Embed / overlay checkout (no full redirect) | 3 | N | N | P | Y | Y | Y | Y | Y | Y |
 | LP-019 | Guest checkout (no buyer account) | — | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| LP-020 | BM / EN localization | 1 | N | P | P | P | P | Y | Y | Y | P |
-| LP-021 | Mobile-first / wallet QR on our page | 1 | N | P | P | Y | Y | P | N | N | N |
+| LP-020 | BM / EN localization | 1 | Y | P | P | P | P | Y | Y | Y | P |
+| LP-021 | Mobile-first / wallet QR on our page | 1 | Y | P | P | Y | Y | P | N | N | N |
 | LP-022 | Company + TIN fields on checkout | 2 | B | N | N | P | P | Y | Y | Y | Y |
 | LP-023 | Address collection (configurable) | — | Y | P | P | Y | Y | Y | Y | Y | Y |
 | LP-024 | Success page + fulfillment hook | 0 | P | P | P | Y | Y | Y | Y | Y | Y |
@@ -299,7 +299,7 @@ Update-payment exists as `/update-payment/[subId]` (dunning), not as a first-cla
 | LP-181 | Status page / SLA | 4 | N | P | P | P | Y | Y | Y | Y | P |
 | LP-182 | Sandbox + test keys | 1 | P | Y | Y | Y | Y | Y | Y | Y | Y |
 | LP-183 | Time-to-first-checkout < 15 min | 1 | P | Y | Y | Y | P | Y | Y | P | Y |
-| LP-184 | Self-serve workspace create | 1 | P | Y | Y | Y | Y | Y | Y | Y | Y |
+| LP-184 | Self-serve workspace create | 1 | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 
 ---
 

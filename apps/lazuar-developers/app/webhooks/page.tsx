@@ -68,17 +68,9 @@ const LHDN_EVENTS = [
     label: "Invoice invalid",
     hint: "MyInvois rejected document",
   },
-  {
-    type: "invoice.cancelled",
-    label: "Invoice cancelled",
-    hint: "Document cancelled after validation",
-  },
-  {
-    type: "invoice.submitted",
-    label: "Invoice submitted",
-    hint: "Accepted for async processing (when emitted)",
-  },
 ] as const;
+
+const DOCS = process.env.NEXT_PUBLIC_DOCS_URL || "http://localhost:5180";
 
 export default function WebhooksCatalogPage() {
   return (
@@ -86,6 +78,14 @@ export default function WebhooksCatalogPage() {
       title="Event catalog"
       description="Outbound webhooks notify your systems when payments, commerce lifecycle, or e-invoice status changes. Configure endpoints in Ops → Developer → Webhooks."
     >
+      <Callout>
+        Normative catalog:{" "}
+        <a href={`${DOCS}/reference/events`} className="underline font-medium text-[#09090b]">
+          VitePress Event catalog (v1)
+        </a>
+        . This page is a verify cheat-sheet. Do not treat Scalar as the event SSoT.
+      </Callout>
+
       <GuideSection title="Delivery model">
         <ul className="list-disc pl-5 space-y-2">
           <li>
@@ -129,7 +129,11 @@ export default function WebhooksCatalogPage() {
           / <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">resumed</code> to unlock and{" "}
           <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">suspended</code> /{" "}
           <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">canceled</code> to revoke.
-          Key-authenticated M2M product/subscription admin is not in v1.
+          Key-authenticated subscription list/get/cancel is{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">
+            /integrations/commerce/subscriptions
+          </code>
+          . Product CRUD stays console-only.
         </Callout>
         <div className="border border-[#e5e5e5] bg-white overflow-hidden">
           <table className="w-full text-left text-[13px]">

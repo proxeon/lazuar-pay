@@ -7,6 +7,7 @@ using BuildingBlocks.Application;
 using Modules.Payments.Application.Exceptions;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Contracts.Results;
+using Modules.Payments.Domain;
 
 namespace Modules.Payments.Application.Services;
 
@@ -71,6 +72,12 @@ public sealed class CheckoutSessionCashier
 
         var plainApiKey = _secretVault.DecryptOrPlaintext(config.ApiKey);
         EnsureKeyModeMatchesGateway(requestIsTestMode, plainApiKey);
+        EnsureKeyModeMatchesConfigEnvironment(requestIsTestMode, config.Environment);
+
+        var stampedMetadata = new Dictionary<string, string>(metadata, StringComparer.Ordinal);
+        stampedMetadata[PaymentGatewayEnvironment.MetadataKey] =
+            PaymentGatewayEnvironment.Normalize(config.Environment);
+
         var adapter = _gatewayFactory.GetAdapter(config.GatewayType);
 
         var result = await adapter.GenerateCheckoutAsync(
@@ -82,7 +89,7 @@ public sealed class CheckoutSessionCashier
             customerEmail,
             successUrl,
             cancelUrl,
-            metadata,
+            stampedMetadata,
             config.MerchantId,
             setupFutureUsage,
             quantity);
@@ -153,6 +160,27 @@ public sealed class CheckoutSessionCashier
                 requestIsTestMode.Value
                     ? "Test API key cannot charge a live gateway credential (KEY_MODE_MISMATCH)."
                     : "Live API key cannot charge a test gateway credential (KEY_MODE_MISMATCH).",
+                statusCode: 409);
+        }
+    }
+
+    public static void EnsureKeyModeMatchesConfigEnvironment(bool? requestIsTestMode, string? configEnvironment)
+    {
+        if (requestIsTestMode is null) return;
+        var env = PaymentGatewayEnvironment.Normalize(configEnvironment);
+        if (requestIsTestMode.Value && env == PaymentGatewayEnvironment.Live)
+        {
+            throw new PaymentIntegrationException(
+                PaymentErrorCodes.KeyModeMismatch,
+                "Test API key cannot charge a live payment-config environment (KEY_MODE_MISMATCH).",
+                statusCode: 409);
+        }
+
+        if (!requestIsTestMode.Value && env == PaymentGatewayEnvironment.Test)
+        {
+            throw new PaymentIntegrationException(
+                PaymentErrorCodes.KeyModeMismatch,
+                "Live API key cannot charge a test payment-config environment (KEY_MODE_MISMATCH).",
                 statusCode: 409);
         }
     }

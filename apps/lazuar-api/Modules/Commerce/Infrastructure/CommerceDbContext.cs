@@ -185,6 +185,12 @@ public class CommerceDbContext : PlatformDbContext
             builder.Property(x => x.GatewayName).HasMaxLength(100);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
             builder.Property(x => x.Quantity).HasDefaultValue(1);
+            builder.Property(x => x.IdempotencyKey).HasMaxLength(200);
+            builder.Property(x => x.RequestFingerprint).HasMaxLength(128);
+            builder.Property(x => x.GatewayCheckoutUrl);
+            builder.HasIndex(x => new { x.OrganizationId, x.IdempotencyKey })
+                .IsUnique()
+                .HasFilter("\"IdempotencyKey\" IS NOT NULL");
 
             builder.Property(x => x.AdHocLineItems)
                 .HasField("_adHocLineItems")

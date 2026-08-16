@@ -1116,6 +1116,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/one/public/pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Anonymous Hub price card. gmv_take_percent is always 0. Hub plan amount comes from Saas:Plan (LP-004). */
+        get: operations["OneOperations_getPublicPricing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/one/public/register": {
         parameters: {
             query?: never;
@@ -2991,12 +3008,47 @@ export interface components {
             has_secret?: boolean;
             secret_hint?: string;
         };
+        "One.PublicCreditPackageDto": {
+            /** Format: double */
+            amount_myr: number;
+            /** Format: int32 */
+            credits: number;
+        };
+        "One.PublicHubPlanDto": {
+            code: string;
+            name: string;
+            /** Format: double */
+            amount_myr: number;
+            interval: string;
+            currency: string;
+        };
+        /** @description Honest Hub commercial card. `gmv_take_percent` is always 0. */
+        "One.PublicPricingDto": {
+            /** Format: double */
+            gmv_take_percent: number;
+            /** Format: int32 */
+            starter_credits: number;
+            packages: components["schemas"]["One.PublicCreditPackageDto"][];
+            /** Format: double */
+            sst_rate: number;
+            sst_note: string;
+            checkout_is_free: boolean;
+            lhdn_credits_live: boolean;
+            whatsapp_credits_live: boolean;
+            /** Format: int32 */
+            lhdn_submit_credits: number;
+            /** Format: int32 */
+            whatsapp_send_credits: number;
+            hub_plan: components["schemas"]["One.PublicHubPlanDto"];
+        };
         "One.PublicRegisterRequestDto": {
             email: string;
             password?: string;
             name?: string;
             workspace_name: string;
             tenant_slug: string;
+            /** @description Clickwrap. Public register rejects the request when this is not true. */
+            accepted_terms?: boolean;
         };
         "One.ResendVerificationRequestDto": {
             email: string;
@@ -9056,6 +9108,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Core.StatusResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    OneOperations_getPublicPricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.PublicPricingDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

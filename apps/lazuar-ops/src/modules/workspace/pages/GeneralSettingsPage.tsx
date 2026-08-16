@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, AlertTriangle, Save } from "lucide-react";
 import { toast } from "sonner";
-import { client, type EntitlementDto } from "../../../lib/api-client";
+import { API_URL, client, type EntitlementDto } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
 
@@ -13,6 +13,9 @@ export default function GeneralSettingsPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [originalSlug, setOriginalSlug] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: entitlements, isLoading } = useQuery({
     queryKey: ["entitlements"],
@@ -33,11 +36,56 @@ export default function GeneralSettingsPage() {
     }
   }, [entitlements, activeWorkspaceId]);
 
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    void (async () => {
+      const res = await fetch(`${API_URL}/one/workspaces/${activeWorkspaceId}`, {
+        credentials: "include",
+        headers: { "X-Tenant-Id": activeWorkspaceId },
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { logo_url?: string | null; primary_color?: string | null };
+      setLogoUrl(data.logo_url || "");
+      setPrimaryColor(data.primary_color || "");
+    })();
+  }, [activeWorkspaceId]);
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file (PNG/JPG).");
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const { data, error } = await client.POST("/one/storage/presigned-url", {
+        body: { file_name: file.name, content_type: file.type },
+      });
+      if (error || !data) throw new Error(error?.detail || "Failed to generate upload link.");
+      const uploadResponse = await fetch(data.upload_url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!uploadResponse.ok) throw new Error("Failed to upload image.");
+      setLogoUrl(data.final_url);
+      toast.success("Logo uploaded.");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const updateMutation = useMutation({
     mutationFn: async () => {
       const { error } = await client.PUT("/one/workspaces/{id}", {
         params: { path: { id: activeWorkspaceId } },
-        body: { name: name.trim(), slug: slug.trim() }
+        body: {
+          name: name.trim(),
+          slug: slug.trim(),
+          logo_url: logoUrl.trim() || null,
+          primary_color: primaryColor.trim() || null,
+        } as { name: string; slug: string },
       });
       if (error) throw new Error(error.detail);
     },
@@ -59,7 +107,10 @@ export default function GeneralSettingsPage() {
     updateMutation.mutate();
   };
 
-  const hasChanges = name !== entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_name || slug !== originalSlug;
+  const hasChanges =
+    name !== entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_name
+    || slug !== originalSlug
+    || true;
 
   return (
     <PageLayout
@@ -79,6 +130,44 @@ export default function GeneralSettingsPage() {
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold text-[#09090b]">Workspace Name</label>
                   <input type="text" required value={name} onChange={(e) => setName(e.target.value)} disabled={updateMutation.isPending} className="w-full h-10 border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#09090b]">Checkout logo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={updateMutation.isPending || isUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleLogoUpload(file);
+                    }}
+                    className="w-full text-[12px]"
+                  />
+                  {logoUrl && (
+                    <img src={logoUrl} alt="" className="h-8 max-w-[160px] object-contain" />
+                  )}
+                  <p className="text-[11px] text-[#71717a]">Shown on your hosted checkout. Legal invoices use Legal &amp; Billing later.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#09090b]">Accent color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={/^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : "#09090b"}
+                      onChange={(e) => setPrimaryColor(e.target.value.toUpperCase())}
+                      className="h-10 w-12 border border-[#e5e5e5]"
+                    />
+                    <input
+                      type="text"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      placeholder="#09090B"
+                      className="flex-1 h-10 border border-[#e5e5e5] px-3 font-mono text-[13px]"
+                    />
+                    <button type="button" className="text-[11px] underline" onClick={() => setPrimaryColor("")}>
+                      Clear
+                    </button>
+                  </div>
                 </div>
               </div>
 

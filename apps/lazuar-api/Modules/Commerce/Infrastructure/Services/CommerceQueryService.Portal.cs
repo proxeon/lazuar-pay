@@ -15,7 +15,8 @@ public partial class CommerceQueryService
         string ProductName,
         string Status,
         DateTime? CurrentPeriodEnd,
-        bool CancelAtPeriodEnd);
+        bool CancelAtPeriodEnd,
+        bool IsReminderOnly);
     private record RawPortalOrderDto(Guid Id, Guid ProductId, string ProductName, string Status, DateTime CreatedAt);
 
     public async Task<AggregatedPortalDataResponse?> GetPortalDataAsync(Guid organizationId, Guid referenceSubscriptionId)
@@ -33,7 +34,8 @@ public partial class CommerceQueryService
 
         const string subsSql = @"
             SELECT s.""Id"", s.""ProductId"", p.""Name"" as ProductName, s.""Status"",
-                   s.""NextBillingDate"" as CurrentPeriodEnd, s.""CancelAtPeriodEnd""
+                   s.""NextBillingDate"" as CurrentPeriodEnd, s.""CancelAtPeriodEnd"",
+                   s.""IsReminderOnly""
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
             WHERE s.""ClientProfileId"" = @ProfileId AND s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'
@@ -71,6 +73,7 @@ public partial class CommerceQueryService
         Product_name = s.ProductName,
         Status = s.Status,
         Current_period_end = s.CurrentPeriodEnd.HasValue ? new DateTimeOffset(s.CurrentPeriodEnd.Value) : null,
-        Cancel_at_period_end = s.CancelAtPeriodEnd
+        Cancel_at_period_end = s.CancelAtPeriodEnd,
+        Is_reminder_only = s.IsReminderOnly
     };
 }

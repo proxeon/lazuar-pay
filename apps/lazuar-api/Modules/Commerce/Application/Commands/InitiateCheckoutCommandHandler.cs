@@ -52,6 +52,35 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             throw new InvalidOperationException("This workspace has not configured an active email provider. Checkout is temporarily disabled.");
         }
 
+        var idempotencyKey = CommerceCheckoutIdempotency.NormalizeKey(request.IdempotencyKey);
+        var fingerprint = CommerceCheckoutIdempotency.Fingerprint(
+            tenantId.Value,
+            request.ProductSlug,
+            request.Email,
+            request.CouponCode,
+            request.Quantity,
+            request.SessionId);
+
+        if (idempotencyKey != null)
+        {
+            var existing = await _repository.GetCheckoutSessionByIdempotencyKeyAsync(
+                tenantId.Value, idempotencyKey, ct);
+            if (existing != null)
+            {
+                if (!string.Equals(existing.RequestFingerprint, fingerprint, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("IDEMPOTENCY_CONFLICT: Idempotency-Key was reused with a different checkout payload.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(existing.GatewayCheckoutUrl))
+                {
+                    return new CheckoutResultDto(
+                        existing.GatewayCheckoutUrl,
+                        existing.Status == "COMPLETED");
+                }
+            }
+        }
+
         var clientUrl = _configuration["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
 
         if (request.SessionId.HasValue)
@@ -160,9 +189,32 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, product.Interval);
         session.SetMetadataJson(CommerceCheckoutMetadata.Serialize(persistMeta));
+        session.SetIdempotency(idempotencyKey, fingerprint);
 
         _repository.AddCheckoutSession(session);
-        await _repository.SaveChangesAsync(ct);
+        try
+        {
+            await _repository.SaveChangesAsync(ct);
+        }
+        catch (Exception) when (idempotencyKey != null)
+        {
+            var raced = await _repository.GetCheckoutSessionByIdempotencyKeyAsync(
+                tenantId.Value, idempotencyKey, ct);
+            if (raced != null && raced.Id != session.Id)
+            {
+                if (!string.Equals(raced.RequestFingerprint, fingerprint, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("IDEMPOTENCY_CONFLICT: Idempotency-Key was reused with a different checkout payload.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(raced.GatewayCheckoutUrl))
+                {
+                    return new CheckoutResultDto(raced.GatewayCheckoutUrl, raced.Status == "COMPLETED");
+                }
+            }
+
+            throw;
+        }
 
         // Same poller handle as the paid hop-2 return — buyer success must observe session COMPLETED.
         var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
@@ -171,6 +223,8 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         {
             var processZeroAmountCmd = new ProcessZeroAmountCheckoutCommand(tenantId.Value, session.Id);
             await _mediator.Send(processZeroAmountCmd, ct);
+            session.SetGatewayCheckoutUrl(successUrl);
+            await _repository.SaveChangesAsync(ct);
 
             return new CheckoutResultDto(successUrl, true);
         }
@@ -204,6 +258,8 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             );
 
             var checkoutUrl = await _mediator.Send(gatewayQuery, ct);
+            session.SetGatewayCheckoutUrl(checkoutUrl);
+            await _repository.SaveChangesAsync(ct);
 
             return new CheckoutResultDto(checkoutUrl, false);
         }
