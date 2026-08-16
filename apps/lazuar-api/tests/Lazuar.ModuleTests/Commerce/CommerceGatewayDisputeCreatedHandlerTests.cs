@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using FluentAssertions;
 using Lazuar.TestSupport;
@@ -10,12 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
-using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.EventHandlers;
 using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Commerce;
@@ -24,7 +20,6 @@ namespace Lazuar.ModuleTests.Commerce;
 public class CommerceGatewayDisputeCreatedHandlerTests
 {
     private CommerceDbContext _db = null!;
-    private IEventBus _eventBus = null!;
     private CommerceGatewayDisputeCreatedHandler _handler = null!;
     private Guid _orgId;
 
@@ -37,10 +32,8 @@ public class CommerceGatewayDisputeCreatedHandlerTests
             FakeExecutionContextAccessor.EmptyTenant(),
             InMemoryDb.NullMediator,
             new DatabaseJobTrigger());
-        _eventBus = Substitute.For<IEventBus>();
         _handler = new CommerceGatewayDisputeCreatedHandler(
             _db,
-            _eventBus,
             NullLogger<CommerceGatewayDisputeCreatedHandler>.Instance);
     }
 
@@ -48,11 +41,13 @@ public class CommerceGatewayDisputeCreatedHandlerTests
     public void TearDown() => _db.Dispose();
 
     [Test]
-    public async Task Replay_SameGatewayTransactionId_PersistsOneRow()
+    public async Task Replay_SameGatewayTransactionId_PersistsOneRow_AndHealsHasOpenDispute()
     {
         var sub = ActiveSub();
         _db.Subscriptions.Add(sub);
+        _db.Disputes.Add(new CommerceDispute(_orgId, "pi_dup", 50m, "MYR", sub.Id));
         await _db.SaveChangesAsync();
+        sub.HasOpenDispute.Should().BeFalse();
 
         var evt = Dispute("pi_dup", subscriptionId: sub.Id);
         await _handler.HandleAsync(evt);
@@ -61,7 +56,8 @@ public class CommerceGatewayDisputeCreatedHandlerTests
         (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(1);
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
         reloaded.Status.Should().Be("ACTIVE");
-        await _eventBus.Received(1).PublishAsync(Arg.Any<GatewayRefundCompletedIntegrationEvent>());
+        reloaded.HasOpenDispute.Should().BeTrue();
+        await AssertDidNotReceiveGatewayRefundCompleted();
     }
 
     [Test]
@@ -72,7 +68,7 @@ public class CommerceGatewayDisputeCreatedHandlerTests
             type: PlatformCheckoutTypes.UtilityCreditTopup));
 
         (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(0);
-        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayRefundCompletedIntegrationEvent>());
+        await AssertDidNotReceiveGatewayRefundCompleted();
     }
 
     [Test]
@@ -83,6 +79,7 @@ public class CommerceGatewayDisputeCreatedHandlerTests
             type: PlatformCheckoutTypes.PlatformSaasFee));
 
         (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+        await AssertDidNotReceiveGatewayRefundCompleted();
     }
 
     [Test]
@@ -101,11 +98,13 @@ public class CommerceGatewayDisputeCreatedHandlerTests
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
         reloaded.Status.Should().NotBe("CANCELED");
         reloaded.Status.Should().Be("ACTIVE");
+        reloaded.HasOpenDispute.Should().BeTrue();
         var dispute = await _db.Disputes.IgnoreQueryFilters().SingleAsync();
         dispute.SubscriptionId.Should().Be(sub.Id);
         dispute.Status.Should().Be(CommerceDispute.StatusOpen);
         (await _db.TransactionLogs.IgnoreQueryFilters().SingleAsync(l => l.Id == log.Id))
             .Status.Should().Be(CommerceTransactionLog.StatusDisputed);
+        await AssertDidNotReceiveGatewayRefundCompleted();
     }
 
     [Test]
@@ -119,8 +118,15 @@ public class CommerceGatewayDisputeCreatedHandlerTests
             _orgId, "pi_none", 10m, "MYR", new Dictionary<string, string>()));
 
         (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(1);
-        (await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id))
-            .Status.Should().Be("ACTIVE");
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.HasOpenDispute.Should().BeFalse();
+        await AssertDidNotReceiveGatewayRefundCompleted();
+    }
+
+    private async Task AssertDidNotReceiveGatewayRefundCompleted()
+    {
+        (await _db.OutboxMessages.CountAsync()).Should().Be(0);
     }
 
     private Subscription ActiveSub()

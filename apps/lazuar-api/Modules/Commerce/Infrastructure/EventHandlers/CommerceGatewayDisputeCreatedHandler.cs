@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Modules.Commerce.Domain.Entities;
 using Modules.Payments.Contracts;
@@ -12,21 +11,18 @@ namespace Modules.Commerce.Infrastructure.EventHandlers;
 
 /// <summary>
 /// Persists Commerce GMV disputes. Platform utility / Hub SaaS types are owned by Billing.
-/// Does not cancel the subscription.
+/// Does not cancel the subscription or book the dispute as a refund.
 /// </summary>
 public class CommerceGatewayDisputeCreatedHandler : IIntegrationEventHandler<GatewayDisputeCreatedIntegrationEvent>
 {
     private readonly CommerceDbContext _dbContext;
-    private readonly IEventBus _eventBus;
     private readonly ILogger<CommerceGatewayDisputeCreatedHandler> _logger;
 
     public CommerceGatewayDisputeCreatedHandler(
         CommerceDbContext dbContext,
-        [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
         ILogger<CommerceGatewayDisputeCreatedHandler> logger)
     {
         _dbContext = dbContext;
-        _eventBus = eventBus;
         _logger = logger;
     }
 
@@ -47,6 +43,7 @@ public class CommerceGatewayDisputeCreatedHandler : IIntegrationEventHandler<Gat
 
         if (existing != null)
         {
+            await TryMarkHasOpenDisputeAsync(@event);
             return;
         }
 
@@ -80,6 +77,10 @@ public class CommerceGatewayDisputeCreatedHandler : IIntegrationEventHandler<Gat
                     subscriptionId = null;
                 }
             }
+            else
+            {
+                sub.MarkHasOpenDispute();
+            }
         }
 
         var dispute = new CommerceDispute(
@@ -98,26 +99,30 @@ public class CommerceGatewayDisputeCreatedHandler : IIntegrationEventHandler<Gat
                 && l.ExternalReference == @event.GatewayTransactionId);
         log?.MarkDisputed();
 
-        if (@event.AmountDisputed > 0)
-        {
-            await _eventBus.PublishAsync(new GatewayRefundCompletedIntegrationEvent(
-                OrganizationId: @event.OrganizationId,
-                SubscriptionId: subscriptionId ?? Guid.Empty,
-                PaymentRecordId: dispute.Id,
-                GatewayTransactionId: @event.GatewayTransactionId,
-                RefundedAmount: @event.AmountDisputed,
-                Currency: string.IsNullOrWhiteSpace(@event.Currency) ? "MYR" : @event.Currency,
-                RefundedFee: 0m,
-                NetRefundedAmount: @event.AmountDisputed)
-            {
-                Id = dispute.Id
-            });
-        }
-
         await _dbContext.SaveChangesAsync();
         _logger.LogWarning(
             "Recorded OPEN commerce dispute {DisputeId} for gateway tx {GatewayTxId} org {OrgId}.",
             dispute.Id, @event.GatewayTransactionId, @event.OrganizationId);
+    }
+
+    private async Task TryMarkHasOpenDisputeAsync(GatewayDisputeCreatedIntegrationEvent @event)
+    {
+        if (@event.Metadata == null
+            || !TryGuid(@event.Metadata, "subscription_id", out var subscriptionId))
+        {
+            return;
+        }
+
+        var sub = await _dbContext.Subscriptions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.OrganizationId == @event.OrganizationId);
+        if (sub == null)
+        {
+            return;
+        }
+
+        sub.MarkHasOpenDispute();
+        await _dbContext.SaveChangesAsync();
     }
 
     private static void TryResolveLinks(

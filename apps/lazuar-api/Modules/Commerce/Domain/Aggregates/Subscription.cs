@@ -198,6 +198,12 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public bool IsCollectionPaused(DateTime utcNow) =>
         CollectionPausedUntil.HasValue && CollectionPausedUntil.Value > utcNow;
 
+    public void MarkHasOpenDispute()
+    {
+        HasOpenDispute = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void SchedulePlanChange(Guid productId)
     {
         if (productId == Guid.Empty)

@@ -144,6 +144,7 @@ public class RecordRefundCommandHandler : ICommandHandler<RecordRefundCommand, s
 
     private static bool IsRefundableSourceStatus(string status) =>
         status.Equals(CommerceTransactionLog.StatusConfirmed, StringComparison.OrdinalIgnoreCase)
+        || status.Equals(CommerceTransactionLog.StatusDisputed, StringComparison.OrdinalIgnoreCase)
         || status.Equals(CommerceTransactionLog.StatusPartiallyRefunded, StringComparison.OrdinalIgnoreCase)
         || status.Equals(CommerceTransactionLog.StatusRefundFailed, StringComparison.OrdinalIgnoreCase);
 

@@ -270,6 +270,31 @@ public class RecordRefundCommandHandlerTests
     }
 
     [Test]
+    public async Task Handle_FromDisputed_MarkRefunded_PublishesCompleted()
+    {
+        await using var db = CreateDb();
+        var orgId = Guid.CreateVersion7();
+        var log = ConfirmedLog(orgId, 25m, "BILLPLZ", "bill_dispute");
+        log.MarkDisputed();
+        db.TransactionLogs.Add(log);
+        await db.SaveChangesAsync();
+
+        var status = await CreateHandler(db).Handle(
+            new RecordRefundCommand(orgId, log.Id, MarkRefunded: true), CancellationToken.None);
+
+        status.Should().Be("refunded");
+        var stored = await db.TransactionLogs.IgnoreQueryFilters().SingleAsync();
+        stored.Status.Should().Be(CommerceTransactionLog.StatusRefunded);
+        stored.RefundedAmount.Should().Be(25m);
+
+        var row = await db.OutboxMessages.SingleAsync();
+        row.Type.Should().Contain(nameof(GatewayRefundCompletedIntegrationEvent));
+        using var doc = JsonDocument.Parse(row.Data);
+        doc.RootElement.GetProperty("RefundedAmount").GetDecimal().Should().Be(25m);
+        doc.RootElement.GetProperty("IsFullRefund").GetBoolean().Should().BeTrue();
+    }
+
+    [Test]
     public async Task Handle_MarkRefunded_Partial_Billplz()
     {
         await using var db = CreateDb();
