@@ -48,5 +48,5 @@ Written 16 August 2026. Twenty subagents; full text kept (do not condense `01`�
 - Buyer money on Billplz / Stripe / CHIP (tenant keys) is not Lazuar's SaaS fee.
 - Do not sell WhatsApp dunning or LHDN e-invoice as live product until those loops are closed and (for LHDN) un-hidden.
 - Do not become a website builder, marketplace, POS, or ERP to “match competitors.”
-- Wrap rails (Stripe, Billplz, CHIP, later Xendit) — do not rebuild acquiring.
+- Wrap rails (Stripe, Billplz, CHIP, Razorpay, Xendit) — do not rebuild acquiring.
 - Aura (salon) is a **customer** of Hub, not a competitor. System A (Paddle SaaS) and System B (Hub guest money) stay separate.

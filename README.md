@@ -15,7 +15,7 @@ We actively avoid the "CMS Trap." We don't build website builders, and we don't 
 | **Historical ambition** | ADR 014 (apps catalog), ADR 020 (integration roadmap) | Useful roadmap context only. Do not implement “15 apps,” community DRM, or link-in-bio from those docs without an explicit reverse of ADR 021/023. |
 | **API contracts** | `packages/api-spec` + `task gen` | OpenAPI clients must match Minimal API; see `docs/contracts/openapi-vs-minimal-api.md`. |
 
-**Honest capability today:** BYOK Stripe / Billplz / CHIP / Razorpay + commerce subscriptions + double-entry billing ledger + **email** dunning + LHDN submit/poll when configured. Billplz renewals = emailed hosted link, not silent charge. Official Receipts (`RCPT-`) are payment receipts, **not** MyInvois tax invoices. WhatsApp dunning, Xero/QuickBooks sync, and Xendit are **not** shipping until their adapters exist.
+**Honest capability today:** BYOK Stripe / Billplz / CHIP / Razorpay / **Xendit** + commerce subscriptions + double-entry billing ledger + **email** dunning + LHDN submit/poll when configured. Billplz / Razorpay / Xendit renewals = emailed hosted link, not silent charge. Official Receipts (`RCPT-`) are payment receipts, **not** MyInvois tax invoices. WhatsApp dunning and Xero/QuickBooks sync are **not** shipping. Xendit is a hosted-invoice wrap (reminder-only). No FPX e-mandate. No proven sandbox MyInvois `VALID`.
 
 ---
 
@@ -71,7 +71,7 @@ Live LHDN MyInvois submissions deduct micro-credits from a prepaid `TenantCredit
 The platform is designed to replace the fragmented, manual workflows currently crippling Asian creators and B2B founders.
 
 ### Phase 1: The "Un-Fireable" Core (Current)
-*   **Local Asian Gateways (BYOK):** Stripe, Billplz, CHIP, Razorpay/Curlec. Xendit is a planned wrap, not a live adapter.
+*   **Local Asian Gateways (BYOK):** Stripe, Billplz, CHIP, Razorpay/Curlec, Xendit (hosted invoice). Silent off-session is Stripe/CHIP only.
 *   **Government Tax Compliance:** Malaysia MyInvois (LHDN) when the tenant configures keys. India GSTN / Indonesia Coretax are not scheduled.
 *   **Official Receipt + tax invoice:** `RCPT-` payment receipts and `INV-` tax invoices are different documents. Receipts are not e-invoices.
 *   **Not shipping:** Xero/QuickBooks sync, Meta Cloud WhatsApp dunning, homemade FPX e-mandate.

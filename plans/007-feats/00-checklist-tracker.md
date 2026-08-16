@@ -126,7 +126,7 @@ Billplz cannot vault; ops product form already warns. Off-session today is Strip
 | LP-053 | Reminder-only / “send link each cycle” | 1 | P | Y | P | Y | P | N | N | P | N |
 | LP-054 | Free trial (`TRIALING`) | 3 | Y | N | N | P | P | Y | Y | Y | Y |
 | LP-055 | Cancel immediately | — | Y | — | — | Y | Y | Y | Y | Y | Y |
-| LP-056 | Cancel at period end | 1 | N | — | — | P | P | Y | Y | Y | Y |
+| LP-056 | Cancel at period end | 1 | Y | — | — | P | P | Y | Y | Y | Y |
 | LP-057 | Pause / resume | 3 | Y | N | N | Y | P | P | Y | Y | P |
 | LP-058 | Plan change | 3 | Y | N | N | P | P | Y | Y | Y | Y |
 | LP-059 | Proration (or next-renewal-only) | 3 | Y | N | N | N | P | Y | Y | Y | P |
@@ -169,12 +169,12 @@ WhatsApp transport is `ConsoleMessagingService` (log only). `Messaging:WhatsAppE
 | LP-091 | Refund full | 1 | Y | P | Y | Y | Y | Y | Y | Y | Y |
 | LP-092 | Refund partial | 1 | Y | N | P | Y | Y | Y | Y | Y | Y |
 | LP-093 | Refund UI in merchant console | 1 | Y | Y | Y | Y | Y | Y | Y | Y | Y |
-| LP-094 | Disputes / chargebacks as first-class | 3 | Y | N | N | P | P | Y | Y | P | Y |
+| LP-094 | Disputes / chargebacks as first-class | 3 | N | N | N | P | P | Y | Y | P | Y |
 | LP-095 | Settlement / payout reports | R | R | Y | Y | Y | Y | Y | Y | — | Y |
 | LP-096 | Multi-currency + FX | 4 | P | N | P | P | Y | Y | Y | Y | Y |
 | LP-097 | Reconciliation export (CSV) | 1 | N | Y | Y | Y | Y | Y | Y | Y | Y |
 
-Adapters implement `IssueRefundAsync` (Billplz stays `false`; mark-refunded is the SOP). Stripe dispute event is parsed. Ops refund modal is honest (pending / partial / mark-refunded).
+Adapters implement `IssueRefundAsync` (Billplz stays `false`; mark-refunded is the SOP). Stripe dispute event is parsed. Ops refund modal is honest (pending / partial / mark-refunded). LP-094 stays **N**: row + ops page exist; chargeback is not a first-class ledger contra (do not book disputes as refunds).
 
 ---
 
