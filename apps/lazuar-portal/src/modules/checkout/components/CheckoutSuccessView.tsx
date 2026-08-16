@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { interpolateNodes, useCheckoutT } from "../i18n/CheckoutI18n";
 import { getCheckoutStatus, type ProductDto } from "../lib/api";
 
 interface CheckoutSuccessViewProps {
@@ -14,8 +15,10 @@ const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 20;
 
 export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessViewProps) {
+  const { t } = useCheckoutT();
   const searchParams = useSearchParams();
   const subId = searchParams.get("sub_id");
+  const productName = <strong className="text-foreground">{product.name}</strong>;
 
   const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT" | "EXPIRED" | "ERROR">("VERIFYING");
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -81,9 +84,9 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
-          <h1 className="text-xl font-semibold text-foreground mb-3">Invalid Session</h1>
+          <h1 className="text-xl font-semibold text-foreground mb-3">{t("success.invalidTitle")}</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            We could not verify your session. Please check your email for access links or contact support if you completed a payment.
+            {t("success.invalidBody")}
           </p>
         </div>
       </div>
@@ -97,9 +100,9 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
           <svg className="animate-spin h-8 w-8 text-muted-foreground mx-auto mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
-          <h1 className="text-xl font-semibold text-foreground mb-3">Verifying Transaction...</h1>
+          <h1 className="text-xl font-semibold text-foreground mb-3">{t("success.verifyingTitle")}</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Please wait while we securely verify your transaction with the payment provider.
+            {t("success.verifyingBody")}
           </p>
         </div>
       </div>
@@ -115,13 +118,13 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
-          <h1 className="text-xl font-semibold text-foreground mb-3">Checkout Expired</h1>
+          <h1 className="text-xl font-semibold text-foreground mb-3">{t("success.expiredTitle")}</h1>
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-            This checkout session for <strong className="text-foreground">{product.name}</strong> is no longer active. If you completed a payment, please check your email. Otherwise, start checkout again.
+            {interpolateNodes(t("success.expiredBody"), { product: productName })}
           </p>
           <Link href={`/${tenantSlug}/checkout/${product.slug}`} className="block w-full">
             <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
-              Return to Checkout
+              {t("success.returnCheckout")}
             </button>
           </Link>
         </div>
@@ -138,9 +141,9 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-foreground mb-3">Processing Payment</h1>
+          <h1 className="text-xl font-semibold text-foreground mb-3">{t("success.timeoutTitle")}</h1>
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-            We are still processing your payment for <strong className="text-foreground">{product.name}</strong>. Please check your email in a few minutes for your receipt. This page does not confirm payment until verification finishes.
+            {interpolateNodes(t("success.timeoutBody"), { product: productName })}
           </p>
           <button
             type="button"
@@ -150,11 +153,11 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
             }}
             className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors mb-3"
           >
-            Check again
+            {t("success.checkAgain")}
           </button>
           <Link href={`/${tenantSlug}/portal`} className="block w-full">
             <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
-              Go to Dashboard
+              {t("success.dashboard")}
             </button>
           </Link>
         </div>
@@ -176,14 +179,14 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold text-foreground mb-3">Order Complete!</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-3">{t("success.completeTitle")}</h1>
         <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-          Your order for <strong className="text-foreground">{product.name}</strong> is confirmed. Please check your email for your receipt.
+          {interpolateNodes(t("success.completeBody"), { product: productName })}
         </p>
 
         <Link href={accessToken ? `/${tenantSlug}/portal?token=${encodeURIComponent(accessToken)}` : `/${tenantSlug}/portal`} className="block w-full">
           <button className="w-full h-12 text-sm font-bold tracking-wide uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
-            Go to Dashboard
+            {t("success.dashboard")}
           </button>
         </Link>
       </div>

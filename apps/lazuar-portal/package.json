@@ -6,7 +6,8 @@
     "dev": "next dev -H 0.0.0.0 -p 3004",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --experimental-strip-types --test src/modules/checkout/i18n/i18n.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

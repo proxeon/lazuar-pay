@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckoutAuthContext } from "../types";
+import { interpolateNodes, useCheckoutT } from "../i18n/CheckoutI18n";
 import { IdentityBanner } from "./IdentityBanner";
 import { submitCheckout, PublicCheckoutRequestDto, ProductDto } from "../lib/api";
 
@@ -27,6 +28,7 @@ export function CheckoutForm({
   onSetGuestMode,
   onError
 }: CheckoutFormProps) {
+  const { t } = useCheckoutT();
   const config = product.checkout_configuration;
 
   const [name, setName] = useState(authContext.userName || "");
@@ -93,7 +95,7 @@ export function CheckoutForm({
 
       window.location.assign(result.url);
     } catch (err: any) {
-      onError(err.message || "An error occurred during checkout.");
+      onError(err.message || "Checkout submission failed.");
       setIsSubmitting(false);
     }
   };
@@ -111,10 +113,10 @@ export function CheckoutForm({
       />
 
       <div className="space-y-4 border-b border-border/60 pb-6">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Account Details</h3>
+        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("form.accountDetails")}</h3>
         
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-semibold text-foreground">Full Name</label>
+          <label htmlFor="name" className="text-sm font-semibold text-foreground">{t("form.fullName")}</label>
           <input
             id="name" 
             type="text" 
@@ -127,7 +129,7 @@ export function CheckoutForm({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-semibold text-foreground">Email Address</label>
+          <label htmlFor="email" className="text-sm font-semibold text-foreground">{t("form.email")}</label>
           <input
             id="email" 
             type="email" 
@@ -141,7 +143,7 @@ export function CheckoutForm({
 
         {config.requires_phone && (
           <div className="space-y-2">
-            <label htmlFor="phone" className="text-sm font-semibold text-foreground">WhatsApp Number</label>
+            <label htmlFor="phone" className="text-sm font-semibold text-foreground">{t("form.phone")}</label>
             <input
               id="phone" 
               type="tel" 
@@ -149,16 +151,16 @@ export function CheckoutForm({
               value={phone} 
               onChange={e => setPhone(e.target.value)}
               className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground"
-              placeholder="+60 12-345 6789"
+              placeholder={t("form.phonePlaceholder")}
             />
-            <p className="text-[11px] text-muted-foreground">Required for delivery and important updates.</p>
+            <p className="text-[11px] text-muted-foreground">{t("form.phoneHint")}</p>
           </div>
         )}
       </div>
 
       {(config.requires_tax_id || config.requires_address) && (
         <div className="space-y-4 border-b border-border/60 pb-6">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Billing Details</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("form.billingDetails")}</h3>
           
           {/* [MVP-HIDE]
           {config.requires_tax_id && (
@@ -193,23 +195,23 @@ export function CheckoutForm({
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 {/* [MVP-HIDE] <label className="text-sm font-semibold text-foreground">{isCompany ? "Company Address *" : "Billing Address *"}</label> */}
-                <label className="text-sm font-semibold text-foreground">Billing Address *</label>
-                <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="Street Address" />
+                <label className="text-sm font-semibold text-foreground">{t("form.billingAddress")}</label>
+                <input required type="text" value={addressLine1} onChange={e => setAddressLine1(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.street")} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <input required type="text" value={city} onChange={e => setCity(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="City" />
+                  <input required type="text" value={city} onChange={e => setCity(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.city")} />
                 </div>
                 <div className="space-y-2">
-                  <input required type="text" value={postalCode} onChange={e => setPostalCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="Postal Code" />
+                  <input required type="text" value={postalCode} onChange={e => setPostalCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.postal")} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <input required type="text" value={stateCode} onChange={e => setStateCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="State" />
+                  <input required type="text" value={stateCode} onChange={e => setStateCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.state")} />
                 </div>
                 <div className="space-y-2">
-                  <input required type="text" value={countryCode} onChange={e => setCountryCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder="Country Code (e.g. MY)" />
+                  <input required type="text" value={countryCode} onChange={e => setCountryCode(e.target.value)} className="flex h-12 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground" placeholder={t("form.country")} />
                 </div>
               </div>
             </div>
@@ -219,7 +221,18 @@ export function CheckoutForm({
 
       <div className="pt-4">
         <p className="text-[11px] text-muted-foreground leading-relaxed mb-4">
-          By proceeding, you agree to Lazuar's <Link href="/legal/terms" target="_blank" className="underline hover:text-foreground transition-colors">Terms of Service</Link> and <Link href="/legal/privacy" target="_blank" className="underline hover:text-foreground transition-colors">Privacy Policy</Link>, and acknowledge that your purchase is a direct transaction with the Creator.
+          {interpolateNodes(t("form.consent"), {
+            terms: (
+              <Link href="/legal/terms" target="_blank" className="underline hover:text-foreground transition-colors">
+                {t("form.consentTerms")}
+              </Link>
+            ),
+            privacy: (
+              <Link href="/legal/privacy" target="_blank" className="underline hover:text-foreground transition-colors">
+                {t("form.consentPrivacy")}
+              </Link>
+            ),
+          })}
         </p>
         <button 
           type="submit" 
@@ -232,10 +245,10 @@ export function CheckoutForm({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Securing Data...
+              {t("cta.securing")}
             </>
           ) : (
-            "Proceed to Payment"
+            t("cta.proceed")
           )}
         </button>
       </div>

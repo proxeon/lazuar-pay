@@ -1,5 +1,6 @@
 // apps/lazuar-portal/src/modules/checkout/components/PromoCodeInput.tsx
 import { useState } from "react";
+import { useCheckoutT } from "../i18n/CheckoutI18n";
 
 export function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(" ");
@@ -20,6 +21,7 @@ export function PromoCodeInput({
   onApply,
   onRemove
 }: PromoCodeInputProps) {
+  const { t } = useCheckoutT();
   const [code, setCode] = useState("");
 
   const handleApplyClick = () => {
@@ -36,7 +38,7 @@ export function PromoCodeInput({
   return (
     <div className="space-y-3">
       <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-        Promo Code
+        {t("promo.label")}
       </label>
       <div className="flex gap-2">
         <input
@@ -48,7 +50,7 @@ export function PromoCodeInput({
               onRemove();
             }
           }}
-          placeholder="ENTER CODE"
+          placeholder={t("promo.placeholder")}
           disabled={isValidating}
           className="flex h-10 w-full rounded-none border border-border/60 bg-background px-3 py-1 text-sm font-mono uppercase shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-foreground disabled:opacity-50"
         />
@@ -58,7 +60,7 @@ export function PromoCodeInput({
             onClick={handleRemoveClick}
             className="h-10 px-4 border border-border bg-background hover:bg-accent hover:text-accent-foreground rounded-none text-xs font-bold uppercase tracking-widest transition-colors"
           >
-            Remove
+            {t("promo.remove")}
           </button>
         ) : (
           <button
@@ -72,7 +74,7 @@ export function PromoCodeInput({
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
             ) : (
-              "Apply"
+              t("promo.apply")
             )}
           </button>
         )}

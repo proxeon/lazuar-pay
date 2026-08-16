@@ -6,6 +6,8 @@ import { OrderSummaryCard } from "./OrderSummaryCard";
 import { PromoCodeInput } from "./PromoCodeInput";
 import { CheckoutForm } from "./CheckoutForm";
 import { validateCouponCode, type ProductDto } from "../lib/api";
+import { localizeCheckoutError } from "../i18n/errors";
+import { useCheckoutT } from "../i18n/CheckoutI18n";
 import {
   CheckoutContext,
   CheckoutAuthContext,
@@ -21,6 +23,7 @@ interface CheckoutViewProps {
 }
 
 export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancelled }: CheckoutViewProps) {
+  const { t } = useCheckoutT();
   const [authContext, setAuthContext] = useState<CheckoutAuthContext>(initialAuthContext);
   const [couponCode, setCouponCode] = useState("");
   const [isCouponValidating, setIsCouponValidating] = useState(false);
@@ -51,7 +54,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
       setIsCouponApplied(true);
       setCouponCode(code);
     } catch (err: any) {
-      setCouponError(err.message || "Invalid promo code.");
+      setCouponError(localizeCheckoutError(err.message, t));
       setIsCouponApplied(false);
       setDiscountAmount(null);
       setFinalPrice(null);
@@ -96,11 +99,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   };
 
   const handleError = (errorMsg: string) => {
-    if (errorMsg.includes("Payment gateway is not configured or active for this workspace")) {
-      setGlobalError("This creator is currently updating their payment settings. Please try again later.");
-    } else {
-      setGlobalError(errorMsg);
-    }
+    setGlobalError(localizeCheckoutError(errorMsg, t));
   };
 
   const checkoutContext: CheckoutContext = {
@@ -124,7 +123,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     <div className="w-full max-w-5xl mx-auto px-4 py-8 md:py-12">
       {isCancelled && !globalError && (
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium">
-          Payment was cancelled or failed. Please try again or use a different payment method.
+          {t("banner.cancelled")}
         </div>
       )}
 

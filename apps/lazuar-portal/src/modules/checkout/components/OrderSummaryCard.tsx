@@ -1,4 +1,6 @@
 import { ReactNode } from "react";
+import { currencySymbol, formatMoney } from "../i18n/format";
+import { useCheckoutT } from "../i18n/CheckoutI18n";
 import { CheckoutContext, CHECKOUT_QUANTITY_MIN, CHECKOUT_QUANTITY_MAX } from "../types";
 
 export function cn(...classes: (string | undefined | null | false)[]) {
@@ -13,12 +15,18 @@ interface OrderSummaryCardProps {
 }
 
 export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChange, promoCodeSlot }: OrderSummaryCardProps) {
+  const { t, locale } = useCheckoutT();
+  const money = (amount: number) => formatMoney(locale, context.currency || "MYR", amount);
   const finalPriceToDisplay = context.finalPrice !== null ? context.finalPrice : context.currentPrice;
-  const intervalLabel = context.interval === "mo" ? "month" : context.interval === "yr" ? "year" : null;
+  const intervalLabel = context.interval === "mo"
+    ? t("summary.intervalMonth")
+    : context.interval === "yr"
+      ? t("summary.intervalYear")
+      : null;
   const isRecurring = intervalLabel !== null;
   const discountLabel = context.quantity > 1 && context.isCouponApplied
-    ? `Discount (per item × ${context.quantity})`
-    : "Discount";
+    ? t("summary.discountEach", { n: context.quantity })
+    : t("summary.discount");
 
   const handlePriceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
@@ -36,7 +44,7 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
 
   return (
     <div className="border border-border/60 bg-card p-6 shadow-sm rounded-none space-y-4">
-      <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Order Summary</h3>
+      <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("summary.title")}</h3>
       
       <div className="pb-4 border-b border-border/40">
         <h4 className="text-lg font-semibold text-foreground leading-tight mb-1">{context.itemName}</h4>
@@ -46,11 +54,11 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
       <div className="space-y-2">
         {context.quantityAdjustable && (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Quantity</span>
+            <span className="text-sm text-muted-foreground">{t("summary.quantity")}</span>
             <div className="flex items-center border border-border/60">
               <button
                 type="button"
-                aria-label="Decrease quantity"
+                aria-label={t("summary.decreaseQty")}
                 disabled={context.quantity <= CHECKOUT_QUANTITY_MIN}
                 onClick={() => onQuantityChange?.(context.quantity - 1)}
                 className="h-8 w-8 text-sm font-medium text-foreground disabled:opacity-40"
@@ -73,7 +81,7 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
               />
               <button
                 type="button"
-                aria-label="Increase quantity"
+                aria-label={t("summary.increaseQty")}
                 disabled={context.quantity >= CHECKOUT_QUANTITY_MAX}
                 onClick={() => onQuantityChange?.(context.quantity + 1)}
                 className="h-8 w-8 text-sm font-medium text-foreground disabled:opacity-40"
@@ -87,12 +95,12 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             {context.quantityAdjustable && context.quantity > 1
-              ? `${context.currency} ${context.basePrice.toFixed(2)} × ${context.quantity}`
-              : "Subtotal"}
+              ? t("summary.unitTimesQty", { amount: money(context.basePrice), n: context.quantity })
+              : t("summary.subtotal")}
           </span>
           {context.pricingModel === "PWYW" && !context.isCouponApplied ? (
              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">{context.currency}</span>
+                <span className="text-sm font-medium text-muted-foreground">{currencySymbol(locale, context.currency || "MYR")}</span>
                 <input 
                   type="number" 
                   min={context.minimumPrice}
@@ -105,7 +113,7 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
              </div>
           ) : (
             <span className={cn("text-sm font-medium", context.isCouponApplied ? "line-through text-muted-foreground" : "text-foreground")}>
-              {context.currency} {context.currentPrice.toFixed(2)}
+              {money(context.currentPrice)}
             </span>
           )}
         </div>
@@ -113,7 +121,7 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
         {context.isCouponApplied && context.discountAmount !== null && (
           <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
             <span className="text-sm font-medium">{discountLabel}</span>
-            <span className="text-sm font-bold">- {context.currency} {context.discountAmount.toFixed(2)}</span>
+            <span className="text-sm font-bold">- {money(context.discountAmount)}</span>
           </div>
         )}
       </div>
@@ -126,26 +134,26 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
 
       <div className="bg-secondary/40 border border-border/60 p-4 rounded-none mt-4 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-base font-semibold text-foreground">Total Due Today</span>
+          <span className="text-base font-semibold text-foreground">{t("summary.total")}</span>
           <span className="text-xl font-bold tracking-tighter text-foreground">
-            {context.currency} {finalPriceToDisplay.toFixed(2)}
+            {money(finalPriceToDisplay)}
           </span>
         </div>
         {isRecurring && (
           <p className="text-xs text-muted-foreground">
-            then {context.currency} {finalPriceToDisplay.toFixed(2)} / {intervalLabel}
+            {t("summary.thenRecurring", { amount: money(finalPriceToDisplay), interval: intervalLabel })}
           </p>
         )}
       </div>
 
       {isRecurring && context.supportsOffSession === false && (
         <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 leading-relaxed">
-          <strong>Not auto-debit.</strong> We email a new payment link each cycle.
+          {t("summary.notAutoDebit")}
         </p>
       )}
       {isRecurring && context.supportsOffSession && (
         <p className="text-xs text-muted-foreground">
-          Your card will be saved for renewals.
+          {t("summary.cardSaved")}
         </p>
       )}
     </div>

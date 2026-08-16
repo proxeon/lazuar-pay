@@ -1,4 +1,28 @@
 import { ReactNode } from "react";
+import type { Metadata } from "next";
+import { CheckoutHeader, CheckoutI18nProvider } from "../../../../modules/checkout/i18n/CheckoutI18n";
+import { getCheckoutLocale } from "../../../../modules/checkout/i18n/getCheckoutLocale";
+import { t } from "../../../../modules/checkout/i18n/translate";
+import { serverClient } from "../../../../modules/core/lib/server-client";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ tenantSlug: string; productSlug: string }>;
+}): Promise<Metadata> {
+  const { tenantSlug, productSlug } = await params;
+  const locale = await getCheckoutLocale();
+  const { data: product } = await serverClient.GET("/public/commerce/{tenantSlug}/products/{slug}", {
+    params: { path: { tenantSlug, slug: productSlug } },
+    next: { revalidate: 60 },
+  });
+
+  if (!product) {
+    return { title: t(locale, "meta.title") };
+  }
+
+  return { title: t(locale, "meta.checkoutTitle", { product: product.name }) };
+}
 
 export default async function BlindCheckoutLayout({
   children,
@@ -8,34 +32,16 @@ export default async function BlindCheckoutLayout({
   params: Promise<{ tenantSlug: string; productSlug: string }>;
 }) {
   await params;
+  const locale = await getCheckoutLocale();
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
-      <header className="sticky top-0 z-40 w-full bg-card border-b border-border/60">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-end">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <svg
-              className="h-3.5 w-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            <span className="text-xs font-semibold uppercase tracking-widest">
-              Powered by Lazuar
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 w-full">
-        {children}
-      </main>
-    </div>
+    <CheckoutI18nProvider locale={locale}>
+      <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
+        <CheckoutHeader />
+        <main className="flex-1 w-full">
+          {children}
+        </main>
+      </div>
+    </CheckoutI18nProvider>
   );
 }
