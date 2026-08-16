@@ -21,6 +21,8 @@ model ProductDto {
   supports_off_session: boolean;
   fulfillment_targets: string[];
   checkout_configuration: CheckoutConfigurationDto;
+  sst_tax_type?: string;
+  sst_rate_percent?: float64;
 }
 
 model CreateProductRequestDto {
@@ -35,6 +37,8 @@ model CreateProductRequestDto {
   requires_address: boolean;
   requires_tax_id: boolean;
   requires_phone: boolean;
+  sst_tax_type?: string;
+  sst_rate_percent?: float64;
   fulfillment_targets: string[];
 }
 
@@ -51,5 +55,7 @@ model UpdateProductRequestDto {
   requires_address: boolean;
   requires_tax_id: boolean;
   requires_phone: boolean;
+  sst_tax_type?: string;
+  sst_rate_percent?: float64;
   fulfillment_targets: string[];
 }

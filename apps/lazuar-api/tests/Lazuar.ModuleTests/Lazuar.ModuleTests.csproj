@@ -41,6 +41,7 @@
     <ProjectReference Include="..\..\Modules\Lhdn\Infrastructure\Modules.Lhdn.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Lhdn\Application\Modules.Lhdn.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Lhdn\Domain\Modules.Lhdn.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Lhdn\Contracts\Modules.Lhdn.Contracts.csproj" />
 
     <!-- Billing Module References -->
     <ProjectReference Include="..\..\Modules\Billing\Application\Modules.Billing.Application.csproj" />

@@ -18,6 +18,7 @@ public class LhdnEndpointsAuthorizationTests
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddSingleton(Substitute.For<IMediator>());
         builder.Services.AddSingleton(Substitute.For<global::BuildingBlocks.Application.IExecutionContextAccessor>());
+        builder.Services.AddSingleton(Substitute.For<Modules.One.Contracts.IOneQueryService>());
 
         var app = builder.Build();
         app.MapLhdnEndpoints();

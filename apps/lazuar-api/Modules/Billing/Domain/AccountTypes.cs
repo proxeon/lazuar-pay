@@ -43,7 +43,9 @@ public static class LhdnValidationStatuses
     public const string B2cReceipt = "B2C_RECEIPT";
     public const string ConsolidatedPending = "CONSOLIDATED_PENDING";
     public const string Valid = "VALID";
+    public const string Invalid = "INVALID";
     public const string Cancelled = "CANCELLED";
+    public const string NeedsBuyerTin = "NEEDS_BUYER_TIN";
     public const string IgnoredNoRevenue = "IGNORED_NO_REVENUE";
 }
 

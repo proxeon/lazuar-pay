@@ -49,6 +49,10 @@ public class BaseInvoiceDocument : IDocument
                 column.Item().Text(_model.CompanyName).FontSize(14).SemiBold();
                 if (!string.IsNullOrWhiteSpace(_model.CompanyTin))
                     column.Item().Text($"TIN: {_model.CompanyTin}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                if (!string.IsNullOrWhiteSpace(_model.CompanyRegistrationNumber))
+                    column.Item().Text($"SSM: {_model.CompanyRegistrationNumber}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                if (!string.IsNullOrWhiteSpace(_model.CompanySstNumber))
+                    column.Item().Text($"SST: {_model.CompanySstNumber}").FontSize(10).FontColor(Colors.Grey.Darken2);
                 if (!string.IsNullOrWhiteSpace(_model.CompanyAddress))
                     column.Item().Text(_model.CompanyAddress).FontSize(10).FontColor(Colors.Grey.Darken2);
             });
@@ -79,7 +83,20 @@ public class BaseInvoiceDocument : IDocument
                 row.RelativeItem().Column(col =>
                 {
                     col.Item().Text("Billed To:").SemiBold().FontColor(Colors.Grey.Darken2);
-                    col.Item().Text(_model.CustomerName).FontSize(12).SemiBold();
+                    if (!string.IsNullOrWhiteSpace(_model.CustomerCompanyName)
+                        && !string.Equals(_model.CustomerCompanyName, _model.CustomerName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        col.Item().Text(_model.CustomerCompanyName).FontSize(12).SemiBold();
+                        col.Item().Text(_model.CustomerName);
+                    }
+                    else
+                    {
+                        col.Item().Text(_model.CustomerName).FontSize(12).SemiBold();
+                    }
+                    if (!string.IsNullOrWhiteSpace(_model.CustomerTin))
+                        col.Item().Text($"TIN: {_model.CustomerTin}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                    if (!string.IsNullOrWhiteSpace(_model.CustomerAddress))
+                        col.Item().Text(_model.CustomerAddress).FontSize(10).FontColor(Colors.Grey.Darken2);
                     col.Item().Text(_model.CustomerEmail);
                 });
             });

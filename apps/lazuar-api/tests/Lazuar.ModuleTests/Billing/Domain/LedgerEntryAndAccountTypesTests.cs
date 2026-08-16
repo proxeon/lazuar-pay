@@ -63,6 +63,28 @@ public class LedgerEntryAndAccountTypesTests
     }
 
     [Test]
+    public void AssignB2bInvoice_SetsCustomerNumber_WithoutB2cReceiptStatus()
+    {
+        var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.GatewayPayment, "tx1", "sale", "B2B");
+        entry.AssignB2bInvoice("INV-2026-00001");
+
+        Assert.That(entry.CustomerDocumentNumber, Is.EqualTo("INV-2026-00001"));
+        Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.NotRequired));
+        Assert.That(entry.LhdnValidationStatus, Is.Null);
+        Assert.That(entry.TaxInvoiceId, Is.EqualTo("INV-2026-00001"));
+    }
+
+    [Test]
+    public void AssignB2bInvoice_DoesNotOverwriteExistingNumber()
+    {
+        var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.GatewayPayment, "tx1", "sale", "B2B");
+        entry.AssignB2bInvoice("INV-2026-00001");
+        entry.AssignB2bInvoice("INV-2026-00099");
+
+        Assert.That(entry.CustomerDocumentNumber, Is.EqualTo("INV-2026-00001"));
+    }
+
+    [Test]
     public void AssignPlatformDocumentNumber_DoesNotStartB2cConsolidation()
     {
         var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.SystemSaasFee, "tx1", "hub", "B2B");

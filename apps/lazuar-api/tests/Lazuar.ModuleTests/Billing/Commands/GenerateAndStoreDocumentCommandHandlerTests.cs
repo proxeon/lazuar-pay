@@ -99,6 +99,32 @@ public class GenerateAndStoreDocumentCommandHandlerTests
             Arg.Any<Stream>(), Arg.Any<string>(), Arg.Any<string>(), "application/pdf", Arg.Any<CancellationToken>());
     }
 
+    [Test]
+    public async Task GenerateAndStore_UsesWorkspaceName_WhenBillingProfileMissing()
+    {
+        var orgId = Guid.CreateVersion7();
+        await using var db = CreateDb(orgId);
+        var entry = SeedReceipt(db, orgId, "gw_txn_3");
+        await db.SaveChangesAsync();
+
+        var lookup = Substitute.For<ICommerceDocumentLookup>();
+        lookup.GetCustomerForDocumentAsync(orgId, entry.ReferenceId, null, Arg.Any<CancellationToken>())
+            .Returns(new CommerceCustomerDisplay("Buyer", "buyer@example.com"));
+
+        var eventBus = Substitute.For<IEventBus>();
+        var r2 = Substitute.For<IR2StorageService>();
+        var one = Substitute.For<IOneQueryService>();
+        one.GetWorkspaceByIdAsync(orgId).Returns(new WorkspaceSnapshotDto(orgId, "Studio Nine", "studio", true, DateTime.UtcNow));
+
+        var handler = CreateHandler(db, lookup, eventBus, r2, one);
+        await handler.Handle(new GenerateAndStoreDocumentCommand(orgId, entry.Id, "Official Receipt"), CancellationToken.None);
+
+        await r2.Received(1).UploadAsync(
+            Arg.Any<Stream>(), Arg.Any<string>(), Arg.Any<string>(), "application/pdf", Arg.Any<CancellationToken>());
+        await eventBus.Received(1).PublishAsync(Arg.Is<DocumentPublishedIntegrationEvent>(e =>
+            e.BusinessName == "Studio Nine"));
+    }
+
     private static GenerateAndStoreDocumentCommandHandler CreateHandler(
         BillingDbContext db,
         ICommerceDocumentLookup lookup,

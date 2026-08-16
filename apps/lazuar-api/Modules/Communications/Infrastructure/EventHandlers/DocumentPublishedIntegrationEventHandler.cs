@@ -35,17 +35,28 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
         if (string.IsNullOrEmpty(@event.CustomerEmail) || string.IsNullOrEmpty(@event.TenantSlug))
             return;
 
-        var templateName = @event.DocumentType switch
+        var preferredTemplate = @event.DocumentType switch
         {
             "Official Receipt" => "Official Receipt",
             "Draft Quotation" => "Quotation Ready",
+            "Tax Invoice" => "Tax Invoice",
+            "Credit Note" => "Credit Note",
             _ => null
         };
-        if (templateName == null) return;
+        if (preferredTemplate == null) return;
+
+        var fallbackTemplate = preferredTemplate is "Tax Invoice" or "Credit Note"
+            ? "Official Receipt"
+            : null;
 
         var template = await _dbContext.MessageTemplates
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(t => t.OrganizationId == @event.OrganizationId && t.Name == templateName);
+            .FirstOrDefaultAsync(t => t.OrganizationId == @event.OrganizationId && t.Name == preferredTemplate)
+            ?? (fallbackTemplate == null
+                ? null
+                : await _dbContext.MessageTemplates
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(t => t.OrganizationId == @event.OrganizationId && t.Name == fallbackTemplate));
 
         if (template == null) return;
 

@@ -70,6 +70,27 @@ public class LhdnTenantConfig : Entity, IAggregateRoot, IMustHaveTenant
     }
 
     /// <summary>
+    /// Copies billing-profile stationery onto the MyInvois supplier identity.
+    /// Does not touch credentials, certificate, id type/value, MSIC, or environment.
+    /// </summary>
+    public void SyncStationeryIdentity(
+        string legalName,
+        string supplierTin,
+        string? addressLine1,
+        string? city,
+        string? state,
+        string? postal,
+        string? country)
+    {
+        if (!string.IsNullOrWhiteSpace(supplierTin))
+        {
+            SupplierTin = supplierTin.Trim().ToUpperInvariant();
+        }
+
+        UpdateLegalAddress(legalName, addressLine1, city, state, postal, country);
+    }
+
+    /// <summary>
     /// Updates legal address fields. Null args leave the existing value; empty/whitespace clears.
     /// </summary>
     public void UpdateLegalAddress(

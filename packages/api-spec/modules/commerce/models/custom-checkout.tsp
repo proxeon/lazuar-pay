@@ -27,6 +27,8 @@ model CustomCheckoutDto {
   line_items: CustomLineItemDto[];
   total_amount: float64;
   created_at: utcDateTime;
+  /** Per-org sequential quote number (`QT-yyyy-#####`), allocated once. */
+  document_number?: string;
   /** HMAC-signed public URL for draft proforma PDF (sig+exp). */
   draft_pdf_url?: string;
 }

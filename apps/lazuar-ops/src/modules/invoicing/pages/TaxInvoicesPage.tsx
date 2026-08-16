@@ -13,6 +13,7 @@ type BaseLedgerEntryDto = components["schemas"]["Billing.LedgerEntryDto"];
 interface LedgerEntryExtended extends BaseLedgerEntryDto {
   customer_type?: string;
   tax_invoice_id?: string;
+  customer_document_number?: string;
   lhdn_validation_status?: string;
 }
 
@@ -46,6 +47,18 @@ export default function TaxInvoicesPage() {
   });
 
   const validInvoices = (response?.data as LedgerEntryExtended[] | undefined) || [];
+
+  const { data: lastCons } = useQuery({
+    queryKey: ["billing-ledger-b2c-cons"],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/billing/ledger", {
+        params: { query: { page: 1, limit: 1, search: "B2C-CONS-", type_filter: "sales" } }
+      });
+      if (error) throw new Error(error.detail);
+      return data;
+    }
+  });
+  const lastConsRow = (lastCons?.data as LedgerEntryExtended[] | undefined)?.[0];
 
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => {
@@ -100,10 +113,20 @@ export default function TaxInvoicesPage() {
 
   return (
     <PageLayout 
-      title="Tax Invoices & Receipts" 
-      description="View and manage official tax documents and their LHDN e-Invoicing compliance status."
-      breadcrumbs={[{ label: "Invoicing" }, { label: "Tax Invoices" }]}
+      title="Sales documents" 
+      description="Official receipts and tax invoices from paid sales. B2C receipts stay receipts until monthly consolidation."
+      breadcrumbs={[{ label: "Invoicing" }, { label: "Sales documents" }]}
     >
+      {lastConsRow && (
+        <div className="mb-3 border border-[#e5e5e5] bg-[#fafafa] px-4 py-3 text-[12px] text-[#52525b]">
+          Last B2C consolidation: <span className="font-mono font-semibold text-[#09090b]">{lastConsRow.tax_invoice_id || lastConsRow.customer_document_number}</span>
+          {" · "}
+          LHDN {lastConsRow.lhdn_validation_status || "pending"}
+          <span className="block text-[11px] text-[#71717a] mt-1">
+            Submitted on the 28th for the prior MYT month. Not a guarantee of the IRBM calendar.
+          </span>
+        </div>
+      )}
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full min-h-[600px]">
         <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
           <div className="flex items-center gap-3">
@@ -146,7 +169,7 @@ export default function TaxInvoicesPage() {
               ) : (
                 validInvoices.map((entry) => {
                   const { netAmount, taxAmount } = getInvoiceMath(entry.lines);
-                  const displayId = entry.tax_invoice_id || entry.id.substring(0, 8).toUpperCase();
+                  const displayId = entry.customer_document_number || entry.tax_invoice_id || entry.id.substring(0, 8).toUpperCase();
 
                   return (
                     <tr 

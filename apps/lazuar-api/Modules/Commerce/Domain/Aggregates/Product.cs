@@ -20,6 +20,11 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
     public string GatewayName { get; private set; }
     public CheckoutConfiguration CheckoutConfiguration { get; private set; }
 
+    /// <summary>MyInvois tax type: 06 (N/A) or 02 (Service Tax).</summary>
+    public string SstTaxType { get; private set; } = "06";
+
+    public decimal SstRatePercent { get; private set; }
+
     private readonly List<string> _fulfillmentTargets = new();
     public IReadOnlyCollection<string> FulfillmentTargets => _fulfillmentTargets.AsReadOnly();
 
@@ -60,6 +65,8 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         Interval = interval.Trim().ToLowerInvariant();
         GatewayName = gatewayName.Trim().ToUpperInvariant();
         CheckoutConfiguration = checkoutConfiguration;
+        SstTaxType = "06";
+        SstRatePercent = 0m;
         IsActive = true;
         
         if (fulfillmentTargets != null)
@@ -92,6 +99,28 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         {
             _fulfillmentTargets.Clear();
             _fulfillmentTargets.AddRange(fulfillmentTargets);
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetSst(string? taxType, decimal ratePercent)
+    {
+        var type = string.IsNullOrWhiteSpace(taxType) ? "06" : taxType.Trim();
+        if (type is not ("06" or "02"))
+        {
+            throw new ArgumentException("SST tax type must be 06 or 02.", nameof(taxType));
+        }
+
+        if (type == "06" || ratePercent <= 0)
+        {
+            SstTaxType = "06";
+            SstRatePercent = 0m;
+        }
+        else
+        {
+            SstTaxType = "02";
+            SstRatePercent = ratePercent;
         }
 
         UpdatedAt = DateTime.UtcNow;

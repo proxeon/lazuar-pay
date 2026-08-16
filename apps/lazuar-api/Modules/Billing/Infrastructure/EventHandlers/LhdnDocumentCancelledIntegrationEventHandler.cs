@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
@@ -28,11 +29,12 @@ public class LhdnDocumentCancelledIntegrationEventHandler : IIntegrationEventHan
         if (await _repository.HasEntryBeenProcessedAsync(LedgerReferenceTypes.LhdnCancellation, @event.InternalReferenceId))
             return;
 
-        var originalEntry = await _dbContext.LedgerEntries
-            .Include(e => e.Lines)
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(e => e.OrganizationId == @event.OrganizationId && e.ReferenceId == @event.InternalReferenceId);
+        var matches = await LedgerLhdnLookup.MatchingAsync(
+            _dbContext.LedgerEntries.Include(e => e.Lines),
+            @event.OrganizationId,
+            @event.InternalReferenceId);
 
+        var originalEntry = matches.FirstOrDefault();
         if (originalEntry == null)
             return;
 

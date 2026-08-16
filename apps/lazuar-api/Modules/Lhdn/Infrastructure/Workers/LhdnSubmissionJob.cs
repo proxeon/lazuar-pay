@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Contracts.Events;
+using Modules.Lhdn.Domain;
 using Modules.Lhdn.Domain.Aggregates;
 
 namespace Modules.Lhdn.Infrastructure.Workers;
@@ -80,13 +81,14 @@ public class LhdnSubmissionJob : BackgroundService
 
                 var base64Document = Convert.ToBase64String(Encoding.UTF8.GetBytes(doc.RawXmlContent));
 
+                var format = MyInvoisBuyerRules.DetectSubmissionFormat(doc.RawXmlContent);
                 var payload = new
                 {
                     documents = new[]
                     {
                         new
                         {
-                            format = "XML",
+                            format,
                             documentHash = doc.DocumentHash,
                             codeNumber = doc.InternalReferenceId,
                             document = base64Document

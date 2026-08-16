@@ -16,4 +16,12 @@ public interface IBillingQueryService
     Task<bool> HasSufficientCreditsAsync(Guid organizationId, int amount);
     Task<CreditBalanceDto> GetCreditBalanceWithHistoryAsync(Guid organizationId);
     Task<TenantBillingProfileDto?> GetBillingProfileAsync(Guid organizationId);
+
+    Task<LedgerDocumentIdentity?> FindPaymentByGatewayTransactionAsync(Guid organizationId, string gatewayTransactionId);
+
+    Task<LedgerDocumentIdentity?> FindLedgerByReferenceAsync(Guid organizationId, string referenceType, string referenceId);
+
+    Task<IReadOnlyList<LedgerDocumentIdentity>> GetDocumentsByReferenceIdsAsync(
+        Guid organizationId,
+        IReadOnlyList<string> referenceIds);
 }

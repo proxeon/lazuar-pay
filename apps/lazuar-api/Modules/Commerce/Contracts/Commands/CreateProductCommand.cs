@@ -17,7 +17,9 @@ public record CreateProductCommand(
     bool RequiresAddress,
     bool RequiresTaxId,
     bool RequiresPhone,
-    List<string> FulfillmentTargets) : ICommand<Guid>
+    List<string> FulfillmentTargets,
+    string? SstTaxType = null,
+    decimal SstRatePercent = 0) : ICommand<Guid>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
 }

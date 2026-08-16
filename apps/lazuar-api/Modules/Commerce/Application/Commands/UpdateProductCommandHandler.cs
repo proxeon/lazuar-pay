@@ -54,6 +54,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand>
             config,
             request.FulfillmentTargets
         );
+        product.SetSst(request.SstTaxType, request.SstRatePercent);
 
         await _repository.SaveChangesAsync(ct);
     }

@@ -14,6 +14,7 @@ public interface ILhdnRepository
     
     Task<TaxDocument?> GetTaxDocumentAsync(Guid id, CancellationToken ct = default);
     Task<TaxDocument?> GetTaxDocumentByInternalIdAsync(Guid organizationId, string internalReferenceId, CancellationToken ct = default);
+    Task<TaxDocument?> GetTaxDocumentByLhdnUuidAsync(Guid organizationId, string lhdnUuid, CancellationToken ct = default);
 
     void AddTaxDocument(TaxDocument document);
     

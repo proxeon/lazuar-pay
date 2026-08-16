@@ -8,17 +8,21 @@ import { getCheckoutStatus, type ProductDto } from "../lib/api";
 
 interface CheckoutSuccessViewProps {
   tenantSlug: string;
-  product: ProductDto;
+  product?: ProductDto;
+  displayName?: string;
+  returnHref?: string;
 }
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 20;
 
-export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessViewProps) {
+export function CheckoutSuccessView({ tenantSlug, product, displayName, returnHref }: CheckoutSuccessViewProps) {
   const { t } = useCheckoutT();
   const searchParams = useSearchParams();
   const subId = searchParams.get("sub_id");
-  const productName = <strong className="text-foreground">{product.name}</strong>;
+  const label = displayName || product?.name || "Payment request";
+  const productName = <strong className="text-foreground">{label}</strong>;
+  const checkoutReturnHref = returnHref || (product ? `/${tenantSlug}/checkout/${product.slug}` : `/${tenantSlug}/portal`);
 
   const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT" | "EXPIRED" | "ERROR">("VERIFYING");
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -122,7 +126,7 @@ export function CheckoutSuccessView({ tenantSlug, product }: CheckoutSuccessView
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
             {interpolateNodes(t("success.expiredBody"), { product: productName })}
           </p>
-          <Link href={`/${tenantSlug}/checkout/${product.slug}`} className="block w-full">
+          <Link href={checkoutReturnHref} className="block w-full">
             <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
               {t("success.returnCheckout")}
             </button>

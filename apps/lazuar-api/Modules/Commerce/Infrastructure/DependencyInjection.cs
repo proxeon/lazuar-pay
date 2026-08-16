@@ -40,6 +40,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICommerceRepository, CommerceRepository>();
         services.AddScoped<ICommerceQueryService, CommerceQueryService>();
+        services.AddScoped<PortalDocumentQueryService>();
         services.AddScoped<ISubscriberQueryService, SubscriberQueryService>();
         services.AddScoped<ICommerceDocumentLookup, CommerceDocumentLookup>();
 

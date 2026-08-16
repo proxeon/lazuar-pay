@@ -3,9 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using FluentAssertions;
+using Lazuar.ApiTypes;
+using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
+using Modules.Billing.Contracts;
+using Modules.Billing.Contracts.Commands;
+using Modules.Commerce.Contracts;
+using Modules.CRM.Contracts;
+using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Ports;
-using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain.Aggregates;
 using Modules.Payments.Contracts.Events;
 using NSubstitute;
@@ -22,60 +28,138 @@ public class GatewayRefundCompletedIntegrationEventHandlerTests
     {
         var orgId = Guid.CreateVersion7();
         var paymentId = Guid.CreateVersion7();
-        var (handler, repo, gateway) = CreateHandler();
+        var (handler, repo, mediator, _) = CreateHandler();
 
         await handler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
             orgId, Guid.Empty, paymentId, "pi_1", 40m, "MYR", 0m, 40m, 0m, IsFullRefund: false));
 
         await repo.DidNotReceive().GetTaxDocumentByInternalIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
-        await gateway.DidNotReceive().CancelDocumentAsync(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<bool>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+        await mediator.DidNotReceive().Send(Arg.Any<CancelTaxDocumentCommand>(), Arg.Any<CancellationToken>());
+        await mediator.DidNotReceive().Send(Arg.Any<SubmitTaxDocumentCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
-    public async Task FullRefund_Within72h_CancelsDocument()
+    public async Task NoTaxDocument_IsNoOp()
+    {
+        var orgId = Guid.CreateVersion7();
+        var (handler, _, mediator, _) = CreateHandler();
+
+        await handler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
+            orgId, Guid.Empty, Guid.CreateVersion7(), "pi_missing", 100m, "MYR", 0m, 100m, 0m, IsFullRefund: true));
+
+        await mediator.DidNotReceive().Send(Arg.Any<CancelTaxDocumentCommand>(), Arg.Any<CancellationToken>());
+        await mediator.DidNotReceive().Send(Arg.Any<SubmitTaxDocumentCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task FullRefund_Within72h_SendsCancelCommand()
     {
         var orgId = Guid.CreateVersion7();
         var paymentId = Guid.CreateVersion7();
-        var doc = new TaxDocument(orgId, paymentId.ToString(), "hash", "<xml/>");
+        var doc = new TaxDocument(orgId, "INV-2026-00001", "hash", "<xml/>");
         doc.MarkAsSubmitted("sub-1", "lhdn-uuid-1");
         doc.MarkAsValid("long-1");
 
-        var config = new LhdnTenantConfig(orgId, false, "C12345678901", "BRN", "202001012345");
-        config.UpdateApiCredentials("client-id", "client-secret");
-
-        var (handler, repo, gateway) = CreateHandler();
-        repo.GetTaxDocumentByInternalIdAsync(orgId, paymentId.ToString()).Returns(doc);
-        repo.GetTenantConfigAsync(orgId).Returns(config);
-        gateway.GetTokenAsync(orgId, "client-id", "client-secret", false, config.SupplierTin)
-            .Returns("token");
-        gateway.CancelDocumentAsync("client-id", "token", "lhdn-uuid-1", Arg.Any<string>(), false, config.SupplierTin)
-            .Returns(new LhdnCancelResult(true, "cancelled", null));
+        var (handler, repo, mediator, billing) = CreateHandler();
+        billing.FindPaymentByGatewayTransactionAsync(orgId, "pi_1")
+            .Returns(new LedgerDocumentIdentity(
+                Guid.CreateVersion7(), "GATEWAY_PAYMENT", "pi_1", "INV-2026-00001",
+                "lhdn-uuid-1", "INV-2026-00001", "B2B", "VALID", 100m, "MYR", DateTime.UtcNow));
+        repo.GetTaxDocumentByInternalIdAsync(orgId, "INV-2026-00001").Returns(doc);
 
         await handler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
             orgId, Guid.Empty, paymentId, "pi_1", 100m, "MYR", 0m, 100m, 0m, IsFullRefund: true));
 
-        await gateway.Received(1).CancelDocumentAsync(
-            "client-id", "token", "lhdn-uuid-1", Arg.Any<string>(), false, config.SupplierTin);
-        doc.ValidationStatus.Should().Be("CANCELLED");
-        await repo.Received(1).SaveChangesAsync();
+        await mediator.Received(1).Send(
+            Arg.Is<CancelTaxDocumentCommand>(c => c.InternalId == "INV-2026-00001"),
+            Arg.Any<CancellationToken>());
+        await mediator.DidNotReceive().Send(Arg.Any<SubmitTaxDocumentCommand>(), Arg.Any<CancellationToken>());
     }
 
-    private static (LhdnRefundHandler Handler, ILhdnRepository Repo, ILhdnGatewayAdapter Gateway) CreateHandler()
+    [Test]
+    public async Task FullRefund_After72h_SubmitsCreditNoteWithCrmTin()
+    {
+        var orgId = Guid.CreateVersion7();
+        var paymentId = Guid.CreateVersion7();
+        var eventId = Guid.CreateVersion7();
+        var doc = new TaxDocument(orgId, "INV-2026-00002", "hash", "<xml/>");
+        doc.MarkAsSubmitted("sub-2", "lhdn-uuid-2");
+        doc.MarkAsValid("long-2");
+        typeof(TaxDocument).GetProperty(nameof(TaxDocument.ValidatedAt))!
+            .SetValue(doc, DateTime.UtcNow.AddHours(-80));
+
+        var (handler, repo, mediator, billing, crm, lookup) = CreateHandlerFull();
+        billing.FindPaymentByGatewayTransactionAsync(orgId, "pi_2")
+            .Returns(new LedgerDocumentIdentity(
+                Guid.CreateVersion7(), "GATEWAY_PAYMENT", "pi_2", "INV-2026-00002",
+                "lhdn-uuid-2", "INV-2026-00002", "B2B", "VALID", 100m, "MYR", DateTime.UtcNow));
+        billing.FindLedgerByReferenceAsync(orgId, "GATEWAY_REFUND", paymentId.ToString("N") + ":" + eventId.ToString("N"))
+            .Returns(new LedgerDocumentIdentity(
+                Guid.CreateVersion7(), "GATEWAY_REFUND", "ref", "CN-2026-00009",
+                null, "CN-2026-00009", "B2C", null, 100m, "MYR", DateTime.UtcNow));
+        repo.GetTaxDocumentByInternalIdAsync(orgId, "INV-2026-00002").Returns(doc);
+        lookup.GetCustomerForDocumentAsync(orgId, "pi_2", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new CommerceCustomerDisplay("Buyer Co", "buyer@example.com", "C98765432109"));
+        crm.GetClientProfileByEmailAsync(orgId, "buyer@example.com")
+            .Returns(new ClientProfileDto
+            {
+                Id = Guid.CreateVersion7().ToString(),
+                Full_name = "Buyer Co",
+                Email = "buyer@example.com",
+                Phone = "60123456789",
+                Tin = "C98765432109",
+                Id_type = "BRN",
+                Id_value = "202001099999",
+                Consented_to_marketing = false
+            });
+
+        var @event = new GatewayRefundCompletedIntegrationEvent(
+            orgId, Guid.Empty, paymentId, "pi_2", 100m, "MYR", 0m, 100m, 0m, IsFullRefund: true)
+        {
+            Id = eventId
+        };
+
+        await handler.HandleAsync(@event);
+
+        await mediator.DidNotReceive().Send(Arg.Any<CancelTaxDocumentCommand>(), Arg.Any<CancellationToken>());
+        await mediator.Received(1).Send(
+            Arg.Is<SubmitTaxDocumentCommand>(c =>
+                c.Payload.Document_type == SubmitDocumentRequestDtoDocument_type._02
+                && c.Payload.Internal_id == "CN-2026-00009"
+                && c.Payload.Buyer_tin == "C98765432109"
+                && c.Payload.Buyer_tin != "IG1234567890"
+                && !string.IsNullOrWhiteSpace(c.IdempotencyKey)),
+            Arg.Any<CancellationToken>());
+    }
+
+    private static (LhdnRefundHandler Handler, ILhdnRepository Repo, IMediator Mediator, IBillingQueryService Billing)
+        CreateHandler()
+    {
+        var full = CreateHandlerFull();
+        return (full.Handler, full.Repo, full.Mediator, full.Billing);
+    }
+
+    private static (
+        LhdnRefundHandler Handler,
+        ILhdnRepository Repo,
+        IMediator Mediator,
+        IBillingQueryService Billing,
+        ICrmQueryService Crm,
+        ICommerceDocumentLookup Lookup) CreateHandlerFull()
     {
         var repo = Substitute.For<ILhdnRepository>();
-        var gateway = Substitute.For<ILhdnGatewayAdapter>();
-        var strategies = Substitute.For<IDocumentStrategyFactory>();
-        var vault = Substitute.For<ISecretVault>();
-        vault.Decrypt(Arg.Any<string>()).Returns(ci => ci.ArgAt<string>(0));
+        var mediator = Substitute.For<IMediator>();
+        var billing = Substitute.For<IBillingQueryService>();
+        var crm = Substitute.For<ICrmQueryService>();
+        var lookup = Substitute.For<ICommerceDocumentLookup>();
 
         var handler = new LhdnRefundHandler(
             repo,
-            gateway,
-            strategies,
-            vault,
+            mediator,
+            billing,
+            lookup,
+            crm,
             NullLogger<LhdnRefundHandler>.Instance);
-        return (handler, repo, gateway);
+        return (handler, repo, mediator, billing, crm, lookup);
     }
 }

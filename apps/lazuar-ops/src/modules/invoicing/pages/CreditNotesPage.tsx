@@ -13,6 +13,7 @@ type BaseLedgerEntryDto = components["schemas"]["Billing.LedgerEntryDto"];
 interface LedgerEntryExtended extends BaseLedgerEntryDto {
   customer_type?: string;
   tax_invoice_id?: string;
+  customer_document_number?: string;
   lhdn_validation_status?: string;
 }
 
@@ -152,7 +153,7 @@ export default function CreditNotesPage() {
                 ) : (
                   creditNotes.map((entry) => {
                     const { refundAmount, taxAmount } = getNoteMath(entry.lines);
-                    const displayId = entry.tax_invoice_id || entry.id.substring(0, 8).toUpperCase();
+                    const displayId = entry.customer_document_number || entry.tax_invoice_id || entry.id.substring(0, 8).toUpperCase();
                     const triggerName = entry.reference_type === "GATEWAY_REFUND" ? "Refund" : "Cancellation";
 
                     return (

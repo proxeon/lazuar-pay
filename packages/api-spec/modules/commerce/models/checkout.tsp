@@ -9,6 +9,8 @@ model PublicCheckoutRequestDto {
   phone?: string;
   tax_id?: string;
   company_name?: string;
+  id_type?: string;
+  id_value?: string;
   address_line1?: string;
   city?: string;
   postal_code?: string;
@@ -48,4 +50,16 @@ model ValidateCouponResponseDto {
   discount_amount: float64;
   final_price: float64;
   error_message?: string;
+}
+
+model PublicValidateTinRequestDto {
+  tin: string;
+  id_type: string;
+  id_value: string;
+}
+
+model PublicValidateTinResponseDto {
+  is_valid: boolean;
+  tin: string;
+  taxpayer_name?: string;
 }

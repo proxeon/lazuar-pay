@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, X, Download, ShieldCheck, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, X, Download, AlertTriangle, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
@@ -12,6 +12,7 @@ type BaseLedgerEntryDto = components["schemas"]["Billing.LedgerEntryDto"];
 interface LedgerEntryExtended extends BaseLedgerEntryDto {
   customer_type?: string;
   tax_invoice_id?: string;
+  customer_document_number?: string;
   lhdn_validation_status?: string;
 }
 
@@ -26,14 +27,35 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
   const [cancelReason, setCancelReason] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const lhdnInternalId = invoice?.customer_document_number
+    || (invoice?.tax_invoice_id && !/^[0-9a-f-]{36}$/i.test(invoice.tax_invoice_id) ? invoice.tax_invoice_id : null);
+
+  const { data: lhdnDoc } = useQuery({
+    queryKey: ["lhdn-document", lhdnInternalId],
+    enabled: !!lhdnInternalId,
+    queryFn: async () => {
+      const { data, error } = await client.GET("/lhdn/documents/{internalId}", {
+        params: { path: { internalId: lhdnInternalId! } },
+      });
+      if (error) throw new Error(error.detail || "LHDN document not found.");
+      return data;
+    },
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "PENDING" || status === "SUBMITTED" ? 5000 : false;
+    },
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async () => {
-      if (!invoice?.tax_invoice_id) throw new Error("Cannot cancel an invoice without an LHDN UUID.");
+      const internalId = invoice?.customer_document_number
+        || (invoice?.tax_invoice_id && !/^[0-9a-f-]{36}$/i.test(invoice.tax_invoice_id) ? invoice.tax_invoice_id : null);
+      if (!internalId) throw new Error("Cannot cancel without a customer document number.");
       if (!cancelReason.trim()) throw new Error("A reason is required by LHDN for cancellation.");
 
       // Client baseUrl is already .../api/v1 — path must be relative (/lhdn/...), not /api/v1/lhdn/...
       const { error } = await client.POST("/lhdn/documents/{internalId}/cancel", {
-        params: { path: { internalId: invoice.id } },
+        params: { path: { internalId } },
         body: { reason: cancelReason.trim() },
       });
 
@@ -96,10 +118,15 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
 
   if (!invoice) return null;
 
-  const displayId = invoice.tax_invoice_id || invoice.id.substring(0, 8).toUpperCase();
-  const isLhdnValidated = invoice.lhdn_validation_status === "VALID";
-  const hoursSinceIssue = (Date.now() - new Date(invoice.timestamp).getTime()) / (1000 * 60 * 60);
-  const isCancelable = isLhdnValidated && hoursSinceIssue < 72;
+  const displayId = invoice.customer_document_number || invoice.tax_invoice_id || invoice.id.substring(0, 8).toUpperCase();
+  const liveStatus = lhdnDoc?.status || invoice.lhdn_validation_status;
+  const isLhdnValidated = liveStatus === "VALID";
+  const validatedAtMs = lhdnDoc?.validated_at ? new Date(lhdnDoc.validated_at).getTime() : NaN;
+  const hoursSinceValid = Number.isFinite(validatedAtMs)
+    ? (Date.now() - validatedAtMs) / (1000 * 60 * 60)
+    : Number.POSITIVE_INFINITY;
+  const isCancelable = isLhdnValidated && hoursSinceValid < 72;
+  const qrLink = liveStatus === "VALID" ? lhdnDoc?.qr_link : undefined;
 
   const getLhdnBadgeClasses = (status?: string) => {
     switch (status) {
@@ -108,6 +135,8 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
       case "PENDING": return "bg-amber-50 text-amber-700 border-amber-200 animate-pulse";
       case "B2C_RECEIPT":
       case "CONSOLIDATED_PENDING": return "bg-blue-50 text-blue-700 border-blue-200";
+      case "INVALID":
+      case "NEEDS_BUYER_TIN":
       case "REJECTED":
       case "CANCELLED": return "bg-rose-50 text-rose-700 border-rose-200";
       default: return "bg-zinc-100 text-zinc-600 border-zinc-200";
@@ -132,9 +161,9 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
               <div className="flex items-center gap-2 mt-1.5">
                 <span className={cn(
                   "text-[10px] px-2 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
-                  getLhdnBadgeClasses(invoice.lhdn_validation_status)
+                  getLhdnBadgeClasses(liveStatus)
                 )}>
-                  {invoice.lhdn_validation_status?.replace("_", " ") || "NOT REQUIRED"}
+                  {liveStatus?.replace("_", " ") || "NOT REQUIRED"}
                 </span>
                 <span className="text-[11px] text-[#71717a] font-mono">
                   {new Date(invoice.timestamp).toLocaleString('en-GB')}
@@ -179,7 +208,7 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
                   </div>
                 )}
                 <div className="flex justify-between text-[12px] text-[#71717a]">
-                  <span>Tax ({invoice.customer_type === 'B2C' ? 'Inclusive' : 'Added'})</span>
+                  <span>{math.tax > 0 ? "SST" : "Tax"} ({invoice.customer_type === 'B2C' ? 'Inclusive' : 'Added'})</span>
                   <span className="font-mono">RM {math.tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-[13px] font-bold text-[#09090b] pt-2 border-t border-[#e5e5e5]">
@@ -207,15 +236,33 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
                 </div>
               </div>
               
-              {invoice.tax_invoice_id && (
+              {(invoice.customer_document_number || invoice.tax_invoice_id) && (
                 <div className="pt-3 border-t border-[#e5e5e5]">
-                  <span className="text-[#a1a1aa] block mb-1 text-[12px]">Official Document ID / LHDN UUID</span>
+                  <span className="text-[#a1a1aa] block mb-1 text-[12px]">
+                    {invoice.customer_document_number ? "Document number" : "Official Document ID / LHDN UUID"}
+                  </span>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-[#09090b] text-[13px] truncate" title={invoice.tax_invoice_id}>
-                      {invoice.tax_invoice_id}
+                    <span className="font-mono font-bold text-[#09090b] text-[13px] truncate" title={displayId}>
+                      {displayId}
                     </span>
-                    <QuickCopy text={invoice.tax_invoice_id} iconSize={12} className="hover:bg-white" />
+                    <QuickCopy text={invoice.customer_document_number || invoice.tax_invoice_id || ""} iconSize={12} className="hover:bg-white" />
                   </div>
+                </div>
+              )}
+              {lhdnDoc?.error_message && liveStatus === "INVALID" && (
+                <p className="text-[12px] text-rose-700 border-t border-[#e5e5e5] pt-3">{lhdnDoc.error_message}</p>
+              )}
+              {qrLink && (
+                <div className="pt-3 border-t border-[#e5e5e5] space-y-2">
+                  <span className="text-[#a1a1aa] block text-[12px]">MyInvois share QR</span>
+                  <img
+                    alt="MyInvois QR"
+                    className="h-28 w-28 border border-[#e5e5e5] bg-white"
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrLink)}`}
+                  />
+                  <a href={qrLink} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-blue-700 break-all underline">
+                    {qrLink}
+                  </a>
                 </div>
               )}
             </div>
@@ -242,10 +289,13 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
                   </button>
                 ) : (
                   <div className="h-9 w-full border border-zinc-200 bg-zinc-50 text-[11px] font-bold uppercase tracking-widest text-zinc-400 flex items-center justify-center rounded-sm cursor-not-allowed" title="The 72-hour cancellation window has expired. Issue a Credit Note instead.">
-                    Cancel e-Invoice (Expired)
+                    Cancel window closed — issue a credit note
                   </div>
                 )
               )}
+              <p className="text-[11px] text-[#71717a] leading-relaxed">
+                Supplier cancel only, within 72 hours of MyInvois VALID. Buyer reject is not implemented.
+              </p>
             </div>
           </div>
 

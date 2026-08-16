@@ -13,7 +13,11 @@ namespace Modules.Lhdn.Infrastructure.Services.Strategies;
 /// </summary>
 public static class ViewModelMapper
 {
-    public static UblInvoiceViewModel MapToViewModel(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
+    public static UblInvoiceViewModel MapToViewModel(
+        SubmitDocumentRequestDto request,
+        LhdnTenantConfig config,
+        string documentVersion,
+        string? supplierSstNumber = null)
     {
         var issueDate = request.Issue_date.UtcDateTime;
         var startDate = request.Billing_period_start?.UtcDateTime ?? issueDate.AddDays(-30);
@@ -42,7 +46,8 @@ public static class ViewModelMapper
             City = string.IsNullOrWhiteSpace(config.City) ? "NA" : config.City,
             PostalCode = string.IsNullOrWhiteSpace(config.Postal) ? "00000" : config.Postal,
             StateCode = string.IsNullOrWhiteSpace(config.State) ? "14" : config.State.TrimStart('_'),
-            CountryCode = string.IsNullOrWhiteSpace(config.Country) ? "MYS" : config.Country
+            CountryCode = string.IsNullOrWhiteSpace(config.Country) ? "MYS" : config.Country,
+            SstNumber = string.IsNullOrWhiteSpace(supplierSstNumber) ? null : supplierSstNumber.Trim()
         };
 
         var requestParty = new UblPartyViewModel

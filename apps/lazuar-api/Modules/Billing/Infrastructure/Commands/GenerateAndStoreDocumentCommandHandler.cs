@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Contracts.Events;
 using Modules.Billing.Domain;
@@ -65,36 +66,20 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         var tenantSlug = workspace?.Slug ?? "";
         var businessName = workspace?.Name ?? profile?.LegalName ?? "Business";
 
-        byte[]? logoBytes = null;
-        if (!string.IsNullOrEmpty(profile?.LogoUrl))
-        {
-            try
-            {
-                var client = _httpClientFactory.CreateClient();
-                logoBytes = await client.GetByteArrayAsync(profile.LogoUrl, ct);
-            }
-            catch { /* Ignore image fetch failures to prevent blocking receipt generation */ }
-        }
+        var logoBytes = await BillingDocumentLogo.TryFetchAsync(_httpClientFactory, profile?.LogoUrl, ct);
 
-        var model = new InvoiceDocumentModel
-        {
-            DocumentType = request.DocumentType,
-            // Customer-facing receipt # is immutable; never use LHDN UUID as invoice number.
-            InvoiceNumber = entry.CustomerDocumentNumber
-                ?? entry.TaxInvoiceId
-                ?? entry.Id.ToString()[..8].ToUpperInvariant(),
-            IssueDate = entry.Timestamp,
-            CompanyName = profile?.LegalName ?? "Lazuar Merchant",
-            CompanyTin = profile?.Tin ?? "N/A",
-            CompanyAddress = profile?.Address?.Line1 ?? "",
-            CompanyLogo = logoBytes,
-            CustomerName = customerName,
-            CustomerEmail = customerEmail,
-            LhdnUuid = entry.LhdnValidationStatus == LhdnValidationStatuses.Valid
+        var model = InvoiceDocumentFactory.CreateHeader(
+            request.DocumentType,
+            DocumentSeries.CustomerFacingNumber(entry.CustomerDocumentNumber, entry.TaxInvoiceId),
+            entry.Timestamp,
+            profile,
+            workspace,
+            customer,
+            logoBytes,
+            entry.LhdnValidationStatus == LhdnValidationStatuses.Valid
                 ? (entry.LhdnDocumentUuid ?? entry.TaxInvoiceId)
                 : null,
-            LhdnQrLink = request.LhdnQrLink
-        };
+            request.LhdnQrLink);
 
         var revenueLines = entry.Lines
             .Where(l => l.AccountType == AccountTypes.RevenueGross || l.AccountType == AccountTypes.RevenueRecognized)
@@ -113,6 +98,10 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
         model.Discount = entry.Lines.Where(l => l.AccountType == AccountTypes.ExpenseDiscount).Sum(l => Math.Abs(l.Amount));
         model.Tax = entry.Lines.Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable).Sum(l => Math.Abs(l.Amount));
         model.Total = model.Subtotal - model.Discount + model.Tax;
+        if (entry.Lines.Any(l => l.TaxTypeCode == "02") || !string.IsNullOrWhiteSpace(profile?.SstRegistrationNumber) && model.Tax > 0)
+        {
+            model.TaxLabel = "SST:";
+        }
 
         var pdfDocument = new BaseInvoiceDocument(model);
         var pdfBytes = pdfDocument.GeneratePdf();

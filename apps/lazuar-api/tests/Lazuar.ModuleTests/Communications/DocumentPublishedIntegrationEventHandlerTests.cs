@@ -162,7 +162,7 @@ public class DocumentPublishedIntegrationEventHandlerTests
     }
 
     [Test]
-    public async Task DocumentPublished_TaxInvoice_DoesNotDispatchOfficialReceipt()
+    public async Task DocumentPublished_TaxInvoice_FallsBackToOfficialReceiptTemplate()
     {
         await using var db = CreateDb();
         var orgId = Guid.CreateVersion7();
@@ -192,7 +192,10 @@ public class DocumentPublishedIntegrationEventHandlerTests
             CustomerName: "Buyer",
             CustomerEmail: "buyer@example.com"));
 
-        await eventBus.DidNotReceive().PublishAsync(Arg.Any<DispatchMessageIntegrationEvent>());
+        await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
+            e.ToEmail == "buyer@example.com"
+            && e.HtmlEmailBody != null
+            && e.HtmlEmailBody.Contains("sig=")));
     }
 
     private static CommunicationsDbContext CreateDb()

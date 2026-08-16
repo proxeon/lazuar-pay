@@ -91,6 +91,25 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
         TaxInvoiceId ??= invoiceNumber;
     }
 
+    /// <summary>
+    /// Immutable customer-facing commercial number (INV / CN / other). Does not start B2C consolidation.
+    /// </summary>
+    public void AssignCustomerDocumentNumber(string documentNumber)
+    {
+        if (string.IsNullOrWhiteSpace(documentNumber))
+            throw new ArgumentException("Document number is required.", nameof(documentNumber));
+
+        CustomerDocumentNumber ??= documentNumber;
+        TaxInvoiceId ??= documentNumber;
+    }
+
+    /// <summary>B2B tax-invoice number allocated on pay, before any MyInvois UUID exists.</summary>
+    public void AssignB2bInvoice(string invoiceNumber)
+    {
+        AssignCustomerDocumentNumber(invoiceNumber);
+        MarkConsolidationNotRequired();
+    }
+
     /// <summary>Marks B2B (or other non-consolidatable) sales so the consolidation job skips them.</summary>
     public void MarkConsolidationNotRequired()
     {

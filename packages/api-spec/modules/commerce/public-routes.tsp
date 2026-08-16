@@ -32,6 +32,14 @@ interface PublicCommerceOperations {
     @query product_slug: string,
   ): ValidateCouponResponseDto | LazuarApi.Core.ProblemDetailsResponse;
 
+  /** Validate buyer TIN + ID against MyInvois using the merchant's credentials. */
+  @post
+  @route("/{tenantSlug}/validate-tin")
+  validateTin(
+    @path tenantSlug: string,
+    @body body: PublicValidateTinRequestDto,
+  ): PublicValidateTinResponseDto | LazuarApi.Core.ProblemDetailsResponse;
+
   /** Start checkout; returns payment gateway redirect / session details. */
   @post
   @route("/checkout")
@@ -83,6 +91,17 @@ interface PublicCommerceOperations {
     @path tenantSlug: string,
     @body body: RequestPortalMagicLinkRequest,
   ): LazuarApi.Core.StatusResponse;
+
+  /**
+   * Buyer document inbox (official receipts, tax invoices, credit notes, quotes).
+   * Same magic token as the portal snapshot. HMAC download URLs only when a PDF exists.
+   */
+  @get
+  @route("/{tenantSlug}/portal/documents")
+  @doc("List this buyer's commercial documents for the workspace. Token-bound; no cross-buyer rows.")
+  getPortalDocuments(@path tenantSlug: string, @query token: string):
+    | PortalDocumentsResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
 
   /** Poll checkout session activation after payment redirect (tenant-bound; no magic token). */
   @get

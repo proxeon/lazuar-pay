@@ -40,6 +40,15 @@ public class LhdnRepository : ILhdnRepository
             .FirstOrDefaultAsync(d => d.OrganizationId == organizationId && d.InternalReferenceId == internalReferenceId, ct);
     }
 
+    public async Task<TaxDocument?> GetTaxDocumentByLhdnUuidAsync(Guid organizationId, string lhdnUuid, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(lhdnUuid))
+            return null;
+
+        return await _context.TaxDocuments
+            .FirstOrDefaultAsync(d => d.OrganizationId == organizationId && d.LhdnUuid == lhdnUuid, ct);
+    }
+
     public void AddTaxDocument(TaxDocument document)
     {
         _context.TaxDocuments.Add(document);

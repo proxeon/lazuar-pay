@@ -44,6 +44,20 @@ function checkoutIdempotencyKey(tenantSlug: string, productSlug: string) {
   }
 }
 
+export async function validateTin(tenantSlug: string, tin: string, idType: string, idValue: string) {
+  const res = await fetch(`${BROWSER_API_URL}/public/commerce/${encodeURIComponent(tenantSlug)}/validate-tin`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tin, id_type: idType, id_value: idValue }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.detail || "Merchant has not connected MyInvois.");
+  }
+  return data as { is_valid: boolean; tin: string; taxpayer_name?: string };
+}
+
 export async function submitCheckout(payload: PublicCheckoutRequestDto) {
   const { data, error } = await browserClient.POST("/public/commerce/checkout", {
     body: payload,

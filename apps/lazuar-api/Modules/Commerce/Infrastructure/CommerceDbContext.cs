@@ -117,6 +117,8 @@ public class CommerceDbContext : PlatformDbContext
             
             builder.Property(x => x.PricingModel).HasMaxLength(50).HasDefaultValue("FIXED");
             builder.Property(x => x.MinimumPrice).HasPrecision(18, 4).HasDefaultValue(0m);
+            builder.Property(x => x.SstTaxType).HasMaxLength(2).HasDefaultValue("06");
+            builder.Property(x => x.SstRatePercent).HasPrecision(5, 2).HasDefaultValue(0m);
 
             builder.Property(x => x.FulfillmentTargets)
                 .HasField("_fulfillmentTargets")
@@ -183,6 +185,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => x.Status);
 
             builder.Property(x => x.GatewayName).HasMaxLength(100);
+            builder.Property(x => x.DocumentNumber).HasMaxLength(40);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
             builder.Property(x => x.Quantity).HasDefaultValue(1);
             builder.Property(x => x.IdempotencyKey).HasMaxLength(200);

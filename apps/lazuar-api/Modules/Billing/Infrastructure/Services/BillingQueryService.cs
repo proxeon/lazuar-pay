@@ -20,7 +20,7 @@ public class BillingQueryService : IBillingQueryService
     private record RawLedgerEntryDto(
         Guid Id, DateTime Timestamp, string ReferenceType, string ReferenceId,
         string? Description, string CustomerType, string? TaxInvoiceId,
-        string? LhdnValidationStatus, int TotalCount);
+        string? CustomerDocumentNumber, string? LhdnValidationStatus, int TotalCount);
 
     private record RawLedgerLineDto(
         Guid Id, Guid LedgerEntryId, string AccountType, decimal Amount,
@@ -43,7 +43,7 @@ public class BillingQueryService : IBillingQueryService
         var sqlBuilder = new StringBuilder(@"
             SELECT 
                 e.""Id"", e.""Timestamp"", e.""ReferenceType"", e.""ReferenceId"", 
-                e.""Description"", e.""CustomerType"", e.""TaxInvoiceId"", e.""LhdnValidationStatus"",
+                e.""Description"", e.""CustomerType"", e.""TaxInvoiceId"", e.""CustomerDocumentNumber"", e.""LhdnValidationStatus"",
                 (COUNT(*) OVER())::int AS ""TotalCount""
             FROM billing.""LedgerEntries"" e
             WHERE e.""OrganizationId"" = @OrgId");
@@ -106,6 +106,7 @@ public class BillingQueryService : IBillingQueryService
             Description = e.Description,
             Customer_type = e.CustomerType,
             Tax_invoice_id = e.TaxInvoiceId,
+            Customer_document_number = e.CustomerDocumentNumber,
             Lhdn_validation_status = e.LhdnValidationStatus,
             Lines = linesLookup.ContainsKey(e.Id) ? linesLookup[e.Id].Select(l => new LedgerLineDto
             {
@@ -327,4 +328,126 @@ public class BillingQueryService : IBillingQueryService
             Address = address
         };
     }
+
+    public Task<LedgerDocumentIdentity?> FindPaymentByGatewayTransactionAsync(
+        Guid organizationId,
+        string gatewayTransactionId)
+    {
+        if (string.IsNullOrWhiteSpace(gatewayTransactionId))
+            return Task.FromResult<LedgerDocumentIdentity?>(null);
+
+        return FindLedgerByReferenceAsync(organizationId, LedgerReferenceTypes.GatewayPayment, gatewayTransactionId);
+    }
+
+    public async Task<LedgerDocumentIdentity?> FindLedgerByReferenceAsync(
+        Guid organizationId,
+        string referenceType,
+        string referenceId)
+    {
+        if (string.IsNullOrWhiteSpace(referenceId))
+            return null;
+
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT e.""Id"", e.""ReferenceType"", e.""ReferenceId"", e.""CustomerDocumentNumber"",
+                   e.""LhdnDocumentUuid"", e.""TaxInvoiceId"", e.""CustomerType"", e.""LhdnValidationStatus"",
+                   e.""Timestamp""
+            FROM billing.""LedgerEntries"" e
+            WHERE e.""OrganizationId"" = @OrgId
+              AND e.""ReferenceType"" = @ReferenceType
+              AND e.""ReferenceId"" = @ReferenceId
+            LIMIT 1";
+
+        var row = await connection.QuerySingleOrDefaultAsync<RawIdentityRow>(sql, new
+        {
+            OrgId = organizationId,
+            ReferenceType = referenceType,
+            ReferenceId = referenceId
+        });
+
+        if (row == null) return null;
+
+        var (amount, currency) = await SumEntryAsync(connection, row.Id);
+        return MapIdentity(row, amount, currency);
+    }
+
+    public async Task<IReadOnlyList<LedgerDocumentIdentity>> GetDocumentsByReferenceIdsAsync(
+        Guid organizationId,
+        IReadOnlyList<string> referenceIds)
+    {
+        var ids = referenceIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (ids.Count == 0)
+            return Array.Empty<LedgerDocumentIdentity>();
+
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT e.""Id"", e.""ReferenceType"", e.""ReferenceId"", e.""CustomerDocumentNumber"",
+                   e.""LhdnDocumentUuid"", e.""TaxInvoiceId"", e.""CustomerType"", e.""LhdnValidationStatus"",
+                   e.""Timestamp""
+            FROM billing.""LedgerEntries"" e
+            WHERE e.""OrganizationId"" = @OrgId
+              AND e.""ReferenceId"" = ANY(@Refs)
+              AND e.""CustomerDocumentNumber"" IS NOT NULL
+              AND e.""ReferenceType"" IN ('GATEWAY_PAYMENT', 'GATEWAY_REFUND', 'MANUAL_ENROLLMENT', 'LHDN_CANCELLATION')
+            ORDER BY e.""Timestamp"" DESC";
+
+        var rows = (await connection.QueryAsync<RawIdentityRow>(sql, new { OrgId = organizationId, Refs = ids.ToArray() })).ToList();
+        if (rows.Count == 0)
+            return Array.Empty<LedgerDocumentIdentity>();
+
+        var result = new List<LedgerDocumentIdentity>(rows.Count);
+        foreach (var row in rows)
+        {
+            var (amount, currency) = await SumEntryAsync(connection, row.Id);
+            result.Add(MapIdentity(row, amount, currency));
+        }
+
+        return result;
+    }
+
+    private static LedgerDocumentIdentity MapIdentity(RawIdentityRow row, decimal amount, string currency) =>
+        new(
+            row.Id,
+            row.ReferenceType,
+            row.ReferenceId,
+            row.CustomerDocumentNumber,
+            row.LhdnDocumentUuid,
+            row.TaxInvoiceId,
+            row.CustomerType,
+            row.LhdnValidationStatus,
+            amount,
+            currency,
+            row.Timestamp);
+
+    private static async Task<(decimal Amount, string Currency)> SumEntryAsync(IDbConnection connection, Guid entryId)
+    {
+        const string sql = @"
+            SELECT COALESCE(SUM(ABS(""Amount"")), 0) as Amount,
+                   COALESCE(MAX(""Currency""), 'MYR') as Currency
+            FROM billing.""LedgerLines""
+            WHERE ""LedgerEntryId"" = @Id
+              AND ""AccountType"" IN ('REVENUE_GROSS', 'REVENUE_RECOGNIZED', 'CONTRA_REVENUE_REFUNDS', 'LIABILITY_TAX_PAYABLE')";
+
+        var row = await connection.QuerySingleAsync<(decimal Amount, string Currency)>(sql, new { Id = entryId });
+        return row;
+    }
+
+    private record RawIdentityRow(
+        Guid Id,
+        string ReferenceType,
+        string ReferenceId,
+        string? CustomerDocumentNumber,
+        string? LhdnDocumentUuid,
+        string? TaxInvoiceId,
+        string CustomerType,
+        string? LhdnValidationStatus,
+        DateTime Timestamp);
 }

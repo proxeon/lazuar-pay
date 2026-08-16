@@ -9,6 +9,7 @@ using BuildingBlocks.Infrastructure.Observability;
 using Modules.Lhdn.Infrastructure.Observability;
 using Modules.Billing.Contracts.Events;
 using Modules.Payments.Contracts.Events;
+using Modules.Lhdn.Application;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Infrastructure.EventHandlers;
@@ -55,10 +56,13 @@ public static class DependencyInjection
         services.AddScoped<ILhdnGatewayAdapter, LhdnGatewayAdapter>();
         services.AddScoped<ITaxpayerValidationService, TaxpayerValidationService>();
         services.AddSingleton<ILhdnLinkService, LhdnLinkService>();
+        services.AddScoped<IDocumentSigner, JsonUblDocumentSigner>();
+        services.Configure<LhdnSigningOptions>(configuration.GetSection(LhdnSigningOptions.SectionName));
 
         services.AddTransient<InvoiceIssuedIntegrationEventHandler>();
         services.AddTransient<GatewayRefundCompletedIntegrationEventHandler>();
         services.AddTransient<ConsolidatedInvoiceIssuedIntegrationEventHandler>();
+        services.AddTransient<B2bTaxInvoiceRequestedIntegrationEventHandler>();
 
         services.AddHostedService<LhdnSubmissionJob>();
         services.AddHostedService<LhdnStatusPollingJob>();
@@ -95,6 +99,7 @@ public static class DependencyInjection
         eventBus.Subscribe<InvoiceIssuedIntegrationEvent, InvoiceIssuedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayRefundCompletedIntegrationEvent, GatewayRefundCompletedIntegrationEventHandler>();
         eventBus.Subscribe<ConsolidatedInvoiceIssuedIntegrationEvent, ConsolidatedInvoiceIssuedIntegrationEventHandler>();
+        eventBus.Subscribe<B2bTaxInvoiceRequestedIntegrationEvent, B2bTaxInvoiceRequestedIntegrationEventHandler>();
 
         return app;
     }

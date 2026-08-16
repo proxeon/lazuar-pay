@@ -12,7 +12,8 @@ public record ManualSubscriberEnrolledIntegrationEvent(
     string Currency,
     string PaymentMethod,
     string? ReferenceNumber,
-    Guid TransactionLogId = default
+    Guid TransactionLogId = default,
+    bool IsB2bRequired = false
 ) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

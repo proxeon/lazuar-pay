@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
+using Modules.Billing.Contracts;
+using Modules.Billing.Contracts.Commands;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.ValueObjects;
@@ -54,6 +56,11 @@ public class CreateCustomCheckoutCommandHandler : ICommandHandler<CreateCustomCh
             request.IsB2bRequired,
             gatewayName
         );
+
+        var quoteNumber = await _mediator.Send(
+            new GenerateNextSequenceNumberCommand(request.OrganizationId, DocumentSeries.QuotePrefix()),
+            ct);
+        session.AssignDocumentNumber(quoteNumber);
 
         _repository.AddCheckoutSession(session);
         await _repository.SaveChangesAsync(ct);

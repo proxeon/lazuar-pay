@@ -7,8 +7,10 @@ using FluentAssertions;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
+using Modules.Lhdn.Application;
 using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
@@ -45,6 +47,9 @@ public class LhdnSingleCreditPathTests
         _billingQueryService.HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>()).Returns(true);
         _creditCostService.GetCost(CreditAction.LhdnSubmit).Returns(3);
 
+        var tin = Substitute.For<ITaxpayerValidationService>();
+        tin.ValidateTinAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new TinValidationResponse(true, "IG1234567890", "Buyer"));
         _handler = new SubmitTaxDocumentCommandHandler(
             _repository,
             _strategyFactory,
@@ -53,7 +58,11 @@ public class LhdnSingleCreditPathTests
             _billingQueryService,
             _creditCostService,
             _mediator,
-            Substitute.For<ILogger<SubmitTaxDocumentCommandHandler>>());
+            Substitute.For<ILogger<SubmitTaxDocumentCommandHandler>>(),
+            tin,
+            Substitute.For<IDocumentSigner>(),
+            Substitute.For<ICertificateVaultService>(),
+            Options.Create(new LhdnSigningOptions()));
     }
 
     [Test]

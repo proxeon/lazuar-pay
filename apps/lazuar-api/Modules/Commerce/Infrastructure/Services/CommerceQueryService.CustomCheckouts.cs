@@ -20,6 +20,7 @@ public partial class CommerceQueryService
         bool IsB2bRequired,
         string AdHocLineItems,
         DateTime CreatedAt,
+        string? DocumentNumber,
         int TotalCount
     );
 
@@ -32,7 +33,7 @@ public partial class CommerceQueryService
 
         const string sql = @"
             SELECT 
-                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"",
+                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"", c.""DocumentNumber"",
                 (COUNT(*) OVER())::int AS ""TotalCount""
             FROM commerce.""CheckoutSessions"" c
             WHERE c.""OrganizationId"" = @OrgId AND c.""ProductId"" IS NULL
@@ -75,7 +76,8 @@ public partial class CommerceQueryService
                 Is_b2b_required = c.IsB2bRequired,
                 Line_items = lineItems,
                 Total_amount = (double)totalAmount,
-                Created_at = new DateTimeOffset(c.CreatedAt)
+                Created_at = new DateTimeOffset(c.CreatedAt),
+                Document_number = c.DocumentNumber
             };
         }).ToList();
 
@@ -89,7 +91,7 @@ public partial class CommerceQueryService
 
         const string sql = @"
             SELECT 
-                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"", 1 AS ""TotalCount""
+                c.""Id"", c.""ClientProfileId"", c.""Status"", c.""ExpiresAt"", c.""IsB2bRequired"", c.""AdHocLineItems"", c.""CreatedAt"", c.""DocumentNumber"", 1 AS ""TotalCount""
             FROM commerce.""CheckoutSessions"" c
             WHERE c.""OrganizationId"" = @OrgId AND c.""Id"" = @SessionId AND c.""ProductId"" IS NULL
             LIMIT 1;";
@@ -118,7 +120,8 @@ public partial class CommerceQueryService
             Is_b2b_required = rawCheckout.IsB2bRequired,
             Line_items = lineItems,
             Total_amount = (double)totalAmount,
-            Created_at = new DateTimeOffset(rawCheckout.CreatedAt)
+            Created_at = new DateTimeOffset(rawCheckout.CreatedAt),
+            Document_number = rawCheckout.DocumentNumber
         };
     }
 }

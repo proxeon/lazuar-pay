@@ -169,7 +169,7 @@ export default function CreateQuoteModal({ isOpen, onClose }: CreateQuoteModalPr
                   <div className="flex items-center pt-5">
                     <label className="flex items-center gap-2 cursor-pointer w-fit">
                       <input type="checkbox" checked={isB2bRequired} onChange={e => setIsB2bRequired(e.target.checked)} disabled={createMutation.isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
-                      <span className="text-[12px] font-medium text-[#09090b]">Require B2B Tax Details (LHDN)</span>
+                      <span className="text-[12px] font-medium text-[#09090b]">Require buyer tax ID (B2B tax invoice after payment)</span>
                     </label>
                   </div>
                 </div>

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Routing;
 using Modules.Commerce.Application.Queries;
 using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Commands;
+using Modules.Commerce.Infrastructure.Services;
 using Modules.One.Contracts;
 
 namespace Modules.Commerce.Infrastructure;
@@ -24,7 +25,8 @@ public static class PublicPortalEndpoints
             [FromQuery] string token,
             IOneQueryService oneQueryService,
             ICommerceQueryService queryService,
-            IMagicLinkTokenService tokenService) =>
+            IMagicLinkTokenService tokenService,
+            PortalDocumentQueryService portalDocuments) =>
         {
             var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
             if (!tenantId.HasValue) return TypedResults.NotFound();
@@ -35,7 +37,27 @@ public static class PublicPortalEndpoints
             var portalData = await queryService.GetPortalDataAsync(tenantId.Value, subId.Value);
             if (portalData == null) return TypedResults.NotFound();
 
+            await portalDocuments.ListForBuyerAsync(tenantId.Value, subId.Value, tenantSlug);
+            portalDocuments.AttachLatestToSubscriptions(portalData);
+
             return TypedResults.Ok(portalData);
+        });
+
+        group.MapGet("/{tenantSlug}/portal/documents", async Task<Results<Ok<PortalDocumentsResponse>, NotFound, UnauthorizedHttpResult>> (
+            string tenantSlug,
+            [FromQuery] string token,
+            IOneQueryService oneQueryService,
+            IMagicLinkTokenService tokenService,
+            PortalDocumentQueryService portalDocuments) =>
+        {
+            var tenantId = await oneQueryService.GetTenantIdBySlugAsync(tenantSlug);
+            if (!tenantId.HasValue) return TypedResults.NotFound();
+
+            var subId = tokenService.ValidateToken(token);
+            if (!subId.HasValue) return TypedResults.Unauthorized();
+
+            var documents = await portalDocuments.ListForBuyerAsync(tenantId.Value, subId.Value, tenantSlug);
+            return TypedResults.Ok(documents);
         });
 
         group.MapPost("/{tenantSlug}/portal/magic-link", async Task<Ok<StatusResponse>> (

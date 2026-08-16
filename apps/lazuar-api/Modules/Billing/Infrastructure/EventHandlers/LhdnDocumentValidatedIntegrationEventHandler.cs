@@ -1,8 +1,13 @@
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Domain;
+using Modules.Billing.Domain.Aggregates;
 using Modules.Lhdn.Contracts.Events;
 
 namespace Modules.Billing.Infrastructure.EventHandlers;
@@ -20,26 +25,58 @@ public class LhdnDocumentValidatedIntegrationEventHandler : IIntegrationEventHan
 
     public async Task HandleAsync(LhdnDocumentValidatedIntegrationEvent @event)
     {
-        var ledgerEntry = await _dbContext.LedgerEntries
+        var key = @event.InternalReferenceId;
+        var entries = await _dbContext.LedgerEntries
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(e => e.OrganizationId == @event.OrganizationId && e.ReferenceId == @event.InternalReferenceId);
+            .Where(e => e.OrganizationId == @event.OrganizationId
+                && (e.ReferenceId == key
+                    || e.CustomerDocumentNumber == key
+                    || e.TaxInvoiceId == key
+                    || e.LhdnDocumentUuid == key))
+            .ToListAsync();
 
-        if (ledgerEntry != null)
+        if (entries.Count == 0)
+            return;
+
+        foreach (var entry in entries)
         {
-            ledgerEntry.UpdateLhdnStatus(@event.LhdnUuid, @event.Status);
-            await _dbContext.SaveChangesAsync();
-
-            if (@event.Status == "VALID")
-            {
-                var docType = ledgerEntry.ReferenceType.Contains("REFUND") ? "Credit Note" : "Tax Invoice";
-
-                await _mediator.Send(new GenerateAndStoreDocumentCommand(
-                    @event.OrganizationId,
-                    ledgerEntry.Id,
-                    docType,
-                    @event.QrLink
-                ));
-            }
+            entry.UpdateLhdnStatus(@event.LhdnUuid, @event.Status);
         }
+
+        await _dbContext.SaveChangesAsync();
+
+        if (@event.Status != "VALID")
+            return;
+
+        // Consolidated QR belongs on the B2C-CONS document, not every receipt.
+        if (key.StartsWith("B2C-CONS-", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        foreach (var entry in entries)
+        {
+            var docType = ResolveDocumentType(entry);
+            await _mediator.Send(new GenerateAndStoreDocumentCommand(
+                @event.OrganizationId,
+                entry.Id,
+                docType,
+                @event.QrLink));
+        }
+    }
+
+    internal static string ResolveDocumentType(LedgerEntry entry)
+    {
+        if (entry.ReferenceType.Contains("REFUND")
+            || entry.ReferenceType == LedgerReferenceTypes.LhdnCancellation
+            || DocumentSeries.IsCreditNoteNumber(entry.CustomerDocumentNumber))
+        {
+            return "Credit Note";
+        }
+
+        if (entry.CustomerType == "B2B" || DocumentSeries.IsInvoiceNumber(entry.CustomerDocumentNumber))
+        {
+            return "Tax Invoice";
+        }
+
+        return "Official Receipt";
     }
 }

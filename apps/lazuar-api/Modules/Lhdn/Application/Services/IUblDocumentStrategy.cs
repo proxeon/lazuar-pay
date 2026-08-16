@@ -5,5 +5,5 @@ namespace Modules.Lhdn.Application.Services;
 
 public interface IUblDocumentStrategy
 {
-    string Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion);
+    string Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion, string? supplierSstNumber = null);
 }

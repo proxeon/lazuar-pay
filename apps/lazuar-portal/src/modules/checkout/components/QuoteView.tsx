@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Download, Building2, CheckCircle2 } from "lucide-react";
 import { components } from "@repo/api-types-ts";
 import { submitCheckout } from "../lib/api";
 import { cn } from "../../../../lib/utils";
 import Link from "next/link";
+import type { PublicWorkspaceBranding } from "../../core/lib/branding";
 
 type CustomCheckoutDto = components["schemas"]["Commerce.CustomCheckoutDto"];
 type TenantBillingProfileDto = components["schemas"]["Billing.TenantBillingProfileDto"];
@@ -14,46 +14,59 @@ type TenantBillingProfileDto = components["schemas"]["Billing.TenantBillingProfi
 interface QuoteViewProps {
   tenantSlug: string;
   checkout: CustomCheckoutDto;
+  branding?: PublicWorkspaceBranding | null;
   profile?: TenantBillingProfileDto | null;
   isCancelled?: boolean;
 }
 
-export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteViewProps) {
-  const router = useRouter();
+export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled }: QuoteViewProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState("");
+  const [taxId, setTaxId] = useState("");
 
   const isCompleted = checkout.status === "COMPLETED";
   const isExpired = checkout.status === "EXPIRED" || new Date(checkout.expires_at).getTime() < Date.now();
+  const sellerName = checkout.is_b2b_required
+    ? (profile?.legal_name || branding?.name || "Merchant")
+    : (branding?.name || "Merchant");
+  const logoUrl = checkout.is_b2b_required ? (profile?.logo_url || branding?.logo_url) : branding?.logo_url;
+  const quoteNumber = checkout.document_number || "PENDING";
 
   const handleProceedToPayment = async () => {
+    if (checkout.is_b2b_required && !taxId.trim()) {
+      setGlobalError("Company tax ID (TIN) is required for this payment request.");
+      return;
+    }
+
     setIsSubmitting(true);
     setGlobalError(null);
 
     try {
       const payload = {
         tenant_slug: tenantSlug,
-        product_slug: "custom", 
+        product_slug: "custom",
         session_id: checkout.id,
         name: checkout.client_name || "Customer",
         email: checkout.client_email || "customer@example.com",
+        company_name: checkout.is_b2b_required ? companyName.trim() || undefined : undefined,
+        tax_id: checkout.is_b2b_required ? taxId.trim() : undefined,
         is_guest_checkout: true
       };
 
-      const result = await submitCheckout(payload as any);
-      
+      const result = await submitCheckout(payload);
+
       if (result.is_zero_amount_bypass) {
         window.location.reload();
       } else {
         window.location.href = result.url;
       }
-    } catch (err: any) {
-      setGlobalError(err.message || "An error occurred initiating checkout.");
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : "An error occurred initiating checkout.");
       setIsSubmitting(false);
     }
   };
 
-  // Prefer HMAC-signed draft URL from API; unsigned path is rejected server-side.
   const downloadDraftUrl = checkout.draft_pdf_url;
 
   return (
@@ -76,12 +89,12 @@ export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteV
           <div className="flex items-center gap-3 text-emerald-800 dark:text-emerald-500">
             <CheckCircle2 size={24} className="shrink-0" />
             <div>
-              <p className="font-bold uppercase tracking-widest text-[11px] mb-1">Invoice Settled</p>
+              <p className="font-bold uppercase tracking-widest text-[11px] mb-1">Payment request settled</p>
               <p className="text-sm font-medium">This payment request has been successfully completed.</p>
             </div>
           </div>
           <Link href={`/${tenantSlug}/portal`} className="h-10 px-6 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-widest transition-colors shrink-0 flex items-center justify-center whitespace-nowrap">
-            View Official Receipt
+            Open buyer portal
           </Link>
         </div>
       )}
@@ -90,23 +103,23 @@ export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteV
         <div className="p-8 sm:p-12 border-b border-border/40 flex flex-col md:flex-row md:items-start justify-between gap-8 bg-secondary/10">
           
           <div className="space-y-4 max-w-sm">
-            {profile?.logo_url ? (
-              <img src={profile.logo_url} alt="Company Logo" className="max-h-16 object-contain" />
+            {logoUrl ? (
+              <img src={logoUrl} alt="Company Logo" className="max-h-16 object-contain" />
             ) : (
               <div className="h-16 w-16 bg-secondary flex items-center justify-center border border-border/60">
                 <Building2 size={24} className="text-muted-foreground" />
               </div>
             )}
             <div>
-              <h2 className="text-lg font-bold text-foreground">{profile?.legal_name || "Lazuar Merchant"}</h2>
-              {profile?.tin && <p className="text-xs text-muted-foreground font-mono mt-1">TIN: {profile.tin}</p>}
-              {profile?.registration_number && <p className="text-xs text-muted-foreground font-mono mt-0.5">SSM: {profile.registration_number}</p>}
+              <h2 className="text-lg font-bold text-foreground">{sellerName}</h2>
+              {checkout.is_b2b_required && profile?.tin && <p className="text-xs text-muted-foreground font-mono mt-1">TIN: {profile.tin}</p>}
+              {checkout.is_b2b_required && profile?.registration_number && <p className="text-xs text-muted-foreground font-mono mt-0.5">SSM: {profile.registration_number}</p>}
             </div>
           </div>
 
           <div className="md:text-right space-y-1.5">
             <h1 className="text-3xl font-light tracking-tight text-foreground uppercase">Proforma Invoice</h1>
-            <p className="text-sm font-mono text-muted-foreground">REF: {checkout.id.substring(0,8).toUpperCase()}</p>
+            <p className="text-sm font-mono text-muted-foreground">No: {quoteNumber}</p>
             <p className="text-sm font-mono text-muted-foreground">Date: {new Date(checkout.created_at).toLocaleDateString('en-GB')}</p>
             {!isCompleted && (
               <p className={cn("text-sm font-mono font-semibold mt-2", isExpired ? "text-rose-600" : "text-amber-600")}>
@@ -146,11 +159,25 @@ export function QuoteView({ tenantSlug, checkout, profile, isCancelled }: QuoteV
         </div>
 
         <div className="p-8 sm:p-12 bg-secondary/10 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-border/60">
-          <div className="w-full md:w-auto">
+          <div className="w-full md:w-auto space-y-3">
             {checkout.is_b2b_required && !isCompleted && (
-              <p className="text-[11px] font-medium text-amber-700 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-3 w-full md:max-w-xs">
-                Company Tax Details (TIN) will be collected during the secure checkout step to generate your official LHDN e-Invoice.
-              </p>
+              <div className="space-y-2 w-full md:min-w-[280px]">
+                <p className="text-[11px] font-medium text-amber-700 dark:text-amber-500">
+                  Enter company tax details to issue a tax invoice after payment.
+                </p>
+                <input
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Company name"
+                  className="w-full h-9 border border-border bg-background px-3 text-sm"
+                />
+                <input
+                  value={taxId}
+                  onChange={(e) => setTaxId(e.target.value)}
+                  placeholder="Tax ID (TIN) *"
+                  className="w-full h-9 border border-border bg-background px-3 text-sm"
+                />
+              </div>
             )}
           </div>
           

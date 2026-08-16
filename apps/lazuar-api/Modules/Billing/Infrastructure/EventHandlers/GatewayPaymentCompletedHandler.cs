@@ -1,9 +1,14 @@
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Application;
+using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Contracts.Events;
 using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Payments.Contracts;
@@ -15,11 +20,19 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
 {
     private readonly ILedgerRepository _repository;
     private readonly IMediator _mediator;
+    private readonly IEventBus _eventBus;
+    private readonly decimal _b2cIndividualThresholdMyr;
 
-    public GatewayPaymentCompletedHandler(ILedgerRepository repository, IMediator mediator)
+    public GatewayPaymentCompletedHandler(
+        ILedgerRepository repository,
+        IMediator mediator,
+        [FromKeyedServices("BillingEventBus")] IEventBus eventBus,
+        IConfiguration? configuration = null)
     {
         _repository = repository;
         _mediator = mediator;
+        _eventBus = eventBus;
+        _b2cIndividualThresholdMyr = configuration?.GetValue("Lhdn:B2cIndividualThresholdMyr", 10000m) ?? 10000m;
     }
 
     public async Task HandleAsync(GatewayPaymentCompletedIntegrationEvent @event)
@@ -51,7 +64,10 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
 
         var baseCurrency = @event.BaseCurrency;
         var fxRate = @event.FxRate;
-        var grossRevenue = @event.AmountPaid - @event.TaxAmount;
+        var taxAmount = ResolveTaxAmount(@event);
+        var taxType = ResolveTaxType(@event, taxAmount);
+        var msic = isB2b ? "022" : "004";
+        var grossRevenue = @event.AmountPaid - taxAmount;
 
         entry.AddLine(AccountTypes.AssetCash, @event.NetAmount, @event.Currency, @event.NetAmount * fxRate, baseCurrency);
 
@@ -60,11 +76,11 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             entry.AddLine(AccountTypes.ExpenseGatewayFee, @event.GatewayFee, @event.Currency, @event.GatewayFee * fxRate, baseCurrency);
         }
 
-        entry.AddLine(AccountTypes.RevenueGross, -grossRevenue, @event.Currency, -grossRevenue * fxRate, baseCurrency);
+        entry.AddLine(AccountTypes.RevenueGross, -grossRevenue, @event.Currency, -grossRevenue * fxRate, baseCurrency, taxType, msic);
 
-        if (@event.TaxAmount > 0)
+        if (taxAmount > 0)
         {
-            entry.AddLine(AccountTypes.LiabilityTaxPayable, -@event.TaxAmount, @event.Currency, -@event.TaxAmount * fxRate, baseCurrency);
+            entry.AddLine(AccountTypes.LiabilityTaxPayable, -taxAmount, @event.Currency, -taxAmount * fxRate, baseCurrency, taxType, msic);
         }
 
         entry.ValidateBalanced();
@@ -72,25 +88,52 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
 
         if (!isB2b)
         {
-            var seqCommand = new GenerateNextSequenceNumberCommand(@event.OrganizationId, $"RCPT-{DateTime.UtcNow:yyyy}");
-            var receiptNumber = await _mediator.Send(seqCommand);
+            var receiptNumber = await _mediator.Send(
+                new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.ReceiptPrefix()));
             entry.AssignB2cReceipt(receiptNumber);
+            if (@event.AmountPaid > _b2cIndividualThresholdMyr)
+            {
+                entry.MarkConsolidationNotRequired();
+                entry.UpdateLhdnStatus(null, LhdnValidationStatuses.NeedsBuyerTin);
+            }
         }
         else
         {
-            entry.MarkConsolidationNotRequired();
+            var invoiceNumber = await _mediator.Send(
+                new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.InvoicePrefix()));
+            entry.AssignB2bInvoice(invoiceNumber);
         }
 
         await _repository.SaveChangesAsync();
 
+        var correlation = ResolveDocumentCorrelation(@event);
         if (!isB2b)
         {
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
                 entry.Id,
                 "Official Receipt",
-                CorrelationId: ResolveDocumentCorrelation(@event)
+                CorrelationId: correlation
             ));
+        }
+        else
+        {
+            await _mediator.Send(new GenerateAndStoreDocumentCommand(
+                @event.OrganizationId,
+                entry.Id,
+                "Tax Invoice",
+                CorrelationId: correlation
+            ));
+
+            await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
+                @event.OrganizationId,
+                entry.Id,
+                entry.CustomerDocumentNumber!,
+                @event.GatewayTransactionId,
+                grossRevenue,
+                @event.TaxAmount,
+                @event.Currency,
+                correlation));
         }
     }
 
@@ -111,5 +154,36 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
         }
 
         return null;
+    }
+
+    private static decimal ResolveTaxAmount(GatewayPaymentCompletedIntegrationEvent @event)
+    {
+        if (@event.TaxAmount > 0)
+        {
+            return @event.TaxAmount;
+        }
+
+        if (@event.Metadata != null
+            && @event.Metadata.TryGetValue("sst_tax_amount", out var raw)
+            && decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed)
+            && parsed > 0)
+        {
+            return parsed;
+        }
+
+        return 0m;
+    }
+
+    private static string ResolveTaxType(GatewayPaymentCompletedIntegrationEvent @event, decimal taxAmount)
+    {
+        if (@event.Metadata != null
+            && @event.Metadata.TryGetValue("sst_tax_type", out var type)
+            && type == "02"
+            && taxAmount > 0)
+        {
+            return "02";
+        }
+
+        return "06";
     }
 }

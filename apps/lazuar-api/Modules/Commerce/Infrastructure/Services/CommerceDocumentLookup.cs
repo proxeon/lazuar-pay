@@ -52,7 +52,9 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         return new CommerceCustomerDisplay(
             (string)(result.CustomerName ?? "Customer"),
-            (string)(result.CustomerEmail ?? ""));
+            (string)(result.CustomerEmail ?? ""),
+            null,
+            null);
     }
 
     public async Task<DraftCheckoutSessionDisplay?> GetDraftCheckoutSessionAsync(
@@ -65,7 +67,7 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         // L-05: commerce-owned SQL only; CRM name/email via ICrmQueryService (no crm JOIN).
         const string sql = @"
-            SELECT c.""AdHocLineItems"", c.""ClientProfileId""
+            SELECT c.""AdHocLineItems"", c.""ClientProfileId"", c.""DocumentNumber""
             FROM commerce.""CheckoutSessions"" c
             WHERE c.""Id"" = @SessionId AND c.""OrganizationId"" = @OrgId
             LIMIT 1";
@@ -83,7 +85,8 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
         return new DraftCheckoutSessionDisplay(
             CustomerName: profile?.Full_name ?? "Customer",
             CustomerEmail: profile?.Email ?? "",
-            AdHocLineItemsJson: (string?)sessionData.AdHocLineItems);
+            AdHocLineItemsJson: (string?)sessionData.AdHocLineItems,
+            DocumentNumber: (string?)sessionData.DocumentNumber);
     }
 
     public async Task<CommerceCustomerDisplay?> GetCustomerForDocumentAsync(
@@ -153,7 +156,9 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         return new CommerceCustomerDisplay(
             string.IsNullOrWhiteSpace(log.CustomerName) ? "Customer" : log.CustomerName,
-            log.CustomerEmail ?? "");
+            log.CustomerEmail ?? "",
+            null,
+            null);
     }
 
     private async Task<CommerceCustomerDisplay?> FindCustomerOnCheckoutSessionAsync(
@@ -195,7 +200,17 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         return new CommerceCustomerDisplay(
             string.IsNullOrWhiteSpace(profile.Full_name) ? "Customer" : profile.Full_name,
-            profile.Email ?? "");
+            profile.Email ?? "",
+            profile.Tin,
+            profile.Company_name,
+            profile.Billing_address?.Line1,
+            profile.Billing_address?.Line2,
+            profile.Billing_address?.City,
+            profile.Billing_address?.Postal_code,
+            profile.Billing_address?.State_code,
+            profile.Billing_address?.Country_code,
+            profile.Id_type,
+            profile.Id_value);
     }
 
     private static IEnumerable<Guid> DistinctGuidCandidates(string? correlationId, string referenceId)

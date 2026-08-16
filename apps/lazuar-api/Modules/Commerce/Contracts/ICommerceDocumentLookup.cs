@@ -46,7 +46,19 @@ public interface ICommerceDocumentLookup
         CancellationToken ct = default);
 }
 
-public record CommerceCustomerDisplay(string Name, string Email);
+public record CommerceCustomerDisplay(
+    string Name,
+    string Email,
+    string? Tin = null,
+    string? CompanyName = null,
+    string? AddressLine1 = null,
+    string? AddressLine2 = null,
+    string? City = null,
+    string? PostalCode = null,
+    string? StateCode = null,
+    string? CountryCode = null,
+    string? IdType = null,
+    string? IdValue = null);
 
 public record CommerceSubscriptionCommsContext(
     Guid ClientProfileId,
@@ -56,4 +68,5 @@ public record CommerceSubscriptionCommsContext(
 public record DraftCheckoutSessionDisplay(
     string CustomerName,
     string CustomerEmail,
-    string? AdHocLineItemsJson);
+    string? AdHocLineItemsJson,
+    string? DocumentNumber = null);

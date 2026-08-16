@@ -3,9 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
+using FluentAssertions;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 using Modules.Billing.Application;
+using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Contracts.Events;
+using Modules.Billing.Domain;
+using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure.EventHandlers;
 using Modules.Payments.Contracts.Events;
 using NSubstitute;
@@ -16,12 +23,21 @@ namespace Lazuar.ModuleTests.Billing.EventHandlers;
 [TestFixture]
 public class GatewayPaymentCompletedHandlerTests
 {
+    private static Microsoft.Extensions.Configuration.IConfiguration Config() =>
+        new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Lhdn:B2cIndividualThresholdMyr"] = "10000"
+            })
+            .Build();
+
     [Test]
     public async Task HandleAsync_WhenB2C_SavesChangesBeforeGeneratingDocument()
     {
         var repository = Substitute.For<ILedgerRepository>();
         var mediator = Substitute.For<IMediator>();
-        var handler = new GatewayPaymentCompletedHandler(repository, mediator);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
 
         var @event = new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: Guid.CreateVersion7(),
@@ -56,7 +72,8 @@ public class GatewayPaymentCompletedHandlerTests
     {
         var repository = Substitute.For<ILedgerRepository>();
         var mediator = Substitute.For<IMediator>();
-        var handler = new GatewayPaymentCompletedHandler(repository, mediator);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
         var sessionId = Guid.CreateVersion7();
 
         var @event = new GatewayPaymentCompletedIntegrationEvent(
@@ -86,5 +103,51 @@ public class GatewayPaymentCompletedHandlerTests
         await mediator.Received().Send(
             Arg.Is<GenerateAndStoreDocumentCommand>(c => c.CorrelationId == sessionId.ToString()),
             Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task HandleAsync_WhenB2B_BooksB2b_SkipsReceiptAndOfficialPdf()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
+        LedgerEntry? captured = null;
+        repository.When(r => r.Add(Arg.Any<LedgerEntry>())).Do(ci => captured = ci.Arg<LedgerEntry>());
+
+        var @event = new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: Guid.CreateVersion7(),
+            GatewayTransactionId: "txn_b2b",
+            AmountPaid: 100m,
+            Currency: "MYR",
+            GatewayFee: 2m,
+            TaxAmount: 0m,
+            NetAmount: 98m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string> { { "is_b2b_required", "true" } }
+        );
+
+        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("INV-2026-00001");
+
+        await handler.HandleAsync(@event);
+
+        captured.Should().NotBeNull();
+        captured!.CustomerType.Should().Be("B2B");
+        captured.ConsolidationStatus.Should().Be(ConsolidationStatuses.NotRequired);
+        captured.CustomerDocumentNumber.Should().Be("INV-2026-00001");
+        DocumentSeries.IsReceiptNumber(captured.CustomerDocumentNumber).Should().BeFalse();
+        await mediator.Received().Send(
+            Arg.Is<GenerateAndStoreDocumentCommand>(c => c.DocumentType == "Tax Invoice"),
+            Arg.Any<CancellationToken>());
+        await mediator.DidNotReceive().Send(
+            Arg.Is<GenerateAndStoreDocumentCommand>(c => c.DocumentType == "Official Receipt"),
+            Arg.Any<CancellationToken>());
+        await eventBus.Received(1).PublishAsync(Arg.Is<B2bTaxInvoiceRequestedIntegrationEvent>(e =>
+            e.InvoiceNumber == "INV-2026-00001"
+            && e.GatewayTransactionId == "txn_b2b"));
     }
 }

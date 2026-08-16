@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-// [MVP-HIDE] import { serverClient } from "../../../../modules/core/lib/server-client";
-// [MVP-HIDE] import { QuoteView } from "../../../../modules/checkout/components/QuoteView";
+import { serverClient } from "../../../../modules/core/lib/server-client";
+import { QuoteView } from "../../../../modules/checkout/components/QuoteView";
+import { fetchWorkspaceBranding } from "../../../../modules/core/lib/branding";
 
 export default async function CustomPaymentRequestPage({
   params,
@@ -9,10 +10,6 @@ export default async function CustomPaymentRequestPage({
   params: Promise<{ tenantSlug: string; sessionId: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // [MVP-HIDE] Disable B2B Custom Quotes for CaaS MVP
-  notFound();
-
-  /*
   const { tenantSlug, sessionId } = await params;
   const isCancelled = (await searchParams).cancelled === "true";
 
@@ -25,20 +22,24 @@ export default async function CustomPaymentRequestPage({
     notFound();
   }
 
-  const { data: profile } = await serverClient.GET("/public/billing/{tenantSlug}/profile", {
-    params: { path: { tenantSlug } },
-    next: { revalidate: 3600 }
-  });
+  const branding = await fetchWorkspaceBranding(tenantSlug);
+
+  const { data: profile } = checkout.is_b2b_required
+    ? await serverClient.GET("/public/billing/{tenantSlug}/profile", {
+        params: { path: { tenantSlug } },
+        next: { revalidate: 3600 }
+      })
+    : { data: undefined };
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black font-sans text-foreground py-12 md:py-16 px-4">
-      <QuoteView 
-        tenantSlug={tenantSlug} 
-        checkout={checkout} 
-        profile={profile}
+      <QuoteView
+        tenantSlug={tenantSlug}
+        checkout={checkout}
+        branding={branding}
+        profile={checkout.is_b2b_required ? profile : null}
         isCancelled={isCancelled}
       />
     </div>
   );
-  */
 }

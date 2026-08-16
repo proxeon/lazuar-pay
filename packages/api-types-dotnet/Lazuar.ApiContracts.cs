@@ -367,6 +367,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("lhdn_validation_status")]
         public string? Lhdn_validation_status { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("customer_document_number")]
+        public string? Customer_document_number { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("lhdn_document_uuid")]
+        public string? Lhdn_document_uuid { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("lines")]
         public System.Collections.Generic.List<LedgerLineDto> Lines { get; set; } = new System.Collections.Generic.List<LedgerLineDto>();
 
@@ -841,7 +847,7 @@ namespace Lazuar.ApiTypes
         public string Status { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
-        public bool Is_reminder_only { get; set; }
+        public bool Is_reminder_only { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1680,6 +1686,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("requires_phone")]
         public bool Requires_phone { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("sst_tax_type")]
+        public string? Sst_tax_type { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_rate_percent")]
+        public double? Sst_rate_percent { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();
 
@@ -1744,6 +1756,13 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        /// <summary>
+        /// Per-org sequential quote number (`QT-yyyy-#####`), allocated once.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("document_number")]
+        public string? Document_number { get; set; } = default!;
 
         /// <summary>
         /// HMAC-signed public URL for draft proforma PDF (sig+exp).
@@ -2150,9 +2169,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("secret_key_hint")]
         public string? Secret_key_hint { get; set; } = default!;
 
-        /// <summary>test or live. Owns Billplz sandbox vs www.</summary>
+        /// <summary>
+        /// test or live. Owns Billplz sandbox vs www.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("environment")]
-        public string? Environment { get; set; }
+        public string? Environment { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2218,6 +2240,97 @@ namespace Lazuar.ApiTypes
             var options = new System.Text.Json.JsonSerializerOptions();
 
             return System.Text.Json.JsonSerializer.Deserialize<PaymentMethodDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PortalDocumentDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("document_number")]
+        public string? Document_number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("issued_at")]
+        public System.DateTimeOffset Issued_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lhdn_status")]
+        public string? Lhdn_status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("download_url")]
+        public string? Download_url { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PortalDocumentDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PortalDocumentDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PortalDocumentsResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
+        public System.Collections.Generic.List<PortalDocumentDto> Items { get; set; } = new System.Collections.Generic.List<PortalDocumentDto>();
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PortalDocumentsResponse FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PortalDocumentsResponse>(data, options);
 
         }
 
@@ -2297,7 +2410,17 @@ namespace Lazuar.ApiTypes
         public bool Cancel_at_period_end { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
-        public bool Is_reminder_only { get; set; }
+        public bool Is_reminder_only { get; set; } = default!;
+
+        /// <summary>
+        /// HMAC download for the latest stored receipt / tax invoice, if any.
+        /// </summary>
+
+        [System.Text.Json.Serialization.JsonPropertyName("document_url")]
+        public string? Document_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("document_label")]
+        public string? Document_label { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -2374,6 +2497,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("checkout_configuration")]
         public CheckoutConfigurationDto Checkout_configuration { get; set; } = new CheckoutConfigurationDto();
 
+        [System.Text.Json.Serialization.JsonPropertyName("sst_tax_type")]
+        public string? Sst_tax_type { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_rate_percent")]
+        public double? Sst_rate_percent { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2429,6 +2558,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("company_name")]
         public string? Company_name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id_type")]
+        public string? Id_type { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("id_value")]
+        public string? Id_value { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("address_line1")]
         public string? Address_line1 { get; set; } = default!;
@@ -2664,7 +2799,7 @@ namespace Lazuar.ApiTypes
         public bool? Is_active { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("environment")]
-        public string? Environment { get; set; }
+        public string? Environment { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -3004,6 +3139,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("requires_phone")]
         public bool Requires_phone { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_tax_type")]
+        public string? Sst_tax_type { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("sst_rate_percent")]
+        public double? Sst_rate_percent { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();
@@ -3966,6 +4107,9 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("phone")]
         public string Phone { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("company_name")]
+        public string? Company_name { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("tin")]
         public string? Tin { get; set; } = default!;
 
@@ -4376,6 +4520,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("has_certificate")]
         public bool Has_certificate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("signing")]
+        public string? Signing { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("submission_kind")]
+        public string? Submission_kind { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("legal_name")]
         public string? Legal_name { get; set; } = default!;
@@ -6059,6 +6209,50 @@ namespace Lazuar.ApiTypes
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PublicWorkspaceBrandingDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("slug")]
+        public string Slug { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("logo_url")]
+        public string? Logo_url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("primary_color")]
+        public string? Primary_color { get; set; } = default!;
+
+        private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+        public string ToJson()
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Serialize(this, options);
+
+        }
+        public static PublicWorkspaceBrandingDto FromJson(string data)
+        {
+
+            var options = new System.Text.Json.JsonSerializerOptions();
+
+            return System.Text.Json.JsonSerializer.Deserialize<PublicWorkspaceBrandingDto>(data, options);
+
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ResendVerificationRequestDto
     {
 
@@ -6339,11 +6533,19 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("slug")]
         public string Slug { get; set; } = default!;
 
+        /// <summary>
+        /// Hosted checkout logo (https). Empty/null clears.
+        /// </summary>
+
         [System.Text.Json.Serialization.JsonPropertyName("logo_url")]
-        public string? Logo_url { get; set; }
+        public string? Logo_url { get; set; } = default!;
+
+        /// <summary>
+        /// Hosted checkout accent `#RRGGBB`. Empty/null clears.
+        /// </summary>
 
         [System.Text.Json.Serialization.JsonPropertyName("primary_color")]
-        public string? Primary_color { get; set; }
+        public string? Primary_color { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -6580,10 +6782,10 @@ namespace Lazuar.ApiTypes
         public System.DateTimeOffset Created_at { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("logo_url")]
-        public string? Logo_url { get; set; }
+        public string? Logo_url { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("primary_color")]
-        public string? Primary_color { get; set; }
+        public string? Primary_color { get; set; } = default!;
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 

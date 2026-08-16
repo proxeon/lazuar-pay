@@ -2,8 +2,11 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Application;
+using Modules.Billing.Contracts;
+using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Payments.Contracts.Events;
@@ -14,11 +17,16 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
 {
     private readonly ILedgerRepository _repository;
     private readonly BillingDbContext _dbContext;
+    private readonly IMediator _mediator;
 
-    public GatewayRefundCompletedHandler(ILedgerRepository repository, BillingDbContext dbContext)
+    public GatewayRefundCompletedHandler(
+        ILedgerRepository repository,
+        BillingDbContext dbContext,
+        IMediator mediator)
     {
         _repository = repository;
         _dbContext = dbContext;
+        _mediator = mediator;
     }
 
     public async Task HandleAsync(GatewayRefundCompletedIntegrationEvent @event)
@@ -61,6 +69,12 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         }
 
         entry.ValidateBalanced();
+
+        var creditNoteNumber = await _mediator.Send(
+            new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.CreditNotePrefix()));
+        if (!string.IsNullOrWhiteSpace(creditNoteNumber))
+            entry.AssignCustomerDocumentNumber(creditNoteNumber);
+
         _repository.Add(entry);
         await _repository.SaveChangesAsync();
     }

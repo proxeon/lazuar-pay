@@ -13,10 +13,15 @@ public class InvoiceDocumentModel
     public string CompanyName { get; set; } = string.Empty;
     public string CompanyTin { get; set; } = string.Empty;
     public string CompanyAddress { get; set; } = string.Empty;
+    public string? CompanyRegistrationNumber { get; set; }
+    public string? CompanySstNumber { get; set; }
     public byte[]? CompanyLogo { get; set; }
 
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
+    public string? CustomerTin { get; set; }
+    public string? CustomerCompanyName { get; set; }
+    public string? CustomerAddress { get; set; }
 
     public List<InvoiceLineItemModel> LineItems { get; set; } = new();
     public decimal Subtotal { get; set; }

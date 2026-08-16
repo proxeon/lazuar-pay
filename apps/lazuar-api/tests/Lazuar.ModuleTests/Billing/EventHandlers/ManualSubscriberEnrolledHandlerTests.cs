@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BuildingBlocks.Application;
 using FluentAssertions;
 using MediatR;
 using Modules.Billing.Application;
@@ -24,7 +25,7 @@ public class ManualSubscriberEnrolledHandlerTests
     {
         var repository = Substitute.For<ILedgerRepository>();
         var mediator = Substitute.For<IMediator>();
-        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator);
+        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator, Substitute.For<IEventBus>());
 
         var @event = new ManualSubscriberEnrolledIntegrationEvent(
             OrganizationId: Guid.CreateVersion7(),
@@ -60,7 +61,7 @@ public class ManualSubscriberEnrolledHandlerTests
     {
         var repository = Substitute.For<ILedgerRepository>();
         var mediator = Substitute.For<IMediator>();
-        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator);
+        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator, Substitute.For<IEventBus>());
         var processed = new HashSet<string>();
         var added = new List<LedgerEntry>();
 
@@ -98,7 +99,7 @@ public class ManualSubscriberEnrolledHandlerTests
     {
         var repository = Substitute.For<ILedgerRepository>();
         var mediator = Substitute.For<IMediator>();
-        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator);
+        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator, Substitute.For<IEventBus>());
         var logId = Guid.CreateVersion7();
 
         repository.HasEntryBeenProcessedAsync(LedgerReferenceTypes.ManualEnrollment, logId.ToString())

@@ -19,7 +19,10 @@ model LedgerEntryDto {
   description?: string;
   customer_type: string;
   tax_invoice_id?: string;
+  /** Immutable customer-facing number (`RCPT-` / `INV-` / `CN-`). Never the LHDN UUID. */
+  customer_document_number?: string;
   lhdn_validation_status?: string;
+  lhdn_document_uuid?: string;
   lines: LedgerLineDto[];
 }
 

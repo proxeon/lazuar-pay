@@ -132,6 +132,10 @@ model LhdnTenantConfigDto {
   client_secret_hint?: string;
   /** True when a signing certificate is stored. */
   has_certificate: boolean;
+  /** Off or Auto. */
+  signing?: string;
+  /** unsigned_v1.0 or signed_v1.1_json */
+  submission_kind?: string;
   legal_name?: string;
   address_line1?: string;
   city?: string;

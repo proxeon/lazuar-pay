@@ -9,6 +9,24 @@ model PortalSubscriptionDto {
   current_period_end?: utcDateTime;
   cancel_at_period_end: boolean;
   is_reminder_only: boolean;
+  /** HMAC download for the latest stored receipt / tax invoice, if any. */
+  document_url?: string;
+  document_label?: string;
+}
+
+model PortalDocumentDto {
+  id: string;
+  document_number?: string;
+  type: string;
+  issued_at: utcDateTime;
+  amount: float64;
+  currency: string;
+  lhdn_status?: string;
+  download_url?: string;
+}
+
+model PortalDocumentsResponse {
+  items: PortalDocumentDto[];
 }
 
 model PortalOrderDto {

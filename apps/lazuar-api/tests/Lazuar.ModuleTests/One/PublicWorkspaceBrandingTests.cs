@@ -6,6 +6,7 @@ using FluentAssertions;
 using Lazuar.TestSupport;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Modules.One.Contracts;
 using Modules.One.Domain;
 using Modules.One.Infrastructure;
 using Modules.One.Infrastructure.Services;
@@ -47,6 +48,9 @@ public class PublicWorkspaceBrandingTests
         branding.Slug.Should().Be("acme");
         branding.LogoUrl.Should().Be("https://cdn.example/logo.png");
         branding.PrimaryColor.Should().Be("#112233");
+        typeof(WorkspaceBrandingDto).GetProperties().Should().NotContain(p =>
+            p.Name.Contains("Tin", StringComparison.OrdinalIgnoreCase)
+            || p.Name.Contains("Tax", StringComparison.OrdinalIgnoreCase));
     }
 
     private static OneDbContext CreateDb()

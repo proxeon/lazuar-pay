@@ -14,4 +14,5 @@ public class UblPartyViewModel
     public string PostalCode { get; set; } = "";
     public string StateCode { get; set; } = "";
     public string CountryCode { get; set; } = "";
+    public string? SstNumber { get; set; }
 }

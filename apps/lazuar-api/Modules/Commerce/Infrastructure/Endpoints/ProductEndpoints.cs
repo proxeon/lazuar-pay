@@ -53,7 +53,9 @@ public static class ProductEndpoints
                 req.Requires_address,
                 req.Requires_tax_id,
                 req.Requires_phone,
-                req.Fulfillment_targets ?? new List<string>()
+                req.Fulfillment_targets ?? new List<string>(),
+                req.Sst_tax_type,
+                (decimal)(req.Sst_rate_percent ?? 0)
             );
 
             var productId = await mediator.Send(command);
@@ -82,7 +84,9 @@ public static class ProductEndpoints
                 req.Requires_address,
                 req.Requires_tax_id,
                 req.Requires_phone,
-                req.Fulfillment_targets ?? new List<string>()
+                req.Fulfillment_targets ?? new List<string>(),
+                req.Sst_tax_type,
+                (decimal)(req.Sst_rate_percent ?? 0)
             );
 
             await mediator.Send(command);

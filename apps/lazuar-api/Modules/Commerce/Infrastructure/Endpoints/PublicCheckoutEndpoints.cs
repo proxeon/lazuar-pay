@@ -58,7 +58,9 @@ public static class PublicCheckoutEndpoints
                 req.Coupon_code,
                 parsedSessionId,
                 req.Metadata,
-                idempotencyKey
+                idempotencyKey,
+                req.Id_type,
+                req.Id_value
             );
 
             try

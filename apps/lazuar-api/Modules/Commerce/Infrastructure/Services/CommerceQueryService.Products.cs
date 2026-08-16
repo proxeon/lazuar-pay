@@ -14,7 +14,8 @@ public partial class CommerceQueryService
     internal record RawProductDto(
         Guid Id, string Slug, string Name, decimal Price, string PricingModel, decimal MinimumPrice, string Currency, string Interval,
         bool RequiresAddress, bool RequiresTaxId, bool RequiresPhone,
-        string? FulfillmentTargets, bool IsActive, string GatewayName);
+        string? FulfillmentTargets, bool IsActive, string GatewayName,
+        string? SstTaxType = null, decimal SstRatePercent = 0);
 
     public async Task<IEnumerable<ProductDto>> GetProductsAsync(Guid organizationId)
     {
@@ -25,7 +26,8 @@ public partial class CommerceQueryService
             SELECT 
                 ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
-                ""FulfillmentTargets""::text, ""IsActive"", ""GatewayName""
+                ""FulfillmentTargets""::text, ""IsActive"", ""GatewayName"",
+                ""SstTaxType"", ""SstRatePercent""
             FROM commerce.""Products""
             WHERE ""OrganizationId"" = @OrgId
             ORDER BY ""CreatedAt"" DESC";
@@ -44,7 +46,8 @@ public partial class CommerceQueryService
             SELECT 
                 ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
-                ""FulfillmentTargets""::text, ""IsActive"", ""GatewayName""
+                ""FulfillmentTargets""::text, ""IsActive"", ""GatewayName"",
+                ""SstTaxType"", ""SstRatePercent""
             FROM commerce.""Products""
             WHERE ""OrganizationId"" = @OrgId AND ""Id"" = @ProductId
             LIMIT 1";
@@ -97,7 +100,9 @@ public partial class CommerceQueryService
                 Requires_phone = raw.RequiresPhone,
                 Requires_tax_id = raw.RequiresTaxId
             },
-            Fulfillment_targets = fulfillmentTargets
+            Fulfillment_targets = fulfillmentTargets,
+            Sst_tax_type = string.IsNullOrWhiteSpace(raw.SstTaxType) ? "06" : raw.SstTaxType,
+            Sst_rate_percent = (double)raw.SstRatePercent
         };
     }
 }

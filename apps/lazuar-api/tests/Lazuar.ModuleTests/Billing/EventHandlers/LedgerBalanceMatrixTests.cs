@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -34,6 +35,14 @@ public class LedgerBalanceMatrixTests
     private BillingDbContext _db = null!;
     private ILedgerRepository _repo = null!;
     private Guid _orgId;
+
+    private static IConfiguration Config() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Lhdn:B2cIndividualThresholdMyr"] = "10000"
+            })
+            .Build();
 
     [SetUp]
     public void SetUp()
@@ -83,7 +92,7 @@ public class LedgerBalanceMatrixTests
         mediator.Send(Arg.Any<GenerateAndStoreDocumentCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
-        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator);
+        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator, Substitute.For<IEventBus>(), Config());
 
         var evt = new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: _orgId,
@@ -128,7 +137,7 @@ public class LedgerBalanceMatrixTests
         _db.LedgerEntries.Add(sale);
         await _db.SaveChangesAsync();
 
-        var refundHandler = new GatewayRefundCompletedHandler(_repo, _db);
+        var refundHandler = new GatewayRefundCompletedHandler(_repo, _db, Substitute.For<IMediator>());
         var paymentRecordId = Guid.CreateVersion7();
         var refundEvent = new GatewayRefundCompletedIntegrationEvent(
             OrganizationId: _orgId,
@@ -190,7 +199,7 @@ public class LedgerBalanceMatrixTests
 
         // Also run commerce payment handler skip path: utility top-up must not dual-post as GMV.
         var mediator = Substitute.For<IMediator>();
-        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator);
+        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator, Substitute.For<IEventBus>(), Config());
         await paymentHandler.HandleAsync(new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: _orgId,
             GatewayTransactionId: "pi_topup_1",
@@ -269,7 +278,7 @@ public class LedgerBalanceMatrixTests
     public async Task PlatformSaasFee_DoesNotPostGatewayPaymentOrGrossRevenue()
     {
         var mediator = Substitute.For<IMediator>();
-        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator);
+        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator, Substitute.For<IEventBus>(), Config());
         var evt = new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: PlatformCheckoutTypes.SystemOrganizationId,
             GatewayTransactionId: "pi_saas_gmv",
@@ -301,7 +310,7 @@ public class LedgerBalanceMatrixTests
             .Returns("RCPT-SAAS-META");
         mediator.Send(Arg.Any<GenerateAndStoreDocumentCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
-        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator);
+        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator, Substitute.For<IEventBus>(), Config());
 
         await paymentHandler.HandleAsync(new GatewayPaymentCompletedIntegrationEvent(
             OrganizationId: _orgId,
@@ -335,7 +344,7 @@ public class LedgerBalanceMatrixTests
         mediator.Send(Arg.Any<GenerateAndStoreDocumentCommand>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
-        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator);
+        var paymentHandler = new GatewayPaymentCompletedHandler(_repo, mediator, Substitute.For<IEventBus>(), Config());
         var topUpHandler = new PlatformTopUpEventHandler(_db, Options.Create(new CreditCostOptions
         {
             Packages = [new CreditPackageOption { AmountMyr = 50m, Credits = 600 }]

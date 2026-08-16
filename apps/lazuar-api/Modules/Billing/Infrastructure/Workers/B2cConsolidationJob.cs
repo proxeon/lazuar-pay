@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,11 +21,16 @@ public class B2cConsolidationJob : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<B2cConsolidationJob> _logger;
+    private readonly decimal _individualThresholdMyr;
 
-    public B2cConsolidationJob(IServiceScopeFactory scopeFactory, ILogger<B2cConsolidationJob> logger)
+    public B2cConsolidationJob(
+        IServiceScopeFactory scopeFactory,
+        ILogger<B2cConsolidationJob> logger,
+        IConfiguration? configuration = null)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _individualThresholdMyr = configuration?.GetValue("Lhdn:B2cIndividualThresholdMyr", 10000m) ?? 10000m;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -212,6 +218,32 @@ public class B2cConsolidationJob : BackgroundService
             return;
         }
 
+        var overThreshold = new List<LedgerEntry>();
+        var batch = new List<LedgerEntry>();
+        foreach (var entry in entries)
+        {
+            if (PaidAmount(entry) > _individualThresholdMyr)
+            {
+                entry.MarkConsolidationNotRequired();
+                entry.UpdateLhdnStatus(null, LhdnValidationStatuses.NeedsBuyerTin);
+                overThreshold.Add(entry);
+            }
+            else
+            {
+                batch.Add(entry);
+            }
+        }
+
+        if (overThreshold.Count > 0)
+        {
+            _logger.LogInformation(
+                "Excluded {Count} B2C rows over RM {Threshold} from {Ref}.",
+                overThreshold.Count, _individualThresholdMyr, consolidationRef);
+        }
+
+        entries = batch;
+        if (entries.Count == 0) return;
+
         var revenueLines = entries.SelectMany(e => e.Lines)
             .Where(l => l.AccountType == AccountTypes.RevenueGross
                         || l.AccountType == AccountTypes.LiabilityTaxPayable
@@ -295,6 +327,11 @@ public class B2cConsolidationJob : BackgroundService
             "Consolidated {Count} B2C entries for Org {OrgId} period {Period}. Ref: {Ref}",
             entries.Count, orgId, periodKey, consolidationRef);
     }
+
+    internal static decimal PaidAmount(LedgerEntry entry) =>
+        entry.Lines
+            .Where(l => l.AccountType == AccountTypes.AssetCash)
+            .Sum(l => l.BaseCurrencyAmount);
 
     private static TimeZoneInfo ResolveMalaysiaTimeZone()
     {

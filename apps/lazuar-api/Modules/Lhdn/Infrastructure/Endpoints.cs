@@ -11,6 +11,7 @@ public static class Endpoints
         endpoints.MapLhdnAdminApiKeyEndpoints();
         endpoints.MapLhdnAdminWebhookEndpoints();
         endpoints.MapLhdnTenantConfigEndpoints();
+        endpoints.MapPublicTinValidationEndpoints();
 
         return endpoints;
     }

@@ -58,7 +58,7 @@ export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDe
     onMutate: () => setIsActionLoading(true),
     onSettled: () => setIsActionLoading(false),
     onSuccess: () => {
-      toast.success("Quote marked as paid. Official receipt generation triggered.");
+      toast.success("Payment recorded. A receipt or tax invoice will be generated.");
       queryClient.invalidateQueries({ queryKey: ["custom-checkouts"] });
       onUpdate(request ? { ...request, status: "COMPLETED" } : null);
     },
@@ -94,7 +94,7 @@ export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDe
                 {request.status}
               </span>
               <span className="text-[11px] text-[#71717a] font-mono">
-                {new Date(request.created_at).toLocaleDateString('en-GB')}
+                {request.document_number ? `${request.document_number} · ` : ""}{new Date(request.created_at).toLocaleDateString('en-GB')}
               </span>
             </div>
           </div>
@@ -168,8 +168,8 @@ export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDe
                 </span>
               </div>
               <div>
-                <span className="text-[#a1a1aa] block mb-1">LHDN e-Invoice Status</span>
-                <span className="font-semibold text-[#09090b]">{request.is_b2b_required ? "Required" : "B2C / Not Required"}</span>
+                <span className="text-[#a1a1aa] block mb-1">After payment</span>
+                <span className="font-semibold text-[#09090b]">{request.is_b2b_required ? "B2B tax invoice" : "B2C official receipt"}</span>
               </div>
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function QuoteDetailPanel({ request, onClose, onUpdate }: QuoteDe
               </button>
               
               <button 
-                onClick={() => { if(window.confirm("Mark this invoice as paid manually via bank transfer? This will record the revenue and generate the final receipt.")) markPaidMutation.mutate(); }} 
+                onClick={() => { if(window.confirm("Mark this payment request as paid via bank transfer? This records revenue and generates the commercial document.")) markPaidMutation.mutate(); }} 
                 disabled={isActionLoading} 
                 className="h-9 w-full border border-[#09090b] bg-[#09090b] text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[#27272a] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 rounded-sm"
               >

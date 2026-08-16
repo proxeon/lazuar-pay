@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
+using Microsoft.Extensions.Options;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain;
@@ -31,7 +32,9 @@ public class GetLhdnDocumentStatusQueryHandler : IQueryHandler<GetLhdnDocumentSt
 
         var portalUrl = _linkService.GetPortalUrl();
 
-        var qrLink = (!string.IsNullOrEmpty(doc.LhdnUuid) && !string.IsNullOrEmpty(doc.LongId))
+        var qrLink = (string.Equals(doc.ValidationStatus, "VALID", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrEmpty(doc.LhdnUuid)
+                && !string.IsNullOrEmpty(doc.LongId))
             ? $"{portalUrl}/{doc.LhdnUuid}/share/{doc.LongId}"
             : null;
 
@@ -58,11 +61,16 @@ public class GetLhdnTenantConfigQueryHandler : IQueryHandler<GetLhdnTenantConfig
 {
     private readonly ILhdnRepository _repository;
     private readonly ISecretVault _secretVault;
+    private readonly LhdnSigningOptions _signing;
 
-    public GetLhdnTenantConfigQueryHandler(ILhdnRepository repository, ISecretVault secretVault)
+    public GetLhdnTenantConfigQueryHandler(
+        ILhdnRepository repository,
+        ISecretVault secretVault,
+        IOptions<LhdnSigningOptions> signing)
     {
         _repository = repository;
         _secretVault = secretVault;
+        _signing = signing.Value;
     }
 
     public async Task<LhdnTenantConfigDto?> Handle(GetLhdnTenantConfigQuery request, CancellationToken ct)
@@ -89,6 +97,10 @@ public class GetLhdnTenantConfigQueryHandler : IQueryHandler<GetLhdnTenantConfig
             Has_client_secret = hasSecret,
             Client_secret_hint = secretHint,
             Has_certificate = !string.IsNullOrEmpty(config.EncryptedPfxBase64),
+            Signing = _signing.Signing,
+            Submission_kind = _signing.IsAuto && !string.IsNullOrEmpty(config.EncryptedPfxBase64)
+                ? "signed_v1.1_json"
+                : "unsigned_v1.0",
             Legal_name = config.LegalName,
             Address_line1 = config.AddressLine1,
             City = config.City,

@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Infrastructure;
 using Lazuar.TestSupport;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Application;
+using NSubstitute;
 using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure;
@@ -33,7 +35,10 @@ public class GatewayRefundCompletedHandlerTests
             InMemoryDb.NullMediator,
             new DatabaseJobTrigger());
         _repo = new LedgerRepository(_db);
-        _handler = new GatewayRefundCompletedHandler(_repo, _db);
+        var mediator = Substitute.For<MediatR.IMediator>();
+        mediator.Send(Arg.Any<Modules.Billing.Contracts.Commands.GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("CN-2026-00001");
+        _handler = new GatewayRefundCompletedHandler(_repo, _db, mediator);
     }
 
     [TearDown]

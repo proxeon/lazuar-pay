@@ -2,8 +2,11 @@ using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Application;
+using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Contracts.Events;
 using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Commerce.Contracts.Events;
@@ -14,11 +17,16 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
 {
     private readonly ILedgerRepository _repository;
     private readonly IMediator _mediator;
+    private readonly IEventBus _eventBus;
 
-    public ManualSubscriberEnrolledIntegrationEventHandler(ILedgerRepository repository, IMediator mediator)
+    public ManualSubscriberEnrolledIntegrationEventHandler(
+        ILedgerRepository repository,
+        IMediator mediator,
+        [FromKeyedServices("BillingEventBus")] IEventBus eventBus)
     {
         _repository = repository;
         _mediator = mediator;
+        _eventBus = eventBus;
     }
 
     public async Task HandleAsync(ManualSubscriberEnrolledIntegrationEvent @event)
@@ -32,12 +40,13 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
         if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
             return;
 
+        var isB2b = @event.IsB2bRequired;
         var entry = new LedgerEntry(
             @event.OrganizationId,
             referenceType,
             referenceId,
             $"{@event.PaymentMethod} payment logged for customer: {@event.ClientProfileId}",
-            "B2C");
+            isB2b ? "B2B" : "B2C");
 
         entry.AddLine(AccountTypes.AssetCash, @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
         entry.AddLine(AccountTypes.RevenueGross, -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
@@ -45,18 +54,47 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
         entry.ValidateBalanced();
         _repository.Add(entry);
 
-        var seqCommand = new GenerateNextSequenceNumberCommand(@event.OrganizationId, $"RCPT-{DateTime.UtcNow:yyyy}");
-        var receiptNumber = await _mediator.Send(seqCommand);
-
-        entry.AssignB2cReceipt(receiptNumber);
+        if (isB2b)
+        {
+            var invoiceNumber = await _mediator.Send(
+                new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.InvoicePrefix()));
+            entry.AssignB2bInvoice(invoiceNumber);
+        }
+        else
+        {
+            var receiptNumber = await _mediator.Send(
+                new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.ReceiptPrefix()));
+            entry.AssignB2cReceipt(receiptNumber);
+        }
 
         await _repository.SaveChangesAsync();
 
-        await _mediator.Send(new GenerateAndStoreDocumentCommand(
-            @event.OrganizationId,
-            entry.Id,
-            "Official Receipt",
-            CorrelationId: @event.SubscriptionId.ToString()
-        ));
+        var correlation = @event.SubscriptionId.ToString();
+        if (isB2b)
+        {
+            await _mediator.Send(new GenerateAndStoreDocumentCommand(
+                @event.OrganizationId,
+                entry.Id,
+                "Tax Invoice",
+                CorrelationId: correlation));
+
+            await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
+                @event.OrganizationId,
+                entry.Id,
+                entry.CustomerDocumentNumber!,
+                referenceId,
+                @event.AmountPaid,
+                0m,
+                @event.Currency,
+                correlation));
+        }
+        else
+        {
+            await _mediator.Send(new GenerateAndStoreDocumentCommand(
+                @event.OrganizationId,
+                entry.Id,
+                "Official Receipt",
+                CorrelationId: correlation));
+        }
     }
 }

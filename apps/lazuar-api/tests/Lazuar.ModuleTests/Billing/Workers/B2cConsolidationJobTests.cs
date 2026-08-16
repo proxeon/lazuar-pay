@@ -7,6 +7,7 @@ using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Billing.Contracts.Events;
@@ -232,5 +233,38 @@ public class B2cConsolidationJobTests
         Assert.That(reloadedOk.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
 
         await _eventBus.Received(1).PublishAsync(Arg.Any<ConsolidatedInvoiceIssuedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task OverThreshold_B2c_IsExcludedFromBatch()
+    {
+        var ts = PriorMonthUtcMid();
+        var small = SeedSale("tx_small", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, ts);
+        var big = new LedgerEntry(_orgId, LedgerReferenceTypes.GatewayPayment, "tx_big", "sale", "B2C");
+        big.AddLine(AccountTypes.AssetCash, 10000.01m, "MYR", 10000.01m, "MYR");
+        big.AddLine(AccountTypes.RevenueGross, -10000.01m, "MYR", -10000.01m, "MYR");
+        big.ValidateBalanced();
+        big.AssignB2cReceipt("RCPT-big");
+        typeof(LedgerEntry).GetProperty(nameof(LedgerEntry.Timestamp))!.SetValue(big, ts);
+        _db.LedgerEntries.Add(big);
+        await _db.SaveChangesAsync();
+
+        _job = new B2cConsolidationJob(
+            _sp.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<B2cConsolidationJob>.Instance,
+            new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Lhdn:B2cIndividualThresholdMyr"] = "10000" })
+                .Build());
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloadedSmall = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_small");
+        var reloadedBig = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_big");
+        Assert.That(reloadedSmall.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
+        Assert.That(reloadedBig.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.NotRequired));
+        Assert.That(reloadedBig.LhdnValidationStatus, Is.EqualTo(LhdnValidationStatuses.NeedsBuyerTin));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ConsolidatedInvoiceIssuedIntegrationEvent>(e =>
+            e.TotalIncludingTax < 10000m));
+        _ = small;
     }
 }

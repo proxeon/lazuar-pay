@@ -522,6 +522,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/commerce/transactions/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description UTF-8 CSV of transaction logs. Default last 31 days. Cap 50000. Match external_reference to the gateway id. Fees are Hub-recorded. */
+        get: operations["AdminCommerceOperations_exportTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/commerce/transactions/{id}/refund": {
         parameters: {
             query?: never;
@@ -1204,7 +1221,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["OneOperations_getWorkspace"];
         put: operations["OneOperations_updateWorkspace"];
         post?: never;
         delete: operations["OneOperations_deleteWorkspace"];
@@ -1649,7 +1666,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Initiate public checkout for a product (subscription or one-time). Primary integrator write path. */
+        /** @description Initiate public checkout for a product (subscription or one-time). Optional Idempotency-Key replays the same session. */
         post: operations["PublicCommerceOperations_initiateCheckout"];
         delete?: never;
         options?: never;
@@ -1700,7 +1717,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Start update-payment / recovery checkout for a past-due subscription. */
+        /** @description Start update-payment. PAST_DUE/SUSPENDED charges the due amount. ACTIVE vaulted uses a verification amount. ACTIVE reminder-only returns 400 REMINDER_ONLY. */
         post: operations["PublicCommerceOperations_updatePayment"];
         delete?: never;
         options?: never;
@@ -1776,6 +1793,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/commerce/{tenantSlug}/portal/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List this buyer's commercial documents for the workspace. Token-bound; no cross-buyer rows. */
+        get: operations["PublicCommerceOperations_getPortalDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/commerce/{tenantSlug}/portal/keep": {
         parameters: {
             query?: never;
@@ -1844,6 +1878,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/one/{tenantSlug}/branding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Public checkout branding. 404 if slug unknown or inactive. No TIN / legal name. */
+        get: operations["PublicOneOperations_getPublicWorkspaceBranding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1904,7 +1955,10 @@ export interface components {
             description?: string;
             customer_type: string;
             tax_invoice_id?: string;
+            /** @description Immutable customer-facing number (`RCPT-` / `INV-` / `CN-`). Never the LHDN UUID. */
+            customer_document_number?: string;
             lhdn_validation_status?: string;
+            lhdn_document_uuid?: string;
             lines: components["schemas"]["Billing.LedgerLineDto"][];
         };
         "Billing.LedgerLineDto": {
@@ -1987,6 +2041,7 @@ export interface components {
             amount: number;
             currency: string;
             status: string;
+            is_reminder_only: boolean;
         };
         "Commerce.CancelPortalRequest": {
             subscription_id: string;
@@ -2203,6 +2258,8 @@ export interface components {
             total_amount: number;
             /** Format: date-time */
             created_at: string;
+            /** @description Per-org sequential quote number (`QT-yyyy-#####`), allocated once. */
+            document_number?: string;
             /** @description HMAC-signed public URL for draft proforma PDF (sig+exp). */
             draft_pdf_url?: string;
         };
@@ -2276,6 +2333,8 @@ export interface components {
             has_secret_key: boolean;
             /** @description Masked hint for the secret key. */
             secret_key_hint?: string;
+            /** @description test or live. Owns Billplz sandbox vs www. */
+            environment?: string;
         };
         "Commerce.PaymentMethodDto": {
             method: string;
@@ -2283,6 +2342,21 @@ export interface components {
             count: number;
             /** Format: double */
             total_amount: number;
+        };
+        "Commerce.PortalDocumentDto": {
+            id: string;
+            document_number?: string;
+            type: string;
+            /** Format: date-time */
+            issued_at: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            lhdn_status?: string;
+            download_url?: string;
+        };
+        "Commerce.PortalDocumentsResponse": {
+            items: components["schemas"]["Commerce.PortalDocumentDto"][];
         };
         "Commerce.PortalOrderDto": {
             id: string;
@@ -2303,6 +2377,10 @@ export interface components {
              */
             current_period_end?: string;
             cancel_at_period_end: boolean;
+            is_reminder_only: boolean;
+            /** @description HMAC download for the latest stored receipt / tax invoice, if any. */
+            document_url?: string;
+            document_label?: string;
         };
         "Commerce.ProductDto": {
             id: string;
@@ -2321,6 +2399,8 @@ export interface components {
             supports_off_session: boolean;
             fulfillment_targets: string[];
             checkout_configuration: components["schemas"]["Commerce.CheckoutConfigurationDto"];
+            sst_tax_type?: string;
+            sst_rate_percent?: number;
         };
         "Commerce.PublicCheckoutRequestDto": {
             tenant_slug: string;
@@ -2331,6 +2411,8 @@ export interface components {
             phone?: string;
             tax_id?: string;
             company_name?: string;
+            id_type?: string;
+            id_value?: string;
             address_line1?: string;
             city?: string;
             postal_code?: string;
@@ -2386,6 +2468,7 @@ export interface components {
             secret_key?: string;
             /** @description Soft-disable without deleting credentials. Defaults to true on create. */
             is_active?: boolean;
+            environment?: string;
         };
         /**
          * @description `data` object for subscription.* events.
@@ -2658,6 +2741,7 @@ export interface components {
             full_name: string;
             email: string;
             phone: string;
+            company_name?: string;
             tin?: string;
             id_type?: string;
             id_value?: string;
@@ -2745,6 +2829,8 @@ export interface components {
             client_secret_hint?: string;
             /** @description True when a signing certificate is stored. */
             has_certificate: boolean;
+            signing?: string;
+            submission_kind?: string;
             legal_name?: string;
             address_line1?: string;
             city?: string;
@@ -3050,6 +3136,12 @@ export interface components {
             /** @description Clickwrap. Public register rejects the request when this is not true. */
             accepted_terms?: boolean;
         };
+        "One.PublicWorkspaceBrandingDto": {
+            name: string;
+            slug: string;
+            logo_url?: string;
+            primary_color?: string;
+        };
         "One.ResendVerificationRequestDto": {
             email: string;
         };
@@ -3082,6 +3174,10 @@ export interface components {
         "One.UpdateWorkspaceRequestDto": {
             name: string;
             slug: string;
+            /** @description Hosted checkout logo (https). Empty/null clears. */
+            logo_url?: string;
+            /** @description Hosted checkout accent `#RRGGBB`. Empty/null clears. */
+            primary_color?: string;
         };
         "One.VerifyEmailRequestDto": {
             token: string;
@@ -3120,6 +3216,8 @@ export interface components {
             is_active: boolean;
             /** Format: date-time */
             created_at: string;
+            logo_url?: string;
+            primary_color?: string;
         };
         "One.WorkspaceInvitationDto": {
             id: string;
@@ -6187,6 +6285,75 @@ export interface operations {
                         /** Format: int32 */
                         total_pages: number;
                     };
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminCommerceOperations_exportTransactions: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */
@@ -9563,6 +9730,73 @@ export interface operations {
             };
         };
     };
+    OneOperations_getWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.WorkspaceDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     OneOperations_updateWorkspace: {
         parameters: {
             query?: never;
@@ -11762,7 +11996,9 @@ export interface operations {
     PublicCommerceOperations_initiateCheckout: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -11967,7 +12203,9 @@ export interface operations {
     PublicCommerceOperations_updatePayment: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
             path: {
                 subId: string;
             };
@@ -12309,6 +12547,75 @@ export interface operations {
             };
         };
     };
+    PublicCommerceOperations_getPortalDocuments: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path: {
+                tenantSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Commerce.PortalDocumentsResponse"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
     PublicCommerceOperations_keepPortalSubscription: {
         parameters: {
             query: {
@@ -12497,6 +12804,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Commerce.ValidateCouponResponseDto"];
+                };
+            };
+            /** @description The server could not understand the request due to invalid syntax. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is unauthorized. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Access is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description The server cannot find the requested resource. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Core.ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublicOneOperations_getPublicWorkspaceBranding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request has succeeded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["One.PublicWorkspaceBrandingDto"];
                 };
             };
             /** @description The server could not understand the request due to invalid syntax. */

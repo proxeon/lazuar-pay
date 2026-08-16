@@ -13,9 +13,9 @@ public class SelfBilledInvoiceStrategy : IUblDocumentStrategy
         _rendererService = rendererService;
     }
 
-    public string Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion)
+    public string Generate(SubmitDocumentRequestDto request, LhdnTenantConfig config, string documentVersion, string? supplierSstNumber = null)
     {
-        var viewModel = ViewModelMapper.MapToViewModel(request, config, documentVersion);
+        var viewModel = ViewModelMapper.MapToViewModel(request, config, documentVersion, supplierSstNumber);
         return _rendererService.Render("SelfBilledInvoice.xml", viewModel);
     }
 }

@@ -24,6 +24,9 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     public DateTime ExpiresAt { get; private set; }
     public bool IsB2bRequired { get; private set; }
 
+    /// <summary>Per-org sequential quote number (<c>QT-yyyy-#####</c>). Allocated once.</summary>
+    public string? DocumentNumber { get; private set; }
+
     /// <summary>Buyer quantity for product checkout. Custom sessions leave this at 1; line qty lives in jsonb.</summary>
     public int Quantity { get; private set; } = 1;
 
@@ -143,6 +146,17 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         }
 
         MetadataJson = metadataJson;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AssignDocumentNumber(string documentNumber)
+    {
+        if (string.IsNullOrWhiteSpace(documentNumber) || DocumentNumber != null)
+        {
+            return;
+        }
+
+        DocumentNumber = documentNumber.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
 }

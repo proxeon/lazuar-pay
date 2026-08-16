@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { serverClient } from "../../../modules/core/lib/server-client";
 import { RequestMagicLinkForm } from "../../../modules/portal/components/RequestMagicLinkForm";
-import { ShieldCheck /* [MVP-HIDE] , FileText */ } from "lucide-react";
+import { ShieldCheck, FileText } from "lucide-react";
 
 function formatPaidThrough(value?: string | null) {
   if (!value) return null;
@@ -43,6 +43,12 @@ export default async function AggregatedPortalPage({
   if (commerceError || !commerceData) {
     notFound();
   }
+
+  const { data: documentsData } = await serverClient.GET("/public/commerce/{tenantSlug}/portal/documents", {
+    params: { path: { tenantSlug }, query: { token: token ?? "" } },
+    next: { revalidate: 0 }
+  });
+  const documents = documentsData?.items ?? [];
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -99,11 +105,11 @@ export default async function AggregatedPortalPage({
                   </div>
                   
                   <div className="shrink-0 flex flex-col gap-2 items-end justify-center">
-                    {/* [MVP-HIDE]
-                    <a href={`/api/billing/invoice?subscription=${sub.id}`} className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-2">
-                      <FileText size={12} /> Download Tax Invoice
-                    </a>
-                    */}
+                    {sub.document_url && (
+                      <a href={sub.document_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-2">
+                        <FileText size={12} /> {sub.document_label || "Download receipt"}
+                      </a>
+                    )}
                     {isHealthyActive && (
                       <>
                         <form action={async () => {
@@ -172,6 +178,46 @@ export default async function AggregatedPortalPage({
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold tracking-tight text-foreground border-b border-border/60 pb-2">Documents</h2>
+        {documents.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No receipts or invoices yet.</p>
+        ) : (
+          <div className="border border-border/60 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-secondary/30 border-b border-border/60">
+                <tr>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Number</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Amount</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {documents.map((doc) => (
+                  <tr key={doc.id}>
+                    <td className="px-4 py-3 text-xs font-mono">{new Date(doc.issued_at).toLocaleDateString("en-GB")}</td>
+                    <td className="px-4 py-3 text-xs font-mono font-semibold">{doc.document_number || "—"}</td>
+                    <td className="px-4 py-3 text-xs">{doc.type}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-right">{doc.currency} {doc.amount.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{doc.lhdn_status || "—"}</td>
+                    <td className="px-4 py-3 text-right">
+                      {doc.download_url ? (
+                        <a href={doc.download_url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase tracking-widest text-foreground hover:underline">
+                          Download
+                        </a>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

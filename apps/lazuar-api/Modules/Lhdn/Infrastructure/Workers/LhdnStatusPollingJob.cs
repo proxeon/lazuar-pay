@@ -106,6 +106,9 @@ public class LhdnStatusPollingJob : BackgroundService
                         var errorMessage = result.ErrorMessage ?? "Validation failed at LHDN.";
                         doc.MarkAsInvalid(errorMessage);
 
+                        await eventBus.PublishAsync(new LhdnDocumentValidatedIntegrationEvent(
+                            doc.OrganizationId, doc.InternalReferenceId, result.Uuid ?? "", "INVALID", null));
+
                         await mediator.Send(new DispatchExternalWebhookCommand(
                             doc.OrganizationId, doc.InternalReferenceId, "INVALID", result.Uuid, null, errorMessage), ct);
                     }

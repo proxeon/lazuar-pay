@@ -65,8 +65,9 @@ export default function QuotesPage() {
           <table className="w-full text-left text-[13px] min-w-[800px]">
             <thead className="bg-white border-b border-[#f4f4f5] select-none">
               <tr>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[25%]">Client</th>
-                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Amount (MYR)</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[22%]">Client</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[13%]">Quote No.</th>
+                <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Amount (MYR)</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Status</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[20%]">Created</th>
                 <th className="px-5 py-3 font-bold uppercase tracking-widest text-[#71717a] text-[9px] w-[15%]">Expires</th>
@@ -74,9 +75,9 @@ export default function QuotesPage() {
             </thead>
             <tbody className="divide-y divide-[#f4f4f5]">
               {isLoading ? (
-                <tr><td colSpan={5} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
               ) : response?.data.length === 0 ? (
-                <tr><td colSpan={5} className="py-12 text-center text-[12px] text-[#71717a]">No quotes found.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-[12px] text-[#71717a]">No quotes found.</td></tr>
               ) : (
                 response?.data.map((req) => (
                   <tr 
@@ -87,6 +88,9 @@ export default function QuotesPage() {
                     <td className="px-5 py-4">
                       <p className="font-medium text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{req.client_name || "Unknown"}</p>
                       <p className="text-[11px] text-[#71717a] mt-0.5">{req.client_email}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="font-mono text-[12px] text-[#09090b]">{req.document_number || "—"}</span>
                     </td>
                     <td className="px-5 py-4">
                       <span className="font-mono font-bold text-[#09090b]">RM {req.total_amount.toFixed(2)}</span>
