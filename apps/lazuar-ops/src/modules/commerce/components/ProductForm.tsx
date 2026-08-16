@@ -38,6 +38,11 @@ export default function ProductForm({
   const [pricingModel, setPricingModel] = useState(initialData?.pricing_model || "FIXED");
   const [price, setPrice] = useState(initialData?.price ?? 0);
   const [minimumPrice, setMinimumPrice] = useState(initialData?.minimum_price ?? 0);
+  const [yearlyPrice, setYearlyPrice] = useState<number>(
+    (initialData?.prices ?? []).find((p) => p.interval === "yr" && !p.is_default)?.amount
+      ?? (initialData?.interval === "yr" ? 0 : 0)
+  );
+  const [trialDays, setTrialDays] = useState(initialData?.trial_days ?? 0);
   const [interval, setInterval] = useState(initialData?.interval || "one_time");
   const [gatewayName, setGatewayName] = useState(initialData?.gateway_name || "");
 
@@ -95,6 +100,8 @@ export default function ProductForm({
       requires_phone: reqPhone,
       sst_tax_type: hasSst ? sstType : "06",
       sst_rate_percent: hasSst && sstType === "02" ? Number(sstRate) : 0,
+      trial_days: interval === "one_time" ? 0 : Number(trialDays) || 0,
+      yearly_price: interval === "mo" && Number(yearlyPrice) > 0 ? Number(yearlyPrice) : undefined,
       fulfillment_targets: targets, 
     });
   };
@@ -133,6 +140,19 @@ export default function ProductForm({
               <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">{pricingModel === "PWYW" ? "Recommended Price (MYR) *" : "Price (MYR) *"}</label>
               <input type="number" step="0.01" required value={price} onChange={e => setPrice(Number(e.target.value))} disabled={isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
             </div>
+            {interval === "mo" && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Yearly price (MYR, optional)</label>
+                <input type="number" step="0.01" min={0} value={yearlyPrice} onChange={e => setYearlyPrice(Number(e.target.value))} disabled={isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+                <p className="text-[10px] text-[#71717a]">Buyers can pick monthly or yearly on the same checkout link.</p>
+              </div>
+            )}
+            {interval !== "one_time" && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Trial days (0 = off)</label>
+                <input type="number" min={0} max={90} value={trialDays} onChange={e => setTrialDays(Number(e.target.value))} disabled={isPending} className="flex h-9 w-full rounded-sm border border-[#e5e5e5] bg-white px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+              </div>
+            )}
             {pricingModel === "PWYW" && (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Minimum Price (MYR) *</label>

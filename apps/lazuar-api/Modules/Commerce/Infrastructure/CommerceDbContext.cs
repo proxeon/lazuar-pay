@@ -19,6 +19,7 @@ namespace Modules.Commerce.Infrastructure;
 public class CommerceDbContext : PlatformDbContext
 {
     public DbSet<Product> Products { get; set; } = null!;
+    public DbSet<ProductPrice> ProductPrices { get; set; } = null!;
     public DbSet<Coupon> Coupons { get; set; } = null!;
     public DbSet<Subscription> Subscriptions { get; set; } = null!;
     public DbSet<Order> Orders { get; set; } = null!;
@@ -119,6 +120,13 @@ public class CommerceDbContext : PlatformDbContext
             builder.Property(x => x.MinimumPrice).HasPrecision(18, 4).HasDefaultValue(0m);
             builder.Property(x => x.SstTaxType).HasMaxLength(2).HasDefaultValue("06");
             builder.Property(x => x.SstRatePercent).HasPrecision(5, 2).HasDefaultValue(0m);
+            builder.Property(x => x.TrialDays).HasDefaultValue(0);
+
+            builder.HasMany(x => x.Prices)
+                .WithOne()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.Metadata.FindNavigation("Prices")?.SetPropertyAccessMode(PropertyAccessMode.Field);
 
             builder.Property(x => x.FulfillmentTargets)
                 .HasField("_fulfillmentTargets")
@@ -158,6 +166,10 @@ public class CommerceDbContext : PlatformDbContext
             builder.HasIndex(x => x.NextBillingDate);
             builder.Property(x => x.IsReminderOnly).HasDefaultValue(false);
             builder.Property(x => x.CancelAtPeriodEnd).HasDefaultValue(false);
+            builder.Property(x => x.Quantity).HasDefaultValue(1);
+            builder.Property(x => x.UnitAmount).HasPrecision(18, 4).HasDefaultValue(0m);
+            builder.Property(x => x.HasOpenDispute).HasDefaultValue(false);
+            builder.Property(x => x.BillingInterval).HasMaxLength(16);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
             builder.Property(x => x.DunningCampaignSnapshotJson).HasColumnType("jsonb");
             builder.Property(x => x.CurrentRenewalCheckoutUrl).HasMaxLength(2000);
@@ -188,6 +200,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.Property(x => x.DocumentNumber).HasMaxLength(40);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
             builder.Property(x => x.Quantity).HasDefaultValue(1);
+            builder.HasIndex(x => x.PriceId);
             builder.Property(x => x.IdempotencyKey).HasMaxLength(200);
             builder.Property(x => x.RequestFingerprint).HasMaxLength(128);
             builder.Property(x => x.GatewayCheckoutUrl);
@@ -200,6 +213,16 @@ public class CommerceDbContext : PlatformDbContext
                 .UsePropertyAccessMode(PropertyAccessMode.Field)
                 .HasConversion(adHocLineItemConverter, adHocLineItemComparer)
                 .HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<ProductPrice>(builder =>
+        {
+            builder.ToTable("ProductPrices");
+            builder.HasKey(x => x.Id);
+            builder.HasIndex(x => new { x.ProductId, x.Interval }).IsUnique();
+            builder.Property(x => x.Interval).HasMaxLength(16).IsRequired();
+            builder.Property(x => x.Amount).HasPrecision(18, 4);
+            builder.Property(x => x.IsDefault).HasDefaultValue(false);
         });
 
         modelBuilder.Entity<ChargeAttemptLog>(builder =>

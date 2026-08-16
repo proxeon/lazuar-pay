@@ -30,7 +30,9 @@ public static class CommerceCheckoutIdempotency
         string email,
         string? coupon,
         int quantity,
-        Guid? sessionId)
+        Guid? sessionId,
+        string? interval = null,
+        Guid? priceId = null)
     {
         var material = string.Join('\n',
             tenantId.ToString("D"),
@@ -38,7 +40,9 @@ public static class CommerceCheckoutIdempotency
             email.Trim().ToLowerInvariant(),
             (coupon ?? "").Trim().ToUpperInvariant(),
             quantity.ToString(),
-            sessionId?.ToString("D") ?? "");
+            sessionId?.ToString("D") ?? "",
+            (interval ?? "").Trim().ToLowerInvariant(),
+            priceId?.ToString("D") ?? "");
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(material));
         return Convert.ToHexString(hash).ToLowerInvariant();
     }

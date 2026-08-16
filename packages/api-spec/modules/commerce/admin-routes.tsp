@@ -149,6 +149,33 @@ interface AdminCommerceOperations {
     | LazuarApi.Core.ProblemDetailsResponse;
 
   @post
+  @route("/subscribers/{id}/change-plan")
+  @doc("Schedule a product swap at next renewal. amount_due_now is always 0.")
+  changeSubscriberPlan(@path id: string, @body body: ChangePlanRequestDto):
+    | PlanChangePreviewDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/quantity")
+  @doc("Schedule a seat count change at next renewal.")
+  setSubscriberQuantity(@path id: string, @body body: SetQuantityRequestDto):
+    | PlanChangePreviewDto
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/collection/pause")
+  @doc("Pause collection on an ACTIVE subscription. Status stays ACTIVE.")
+  pauseSubscriberCollection(@path id: string, @body body: PauseCollectionRequestDto):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/subscribers/{id}/collection/resume")
+  resumeSubscriberCollection(@path id: string):
+    | LazuarApi.Core.StatusResponse
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
   @route("/subscribers/{id}/anonymize")
   @doc("PDPA wipe: anonymize the buyer on this subscription. Cancels their subscriptions and stops email. Idempotent.")
   anonymizeSubscriber(@path id: string):

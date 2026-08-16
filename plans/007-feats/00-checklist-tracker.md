@@ -124,20 +124,20 @@ Billplz cannot vault; ops product form already warns. Off-session today is Strip
 | LP-051 | Subscription records + statuses | — | Y | N | N | Y | Y | Y | Y | Y | Y |
 | LP-052 | Automatic renewal (merchant-initiated) | 0 | P | N | P | P | Y | Y | Y | Y | Y |
 | LP-053 | Reminder-only / “send link each cycle” | 1 | P | Y | P | Y | P | N | N | P | N |
-| LP-054 | Free trial (`TRIALING`) | 3 | N | N | N | P | P | Y | Y | Y | Y |
+| LP-054 | Free trial (`TRIALING`) | 3 | Y | N | N | P | P | Y | Y | Y | Y |
 | LP-055 | Cancel immediately | — | Y | — | — | Y | Y | Y | Y | Y | Y |
 | LP-056 | Cancel at period end | 1 | N | — | — | P | P | Y | Y | Y | Y |
-| LP-057 | Pause / resume | 3 | P | N | N | Y | P | P | Y | Y | P |
-| LP-058 | Plan change | 3 | N | N | N | P | P | Y | Y | Y | Y |
-| LP-059 | Proration | 3 | N | N | N | N | P | Y | Y | Y | P |
-| LP-060 | Quantity / seats | 3 | N | N | N | P | P | Y | P | Y | P |
+| LP-057 | Pause / resume | 3 | Y | N | N | Y | P | P | Y | Y | P |
+| LP-058 | Plan change | 3 | Y | N | N | P | P | Y | Y | Y | Y |
+| LP-059 | Proration (or next-renewal-only) | 3 | Y | N | N | N | P | Y | Y | Y | P |
+| LP-060 | Quantity / seats | 3 | Y | N | N | P | P | Y | P | Y | P |
 | LP-061 | Usage / metered billing | 4 | N | N | N | N | Y | Y | P | Y | Y |
 | LP-062 | Setup fee / add-ons | 3 | N | N | N | P | P | Y | P | Y | P |
-| LP-063 | Multiple prices per product | 3 | N | N | N | Y | Y | Y | Y | Y | Y |
+| LP-063 | Multiple prices per product | 3 | Y | N | N | Y | Y | Y | Y | Y | Y |
 | LP-064 | Import existing subscribers | 4 | N | N | N | Y | P | P | P | Y | P |
 | LP-065 | Offline / manual payment sub | 1 | Y | Y | N | Y | P | P | P | Y | N |
 
-Statuses we persist: `PENDING`, `ACTIVE`, `PAST_DUE`, `SUSPENDED`, `CANCELED`. `TRIALING` is referenced in anonymize code only.
+Statuses we persist: `PENDING`, `ACTIVE`, `TRIALING`, `PAST_DUE`, `SUSPENDED`, `CANCELED`. Collection pause is a flag on `ACTIVE` (no `PAUSED` status). LP-059 is next-renewal-only (not unused-time credit).
 
 ---
 
@@ -262,7 +262,7 @@ Keys live in `one.ApiCredentials`. Scopes today: `lhdn.documents:*`, `payments.c
 | ID | Feature | Wave | Lazuar | Billplz | CHIP | HitPay | Xendit | Stripe | Paddle | Chargebee | Polar |
 |----|---------|------|--------|---------|------|--------|--------|--------|--------|-----------|-------|
 | LP-160 | Dashboard: net cash, actives, past due | — | Y | P | P | Y | Y | Y | Y | Y | Y |
-| LP-161 | Honest MRR / ARR (ledger-based) | 3 | P | N | N | P | P | Y | Y | Y | Y |
+| LP-161 | Honest MRR / ARR (ledger-based) | 3 | Y | N | N | P | P | Y | Y | Y | Y |
 | LP-162 | Churn / ARPU (directional) | — | P | N | N | P | P | Y | Y | Y | Y |
 | LP-163 | Transaction log | — | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 | LP-164 | Subscriber list + detail | — | Y | N | N | Y | Y | Y | Y | Y | Y |
@@ -284,7 +284,7 @@ CRM is a thin `ClientProfile` for checkout identity + PDPA anonymize. Do not gro
 | LP-171 | See subscriptions + status | — | Y | N | N | Y | P | Y | Y | Y | Y |
 | LP-172 | Cancel from portal | — | Y | N | N | P | P | Y | Y | Y | Y |
 | LP-173 | Update payment method | 1 | P | N | N | P | P | Y | Y | Y | Y |
-| LP-174 | Change plan from portal | 3 | N | N | N | N | N | Y | Y | Y | P |
+| LP-174 | Change plan from portal | 3 | Y | N | N | N | N | Y | Y | Y | P |
 | LP-175 | Invoice / receipt history | 2 | B | N | N | Y | P | Y | Y | Y | Y |
 
 Update-payment exists as `/update-payment/[subId]` (dunning), not as a first-class portal card.

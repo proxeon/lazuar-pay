@@ -32,7 +32,7 @@ model CommerceWebhookEnvelope {
  */
 model SubscriptionWebhookData {
   subscription_id: string;
-  status: "ACTIVE" | "PAST_DUE" | "CANCELED" | "SUSPENDED";
+  status: "ACTIVE" | "PAST_DUE" | "CANCELED" | "SUSPENDED" | "TRIALING";
   current_period_end?: utcDateTime;
   customer_id: string;
   client_profile_id?: string;

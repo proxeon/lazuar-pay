@@ -35,12 +35,23 @@ public static class CommerceWebhookPayload
             sub.NextBillingDate,
             sub.CurrentPeriodEnd,
             customerEmail,
-            product?.Price,
+            status == "TRIALING" ? 0m : LineAmount(sub, product),
             product?.Currency,
             product?.Interval,
             metadata,
             isFirstPayment,
             checkoutUrl ?? sub.CurrentRenewalCheckoutUrl);
+    }
+
+    private static decimal? LineAmount(Subscription sub, Product? product)
+    {
+        if (product == null && sub.UnitAmount <= 0)
+        {
+            return null;
+        }
+
+        var unit = sub.UnitAmount > 0 ? sub.UnitAmount : product?.Price ?? 0m;
+        return unit * Math.Max(1, sub.Quantity);
     }
 
     public static JsonElement Build(

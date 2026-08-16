@@ -560,6 +560,89 @@ public class BillingEngineJobTests
         await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
     }
 
+    [Test]
+    public async Task RunOnce_TrialNotDue_DoesNotCharge()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.ActivateTrial(DateTime.UtcNow.AddDays(7), reminderOnly: false, 1, product.Price);
+        sub.StoreVaultedToken("cus", "pm");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("TRIALING");
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task RunOnce_CollectionPaused_SkipsChargeAndKeepsActive()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        sub.StoreVaultedToken("cus", "pm");
+        sub.PauseCollection(DateTime.UtcNow.AddDays(10));
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.NextBillingDate.Should().BeCloseTo(DateTime.UtcNow.AddDays(-1), TimeSpan.FromMinutes(2));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task RunOnce_AppliesPendingProductThenChargesNewPrice()
+    {
+        var basic = CreateProduct(_orgId, "STRIPE");
+        var pro = new Product(
+            _orgId, "Pro", $"pro-{Guid.CreateVersion7():N}"[..20], 80m, "FIXED", 0m, "MYR", "mo", "STRIPE",
+            new CheckoutConfiguration(false, false, false), Array.Empty<string>());
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), basic.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), false, 1, basic.Price);
+        sub.StoreVaultedToken("cus", "pm");
+        sub.SchedulePlanChange(pro.Id);
+
+        _db.Products.AddRange(basic, pro);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.ProductId.Should().Be(pro.Id);
+        reloaded.PendingProductId.Should().BeNull();
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sub.Id && e.Amount == 80m));
+    }
+
+    [Test]
+    public async Task RunOnce_QuantityTimesUnitAmount()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), false, 3, 50m);
+        sub.StoreVaultedToken("cus", "pm");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sub.Id && e.Amount == 150m));
+    }
+
     private void ArrangeMint(string email, string checkoutUrl)
     {
         _crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns(new ClientProfileDto

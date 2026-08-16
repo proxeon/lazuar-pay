@@ -60,7 +60,9 @@ public static class PublicCheckoutEndpoints
                 req.Metadata,
                 idempotencyKey,
                 req.Id_type,
-                req.Id_value
+                req.Id_value,
+                req.Interval,
+                Guid.TryParse(req.Price_id, out var priceId) ? priceId : null
             );
 
             try

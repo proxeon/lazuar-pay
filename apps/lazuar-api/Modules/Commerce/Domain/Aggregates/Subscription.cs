@@ -19,7 +19,17 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public string? VaultedTokenId { get; private set; }
     public bool IsReminderOnly { get; private set; }
     public bool CancelAtPeriodEnd { get; private set; }
-    
+
+    public int Quantity { get; private set; } = 1;
+    public int? PendingQuantity { get; private set; }
+    public Guid? PendingProductId { get; private set; }
+    public Guid? PriceId { get; private set; }
+    public decimal UnitAmount { get; private set; }
+    public string? BillingInterval { get; private set; }
+    public DateTime? TrialEndsAt { get; private set; }
+    public DateTime? CollectionPausedUntil { get; private set; }
+    public bool HasOpenDispute { get; private set; }
+
     public Guid? CurrentDunningCampaignId { get; private set; }
     /// <summary>Legacy progress field; kept in sync with <see cref="LastCompletedDayOffset"/> for compatibility.</summary>
     public int CurrentDunningStepIndex { get; private set; }
@@ -65,13 +75,21 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         Status = "PENDING";
         IsReminderOnly = false;
         CancelAtPeriodEnd = false;
+        Quantity = 1;
+        UnitAmount = 0m;
+        HasOpenDispute = false;
         CurrentDunningStepIndex = 0;
         LastCompletedDayOffset = null;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Activate(DateTime currentPeriodEnd, DateTime? nextBillingDate, bool isReminderOnly = false)
+    public void Activate(
+        DateTime currentPeriodEnd,
+        DateTime? nextBillingDate,
+        bool isReminderOnly = false,
+        int? quantity = null,
+        decimal? unitAmount = null)
     {
         // Prevent cycle advancement if the subscription was in arrears and is just updating config
         if (Status == "PAST_DUE" || Status == "SUSPENDED")
@@ -89,7 +107,167 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         Status = "ACTIVE";
         IsReminderOnly = isReminderOnly;
         SuspendedAt = null;
+        if (quantity.HasValue || unitAmount.HasValue)
+        {
+            SetSnapshot(unitAmount ?? UnitAmount, quantity ?? Quantity);
+        }
+
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ActivateTrial(DateTime endsAt, bool reminderOnly, int quantity = 1, decimal unitAmount = 0)
+    {
+        if (endsAt <= DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Trial end must be in the future.");
+        }
+
+        SetSnapshot(unitAmount, quantity);
+        Status = "TRIALING";
+        TrialEndsAt = endsAt;
+        NextBillingDate = endsAt;
+        CurrentPeriodEnd = endsAt;
+        IsReminderOnly = reminderOnly;
+        SuspendedAt = null;
+        ClearCurrentRenewalCheckout();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetSnapshot(decimal unitAmount, int quantity)
+    {
+        if (quantity < 1 || quantity > 99)
+        {
+            throw new InvalidOperationException("Quantity must be between 1 and 99.");
+        }
+
+        Quantity = quantity;
+        UnitAmount = unitAmount;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RefreshSnapshot(decimal unitAmount)
+    {
+        UnitAmount = unitAmount;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetPriceId(Guid? priceId)
+    {
+        PriceId = priceId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetBillingInterval(string? interval)
+    {
+        if (string.IsNullOrWhiteSpace(interval))
+        {
+            return;
+        }
+
+        BillingInterval = interval.Trim().ToLowerInvariant();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void PauseCollection(DateTime until)
+    {
+        if (Status != "ACTIVE")
+        {
+            throw new InvalidOperationException($"Cannot pause collection from status '{Status}'.");
+        }
+
+        if (until <= DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Collection pause resume date must be in the future.");
+        }
+
+        CollectionPausedUntil = until;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResumeCollection(DateTime? nextBill = null)
+    {
+        CollectionPausedUntil = null;
+        if (nextBill.HasValue && (NextBillingDate == null || NextBillingDate < nextBill.Value))
+        {
+            NextBillingDate = nextBill.Value;
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool IsCollectionPaused(DateTime utcNow) =>
+        CollectionPausedUntil.HasValue && CollectionPausedUntil.Value > utcNow;
+
+    public void SchedulePlanChange(Guid productId)
+    {
+        if (productId == Guid.Empty)
+        {
+            throw new InvalidOperationException("product_id is required.");
+        }
+
+        if (productId == ProductId)
+        {
+            ClearPendingPlanChange();
+            return;
+        }
+
+        PendingProductId = productId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearPendingPlanChange()
+    {
+        PendingProductId = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool ApplyPendingPlanChange()
+    {
+        if (PendingProductId is not Guid pending || pending == Guid.Empty)
+        {
+            return false;
+        }
+
+        ProductId = pending;
+        PendingProductId = null;
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    public void ScheduleQuantity(int qty)
+    {
+        if (qty < 1 || qty > 99)
+        {
+            throw new InvalidOperationException("Quantity must be between 1 and 99.");
+        }
+
+        if (qty == Quantity)
+        {
+            PendingQuantity = null;
+            UpdatedAt = DateTime.UtcNow;
+            return;
+        }
+
+        PendingQuantity = qty;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public bool ApplyPendingQuantity()
+    {
+        if (PendingQuantity is not int qty)
+        {
+            return false;
+        }
+
+        if (qty < 1 || qty > 99)
+        {
+            throw new InvalidOperationException("Quantity must be between 1 and 99.");
+        }
+
+        Quantity = qty;
+        PendingQuantity = null;
+        UpdatedAt = DateTime.UtcNow;
+        return true;
     }
 
     public void StoreVaultedToken(string customerId, string tokenId)
@@ -156,7 +334,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
 
     public void ScheduleCancelAtPeriodEnd()
     {
-        if (Status != "ACTIVE")
+        if (Status is not ("ACTIVE" or "TRIALING"))
             throw new InvalidOperationException($"Cannot schedule cancel from status '{Status}'.");
         if (NextBillingDate is null || NextBillingDate.Value <= DateTime.UtcNow)
             throw new InvalidOperationException("No remaining paid period.");

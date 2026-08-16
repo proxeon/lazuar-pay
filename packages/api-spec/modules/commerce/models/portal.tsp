@@ -9,9 +9,28 @@ model PortalSubscriptionDto {
   current_period_end?: utcDateTime;
   cancel_at_period_end: boolean;
   is_reminder_only: boolean;
+  quantity?: int32;
+  pending_product_id?: string;
+  pending_product_name?: string;
+  trial_ends_at?: utcDateTime;
   /** HMAC download for the latest stored receipt / tax invoice, if any. */
   document_url?: string;
   document_label?: string;
+}
+
+model PortalPlanDto {
+  id: string;
+  name: string;
+  interval: string;
+  amount: float64;
+  currency: string;
+}
+
+model PortalChangePlanRequest {
+  subscription_id: string;
+  product_id?: string;
+  prorate?: boolean;
+  apply?: string;
 }
 
 model PortalDocumentDto {

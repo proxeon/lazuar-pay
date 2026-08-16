@@ -28,7 +28,10 @@ public static class PublicArrearsEndpoints
         {
             using var connection = sqlFactory.CreateConnection();
             var query = @"
-                SELECT p.""Name"" as ProductName, p.""Price"" as Amount, p.""Currency"", s.""Status"",
+                SELECT p.""Name"" as ProductName,
+                       (CASE WHEN s.""UnitAmount"" > 0 THEN s.""UnitAmount"" ELSE p.""Price"" END)
+                           * GREATEST(s.""Quantity"", 1) as Amount,
+                       p.""Currency"", s.""Status"",
                        p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
@@ -62,7 +65,10 @@ public static class PublicArrearsEndpoints
             var query = @"
                 SELECT s.""OrganizationId"", s.""ProductId"", s.""ClientProfileId"", s.""Status"", s.""CurrentDunningCampaignId"",
                        s.""CurrentRenewalCheckoutUrl"", s.""CurrentRenewalCheckoutForDate"", s.""NextBillingDate"",
-                       p.""Name"" as ProductName, p.""Price"", p.""Currency"", p.""GatewayName"" as ProductGatewayName
+                       p.""Name"" as ProductName,
+                       (CASE WHEN s.""UnitAmount"" > 0 THEN s.""UnitAmount"" ELSE p.""Price"" END)
+                           * GREATEST(s.""Quantity"", 1) as Price,
+                       p.""Currency"", p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
                 WHERE s.""Id"" = @SubId LIMIT 1";

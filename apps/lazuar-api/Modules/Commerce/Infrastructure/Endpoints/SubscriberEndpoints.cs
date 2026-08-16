@@ -154,6 +154,94 @@ public static class SubscriberEndpoints
             }
         });
 
+        group.MapPost("/subscribers/{id:guid}/change-plan", async Task<Results<Ok<PlanChangePreviewDto>, BadRequest<StatusResponse>>> (
+            Guid id,
+            ChangePlanRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                Guid? productId = null;
+                if (!string.IsNullOrWhiteSpace(req.Product_id))
+                {
+                    if (!Guid.TryParse(req.Product_id, out var parsed))
+                    {
+                        return TypedResults.BadRequest(new StatusResponse { Status = "Invalid product_id." });
+                    }
+
+                    productId = parsed;
+                }
+
+                var preview = await mediator.Send(new ChangePlanCommand(
+                    ctx.TenantId,
+                    id,
+                    productId,
+                    req.Prorate,
+                    req.Apply));
+                return TypedResults.Ok(MapPreview(preview));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+            }
+        });
+
+        group.MapPost("/subscribers/{id:guid}/quantity", async Task<Results<Ok<PlanChangePreviewDto>, BadRequest<StatusResponse>>> (
+            Guid id,
+            SetQuantityRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                var preview = await mediator.Send(new SetSubscriptionQuantityCommand(
+                    ctx.TenantId,
+                    id,
+                    req.Quantity,
+                    req.Prorate,
+                    req.Apply));
+                return TypedResults.Ok(MapPreview(preview));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+            }
+        });
+
+        group.MapPost("/subscribers/{id:guid}/collection/pause", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
+            Guid id,
+            PauseCollectionRequestDto req,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new PauseCollectionCommand(ctx.TenantId, id, req.Resume_on.UtcDateTime));
+                return TypedResults.Ok(new StatusResponse { Status = "paused" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+            }
+        });
+
+        group.MapPost("/subscribers/{id:guid}/collection/resume", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
+            Guid id,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            try
+            {
+                await mediator.Send(new ResumeCollectionCommand(ctx.TenantId, id));
+                return TypedResults.Ok(new StatusResponse { Status = "resumed" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
+            }
+        });
+
         group.MapPost("/subscribers/{id:guid}/dunning/pause", async Task<Ok<StatusResponse>> (
             Guid id,
             PauseDunningRequestDto req,
@@ -223,4 +311,17 @@ public static class SubscriberEndpoints
 
         return sb.ToString();
     }
+
+    internal static PlanChangePreviewDto MapPreview(Modules.Commerce.Contracts.Commands.PlanChangePreview preview) => new()
+    {
+        Current_product_id = preview.CurrentProductId.ToString(),
+        Current_amount = (double)preview.CurrentAmount,
+        Currency = preview.Currency,
+        Interval = preview.Interval,
+        Next_product_id = preview.NextProductId.ToString(),
+        Next_amount = (double)preview.NextAmount,
+        Effective_at = preview.EffectiveAt.HasValue ? new DateTimeOffset(preview.EffectiveAt.Value) : null,
+        Amount_due_now = (double)preview.AmountDueNow,
+        Policy = preview.Policy
+    };
 }

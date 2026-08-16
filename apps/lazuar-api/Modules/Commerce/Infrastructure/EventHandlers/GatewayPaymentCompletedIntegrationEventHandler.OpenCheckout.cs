@@ -59,6 +59,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
 
         var product = await _dbContext.Products
             .IgnoreQueryFilters()
+            .Include(p => p.Prices)
             .FirstOrDefaultAsync(p =>
                 p.Id == (session.ProductId ?? Guid.Empty)
                 && p.OrganizationId == session.OrganizationId);
@@ -83,10 +84,19 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
                 product.Id
             );
 
-            var nextBilling = product.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
+            var chosen = product.Prices.FirstOrDefault(p => p.Id == session.PriceId);
+            var unitAmount = chosen?.Amount ?? product.Price;
+            var interval = chosen?.Interval ?? product.Interval;
             var hasVault = TryVaultIds(product.GatewayName, @event.GatewayCustomerId, @event.GatewayTokenId, out var vaultCustomerId, out var vaultTokenId);
-            subscription.Activate(DateTime.UtcNow, nextBilling, isReminderOnly: !hasVault);
-            ApplyCheckoutMetadata(subscription, session, @event, product.Interval);
+            Modules.Commerce.Application.SubscriptionActivation.Start(
+                subscription,
+                product,
+                Math.Max(1, session.Quantity),
+                unitAmount,
+                reminderOnly: !hasVault,
+                billingInterval: interval,
+                priceId: session.PriceId);
+            ApplyCheckoutMetadata(subscription, session, @event, interval);
 
             if (hasVault)
             {

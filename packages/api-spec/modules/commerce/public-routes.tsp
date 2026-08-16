@@ -71,6 +71,22 @@ interface PublicCommerceOperations {
     @body body: CancelPortalRequest,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  @get
+  @route("/{tenantSlug}/portal/plans")
+  @doc("Eligible recurring products for a portal plan change.")
+  getPortalPlans(@path tenantSlug: string, @query token: string):
+    | PortalPlanDto[]
+    | LazuarApi.Core.ProblemDetailsResponse;
+
+  @post
+  @route("/{tenantSlug}/portal/change-plan")
+  @doc("Schedule a plan change from the buyer portal. No charge today.")
+  changePortalPlan(
+    @path tenantSlug: string,
+    @query token: string,
+    @body body: PortalChangePlanRequest,
+  ): PlanChangePreviewDto | LazuarApi.Core.ProblemDetailsResponse;
+
   @post
   @route("/{tenantSlug}/portal/keep")
   @doc("Undo a scheduled period-end cancel while the subscription is still ACTIVE.")

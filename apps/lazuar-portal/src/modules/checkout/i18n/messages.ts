@@ -49,6 +49,7 @@ export const en = {
   "summary.unitTimesQty": "{amount} × {n}",
   "summary.discountEach": "Discount (per item × {n})",
   "summary.thenRecurring": "then {amount} / {interval}",
+  "summary.trialThen": "{days}-day trial, then {amount} / {interval}. Cancel anytime during trial.",
   "summary.intervalMonth": "month",
   "summary.intervalYear": "year",
   "summary.notAutoDebit": "Not auto-debit. We email a new payment link each cycle.",
@@ -150,6 +151,7 @@ export const ms: Record<MessageKey, string> = {
   "summary.unitTimesQty": "{amount} × {n}",
   "summary.discountEach": "Diskaun (setiap item × {n})",
   "summary.thenRecurring": "kemudian {amount} / {interval}",
+  "summary.trialThen": "Percubaan {days} hari, kemudian {amount} / {interval}. Boleh batal semasa percubaan.",
   "summary.intervalMonth": "bulan",
   "summary.intervalYear": "tahun",
   "summary.notAutoDebit":

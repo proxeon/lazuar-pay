@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BuildingBlocks.Domain;
+using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Domain.ValueObjects;
 
 namespace Modules.Commerce.Domain.Aggregates;
@@ -25,8 +27,13 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
 
     public decimal SstRatePercent { get; private set; }
 
+    public int TrialDays { get; private set; }
+
     private readonly List<string> _fulfillmentTargets = new();
     public IReadOnlyCollection<string> FulfillmentTargets => _fulfillmentTargets.AsReadOnly();
+
+    private readonly List<ProductPrice> _prices = new();
+    public IReadOnlyCollection<ProductPrice> Prices => _prices.AsReadOnly();
 
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
@@ -67,7 +74,9 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         CheckoutConfiguration = checkoutConfiguration;
         SstTaxType = "06";
         SstRatePercent = 0m;
+        TrialDays = 0;
         IsActive = true;
+        SyncDefaultPrice();
         
         if (fulfillmentTargets != null)
         {
@@ -102,6 +111,108 @@ public class Product : Entity, IAggregateRoot, IMustHaveTenant
         }
 
         UpdatedAt = DateTime.UtcNow;
+        SyncDefaultPrice();
+    }
+
+    public void SetTrialDays(int days)
+    {
+        if (days < 0 || days > 90)
+        {
+            throw new InvalidOperationException("Trial days must be between 0 and 90.");
+        }
+
+        if (days > 0 && string.Equals(Interval, "one_time", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Free trial is not available on one-time products.");
+        }
+
+        TrialDays = days;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public ProductPrice? GetPrice(string interval)
+    {
+        var normalized = (interval ?? string.Empty).Trim().ToLowerInvariant();
+        return _prices.FirstOrDefault(p => p.Interval == normalized);
+    }
+
+    public ProductPrice? DefaultPrice() =>
+        _prices.FirstOrDefault(p => p.IsDefault) ?? _prices.FirstOrDefault(p => p.Interval == Interval);
+
+    public void UpsertPrice(string interval, decimal amount, bool isDefault)
+    {
+        var normalized = ProductPrice.NormalizeInterval(interval);
+        if (normalized is not (ProductPrice.IntervalMonth or ProductPrice.IntervalYear or "one_time"))
+        {
+            throw new InvalidOperationException("Only monthly, yearly, or one-time prices are supported.");
+        }
+
+        if (_prices.Count(p => p.Interval != normalized) >= 2 && GetPrice(normalized) == null)
+        {
+            throw new InvalidOperationException("A product can have at most monthly and yearly prices.");
+        }
+
+        var existing = GetPrice(normalized);
+        if (existing == null)
+        {
+            if (_prices.Select(p => p.Interval).Distinct().Count() >= 2)
+            {
+                throw new InvalidOperationException("A product can have at most monthly and yearly prices.");
+            }
+
+            _prices.Add(ProductPrice.Create(Id, normalized, amount, isDefault));
+        }
+        else
+        {
+            existing.Update(normalized, amount, isDefault || existing.IsDefault);
+        }
+
+        if (isDefault)
+        {
+            foreach (var price in _prices.Where(p => p.Interval != normalized))
+            {
+                price.ClearDefault();
+            }
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetYearlyPrice(decimal? amount)
+    {
+        if (amount == null)
+        {
+            return;
+        }
+
+        if (string.Equals(Interval, "one_time", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Yearly price is only available on recurring products.");
+        }
+
+        if (amount.Value < 0)
+        {
+            throw new InvalidOperationException("Yearly price cannot be negative.");
+        }
+
+        UpsertPrice(ProductPrice.IntervalYear, amount.Value, isDefault: Interval == ProductPrice.IntervalYear);
+    }
+
+    internal void SyncDefaultPrice()
+    {
+        var existingDefault = _prices.FirstOrDefault(p => p.IsDefault)
+            ?? _prices.FirstOrDefault(p => p.Interval == Interval);
+        if (existingDefault == null)
+        {
+            _prices.Add(ProductPrice.Create(Id, Interval, Price, isDefault: true));
+            return;
+        }
+
+        existingDefault.Update(Interval, Price, isDefault: true);
+        foreach (var other in _prices.Where(p => p.Id != existingDefault.Id))
+        {
+            other.ClearDefault();
+        }
     }
 
     public void SetSst(string? taxType, decimal ratePercent)

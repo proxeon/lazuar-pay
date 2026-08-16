@@ -15,7 +15,7 @@ public partial class CommerceQueryService
         Guid Id, string Slug, string Name, decimal Price, string PricingModel, decimal MinimumPrice, string Currency, string Interval,
         bool RequiresAddress, bool RequiresTaxId, bool RequiresPhone,
         string? FulfillmentTargets, bool IsActive, string GatewayName,
-        string? SstTaxType = null, decimal SstRatePercent = 0);
+        string? SstTaxType = null, decimal SstRatePercent = 0, int TrialDays = 0);
 
     public async Task<IEnumerable<ProductDto>> GetProductsAsync(Guid organizationId)
     {
@@ -27,14 +27,14 @@ public partial class CommerceQueryService
                 ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
                 ""FulfillmentTargets""::text, ""IsActive"", ""GatewayName"",
-                ""SstTaxType"", ""SstRatePercent""
+                ""SstTaxType"", ""SstRatePercent"", ""TrialDays""
             FROM commerce.""Products""
             WHERE ""OrganizationId"" = @OrgId
             ORDER BY ""CreatedAt"" DESC";
 
-        var rawProducts = await connection.QueryAsync<RawProductDto>(sql, new { OrgId = organizationId });
-
-        return rawProducts.Select(MapToDto);
+        var rawProducts = (await connection.QueryAsync<RawProductDto>(sql, new { OrgId = organizationId })).ToList();
+        var prices = await LoadPricesAsync(connection, rawProducts.Select(p => p.Id));
+        return rawProducts.Select(p => MapToDto(p, prices));
     }
 
     public async Task<ProductDto?> GetProductByIdAsync(Guid organizationId, Guid productId)
@@ -47,7 +47,7 @@ public partial class CommerceQueryService
                 ""Id"", ""Slug"", ""Name"", ""Price"", ""PricingModel"", ""MinimumPrice"", ""Currency"", ""Interval"",
                 ""RequiresAddress"", ""RequiresTaxId"", ""RequiresPhone"",
                 ""FulfillmentTargets""::text, ""IsActive"", ""GatewayName"",
-                ""SstTaxType"", ""SstRatePercent""
+                ""SstTaxType"", ""SstRatePercent"", ""TrialDays""
             FROM commerce.""Products""
             WHERE ""OrganizationId"" = @OrgId AND ""Id"" = @ProductId
             LIMIT 1";
@@ -56,10 +56,46 @@ public partial class CommerceQueryService
 
         if (rawProduct == null) return null;
 
-        return MapToDto(rawProduct);
+        var prices = await LoadPricesAsync(connection, new[] { rawProduct.Id });
+        return MapToDto(rawProduct, prices);
     }
 
-    internal static ProductDto MapToDto(RawProductDto raw)
+    private static async Task<ILookup<Guid, ProductPriceDto>> LoadPricesAsync(IDbConnection connection, IEnumerable<Guid> productIds)
+    {
+        var ids = productIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return Array.Empty<ProductPriceDto>().ToLookup(_ => Guid.Empty);
+        }
+
+        const string sql = @"
+            SELECT ""ProductId"", ""Id"", ""Interval"", ""Amount"", ""IsDefault""
+            FROM commerce.""ProductPrices""
+            WHERE ""ProductId"" = ANY(@Ids)";
+
+        try
+        {
+            var rows = await connection.QueryAsync<(Guid ProductId, Guid Id, string Interval, decimal Amount, bool IsDefault)>(
+                sql, new { Ids = ids.ToArray() });
+            return rows.ToLookup(
+                r => r.ProductId,
+                r => new ProductPriceDto
+                {
+                    Id = r.Id.ToString(),
+                    Interval = r.Interval,
+                    Amount = (double)r.Amount,
+                    Is_default = r.IsDefault
+                });
+        }
+        catch
+        {
+            return Array.Empty<ProductPriceDto>().ToLookup(_ => Guid.Empty);
+        }
+    }
+
+    internal static ProductDto MapToDto(RawProductDto raw) => MapToDto(raw, null);
+
+    internal static ProductDto MapToDto(RawProductDto raw, ILookup<Guid, ProductPriceDto>? prices)
     {
         var jsonOptions = new JsonSerializerOptions
         {
@@ -102,7 +138,9 @@ public partial class CommerceQueryService
             },
             Fulfillment_targets = fulfillmentTargets,
             Sst_tax_type = string.IsNullOrWhiteSpace(raw.SstTaxType) ? "06" : raw.SstTaxType,
-            Sst_rate_percent = (double)raw.SstRatePercent
+            Sst_rate_percent = (double)raw.SstRatePercent,
+            Trial_days = raw.TrialDays,
+            Prices = prices?[raw.Id].ToList() ?? new List<ProductPriceDto>()
         };
     }
 }

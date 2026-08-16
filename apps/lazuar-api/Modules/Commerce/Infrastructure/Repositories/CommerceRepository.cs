@@ -21,7 +21,10 @@ public class CommerceRepository : ICommerceRepository
 
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == id, ct);
+        return await _context.Products
+            .IgnoreQueryFilters()
+            .Include(p => p.Prices)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
     public async Task<IReadOnlyList<Product>> GetProductsByIdsAsync(Guid organizationId, IEnumerable<Guid> ids, CancellationToken ct = default)
@@ -34,6 +37,7 @@ public class CommerceRepository : ICommerceRepository
 
         return await _context.Products
             .IgnoreQueryFilters()
+            .Include(p => p.Prices)
             .Where(p => p.OrganizationId == organizationId && idList.Contains(p.Id))
             .ToListAsync(ct);
     }
@@ -42,6 +46,7 @@ public class CommerceRepository : ICommerceRepository
     {
         return await _context.Products
             .IgnoreQueryFilters()
+            .Include(p => p.Prices)
             .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Slug == slug && p.IsActive, ct);
     }
 
@@ -168,7 +173,7 @@ public class CommerceRepository : ICommerceRepository
                 s => s.OrganizationId == organizationId
                     && s.ClientProfileId == clientProfileId
                     && s.ProductId == productId
-                    && s.Status == "ACTIVE",
+                    && (s.Status == "ACTIVE" || s.Status == "TRIALING"),
                 ct);
     }
 

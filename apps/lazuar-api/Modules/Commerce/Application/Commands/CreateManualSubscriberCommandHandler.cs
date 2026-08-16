@@ -88,7 +88,16 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
             ?? (product.Interval == "yr" ? start.AddYears(1) : start.AddMonths(1));
 
         var subscription = new Subscription(request.OrganizationId, clientProfileId, product.Id);
-        subscription.Activate(start, nextBillingDate, isReminderOnly: true);
+        if (SubscriptionActivation.IsTrialOffer(product) && request.NextBillingDate is null)
+        {
+            SubscriptionActivation.Start(subscription, product, 1, product.Price, reminderOnly: true, now: start);
+        }
+        else
+        {
+            subscription.Activate(start, nextBillingDate, isReminderOnly: true, quantity: 1, unitAmount: product.Price);
+            subscription.SetBillingInterval(product.Interval);
+        }
+
         _repository.AddSubscription(subscription);
 
         var clientProfile = await _crmQueryService.GetClientProfileAsync(clientProfileId);

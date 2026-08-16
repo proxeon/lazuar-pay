@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { serverClient } from "../../../modules/core/lib/server-client";
 import { RequestMagicLinkForm } from "../../../modules/portal/components/RequestMagicLinkForm";
+import { PortalPlanChange } from "../../../modules/portal/components/PortalPlanChange";
 import { ShieldCheck, FileText } from "lucide-react";
 
 function formatPaidThrough(value?: string | null) {
@@ -81,6 +82,11 @@ export default async function AggregatedPortalPage({
                       <span className="text-[10px] font-bold uppercase tracking-widest bg-secondary text-foreground px-2 py-0.5 border border-border">
                         {sub.status.replace("_", " ")}
                       </span>
+                      {sub.status === "TRIALING" && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest bg-sky-50 text-sky-800 px-2 py-0.5 border border-sky-200">
+                          Trial{sub.trial_ends_at ? ` until ${formatPaidThrough(sub.trial_ends_at)}` : ""}
+                        </span>
+                      )}
                       {isFlagged && (
                         <span className="text-[10px] font-bold uppercase tracking-widest bg-amber-50 text-amber-800 px-2 py-0.5 border border-amber-200">
                           Cancels {paidThrough ? `on ${paidThrough}` : "at period end"}
@@ -96,6 +102,15 @@ export default async function AggregatedPortalPage({
                       <p className="text-xs text-muted-foreground">
                         Cancel at period end keeps access until {paidThrough}. No further charges after that.
                       </p>
+                    )}
+                    {isHealthyActive && token && (
+                      <PortalPlanChange
+                        tenantSlug={tenantSlug}
+                        token={token}
+                        subscriptionId={sub.id}
+                        paidThrough={sub.current_period_end}
+                        pendingProductName={sub.pending_product_name}
+                      />
                     )}
                     {isPastDue && (
                       <p className="text-xs text-muted-foreground">

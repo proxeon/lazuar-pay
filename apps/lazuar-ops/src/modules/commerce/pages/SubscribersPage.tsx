@@ -36,6 +36,19 @@ export default function SubscribersPage() {
 
   const [refundTransaction, setRefundTransaction] = useState<TransactionLogDto | null>(null);
   const [pauseDunningModal, setPauseDunningModal] = useState({ isOpen: false, date: "" });
+  const [pauseCollectionModal, setPauseCollectionModal] = useState({ isOpen: false, date: "" });
+  const [planProductId, setPlanProductId] = useState("");
+  const [seatQty, setSeatQty] = useState("1");
+
+  const { data: products } = useQuery({
+    queryKey: ["commerce-products"],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/admin/commerce/products");
+      if (error) throw new Error(error.detail);
+      return data;
+    },
+    enabled: !!activeWorkspaceId
+  });
 
   const { data: subscribersData, isLoading } = useQuery({
     queryKey: ["commerce-subscribers", page, debouncedSearchTerm],
@@ -124,6 +137,72 @@ export default function SubscribersPage() {
         return;
       }
 
+      if (action === "change-plan") {
+        const response = await fetch(`${API_URL}/admin/commerce/subscribers/${selectedSub.id}/change-plan`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "",
+          },
+          body: JSON.stringify({ product_id: payload?.product_id ?? null }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.status || body?.detail || "Change plan failed");
+        }
+        return response.json();
+      }
+
+      if (action === "quantity") {
+        const response = await fetch(`${API_URL}/admin/commerce/subscribers/${selectedSub.id}/quantity`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "",
+          },
+          body: JSON.stringify({ quantity: payload.quantity }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.status || body?.detail || "Set seats failed");
+        }
+        return response.json();
+      }
+
+      if (action === "collection/pause") {
+        const response = await fetch(`${API_URL}/admin/commerce/subscribers/${selectedSub.id}/collection/pause`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "",
+          },
+          body: JSON.stringify({ resume_on: payload.resume_on }),
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.status || body?.detail || "Pause collection failed");
+        }
+        return;
+      }
+
+      if (action === "collection/resume") {
+        const response = await fetch(`${API_URL}/admin/commerce/subscribers/${selectedSub.id}/collection/resume`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "",
+          },
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.status || body?.detail || "Resume collection failed");
+        }
+        return;
+      }
+
       if (action === "dunning/pause") {
         const { error } = await client.POST("/admin/commerce/subscribers/{id}/dunning/pause", {
           params: { path: { id: selectedSub.id } },
@@ -168,6 +247,20 @@ export default function SubscribersPage() {
         setIsPaymentModalOpen(false);
         setPaymentAmount("");
         setPaymentRef("");
+        const cached = queryClient.getQueriesData<{ data?: CommerceSubscriptionDto[] }>({ queryKey: ["commerce-subscribers"] });
+        for (const [, data] of cached) {
+          const match = data?.data?.find((s) => s.id === selectedSub?.id);
+          if (match) {
+            setSelectedSub(match);
+            break;
+          }
+        }
+      } else if (variables.action === "collection/pause") {
+        setPauseCollectionModal({ isOpen: false, date: "" });
+        setSelectedSub(prev => prev ? { ...prev, collection_paused_until: new Date(variables.payload.resume_on).toISOString() } : null);
+      } else if (variables.action === "collection/resume") {
+        setSelectedSub(prev => prev ? { ...prev, collection_paused_until: undefined } : null);
+      } else if (variables.action === "change-plan" || variables.action === "quantity") {
         const cached = queryClient.getQueriesData<{ data?: CommerceSubscriptionDto[] }>({ queryKey: ["commerce-subscribers"] });
         for (const [, data] of cached) {
           const match = data?.data?.find((s) => s.id === selectedSub?.id);
@@ -248,6 +341,7 @@ export default function SubscribersPage() {
           >
             <option value="ALL">ALL STATUSES</option>
             <option value="ACTIVE">ACTIVE</option>
+            <option value="TRIALING">TRIALING</option>
             <option value="PAST_DUE">PAST DUE</option>
             <option value="CANCELED">CANCELED</option>
             <option value="SUSPENDED">SUSPENDED</option>
@@ -271,7 +365,7 @@ export default function SubscribersPage() {
                 <tr><td colSpan={4} className="py-12 text-center text-[12px] text-[#71717a]">No subscribers found.</td></tr>
               ) : (
                 displayedSubscribers.map((sub) => (
-                  <tr key={sub.id} onClick={() => setSelectedSub(sub)} className="hover:bg-[#fafafa] transition-colors cursor-pointer group">
+                  <tr key={sub.id} onClick={() => { setSelectedSub(sub); setSeatQty(String(sub.quantity ?? 1)); setPlanProductId(""); }} className="hover:bg-[#fafafa] transition-colors cursor-pointer group">
                     <td className="px-5 py-3.5 min-w-[200px]">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-[#09090b] text-[13px] group-hover:text-blue-600 transition-colors">{sub.customer_name}</p>
@@ -300,9 +394,29 @@ export default function SubscribersPage() {
                         )}>
                           {sub.status.replace("_", " ")}
                         </span>
+                        {sub.status === "TRIALING" && (
+                          <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap bg-sky-50 text-sky-800 border-sky-200">
+                            Trial
+                          </span>
+                        )}
                         {sub.cancel_at_period_end && (
                           <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap bg-amber-50 text-amber-800 border-amber-200">
                             Cancels
+                          </span>
+                        )}
+                        {sub.collection_paused_until && new Date(sub.collection_paused_until).getTime() > Date.now() && (
+                          <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap bg-zinc-100 text-zinc-700 border-zinc-200">
+                            Collection paused
+                          </span>
+                        )}
+                        {sub.pending_product_name && (
+                          <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap bg-blue-50 text-blue-800 border-blue-200">
+                            → {sub.pending_product_name}
+                          </span>
+                        )}
+                        {sub.pending_quantity != null && (
+                          <span className="text-[9px] px-1.5 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap bg-blue-50 text-blue-800 border-blue-200">
+                            Seats → {sub.pending_quantity}
                           </span>
                         )}
                       </div>
@@ -368,7 +482,13 @@ export default function SubscribersPage() {
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Subscription Details</h3>
               <div className="grid grid-cols-2 gap-4 text-[12px]">
-                <div><span className="text-[#a1a1aa] block mb-1">Product</span><span className="font-medium text-[#09090b]">{selectedSub.product_name}</span></div>
+                <div>
+                  <span className="text-[#a1a1aa] block mb-1">Product</span>
+                  <span className="font-medium text-[#09090b]">{selectedSub.product_name}</span>
+                  {selectedSub.pending_product_name && (
+                    <span className="block text-[10px] text-blue-700 mt-0.5">Changes to {selectedSub.pending_product_name} on next bill. No charge today.</span>
+                  )}
+                </div>
                 <div>
                   <span className="text-[#a1a1aa] block mb-1">Status</span>
                   <span className="font-bold text-[#09090b]">
@@ -383,6 +503,13 @@ export default function SubscribersPage() {
                     <span className="block text-[10px] text-[#a1a1aa] mt-0.5">Period started {new Date(selectedSub.current_period_end).toLocaleDateString()}</span>
                   )}
                 </div>
+                <div><span className="text-[#a1a1aa] block mb-1">Seats</span><span className="font-medium text-[#09090b]">{selectedSub.quantity ?? 1}{selectedSub.pending_quantity != null ? ` → ${selectedSub.pending_quantity}` : ""}</span></div>
+                {selectedSub.trial_ends_at && (
+                  <div><span className="text-[#a1a1aa] block mb-1">Trial ends</span><span className="font-mono text-[#52525b]">{new Date(selectedSub.trial_ends_at).toLocaleDateString()}</span></div>
+                )}
+                {selectedSub.collection_paused_until && (
+                  <div className="col-span-2"><span className="text-[#a1a1aa] block mb-1">Collection paused until</span><span className="font-mono text-[#52525b]">{new Date(selectedSub.collection_paused_until).toLocaleDateString()}</span></div>
+                )}
                 <div><span className="text-[#a1a1aa] block mb-1">Auto-Debit</span><span className="font-medium text-[#09090b]">{selectedSub.is_reminder_only ? "Reminder-only (pay link / record payment)" : selectedSub.vaulted_token_id ? "Auto-debit active" : "None"}</span></div>
                 {selectedSub.current_renewal_checkout_url && (
                   <div className="col-span-2">
@@ -436,11 +563,75 @@ export default function SubscribersPage() {
                         disabled={activeAction !== null}
                         className="w-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-amber-200 text-amber-700 h-8 hover:bg-amber-100 transition-colors"
                       >
-                        <CalendarClock size={12} /> Pause Automations
+                        <CalendarClock size={12} /> Pause recovery
                       </button>
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {(selectedSub.status === "ACTIVE" || selectedSub.status === "TRIALING") && (
+              <div className="space-y-3">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Plan &amp; seats</h3>
+                <p className="text-[11px] text-[#71717a]">No charge today. Changes start on the next billing date.</p>
+                <div className="flex gap-2">
+                  <select
+                    value={planProductId}
+                    onChange={(e) => setPlanProductId(e.target.value)}
+                    className="flex-1 h-8 border border-[#e5e5e5] bg-white px-2 text-[12px]"
+                  >
+                    <option value="">Keep current / revert pending</option>
+                    {(products || [])
+                      .filter((p) => p.is_active && (p.interval === "mo" || p.interval === "yr") && p.id !== selectedSub.product_id)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.name} · {p.interval} · RM {p.price}</option>
+                      ))}
+                  </select>
+                  <button
+                    onClick={() => actionMutation.mutate({ action: "change-plan", payload: { product_id: planProductId || null } })}
+                    disabled={activeAction !== null}
+                    className="h-8 px-3 border border-[#e5e5e5] text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    {planProductId ? "Schedule" : "Revert"}
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={seatQty}
+                    onChange={(e) => setSeatQty(e.target.value)}
+                    className="w-20 h-8 border border-[#e5e5e5] px-2 text-[12px]"
+                  />
+                  <button
+                    onClick={() => actionMutation.mutate({ action: "quantity", payload: { quantity: Number(seatQty) } })}
+                    disabled={activeAction !== null}
+                    className="h-8 px-3 border border-[#e5e5e5] text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Set seats
+                  </button>
+                </div>
+                {selectedSub.status === "ACTIVE" && (
+                  selectedSub.collection_paused_until && new Date(selectedSub.collection_paused_until).getTime() > Date.now() ? (
+                    <button
+                      onClick={() => actionMutation.mutate({ action: "collection/resume" })}
+                      disabled={activeAction !== null}
+                      className="h-8 w-full border border-[#e5e5e5] text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      Resume collection
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setPauseCollectionModal({ isOpen: true, date: "" })}
+                      disabled={activeAction !== null}
+                      className="h-8 w-full border border-[#e5e5e5] text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      Pause collection
+                    </button>
+                  )
+                )}
               </div>
             )}
 
@@ -613,7 +804,7 @@ export default function SubscribersPage() {
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setPauseDunningModal({ isOpen: false, date: "" })} />
           <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "dunning/pause", payload: { pause_until: new Date(pauseDunningModal.date).toISOString() }}); }} className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
-              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Pause Automations</h3>
+              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Pause recovery</h3>
               <button type="button" onClick={() => setPauseDunningModal({ isOpen: false, date: "" })} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50 p-1"><X size={16} /></button>
             </div>
             <div className="p-5 space-y-4">
@@ -630,6 +821,31 @@ export default function SubscribersPage() {
               <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest hover:bg-[#27272a] disabled:opacity-50 flex items-center gap-1.5 rounded-sm">
                 {activeAction === "dunning/pause" && <Loader2 size={13} className="animate-spin" />} Pause Rule
               </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {pauseCollectionModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => !activeAction && setPauseCollectionModal({ isOpen: false, date: "" })} />
+          <form onSubmit={(e) => { e.preventDefault(); actionMutation.mutate({ action: "collection/pause", payload: { resume_on: new Date(pauseCollectionModal.date).toISOString() }}); }} className="relative bg-white border border-[#e5e5e5] shadow-2xl w-full max-w-sm flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
+              <h3 className="text-[13px] font-bold uppercase tracking-widest text-[#09090b]">Pause collection</h3>
+              <button type="button" onClick={() => setPauseCollectionModal({ isOpen: false, date: "" })} disabled={activeAction !== null} className="text-[#a1a1aa] hover:text-[#09090b] disabled:opacity-50 p-1"><X size={16} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-[12px] text-[#52525b] leading-relaxed">
+                Stop billing until this date. Access stays ACTIVE. No charge and no dunning emails during the holiday.
+              </p>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Resume on *</label>
+                <input required type="datetime-local" value={pauseCollectionModal.date} onChange={e => setPauseCollectionModal({ ...pauseCollectionModal, date: e.target.value })} disabled={activeAction !== null} className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px] focus:outline-none focus:border-[#09090b] disabled:opacity-50" />
+              </div>
+            </div>
+            <div className="p-4 border-t border-[#f4f4f5] bg-[#fafafa]/50 flex justify-end gap-2">
+              <button type="button" onClick={() => setPauseCollectionModal({ isOpen: false, date: "" })} disabled={activeAction !== null} className="px-4 h-8 text-[11px] font-bold uppercase tracking-widest text-[#71717a] hover:bg-[#e5e5e5] border border-[#e5e5e5] bg-white">Cancel</button>
+              <button type="submit" disabled={activeAction !== null} className="px-5 h-8 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest">Pause collection</button>
             </div>
           </form>
         </div>

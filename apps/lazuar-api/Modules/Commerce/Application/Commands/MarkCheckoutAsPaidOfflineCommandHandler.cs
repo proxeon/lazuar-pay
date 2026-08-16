@@ -120,8 +120,17 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         else
         {
             var subscription = new Subscription(session.OrganizationId, session.ClientProfileId, product.Id);
-            var nextBilling = product.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
-            subscription.Activate(DateTime.UtcNow, nextBilling, isReminderOnly: true);
+            var chosen = product.Prices.FirstOrDefault(p => p.Id == session.PriceId);
+            var unitAmount = chosen?.Amount ?? product.Price;
+            var interval = chosen?.Interval ?? product.Interval;
+            SubscriptionActivation.Start(
+                subscription,
+                product,
+                quantity,
+                unitAmount,
+                reminderOnly: true,
+                billingInterval: interval,
+                priceId: session.PriceId);
             subscription.SetMetadataJson(session.MetadataJson);
             _repository.AddSubscription(subscription);
             entitlementId = subscription.Id;

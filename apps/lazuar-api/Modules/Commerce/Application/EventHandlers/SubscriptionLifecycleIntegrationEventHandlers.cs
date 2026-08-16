@@ -78,7 +78,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         bool? isFirstPayment)
     {
         var payloadElement = await BuildPayloadAsync(
-            subscriptionId, clientProfileId, productId, status, isFirstPayment);
+            subscriptionId, clientProfileId, productId, status, eventType, isFirstPayment);
 
         await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
             organizationId, TargetUrl: null, eventType, payloadElement));
@@ -90,6 +90,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         Guid clientProfileId,
         Guid productId,
         string status,
+        string eventType,
         bool? isFirstPayment)
     {
         var sub = await _repository.GetSubscriptionByIdAsync(subscriptionId);
@@ -101,7 +102,8 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
 
         if (sub != null)
         {
-            return CommerceWebhookPayload.From(sub, product, email, status, isFirstPayment);
+            var payloadStatus = eventType == "subscription.activated" ? sub.Status : status;
+            return CommerceWebhookPayload.From(sub, product, email, payloadStatus, isFirstPayment);
         }
 
         return CommerceWebhookPayload.Build(

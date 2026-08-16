@@ -30,7 +30,14 @@ public partial class CommerceQueryService
         string? DunningCampaignName,
         int CurrentDunningStepIndex,
         int? LastCompletedDayOffset,
-        DateTime? DunningPausedUntil
+        DateTime? DunningPausedUntil,
+        int Quantity = 1,
+        int? PendingQuantity = null,
+        Guid? PendingProductId = null,
+        string? PendingProductName = null,
+        decimal UnitAmount = 0,
+        DateTime? TrialEndsAt = null,
+        DateTime? CollectionPausedUntil = null
     );
 
     public async Task<PaginatedResponse<CommerceSubscriptionDto>> GetSubscribersAsync(
@@ -52,9 +59,13 @@ public partial class CommerceQueryService
                 d.""Name"" as DunningCampaignName,
                 s.""CurrentDunningStepIndex"",
                 s.""LastCompletedDayOffset"",
-                s.""DunningPausedUntil""
+                s.""DunningPausedUntil"",
+                s.""Quantity"", s.""PendingQuantity"", s.""PendingProductId"",
+                pp.""Name"" as PendingProductName,
+                s.""UnitAmount"", s.""TrialEndsAt"", s.""CollectionPausedUntil""
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
+            LEFT JOIN commerce.""Products"" pp ON s.""PendingProductId"" = pp.""Id""
             LEFT JOIN commerce.""DunningCampaigns"" d ON s.""CurrentDunningCampaignId"" = d.""Id""
             WHERE s.""OrganizationId"" = @OrgId 
             AND s.""Status"" != 'PENDING'
@@ -129,7 +140,14 @@ public partial class CommerceQueryService
             Dunning_campaign_name = s.DunningCampaignName,
             Current_dunning_step = s.LastCompletedDayOffset ?? s.CurrentDunningStepIndex,
             Dunning_paused_until = s.DunningPausedUntil.HasValue ? new DateTimeOffset(s.DunningPausedUntil.Value) : null,
-            Created_at = new DateTimeOffset(s.CreatedAt)
+            Created_at = new DateTimeOffset(s.CreatedAt),
+            Quantity = s.Quantity < 1 ? 1 : s.Quantity,
+            Pending_quantity = s.PendingQuantity,
+            Pending_product_id = s.PendingProductId?.ToString(),
+            Pending_product_name = s.PendingProductName,
+            Unit_amount = (double)s.UnitAmount,
+            Trial_ends_at = s.TrialEndsAt.HasValue ? new DateTimeOffset(s.TrialEndsAt.Value) : null,
+            Collection_paused_until = s.CollectionPausedUntil.HasValue ? new DateTimeOffset(s.CollectionPausedUntil.Value) : null
         };
     }
 }

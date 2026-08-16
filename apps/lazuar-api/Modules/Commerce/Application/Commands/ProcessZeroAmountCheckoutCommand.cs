@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Events;
+using Modules.Payments.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -53,9 +54,12 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             }
         }
 
-        var lineGross = product.Price * quantity;
+        var chosen = product.Prices.FirstOrDefault(p => p.Id == session.PriceId);
+        var unitAmount = chosen?.Amount ?? product.Price;
+        var lineGross = unitAmount * quantity;
         var lineDiscount = unitDiscount * quantity;
-        var finalPrice = Math.Max(0, lineGross - lineDiscount);
+        var isTrial = SubscriptionActivation.IsTrialOffer(product);
+        var finalPrice = isTrial ? 0m : Math.Max(0, lineGross - lineDiscount);
         if (finalPrice > 0)
         {
             throw new InvalidOperationException("This checkout session requires payment and cannot bypass the gateway.");
@@ -81,8 +85,16 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         else
         {
             var subscription = new Domain.Aggregates.Subscription(session.OrganizationId, session.ClientProfileId, product.Id);
-            var nextBilling = product.Interval == "yr" ? DateTime.UtcNow.AddYears(1) : DateTime.UtcNow.AddMonths(1);
-            subscription.Activate(DateTime.UtcNow, nextBilling, isReminderOnly: true);
+            var interval = chosen?.Interval ?? product.Interval;
+            var reminderOnly = !PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName);
+            SubscriptionActivation.Start(
+                subscription,
+                product,
+                quantity,
+                unitAmount,
+                reminderOnly: true,
+                billingInterval: interval,
+                priceId: session.PriceId);
             subscription.SetMetadataJson(session.MetadataJson);
             _repository.AddSubscription(subscription);
 

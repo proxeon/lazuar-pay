@@ -11,6 +11,7 @@ using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Queries;
 using Modules.Communications.Contracts;
 using Modules.Billing.Contracts;
@@ -63,7 +64,9 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             request.Email,
             request.CouponCode,
             request.Quantity,
-            request.SessionId);
+            request.SessionId,
+            request.Interval,
+            request.PriceId);
 
         if (idempotencyKey != null)
         {
@@ -167,6 +170,15 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         }
 
         var quantity = CommerceCheckoutQuantity.NormalizeOrThrow(request.Quantity, product);
+        var resolved = ResolveCheckoutPrice(product, request.PriceId, request.Interval);
+
+        if (product.TrialDays > 0 && string.Equals(resolved.Interval, "one_time", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Free trial is not available on one-time products.");
+        }
+
+        var isTrial = SubscriptionActivation.IsTrialOffer(product)
+            && resolved.Interval is "mo" or "yr";
 
         EnforceCheckoutConfiguration(product, request);
 
@@ -200,7 +212,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         decimal unitDiscount = 0m;
         Guid? couponId = null;
 
-        if (!string.IsNullOrWhiteSpace(request.CouponCode))
+        if (!isTrial && !string.IsNullOrWhiteSpace(request.CouponCode))
         {
             var coupon = await _repository.GetCouponByCodeWithLockAsync(tenantId.Value, request.CouponCode, ct);
             if (coupon == null)
@@ -208,13 +220,13 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 throw new InvalidOperationException($"Coupon with code '{request.CouponCode}' is invalid or expired.");
             }
 
-            coupon.Validate(product.Price, product.Id);
-            unitDiscount = coupon.CalculateDiscount(product.Price);
+            coupon.Validate(resolved.Amount, product.Id);
+            unitDiscount = coupon.CalculateDiscount(resolved.Amount);
             coupon.Reserve();
             couponId = coupon.Id;
         }
 
-        var unitNet = Math.Max(0, product.Price - unitDiscount);
+        var unitNet = isTrial ? 0m : Math.Max(0, resolved.Amount - unitDiscount);
         var merchantHasSst = false;
         if (_billingQueryService != null)
         {
@@ -232,11 +244,12 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             product.Id,
             couponId,
             DateTime.UtcNow.AddHours(24),
-            quantity
+            quantity,
+            resolved.PriceId
         );
 
         var isB2bRequired = !string.IsNullOrWhiteSpace(request.TaxId);
-        var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, product.Interval);
+        var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, resolved.Interval);
         if (isB2bRequired)
         {
             persistMeta["is_b2b_required"] = "true";
@@ -274,6 +287,36 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         if (lineNet == 0)
         {
+            var vaultingTrial = isTrial && PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName);
+            if (vaultingTrial)
+            {
+                var cancelUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}?cancelled=true";
+                var trialMetadata = CommerceCheckoutMetadata.MergeClientIntoGateway(
+                    request.Metadata,
+                    tenantId.Value,
+                    session.Id,
+                    isB2bRequired);
+                trialMetadata["client_profile_id"] = clientProfileId.ToString();
+                trialMetadata["type"] = "trial";
+                var trialQuery = new GenerateCheckoutSessionQuery(
+                    tenantId.Value,
+                    0m,
+                    product.Currency,
+                    product.Name,
+                    request.Email,
+                    successUrl,
+                    cancelUrl,
+                    trialMetadata,
+                    true,
+                    quantity,
+                    string.IsNullOrWhiteSpace(product.GatewayName) ? null : product.GatewayName
+                );
+                var trialUrl = await _mediator.Send(trialQuery, ct);
+                session.SetGatewayCheckoutUrl(trialUrl);
+                await _repository.SaveChangesAsync(ct);
+                return new CheckoutResultDto(trialUrl, false);
+            }
+
             var processZeroAmountCmd = new ProcessZeroAmountCheckoutCommand(tenantId.Value, session.Id);
             await _mediator.Send(processZeroAmountCmd, ct);
             session.SetGatewayCheckoutUrl(successUrl);
@@ -313,7 +356,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 successUrl,
                 cancelUrl,
                 metadata,
-                product.Interval != "one_time",
+                resolved.Interval != "one_time",
                 quantity,
                 preferredGateway
             );
@@ -324,6 +367,42 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
             return new CheckoutResultDto(checkoutUrl, false);
         }
+    }
+
+    internal static (decimal Amount, string Interval, Guid? PriceId) ResolveCheckoutPrice(
+        Domain.Aggregates.Product product,
+        Guid? priceId,
+        string? interval)
+    {
+        if (priceId.HasValue)
+        {
+            var byId = product.Prices.FirstOrDefault(p => p.Id == priceId.Value);
+            if (byId == null)
+            {
+                throw new InvalidOperationException("price_id is not valid for this product.");
+            }
+
+            return (byId.Amount, byId.Interval, byId.Id);
+        }
+
+        if (!string.IsNullOrWhiteSpace(interval))
+        {
+            var normalized = interval.Trim().ToLowerInvariant();
+            var byInterval = product.GetPrice(normalized);
+            if (byInterval == null)
+            {
+                if (string.Equals(product.Interval, normalized, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (product.Price, product.Interval, product.DefaultPrice()?.Id);
+                }
+
+                throw new InvalidOperationException($"This product has no {normalized} price.");
+            }
+
+            return (byInterval.Amount, byInterval.Interval, byInterval.Id);
+        }
+
+        return (product.Price, product.Interval, product.DefaultPrice()?.Id);
     }
 
     private static void EnforceCheckoutConfiguration(Domain.Aggregates.Product product, InitiateCheckoutCommand request)

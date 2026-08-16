@@ -173,7 +173,7 @@ public class BillingEngineJob : BackgroundService
         HashSet<Guid> failedIds,
         CancellationToken ct)
     {
-        var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+        var product = await db.Products.IgnoreQueryFilters().Include(p => p.Prices).FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
         if (product == null)
         {
             failedIds.Add(sub.Id);
@@ -187,6 +187,12 @@ public class BillingEngineJob : BackgroundService
         {
             failedIds.Add(sub.Id);
             _logger.LogInformation("Billing skipped one-time subscription {Id}.", sub.Id);
+            return;
+        }
+
+        if (sub.IsCollectionPaused(DateTime.UtcNow))
+        {
+            _logger.LogInformation("Billing skipped collection-paused subscription {Id} until {Until}.", sub.Id, sub.CollectionPausedUntil);
             return;
         }
 
@@ -204,6 +210,30 @@ public class BillingEngineJob : BackgroundService
                 sub.Id);
             return;
         }
+
+        if (sub.ApplyPendingPlanChange())
+        {
+            product = await db.Products.IgnoreQueryFilters().Include(p => p.Prices).FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+            if (product == null)
+            {
+                failedIds.Add(sub.Id);
+                _logger.LogWarning(
+                    "Billing skipped subscription {Id}: pending product {ProductId} is missing.",
+                    sub.Id, sub.ProductId);
+                return;
+            }
+
+            var pendingPrice = product.Prices.FirstOrDefault(p => p.Interval == product.Interval) ?? product.DefaultPrice();
+            sub.SetSnapshot(pendingPrice?.Amount ?? product.Price, sub.Quantity);
+            sub.SetBillingInterval(pendingPrice?.Interval ?? product.Interval);
+            if (pendingPrice != null)
+            {
+                sub.SetPriceId(pendingPrice.Id);
+            }
+        }
+
+        sub.ApplyPendingQuantity();
+        var chargeAmount = SubscriptionBillingAmount.Line(sub, product);
 
         var canCharge = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
                         && !sub.IsReminderOnly
@@ -229,7 +259,7 @@ public class BillingEngineJob : BackgroundService
                 await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                     sub.OrganizationId,
                     sub.Id,
-                    product.Price,
+                    chargeAmount,
                     product.Currency,
                     sub.VaultedCustomerId!,
                     sub.VaultedTokenId!,

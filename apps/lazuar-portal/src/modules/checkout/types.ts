@@ -17,6 +17,7 @@ export interface CheckoutContext {
   fulfillmentTargets: string[];
   quantity: number;
   quantityAdjustable: boolean;
+  trialDays?: number;
 }
 
 export interface CheckoutAuthContext {

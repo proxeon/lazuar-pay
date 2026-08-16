@@ -845,13 +845,31 @@ public class CommerceProductCompletenessTests
         await mediator.DidNotReceive().Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>());
     }
 
-    [TestCase("mo", "FIXED", 2)]
     [TestCase("mo", "FIXED", 3)]
     [TestCase("yr", "FIXED", 2)]
-    [TestCase("yr", "FIXED", 3)]
+    public async Task InitiateCheckout_FixedRecurring_NonOneQuantity_Persists(
+        string interval,
+        string pricingModel,
+        int quantity)
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: interval, pricingModel: pricingModel);
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(Guid.CreateVersion7());
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://gateway.test/pay");
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+
+        await handler.Handle(GuestCheckoutCommand(couponCode: null, quantity: quantity), CancellationToken.None);
+
+        repository.Received(1).AddCheckoutSession(Arg.Is<CheckoutSession>(s => s.Quantity == quantity));
+    }
+
     [TestCase("one_time", "PWYW", 2)]
     [TestCase("one_time", "PWYW", 3)]
-    public async Task InitiateCheckout_RecurringOrPwyw_NonOneQuantity_ThrowsAndDoesNotPersist(
+    public async Task InitiateCheckout_Pwyw_NonOneQuantity_ThrowsAndDoesNotPersist(
         string interval,
         string pricingModel,
         int quantity)
@@ -867,7 +885,7 @@ public class CommerceProductCompletenessTests
             GuestCheckoutCommand(couponCode: null, quantity: quantity),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*one-time*");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*fixed-price*");
         repository.DidNotReceive().AddCheckoutSession(Arg.Any<CheckoutSession>());
         await mediator.DidNotReceive().Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>());
     }

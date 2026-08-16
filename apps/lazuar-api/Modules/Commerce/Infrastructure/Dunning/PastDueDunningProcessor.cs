@@ -154,7 +154,7 @@ public sealed class PastDueDunningProcessor
                     await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                         sub.OrganizationId,
                         sub.Id,
-                        product.Price,
+                        Modules.Commerce.Application.SubscriptionBillingAmount.Line(sub, product),
                         product.Currency,
                         sub.VaultedCustomerId!,
                         sub.VaultedTokenId!,

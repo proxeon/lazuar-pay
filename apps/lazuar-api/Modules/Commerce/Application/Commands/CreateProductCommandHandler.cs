@@ -47,6 +47,8 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
         }
 
         product.SetSst(request.SstTaxType, request.SstRatePercent);
+        product.SetTrialDays(request.TrialDays);
+        product.SetYearlyPrice(request.YearlyPrice);
         _repository.AddProduct(product);
         await _repository.SaveChangesAsync(ct);
 

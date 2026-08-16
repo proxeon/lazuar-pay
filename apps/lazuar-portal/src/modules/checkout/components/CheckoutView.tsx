@@ -31,14 +31,20 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   const [couponError, setCouponError] = useState<string | null>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
   
+  const prices = product.prices ?? [];
+  const defaultInterval = product.interval;
+  const [selectedInterval, setSelectedInterval] = useState(defaultInterval);
+  const selectedPrice = prices.find((p) => p.interval === selectedInterval);
+  const unitPrice = selectedPrice?.amount ?? product.price;
   const [quantity, setQuantity] = useState(1);
-  const [customPrice, setCustomPrice] = useState<number>(product.price);
-  const quantityAdjustable = product.pricing_model === "FIXED" && product.interval === "one_time";
+  const [customPrice, setCustomPrice] = useState<number>(unitPrice);
+  const quantityAdjustable = product.pricing_model === "FIXED" && (product.interval === "one_time" || product.interval === "mo" || product.interval === "yr");
+  const trialDays = product.trial_days ?? 0;
   const [discountAmount, setDiscountAmount] = useState<number | null>(null);
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
 
-  const basePriceForQuantity = (product.pricing_model === "PWYW" ? customPrice : product.price) * quantity;
+  const basePriceForQuantity = (product.pricing_model === "PWYW" ? customPrice : unitPrice) * quantity;
 
   const handleApplyCoupon = async (code: string) => {
     setIsCouponValidating(true);
@@ -106,10 +112,10 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   const checkoutContext: CheckoutContext = {
     itemName: product.name,
     pricingModel: product.pricing_model,
-    basePrice: product.price,
+    basePrice: unitPrice,
     minimumPrice: product.minimum_price,
-    currentPrice: basePriceForQuantity,
-    interval: product.interval,
+    currentPrice: trialDays > 0 && selectedInterval !== "one_time" ? 0 : basePriceForQuantity,
+    interval: selectedInterval,
     supportsOffSession: product.supports_off_session,
     currency: product.currency,
     discountAmount: discountAmount,
@@ -118,6 +124,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     fulfillmentTargets: product.fulfillment_targets || [],
     quantity,
     quantityAdjustable,
+    trialDays: selectedInterval === "one_time" ? 0 : trialDays,
   };
 
   return (
@@ -134,6 +141,28 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
         </div>
       )}
 
+      {prices.length > 1 && (
+        <div className="mb-6 flex gap-2">
+          {prices.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => {
+                setSelectedInterval(p.interval);
+                handleRemoveCoupon();
+              }}
+              className={`h-9 px-4 text-[11px] font-bold uppercase tracking-widest border ${
+                selectedInterval === p.interval
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-foreground border-border"
+              }`}
+            >
+              {p.interval === "yr" ? "Yearly" : "Monthly"}
+            </button>
+          ))}
+        </div>
+      )}
+
       <CheckoutLayout
         formSlot={
           <CheckoutForm
@@ -143,6 +172,8 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
             isCouponApplied={isCouponApplied}
             couponCode={couponCode}
             quantity={quantityAdjustable ? quantity : 1}
+            interval={selectedInterval}
+            priceId={selectedPrice?.id}
             workspaceName={workspaceName}
             onSetGuestMode={handleSetGuestMode}
             onError={handleError}

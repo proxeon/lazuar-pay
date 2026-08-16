@@ -2107,6 +2107,8 @@ export interface components {
             saved_subscriptions: number;
             cash_flow_trend: components["schemas"]["Commerce.CashFlowTrendDto"][];
             payment_methods: components["schemas"]["Commerce.PaymentMethodDto"][];
+            /** Format: double */
+            arr?: number;
         };
         "Commerce.CommerceSubscriptionDto": {
             id: string;
@@ -2138,6 +2140,18 @@ export interface components {
             dunning_paused_until?: string;
             /** Format: date-time */
             created_at: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            pending_quantity?: number;
+            pending_product_id?: string;
+            pending_product_name?: string;
+            /** Format: double */
+            unit_amount?: number;
+            /** Format: date-time */
+            trial_ends_at?: string;
+            /** Format: date-time */
+            collection_paused_until?: string;
         };
         /**
          * @description Five Commerce lifecycle types Aura applies on POST /webhooks/hub/saas.
@@ -2243,6 +2257,12 @@ export interface components {
             requires_tax_id: boolean;
             requires_phone: boolean;
             fulfillment_targets: string[];
+            sst_tax_type?: string;
+            sst_rate_percent?: number;
+            /** Format: int32 */
+            trial_days?: number;
+            /** Format: double */
+            yearly_price?: number;
         };
         "Commerce.CustomCheckoutDto": {
             id: string;
@@ -2378,6 +2398,12 @@ export interface components {
             current_period_end?: string;
             cancel_at_period_end: boolean;
             is_reminder_only: boolean;
+            /** Format: int32 */
+            quantity?: number;
+            pending_product_id?: string;
+            pending_product_name?: string;
+            /** Format: date-time */
+            trial_ends_at?: string;
             /** @description HMAC download for the latest stored receipt / tax invoice, if any. */
             document_url?: string;
             document_label?: string;
@@ -2401,6 +2427,16 @@ export interface components {
             checkout_configuration: components["schemas"]["Commerce.CheckoutConfigurationDto"];
             sst_tax_type?: string;
             sst_rate_percent?: number;
+            /** Format: int32 */
+            trial_days?: number;
+            prices?: components["schemas"]["Commerce.ProductPriceDto"][];
+        };
+        "Commerce.ProductPriceDto": {
+            id: string;
+            interval: string;
+            /** Format: double */
+            amount: number;
+            is_default?: boolean;
         };
         "Commerce.PublicCheckoutRequestDto": {
             tenant_slug: string;
@@ -2424,6 +2460,8 @@ export interface components {
              *     Recurring and PWYW must be 1 (or omitted).
              */
             quantity?: number;
+            interval?: string;
+            price_id?: string;
             is_guest_checkout?: boolean;
             coupon_code?: string;
             /**
@@ -2565,6 +2603,12 @@ export interface components {
             requires_tax_id: boolean;
             requires_phone: boolean;
             fulfillment_targets: string[];
+            sst_tax_type?: string;
+            sst_rate_percent?: number;
+            /** Format: int32 */
+            trial_days?: number;
+            /** Format: double */
+            yearly_price?: number;
         };
         "Commerce.ValidateCouponResponseDto": {
             is_valid: boolean;

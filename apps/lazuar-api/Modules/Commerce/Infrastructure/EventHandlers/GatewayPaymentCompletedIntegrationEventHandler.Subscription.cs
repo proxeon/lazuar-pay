@@ -27,6 +27,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
 
         var productInfo = await _dbContext.Products
             .IgnoreQueryFilters()
+            .Include(p => p.Prices)
             .FirstOrDefaultAsync(p => p.Id == existingSub.ProductId && p.OrganizationId == @event.OrganizationId);
 
         if (productInfo == null || productInfo.Interval == "one_time")
@@ -61,9 +62,11 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             @event.Metadata);
 
         var periodEnd = DateTime.UtcNow;
-        var updatedNextBilling = productInfo.Interval == "yr"
-            ? DateTime.UtcNow.AddYears(1)
-            : DateTime.UtcNow.AddMonths(1);
+        var interval = SubscriptionBillingAmount.ResolveInterval(existingSub, productInfo);
+        var catalogUnit = existingSub.PriceId.HasValue
+            ? (productInfo.Prices.FirstOrDefault(p => p.Id == existingSub.PriceId)?.Amount ?? productInfo.Price)
+            : productInfo.Price;
+        var updatedNextBilling = SubscriptionBillingAmount.AdvanceFrom(DateTime.UtcNow, interval);
 
         if (wasSuspended)
         {
@@ -78,6 +81,8 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         {
             existingSub.Activate(periodEnd, updatedNextBilling, existingSub.IsReminderOnly);
         }
+
+        existingSub.RefreshSnapshot(catalogUnit);
 
         if (string.IsNullOrWhiteSpace(existingSub.MetadataJson))
         {

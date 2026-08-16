@@ -14,6 +14,8 @@ interface CheckoutFormProps {
   isCouponApplied: boolean;
   couponCode: string;
   quantity: number;
+  interval?: string;
+  priceId?: string;
   workspaceName?: string;
   onSetGuestMode: (isGuest: boolean) => void;
   onError: (errorMsg: string) => void;
@@ -26,6 +28,8 @@ export function CheckoutForm({
   isCouponApplied,
   couponCode,
   quantity,
+  interval,
+  priceId,
   workspaceName,
   onSetGuestMode,
   onError
@@ -82,6 +86,8 @@ export function CheckoutForm({
       state_code: config.requires_address ? stateCode : undefined,
       country_code: config.requires_address ? countryCode : undefined,
       quantity: quantity,
+      interval,
+      price_id: priceId,
       is_guest_checkout: authContext.isGuestMode,
       coupon_code: isCouponApplied ? couponCode : undefined
     };

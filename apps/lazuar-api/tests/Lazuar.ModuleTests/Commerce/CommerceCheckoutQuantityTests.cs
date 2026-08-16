@@ -39,36 +39,31 @@ public class CommerceCheckoutQuantityTests
     }
 
     [Test]
-    public void NormalizeOrThrow_ThreeOnMonthly_Throws()
+    public void NormalizeOrThrow_ThreeOnMonthly_ReturnsThree()
     {
-        var act = () => CommerceCheckoutQuantity.NormalizeOrThrow(3, Product("FIXED", "mo"));
-        act.Should().Throw<InvalidOperationException>().WithMessage("*one-time*");
+        CommerceCheckoutQuantity.NormalizeOrThrow(3, Product("FIXED", "mo")).Should().Be(3);
     }
 
     [Test]
-    public void NormalizeOrThrow_ThreeOnYearly_Throws()
+    public void NormalizeOrThrow_ThreeOnYearly_ReturnsThree()
     {
-        var act = () => CommerceCheckoutQuantity.NormalizeOrThrow(3, Product("FIXED", "yr"));
-        act.Should().Throw<InvalidOperationException>().WithMessage("*one-time*");
+        CommerceCheckoutQuantity.NormalizeOrThrow(3, Product("FIXED", "yr")).Should().Be(3);
     }
 
     [Test]
     public void NormalizeOrThrow_ThreeOnPwywOneTime_Throws()
     {
         var act = () => CommerceCheckoutQuantity.NormalizeOrThrow(3, Product("PWYW", "one_time"));
-        act.Should().Throw<InvalidOperationException>().WithMessage("*one-time*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*fixed-price*");
     }
 
-    [TestCase("FIXED", "mo", 2)]
-    [TestCase("FIXED", "mo", 99)]
-    [TestCase("FIXED", "yr", 2)]
-    [TestCase("FIXED", "yr", 99)]
     [TestCase("PWYW", "one_time", 2)]
     [TestCase("PWYW", "one_time", 99)]
-    public void NormalizeOrThrow_NonOneOnRecurringOrPwyw_Throws(string pricingModel, string interval, int quantity)
+    [TestCase("PWYW", "mo", 2)]
+    public void NormalizeOrThrow_NonOneOnPwyw_Throws(string pricingModel, string interval, int quantity)
     {
         var act = () => CommerceCheckoutQuantity.NormalizeOrThrow(quantity, Product(pricingModel, interval));
-        act.Should().Throw<InvalidOperationException>().WithMessage("*one-time*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*fixed-price*");
     }
 
     [Test]

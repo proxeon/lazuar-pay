@@ -140,7 +140,12 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
             {money(finalPriceToDisplay)}
           </span>
         </div>
-        {isRecurring && (
+        {isRecurring && (context.trialDays ?? 0) > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {t("summary.trialThen", { days: context.trialDays, amount: money(context.basePrice * context.quantity), interval: intervalLabel })}
+          </p>
+        )}
+        {isRecurring && !(context.trialDays && context.trialDays > 0) && (
           <p className="text-xs text-muted-foreground">
             {t("summary.thenRecurring", { amount: money(finalPriceToDisplay), interval: intervalLabel })}
           </p>

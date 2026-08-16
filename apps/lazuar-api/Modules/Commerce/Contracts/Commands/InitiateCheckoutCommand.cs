@@ -24,7 +24,9 @@ public record InitiateCheckoutCommand(
     IReadOnlyDictionary<string, string>? Metadata = null,
     string? IdempotencyKey = null,
     string? IdType = null,
-    string? IdValue = null
+    string? IdValue = null,
+    string? Interval = null,
+    Guid? PriceId = null
 ) : ICommand<CheckoutResultDto>
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();

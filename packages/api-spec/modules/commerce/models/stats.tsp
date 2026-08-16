@@ -13,6 +13,8 @@ model PaymentMethodDto {
 
 model CommerceStatsDto {
   mrr: float64;
+  /** Annualized committed recurring (MRR × 12). Not cash. */
+  arr?: float64;
   active_subscribers: int32;
   past_due_subscribers: int32;
   cancelled_subscribers: int32;

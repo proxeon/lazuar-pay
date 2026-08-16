@@ -23,6 +23,15 @@ model ProductDto {
   checkout_configuration: CheckoutConfigurationDto;
   sst_tax_type?: string;
   sst_rate_percent?: float64;
+  trial_days?: int32;
+  prices?: ProductPriceDto[];
+}
+
+model ProductPriceDto {
+  id: string;
+  interval: string;
+  amount: float64;
+  is_default?: boolean;
 }
 
 model CreateProductRequestDto {
@@ -39,6 +48,8 @@ model CreateProductRequestDto {
   requires_phone: boolean;
   sst_tax_type?: string;
   sst_rate_percent?: float64;
+  trial_days?: int32;
+  yearly_price?: float64;
   fulfillment_targets: string[];
 }
 
@@ -57,5 +68,7 @@ model UpdateProductRequestDto {
   requires_phone: boolean;
   sst_tax_type?: string;
   sst_rate_percent?: float64;
+  trial_days?: int32;
+  yearly_price?: float64;
   fulfillment_targets: string[];
 }

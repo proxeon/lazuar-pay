@@ -74,6 +74,8 @@ export default function DashboardPage() {
 
   const topMetrics = [
     { label: "Net Cash in Bank", value: formatMYR(financials?.net_revenue || 0), icon: DollarSign },
+    { label: "MRR", value: formatMYR(stats?.mrr || 0), icon: DollarSign, tip: "Committed monthly equivalent of active memberships. Not cash. Past-due is excluded." },
+    { label: "ARR", value: formatMYR(stats?.arr ?? ((stats?.mrr || 0) * 12)), icon: DollarSign, tip: "Committed monthly equivalent of active memberships. Not cash. Past-due is excluded." },
     { label: "Active Subscribers", value: stats?.active_subscribers || 0, icon: Users },
     { label: "Past Due", value: stats?.past_due_subscribers || 0, icon: AlertTriangle, alert: (stats?.past_due_subscribers || 0) > 0 },
     { label: "Cancellation Rate", value: `${stats?.churn_rate_percentage || 0}%`, icon: Activity },
@@ -171,7 +173,7 @@ export default function DashboardPage() {
             <div key={i} className={cn(
               "bg-white border p-4 flex flex-col justify-between",
               kpi.alert ? "border-amber-300 bg-amber-50/30" : "border-[#e5e5e5]"
-            )}>
+            )} title={"tip" in kpi ? kpi.tip : undefined}>
               <div className="flex justify-between items-start mb-3">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#71717a]">{kpi.label}</span>
                 <kpi.icon size={14} className={kpi.alert ? "text-amber-500" : "text-[#a1a1aa]"} />
@@ -186,6 +188,7 @@ export default function DashboardPage() {
           ))}
         </div>
         <p className="text-[10px] text-[#71717a] -mt-2">
+          MRR / ARR is the committed monthly equivalent of active memberships. Not cash. Past-due is excluded.{" "}
           Recovered is campaign-lifetime cash collected while PAST_DUE or SUSPENDED, not this month.{" "}
           <Link to="/commerce/dunning-campaigns" className="underline underline-offset-2 hover:text-[#09090b]">
             Dunning Campaigns

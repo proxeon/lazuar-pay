@@ -47,7 +47,7 @@ public static class RenewalCheckoutIssuer
 
         var url = await mediator.Send(new GenerateCheckoutSessionQuery(
             sub.OrganizationId,
-            product.Price,
+            SubscriptionBillingAmount.Line(sub, product),
             product.Currency,
             product.Name,
             customerEmail,

@@ -55,6 +55,12 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand>
             request.FulfillmentTargets
         );
         product.SetSst(request.SstTaxType, request.SstRatePercent);
+        if (request.TrialDays.HasValue)
+        {
+            product.SetTrialDays(request.TrialDays.Value);
+        }
+
+        product.SetYearlyPrice(request.YearlyPrice);
 
         await _repository.SaveChangesAsync(ct);
     }

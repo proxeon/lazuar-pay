@@ -30,6 +30,11 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     /// <summary>Buyer quantity for product checkout. Custom sessions leave this at 1; line qty lives in jsonb.</summary>
     public int Quantity { get; private set; } = 1;
 
+    public Guid? PriceId { get; private set; }
+
+    /// <summary>Reserved for scheduled / quote due dates (LP-105).</summary>
+    public DateTime? DueAt { get; private set; }
+
     public string? IdempotencyKey { get; private set; }
     public string? RequestFingerprint { get; private set; }
     public string? GatewayCheckoutUrl { get; private set; }
@@ -53,7 +58,8 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         Guid productId,
         Guid? couponId,
         DateTime expiresAt,
-        int quantity = 1)
+        int quantity = 1,
+        Guid? priceId = null)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -65,6 +71,7 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         ExpiresAt = expiresAt;
         IsB2bRequired = false;
         Quantity = quantity < 1 ? 1 : quantity;
+        PriceId = priceId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -146,6 +153,12 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         }
 
         MetadataJson = metadataJson;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetPriceId(Guid? priceId)
+    {
+        PriceId = priceId;
         UpdatedAt = DateTime.UtcNow;
     }
 

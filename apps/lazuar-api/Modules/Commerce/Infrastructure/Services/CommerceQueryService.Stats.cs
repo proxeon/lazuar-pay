@@ -5,12 +5,21 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Lazuar.ApiTypes;
+using Modules.Commerce.Application;
 
 namespace Modules.Commerce.Infrastructure.Services;
 
 public partial class CommerceQueryService
 {
-    private record SubStatsDto(string Status, DateTime CreatedAt, DateTime UpdatedAt, decimal Price, string Interval);
+    private record SubStatsDto(
+        string Status,
+        DateTime CreatedAt,
+        DateTime UpdatedAt,
+        decimal Price,
+        string Interval,
+        decimal UnitAmount = 0,
+        int Quantity = 1,
+        DateTime? CollectionPausedUntil = null);
 
     private record TxRevenueDto(decimal Amount, string Status, DateTime CreatedAt, string RecordedByName);
 
@@ -24,17 +33,25 @@ public partial class CommerceQueryService
         const string subSql = @"
             SELECT 
                 s.""Status"" as Status, s.""CreatedAt"" as CreatedAt, s.""UpdatedAt"" as UpdatedAt, 
-                p.""Price"" as Price, p.""Interval"" as Interval
+                p.""Price"" as Price, p.""Interval"" as Interval,
+                s.""UnitAmount"" as UnitAmount, s.""Quantity"" as Quantity,
+                s.""CollectionPausedUntil"" as CollectionPausedUntil
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
             WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'";
 
         var subs = (await connection.QueryAsync<SubStatsDto>(subSql, new { OrgId = organizationId })).ToList();
 
-        var activeSubs = subs.Where(s => s.Status == "ACTIVE" || s.Status == "PAST_DUE").ToList();
-        var mrr = activeSubs.Sum(s => s.Interval == "yr" ? s.Price / 12m : s.Price);
-
         var now = DateTime.UtcNow;
+        var activeSubs = subs.Where(s => s.Status == "ACTIVE" || s.Status == "PAST_DUE").ToList();
+        var mrr = subs.Sum(s => CommerceMrr.MonthlyEquivalent(
+            s.Status,
+            s.CollectionPausedUntil,
+            now,
+            s.Interval,
+            s.UnitAmount,
+            s.Quantity,
+            s.Price));
         var thirtyDaysAgo = now.AddDays(-30);
         var cancelledLast30 = subs.Count(s => s.Status == "CANCELED" && s.UpdatedAt >= thirtyDaysAgo);
         var newActiveLast30 = activeSubs.Count(s => s.CreatedAt >= thirtyDaysAgo);
@@ -101,6 +118,7 @@ public partial class CommerceQueryService
         return new CommerceStatsDto
         {
             Mrr = (double)mrr,
+            Arr = (double)(mrr * 12m),
             Active_subscribers = activeSubs.Count,
             Past_due_subscribers = subs.Count(s => s.Status == "PAST_DUE"),
             Cancelled_subscribers = subs.Count(s => s.Status == "CANCELED"),

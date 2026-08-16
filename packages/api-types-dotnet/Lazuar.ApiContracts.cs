@@ -1121,6 +1121,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("mrr")]
         public double Mrr { get; set; } = default!;
 
+        /// <summary>
+        /// Annualized committed recurring (MRR × 12). Not cash.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("arr")]
+        public double? Arr { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("active_subscribers")]
         public int Active_subscribers { get; set; } = default!;
 
@@ -1260,6 +1266,27 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("created_at")]
         public System.DateTimeOffset Created_at { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
+        public int? Quantity { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("pending_quantity")]
+        public int? Pending_quantity { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("pending_product_id")]
+        public string? Pending_product_id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("pending_product_name")]
+        public string? Pending_product_name { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("unit_amount")]
+        public double? Unit_amount { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("trial_ends_at")]
+        public System.DateTimeOffset? Trial_ends_at { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("collection_paused_until")]
+        public System.DateTimeOffset? Collection_paused_until { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
@@ -1692,6 +1719,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("sst_rate_percent")]
         public double? Sst_rate_percent { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("trial_days")]
+        public int? Trial_days { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("yearly_price")]
+        public double? Yearly_price { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();
 
@@ -2101,6 +2134,114 @@ namespace Lazuar.ApiTypes
 
     }
 
+    public partial class ProductPriceDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("interval")]
+        public string Interval { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("is_default")]
+        public bool? Is_default { get; set; }
+    }
+
+    public partial class ChangePlanRequestDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
+        public string? Product_id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("prorate")]
+        public bool? Prorate { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("apply")]
+        public string? Apply { get; set; }
+    }
+
+    public partial class SetQuantityRequestDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
+        public int Quantity { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("prorate")]
+        public bool? Prorate { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("apply")]
+        public string? Apply { get; set; }
+    }
+
+    public partial class PauseCollectionRequestDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("resume_on")]
+        public System.DateTimeOffset Resume_on { get; set; }
+    }
+
+    public partial class PlanChangePreviewDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("current_product_id")]
+        public string Current_product_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("current_amount")]
+        public double Current_amount { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("interval")]
+        public string Interval { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("next_product_id")]
+        public string Next_product_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("next_amount")]
+        public double Next_amount { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("effective_at")]
+        public System.DateTimeOffset? Effective_at { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount_due_now")]
+        public double Amount_due_now { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("policy")]
+        public string Policy { get; set; } = default!;
+    }
+
+    public partial class PortalPlanDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("interval")]
+        public string Interval { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        public double Amount { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        public string Currency { get; set; } = default!;
+    }
+
+    public partial class PortalChangePlanRequest
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("subscription_id")]
+        public string Subscription_id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("product_id")]
+        public string? Product_id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("prorate")]
+        public bool? Prorate { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("apply")]
+        public string? Apply { get; set; }
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.1.0.0 (NJsonSchema v11.0.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PaymentConfigDto
     {
@@ -2412,6 +2553,18 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("is_reminder_only")]
         public bool Is_reminder_only { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("quantity")]
+        public int? Quantity { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("pending_product_id")]
+        public string? Pending_product_id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("pending_product_name")]
+        public string? Pending_product_name { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("trial_ends_at")]
+        public System.DateTimeOffset? Trial_ends_at { get; set; }
+
         /// <summary>
         /// HMAC download for the latest stored receipt / tax invoice, if any.
         /// </summary>
@@ -2503,6 +2656,12 @@ namespace Lazuar.ApiTypes
         [System.Text.Json.Serialization.JsonPropertyName("sst_rate_percent")]
         public double? Sst_rate_percent { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("trial_days")]
+        public int? Trial_days { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("prices")]
+        public System.Collections.Generic.List<ProductPriceDto> Prices { get; set; } = new System.Collections.Generic.List<ProductPriceDto>();
+
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
 
         [System.Text.Json.Serialization.JsonExtensionData]
@@ -2587,6 +2746,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("quantity")]
         public int? Quantity { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("interval")]
+        public string? Interval { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("price_id")]
+        public string? Price_id { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("is_guest_checkout")]
         public bool? Is_guest_checkout { get; set; } = default!;
@@ -3145,6 +3310,12 @@ namespace Lazuar.ApiTypes
 
         [System.Text.Json.Serialization.JsonPropertyName("sst_rate_percent")]
         public double? Sst_rate_percent { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("trial_days")]
+        public int? Trial_days { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("yearly_price")]
+        public double? Yearly_price { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("fulfillment_targets")]
         public System.Collections.Generic.List<string> Fulfillment_targets { get; set; } = new System.Collections.Generic.List<string>();

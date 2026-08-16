@@ -40,6 +40,41 @@ model CommerceSubscriptionDto {
   current_dunning_step?: int32;
   dunning_paused_until?: utcDateTime;
   created_at: utcDateTime;
+  quantity?: int32;
+  pending_quantity?: int32;
+  pending_product_id?: string;
+  pending_product_name?: string;
+  unit_amount?: float64;
+  trial_ends_at?: utcDateTime;
+  collection_paused_until?: utcDateTime;
+}
+
+model ChangePlanRequestDto {
+  product_id?: string;
+  prorate?: boolean;
+  apply?: string;
+}
+
+model SetQuantityRequestDto {
+  quantity: int32;
+  prorate?: boolean;
+  apply?: string;
+}
+
+model PauseCollectionRequestDto {
+  resume_on: utcDateTime;
+}
+
+model PlanChangePreviewDto {
+  current_product_id: string;
+  current_amount: float64;
+  currency: string;
+  interval: string;
+  next_product_id: string;
+  next_amount: float64;
+  effective_at?: utcDateTime;
+  amount_due_now: float64;
+  policy: string;
 }
 
 model TransactionLogDto {

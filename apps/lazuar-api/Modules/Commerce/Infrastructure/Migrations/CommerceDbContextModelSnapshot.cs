@@ -124,6 +124,9 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("DocumentNumber")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
@@ -151,6 +154,9 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PriceId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
 
@@ -175,6 +181,8 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "IdempotencyKey")
                         .IsUnique()
                         .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+                    b.HasIndex("PriceId");
 
                     b.HasIndex("Status");
 
@@ -405,6 +413,11 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .HasColumnType("character varying(2)")
                         .HasDefaultValue("06");
 
+                    b.Property<int>("TrialDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -414,6 +427,37 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Products", "commerce");
+                });
+
+            modelBuilder.Entity("Modules.Commerce.Domain.Entities.ProductPrice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "Interval")
+                        .IsUnique();
+
+                    b.ToTable("ProductPrices", "commerce");
                 });
 
             modelBuilder.Entity("Modules.Commerce.Domain.Aggregates.Subscription", b =>
@@ -449,11 +493,23 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<string>("BillingInterval")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime?>("CollectionPausedUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("DunningCampaignSnapshotJson")
                         .HasColumnType("jsonb");
 
                     b.Property<DateTime?>("DunningPausedUntil")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("HasOpenDispute")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsReminderOnly")
                         .ValueGeneratedOnAdd()
@@ -472,8 +528,22 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PendingProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("PendingQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PriceId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -481,6 +551,15 @@ namespace Modules.Commerce.Infrastructure.Migrations
 
                     b.Property<DateTime?>("SuspendedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("TrialEndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("UnitAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasDefaultValue(0m);
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -740,6 +819,17 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         });
 
                     b.Navigation("CheckoutConfiguration")
+                        .IsRequired();
+
+                    b.Navigation("Prices");
+                });
+
+            modelBuilder.Entity("Modules.Commerce.Domain.Entities.ProductPrice", b =>
+                {
+                    b.HasOne("Modules.Commerce.Domain.Aggregates.Product", null)
+                        .WithMany("Prices")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
