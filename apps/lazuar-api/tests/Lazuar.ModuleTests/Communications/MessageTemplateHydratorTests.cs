@@ -100,7 +100,7 @@ public class MessageTemplateHydratorTests
     {
         var links = MessageLinkBuilder.Build("https://portal.test", "acme", "sub-1", "tok");
         links.RenewalLink.Should().Be(links.UpdatePaymentLink);
-        links.UpdatePaymentLink.Should().Be("https://portal.test/acme/update-payment/sub-1");
+        links.UpdatePaymentLink.Should().Be("https://portal.test/acme/update-payment/sub-1?token=tok");
         links.PortalMagicLink.Should().Be("https://portal.test/acme/portal?token=tok");
     }
 

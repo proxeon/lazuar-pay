@@ -63,10 +63,10 @@ public class DunningTemplateVariableSubstitutionTests
             && e.HtmlEmailBody.Contains("3")
             && e.HtmlEmailBody.Contains("Aisha Merchant")
             && e.HtmlEmailBody.Contains("Acme Studio")
-            && e.HtmlEmailBody.Contains($"https://portal.test/acme/update-payment/{subscriptionId}")
+            && e.HtmlEmailBody.Contains($"https://portal.test/acme/update-payment/{subscriptionId}?token=magic-token")
             && e.HtmlEmailBody.Contains("{{update_payment_link}}") == false
             && e.HtmlEmailBody.Contains("Renew:")
-            && e.HtmlEmailBody.Contains($"href=\"https://portal.test/acme/update-payment/{subscriptionId}\"")
+            && e.HtmlEmailBody.Contains($"href=\"https://portal.test/acme/update-payment/{subscriptionId}?token=magic-token\"")
             && e.HtmlEmailBody.Contains("href=\"https://portal.test/acme/portal\"") == false
             && e.HtmlEmailBody.Contains("https://portal.test/acme/portal?token=magic-token")
             && e.HtmlEmailBody.Contains("{{portal_magic_link}}") == false
@@ -356,7 +356,9 @@ public class DunningTemplateVariableSubstitutionTests
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
         var eventBus = Substitute.For<IEventBus>();
-        var handler = CreateHandler(db, crm, one, eventBus, Substitute.For<IMagicLinkTokenService>());
+        var tokens = Substitute.For<IMagicLinkTokenService>();
+        tokens.GenerateToken(subscriptionId).Returns("magic-token");
+        var handler = CreateHandler(db, crm, one, eventBus, tokens);
 
         var payload = JsonSerializer.SerializeToElement(new
         {
@@ -374,7 +376,8 @@ public class DunningTemplateVariableSubstitutionTests
         await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
             e.HtmlEmailBody != null
             && e.HtmlEmailBody.Contains(hosted)
-            && e.HtmlEmailBody.Contains($"/update-payment/{subscriptionId}")
+            && e.HtmlEmailBody.Contains($"{hosted}?token=") == false
+            && e.HtmlEmailBody.Contains($"/update-payment/{subscriptionId}?token=magic-token")
             && e.HtmlEmailBody.Contains("{{renewal_link}}") == false
             && e.HtmlEmailBody.Contains("{{update_payment_link}}") == false
             && e.HtmlEmailBody.Contains("{{checkout_url}}") == false));
@@ -394,7 +397,9 @@ public class DunningTemplateVariableSubstitutionTests
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
         var eventBus = Substitute.For<IEventBus>();
-        var handler = CreateHandler(db, crm, one, eventBus, Substitute.For<IMagicLinkTokenService>());
+        var tokens = Substitute.For<IMagicLinkTokenService>();
+        tokens.GenerateToken(subscriptionId).Returns("magic-token");
+        var handler = CreateHandler(db, crm, one, eventBus, tokens);
 
         var payload = JsonSerializer.SerializeToElement(new
         {
@@ -408,7 +413,7 @@ public class DunningTemplateVariableSubstitutionTests
         await handler.HandleAsync(new FulfillmentRequestedIntegrationEvent(
             orgId, "COMMUNICATIONS", "reminder.dunning", payload));
 
-        var expectedPage = $"https://portal.test/acme/update-payment/{subscriptionId}";
+        var expectedPage = $"https://portal.test/acme/update-payment/{subscriptionId}?token=magic-token";
         await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
             e.HtmlEmailBody != null
             && e.HtmlEmailBody.Contains(expectedPage)

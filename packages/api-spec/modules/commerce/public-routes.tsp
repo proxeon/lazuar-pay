@@ -146,7 +146,7 @@ interface PublicCommerceOperations {
   @get
   @route("/checkout/{subId}/arrears")
   @doc("Arrears summary for update-payment flows.")
-  getArrearsSummary(@path subId: string):
+  getArrearsSummary(@path subId: string, @query token: string):
     | ArrearsSummaryDto
     | LazuarApi.Core.ProblemDetailsResponse;
 
@@ -156,6 +156,7 @@ interface PublicCommerceOperations {
   updatePayment(
     @header("Idempotency-Key") idempotencyKey?: string,
     @path subId: string,
+    @query token: string,
   ):
     | CheckoutResponse
     | LazuarApi.Core.ProblemDetailsResponse;

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
@@ -40,6 +41,7 @@ public class BillingEngineJobTests
     private IMediator _mediator = null!;
     private ICrmQueryService _crm = null!;
     private IOneQueryService _one = null!;
+    private IMagicLinkTokenService _tokens = null!;
     private Guid _orgId = Guid.Empty;
 
     [SetUp]
@@ -58,6 +60,8 @@ public class BillingEngineJobTests
         _mediator = Substitute.For<IMediator>();
         _crm = Substitute.For<ICrmQueryService>();
         _one = Substitute.For<IOneQueryService>();
+        _tokens = Substitute.For<IMagicLinkTokenService>();
+        _tokens.GenerateToken(Arg.Any<Guid>()).Returns("mint-token");
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -71,6 +75,7 @@ public class BillingEngineJobTests
         services.AddSingleton(_mediator);
         services.AddSingleton(_crm);
         services.AddSingleton(_one);
+        services.AddSingleton(_tokens);
         services.AddSingleton<IConfiguration>(config);
         _sp = services.BuildServiceProvider();
 
@@ -303,7 +308,7 @@ public class BillingEngineJobTests
             && q.Metadata["subscription_id"] == sub.Id.ToString()
             && q.Metadata["tenant_id"] == _orgId.ToString()
             && q.SuccessUrl == "https://portal.test/acme/portal"
-            && q.CancelUrl == $"https://portal.test/acme/update-payment/{sub.Id}"),
+            && q.CancelUrl == $"https://portal.test/acme/update-payment/{sub.Id}?token=mint-token"),
             Arg.Any<CancellationToken>());
 
         await _eventBus.Received().PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>

@@ -12110,7 +12110,9 @@ export interface operations {
     };
     PublicCommerceOperations_getArrearsSummary: {
         parameters: {
-            query?: never;
+            query: {
+                token: string;
+            };
             header?: never;
             path: {
                 subId: string;
@@ -12246,7 +12248,9 @@ export interface operations {
     };
     PublicCommerceOperations_updatePayment: {
         parameters: {
-            query?: never;
+            query: {
+                token: string;
+            };
             header?: {
                 "Idempotency-Key"?: string;
             };

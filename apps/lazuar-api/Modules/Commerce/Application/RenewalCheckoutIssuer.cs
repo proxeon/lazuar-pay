@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.Extensions.Configuration;
+using Modules.Commerce.Contracts;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts.Queries;
@@ -19,6 +20,7 @@ public static class RenewalCheckoutIssuer
         IMediator mediator,
         IOneQueryService one,
         IConfiguration? config,
+        IMagicLinkTokenService tokenService,
         Subscription sub,
         Product product,
         string customerEmail,
@@ -26,6 +28,7 @@ public static class RenewalCheckoutIssuer
     {
         ArgumentNullException.ThrowIfNull(mediator);
         ArgumentNullException.ThrowIfNull(one);
+        ArgumentNullException.ThrowIfNull(tokenService);
         ArgumentNullException.ThrowIfNull(sub);
         ArgumentNullException.ThrowIfNull(product);
         ArgumentException.ThrowIfNullOrWhiteSpace(customerEmail);
@@ -36,7 +39,8 @@ public static class RenewalCheckoutIssuer
 
         var clientUrl = config?["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
         var successUrl = $"{clientUrl}/{workspace.Slug}/portal";
-        var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{sub.Id}";
+        var magicToken = tokenService.GenerateToken(sub.Id);
+        var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{sub.Id}?token={magicToken}";
 
         var metadata = new Dictionary<string, string>
         {

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Modules.Commerce.Application;
+using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
@@ -76,6 +77,7 @@ public class BillingEngineJob : BackgroundService
             var mediator = scope.ServiceProvider.GetService<IMediator>();
             var one = scope.ServiceProvider.GetService<IOneQueryService>();
             var config = scope.ServiceProvider.GetService<IConfiguration>();
+            var tokens = scope.ServiceProvider.GetService<IMagicLinkTokenService>();
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             try
@@ -99,7 +101,7 @@ public class BillingEngineJob : BackgroundService
 
                 try
                 {
-                    await ProcessOneSubscriptionAsync(db, eventBus, crm, mediator, one, config, sub, failedIds, ct);
+                    await ProcessOneSubscriptionAsync(db, eventBus, crm, mediator, one, config, tokens, sub, failedIds, ct);
                     await db.SaveChangesAsync(ct);
                     if (tx != null) await tx.CommitAsync(ct);
                 }
@@ -171,6 +173,7 @@ public class BillingEngineJob : BackgroundService
         IMediator? mediator,
         IOneQueryService? one,
         IConfiguration? config,
+        IMagicLinkTokenService? tokens,
         Subscription sub,
         HashSet<Guid> failedIds,
         CancellationToken ct)
@@ -295,13 +298,13 @@ public class BillingEngineJob : BackgroundService
         }
         else
         {
-            if (mediator == null || one == null)
+            if (mediator == null || one == null || tokens == null)
             {
                 throw new InvalidOperationException(
-                    "Cannot mint a renewal checkout: IMediator and IOneQueryService are required.");
+                    "Cannot mint a renewal checkout: IMediator, IOneQueryService, and IMagicLinkTokenService are required.");
             }
 
-            checkoutUrl = await RenewalCheckoutIssuer.MintAsync(mediator, one, config, sub, product, email, ct);
+            checkoutUrl = await RenewalCheckoutIssuer.MintAsync(mediator, one, config, tokens, sub, product, email, ct);
             sub.SetCurrentRenewalCheckout(checkoutUrl, sub.NextBillingDate!.Value);
         }
 

@@ -31,6 +31,10 @@ public static class MessageLinkBuilder
         var updatePaymentLink = string.IsNullOrEmpty(subId)
             ? $"{portalBase}/{workspaceSlug}/update-payment"
             : $"{portalBase}/{workspaceSlug}/update-payment/{subId}";
+        if (!string.IsNullOrEmpty(magicToken))
+        {
+            updatePaymentLink += $"?token={magicToken}";
+        }
         var portalPath = $"{portalBase}/{workspaceSlug}/portal";
         var portalMagicLink = string.IsNullOrEmpty(magicToken)
             ? portalPath

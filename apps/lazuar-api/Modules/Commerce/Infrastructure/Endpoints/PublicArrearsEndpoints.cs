@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.Commerce.Application;
+using Modules.Commerce.Contracts;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 using Modules.Payments.Contracts;
@@ -22,10 +24,18 @@ public static class PublicArrearsEndpoints
 {
     public static RouteGroupBuilder MapPublicArrearsEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/checkout/{subId:guid}/arrears", async Task<Results<Ok<ArrearsSummaryDto>, NotFound>> (
+        group.MapGet("/checkout/{subId:guid}/arrears", async Task<Results<Ok<ArrearsSummaryDto>, NotFound, UnauthorizedHttpResult>> (
             Guid subId,
+            [FromQuery] string token,
+            IMagicLinkTokenService tokenService,
+            ICommerceRepository repository,
             [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory sqlFactory) =>
         {
+            if (!await ArrearsAccess.IsAuthorizedAsync(tokenService, repository, token, subId))
+            {
+                return TypedResults.Unauthorized();
+            }
+
             using var connection = sqlFactory.CreateConnection();
             var query = @"
                 SELECT p.""Name"" as ProductName,
@@ -52,14 +62,22 @@ public static class PublicArrearsEndpoints
             return TypedResults.Ok(dto);
         });
 
-        group.MapPost("/checkout/{subId:guid}/update-payment", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>>> (
+        group.MapPost("/checkout/{subId:guid}/update-payment", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>, UnauthorizedHttpResult>> (
             Guid subId,
+            [FromQuery] string token,
             [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory sqlFactory,
             ICrmQueryService crmQueryService,
             IOneQueryService oneQueryService,
+            IMagicLinkTokenService tokenService,
+            ICommerceRepository repository,
             IMediator mediator,
             IConfiguration config) =>
         {
+            if (!await ArrearsAccess.IsAuthorizedAsync(tokenService, repository, token, subId))
+            {
+                return TypedResults.Unauthorized();
+            }
+
             // L-03: commerce-owned SQL only; CRM email + One tenant slug via contracts ports.
             using var connection = sqlFactory.CreateConnection();
             var query = @"
@@ -113,7 +131,7 @@ public static class PublicArrearsEndpoints
 
             var clientUrl = config["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
             var successUrl = $"{clientUrl}/{workspace.Slug}/portal";
-            var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}";
+            var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}?token={token}";
 
             var isActiveUpdate = sub.Status == "ACTIVE";
             var chargeAmount = isActiveUpdate ? 1m : sub.Price;

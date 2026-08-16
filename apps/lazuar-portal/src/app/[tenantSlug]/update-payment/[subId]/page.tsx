@@ -6,14 +6,22 @@ import Link from "next/link";
 
 export default async function UpdatePaymentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tenantSlug: string; subId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { tenantSlug, subId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const token = resolvedSearchParams.token as string | undefined;
+  if (!token) {
+    notFound();
+  }
+
   const branding = await fetchWorkspaceBranding(tenantSlug);
 
   const { data, error } = await serverClient.GET("/public/commerce/checkout/{subId}/arrears", {
-    params: { path: { subId } },
+    params: { path: { subId }, query: { token } },
     next: { revalidate: 0 }
   });
 
@@ -30,7 +38,7 @@ export default async function UpdatePaymentPage({
     "use server";
     const { data: checkoutData, error: checkoutError } = await serverClient.POST(
       "/public/commerce/checkout/{subId}/update-payment",
-      { params: { path: { subId } } },
+      { params: { path: { subId }, query: { token } } },
     );
 
     if (checkoutData?.url) {
@@ -38,7 +46,7 @@ export default async function UpdatePaymentPage({
     }
 
     if (checkoutError) {
-      redirect(`/${tenantSlug}/update-payment/${subId}?err=1`);
+      redirect(`/${tenantSlug}/update-payment/${subId}?token=${token}&err=1`);
     }
   }
 
