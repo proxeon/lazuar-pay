@@ -58,14 +58,15 @@ public class GatewayRefundCompletedHandlerTests
     }
 
     private static GatewayRefundCompletedIntegrationEvent RefundEvent(
-        Guid orgId, Guid paymentRecordId, string gatewayTxId, decimal amount, decimal tax = 0m, decimal fee = 0m) =>
+        Guid orgId, Guid paymentRecordId, string gatewayTxId, decimal amount, decimal tax = 0m, decimal fee = 0m,
+        string currency = "MYR") =>
         new(
             OrganizationId: orgId,
             SubscriptionId: Guid.CreateVersion7(),
             PaymentRecordId: paymentRecordId,
             GatewayTransactionId: gatewayTxId,
             RefundedAmount: amount,
-            Currency: "MYR",
+            Currency: currency,
             RefundedFee: fee,
             NetRefundedAmount: amount - fee,
             TaxAmount: tax);
@@ -152,6 +153,33 @@ public class GatewayRefundCompletedHandlerTests
             await _db.LedgerEntries.IgnoreQueryFilters()
                 .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
             Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task UsdSale_RefundCopiesFxIntoBaseCurrency()
+    {
+        const string tx = "txn_usd";
+        var sale = new LedgerEntry(_orgId, LedgerReferenceTypes.GatewayPayment, tx, "sale", "B2C");
+        sale.AddLine(AccountTypes.AssetCash, 100m, "USD", 470m, "MYR");
+        sale.AddLine(AccountTypes.RevenueGross, -100m, "USD", -470m, "MYR");
+        sale.ValidateBalanced();
+        sale.AssignB2cReceipt("RCPT-USD-1");
+        _db.LedgerEntries.Add(sale);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(RefundEvent(_orgId, Guid.CreateVersion7(), tx, amount: 100m, currency: "USD"));
+
+        var refund = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
+            .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund);
+
+        var cash = refund.Lines.Single(l => l.AccountType == AccountTypes.AssetCash);
+        Assert.That(cash.Amount, Is.EqualTo(-100m));
+        Assert.That(cash.Currency, Is.EqualTo("USD"));
+        Assert.That(cash.BaseCurrencyAmount, Is.EqualTo(-470m));
+        Assert.That(cash.BaseCurrency, Is.EqualTo("MYR"));
+        var contra = refund.Lines.Single(l => l.AccountType == AccountTypes.ContraRevenueRefunds);
+        Assert.That(contra.BaseCurrencyAmount, Is.EqualTo(470m));
+        Assert.That(contra.BaseCurrency, Is.EqualTo("MYR"));
     }
 
     [Test]

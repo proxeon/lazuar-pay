@@ -42,6 +42,7 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
             return;
 
         var taxRefund = await ResolveTaxRefundAmountAsync(@event);
+        var (fxRate, baseCurrency) = await ResolveFxAsync(@event);
 
         async Task PersistAsync(CancellationToken ct)
         {
@@ -54,18 +55,18 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
             var cashOutflow = @event.RefundedAmount - @event.RefundedFee;
             var grossRefund = @event.RefundedAmount - taxRefund;
 
-            entry.AddLine(AccountTypes.AssetCash, -cashOutflow, @event.Currency, -cashOutflow, @event.Currency);
+            entry.AddLine(AccountTypes.AssetCash, -cashOutflow, @event.Currency, -cashOutflow * fxRate, baseCurrency);
 
             if (@event.RefundedFee > 0)
             {
-                entry.AddLine(AccountTypes.ExpenseGatewayFee, -@event.RefundedFee, @event.Currency, -@event.RefundedFee, @event.Currency);
+                entry.AddLine(AccountTypes.ExpenseGatewayFee, -@event.RefundedFee, @event.Currency, -@event.RefundedFee * fxRate, baseCurrency);
             }
 
-            entry.AddLine(AccountTypes.ContraRevenueRefunds, grossRefund, @event.Currency, grossRefund, @event.Currency);
+            entry.AddLine(AccountTypes.ContraRevenueRefunds, grossRefund, @event.Currency, grossRefund * fxRate, baseCurrency);
 
             if (taxRefund > 0)
             {
-                entry.AddLine(AccountTypes.LiabilityTaxPayable, taxRefund, @event.Currency, taxRefund, @event.Currency);
+                entry.AddLine(AccountTypes.LiabilityTaxPayable, taxRefund, @event.Currency, taxRefund * fxRate, baseCurrency);
             }
 
             entry.ValidateBalanced();
@@ -133,5 +134,37 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
             return originalTax;
 
         return Math.Round(@event.RefundedAmount / originalPaid * originalTax, 4, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>
+    /// Prefer event FX; otherwise copy rate and base currency from the original sale so a
+    /// USD capture booked into MYR is not reversed as if USD were MYR.
+    /// </summary>
+    private async Task<(decimal FxRate, string BaseCurrency)> ResolveFxAsync(
+        GatewayRefundCompletedIntegrationEvent @event)
+    {
+        if (@event.FxRate > 0 && !string.IsNullOrWhiteSpace(@event.BaseCurrency))
+            return (@event.FxRate, @event.BaseCurrency);
+
+        if (string.IsNullOrWhiteSpace(@event.GatewayTransactionId))
+            return (1m, @event.Currency);
+
+        var originalEntry = await _dbContext.LedgerEntries
+            .Include(e => e.Lines)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e =>
+                e.OrganizationId == @event.OrganizationId
+                && e.ReferenceType == LedgerReferenceTypes.GatewayPayment
+                && e.ReferenceId == @event.GatewayTransactionId);
+
+        var sample = originalEntry?.Lines.FirstOrDefault(l => l.Amount != 0);
+        if (sample is null)
+            return (1m, @event.Currency);
+
+        var rate = sample.Amount == 0 ? 1m : sample.BaseCurrencyAmount / sample.Amount;
+        var baseCurrency = string.IsNullOrWhiteSpace(sample.BaseCurrency)
+            ? @event.Currency
+            : sample.BaseCurrency;
+        return (rate, baseCurrency);
     }
 }
