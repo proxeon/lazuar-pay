@@ -41,4 +41,18 @@ public class TaxDocumentClaimLeaseTests
         doc.NextPollAt.Should().BeCloseTo(leaseUntil, TimeSpan.FromSeconds(1));
         doc.NextPollAt.Should().NotBe(afterSubmit);
     }
+
+    [Test]
+    public void MarkAsValid_WritesPollUuidWhenSubmitMissedIt()
+    {
+        var doc = new TaxDocument(Guid.CreateVersion7(), "INV-3", "hash", "<Invoice/>");
+        doc.MarkAsSubmitted("sub-uid", lhdnUuid: null);
+        doc.LhdnUuid.Should().BeNull();
+
+        doc.MarkAsValid("long-id", "poll-uuid");
+
+        doc.LhdnUuid.Should().Be("poll-uuid");
+        doc.LongId.Should().Be("long-id");
+        doc.ValidationStatus.Should().Be("VALID");
+    }
 }

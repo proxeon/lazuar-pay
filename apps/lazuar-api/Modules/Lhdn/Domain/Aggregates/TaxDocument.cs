@@ -88,9 +88,11 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void MarkAsValid(string longId)
+    public void MarkAsValid(string longId, string? lhdnUuid = null)
     {
         LongId = longId;
+        if (!string.IsNullOrWhiteSpace(lhdnUuid))
+            LhdnUuid = lhdnUuid;
         ValidationStatus = "VALID";
         ValidatedAt = DateTime.UtcNow;
         NextPollAt = null;
