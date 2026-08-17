@@ -72,6 +72,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 060 | B04-P03 | `fix/060-chip-recurring-token` | CHIP off-session does not GET /purchases/{recurring_token} as a purchase |
 | 061 | B04-P04 | `fix/061-chip-offsession-idempotency` | CHIP off-session sends Idempotency-Key + reference; retries reuse the purchase |
 | 062 | B04-P05 | `fix/062-chip-xendit-paying-tenant` | CHIP/Xendit generate keep paying tenant_id; system org is platform_tenant_id |
+| 063 | B04-P06 | `fix/063-webhook-tenant-eventid` | Inbound tenant_id must match URL tenant; EventId unique is per tenant |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

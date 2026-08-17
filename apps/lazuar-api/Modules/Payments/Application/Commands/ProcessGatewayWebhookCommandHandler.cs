@@ -87,13 +87,22 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
             return;
         }
 
+        if (TryGetInboundTenantId(parsedResult.Metadata, out var inboundTenant)
+            && inboundTenant != request.TenantId)
+        {
+            _logger.LogWarning(
+                "Rejected payment webhook: inbound tenant_id {InboundTenant} does not match URL tenant {UrlTenant}.",
+                inboundTenant, request.TenantId);
+            return;
+        }
+
         var businessKey = BuildBusinessKey(parsedResult.EventType, parsedResult.GatewayTransactionId);
         var existing = await _logRepository.GetByEventIdAsync(
-            parsedResult.EventId, config.GatewayType, cancellationToken);
+            parsedResult.EventId, config.GatewayType, request.TenantId, cancellationToken);
         if (existing is null && businessKey is not null)
         {
             existing = await _logRepository.GetByBusinessKeyAsync(
-                businessKey, config.GatewayType, cancellationToken);
+                businessKey, config.GatewayType, request.TenantId, cancellationToken);
         }
 
         if (existing is not null)
@@ -109,7 +118,8 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
             parsedResult.Metadata,
             cancellationToken);
 
-        var log = new PaymentWebhookLog(parsedResult.EventId, config.GatewayType, businessKey);
+        var log = new PaymentWebhookLog(
+            parsedResult.EventId, config.GatewayType, businessKey, organizationId: request.TenantId);
         _logRepository.Add(log);
         await PublishParsedEventAsync(request, parsedResult, metadata, log);
         await TrySaveChangesAsync(cancellationToken);

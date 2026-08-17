@@ -45,14 +45,16 @@ public class PaymentWebhookLogRepository : IPaymentWebhookLogRepository
         _context = context;
     }
 
-    public async Task<PaymentWebhookLog?> GetByEventIdAsync(string eventId, string provider, CancellationToken ct = default)
+    public async Task<PaymentWebhookLog?> GetByEventIdAsync(string eventId, string provider, Guid organizationId, CancellationToken ct = default)
     {
         return await _context.PaymentWebhookLogs
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(l => l.EventId == eventId && l.Provider == provider, ct);
+            .FirstOrDefaultAsync(
+                l => l.EventId == eventId && l.Provider == provider && l.OrganizationId == organizationId,
+                ct);
     }
 
-    public async Task<PaymentWebhookLog?> GetByBusinessKeyAsync(string businessKey, string provider, CancellationToken ct = default)
+    public async Task<PaymentWebhookLog?> GetByBusinessKeyAsync(string businessKey, string provider, Guid organizationId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(businessKey))
         {
@@ -61,7 +63,9 @@ public class PaymentWebhookLogRepository : IPaymentWebhookLogRepository
 
         return await _context.PaymentWebhookLogs
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(l => l.BusinessKey == businessKey && l.Provider == provider, ct);
+            .FirstOrDefaultAsync(
+                l => l.BusinessKey == businessKey && l.Provider == provider && l.OrganizationId == organizationId,
+                ct);
     }
 
     public async Task<OutboxRequeueResult> TryRequeueDeadOutboxAsync(Guid outboxId, CancellationToken ct = default)

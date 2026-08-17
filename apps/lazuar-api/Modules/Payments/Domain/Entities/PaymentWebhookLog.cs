@@ -10,6 +10,11 @@ public class PaymentWebhookLog : Entity
     public Guid Id { get; private set; }
 
     /// <summary>
+    /// URL tenant that received this delivery. EventId uniqueness is per tenant.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
+
+    /// <summary>
     /// The unique ID assigned to the webhook event by the provider (e.g., Stripe Event ID).
     /// </summary>
     public string EventId { get; private set; }
@@ -41,9 +46,15 @@ public class PaymentWebhookLog : Entity
     private PaymentWebhookLog() { }
 #pragma warning restore CS8618
 
-    public PaymentWebhookLog(string eventId, string provider, string? businessKey = null, Guid? outboxMessageId = null)
+    public PaymentWebhookLog(
+        string eventId,
+        string provider,
+        string? businessKey = null,
+        Guid? outboxMessageId = null,
+        Guid organizationId = default)
     {
         Id = Guid.CreateVersion7();
+        OrganizationId = organizationId;
         EventId = eventId;
         Provider = provider;
         BusinessKey = businessKey;

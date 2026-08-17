@@ -26,11 +26,10 @@ public class PaymentWebhookLogConfig : IEntityTypeConfiguration<PaymentWebhookLo
     {
         builder.HasKey(x => x.Id);
 
-        // Guarantee event-delivery idempotency at the database level
-        builder.HasIndex(x => new { x.Provider, x.EventId }).IsUnique();
+        // Event-delivery idempotency is per tenant (shared CHIP/Xendit credentials).
+        builder.HasIndex(x => new { x.OrganizationId, x.Provider, x.EventId }).IsUnique();
 
-        // Payment-level idempotency (Stripe dual events, etc.) — only when BusinessKey is set
-        builder.HasIndex(x => new { x.Provider, x.BusinessKey })
+        builder.HasIndex(x => new { x.OrganizationId, x.Provider, x.BusinessKey })
             .IsUnique()
             .HasFilter("\"BusinessKey\" IS NOT NULL");
 

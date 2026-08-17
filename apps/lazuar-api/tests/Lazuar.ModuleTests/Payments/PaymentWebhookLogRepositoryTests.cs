@@ -87,13 +87,19 @@ public class PaymentWebhookLogRepositoryTests
     [Test]
     public async Task GetByEventId_ReturnsTrackedLog()
     {
-        var log = new PaymentWebhookLog("evt_1", "STRIPE", "PAYMENT_COMPLETED:pi_1", Guid.CreateVersion7());
+        var org = Guid.CreateVersion7();
+        var other = Guid.CreateVersion7();
+        var log = new PaymentWebhookLog(
+            "evt_1", "STRIPE", "PAYMENT_COMPLETED:pi_1", Guid.CreateVersion7(), organizationId: org);
         _repo.Add(log);
         await _repo.SaveChangesAsync();
 
-        var found = await _repo.GetByEventIdAsync("evt_1", "STRIPE");
+        var found = await _repo.GetByEventIdAsync("evt_1", "STRIPE", org);
         found.Should().NotBeNull();
         found!.BusinessKey.Should().Be("PAYMENT_COMPLETED:pi_1");
         found.OutboxMessageId.Should().Be(log.OutboxMessageId);
+        found.OrganizationId.Should().Be(org);
+
+        (await _repo.GetByEventIdAsync("evt_1", "STRIPE", other)).Should().BeNull();
     }
 }

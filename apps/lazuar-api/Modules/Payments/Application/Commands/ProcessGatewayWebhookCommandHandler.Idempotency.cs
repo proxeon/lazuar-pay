@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,6 +20,21 @@ public partial class ProcessGatewayWebhookCommandHandler
 
         // Money events only (caller already filters to these)
         return eventType + ":" + gatewayTransactionId;
+    }
+
+    internal static bool TryGetInboundTenantId(Dictionary<string, string>? metadata, out Guid tenantId)
+    {
+        tenantId = Guid.Empty;
+        if (metadata is null
+            || !metadata.TryGetValue("tenant_id", out var raw)
+            || string.IsNullOrWhiteSpace(raw)
+            || !Guid.TryParse(raw, out tenantId)
+            || tenantId == Guid.Empty)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private async Task TrySaveChangesAsync(CancellationToken cancellationToken)

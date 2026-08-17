@@ -22,8 +22,8 @@ public enum OutboxRequeueResult
 
 public interface IPaymentWebhookLogRepository
 {
-    Task<PaymentWebhookLog?> GetByEventIdAsync(string eventId, string provider, CancellationToken ct = default);
-    Task<PaymentWebhookLog?> GetByBusinessKeyAsync(string businessKey, string provider, CancellationToken ct = default);
+    Task<PaymentWebhookLog?> GetByEventIdAsync(string eventId, string provider, Guid organizationId, CancellationToken ct = default);
+    Task<PaymentWebhookLog?> GetByBusinessKeyAsync(string businessKey, string provider, Guid organizationId, CancellationToken ct = default);
     Task<OutboxRequeueResult> TryRequeueDeadOutboxAsync(Guid outboxId, CancellationToken ct = default);
     void Add(PaymentWebhookLog log);
 

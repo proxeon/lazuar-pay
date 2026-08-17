@@ -167,6 +167,9 @@ namespace Modules.Payments.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("OutboxMessageId")
                         .HasColumnType("uuid");
 
@@ -179,11 +182,11 @@ namespace Modules.Payments.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Provider", "BusinessKey")
+                    b.HasIndex("OrganizationId", "Provider", "BusinessKey")
                         .IsUnique()
                         .HasFilter("\"BusinessKey\" IS NOT NULL");
 
-                    b.HasIndex("Provider", "EventId")
+                    b.HasIndex("OrganizationId", "Provider", "EventId")
                         .IsUnique();
 
                     b.ToTable("PaymentWebhookLogs", "payments");

@@ -2,17 +2,21 @@
 number: "063"
 id: B04-P06
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
+resolved_branch: fix/063-webhook-tenant-eventid
 ---
 
 # 063 — B04-P06 — No inbound `tenant_id` vs URL tenant check; EventId unique is not tenant-scoped
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/063-webhook-tenant-eventid`
+
+Inbound `tenant_id` must match the URL tenant. Webhook logs are unique per `(OrganizationId, Provider, EventId)`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
