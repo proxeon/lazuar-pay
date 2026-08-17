@@ -71,6 +71,41 @@ public class ClientProfileCompanyNameTests
     }
 
     [Test]
+    public async Task Resolve_OverwritesPoisonedIdValue_WhenRequestProvidesIdPair()
+    {
+        var orgId = Guid.CreateVersion7();
+        await using var db = CreateDb();
+        db.ClientProfiles.Add(new ClientProfileEntity
+        {
+            OrganizationId = orgId,
+            FullName = "Ada Buyer",
+            Email = "ada@example.com",
+            Phone = "",
+            Tin = "C12345678901",
+            CompanyName = "Acme Sdn Bhd",
+            IdType = null,
+            IdValue = "Acme Sdn Bhd"
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new ResolveClientProfileCommandHandler(db);
+        await handler.Handle(new ResolveClientProfileCommand(
+            orgId,
+            "Ada Buyer",
+            "ada@example.com",
+            "60111111111",
+            Tin: "C12345678901",
+            IdType: "BRN",
+            IdValue: "202401001234",
+            CompanyName: "Acme Sdn Bhd"), CancellationToken.None);
+
+        var profile = await db.ClientProfiles.IgnoreQueryFilters().SingleAsync();
+        profile.IdType.Should().Be("BRN");
+        profile.IdValue.Should().Be("202401001234");
+        profile.Tin.Should().Be("C12345678901");
+    }
+
+    [Test]
     public void Anonymize_ClearsCompanyName()
     {
         var profile = new ClientProfileEntity

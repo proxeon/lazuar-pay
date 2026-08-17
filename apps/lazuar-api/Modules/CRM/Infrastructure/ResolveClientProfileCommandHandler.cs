@@ -47,12 +47,14 @@ public class ResolveClientProfileCommandHandler : ICommandHandler<ResolveClientP
                 existingProfile.Tin = request.Tin.Trim();
                 isModified = true;
             }
-            if (string.IsNullOrWhiteSpace(existingProfile.IdType) && !string.IsNullOrWhiteSpace(request.IdType))
+            if (!string.IsNullOrWhiteSpace(request.IdType)
+                && !string.Equals(existingProfile.IdType, request.IdType, StringComparison.Ordinal))
             {
                 existingProfile.IdType = request.IdType;
                 isModified = true;
             }
-            if (string.IsNullOrWhiteSpace(existingProfile.IdValue) && !string.IsNullOrWhiteSpace(request.IdValue))
+            if (!string.IsNullOrWhiteSpace(request.IdValue)
+                && !string.Equals(existingProfile.IdValue, request.IdValue, StringComparison.Ordinal))
             {
                 existingProfile.IdValue = request.IdValue;
                 isModified = true;
