@@ -109,6 +109,13 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 throw new InvalidOperationException("Invalid or completed custom checkout session.");
             }
 
+            if (CommerceCheckoutIdempotency.TryReplayUrl(existingSession, DateTime.UtcNow, out var existingQuoteUrl))
+            {
+                return new CheckoutResultDto(existingQuoteUrl!, false);
+            }
+
+            existingSession.SetIdempotency(idempotencyKey, fingerprint);
+
             decimal customTotalAmount = existingSession.AdHocLineItems.Sum(x => x.UnitPrice * x.Quantity);
             
             var customSuccessUrl = $"{clientUrl}/{request.TenantSlug}/checkout/custom/success?sub_id={existingSession.Id}";

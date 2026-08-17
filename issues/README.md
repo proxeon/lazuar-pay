@@ -40,6 +40,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 028 | B01-C02 | `fix/028-coupon-lock-transaction` | Coupon `FOR UPDATE` + reserve + session insert share one transaction |
 | 029 | B01-C03 | `fix/029-zero-amount-offline-chosen-price` | $0 / mark-paid discount the chosen price row |
 | 030 | B01-C04 | `fix/030-idempotency-replay-open-only` | Idempotency replay only OPEN live URLs; resume empty-URL rows |
+| 031 | B01-C05 | `fix/031-quote-reuse-hop2-idem-key` | Quote hop-2 is reused; portal key is per session |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -31,8 +31,17 @@ export async function validateCouponCode(tenantSlug: string, productSlug: string
   return data;
 }
 
-function checkoutIdempotencyKey(tenantSlug: string, productSlug: string) {
-  const storageKey = `lazuar-checkout-idem:${tenantSlug}:${productSlug}`;
+function checkoutIdempotencyKey(payload: PublicCheckoutRequestDto) {
+  const storageKey = [
+    "lazuar-checkout-idem",
+    payload.tenant_slug,
+    payload.session_id || payload.product_slug,
+    payload.email ?? "",
+    String(payload.quantity ?? 1),
+    payload.interval ?? "",
+    payload.price_id ?? "",
+    payload.coupon_code ?? "",
+  ].join(":");
   try {
     const existing = sessionStorage.getItem(storageKey);
     if (existing) return existing;
@@ -59,12 +68,40 @@ export async function validateTin(tenantSlug: string, tin: string, idType: strin
 }
 
 export async function submitCheckout(payload: PublicCheckoutRequestDto) {
-  const { data, error } = await browserClient.POST("/public/commerce/checkout", {
+  let key = checkoutIdempotencyKey(payload);
+  const { data, error, response } = await browserClient.POST("/public/commerce/checkout", {
     body: payload,
     headers: {
-      "Idempotency-Key": checkoutIdempotencyKey(payload.tenant_slug, payload.product_slug),
+      "Idempotency-Key": key,
     },
   });
+
+  if (response?.status === 409) {
+    try {
+      const storageKey = [
+        "lazuar-checkout-idem",
+        payload.tenant_slug,
+        payload.session_id || payload.product_slug,
+        payload.email ?? "",
+        String(payload.quantity ?? 1),
+        payload.interval ?? "",
+        payload.price_id ?? "",
+        payload.coupon_code ?? "",
+      ].join(":");
+      key = crypto.randomUUID();
+      sessionStorage.setItem(storageKey, key);
+    } catch {
+      key = crypto.randomUUID();
+    }
+    const retry = await browserClient.POST("/public/commerce/checkout", {
+      body: payload,
+      headers: { "Idempotency-Key": key },
+    });
+    if (retry.error || !retry.data) {
+      throw new Error(retry.error?.detail || "Checkout submission failed.");
+    }
+    return retry.data;
+  }
 
   if (error || !data) {
     throw new Error(error?.detail || "Checkout submission failed.");

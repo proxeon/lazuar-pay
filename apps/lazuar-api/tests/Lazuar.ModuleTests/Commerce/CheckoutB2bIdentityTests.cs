@@ -110,6 +110,15 @@ public class CheckoutB2bIdentityTests
                 && q.Metadata.GetValueOrDefault("is_b2b_required") == "true"),
             Arg.Any<CancellationToken>());
 
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://gateway.test/pay/custom-2");
+        var replay = await handler.Handle(
+            GuestCommand(taxId: "C12345678901", companyName: "Acme Sdn Bhd", idType: "BRN", idValue: "202401001234")
+                with { SessionId = session.Id },
+            CancellationToken.None);
+        replay.Url.Should().Be("https://gateway.test/pay/custom");
+        await mediator.Received(1).Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>());
+
         await mediator.Received(1).Send(
             Arg.Is<ResolveClientProfileCommand>(c =>
                 c.Tin == "C12345678901"

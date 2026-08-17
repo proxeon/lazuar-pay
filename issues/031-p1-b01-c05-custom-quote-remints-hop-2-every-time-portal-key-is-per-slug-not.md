@@ -2,17 +2,21 @@
 number: "031"
 id: B01-C05
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
+resolved_branch: fix/031-quote-reuse-hop2-idem-key
 ---
 
 # 031 — B01-C05 — Custom quote remints hop-2 every time; portal key is per slug not per quote
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/031-quote-reuse-hop2-idem-key`
+
+OPEN quotes reuse an existing hop-2 URL. Portal idempotency keys include session_id and rotate on 409.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
