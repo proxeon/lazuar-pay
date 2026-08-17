@@ -9,6 +9,8 @@ public interface ILedgerRepository
 {
     Task<bool> HasEntryBeenProcessedAsync(
         Guid organizationId, string referenceType, string referenceId, CancellationToken ct = default);
+    Task<LedgerEntry?> GetByReferenceAsync(
+        Guid organizationId, string referenceType, string referenceId, CancellationToken ct = default);
     void Add(LedgerEntry entry);
     void AddDeferredRevenue(DeferredRevenueSchedule schedule);
     Task SaveChangesAsync(CancellationToken ct = default);

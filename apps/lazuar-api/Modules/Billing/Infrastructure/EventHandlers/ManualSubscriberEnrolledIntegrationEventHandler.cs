@@ -38,7 +38,13 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
             : @event.SubscriptionId.ToString();
 
         if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
+        {
+            var existing = await _repository.GetByReferenceAsync(
+                @event.OrganizationId, referenceType, referenceId);
+            if (existing is not null)
+                await GenerateDocumentAsync(@event, existing, publishB2b: false);
             return;
+        }
 
         var isB2b = @event.IsB2bRequired;
         var entry = new LedgerEntry(
@@ -69,32 +75,42 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
 
         await _repository.SaveChangesAsync();
 
+        await GenerateDocumentAsync(@event, entry, publishB2b: true);
+    }
+
+    private async Task GenerateDocumentAsync(
+        ManualSubscriberEnrolledIntegrationEvent @event, LedgerEntry booked, bool publishB2b)
+    {
+        var isB2b = booked.CustomerType == "B2B";
         var correlation = @event.SubscriptionId.ToString();
         if (isB2b)
         {
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
-                entry.Id,
+                booked.Id,
                 "Invoice",
                 CorrelationId: correlation));
 
-            await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
-                @event.OrganizationId,
-                entry.Id,
-                entry.CustomerDocumentNumber!,
-                referenceId,
-                @event.AmountPaid,
-                0m,
-                @event.Currency,
-                correlation));
+            if (publishB2b)
+            {
+                await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
+                    @event.OrganizationId,
+                    booked.Id,
+                    booked.CustomerDocumentNumber ?? "",
+                    booked.ReferenceId,
+                    @event.AmountPaid,
+                    0m,
+                    @event.Currency,
+                    correlation));
+            }
+
+            return;
         }
-        else
-        {
-            await _mediator.Send(new GenerateAndStoreDocumentCommand(
-                @event.OrganizationId,
-                entry.Id,
-                "Official Receipt",
-                CorrelationId: correlation));
-        }
+
+        await _mediator.Send(new GenerateAndStoreDocumentCommand(
+            @event.OrganizationId,
+            booked.Id,
+            "Official Receipt",
+            CorrelationId: correlation));
     }
 }

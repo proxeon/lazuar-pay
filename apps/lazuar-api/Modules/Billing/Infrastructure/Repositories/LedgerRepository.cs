@@ -52,6 +52,18 @@ public class LedgerRepository : ILedgerRepository, IBillingTransactional
                 ct);
     }
 
+    public async Task<LedgerEntry?> GetByReferenceAsync(
+        Guid organizationId, string referenceType, string referenceId, CancellationToken ct = default)
+    {
+        return await _context.LedgerEntries
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                e => e.OrganizationId == organizationId
+                     && e.ReferenceType == referenceType
+                     && e.ReferenceId == referenceId,
+                ct);
+    }
+
     public void Add(LedgerEntry entry)
     {
         _context.LedgerEntries.Add(entry);

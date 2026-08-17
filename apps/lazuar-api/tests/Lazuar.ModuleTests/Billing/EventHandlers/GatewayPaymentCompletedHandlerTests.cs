@@ -254,4 +254,41 @@ public class GatewayPaymentCompletedHandlerTests
         await eventBus.Received(1).PublishAsync(Arg.Is<B2bTaxInvoiceRequestedIntegrationEvent>(e =>
             e.TaxAmount == 8m && e.AmountExcludingTax == 100m));
     }
+
+    [Test]
+    public async Task HandleAsync_AlreadyProcessed_RetriesPdf()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
+        var orgId = Guid.CreateVersion7();
+        var existing = new LedgerEntry(orgId, LedgerReferenceTypes.GatewayPayment, "txn_retry", "sale", "B2C");
+        existing.AssignB2cReceipt("RCPT-RETRY");
+
+        repository.HasEntryBeenProcessedAsync(orgId, LedgerReferenceTypes.GatewayPayment, "txn_retry")
+            .Returns(true);
+        repository.GetByReferenceAsync(orgId, LedgerReferenceTypes.GatewayPayment, "txn_retry")
+            .Returns(existing);
+
+        await handler.HandleAsync(new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: orgId,
+            GatewayTransactionId: "txn_retry",
+            AmountPaid: 100m,
+            Currency: "MYR",
+            GatewayFee: 0m,
+            TaxAmount: 0m,
+            NetAmount: 100m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string>()));
+
+        repository.DidNotReceive().Add(Arg.Any<LedgerEntry>());
+        await mediator.Received(1).Send(
+            Arg.Is<GenerateAndStoreDocumentCommand>(c =>
+                c.LedgerEntryId == existing.Id && c.DocumentType == "Official Receipt"),
+            Arg.Any<CancellationToken>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<B2bTaxInvoiceRequestedIntegrationEvent>());
+    }
 }

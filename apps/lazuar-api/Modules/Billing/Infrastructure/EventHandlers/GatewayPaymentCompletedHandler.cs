@@ -52,7 +52,13 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
         var referenceId = @event.GatewayTransactionId;
 
         if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
+        {
+            var existing = await _repository.GetByReferenceAsync(
+                @event.OrganizationId, referenceType, referenceId);
+            if (existing is not null)
+                await GenerateDocumentAsync(@event, existing, publishB2b: false);
             return;
+        }
 
         var isB2b = @event.Metadata.TryGetValue("is_b2b_required", out var b2bFlag) && b2bFlag == "true";
         var taxAmount = ResolveTaxAmount(@event);
@@ -120,7 +126,13 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             await PersistAsync(default);
         }
 
-        var booked = entry!;
+        await GenerateDocumentAsync(@event, entry!, publishB2b: true);
+    }
+
+    private async Task GenerateDocumentAsync(
+        GatewayPaymentCompletedIntegrationEvent @event, LedgerEntry booked, bool publishB2b)
+    {
+        var isB2b = booked.CustomerType == "B2B";
         var correlation = ResolveDocumentCorrelation(@event);
         if (!isB2b)
         {
@@ -130,26 +142,30 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
                 "Official Receipt",
                 CorrelationId: correlation
             ));
+            return;
         }
-        else
-        {
-            await _mediator.Send(new GenerateAndStoreDocumentCommand(
-                @event.OrganizationId,
-                booked.Id,
-                "Invoice",
-                CorrelationId: correlation
-            ));
 
-            await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
-                @event.OrganizationId,
-                booked.Id,
-                booked.CustomerDocumentNumber!,
-                @event.GatewayTransactionId,
-                grossRevenue,
-                taxAmount,
-                @event.Currency,
-                correlation));
-        }
+        await _mediator.Send(new GenerateAndStoreDocumentCommand(
+            @event.OrganizationId,
+            booked.Id,
+            "Invoice",
+            CorrelationId: correlation
+        ));
+
+        if (!publishB2b)
+            return;
+
+        var taxAmount = ResolveTaxAmount(@event);
+        var grossRevenue = @event.AmountPaid - taxAmount;
+        await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
+            @event.OrganizationId,
+            booked.Id,
+            booked.CustomerDocumentNumber ?? "",
+            @event.GatewayTransactionId,
+            grossRevenue,
+            taxAmount,
+            @event.Currency,
+            correlation));
     }
 
     private static string? ResolveDocumentCorrelation(GatewayPaymentCompletedIntegrationEvent @event)
