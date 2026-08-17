@@ -387,6 +387,7 @@ public class BillingEngineJob : BackgroundService
         Subscription sub,
         CancellationToken ct)
     {
+        await CommerceSubscriptionLock.AcquireAsync(db, sub.Id, ct);
         await db.Entry(sub).Collection(s => s.ReminderLogs).LoadAsync(ct);
         var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(db, ct);
         var whatsAppEnabled = config?.GetValue("Messaging:WhatsAppEnabled", false) ?? false;

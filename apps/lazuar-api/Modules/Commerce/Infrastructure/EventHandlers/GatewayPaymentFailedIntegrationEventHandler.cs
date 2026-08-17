@@ -56,6 +56,16 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             return;
         }
 
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
+        if (_dbContext.Database.IsRelational())
+        {
+            tx = await _dbContext.Database.BeginTransactionAsync();
+        }
+
+        try
+        {
+        await CommerceSubscriptionLock.AcquireAsync(_dbContext, subscriptionId, CancellationToken.None);
+
         var sub = await _dbContext.Subscriptions
             .IgnoreQueryFilters()
             .Include(s => s.ReminderLogs)
@@ -77,6 +87,7 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
                 "GatewayPaymentFailed {GatewayTxId}: update-payment decline for {SubscriptionId} ({Status}); skipping PAST_DUE.",
                 @event.GatewayTransactionId, sub.Id, sub.Status);
             await _dbContext.SaveChangesAsync();
+            if (tx != null) await tx.CommitAsync();
             return;
         }
 
@@ -86,6 +97,7 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
                 "GatewayPaymentFailed {GatewayTxId}: subscription {SubscriptionId} is {Status}; charge attempt updated, skipping PAST_DUE.",
                 @event.GatewayTransactionId, sub.Id, sub.Status);
             await _dbContext.SaveChangesAsync();
+            if (tx != null) await tx.CommitAsync();
             return;
         }
 
@@ -110,6 +122,12 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         }
 
         await _dbContext.SaveChangesAsync();
+        if (tx != null) await tx.CommitAsync();
+        }
+        finally
+        {
+            if (tx != null) await tx.DisposeAsync();
+        }
     }
 
     private async Task PublishPastDueAsync(Domain.Aggregates.Subscription sub)

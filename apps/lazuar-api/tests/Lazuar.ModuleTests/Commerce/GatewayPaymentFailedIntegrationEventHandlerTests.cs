@@ -15,6 +15,7 @@ using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Domain.ValueObjects;
 using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.EventHandlers;
+using Lazuar.ApiTypes;
 using Modules.CRM.Contracts;
 using Modules.Payments.Contracts.Events;
 using NSubstitute;
@@ -44,10 +45,17 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
             new DatabaseJobTrigger());
 
         _eventBus = Substitute.For<IEventBus>();
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns(ci => new ClientProfileDto
+        {
+            Id = ci.Arg<Guid>().ToString(),
+            Full_name = "Buyer",
+            Email = "buyer@example.com"
+        });
         _handler = new GatewayPaymentFailedIntegrationEventHandler(
             _db,
             _eventBus,
-            Substitute.For<ICrmQueryService>(),
+            crm,
             Substitute.For<ILogger<GatewayPaymentFailedIntegrationEventHandler>>(),
             new ConfigurationBuilder().AddInMemoryCollection().Build());
     }
