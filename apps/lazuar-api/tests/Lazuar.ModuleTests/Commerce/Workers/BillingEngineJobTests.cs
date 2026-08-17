@@ -792,6 +792,36 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_AppliesPendingYearlyPriceNotCatalogDefault()
+    {
+        var basic = CreateProduct(_orgId, "STRIPE");
+        basic.UpsertPrice("yr", 500m, isDefault: false);
+        var pro = new Product(
+            _orgId, "Pro", $"pro-{Guid.CreateVersion7():N}"[..20], 80m, "FIXED", 0m, "MYR", "mo", "STRIPE",
+            new CheckoutConfiguration(false, false, false), Array.Empty<string>());
+        pro.UpsertPrice("yr", 800m, isDefault: false);
+
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), basic.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-400), DateTime.UtcNow.AddDays(-1), false, 1, 500m);
+        sub.SetBillingInterval("yr");
+        sub.StoreVaultedToken("cus", "pm");
+        sub.SchedulePlanChange(pro.Id);
+
+        _db.Products.AddRange(basic, pro);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.ProductId.Should().Be(pro.Id);
+        reloaded.BillingInterval.Should().Be("yr");
+        reloaded.UnitAmount.Should().Be(800m);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sub.Id && e.Amount == 800m));
+    }
+
+    [Test]
     public async Task RunOnce_MissingPendingProduct_DoesNotCommitGhostProductId()
     {
         var basic = CreateProduct(_orgId, "STRIPE");

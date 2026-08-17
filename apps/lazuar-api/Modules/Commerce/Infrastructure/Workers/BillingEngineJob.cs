@@ -240,14 +240,23 @@ public class BillingEngineJob : BackgroundService
                 return;
             }
 
+            var interval = SubscriptionBillingAmount.ResolveInterval(sub, product);
+            if (!PlanChangePolicy.TryResolvePrice(pendingProduct, interval, out var unit, out var billedInterval, out var priceId))
+            {
+                failedIds.Add(sub.Id);
+                _logger.LogWarning(
+                    "Billing skipped subscription {Id}: pending product {ProductId} has no {Interval} price.",
+                    sub.Id, pendingId, interval);
+                return;
+            }
+
             sub.ApplyPendingPlanChange();
             product = pendingProduct;
-            var pendingPrice = product.Prices.FirstOrDefault(p => p.Interval == product.Interval) ?? product.DefaultPrice();
-            sub.SetSnapshot(pendingPrice?.Amount ?? product.Price, sub.Quantity);
-            sub.SetBillingInterval(pendingPrice?.Interval ?? product.Interval);
-            if (pendingPrice != null)
+            sub.SetSnapshot(unit, sub.Quantity);
+            sub.SetBillingInterval(billedInterval);
+            if (priceId.HasValue)
             {
-                sub.SetPriceId(pendingPrice.Id);
+                sub.SetPriceId(priceId);
             }
         }
 

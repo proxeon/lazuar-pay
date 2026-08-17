@@ -47,6 +47,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 035 | B01-C09 | `fix/035-session-complete-cas` | Only one completer wins: TryComplete + Status concurrency token |
 | 036 | B01-C10 | `fix/036-expire-vs-paid-revive` | Paid webhook revives an EXPIRED session and still fulfills |
 | 037 | B02-C02 | `fix/037-pending-product-after-load` | Missing pending product no longer commits a ghost ProductId |
+| 038 | B02-C03 | `fix/038-pending-plan-billing-interval` | Pending plan snapshot / preview use BillingInterval, not catalog default |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

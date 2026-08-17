@@ -29,6 +29,36 @@ public class PlanChangePolicyTests
     }
 
     [Test]
+    public void Preview_YearlySeat_UsesYearlyTargetRow()
+    {
+        var org = Guid.CreateVersion7();
+        var current = DualPrice(org, "Basic", 50m, 500m);
+        var target = DualPrice(org, "Pro", 80m, 800m);
+        var sub = new Subscription(org, Guid.CreateVersion7(), current.Id);
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddDays(20), false, 1, 500m);
+        sub.SetBillingInterval("yr");
+
+        var preview = PlanChangePolicy.Preview(sub, current, target, 1);
+
+        preview.NextAmount.Should().Be(800m);
+        preview.CurrentAmount.Should().Be(500m);
+    }
+
+    [Test]
+    public void GuardTarget_YearlySeat_TargetWithoutYearlyRow_Throws()
+    {
+        var org = Guid.CreateVersion7();
+        var current = DualPrice(org, "Basic", 50m, 500m);
+        var target = Product(org, "Pro", 80m);
+        var sub = new Subscription(org, Guid.CreateVersion7(), current.Id);
+        sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddDays(20), false, 1, 500m);
+        sub.SetBillingInterval("yr");
+
+        var act = () => PlanChangePolicy.GuardTargetProduct(sub, current, target);
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Interval*");
+    }
+
+    [Test]
     public void RejectImmediateOrProrate_ProrateTrue_Throws()
     {
         var act = () => PlanChangePolicy.RejectImmediateOrProrate(true, null);
@@ -58,4 +88,11 @@ public class PlanChangePolicyTests
     private static Product Product(Guid org, string name, decimal price, string gateway = "STRIPE") =>
         new(org, name, name.ToLowerInvariant(), price, "FIXED", 0m, "MYR", "mo", gateway,
             new CheckoutConfiguration(false, false, false), Array.Empty<string>());
+
+    private static Product DualPrice(Guid org, string name, decimal monthly, decimal yearly)
+    {
+        var product = Product(org, name, monthly);
+        product.UpsertPrice("yr", yearly, isDefault: false);
+        return product;
+    }
 }

@@ -19,7 +19,7 @@ public static class PlanChangePolicy
 
         var qty = Math.Max(1, quantity);
         var currentUnit = sub.UnitAmount > 0 ? sub.UnitAmount : currentProduct.Price;
-        var nextUnit = targetProduct.Price;
+        var nextUnit = ResolveTargetPrice(sub, currentProduct, targetProduct).Unit;
 
         return new PlanChangePreview(
             sub.ProductId,
@@ -82,9 +82,55 @@ public static class PlanChangePolicy
             throw new InvalidOperationException("Plan change must stay on the same currency.");
         }
 
-        if (!string.Equals(target.Interval, current.Interval, StringComparison.OrdinalIgnoreCase))
+        _ = ResolveTargetPrice(sub, current, target);
+    }
+
+    public static (decimal Unit, string Interval, Guid? PriceId) ResolveTargetPrice(
+        Subscription sub,
+        Product current,
+        Product target)
+    {
+        ArgumentNullException.ThrowIfNull(sub);
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(target);
+
+        var interval = SubscriptionBillingAmount.ResolveInterval(sub, current);
+        if (TryResolvePrice(target, interval, out var amount, out var billedInterval, out var priceId))
         {
-            throw new InvalidOperationException("Interval change requires a new checkout.");
+            return (amount, billedInterval, priceId);
         }
+
+        throw new InvalidOperationException("Interval change requires a new checkout.");
+    }
+
+    public static bool TryResolvePrice(
+        Product product,
+        string interval,
+        out decimal amount,
+        out string billedInterval,
+        out Guid? priceId)
+    {
+        ArgumentNullException.ThrowIfNull(product);
+        var row = product.GetPrice(interval);
+        if (row != null)
+        {
+            amount = row.Amount;
+            billedInterval = row.Interval;
+            priceId = row.Id;
+            return true;
+        }
+
+        if (string.Equals(product.Interval, interval, StringComparison.OrdinalIgnoreCase))
+        {
+            amount = product.Price;
+            billedInterval = product.Interval;
+            priceId = product.DefaultPrice()?.Id;
+            return true;
+        }
+
+        amount = 0;
+        billedInterval = interval;
+        priceId = null;
+        return false;
     }
 }

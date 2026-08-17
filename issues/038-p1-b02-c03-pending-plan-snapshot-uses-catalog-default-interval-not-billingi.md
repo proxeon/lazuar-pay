@@ -2,17 +2,21 @@
 number: "038"
 id: B02-C03
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/02-commerce-subscriptions-billing-engine.md
 head: "297ba98"
+resolved_branch: fix/038-pending-plan-billing-interval
 ---
 
 # 038 — B02-C03 — Pending plan snapshot uses catalog default interval, not BillingInterval
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/02-commerce-subscriptions-billing-engine.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/038-pending-plan-billing-interval`
+
+Plan-change guard, preview, and billing snapshot use the subscription BillingInterval price row, not the catalog default.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
