@@ -22,7 +22,7 @@ public class ZeroAmountCheckoutHandlerTests
         var sessionId = Guid.CreateVersion7();
         LedgerEntry? added = null;
         var repo = Substitute.For<ILedgerRepository>();
-        repo.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        repo.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         repo.When(r => r.Add(Arg.Any<LedgerEntry>())).Do(ci => added = ci.Arg<LedgerEntry>());
 
         var handler = new ZeroAmountCheckoutHandler(repo);

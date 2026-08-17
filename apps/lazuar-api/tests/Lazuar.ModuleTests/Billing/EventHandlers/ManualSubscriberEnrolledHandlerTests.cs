@@ -38,7 +38,7 @@ public class ManualSubscriberEnrolledHandlerTests
             ReferenceNumber: "REF-999"
         );
 
-        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("RCPT-2026");
 
@@ -65,8 +65,8 @@ public class ManualSubscriberEnrolledHandlerTests
         var processed = new HashSet<string>();
         var added = new List<LedgerEntry>();
 
-        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>())
-            .Returns(ci => processed.Contains(ci.ArgAt<string>(1)));
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(ci => processed.Contains(ci.ArgAt<string>(2)));
         repository.When(r => r.Add(Arg.Any<LedgerEntry>())).Do(ci =>
         {
             var entry = ci.Arg<LedgerEntry>();
@@ -87,9 +87,11 @@ public class ManualSubscriberEnrolledHandlerTests
         added[0].ReferenceId.Should().Be(firstLog.ToString());
         added[1].ReferenceId.Should().Be(secondLog.ToString());
         await repository.Received(1).HasEntryBeenProcessedAsync(
+            Arg.Any<Guid>(),
             LedgerReferenceTypes.ManualEnrollment,
             firstLog.ToString());
         await repository.Received(1).HasEntryBeenProcessedAsync(
+            Arg.Any<Guid>(),
             LedgerReferenceTypes.ManualEnrollment,
             secondLog.ToString());
     }
@@ -102,7 +104,7 @@ public class ManualSubscriberEnrolledHandlerTests
         var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator, Substitute.For<IEventBus>());
         var logId = Guid.CreateVersion7();
 
-        repository.HasEntryBeenProcessedAsync(LedgerReferenceTypes.ManualEnrollment, logId.ToString())
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), LedgerReferenceTypes.ManualEnrollment, logId.ToString())
             .Returns(false, true);
         mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("RCPT-2026");

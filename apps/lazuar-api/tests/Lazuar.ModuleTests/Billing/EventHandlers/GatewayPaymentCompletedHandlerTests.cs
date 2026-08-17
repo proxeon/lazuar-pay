@@ -53,7 +53,7 @@ public class GatewayPaymentCompletedHandlerTests
             LineItems: new List<LineItemDto>(),
             Metadata: new Dictionary<string, string> { ["type"] = "trial" }));
 
-        await repository.DidNotReceive().HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>());
+        await repository.DidNotReceive().HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>());
         repository.DidNotReceive().Add(Arg.Any<LedgerEntry>());
         await mediator.DidNotReceive().Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>());
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<B2bTaxInvoiceRequestedIntegrationEvent>());
@@ -81,7 +81,7 @@ public class GatewayPaymentCompletedHandlerTests
             Metadata: new Dictionary<string, string> { { "is_b2b_required", "false" } }
         );
 
-        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("RCPT-2026");
 
@@ -122,7 +122,7 @@ public class GatewayPaymentCompletedHandlerTests
             }
         );
 
-        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("RCPT-2026");
 
@@ -157,7 +157,7 @@ public class GatewayPaymentCompletedHandlerTests
             Metadata: new Dictionary<string, string> { { "is_b2b_required", "true" } }
         );
 
-        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("INV-2026-00001");
 
@@ -210,7 +210,7 @@ public class GatewayPaymentCompletedHandlerTests
                 ["sst_tax_type"] = "02"
             });
 
-        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("RCPT-2026");
 
@@ -229,7 +229,7 @@ public class GatewayPaymentCompletedHandlerTests
         var mediator = Substitute.For<IMediator>();
         var eventBus = Substitute.For<IEventBus>();
         var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
-        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("INV-2026-00002");
 

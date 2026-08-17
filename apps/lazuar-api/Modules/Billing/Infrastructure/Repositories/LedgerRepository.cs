@@ -37,12 +37,19 @@ public class LedgerRepository : ILedgerRepository, IBillingTransactional
         }
     }
 
-    public async Task<bool> HasEntryBeenProcessedAsync(string referenceType, string referenceId, CancellationToken ct = default)
+    public async Task<bool> HasEntryBeenProcessedAsync(
+        Guid organizationId, string referenceType, string referenceId, CancellationToken ct = default)
     {
         // Workers/event handlers run with empty ambient TenantId (fail-closed filter).
+        // Unique grain is (OrganizationId, ReferenceType, ReferenceId) — do not treat
+        // another tenant's row as already processed.
         return await _context.LedgerEntries
             .IgnoreQueryFilters()
-            .AnyAsync(e => e.ReferenceType == referenceType && e.ReferenceId == referenceId, ct);
+            .AnyAsync(
+                e => e.OrganizationId == organizationId
+                     && e.ReferenceType == referenceType
+                     && e.ReferenceId == referenceId,
+                ct);
     }
 
     public void Add(LedgerEntry entry)

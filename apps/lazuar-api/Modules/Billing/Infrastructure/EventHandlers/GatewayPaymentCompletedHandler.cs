@@ -51,7 +51,7 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
         var referenceType = LedgerReferenceTypes.GatewayPayment;
         var referenceId = @event.GatewayTransactionId;
 
-        if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
+        if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
         var isB2b = @event.Metadata.TryGetValue("is_b2b_required", out var b2bFlag) && b2bFlag == "true";

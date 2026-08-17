@@ -21,7 +21,7 @@ public class ZeroAmountCheckoutHandler : IIntegrationEventHandler<ZeroAmountChec
         var referenceType = LedgerReferenceTypes.ZeroAmountCheckout;
         var referenceId = @event.CheckoutSessionId.ToString();
 
-        if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
+        if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
         var entry = new LedgerEntry(

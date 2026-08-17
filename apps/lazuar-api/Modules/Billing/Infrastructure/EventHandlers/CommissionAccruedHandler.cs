@@ -21,7 +21,7 @@ public class CommissionAccruedHandler : IIntegrationEventHandler<CommissionAccru
         var referenceType = LedgerReferenceTypes.CommissionAccrued;
         var referenceId = @event.CommissionId;
 
-        if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
+        if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
         var entry = new LedgerEntry(

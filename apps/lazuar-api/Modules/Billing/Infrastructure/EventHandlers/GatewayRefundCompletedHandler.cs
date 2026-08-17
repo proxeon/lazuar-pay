@@ -38,7 +38,7 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         // Per refund attempt (event id), not per capture. A second slice must post a new row.
         var referenceId = @event.PaymentRecordId.ToString("N") + ":" + @event.Id.ToString("N");
 
-        if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
+        if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
         var taxRefund = await ResolveTaxRefundAmountAsync(@event);

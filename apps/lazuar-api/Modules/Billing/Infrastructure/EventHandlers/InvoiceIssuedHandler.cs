@@ -21,7 +21,7 @@ public class InvoiceIssuedHandler : IIntegrationEventHandler<InvoiceIssuedIntegr
         var referenceType = LedgerReferenceTypes.InvoiceIssued;
         var referenceId = @event.InvoiceNumber;
 
-        if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
+        if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
         var entry = new LedgerEntry(

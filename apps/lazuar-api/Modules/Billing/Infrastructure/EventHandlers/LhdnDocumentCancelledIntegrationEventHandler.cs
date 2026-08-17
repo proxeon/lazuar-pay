@@ -26,7 +26,8 @@ public class LhdnDocumentCancelledIntegrationEventHandler : IIntegrationEventHan
 
     public async Task HandleAsync(LhdnDocumentCancelledIntegrationEvent @event)
     {
-        if (await _repository.HasEntryBeenProcessedAsync(LedgerReferenceTypes.LhdnCancellation, @event.InternalReferenceId))
+        if (await _repository.HasEntryBeenProcessedAsync(
+                @event.OrganizationId, LedgerReferenceTypes.LhdnCancellation, @event.InternalReferenceId))
             return;
 
         var matches = await LedgerLhdnLookup.MatchingAsync(

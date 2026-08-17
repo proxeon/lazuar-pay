@@ -37,7 +37,7 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
             ? @event.TransactionLogId.ToString()
             : @event.SubscriptionId.ToString();
 
-        if (await _repository.HasEntryBeenProcessedAsync(referenceType, referenceId))
+        if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
         var isB2b = @event.IsB2bRequired;

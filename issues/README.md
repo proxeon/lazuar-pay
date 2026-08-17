@@ -90,6 +90,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 078 | B05-L08 | `fix/078-already-consolidated-ignore-filters` | alreadyConsolidated already IgnoreQueryFilters; leftover PENDING does not re-issue |
 | 079 | B05-L09 | `fix/079-sequence-in-ledger-transaction` | Sequence increment shares the ledger SaveChanges transaction |
 | 080 | B05-L10 | `fix/080-ledger-unique-tenant` | Unique ledger key is per tenant, not global (ReferenceType, ReferenceId) |
+| 081 | B05-L11 | `fix/081-hasentry-tenant` | HasEntryBeenProcessed is per tenant, matching the unique ledger key |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
