@@ -43,7 +43,7 @@ public static class PublicArrearsEndpoints
                 SELECT p.""Name"" as ProductName,
                        s.""OrganizationId"", s.""UnitAmount"", s.""Quantity"", p.""Price"",
                        p.""SstTaxType"", p.""SstRatePercent"",
-                       p.""Currency"", s.""Status"",
+                       p.""Currency"", s.""Status"", s.""IsReminderOnly"",
                        p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
                 JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
@@ -62,7 +62,7 @@ public static class PublicArrearsEndpoints
                 Amount = (double)amount,
                 Currency = row.Currency,
                 Status = row.Status,
-                Is_reminder_only = PaymentGatewayCapabilities.IsReminderOnlyGateway(row.ProductGatewayName)
+                Is_reminder_only = row.IsReminderOnly
             };
             return TypedResults.Ok(dto);
         });
@@ -87,7 +87,7 @@ public static class PublicArrearsEndpoints
             // L-03: commerce-owned SQL only; CRM email + One tenant slug via contracts ports.
             using var connection = sqlFactory.CreateConnection();
             var query = @"
-                SELECT s.""OrganizationId"", s.""ProductId"", s.""ClientProfileId"", s.""Status"", s.""CurrentDunningCampaignId"",
+                SELECT s.""OrganizationId"", s.""ProductId"", s.""ClientProfileId"", s.""Status"", s.""IsReminderOnly"", s.""CurrentDunningCampaignId"",
                        s.""CurrentRenewalCheckoutUrl"", s.""CurrentRenewalCheckoutForDate"", s.""NextBillingDate"",
                        p.""Name"" as ProductName,
                        s.""UnitAmount"", s.""Quantity"", p.""Price"",
@@ -106,8 +106,7 @@ public static class PublicArrearsEndpoints
                 return TypedResults.BadRequest("This subscription is canceled.");
             }
 
-            var reminderOnly = PaymentGatewayCapabilities.IsReminderOnlyGateway(sub.ProductGatewayName);
-            if (sub.Status == "ACTIVE" && reminderOnly)
+            if (sub.Status == "ACTIVE" && sub.IsReminderOnly)
             {
                 return TypedResults.BadRequest("REMINDER_ONLY: This plan is paid by invoice each cycle. No card on file.");
             }
@@ -240,6 +239,7 @@ public static class PublicArrearsEndpoints
         public decimal SstRatePercent { get; init; }
         public string Currency { get; init; } = "";
         public string Status { get; init; } = "";
+        public bool IsReminderOnly { get; init; }
         public string? ProductGatewayName { get; init; }
     }
 
@@ -252,6 +252,7 @@ public static class PublicArrearsEndpoints
         public Guid ProductId { get; init; }
         public Guid ClientProfileId { get; init; }
         public string Status { get; init; } = "";
+        public bool IsReminderOnly { get; init; }
         public Guid? CurrentDunningCampaignId { get; init; }
         public string? CurrentRenewalCheckoutUrl { get; init; }
         public DateTime? CurrentRenewalCheckoutForDate { get; init; }

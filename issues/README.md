@@ -60,6 +60,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 048 | B03-C03 | `fix/048-unique-dunning-dayoffset` | Campaign save rejects two steps on the same DayOffset |
 | 049 | B03-C04 | `fix/049-reminder-log-after-publish` | Missing CRM email does not consume the dunning reminder slot |
 | 050 | B03-C05 | `fix/050-update-payment-myr-minimum` | ACTIVE update-payment is RM 2, not RM 1 |
+| 051 | B03-C06 | `fix/051-arrears-row-reminder-only` | Arrears reminder-only comes from the subscription row |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
