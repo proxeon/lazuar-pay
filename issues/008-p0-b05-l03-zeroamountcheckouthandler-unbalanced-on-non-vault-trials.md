@@ -2,17 +2,21 @@
 number: "008"
 id: B05-L03
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
+resolved_branch: fix/008-zero-amount-trial-ledger
 ---
 
 # 008 — B05-L03 — `ZeroAmountCheckoutHandler` unbalanced on non-vault trials
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/008-zero-amount-trial-ledger`
+
+Billplz/reminder-only trials now publish `DiscountAmount = list`. Billing treats any zero-amount checkout as 100% off so the journal balances.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

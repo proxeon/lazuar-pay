@@ -64,6 +64,11 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             throw new InvalidOperationException("This checkout session requires payment and cannot bypass the gateway.");
         }
 
+        if (isTrial)
+        {
+            lineDiscount = lineGross;
+        }
+
         session.Complete();
 
         if (product.Interval == "one_time")

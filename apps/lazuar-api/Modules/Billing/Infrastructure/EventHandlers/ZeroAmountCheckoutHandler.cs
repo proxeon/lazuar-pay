@@ -32,7 +32,10 @@ public class ZeroAmountCheckoutHandler : IIntegrationEventHandler<ZeroAmountChec
 
         if (@event.OriginalAmount > 0)
         {
-            entry.AddLine(AccountTypes.ExpenseDiscount, @event.DiscountAmount, @event.Currency, @event.DiscountAmount, @event.Currency);
+            // Zero-amount checkout is always 100% off (coupon or trial). Use list as discount
+            // so a trial that published DiscountAmount=0 still balances.
+            var discount = @event.OriginalAmount;
+            entry.AddLine(AccountTypes.ExpenseDiscount, discount, @event.Currency, discount, @event.Currency);
             entry.AddLine(AccountTypes.RevenueGross, -@event.OriginalAmount, @event.Currency, -@event.OriginalAmount, @event.Currency);
         }
 

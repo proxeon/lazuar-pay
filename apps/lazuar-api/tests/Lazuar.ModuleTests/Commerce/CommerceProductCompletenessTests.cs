@@ -890,6 +890,27 @@ public class CommerceProductCompletenessTests
     }
 
     [Test]
+    public async Task ProcessZeroAmount_BillplzTrial_PublishesMatchingDiscount()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, gatewayName: "BILLPLZ");
+        product.SetTrialDays(14);
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new ProcessZeroAmountCheckoutCommandHandler(repository, eventBus);
+        await handler.Handle(new ProcessZeroAmountCheckoutCommand(orgId, session.Id), CancellationToken.None);
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<ZeroAmountCheckoutCompletedIntegrationEvent>(e =>
+            e.OriginalAmount == 100m && e.DiscountAmount == 100m));
+    }
+
+    [Test]
     public async Task SubscriptionPayment_Billplz_DoesNotClearReminderOnly()
     {
         using var db = CreateDb(out var orgId);

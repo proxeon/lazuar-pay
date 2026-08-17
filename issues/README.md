@@ -18,6 +18,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 005 | B04-P01 | `fix/005-chip-preauthorized-vault` | CHIP `$0` `purchase.preauthorized` + token → `PAYMENT_COMPLETED` |
 | 006 | B04-P02 | `fix/006-m2m-fail-then-pay` | Failed M2M session can still complete when the buyer later pays |
 | 007 | B05-L01 | `fix/007-lhdn-cancel-skip-if-refunded` | ≤72h IRBM cancel after refund does not double-reverse cash/tax |
+| 008 | B05-L03 | `fix/008-zero-amount-trial-ledger` | Non-vault trial $0 checkout books a balanced discount journal |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
