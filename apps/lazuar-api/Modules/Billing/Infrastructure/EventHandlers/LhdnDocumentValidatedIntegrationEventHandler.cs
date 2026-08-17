@@ -38,8 +38,12 @@ public class LhdnDocumentValidatedIntegrationEventHandler : IIntegrationEventHan
         if (entries.Count == 0)
             return;
 
+        var consBatch = key.StartsWith("B2C-CONS-", StringComparison.OrdinalIgnoreCase);
         foreach (var entry in entries)
         {
+            if (consBatch && IsConsolidatedReceiptChild(entry, key))
+                continue;
+
             entry.UpdateLhdnStatus(@event.LhdnUuid, @event.Status);
         }
 
@@ -61,6 +65,18 @@ public class LhdnDocumentValidatedIntegrationEventHandler : IIntegrationEventHan
                 docType,
                 @event.QrLink));
         }
+    }
+
+    private static bool IsConsolidatedReceiptChild(LedgerEntry entry, string consKey)
+    {
+        if (string.Equals(entry.ReferenceId, consKey, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entry.CustomerDocumentNumber, consKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return entry.CustomerType == "B2C"
+               || DocumentSeries.IsReceiptNumber(entry.CustomerDocumentNumber);
     }
 
     internal static string ResolveDocumentType(LedgerEntry entry)

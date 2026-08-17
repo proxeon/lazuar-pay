@@ -165,7 +165,7 @@ export default function TaxInvoicesPage() {
               {isLoading ? (
                 <tr><td colSpan={6} className="py-12 text-center text-[#a1a1aa]"><Loader2 size={20} className="animate-spin mx-auto" /></td></tr>
               ) : validInvoices.length === 0 ? (
-                <tr><td colSpan={6} className="py-12 text-center text-[12px] text-[#71717a]">No tax invoices found.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-[12px] text-[#71717a]">No sales documents found.</td></tr>
               ) : (
                 validInvoices.map((entry) => {
                   const { netAmount, taxAmount } = getInvoiceMath(entry.lines);
@@ -206,7 +206,8 @@ export default function TaxInvoicesPage() {
                           "text-[9px] px-2 py-0.5 border font-bold uppercase tracking-widest whitespace-nowrap",
                           getLhdnBadgeClasses(entry.lhdn_validation_status)
                         )}>
-                          {entry.lhdn_validation_status?.replace("_", " ") || "NOT REQUIRED"}
+                          {entry.lhdn_validation_status?.replace("_", " ")
+                            || (entry.customer_type === "B2B" ? "PENDING SUBMIT" : "RECEIPT")}
                         </span>
                       </td>
                     </tr>

@@ -61,7 +61,7 @@ public class LhdnDocumentValidatedIntegrationEventHandlerTests
 
         foreach (var row in await db.LedgerEntries.IgnoreQueryFilters().ToListAsync())
         {
-            Assert.That(row.LhdnValidationStatus, Is.EqualTo(LhdnValidationStatuses.Valid));
+            Assert.That(row.LhdnValidationStatus, Is.EqualTo(LhdnValidationStatuses.ConsolidatedPending));
         }
 
         await mediator.DidNotReceive().Send(Arg.Any<GenerateAndStoreDocumentCommand>(), Arg.Any<CancellationToken>());
