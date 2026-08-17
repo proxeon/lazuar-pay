@@ -63,10 +63,17 @@ public class CommerceMrrTests
     }
 
     [Test]
-    public void SnapshotZero_FallsBackToCatalog()
+    public void MissingSnapshot_FallsBackToCatalog()
     {
         CommerceMrr.MonthlyEquivalent("ACTIVE", null, DateTime.UtcNow, "mo", 0m, 2, fallbackUnit: 50m)
             .Should().Be(100m);
+    }
+
+    [Test]
+    public void WrittenZeroSnapshot_IsZero()
+    {
+        CommerceMrr.MonthlyEquivalent("ACTIVE", null, DateTime.UtcNow, "mo", 0m, 2, fallbackUnit: 50m, hasSnapshot: true)
+            .Should().Be(0m);
     }
 
     [Test]

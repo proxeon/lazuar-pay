@@ -512,6 +512,11 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("HasUnitSnapshot")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsReminderOnly")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

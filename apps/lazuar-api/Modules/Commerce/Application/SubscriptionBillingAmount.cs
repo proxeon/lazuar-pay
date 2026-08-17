@@ -21,8 +21,11 @@ public static class SubscriptionBillingAmount
     {
         ArgumentNullException.ThrowIfNull(sub);
         ArgumentNullException.ThrowIfNull(product);
-        return sub.UnitAmount > 0 ? sub.UnitAmount : product.Price;
+        return ResolveUnit(sub.HasUnitSnapshot, sub.UnitAmount, product.Price);
     }
+
+    public static decimal ResolveUnit(bool hasSnapshot, decimal unitAmount, decimal fallbackUnit) =>
+        hasSnapshot ? unitAmount : (unitAmount > 0 ? unitAmount : fallbackUnit);
 
     public static int Seats(Subscription sub)
     {

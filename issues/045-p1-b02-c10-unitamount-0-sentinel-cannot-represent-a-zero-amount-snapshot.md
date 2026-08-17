@@ -2,17 +2,21 @@
 number: "045"
 id: B02-C10
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/02-commerce-subscriptions-billing-engine.md
 head: "297ba98"
+resolved_branch: fix/045-zero-unit-snapshot
 ---
 
 # 045 — B02-C10 — UnitAmount > 0 sentinel cannot represent a $0 snapshot
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/02-commerce-subscriptions-billing-engine.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/045-zero-unit-snapshot`
+
+`HasUnitSnapshot` makes a written 0 stick. Missing snapshots still fall back to catalog.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

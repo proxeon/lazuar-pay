@@ -54,6 +54,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 042 | B02-C07 | `fix/042-arpu-exclude-pastdue` | ARPU denominator is MRR contributors, not PAST_DUE |
 | 043 | B02-C08 | `fix/043-pause-expiry-skip-back-invoice` | Pause expiry skips the back invoice like manual resume |
 | 044 | B02-C09 | `fix/044-skip-open-dispute-billing` | Open disputes are not billed; close clears the flag |
+| 045 | B02-C10 | `fix/045-zero-unit-snapshot` | Written UnitAmount 0 is 0; missing snapshot still uses catalog |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

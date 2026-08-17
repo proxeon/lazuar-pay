@@ -15,7 +15,8 @@ public static class CommerceMrr
         string? interval,
         decimal unitAmount,
         int quantity,
-        decimal fallbackUnit = 0m)
+        decimal fallbackUnit = 0m,
+        bool hasSnapshot = false)
     {
         if (!string.Equals(status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
         {
@@ -32,7 +33,7 @@ public static class CommerceMrr
             return 0m;
         }
 
-        var unit = unitAmount > 0 ? unitAmount : fallbackUnit;
+        var unit = SubscriptionBillingAmount.ResolveUnit(hasSnapshot, unitAmount, fallbackUnit);
         var line = unit * Math.Max(1, quantity);
         return interval == "yr" ? line / 12m : line;
     }

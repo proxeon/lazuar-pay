@@ -178,6 +178,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.Property(x => x.CancelAtPeriodEnd).HasDefaultValue(false);
             builder.Property(x => x.Quantity).HasDefaultValue(1);
             builder.Property(x => x.UnitAmount).HasPrecision(18, 4).HasDefaultValue(0m);
+            builder.Property(x => x.HasUnitSnapshot).HasDefaultValue(false);
             builder.Property(x => x.HasOpenDispute).HasDefaultValue(false);
             builder.Property(x => x.BillingInterval).HasMaxLength(16);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");

@@ -19,7 +19,8 @@ public partial class CommerceQueryService
         string Interval,
         decimal UnitAmount = 0,
         int Quantity = 1,
-        DateTime? CollectionPausedUntil = null);
+        DateTime? CollectionPausedUntil = null,
+        bool HasUnitSnapshot = false);
 
     private record TxRevenueDto(decimal Amount, string Status, DateTime CreatedAt, string RecordedByName);
 
@@ -36,7 +37,8 @@ public partial class CommerceQueryService
                 p.""Price"" as Price,
                 COALESCE(NULLIF(BTRIM(s.""BillingInterval""), ''), p.""Interval"") as Interval,
                 s.""UnitAmount"" as UnitAmount, s.""Quantity"" as Quantity,
-                s.""CollectionPausedUntil"" as CollectionPausedUntil
+                s.""CollectionPausedUntil"" as CollectionPausedUntil,
+                COALESCE(s.""HasUnitSnapshot"", false) as HasUnitSnapshot
             FROM commerce.""Subscriptions"" s
             JOIN commerce.""Products"" p ON s.""ProductId"" = p.""Id""
             WHERE s.""OrganizationId"" = @OrgId AND s.""Status"" != 'PENDING'";
@@ -52,7 +54,8 @@ public partial class CommerceQueryService
             s.Interval,
             s.UnitAmount,
             s.Quantity,
-            s.Price));
+            s.Price,
+            s.HasUnitSnapshot));
         var thirtyDaysAgo = now.AddDays(-30);
         var cancelledLast30 = subs.Count(s => s.Status == "CANCELED" && s.UpdatedAt >= thirtyDaysAgo);
         var newActiveLast30 = activeSubs.Count(s => s.CreatedAt >= thirtyDaysAgo);

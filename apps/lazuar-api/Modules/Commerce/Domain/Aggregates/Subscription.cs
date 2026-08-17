@@ -25,6 +25,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public Guid? PendingProductId { get; private set; }
     public Guid? PriceId { get; private set; }
     public decimal UnitAmount { get; private set; }
+    public bool HasUnitSnapshot { get; private set; }
     public string? BillingInterval { get; private set; }
     public DateTime? TrialEndsAt { get; private set; }
     public DateTime? CollectionPausedUntil { get; private set; }
@@ -142,12 +143,14 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
 
         Quantity = quantity;
         UnitAmount = unitAmount;
+        HasUnitSnapshot = true;
         UpdatedAt = DateTime.UtcNow;
     }
 
     public void RefreshSnapshot(decimal unitAmount)
     {
         UnitAmount = unitAmount;
+        HasUnitSnapshot = true;
         UpdatedAt = DateTime.UtcNow;
     }
 

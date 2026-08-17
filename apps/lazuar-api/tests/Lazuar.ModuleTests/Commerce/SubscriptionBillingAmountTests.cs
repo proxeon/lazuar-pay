@@ -46,6 +46,32 @@ public class SubscriptionBillingAmountTests
     }
 
     [Test]
+    public void Unit_WrittenZeroSnapshot_IsZeroNotCatalog()
+    {
+        var orgId = Guid.CreateVersion7();
+        var catalog = new Product(
+            orgId, "Paid", "paid", 100m, "FIXED", 0m, "MYR", "mo", "STRIPE",
+            new CheckoutConfiguration(false, false, false), Array.Empty<string>());
+        var free = new Subscription(orgId, Guid.CreateVersion7(), catalog.Id);
+        free.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1), false, 3, 0m);
+
+        SubscriptionBillingAmount.Unit(free, catalog).Should().Be(0m);
+        SubscriptionBillingAmount.Gross(free, catalog, merchantHasSst: false).Should().Be(0m);
+    }
+
+    [Test]
+    public void Unit_MissingSnapshot_FallsBackToCatalog()
+    {
+        var orgId = Guid.CreateVersion7();
+        var catalog = new Product(
+            orgId, "Paid", "paid", 100m, "FIXED", 0m, "MYR", "mo", "STRIPE",
+            new CheckoutConfiguration(false, false, false), Array.Empty<string>());
+        var pending = new Subscription(orgId, Guid.CreateVersion7(), catalog.Id);
+
+        SubscriptionBillingAmount.Unit(pending, catalog).Should().Be(100m);
+    }
+
+    [Test]
     public async Task Gross_NoSst_Is100()
     {
         var (sub, product) = Create(unitAmount: 100m, quantity: 1);
