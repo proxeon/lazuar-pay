@@ -332,6 +332,23 @@ public class ChipCollectGatewayAdapterTests
     }
 
     [Test]
+    public async Task ParseWebhook_PurchasePaid_MissingCurrency_IsNotVerified()
+    {
+        var body = """
+            {
+              "id": "purch_noccy",
+              "event_type": "purchase.paid",
+              "purchase": { "id": "purch_noccy", "total": 1000 }
+            }
+            """;
+        var (result, _) = await ParseSignedAsync(body);
+
+        result.Verified.Should().BeFalse();
+        result.Error.Should().Contain("currency");
+        result.Currency.Should().NotBe("MYR");
+    }
+
+    [Test]
     public async Task ParseWebhook_PurchasePaid_NoIds_IsNotVerified()
     {
         var body = """

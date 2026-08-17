@@ -183,7 +183,15 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var amountCents = purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("total", out var tProp) ? tProp.GetDecimal() : 0m;
             var amountPaid = amountCents / 100m;
             
-            var currency = purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("currency", out var cProp) ? cProp.GetString() ?? "MYR" : "MYR";
+            var rawCurrency = purchaseNode.ValueKind != JsonValueKind.Undefined && purchaseNode.TryGetProperty("currency", out var cProp)
+                ? cProp.GetString()
+                : null;
+            if (!GatewayCommon.TryNormalizeCurrency(rawCurrency, out var currency))
+            {
+                return Task.FromResult(new GatewayWebhookParsedResult(
+                    false, mappedEventType, eventId, 0, "", purchaseId, new(), 0, 0, 0, 1, "",
+                    "Missing purchase currency; refusing to default to MYR."));
+            }
 
             decimal gatewayFee = 0m;
             decimal netAmount = amountPaid;

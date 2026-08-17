@@ -65,7 +65,14 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     
                     decimal gatewayFee = 0;
                     decimal fxRate = 1;
-                    string baseCurrency = session.Currency ?? "myr";
+                    if (!GatewayCommon.TryNormalizeCurrency(session.Currency, out var sessionCurrency))
+                    {
+                        return new GatewayWebhookParsedResult(
+                            false, "PAYMENT_COMPLETED", stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "",
+                            "Missing session currency; refusing to invent MYR.");
+                    }
+
+                    string baseCurrency = sessionCurrency;
                     decimal taxAmount = (session.TotalDetails?.AmountTax ?? 0L) / 100m;
                     string? customerId = session.CustomerId;
                     string? paymentMethodId = null;
@@ -93,7 +100,10 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                                 {
                                     fxRate = bt.ExchangeRate.Value;
                                 }
-                                baseCurrency = bt.Currency ?? baseCurrency;
+                                if (GatewayCommon.TryNormalizeCurrency(bt.Currency, out var btCurrency))
+                                {
+                                    baseCurrency = btCurrency;
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -132,7 +142,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         EventType: "PAYMENT_COMPLETED",
                         EventId: stripeEvent.Id,
                         AmountPaid: amount,
-                        Currency: session.Currency ?? "myr",
+                        Currency: sessionCurrency,
                         GatewayTransactionId: session.PaymentIntentId ?? session.SetupIntentId ?? session.Id,
                         Metadata: meta,
                         GatewayFee: gatewayFee,
@@ -154,7 +164,14 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     // If expand fails, leave GatewayFee=0 (gross-only) rather than blocking fulfillment.
                     decimal gatewayFee = 0;
                     decimal fxRate = 1;
-                    string baseCurrency = pi.Currency ?? "myr";
+                    if (!GatewayCommon.TryNormalizeCurrency(pi.Currency, out var piCurrency))
+                    {
+                        return new GatewayWebhookParsedResult(
+                            false, "PAYMENT_COMPLETED", stripeEvent.Id, 0, "", pi.Id, new(), 0, 0, 0, 1, "",
+                            "Missing PaymentIntent currency; refusing to invent MYR.");
+                    }
+
+                    string baseCurrency = piCurrency;
 
                     try
                     {
@@ -192,7 +209,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                         EventType: "PAYMENT_COMPLETED",
                         EventId: stripeEvent.Id,
                         AmountPaid: amount,
-                        Currency: pi.Currency ?? "myr",
+                        Currency: piCurrency,
                         GatewayTransactionId: pi.Id,
                         Metadata: meta,
                         GatewayFee: gatewayFee,
@@ -255,14 +272,18 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     EventType: eventType,
                     EventId: stripeEvent.Id,
                     AmountPaid: amount,
-                    Currency: dispute.Currency ?? "myr",
+                    Currency: GatewayCommon.TryNormalizeCurrency(dispute.Currency, out var disputeCurrency)
+                        ? disputeCurrency
+                        : "",
                     GatewayTransactionId: dispute.PaymentIntentId ?? dispute.Id,
                     Metadata: meta,
                     GatewayFee: 0,
                     TaxAmount: 0,
                     NetAmount: amount,
                     FxRate: 1,
-                    BaseCurrency: dispute.Currency ?? "myr",
+                    BaseCurrency: GatewayCommon.TryNormalizeCurrency(dispute.Currency, out var disputeBase)
+                        ? disputeBase
+                        : "",
                     Error: null,
                     GatewayCustomerId: null,
                     GatewayTokenId: null
@@ -350,7 +371,12 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         }
 
         var amount = pi.Amount / 100m;
-        var currency = pi.Currency ?? "myr";
+        if (!GatewayCommon.TryNormalizeCurrency(pi.Currency, out var currency))
+        {
+            return new GatewayWebhookParsedResult(
+                false, "PAYMENT_FAILED", eventId, 0, "", pi.Id, meta, 0, 0, 0, 1, "",
+                "Missing PaymentIntent currency; refusing to invent MYR.");
+        }
 
         return new GatewayWebhookParsedResult(
             Verified: true,

@@ -54,6 +54,24 @@ internal static class GatewayCommon
     /// tenant as <c>platform_tenant_id</c> when it differs so system checkout does not
     /// overwrite the workspace that must be activated.
     /// </summary>
+    public static bool TryNormalizeCurrency(string? raw, out string currency)
+    {
+        currency = "";
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        var normalized = raw.Trim().ToUpperInvariant();
+        if (normalized.Length != 3)
+        {
+            return false;
+        }
+
+        currency = normalized;
+        return true;
+    }
+
     internal const string RefundIdempotencyKeyPrefix = "lazuar-refund:";
 
     public static string FormatRefundIdempotencyKey(string transactionId, decimal amount)

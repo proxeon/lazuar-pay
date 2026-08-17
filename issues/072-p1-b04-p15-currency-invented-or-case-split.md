@@ -2,17 +2,21 @@
 number: "072"
 id: B04-P15
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
+resolved_branch: fix/072-currency-normalize
 ---
 
 # 072 — B04-P15 — Currency invented or case-split
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/072-currency-normalize`
+
+Webhook currency is fail-closed when omitted. Published ISO codes are uppercase. Stripe generate still sends lowercase because Stripe requires it.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

@@ -56,6 +56,15 @@ public class GatewayCommonTests
     }
 
     [Test]
+    public void TryNormalizeCurrency_UppercasesAndRejectsBlank()
+    {
+        GatewayCommon.TryNormalizeCurrency("myr", out var myr).Should().BeTrue();
+        myr.Should().Be("MYR");
+        GatewayCommon.TryNormalizeCurrency(null, out _).Should().BeFalse();
+        GatewayCommon.TryNormalizeCurrency("MYRX", out _).Should().BeFalse();
+    }
+
+    [Test]
     public void ApplyPayingTenantMetadata_PreservesPayingTenant_AndStampsPlatformTenant()
     {
         var paying = Guid.CreateVersion7();

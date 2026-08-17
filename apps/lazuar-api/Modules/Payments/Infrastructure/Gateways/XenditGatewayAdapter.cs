@@ -262,7 +262,9 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         {
             ["external_id"] = "lazuar_" + Guid.CreateVersion7().ToString("N"),
             ["amount"] = line,
-            ["currency"] = (currency ?? "MYR").Trim().ToUpperInvariant(),
+            ["currency"] = GatewayCommon.TryNormalizeCurrency(currency, out var iso)
+                ? iso
+                : throw new InvalidOperationException("Currency is required."),
             ["description"] = GatewayCommon.ProductDescription(productName, quantity),
             ["payer_email"] = GatewayCommon.ResolveEmail(customerEmail),
             ["success_redirect_url"] = successUrl,
