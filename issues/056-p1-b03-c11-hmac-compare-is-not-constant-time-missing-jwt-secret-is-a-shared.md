@@ -2,17 +2,21 @@
 number: "056"
 id: B03-C11
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
+resolved_branch: fix/056-magic-token-constant-time
 ---
 
 # 056 — B03-C11 — HMAC compare is not constant-time; missing `Jwt:Secret` is a shared mint key
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/056-magic-token-constant-time`
+
+Missing `Jwt:Secret` fails closed. HMAC compare uses `FixedTimeEquals`. Expired tokens return null.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

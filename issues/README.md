@@ -65,6 +65,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 053 | B03-C08 | `fix/053-zero-unit-gross` | Arrears Gross treats a written UnitAmount 0 as zero |
 | 054 | B03-C09 | `fix/054-success-url-magic-token` | Success and dashboard links keep the portal HMAC |
 | 055 | B03-C10 | `fix/055-magic-link-throttle` | Magic-link is throttled 5 / 10 minutes per IP |
+| 056 | B03-C11 | `fix/056-magic-token-constant-time` | Portal HMAC is constant-time; missing Jwt:Secret fails closed |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -88,13 +88,25 @@ public class MagicLinkTokenServiceTests
     }
 
     [Test]
-    public void GenerateToken_UsesFallbackSecret_WhenJwtSecretMissing()
+    public void Constructor_MissingJwtSecret_Throws()
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
-        var a = new MagicLinkTokenService(config);
-        var b = new MagicLinkTokenService(config);
-        var subscriptionId = Guid.CreateVersion7();
+        var act = () => new MagicLinkTokenService(config);
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Jwt:Secret*");
+    }
 
-        b.ValidateToken(a.GenerateToken(subscriptionId)).Should().Be(subscriptionId);
+    [Test]
+    public void ValidateToken_Expired_ReturnsNull()
+    {
+        var subscriptionId = Guid.CreateVersion7();
+        var sut = CreateSut();
+        var expiry = DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds();
+        var payload = $"{subscriptionId}:{expiry}";
+        var hash = Convert.ToHexString(System.Security.Cryptography.HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(Secret),
+            Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{payload}:{hash}"));
+
+        sut.ValidateToken(token).Should().BeNull();
     }
 }

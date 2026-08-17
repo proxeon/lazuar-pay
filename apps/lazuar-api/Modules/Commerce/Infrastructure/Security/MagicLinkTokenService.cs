@@ -16,7 +16,13 @@ public class MagicLinkTokenService : IMagicLinkTokenService
 
     public MagicLinkTokenService(IConfiguration configuration)
     {
-        _secret = configuration["Jwt:Secret"] ?? "fallback_dev_secret_key";
+        var secret = configuration["Jwt:Secret"];
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new InvalidOperationException("Jwt:Secret is required to mint and validate portal magic-link tokens.");
+        }
+
+        _secret = secret;
     }
 
     public string GenerateToken(Guid subscriptionId)
@@ -45,7 +51,14 @@ public class MagicLinkTokenService : IMagicLinkTokenService
                 Encoding.UTF8.GetBytes(_secret),
                 Encoding.UTF8.GetBytes($"{subId}:{expiry}"))).ToLowerInvariant();
 
-            if (parts[2] != expectedHash) return null;
+            var provided = Encoding.UTF8.GetBytes(parts[2]);
+            var expected = Encoding.UTF8.GetBytes(expectedHash);
+            if (provided.Length != expected.Length
+                || !CryptographicOperations.FixedTimeEquals(provided, expected))
+            {
+                return null;
+            }
+
             if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expiry) return null;
 
             return subId;
