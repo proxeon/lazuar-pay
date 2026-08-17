@@ -63,20 +63,31 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
         var alreadyReversed = await _dbContext.LedgerEntries
             .IgnoreQueryFilters()
             .AnyAsync(e =>
-                e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback
+                e.OrganizationId == tenantId
+                && e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback
                 && e.ReferenceId == @event.GatewayTransactionId);
         if (alreadyReversed)
         {
             return;
         }
 
-        // Recompute the credits that were granted for the disputed amount (same package logic as PlatformTopUpEventHandler).
-        var creditsToClawback = _creditOptions.Packages
-            .Where(p => p.AmountMyr <= @event.AmountDisputed)
-            .OrderByDescending(p => p.AmountMyr)
-            .Select(p => (int?)p.Credits)
-            .FirstOrDefault() ?? 0;
+        var originalTopUp = await _dbContext.LedgerEntries
+            .Include(e => e.Lines)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e =>
+                e.OrganizationId == tenantId
+                && e.ReferenceType == LedgerReferenceTypes.SystemCreditTopup
+                && e.ReferenceId == @event.GatewayTransactionId);
 
+        if (originalTopUp == null)
+        {
+            _logger.LogWarning(
+                "No SYSTEM_CREDIT_TOPUP ledger entry found for disputed gateway tx {GatewayTxId}; skipping claw and ledger reverse.",
+                @event.GatewayTransactionId);
+            return;
+        }
+
+        var creditsToClawback = CreditsGrantedOnTopUp(originalTopUp);
         if (creditsToClawback > 0)
         {
             await _mediator.Send(new ClawbackCreditsCommand(
@@ -89,7 +100,7 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
                 creditsToClawback, tenantId, @event.GatewayTransactionId);
         }
 
-        await ReverseUtilityTopUpLedgerAsync(tenantId, @event);
+        await ReverseUtilityTopUpLedgerAsync(tenantId, @event, originalTopUp);
     }
 
     private async Task MarkSaasPastDueAsync(GatewayDisputeCreatedIntegrationEvent @event)
@@ -117,34 +128,47 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
             tenantId, @event.GatewayTransactionId);
     }
 
-    private async Task ReverseUtilityTopUpLedgerAsync(Guid tenantId, GatewayDisputeCreatedIntegrationEvent @event)
+    private int CreditsGrantedOnTopUp(LedgerEntry originalTopUp)
+    {
+        const string prefix = "Purchased ";
+        const string suffix = " Utility Credits";
+        var description = originalTopUp.Description ?? "";
+        var start = description.IndexOf(prefix, StringComparison.Ordinal);
+        var end = description.IndexOf(suffix, StringComparison.Ordinal);
+        if (start >= 0 && end > start)
+        {
+            var raw = description[(start + prefix.Length)..end].Trim();
+            if (int.TryParse(raw, out var parsed) && parsed > 0)
+                return parsed;
+        }
+
+        var paid = Math.Abs(originalTopUp.Lines
+            .Where(l => l.AccountType == AccountTypes.ExpenseSoftwareSubscription)
+            .Sum(l => l.Amount));
+        return _creditOptions.Packages
+            .Where(p => p.AmountMyr <= paid)
+            .OrderByDescending(p => p.AmountMyr)
+            .Select(p => (int?)p.Credits)
+            .FirstOrDefault() ?? 0;
+    }
+
+    private async Task ReverseUtilityTopUpLedgerAsync(
+        Guid tenantId,
+        GatewayDisputeCreatedIntegrationEvent @event,
+        LedgerEntry originalTopUp)
     {
         var referenceType = LedgerReferenceTypes.SystemCreditChargeback;
         var referenceId = @event.GatewayTransactionId;
 
-        // Idempotent on ReferenceType + ReferenceId.
         var alreadyReversed = await _dbContext.LedgerEntries
             .IgnoreQueryFilters()
-            .AnyAsync(e => e.ReferenceType == referenceType && e.ReferenceId == referenceId);
+            .AnyAsync(e =>
+                e.OrganizationId == tenantId
+                && e.ReferenceType == referenceType
+                && e.ReferenceId == referenceId);
 
         if (alreadyReversed)
             return;
-
-        var originalTopUp = await _dbContext.LedgerEntries
-            .Include(e => e.Lines)
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(e =>
-                e.OrganizationId == tenantId
-                && e.ReferenceType == LedgerReferenceTypes.SystemCreditTopup
-                && e.ReferenceId == @event.GatewayTransactionId);
-
-        if (originalTopUp == null)
-        {
-            _logger.LogWarning(
-                "No SYSTEM_CREDIT_TOPUP ledger entry found for disputed gateway tx {GatewayTxId}; skipping ledger reverse.",
-                @event.GatewayTransactionId);
-            return;
-        }
 
         var reverseEntry = new LedgerEntry(
             tenantId,

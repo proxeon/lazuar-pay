@@ -97,6 +97,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 085 | B05-L15 | `fix/085-inbound-refund-webhooks` | Succeeded inbound Stripe refunds publish Completed; pending is not success |
 | 086 | B05-L16 | `fix/086-lost-chargeback-journal` | Lost GMV chargeback books GATEWAY_DISPUTE unless already refunded |
 | 087 | B05-L17 | `fix/087-dispute-status-honesty` | Fully refunded logs stay REFUNDED if a dispute arrives later |
+| 088 | B05-L18 | `fix/088-clawback-granted-credits` | Utility claw uses credits granted on the original top-up |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

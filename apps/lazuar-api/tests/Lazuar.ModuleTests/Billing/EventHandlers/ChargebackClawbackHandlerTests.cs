@@ -44,7 +44,8 @@ public class ChargebackClawbackHandlerTests
         {
             Packages =
             [
-                new CreditPackageOption { AmountMyr = 50m, Credits = 600 }
+                new CreditPackageOption { AmountMyr = 50m, Credits = 600 },
+                new CreditPackageOption { AmountMyr = 200m, Credits = 2500 }
             ]
         });
 
@@ -123,6 +124,27 @@ public class ChargebackClawbackHandlerTests
                 .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback),
             Is.EqualTo(1));
         await _mediator.Received(1).Send(Arg.Any<ClawbackCreditsCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task UtilityChargeback_ClawsGrantedPack_NotDisputeAmount()
+    {
+        const string tx = "txn_cb_oversize";
+        await SeedTopUpAsync(tx, amount: 50m);
+
+        await _handler.HandleAsync(Dispute(tx, amount: 200m));
+
+        await _mediator.Received(1).Send(
+            Arg.Is<ClawbackCreditsCommand>(c => c.Amount == 600),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task UtilityChargeback_MissingOriginal_DoesNotClaw()
+    {
+        await _handler.HandleAsync(Dispute("txn_missing", amount: 50m));
+
+        await _mediator.DidNotReceive().Send(Arg.Any<ClawbackCreditsCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
