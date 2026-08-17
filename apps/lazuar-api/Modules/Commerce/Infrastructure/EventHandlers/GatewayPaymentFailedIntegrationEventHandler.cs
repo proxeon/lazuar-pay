@@ -71,6 +71,15 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
 
         await MarkChargeAttemptFailedAsync(@event, sub.Id);
 
+        if (IsUpdatePayment(@event))
+        {
+            _logger.LogInformation(
+                "GatewayPaymentFailed {GatewayTxId}: update-payment decline for {SubscriptionId} ({Status}); skipping PAST_DUE.",
+                @event.GatewayTransactionId, sub.Id, sub.Status);
+            await _dbContext.SaveChangesAsync();
+            return;
+        }
+
         if (sub.Status is "CANCELED" or "SUSPENDED")
         {
             _logger.LogInformation(
@@ -170,6 +179,18 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             .OrderByDescending(l => l.AttemptNumber)
             .ThenByDescending(l => l.AttemptedAt)
             .FirstOrDefaultAsync();
+    }
+
+    internal static bool IsUpdatePayment(GatewayPaymentFailedIntegrationEvent @event)
+    {
+        if (@event.Metadata == null
+            || !@event.Metadata.TryGetValue("update_payment", out var flag)
+            || string.IsNullOrWhiteSpace(flag))
+        {
+            return false;
+        }
+
+        return flag is "1" or "true" or "True" or "yes";
     }
 
     private static bool TryResolveSubscriptionId(GatewayPaymentFailedIntegrationEvent @event, out Guid subscriptionId)

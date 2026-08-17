@@ -109,6 +109,44 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
     }
 
     [Test]
+    public async Task HandleAsync_UpdatePaymentDecline_KeepsActive_DoesNotAssignCampaign()
+    {
+        var nextBilling = DateTime.UtcNow.AddDays(20);
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), _productId);
+        sub.Activate(DateTime.UtcNow.AddMonths(-1), nextBilling);
+        sub.StoreVaultedToken("cus_live", "pm_live");
+
+        var campaign = new DunningCampaign(_orgId, "Default online", "SUSPEND", 7, priorityOrder: 10);
+
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        var @event = new GatewayPaymentFailedIntegrationEvent(
+            OrganizationId: _orgId,
+            GatewayTransactionId: "pi_update_fail",
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = "commerce_subscription",
+                ["subscription_id"] = sub.Id.ToString(),
+                ["tenant_id"] = _orgId.ToString(),
+                ["update_payment"] = "1",
+                ["failure_reason"] = "charge_declined",
+                ["gateway_name"] = "STRIPE"
+            });
+
+        await _handler.HandleAsync(@event);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().FirstAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.CurrentDunningCampaignId.Should().BeNull();
+        reloaded.NextBillingDate.Should().BeCloseTo(nextBilling, TimeSpan.FromSeconds(1));
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == "subscription.past_due"));
+    }
+
+    [Test]
     public async Task HandleAsync_MarksPendingChargeAttemptFailed_ByChargeAttemptId()
     {
         var sub = new Subscription(_orgId, Guid.CreateVersion7(), _productId);
