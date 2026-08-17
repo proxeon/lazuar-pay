@@ -2,17 +2,21 @@
 number: "096"
 id: B06-D10
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/096-b2b-event-resolved-sst
 ---
 
 # 096 — B06-D10 — B2B event `TaxAmount` is the raw gateway field, not the resolved SST
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/096-b2b-event-resolved-sst`
+
+`B2bTaxInvoiceRequested` already receives resolved SST from `GatewayPaymentCompletedHandler` (076). Locked by `HandleAsync_B2bUsesResolvedSstNotRawEventTax`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

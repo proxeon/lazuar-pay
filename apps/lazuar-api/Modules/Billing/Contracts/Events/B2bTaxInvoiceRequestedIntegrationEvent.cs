@@ -5,7 +5,8 @@ namespace Modules.Billing.Contracts.Events;
 
 /// <summary>
 /// B2B paid sale is ready for MyInvois type 01. Buyer fields must come from CRM —
-/// do not pair this with stub TINs. Not the orphan <c>InvoiceIssued</c> event.
+/// do not pair this with stub TINs. <see cref="TaxAmount"/> is resolved SST
+/// (event field or metadata sst_tax_amount), not the raw gateway tax.
 /// </summary>
 public record B2bTaxInvoiceRequestedIntegrationEvent(
     Guid OrganizationId,
