@@ -57,6 +57,7 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         var taxRefund = await ResolveTaxRefundAmountAsync(@event);
         var (fxRate, baseCurrency) = await ResolveFxAsync(@event);
 
+        LedgerEntry? booked = null;
         async Task PersistAsync(CancellationToken ct)
         {
             var entry = new LedgerEntry(
@@ -92,6 +93,7 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
 
             _repository.Add(entry);
             await _repository.SaveChangesAsync(ct);
+            booked = entry;
         }
 
         if (_repository is IBillingTransactional transactional)
@@ -102,6 +104,15 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         {
             await PersistAsync(default);
         }
+
+        if (booked == null)
+            return;
+
+        await _mediator.Send(new GenerateAndStoreDocumentCommand(
+            @event.OrganizationId,
+            booked.Id,
+            "Credit Note",
+            CorrelationId: @event.PaymentRecordId.ToString()));
     }
 
     /// <summary>

@@ -74,6 +74,49 @@ public class GatewayRefundCompletedIntegrationEventHandlerTests
     }
 
     [Test]
+    public async Task FullRefund_After72h_WithoutBillingCn_DoesNotMintSecondNumber()
+    {
+        var orgId = Guid.CreateVersion7();
+        var paymentId = Guid.CreateVersion7();
+        var eventId = Guid.CreateVersion7();
+        var doc = new TaxDocument(orgId, "INV-2026-00008", "hash", "<xml/>");
+        doc.MarkAsSubmitted("sub-8", "lhdn-uuid-8");
+        doc.MarkAsValid("long-8");
+        typeof(TaxDocument).GetProperty(nameof(TaxDocument.ValidatedAt))!
+            .SetValue(doc, DateTime.UtcNow.AddHours(-80));
+
+        var (handler, repo, mediator, billing, crm, lookup) = CreateHandlerFull();
+        billing.FindPaymentByGatewayTransactionAsync(orgId, "pi_8")
+            .Returns(new LedgerDocumentIdentity(
+                Guid.CreateVersion7(), "GATEWAY_PAYMENT", "pi_8", "INV-2026-00008",
+                "lhdn-uuid-8", "INV-2026-00008", "B2B", "VALID", 100m, "MYR", DateTime.UtcNow));
+        repo.GetTaxDocumentByInternalIdAsync(orgId, "INV-2026-00008").Returns(doc);
+        lookup.GetCustomerForDocumentAsync(orgId, "pi_8", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new CommerceCustomerDisplay("Buyer Co", "buyer@example.com", "C98765432109"));
+        crm.GetClientProfileByEmailAsync(orgId, "buyer@example.com")
+            .Returns(new ClientProfileDto
+            {
+                Id = Guid.CreateVersion7().ToString(),
+                Full_name = "Buyer Co",
+                Email = "buyer@example.com",
+                Phone = "60123456789",
+                Tin = "C98765432109",
+                Id_type = "BRN",
+                Id_value = "202001099999",
+                Consented_to_marketing = false
+            });
+
+        await handler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
+            orgId, Guid.Empty, paymentId, "pi_8", 100m, "MYR", 0m, 100m, 0m, IsFullRefund: true)
+        {
+            Id = eventId
+        });
+
+        await mediator.DidNotReceive().Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>());
+        await mediator.DidNotReceive().Send(Arg.Any<SubmitTaxDocumentCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task NoTaxDocument_IsNoOp()
     {
         var orgId = Guid.CreateVersion7();

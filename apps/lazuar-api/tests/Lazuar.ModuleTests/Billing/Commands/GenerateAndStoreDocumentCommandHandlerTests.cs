@@ -125,6 +125,36 @@ public class GenerateAndStoreDocumentCommandHandlerTests
             e.BusinessName == "Studio Nine"));
     }
 
+    [Test]
+    public async Task CreditNote_UsesContraRevenueLine()
+    {
+        var orgId = Guid.CreateVersion7();
+        await using var db = CreateDb(orgId);
+        var entry = new LedgerEntry(orgId, LedgerReferenceTypes.GatewayRefund, "ref", "Refund", "B2B");
+        entry.AddLine(AccountTypes.AssetCash, -108m, "MYR", -108m, "MYR");
+        entry.AddLine(AccountTypes.ContraRevenueRefunds, 100m, "MYR", 100m, "MYR");
+        entry.AddLine(AccountTypes.LiabilityTaxPayable, 8m, "MYR", 8m, "MYR");
+        entry.AssignCustomerDocumentNumber("CN-2026-00001");
+        db.LedgerEntries.Add(entry);
+        await db.SaveChangesAsync();
+
+        var lookup = Substitute.For<ICommerceDocumentLookup>();
+        lookup.GetCustomerForDocumentAsync(orgId, entry.ReferenceId, null, Arg.Any<CancellationToken>())
+            .Returns(new CommerceCustomerDisplay("Buyer", "buyer@example.com"));
+        var eventBus = Substitute.For<IEventBus>();
+        var r2 = Substitute.For<IR2StorageService>();
+        var one = Substitute.For<IOneQueryService>();
+        one.GetWorkspaceByIdAsync(orgId).Returns(new WorkspaceSnapshotDto(orgId, "Acme", "acme", true, DateTime.UtcNow));
+
+        var handler = CreateHandler(db, lookup, eventBus, r2, one);
+        await handler.Handle(new GenerateAndStoreDocumentCommand(orgId, entry.Id, "Credit Note"), CancellationToken.None);
+
+        await r2.Received(1).UploadAsync(
+            Arg.Any<Stream>(), Arg.Any<string>(), Arg.Any<string>(), "application/pdf", Arg.Any<CancellationToken>());
+        await eventBus.Received(1).PublishAsync(Arg.Is<DocumentPublishedIntegrationEvent>(e =>
+            e.DocumentType == "Credit Note"));
+    }
+
     private static GenerateAndStoreDocumentCommandHandler CreateHandler(
         BillingDbContext db,
         ICommerceDocumentLookup lookup,

@@ -7,7 +7,6 @@ using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Modules.Billing.Contracts;
-using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Domain;
 using Modules.Commerce.Contracts;
 using Modules.CRM.Contracts;
@@ -94,6 +93,13 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
         }
 
         var creditNoteNumber = await ResolveCreditNoteNumberAsync(@event);
+        if (string.IsNullOrWhiteSpace(creditNoteNumber))
+        {
+            _logger.LogInformation(
+                "Billing has not assigned a CN- for PaymentRecordId {PaymentRecordId}; skip type 02 until retry.",
+                @event.PaymentRecordId);
+            return;
+        }
 
         // RefundedAmount is Commerce cash (gross). Do not add TaxAmount again.
         var tax = @event.TaxAmount;
@@ -170,7 +176,7 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
         return null;
     }
 
-    private async Task<string> ResolveCreditNoteNumberAsync(GatewayRefundCompletedIntegrationEvent @event)
+    private async Task<string?> ResolveCreditNoteNumberAsync(GatewayRefundCompletedIntegrationEvent @event)
     {
         var refundReference = @event.PaymentRecordId.ToString("N") + ":" + @event.Id.ToString("N");
         var refundLedger = await _billingQueryService.FindLedgerByReferenceAsync(
@@ -178,10 +184,6 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
             LedgerReferenceTypes.GatewayRefund,
             refundReference);
 
-        if (!string.IsNullOrWhiteSpace(refundLedger?.CustomerDocumentNumber))
-            return refundLedger.CustomerDocumentNumber;
-
-        return await _mediator.Send(
-            new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.CreditNotePrefix()));
+        return refundLedger?.CustomerDocumentNumber;
     }
 }

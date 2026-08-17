@@ -23,6 +23,7 @@ public class GatewayRefundCompletedHandlerTests
     private BillingDbContext _db = null!;
     private ILedgerRepository _repo = null!;
     private GatewayRefundCompletedHandler _handler = null!;
+    private MediatR.IMediator _mediator = null!;
     private Guid _orgId;
 
     [SetUp]
@@ -35,10 +36,10 @@ public class GatewayRefundCompletedHandlerTests
             InMemoryDb.NullMediator,
             new DatabaseJobTrigger());
         _repo = new LedgerRepository(_db);
-        var mediator = Substitute.For<MediatR.IMediator>();
-        mediator.Send(Arg.Any<Modules.Billing.Contracts.Commands.GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+        _mediator = Substitute.For<MediatR.IMediator>();
+        _mediator.Send(Arg.Any<Modules.Billing.Contracts.Commands.GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
             .Returns("CN-2026-00001");
-        _handler = new GatewayRefundCompletedHandler(_repo, _db, mediator);
+        _handler = new GatewayRefundCompletedHandler(_repo, _db, _mediator);
     }
 
     [TearDown]
@@ -153,6 +154,27 @@ public class GatewayRefundCompletedHandlerTests
             await _db.LedgerEntries.IgnoreQueryFilters()
                 .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
             Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Refund_GeneratesCreditNotePdf()
+    {
+        const string tx = "txn_pdf";
+        await SeedOriginalPaymentAsync(tx, gross: 100m, tax: 0m);
+        var paymentRecordId = Guid.CreateVersion7();
+
+        await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 100m));
+
+        var refund = await _db.LedgerEntries.IgnoreQueryFilters()
+            .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund);
+
+        await _mediator.Received(1).Send(
+            Arg.Is<Modules.Billing.Contracts.Commands.GenerateAndStoreDocumentCommand>(c =>
+                c.OrganizationId == _orgId
+                && c.LedgerEntryId == refund.Id
+                && c.DocumentType == "Credit Note"
+                && c.CorrelationId == paymentRecordId.ToString()),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]

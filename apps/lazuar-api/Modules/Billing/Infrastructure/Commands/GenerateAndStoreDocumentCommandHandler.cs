@@ -81,14 +81,16 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
                 : null,
             request.LhdnQrLink);
 
-        var revenueLines = entry.Lines
-            .Where(l => l.AccountType == AccountTypes.RevenueGross || l.AccountType == AccountTypes.RevenueRecognized)
-            .ToList();
-        foreach (var line in revenueLines)
+        var isCreditNote = string.Equals(request.DocumentType, "Credit Note", StringComparison.OrdinalIgnoreCase);
+        var sourceLines = entry.Lines.Where(l =>
+            l.AccountType == AccountTypes.RevenueGross
+            || l.AccountType == AccountTypes.RevenueRecognized
+            || (isCreditNote && l.AccountType == AccountTypes.ContraRevenueRefunds)).ToList();
+        foreach (var line in sourceLines)
         {
             model.LineItems.Add(new InvoiceLineItemModel
             {
-                Description = entry.Description ?? "Payment",
+                Description = isCreditNote ? "Refund" : entry.Description ?? "Payment",
                 Amount = Math.Abs(line.Amount)
             });
             model.Currency = line.Currency;
