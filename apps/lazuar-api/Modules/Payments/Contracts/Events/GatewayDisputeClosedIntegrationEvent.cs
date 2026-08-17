@@ -9,7 +9,8 @@ public record GatewayDisputeClosedIntegrationEvent(
     Guid OrganizationId,
     string GatewayTransactionId,
     string Outcome,
-    IReadOnlyDictionary<string, string>? Metadata = null) : IIntegrationEvent
+    IReadOnlyDictionary<string, string>? Metadata = null,
+    decimal Amount = 0m) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;

@@ -82,6 +82,7 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
 
         if (parsedResult.EventType != "PAYMENT_COMPLETED"
             && parsedResult.EventType != "DISPUTE_CREATED"
+            && parsedResult.EventType != "DISPUTE_CLOSED"
             && parsedResult.EventType != "PAYMENT_FAILED"
             && parsedResult.EventType != "REFUND_COMPLETED")
         {
@@ -214,7 +215,8 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
                 OrganizationId: request.TenantId,
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
                 Outcome: outcome ?? "closed",
-                Metadata: metadata);
+                Metadata: metadata,
+                Amount: parsedResult.AmountPaid);
             log.AssignOutboxMessageId(closedEvent.Id);
             await _eventBus.PublishAsync(closedEvent);
             return;

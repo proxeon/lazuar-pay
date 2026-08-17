@@ -107,6 +107,7 @@ public class B2cConsolidationJob : BackgroundService
             .IgnoreQueryFilters()
             .Where(e => e.CustomerType == "B2C"
                 && e.ReferenceType != LedgerReferenceTypes.GatewayRefund
+                && e.ReferenceType != LedgerReferenceTypes.GatewayDispute
                 && e.Timestamp >= lookbackStartUtc
                 && e.Timestamp < currentMonthStartUtc
                 && (e.ConsolidationStatus == ConsolidationStatuses.Pending
@@ -154,6 +155,7 @@ public class B2cConsolidationJob : BackgroundService
             .Include(e => e.Lines)
             .Where(e => e.CustomerType == "B2C"
                 && e.ReferenceType != LedgerReferenceTypes.GatewayRefund
+                && e.ReferenceType != LedgerReferenceTypes.GatewayDispute
                 && e.Timestamp >= periodStartUtc
                 && e.Timestamp < periodEndUtc
                 && (e.ConsolidationStatus == ConsolidationStatuses.Pending

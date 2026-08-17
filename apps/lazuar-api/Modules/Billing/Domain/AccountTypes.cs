@@ -56,6 +56,7 @@ public static class LedgerReferenceTypes
 {
     public const string GatewayPayment = "GATEWAY_PAYMENT";
     public const string GatewayRefund = "GATEWAY_REFUND";
+    public const string GatewayDispute = "GATEWAY_DISPUTE";
     public const string ManualEnrollment = "MANUAL_ENROLLMENT";
     public const string SystemCreditTopup = "SYSTEM_CREDIT_TOPUP";
     public const string SystemCreditChargeback = "SYSTEM_CREDIT_CHARGEBACK";

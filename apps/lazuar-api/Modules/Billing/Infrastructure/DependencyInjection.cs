@@ -69,6 +69,7 @@ public static class DependencyInjection
         services.AddTransient<ManualSubscriberEnrolledIntegrationEventHandler>();
         services.AddTransient<StarterCreditSeederHandler>();
         services.AddTransient<ChargebackClawbackHandler>();
+        services.AddTransient<GatewayDisputeLostHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("billing");
@@ -102,6 +103,7 @@ public static class DependencyInjection
         eventBus.Subscribe<ManualSubscriberEnrolledIntegrationEvent, ManualSubscriberEnrolledIntegrationEventHandler>();
         eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, StarterCreditSeederHandler>();
         eventBus.Subscribe<GatewayDisputeCreatedIntegrationEvent, ChargebackClawbackHandler>();
+        eventBus.Subscribe<GatewayDisputeClosedIntegrationEvent, GatewayDisputeLostHandler>();
 
         return app;
     }
