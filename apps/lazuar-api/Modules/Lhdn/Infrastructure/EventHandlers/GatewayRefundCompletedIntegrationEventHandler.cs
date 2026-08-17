@@ -102,6 +102,11 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
         var creditNoteNumber = await ResolveCreditNoteNumberAsync(@event);
 
+        var tax = @event.TaxAmount;
+        var gross = @event.RefundedAmount;
+        var net = tax > 0 && gross >= tax ? gross - tax : gross;
+        var taxRate = net == 0 || tax == 0 ? 0 : (double)Math.Round((tax / net) * 100m, 2);
+
         var payload = new SubmitDocumentRequestDto
         {
             Internal_id = creditNoteNumber,
@@ -123,16 +128,18 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
                     Description = "Refund",
                     Classification_code = "022",
                     Quantity = 1,
-                    Unit_price = (double)@event.RefundedAmount,
-                    Tax_rate = 0,
-                    Tax_amount = (double)@event.TaxAmount,
-                    Subtotal = (double)@event.RefundedAmount,
-                    Tax_type_code = LhdnItemDtoTax_type_code._06
+                    Unit_price = (double)net,
+                    Tax_rate = taxRate,
+                    Tax_amount = (double)tax,
+                    Subtotal = (double)net,
+                    Tax_type_code = tax > 0
+                        ? LhdnItemDtoTax_type_code._02
+                        : LhdnItemDtoTax_type_code._06
                 }
             },
-            Total_excluding_tax = (double)@event.RefundedAmount,
-            Total_tax = (double)@event.TaxAmount,
-            Total_including_tax = (double)(@event.RefundedAmount + @event.TaxAmount)
+            Total_excluding_tax = (double)net,
+            Total_tax = (double)tax,
+            Total_including_tax = (double)gross
         };
 
         var idempotencyKey = $"cn:{@event.OrganizationId:N}:{@event.PaymentRecordId:N}:{@event.Id:N}";

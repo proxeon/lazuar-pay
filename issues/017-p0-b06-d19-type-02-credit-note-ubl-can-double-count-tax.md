@@ -2,17 +2,21 @@
 number: "017"
 id: B06-D19
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/017-credit-note-tax-totals
 ---
 
 # 017 — B06-D19 — Type `02` credit note UBL can double-count tax
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/017-credit-note-tax-totals`
+
+Credit-note totals treat refunded amount as gross. SST is not added twice. Tax type is SST (`02`) when tax is present.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
