@@ -2,17 +2,21 @@
 number: "052"
 id: B03-C07
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
+resolved_branch: fix/052-dunning-pause-predunning
 ---
 
 # 052 — B03-C07 — `DunningPausedUntil` does not pause pre-dunning
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/052-dunning-pause-predunning`
+
+Pre-dunning claim (SQL + in-memory) honors `DunningPausedUntil` like PAST_DUE.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

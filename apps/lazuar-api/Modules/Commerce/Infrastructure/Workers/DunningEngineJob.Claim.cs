@@ -108,6 +108,7 @@ public partial class DunningEngineJob
                 WHERE s."Status" = 'ACTIVE'
                   AND s."CancelAtPeriodEnd" IS NOT TRUE
                   AND (s."CollectionPausedUntil" IS NULL OR s."CollectionPausedUntil" <= NOW())
+                  AND (s."DunningPausedUntil" IS NULL OR s."DunningPausedUntil" <= NOW())
                   AND s."NextBillingDate" IS NOT NULL
                   AND s."NextBillingDate" > NOW()
                   AND s."NextBillingDate" <= NOW() + INTERVAL '14 days'
@@ -159,6 +160,7 @@ public partial class DunningEngineJob
                 s.Status == "ACTIVE"
                 && !s.CancelAtPeriodEnd
                 && (s.CollectionPausedUntil == null || s.CollectionPausedUntil <= now)
+                && (s.DunningPausedUntil == null || s.DunningPausedUntil <= now)
                 && s.NextBillingDate != null
                 && s.NextBillingDate > now
                 && s.NextBillingDate <= now.AddDays(14)),
