@@ -59,6 +59,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 047 | B02-C12 | `fix/047-trial-convert-stall-pastdue` | Trial convert stall after attempt 1 becomes PAST_DUE |
 | 048 | B03-C03 | `fix/048-unique-dunning-dayoffset` | Campaign save rejects two steps on the same DayOffset |
 | 049 | B03-C04 | `fix/049-reminder-log-after-publish` | Missing CRM email does not consume the dunning reminder slot |
+| 050 | B03-C05 | `fix/050-update-payment-myr-minimum` | ACTIVE update-payment is RM 2, not RM 1 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

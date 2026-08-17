@@ -145,7 +145,8 @@ public static class PublicArrearsEndpoints
             var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, sub.OrganizationId);
             var breakdown = SubscriptionBillingAmount.GrossBreakdown(
                 unitNet, sub.Quantity, sub.SstTaxType, sub.SstRatePercent, merchantHasSst);
-            var chargeAmount = isActiveUpdate ? 1m : breakdown.Gross;
+            // Stripe MYR floor is RM 2 (Payments CheckoutAmountRules.MyrMinimum). RM 1 fails amount_too_small.
+            var chargeAmount = isActiveUpdate ? 2.00m : breakdown.Gross;
 
             var metadata = new Dictionary<string, string>
             {
