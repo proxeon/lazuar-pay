@@ -25,6 +25,23 @@ public class CommerceMrrTests
     }
 
     [Test]
+    public void CoalesceInterval_PrefersBillingInterval()
+    {
+        CommerceMrr.CoalesceInterval("yr", "mo").Should().Be("yr");
+        CommerceMrr.CoalesceInterval("  yr  ", "mo").Should().Be("yr");
+        CommerceMrr.CoalesceInterval("", "mo").Should().Be("mo");
+        CommerceMrr.CoalesceInterval(null, "mo").Should().Be("mo");
+    }
+
+    [Test]
+    public void YearlySeatOnMonthlyCatalog_IsOneHundredNotTwelveHundred()
+    {
+        var interval = CommerceMrr.CoalesceInterval("yr", "mo");
+        CommerceMrr.MonthlyEquivalent("ACTIVE", null, DateTime.UtcNow, interval, 1200m, 1)
+            .Should().Be(100m);
+    }
+
+    [Test]
     public void PastDue_IsZero()
     {
         CommerceMrr.MonthlyEquivalent("PAST_DUE", null, DateTime.UtcNow, "mo", 100m, 1)

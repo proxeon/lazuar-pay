@@ -50,6 +50,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 038 | B02-C03 | `fix/038-pending-plan-billing-interval` | Pending plan snapshot / preview use BillingInterval, not catalog default |
 | 039 | B02-C04 | `fix/039-no-refresh-snapshot-on-renewal` | Renewal webhook does not RefreshSnapshot / unfreeze UnitAmount |
 | 040 | B02-C05 | `fix/040-record-payment-billing-interval` | Record-payment advances with BillingInterval, not catalog Interval |
+| 041 | B02-C06 | `fix/041-stats-mrr-billing-interval` | Stats MRR uses BillingInterval so yearly seats are /12 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

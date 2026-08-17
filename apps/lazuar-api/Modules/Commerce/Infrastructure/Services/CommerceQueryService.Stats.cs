@@ -33,7 +33,8 @@ public partial class CommerceQueryService
         const string subSql = @"
             SELECT 
                 s.""Status"" as Status, s.""CreatedAt"" as CreatedAt, s.""UpdatedAt"" as UpdatedAt, 
-                p.""Price"" as Price, p.""Interval"" as Interval,
+                p.""Price"" as Price,
+                COALESCE(NULLIF(BTRIM(s.""BillingInterval""), ''), p.""Interval"") as Interval,
                 s.""UnitAmount"" as UnitAmount, s.""Quantity"" as Quantity,
                 s.""CollectionPausedUntil"" as CollectionPausedUntil
             FROM commerce.""Subscriptions"" s

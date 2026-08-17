@@ -36,4 +36,8 @@ public static class CommerceMrr
         var line = unit * Math.Max(1, quantity);
         return interval == "yr" ? line / 12m : line;
     }
+
+    /// <summary>Stats SQL: COALESCE(NULLIF(TRIM(BillingInterval), ''), product.Interval).</summary>
+    public static string CoalesceInterval(string? billingInterval, string productInterval) =>
+        string.IsNullOrWhiteSpace(billingInterval) ? productInterval : billingInterval.Trim();
 }
