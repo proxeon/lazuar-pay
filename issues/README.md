@@ -28,6 +28,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 015 | B06-D05 | `fix/015-crm-overwrite-poisoned-idvalue` | Later checkout can correct a poisoned CRM `IdValue` |
 | 016 | B06-D09 | `fix/016-type01-tax-percent-scale` | Type 01 UBL Percent is 8, not 0.08 |
 | 017 | B06-D19 | `fix/017-credit-note-tax-totals` | Type 02 CN does not add tax on top of a gross refund |
+| 018 | B07-I01 | `fix/018-invite-mail-platform-resend` | Invite mail uses platform Resend, not tenant BYOK |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -66,7 +66,8 @@ public class OneLinkServiceTests
         await handler.Handle(evt, CancellationToken.None);
 
         await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
-            e.ToEmail == "staff@example.com"
+            e.OrganizationId == Guid.Empty
+            && e.ToEmail == "staff@example.com"
             && e.HtmlEmailBody != null
             && e.HtmlEmailBody.Contains("http://localhost:3003/accept-invite?token=invite-token")
             && !e.HtmlEmailBody.Contains("localhost:3004")

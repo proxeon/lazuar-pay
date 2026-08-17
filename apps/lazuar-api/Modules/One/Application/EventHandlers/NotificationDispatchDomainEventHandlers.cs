@@ -76,6 +76,6 @@ You have been invited to join a workspace as a **{notification.Role}**.
         var htmlBody = MarkdownParser.ToHtml(rawMarkdown);
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
-            notification.OrganizationId, notification.Email, null, subject, htmlBody, null, "EMAIL"));
+            _systemTenantId, notification.Email, null, subject, htmlBody, null, "EMAIL"));
     }
 }

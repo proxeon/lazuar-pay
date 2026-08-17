@@ -2,17 +2,21 @@
 number: "018"
 id: B07-I01
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/07-one-identity-invites-keys.md
 head: "297ba98"
+resolved_branch: fix/018-invite-mail-platform-resend
 ---
 
 # 018 — B07-I01 — Invite mail still requires tenant Resend BYOK; token is unrecoverable
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/07-one-identity-invites-keys.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/018-invite-mail-platform-resend`
+
+Workspace invite mail now dispatches as the system tenant, same as password reset, so platform Resend can send it before BYOK exists.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
