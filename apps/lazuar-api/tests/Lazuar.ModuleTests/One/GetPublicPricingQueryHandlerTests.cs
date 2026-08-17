@@ -86,12 +86,12 @@ public class GetPublicPricingQueryHandlerTests
     }
 
     [Test]
-    public async Task Zero_Hub_Plan_Means_Checkout_Is_Free_And_Credits_Are_Not_Sold_As_Live()
+    public async Task Zero_Hub_Plan_Means_Unconfigured_Not_Free()
     {
         var handler = CreateHandler();
         var dto = await handler.Handle(new GetPublicPricingQuery(), CancellationToken.None);
 
-        Assert.That(dto.Checkout_is_free, Is.True);
+        Assert.That(dto.Checkout_is_free, Is.False);
         Assert.That(dto.Hub_plan.Code, Is.EqualTo("hub_starter"));
         Assert.That(dto.Hub_plan.Amount_myr, Is.EqualTo(0));
         Assert.That(dto.Lhdn_credits_live, Is.False);

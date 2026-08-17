@@ -16,7 +16,7 @@ const FALLBACK_PRICING: PublicPricingDto = {
   sst_rate: 0,
   sst_note:
     "SST 0% — Supplier not SST-registered. Confirm with your accountant. We do not add SST at checkout today.",
-  checkout_is_free: true,
+  checkout_is_free: false,
   lhdn_credits_live: false,
   whatsapp_credits_live: false,
   lhdn_submit_credits: 3,
@@ -49,7 +49,7 @@ export default function PricingPage() {
   const pricing = data ?? FALLBACK_PRICING;
   const plan = pricing.hub_plan;
   const planPriced = (plan.amount_myr ?? 0) > 0;
-  const checkoutFree = pricing.checkout_is_free || !planPriced;
+  const checkoutFree = pricing.checkout_is_free === true;
 
   return (
     <div className="min-h-screen w-full bg-[#f5f5f5] font-sans text-[#1a1a1a]">
@@ -94,6 +94,12 @@ export default function PricingPage() {
               Checkout software is <span className="font-semibold text-[#09090b]">free today</span>.{" "}
               {plan.name} has no listed monthly price until we publish one. Optional Hub subscription
               later is a flat software fee — never a GMV tax.
+            </p>
+          ) : !planPriced ? (
+            <p className="text-[15px] text-[#52525b] leading-relaxed">
+              Hub subscription is <span className="font-semibold text-[#09090b]">not on sale</span> in
+              this environment. A RM 0 plan is unpaid, not free — checkout will not mint a Hub
+              subscription until a price is configured.
             </p>
           ) : (
             <p className="text-[15px] text-[#52525b] leading-relaxed">

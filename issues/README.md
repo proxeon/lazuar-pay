@@ -99,6 +99,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 087 | B05-L17 | `fix/087-dispute-status-honesty` | Fully refunded logs stay REFUNDED if a dispute arrives later |
 | 088 | B05-L18 | `fix/088-clawback-granted-credits` | Utility claw uses credits granted on the original top-up |
 | 089 | B05-L19 | `fix/089-underpack-unmatched-cash` | Under-pack utility payment books unmatched cash, not a silent no-op |
+| 090 | B05-L20 | `fix/090-saas-zero-not-free` | AmountMyr 0 is unpaid Hub, not “free today” |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
