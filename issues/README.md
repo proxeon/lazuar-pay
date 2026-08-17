@@ -29,6 +29,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 016 | B06-D09 | `fix/016-type01-tax-percent-scale` | Type 01 UBL Percent is 8, not 0.08 |
 | 017 | B06-D19 | `fix/017-credit-note-tax-totals` | Type 02 CN does not add tax on top of a gross refund |
 | 018 | B07-I01 | `fix/018-invite-mail-platform-resend` | Invite mail uses platform Resend, not tenant BYOK |
+| 019 | B08-M01 | `fix/019-resend-svix-whsec-hmac` | Resend webhook verifies Svix `whsec_` HMAC correctly |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

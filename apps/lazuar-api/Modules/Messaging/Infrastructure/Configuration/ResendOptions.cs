@@ -6,4 +6,5 @@ public sealed class ResendOptions
 
     public string ApiKey { get; init; } = "";
     public string SenderEmail { get; init; } = "";
+    public string WebhookSecret { get; init; } = "";
 }

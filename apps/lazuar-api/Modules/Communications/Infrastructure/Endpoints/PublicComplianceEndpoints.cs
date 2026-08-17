@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Modules.Communications.Contracts;
+using Modules.Communications.Infrastructure.Security;
 
 namespace Modules.Communications.Infrastructure;
 
@@ -123,13 +124,12 @@ public static class PublicComplianceEndpoints
                 if (!long.TryParse(svixTimestamp, out var ts) || Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - ts) > 300)
                     return Results.BadRequest("Stale webhook timestamp.");
 
-                var signed = $"{svixId}.{svixTimestamp}.{rawBody}";
-                var expected = Convert.ToBase64String(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(signed)));
-                var received = svixSignature.ToString()
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .FirstOrDefault(p => p.StartsWith("v1="))?["v1=".Length..];
-                if (received == null || !CryptographicOperations.FixedTimeEquals(
-                        Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(received)))
+                if (!SvixWebhookSignature.IsValid(
+                        secret,
+                        svixId.ToString(),
+                        svixTimestamp.ToString(),
+                        rawBody,
+                        svixSignature.ToString()))
                 {
                     return Results.BadRequest("Invalid webhook signature.");
                 }

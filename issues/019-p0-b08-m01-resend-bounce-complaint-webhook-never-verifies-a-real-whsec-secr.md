@@ -2,17 +2,21 @@
 number: "019"
 id: B08-M01
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/08-communications-messaging-crm.md
 head: "297ba98"
+resolved_branch: fix/019-resend-svix-whsec-hmac
 ---
 
 # 019 — B08-M01 — Resend bounce/complaint webhook never verifies a real `whsec_` secret
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/08-communications-messaging-crm.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/019-resend-svix-whsec-hmac`
+
+Resend/Svix verification now HMAC-SHA256s with the base64 payload after `whsec_`, not UTF-8 of the whole dashboard secret.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
