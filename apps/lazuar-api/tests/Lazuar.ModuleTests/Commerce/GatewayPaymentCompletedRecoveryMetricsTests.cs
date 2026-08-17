@@ -184,6 +184,27 @@ public class GatewayPaymentCompletedRecoveryMetricsTests
     }
 
     [Test]
+    public async Task Renewal_DoesNotUnfreezeNegotiatedUnitAmount()
+    {
+        using var fx = await SeedActiveAsync();
+        fx.Subscription.SetSnapshot(40m, 1);
+        await fx.Db.SaveChangesAsync();
+
+        var @event = PaymentEvent(fx, 40m, new Dictionary<string, string>
+        {
+            ["type"] = "commerce_subscription",
+            ["subscription_id"] = fx.Subscription.Id.ToString(),
+            ["tenant_id"] = fx.OrgId.ToString()
+        });
+
+        await fx.Handler.HandleAsync(@event);
+
+        var sub = await ReloadSubAsync(fx);
+        sub.UnitAmount.Should().Be(40m);
+        fx.Product.Price.Should().Be(49.90m);
+    }
+
+    [Test]
     public async Task H7_Suspended_ResumesAndIncrements()
     {
         using var fx = await SeedSuspendedAsync();

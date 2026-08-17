@@ -79,9 +79,6 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
 
         var periodEnd = DateTime.UtcNow;
         var interval = SubscriptionBillingAmount.ResolveInterval(existingSub, productInfo);
-        var catalogUnit = existingSub.PriceId.HasValue
-            ? (productInfo.Prices.FirstOrDefault(p => p.Id == existingSub.PriceId)?.Amount ?? productInfo.Price)
-            : productInfo.Price;
         var updatedNextBilling = SubscriptionBillingAmount.AdvanceFrom(DateTime.UtcNow, interval);
 
         if (wasSuspended)
@@ -97,8 +94,6 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         {
             existingSub.Activate(periodEnd, updatedNextBilling, existingSub.IsReminderOnly);
         }
-
-        existingSub.RefreshSnapshot(catalogUnit);
 
         if (string.IsNullOrWhiteSpace(existingSub.MetadataJson))
         {

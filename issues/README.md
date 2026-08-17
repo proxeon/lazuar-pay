@@ -48,6 +48,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 036 | B01-C10 | `fix/036-expire-vs-paid-revive` | Paid webhook revives an EXPIRED session and still fulfills |
 | 037 | B02-C02 | `fix/037-pending-product-after-load` | Missing pending product no longer commits a ghost ProductId |
 | 038 | B02-C03 | `fix/038-pending-plan-billing-interval` | Pending plan snapshot / preview use BillingInterval, not catalog default |
+| 039 | B02-C04 | `fix/039-no-refresh-snapshot-on-renewal` | Renewal webhook does not RefreshSnapshot / unfreeze UnitAmount |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

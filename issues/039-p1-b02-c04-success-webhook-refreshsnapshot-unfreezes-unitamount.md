@@ -2,17 +2,21 @@
 number: "039"
 id: B02-C04
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/02-commerce-subscriptions-billing-engine.md
 head: "297ba98"
+resolved_branch: fix/039-no-refresh-snapshot-on-renewal
 ---
 
 # 039 — B02-C04 — Success webhook RefreshSnapshot unfreezes UnitAmount
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/02-commerce-subscriptions-billing-engine.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/039-no-refresh-snapshot-on-renewal`
+
+Gateway payment success no longer RefreshSnapshot from catalog, so a negotiated UnitAmount stays frozen.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
