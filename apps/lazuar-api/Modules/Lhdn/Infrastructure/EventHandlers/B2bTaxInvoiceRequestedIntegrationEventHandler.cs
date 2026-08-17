@@ -79,7 +79,9 @@ public class B2bTaxInvoiceRequestedIntegrationEventHandler : IIntegrationEventHa
                     Classification_code = "022",
                     Quantity = 1,
                     Unit_price = (double)@event.AmountExcludingTax,
-                    Tax_rate = @event.AmountExcludingTax == 0 ? 0 : (double)(@event.TaxAmount / @event.AmountExcludingTax),
+                    Tax_rate = @event.AmountExcludingTax == 0
+                        ? 0
+                        : (double)Math.Round((@event.TaxAmount / @event.AmountExcludingTax) * 100m, 2),
                     Tax_amount = (double)@event.TaxAmount,
                     Subtotal = (double)@event.AmountExcludingTax,
                     Tax_type_code = @event.TaxAmount > 0

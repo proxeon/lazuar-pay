@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lazuar.ApiTypes;
@@ -98,7 +99,8 @@ public class B2bTaxInvoiceRequestedIntegrationEventHandlerTests
                 c.Payload.Document_type == SubmitDocumentRequestDtoDocument_type._01
                 && c.Payload.Internal_id == "INV-2026-00008"
                 && c.Payload.Buyer_tin == "C55555555555"
-                && c.Payload.Total_excluding_tax == 200),
+                && c.Payload.Total_excluding_tax == 200
+                && c.Payload.Items!.First().Tax_rate == 8),
             Arg.Any<CancellationToken>());
     }
 }

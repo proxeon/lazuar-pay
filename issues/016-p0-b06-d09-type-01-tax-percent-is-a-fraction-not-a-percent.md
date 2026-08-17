@@ -2,17 +2,21 @@
 number: "016"
 id: B06-D09
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/016-type01-tax-percent-scale
 ---
 
 # 016 — B06-D09 — Type `01` tax `Percent` is a fraction, not a percent
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/016-type01-tax-percent-scale`
+
+Type 01 `Tax_rate` is now a percent (SST 16/200 → 8), matching B2C consolidation.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

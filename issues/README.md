@@ -26,6 +26,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 013 | B06-D03 | `fix/013-document-pdf-keep-buyer-tin` | Document PDF billed-to uses CRM TIN/company, not log-only name |
 | 014 | B06-D04 | `fix/014-quoteview-id-pair-validate-tin` | Quote B2B collects ID pair and validates TIN |
 | 015 | B06-D05 | `fix/015-crm-overwrite-poisoned-idvalue` | Later checkout can correct a poisoned CRM `IdValue` |
+| 016 | B06-D09 | `fix/016-type01-tax-percent-scale` | Type 01 UBL Percent is 8, not 0.08 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
