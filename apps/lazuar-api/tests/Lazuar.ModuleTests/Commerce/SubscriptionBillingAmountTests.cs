@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Lazuar.ApiTypes;
@@ -52,6 +53,20 @@ public class SubscriptionBillingAmountTests
         (await SubscriptionBillingAmount.Gross(sub, product, billing: null)).Should().Be(100m);
         SubscriptionBillingAmount.Line(sub, product).Should().Be(100m);
         sub.UnitAmount.Should().Be(100m);
+    }
+
+    [Test]
+    public async Task StampSstMetadata_SstRegistered_WritesAmountAndType()
+    {
+        var (sub, product) = Create(unitAmount: 100m, quantity: 1);
+        var billing = SstBilling(sub.OrganizationId, "W10-1234-12345678");
+        var breakdown = await SubscriptionBillingAmount.GrossBreakdown(sub, product, billing);
+        var metadata = new Dictionary<string, string>();
+
+        SubscriptionBillingAmount.StampSstMetadata(metadata, breakdown);
+
+        metadata["sst_tax_amount"].Should().Be("8.00");
+        metadata["sst_tax_type"].Should().Be("02");
     }
 
     private static (Subscription Sub, Product Product) Create(decimal unitAmount, int quantity)

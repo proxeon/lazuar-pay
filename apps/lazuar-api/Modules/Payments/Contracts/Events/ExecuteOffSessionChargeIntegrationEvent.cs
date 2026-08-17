@@ -12,7 +12,9 @@ public record ExecuteOffSessionChargeIntegrationEvent(
     string GatewayTokenId,
     Guid? DunningCampaignId = null,
     string GatewayName = "STRIPE",
-    Guid? ChargeAttemptId = null) : IIntegrationEvent
+    Guid? ChargeAttemptId = null,
+    decimal TaxAmount = 0,
+    string? TaxType = null) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;

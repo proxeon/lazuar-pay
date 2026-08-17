@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using Modules.Billing.Contracts;
 using Modules.Commerce.Domain.Aggregates;
@@ -61,6 +63,24 @@ public static class SubscriptionBillingAmount
 
     public static decimal Gross(Subscription sub, Product product, bool merchantHasSst) =>
         GrossBreakdown(sub, product, merchantHasSst).Gross;
+
+    public static decimal LineTax(Breakdown breakdown) => breakdown.UnitTax * breakdown.Seats;
+
+    public static void StampSstMetadata(IDictionary<string, string> metadata, Breakdown breakdown)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        var tax = LineTax(breakdown);
+        if (tax <= 0)
+        {
+            return;
+        }
+
+        metadata["sst_tax_amount"] = tax.ToString("0.00", CultureInfo.InvariantCulture);
+        if (!string.IsNullOrWhiteSpace(breakdown.TaxType))
+        {
+            metadata["sst_tax_type"] = breakdown.TaxType;
+        }
+    }
 
     public static async Task<bool> MerchantHasSstAsync(IBillingQueryService? billing, Guid organizationId)
     {

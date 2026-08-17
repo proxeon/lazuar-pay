@@ -163,9 +163,11 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         Guid tenantId,
         Guid? dunningCampaignId = null,
         string? idempotencyKey = null,
-        Guid? chargeAttemptId = null)
+        Guid? chargeAttemptId = null,
+        decimal taxAmount = 0,
+        string? taxType = null)
     {
-        _ = (apiKey, customerId, tokenId, amount, currency, description, receipt, tenantId, dunningCampaignId, idempotencyKey, chargeAttemptId);
+        _ = (apiKey, customerId, tokenId, amount, currency, description, receipt, tenantId, dunningCampaignId, idempotencyKey, chargeAttemptId, taxAmount, taxType);
         // Honest: hosted invoices do not vault. Stay reminder-only until payment tokens soak.
         return Task.FromResult(false);
     }

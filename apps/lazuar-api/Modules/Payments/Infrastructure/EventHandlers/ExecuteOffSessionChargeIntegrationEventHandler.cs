@@ -77,7 +77,9 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
                 @event.TenantId,
                 @event.DunningCampaignId,
                 idempotencyKey,
-                @event.ChargeAttemptId);
+                @event.ChargeAttemptId,
+                @event.TaxAmount,
+                @event.TaxType);
         }
         catch (NotSupportedException ex)
         {

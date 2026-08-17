@@ -265,13 +265,15 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
         string description, string receipt, Guid tenantId,
         Guid? dunningCampaignId = null, string? idempotencyKey = null,
-        Guid? chargeAttemptId = null)
+        Guid? chargeAttemptId = null,
+        decimal taxAmount = 0,
+        string? taxType = null)
     {
         try
         {
             var client = new StripeClient(apiKey);
             var service = new PaymentIntentService(client);
-            var meta = BuildOffSessionMetadata(receipt, tenantId, dunningCampaignId, chargeAttemptId);
+            var meta = BuildOffSessionMetadata(receipt, tenantId, dunningCampaignId, chargeAttemptId, taxAmount, taxType);
             var resolvedKey = ResolveOffSessionIdempotencyKey(chargeAttemptId, idempotencyKey);
 
             var options = new PaymentIntentCreateOptions
@@ -378,7 +380,9 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         string receipt,
         Guid tenantId,
         Guid? dunningCampaignId,
-        Guid? chargeAttemptId)
+        Guid? chargeAttemptId,
+        decimal taxAmount = 0,
+        string? taxType = null)
     {
         var meta = new Dictionary<string, string>
         {
@@ -395,6 +399,15 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         if (chargeAttemptId.HasValue)
         {
             meta["charge_attempt_id"] = chargeAttemptId.Value.ToString();
+        }
+
+        if (taxAmount > 0)
+        {
+            meta["sst_tax_amount"] = taxAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            if (!string.IsNullOrWhiteSpace(taxType))
+            {
+                meta["sst_tax_type"] = taxType;
+            }
         }
 
         return meta;

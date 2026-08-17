@@ -141,16 +141,11 @@ public static class PublicArrearsEndpoints
 
             var isActiveUpdate = sub.Status == "ACTIVE";
             var billing = http.RequestServices.GetService<IBillingQueryService>();
-            var chargeAmount = isActiveUpdate
-                ? 1m
-                : await ResolveGrossAsync(
-                    billing,
-                    sub.OrganizationId,
-                    sub.UnitAmount,
-                    sub.Quantity,
-                    sub.Price,
-                    sub.SstTaxType,
-                    sub.SstRatePercent);
+            var unitNet = sub.UnitAmount > 0 ? sub.UnitAmount : sub.Price;
+            var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, sub.OrganizationId);
+            var breakdown = SubscriptionBillingAmount.GrossBreakdown(
+                unitNet, sub.Quantity, sub.SstTaxType, sub.SstRatePercent, merchantHasSst);
+            var chargeAmount = isActiveUpdate ? 1m : breakdown.Gross;
 
             var metadata = new Dictionary<string, string>
             {
@@ -162,6 +157,10 @@ public static class PublicArrearsEndpoints
             if (isActiveUpdate)
             {
                 metadata["update_payment"] = "1";
+            }
+            else
+            {
+                SubscriptionBillingAmount.StampSstMetadata(metadata, breakdown);
             }
 
             if (sub.CurrentDunningCampaignId != null)

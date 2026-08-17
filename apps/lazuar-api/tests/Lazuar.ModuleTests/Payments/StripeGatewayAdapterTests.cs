@@ -317,6 +317,21 @@ public class StripeGatewayAdapterTests
     }
 
     [Test]
+    public void BuildOffSessionMetadata_IncludesSstWhenTaxAmountPositive()
+    {
+        var meta = StripeGatewayAdapter.BuildOffSessionMetadata(
+            Guid.CreateVersion7().ToString(),
+            Guid.CreateVersion7(),
+            null,
+            null,
+            taxAmount: 8m,
+            taxType: "02");
+
+        meta["sst_tax_amount"].Should().Be("8.00");
+        meta["sst_tax_type"].Should().Be("02");
+    }
+
+    [Test]
     public void CreateOffSessionRequestOptions_WhenMissing_ReturnsNull()
     {
         StripeGatewayAdapter.CreateOffSessionRequestOptions(null).Should().BeNull();

@@ -72,7 +72,9 @@ public interface IPaymentGatewayAdapter
         Guid tenantId,
         Guid? dunningCampaignId = null,
         string? idempotencyKey = null,
-        Guid? chargeAttemptId = null);
+        Guid? chargeAttemptId = null,
+        decimal taxAmount = 0,
+        string? taxType = null);
 }
 
 public interface IPaymentGatewayFactory

@@ -207,9 +207,13 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
         string description, string receipt, Guid tenantId,
         Guid? dunningCampaignId = null, string? idempotencyKey = null,
-        Guid? chargeAttemptId = null)
+        Guid? chargeAttemptId = null,
+        decimal taxAmount = 0,
+        string? taxType = null)
     {
         _ = idempotencyKey; // Razorpay recurring create has no idempotency key (best-effort).
+        _ = taxAmount;
+        _ = taxType;
         try
         {
             var client = GetClient(apiKey);

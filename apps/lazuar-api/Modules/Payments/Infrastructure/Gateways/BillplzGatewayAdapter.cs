@@ -256,10 +256,14 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, string customerId, string tokenId, decimal amount, string currency,
         string description, string receipt, Guid tenantId,
         Guid? dunningCampaignId = null, string? idempotencyKey = null,
-        Guid? chargeAttemptId = null)
+        Guid? chargeAttemptId = null,
+        decimal taxAmount = 0,
+        string? taxType = null)
     {
         _ = idempotencyKey;
         _ = chargeAttemptId;
+        _ = taxAmount;
+        _ = taxType;
         _logger.LogWarning(
             "Billplz does not support vaulted off-session charges for tenant {TenantId}; skipping.",
             tenantId);

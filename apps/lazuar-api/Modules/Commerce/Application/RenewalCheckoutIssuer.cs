@@ -44,16 +44,18 @@ public static class RenewalCheckoutIssuer
         var magicToken = tokenService.GenerateToken(sub.Id);
         var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{sub.Id}?token={magicToken}";
 
+        var breakdown = await SubscriptionBillingAmount.GrossBreakdown(sub, product, billing);
         var metadata = new Dictionary<string, string>
         {
             ["type"] = "commerce_subscription",
             ["subscription_id"] = sub.Id.ToString(),
             ["tenant_id"] = sub.OrganizationId.ToString()
         };
+        SubscriptionBillingAmount.StampSstMetadata(metadata, breakdown);
 
         var url = await mediator.Send(new GenerateCheckoutSessionQuery(
             sub.OrganizationId,
-            await SubscriptionBillingAmount.Gross(sub, product, billing),
+            breakdown.Gross,
             product.Currency,
             product.Name,
             customerEmail,

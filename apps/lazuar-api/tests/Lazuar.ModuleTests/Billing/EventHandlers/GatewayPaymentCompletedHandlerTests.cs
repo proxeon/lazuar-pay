@@ -1,6 +1,7 @@
 // Lazuar.ModuleTests/Billing/EventHandlers/GatewayPaymentCompletedHandlerTests.cs
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -149,5 +150,45 @@ public class GatewayPaymentCompletedHandlerTests
         await eventBus.Received(1).PublishAsync(Arg.Is<B2bTaxInvoiceRequestedIntegrationEvent>(e =>
             e.InvoiceNumber == "INV-2026-00001"
             && e.GatewayTransactionId == "txn_b2b"));
+    }
+
+    [Test]
+    public async Task HandleAsync_RenewalWithSstMetadata_BooksTaxPayable()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
+        LedgerEntry? captured = null;
+        repository.When(r => r.Add(Arg.Any<LedgerEntry>())).Do(ci => captured = ci.Arg<LedgerEntry>());
+
+        var @event = new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: Guid.CreateVersion7(),
+            GatewayTransactionId: "pi_renewal_sst",
+            AmountPaid: 108m,
+            Currency: "MYR",
+            GatewayFee: 2m,
+            TaxAmount: 0m,
+            NetAmount: 106m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = "commerce_subscription",
+                ["sst_tax_amount"] = "8.00",
+                ["sst_tax_type"] = "02"
+            });
+
+        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("RCPT-2026");
+
+        await handler.HandleAsync(@event);
+
+        captured.Should().NotBeNull();
+        captured!.Lines.Should().Contain(l => l.AccountType == AccountTypes.RevenueGross && l.Amount == -100m);
+        captured.Lines.Should().Contain(l => l.AccountType == AccountTypes.LiabilityTaxPayable && l.Amount == -8m);
+        captured.Lines.Sum(l => l.Amount).Should().Be(0m);
     }
 }

@@ -173,16 +173,19 @@ public sealed class PastDueDunningProcessor
                     cycleAttempts.Add(attempt);
                     publishedOffSessionThisTick = true;
 
+                    var breakdown = await Modules.Commerce.Application.SubscriptionBillingAmount.GrossBreakdown(sub, product, billing);
                     await eventBus.PublishAsync(new Modules.Payments.Contracts.Events.ExecuteOffSessionChargeIntegrationEvent(
                         sub.OrganizationId,
                         sub.Id,
-                        await Modules.Commerce.Application.SubscriptionBillingAmount.Gross(sub, product, billing),
+                        breakdown.Gross,
                         product.Currency,
                         sub.VaultedCustomerId!,
                         sub.VaultedTokenId!,
                         DunningCampaignId: campaignId,
                         GatewayName: product.GatewayName,
-                        ChargeAttemptId: attempt.Id
+                        ChargeAttemptId: attempt.Id,
+                        TaxAmount: Modules.Commerce.Application.SubscriptionBillingAmount.LineTax(breakdown),
+                        TaxType: breakdown.TaxType
                     ));
                     _logger.LogInformation(
                         "Dispatched auto-charge dunning step DayOffset={DayOffset} for Subscription {Id} (attempt {AttemptNumber}/{Max}).",

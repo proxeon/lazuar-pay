@@ -248,7 +248,8 @@ public class BillingEngineJob : BackgroundService
 
         sub.ApplyPendingQuantity();
         var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, sub.OrganizationId);
-        var chargeAmount = SubscriptionBillingAmount.Gross(sub, product, merchantHasSst);
+        var breakdown = SubscriptionBillingAmount.GrossBreakdown(sub, product, merchantHasSst);
+        var chargeAmount = breakdown.Gross;
 
         var canCharge = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
                         && !sub.IsReminderOnly
@@ -280,7 +281,9 @@ public class BillingEngineJob : BackgroundService
                     sub.VaultedTokenId!,
                     DunningCampaignId: null,
                     GatewayName: product.GatewayName,
-                    ChargeAttemptId: attempt.Id
+                    ChargeAttemptId: attempt.Id,
+                    TaxAmount: SubscriptionBillingAmount.LineTax(breakdown),
+                    TaxType: breakdown.TaxType
                 ));
 
                 _logger.LogInformation(

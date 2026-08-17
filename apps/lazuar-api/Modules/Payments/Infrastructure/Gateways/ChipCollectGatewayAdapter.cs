@@ -235,7 +235,9 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         string apiKey, string customerId, string tokenId, decimal amount,
         string currency, string description, string receipt, Guid tenantId,
         Guid? dunningCampaignId = null, string? idempotencyKey = null,
-        Guid? chargeAttemptId = null)
+        Guid? chargeAttemptId = null,
+        decimal taxAmount = 0,
+        string? taxType = null)
     {
         _ = idempotencyKey; // CHIP purchase/charge has no idempotency key (best-effort).
         try
@@ -274,6 +276,15 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             if (chargeAttemptId.HasValue)
             {
                 meta["charge_attempt_id"] = chargeAttemptId.Value.ToString();
+            }
+
+            if (taxAmount > 0)
+            {
+                meta["sst_tax_amount"] = taxAmount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                if (!string.IsNullOrWhiteSpace(taxType))
+                {
+                    meta["sst_tax_type"] = taxType;
+                }
             }
 
             var amountInCents = GatewayCommon.ToMinorUnitsRounded(amount);
