@@ -64,22 +64,30 @@ public class PlatformTopUpEventHandler : IIntegrationEventHandler<GatewayPayment
 
             var reference = $"Platform Top-Up: {@event.GatewayTransactionId}";
             wallet.TopUp(credits, reference);
-
-            var ledgerEntry = new LedgerEntry(
-                targetTenantId,
-                LedgerReferenceTypes.SystemCreditTopup,
-                @event.GatewayTransactionId,
-                $"Purchased {credits} Utility Credits via Lazuar Platform",
-                "B2B");
-
-            ledgerEntry.AddLine(AccountTypes.ExpenseSoftwareSubscription, @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
-            ledgerEntry.AddLine(AccountTypes.AssetCash, -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
-
-            ledgerEntry.ValidateBalanced();
-            ledgerEntry.MarkConsolidationNotRequired();
-            _dbContext.LedgerEntries.Add(ledgerEntry);
-
-            await _dbContext.SaveChangesAsync();
         }
+        else if (@event.AmountPaid <= 0)
+        {
+            return;
+        }
+
+        var description = credits > 0
+            ? $"Purchased {credits} Utility Credits via Lazuar Platform"
+            : "Unmatched utility payment (below minimum pack)";
+
+        var ledgerEntry = new LedgerEntry(
+            targetTenantId,
+            LedgerReferenceTypes.SystemCreditTopup,
+            @event.GatewayTransactionId,
+            description,
+            "B2B");
+
+        ledgerEntry.AddLine(AccountTypes.ExpenseSoftwareSubscription, @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
+        ledgerEntry.AddLine(AccountTypes.AssetCash, -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
+
+        ledgerEntry.ValidateBalanced();
+        ledgerEntry.MarkConsolidationNotRequired();
+        _dbContext.LedgerEntries.Add(ledgerEntry);
+
+        await _dbContext.SaveChangesAsync();
     }
 }

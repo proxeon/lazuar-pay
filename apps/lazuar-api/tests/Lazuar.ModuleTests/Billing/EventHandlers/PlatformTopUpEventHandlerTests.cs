@@ -131,6 +131,18 @@ public class PlatformTopUpEventHandlerTests
     }
 
     [Test]
+    public async Task HandleAsync_UnderMinPack_BooksLedgerWithoutCredits()
+    {
+        await _handler.HandleAsync(CreateEvent(_tenantId, "txn_under", amountPaid: 5m));
+
+        Assert.That(await _dbContext.TenantCreditBalances.IgnoreQueryFilters().CountAsync(), Is.EqualTo(0));
+        var ledger = await _dbContext.LedgerEntries.IgnoreQueryFilters()
+            .SingleAsync(e => e.ReferenceType == "SYSTEM_CREDIT_TOPUP" && e.ReferenceId == "txn_under");
+        Assert.That(ledger.Description, Does.Contain("Unmatched"));
+        Assert.That(ledger.Lines.Sum(l => l.Amount), Is.EqualTo(0m));
+    }
+
+    [Test]
     public async Task HandleAsync_Ignores_Non_Utility_TopUp()
     {
         var @event = new GatewayPaymentCompletedIntegrationEvent(

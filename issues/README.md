@@ -98,6 +98,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 086 | B05-L16 | `fix/086-lost-chargeback-journal` | Lost GMV chargeback books GATEWAY_DISPUTE unless already refunded |
 | 087 | B05-L17 | `fix/087-dispute-status-honesty` | Fully refunded logs stay REFUNDED if a dispute arrives later |
 | 088 | B05-L18 | `fix/088-clawback-granted-credits` | Utility claw uses credits granted on the original top-up |
+| 089 | B05-L19 | `fix/089-underpack-unmatched-cash` | Under-pack utility payment books unmatched cash, not a silent no-op |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
