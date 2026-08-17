@@ -108,6 +108,24 @@ public class CommerceGatewayDisputeCreatedHandlerTests
     }
 
     [Test]
+    public async Task RefundedLog_DisputeDoesNotOverwriteStatus()
+    {
+        var log = new CommerceTransactionLog(
+            _orgId, 50m, 0m, "MYR", CommerceTransactionLog.StatusConfirmed,
+            "Buyer", "buyer@example.com", "Plan", "STRIPE", "pi_ref", "STRIPE");
+        log.ApplyRefund(50m);
+        _db.TransactionLogs.Add(log);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(Dispute("pi_ref"));
+
+        var stored = await _db.TransactionLogs.IgnoreQueryFilters().SingleAsync();
+        stored.Status.Should().Be(CommerceTransactionLog.StatusRefunded);
+        stored.RefundedAmount.Should().Be(50m);
+        (await _db.Disputes.IgnoreQueryFilters().CountAsync()).Should().Be(1);
+    }
+
+    [Test]
     public async Task NoMetadata_PersistsDispute_NoSubMutation()
     {
         var sub = ActiveSub();

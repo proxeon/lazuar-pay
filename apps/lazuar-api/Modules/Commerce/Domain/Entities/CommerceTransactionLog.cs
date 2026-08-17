@@ -134,6 +134,12 @@ public class CommerceTransactionLog : Entity, IMustHaveTenant
 
     public void MarkDisputed()
     {
+        if (string.Equals(Status, StatusRefunded, StringComparison.OrdinalIgnoreCase)
+            || RemainingAmount <= 0m && RefundedAmount > 0m)
+        {
+            return;
+        }
+
         Status = StatusDisputed;
     }
 
