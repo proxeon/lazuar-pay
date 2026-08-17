@@ -225,18 +225,23 @@ public class BillingEngineJob : BackgroundService
             return;
         }
 
-        if (sub.ApplyPendingPlanChange())
+        if (sub.PendingProductId is Guid pendingId && pendingId != Guid.Empty)
         {
-            product = await db.Products.IgnoreQueryFilters().Include(p => p.Prices).FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
-            if (product == null)
+            var pendingProduct = await db.Products
+                .IgnoreQueryFilters()
+                .Include(p => p.Prices)
+                .FirstOrDefaultAsync(p => p.Id == pendingId, ct);
+            if (pendingProduct == null)
             {
                 failedIds.Add(sub.Id);
                 _logger.LogWarning(
                     "Billing skipped subscription {Id}: pending product {ProductId} is missing.",
-                    sub.Id, sub.ProductId);
+                    sub.Id, pendingId);
                 return;
             }
 
+            sub.ApplyPendingPlanChange();
+            product = pendingProduct;
             var pendingPrice = product.Prices.FirstOrDefault(p => p.Interval == product.Interval) ?? product.DefaultPrice();
             sub.SetSnapshot(pendingPrice?.Amount ?? product.Price, sub.Quantity);
             sub.SetBillingInterval(pendingPrice?.Interval ?? product.Interval);

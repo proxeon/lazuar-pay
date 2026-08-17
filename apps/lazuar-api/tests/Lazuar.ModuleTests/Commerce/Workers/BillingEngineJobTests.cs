@@ -792,6 +792,29 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_MissingPendingProduct_DoesNotCommitGhostProductId()
+    {
+        var basic = CreateProduct(_orgId, "STRIPE");
+        var ghostId = Guid.CreateVersion7();
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), basic.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), false, 1, basic.Price);
+        sub.StoreVaultedToken("cus", "pm");
+        sub.SchedulePlanChange(ghostId);
+
+        _db.Products.Add(basic);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.ProductId.Should().Be(basic.Id);
+        reloaded.PendingProductId.Should().Be(ghostId);
+        reloaded.Status.Should().Be("ACTIVE");
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
     public async Task RunOnce_QuantityTimesUnitAmount()
     {
         var product = CreateProduct(_orgId, "STRIPE");

@@ -46,6 +46,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 034 | B01-C08 | `fix/034-quote-offline-sst` | Custom quotes and mark-paid book exclusive SST when the merchant has an SST id |
 | 035 | B01-C09 | `fix/035-session-complete-cas` | Only one completer wins: TryComplete + Status concurrency token |
 | 036 | B01-C10 | `fix/036-expire-vs-paid-revive` | Paid webhook revives an EXPIRED session and still fulfills |
+| 037 | B02-C02 | `fix/037-pending-product-after-load` | Missing pending product no longer commits a ghost ProductId |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
