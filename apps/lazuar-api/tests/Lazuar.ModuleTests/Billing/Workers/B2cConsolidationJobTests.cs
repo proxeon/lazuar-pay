@@ -133,6 +133,25 @@ public class B2cConsolidationJobTests
     }
 
     [Test]
+    public async Task AlreadyConsolidated_EmptyAmbientTenant_DoesNotRepublish()
+    {
+        var ts = PriorMonthUtcMid();
+        SeedSale("tx_new_pending", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, ts);
+
+        var myt = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "Singapore Standard Time" : "Asia/Kuala_Lumpur");
+        var periodMyt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(ts, DateTimeKind.Utc), myt);
+        var periodKey = new DateTime(periodMyt.Year, periodMyt.Month, 1).ToString("yyyyMM");
+        var issued = SeedSale("tx_issued_marker", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, ts);
+        issued.MarkConsolidatedPending($"B2C-CONS-{periodKey}-{_orgId:N}");
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ConsolidatedInvoiceIssuedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task SecondRun_SamePeriod_IsIdempotent()
     {
         var ts = PriorMonthUtcMid();

@@ -206,9 +206,11 @@ public class B2cConsolidationJob : BackgroundService
         CancellationToken ct)
     {
         var consolidationRef = $"B2C-CONS-{periodKey}-{orgId:N}";
-        var alreadyConsolidated = await db.LedgerEntries.AnyAsync(e =>
-            e.OrganizationId == orgId
-            && e.TaxInvoiceId == consolidationRef, ct);
+        var alreadyConsolidated = await db.LedgerEntries
+            .IgnoreQueryFilters()
+            .AnyAsync(e =>
+                e.OrganizationId == orgId
+                && e.TaxInvoiceId == consolidationRef, ct);
 
         if (alreadyConsolidated)
         {
