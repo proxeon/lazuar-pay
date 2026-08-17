@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Modules.Lhdn.Application.Ports;
+using Modules.Lhdn.Infrastructure.Services;
 
 namespace Modules.Lhdn.Infrastructure.Gateways;
 
@@ -41,9 +42,21 @@ public partial class LhdnGatewayAdapter : ILhdnGatewayAdapter
         _logger = logger;
     }
 
-    private string GetBaseUrl()
+    private readonly ConcurrentDictionary<string, string> _environmentByClientId = new();
+
+    internal string GetBaseUrl(string? clientId = null)
     {
-        return _configuration["Lhdn:BaseUrl"]?.TrimEnd('/') ?? "https://preprod-api.myinvois.hasil.gov.my";
+        string? environment = null;
+        if (!string.IsNullOrWhiteSpace(clientId))
+            _environmentByClientId.TryGetValue(clientId, out environment);
+
+        return LhdnEnvironmentUrls.ApiBaseUrl(_configuration, environment);
+    }
+
+    internal void RememberEnvironment(string clientId, string? environment)
+    {
+        if (!string.IsNullOrWhiteSpace(clientId))
+            _environmentByClientId[clientId] = environment ?? "SANDBOX";
     }
 
     private async Task EnforceRateLimitAsync(ConcurrentDictionary<string, TokenBucketRateLimiter> registry, string clientId, int limit, CancellationToken ct)

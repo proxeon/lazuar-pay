@@ -14,7 +14,7 @@ public record LhdnCancelResult(bool Success, string? Status, string? ErrorMessag
 
 public interface ILhdnGatewayAdapter
 {
-    Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default);
+    Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default, string? environment = null);
     
     Task<LhdnSubmissionResult> SubmitDocumentAsync(string clientId, string token, string payloadJson, bool isIntermediary, string? tenantTin, CancellationToken ct = default);
     

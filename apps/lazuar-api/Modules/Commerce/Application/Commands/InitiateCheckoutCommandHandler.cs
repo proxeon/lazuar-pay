@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using BuildingBlocks.Domain;
 using Lazuar.ApiTypes;
 using MediatR;
 using Microsoft.Extensions.Configuration;
@@ -166,7 +167,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                         City = request.City ?? "",
                         Postal_code = request.PostalCode ?? "",
                         State_code = request.StateCode ?? "",
-                        Country_code = request.CountryCode ?? "MYS"
+                        Country_code = Iso3166Country.NormalizeToAlpha3(request.CountryCode)
                     };
                 }
 
@@ -231,7 +232,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 City = request.City ?? "",
                 Postal_code = request.PostalCode ?? "",
                 State_code = request.StateCode ?? "",
-                Country_code = request.CountryCode ?? "MYS"
+                Country_code = Iso3166Country.NormalizeToAlpha3(request.CountryCode)
             };
         }
 

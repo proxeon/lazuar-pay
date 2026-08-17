@@ -16,7 +16,7 @@ public partial class LhdnGatewayAdapter
         await EnforceRateLimitAsync(_tinLimiters, clientId, 60, ct);
 
         var client = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/taxpayer/validate/{Uri.EscapeDataString(tin)}?idType={Uri.EscapeDataString(idType)}&idValue={Uri.EscapeDataString(idValue)}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl(clientId)}/api/v1.0/taxpayer/validate/{Uri.EscapeDataString(tin)}?idType={Uri.EscapeDataString(idType)}&idValue={Uri.EscapeDataString(idValue)}");
         
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         TryAddIntermediaryHeader(request, isIntermediary, tenantTin);

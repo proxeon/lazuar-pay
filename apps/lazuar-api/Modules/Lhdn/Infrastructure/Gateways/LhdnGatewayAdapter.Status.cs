@@ -17,7 +17,7 @@ public partial class LhdnGatewayAdapter
         await EnforceRateLimitAsync(_pollLimiters, clientId, 300, ct);
 
         var client = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/documentsubmissions/{submissionUid}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl(clientId)}/api/v1.0/documentsubmissions/{submissionUid}");
         
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         TryAddIntermediaryHeader(request, isIntermediary, tenantTin);
@@ -67,7 +67,7 @@ public partial class LhdnGatewayAdapter
         // Fetch detailed error messages if the document was marked as invalid
         if (status?.Equals("Invalid", StringComparison.OrdinalIgnoreCase) == true && !string.IsNullOrEmpty(uuid))
         {
-            var detailsReq = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl()}/api/v1.0/documents/{uuid}/details");
+            var detailsReq = new HttpRequestMessage(HttpMethod.Get, $"{GetBaseUrl(clientId)}/api/v1.0/documents/{uuid}/details");
             detailsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             TryAddIntermediaryHeader(detailsReq, isIntermediary, tenantTin);
 

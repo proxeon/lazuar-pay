@@ -15,7 +15,7 @@ public partial class LhdnGatewayAdapter
         await EnforceRateLimitAsync(_submitLimiters, clientId, 100, ct);
 
         var client = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{GetBaseUrl()}/api/v1.0/documentsubmissions");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{GetBaseUrl(clientId)}/api/v1.0/documentsubmissions");
         
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = new StringContent(payloadJson, Encoding.UTF8, "application/json");

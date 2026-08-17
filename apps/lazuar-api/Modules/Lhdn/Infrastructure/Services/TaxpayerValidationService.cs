@@ -59,7 +59,7 @@ public class TaxpayerValidationService : ITaxpayerValidationService
         }
 
         var clientSecret = _secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
-        var token = await _gatewayAdapter.GetTokenAsync(organizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+        var token = await _gatewayAdapter.GetTokenAsync(organizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct, config.Environment);
         
         var validationResult = await _gatewayAdapter.ValidateTaxpayerTinAsync(config.MyInvoisClientId, token, normalizedTin, normalizedIdType, normalizedIdValue, config.IntermediaryMode, config.SupplierTin, ct);
 

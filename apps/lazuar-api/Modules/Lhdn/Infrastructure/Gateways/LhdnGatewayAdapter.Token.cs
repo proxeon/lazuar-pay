@@ -11,9 +11,10 @@ namespace Modules.Lhdn.Infrastructure.Gateways;
 
 public partial class LhdnGatewayAdapter
 {
-    public async Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default)
+    public async Task<string> GetTokenAsync(Guid organizationId, string clientId, string clientSecret, bool isIntermediary, string? tenantTin, CancellationToken ct = default, string? environment = null)
     {
-        var cacheKey = $"lhdn_token_{organizationId}";
+        RememberEnvironment(clientId, environment);
+        var cacheKey = $"lhdn_token_{organizationId}_{environment ?? "SANDBOX"}";
 
         if (_cache.TryGetValue(cacheKey, out string? cachedToken) && !string.IsNullOrEmpty(cachedToken))
         {
@@ -23,7 +24,7 @@ public partial class LhdnGatewayAdapter
         await EnforceRateLimitAsync(_loginLimiters, clientId, 12, ct);
 
         var client = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{GetBaseUrl()}/connect/token");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{GetBaseUrl(clientId)}/connect/token");
 
         var formData = new Dictionary<string, string>
         {

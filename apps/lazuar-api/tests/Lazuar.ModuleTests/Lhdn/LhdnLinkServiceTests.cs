@@ -1,6 +1,9 @@
+using BuildingBlocks.Domain;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Modules.Lhdn.Infrastructure.Gateways;
 using Modules.Lhdn.Infrastructure.Services;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Lhdn;
@@ -24,6 +27,38 @@ public class LhdnLinkServiceTests
 
         service.GetPortalUrl("PROD").Should().Be("https://myinvois.hasil.gov.my");
         service.GetPortalUrl("production").Should().Be("https://myinvois.hasil.gov.my");
+    }
+
+    [Test]
+    public void ApiBaseUrl_Prod_UsesProductionApiHost()
+    {
+        var config = new ConfigurationBuilder().Build();
+        LhdnEnvironmentUrls.ApiBaseUrl(config, "PROD").Should().Be("https://api.myinvois.hasil.gov.my");
+        LhdnEnvironmentUrls.ApiBaseUrl(config, "SANDBOX").Should().Be("https://preprod-api.myinvois.hasil.gov.my");
+    }
+
+    [Test]
+    public void GetBaseUrl_AfterRememberingProd_UsesProductionApi()
+    {
+        var config = new ConfigurationBuilder().Build();
+        var adapter = new LhdnGatewayAdapter(
+            Substitute.For<System.Net.Http.IHttpClientFactory>(),
+            new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()),
+            config,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<LhdnGatewayAdapter>.Instance);
+
+        adapter.RememberEnvironment("client-prod", "PROD");
+        adapter.GetBaseUrl("client-prod").Should().Be("https://api.myinvois.hasil.gov.my");
+        adapter.GetBaseUrl("unknown").Should().Be("https://preprod-api.myinvois.hasil.gov.my");
+    }
+
+    [Test]
+    public void NormalizeToAlpha3_MapsMyToMys()
+    {
+        Iso3166Country.NormalizeToAlpha3(null).Should().Be("MYS");
+        Iso3166Country.NormalizeToAlpha3("MY").Should().Be("MYS");
+        Iso3166Country.NormalizeToAlpha3("my").Should().Be("MYS");
+        Iso3166Country.NormalizeToAlpha3("MYS").Should().Be("MYS");
     }
 
     [Test]

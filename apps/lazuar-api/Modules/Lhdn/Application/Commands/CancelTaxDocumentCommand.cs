@@ -50,7 +50,7 @@ public class CancelTaxDocumentCommandHandler : ICommandHandler<CancelTaxDocument
         doc.Cancel();
 
         var clientSecret = _secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
-        var token = await _gatewayAdapter.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+        var token = await _gatewayAdapter.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct, config.Environment);
         var result = await _gatewayAdapter.CancelDocumentAsync(config.MyInvoisClientId, token, doc.LhdnUuid, request.Reason, config.IntermediaryMode, config.SupplierTin, ct);
 
         if (!result.Success)

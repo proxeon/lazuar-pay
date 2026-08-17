@@ -99,7 +99,7 @@ public class LhdnSubmissionJob : BackgroundService
                 var jsonPayload = JsonSerializer.Serialize(payload);
 
                 var clientSecret = secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
-                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct, config.Environment);
                 var result = await gateway.SubmitDocumentAsync(config.MyInvoisClientId, token, jsonPayload, config.IntermediaryMode, config.SupplierTin, ct);
 
                 if (result.Success && !string.IsNullOrEmpty(result.SubmissionUid))

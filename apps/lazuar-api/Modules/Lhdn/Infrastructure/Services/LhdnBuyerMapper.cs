@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using BuildingBlocks.Domain;
 using Lazuar.ApiTypes;
 using Modules.Lhdn.Domain;
 using Modules.CRM.Contracts;
@@ -67,7 +68,8 @@ internal static class LhdnBuyerMapper
                 City = FirstNonEmpty(profile?.Billing_address?.City, display?.City, "NA"),
                 Postal_code = FirstNonEmpty(profile?.Billing_address?.Postal_code, display?.PostalCode, "00000"),
                 State_code = stateCode,
-                Country_code = FirstNonEmpty(profile?.Billing_address?.Country_code, display?.CountryCode, "MYS")
+                Country_code = Iso3166Country.NormalizeToAlpha3(
+                    FirstNonEmpty(profile?.Billing_address?.Country_code, display?.CountryCode, "MYS"))
             };
         }
 

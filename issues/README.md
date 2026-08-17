@@ -111,6 +111,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 099 | B06-D13 | `fix/099-stub-tin-lists` | Stub TIN lists are the same (C / IG / EI) |
 | 100 | B06-D14 | `fix/100-poll-uuid-on-valid` | Poller writes UUID onto TaxDocument when submit missed it |
 | 101 | B06-D15 | `fix/101-qr-host-preprod` | Share QR host follows tenant Environment; ops QR is same-origin |
+| 102 | B06-D16 | `fix/102-environment-cosmetic-country-my` | PROD Environment hits api.myinvois; checkout country default is MYS |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

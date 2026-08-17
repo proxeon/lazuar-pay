@@ -16,7 +16,7 @@ public partial class LhdnGatewayAdapter
         await EnforceRateLimitAsync(_cancelLimiters, clientId, 12, ct);
 
         var client = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Put, $"{GetBaseUrl()}/api/v1.0/documents/state/{uuid}/state");
+        var request = new HttpRequestMessage(HttpMethod.Put, $"{GetBaseUrl(clientId)}/api/v1.0/documents/state/{uuid}/state");
         
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         TryAddIntermediaryHeader(request, isIntermediary, tenantTin);

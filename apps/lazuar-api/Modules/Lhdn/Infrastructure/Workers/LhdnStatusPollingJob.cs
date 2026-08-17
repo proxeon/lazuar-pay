@@ -81,7 +81,7 @@ public class LhdnStatusPollingJob : BackgroundService
                 }
 
                 var clientSecret = secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
-                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct);
+                var token = await gateway.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct, config.Environment);
                 var result = await gateway.GetDocumentStatusAsync(config.MyInvoisClientId, token, doc.SubmissionUid!, config.IntermediaryMode, config.SupplierTin, ct);
 
                 if (result.Success)

@@ -50,7 +50,7 @@ export function CheckoutForm({
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [stateCode, setStateCode] = useState("");
-  const [countryCode, setCountryCode] = useState("MY");
+  const [countryCode, setCountryCode] = useState("MYS");
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 

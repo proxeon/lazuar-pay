@@ -34,7 +34,7 @@ public class CancelTaxDocumentCommandTests
         doc.MarkAsValid("long");
         repo.GetTaxDocumentByInternalIdAsync(org, "INV-2026-1", Arg.Any<CancellationToken>()).Returns(doc);
 
-        gateway.GetTokenAsync(org, "cid", "plain", false, "C1", Arg.Any<CancellationToken>()).Returns("tok");
+        gateway.GetTokenAsync(org, "cid", "plain", false, "C1", Arg.Any<CancellationToken>(), Arg.Any<string?>()).Returns("tok");
         gateway.CancelDocumentAsync("cid", "tok", "uuid-1", "wrong TIN", false, "C1", Arg.Any<CancellationToken>())
             .Returns(new LhdnCancelResult(true, "cancelled", null));
 
