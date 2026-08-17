@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, X, Download, AlertTriangle, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { client, type components } from "../../../lib/api-client";
+import { API_URL, client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
@@ -116,17 +116,41 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
     return { subtotal, discount, tax, total, currency, lines: displayLines };
   }, [invoice]);
 
+  const liveStatus = lhdnDoc?.status || invoice?.lhdn_validation_status;
+  const qrLink = liveStatus === "VALID" ? lhdnDoc?.qr_link : undefined;
+
+  const { data: qrImageUrl } = useQuery({
+    queryKey: ["lhdn-document-qr", lhdnInternalId, qrLink],
+    enabled: !!invoice && !!lhdnInternalId && !!qrLink,
+    queryFn: async () => {
+      const tenantId = localStorage.getItem("ops_active_workspace_id");
+      const res = await fetch(
+        `${API_URL}/lhdn/documents/${encodeURIComponent(lhdnInternalId!)}/qr`,
+        {
+          credentials: "include",
+          headers: tenantId ? { "X-Tenant-Id": tenantId } : undefined,
+        }
+      );
+      if (!res.ok) throw new Error("QR unavailable");
+      return URL.createObjectURL(await res.blob());
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      if (qrImageUrl) URL.revokeObjectURL(qrImageUrl);
+    };
+  }, [qrImageUrl]);
+
   if (!invoice) return null;
 
   const displayId = invoice.customer_document_number || invoice.tax_invoice_id || invoice.id.substring(0, 8).toUpperCase();
-  const liveStatus = lhdnDoc?.status || invoice.lhdn_validation_status;
   const isLhdnValidated = liveStatus === "VALID";
   const validatedAtMs = lhdnDoc?.validated_at ? new Date(lhdnDoc.validated_at).getTime() : NaN;
   const hoursSinceValid = Number.isFinite(validatedAtMs)
     ? (Date.now() - validatedAtMs) / (1000 * 60 * 60)
     : Number.POSITIVE_INFINITY;
   const isCancelable = isLhdnValidated && hoursSinceValid < 72;
-  const qrLink = liveStatus === "VALID" ? lhdnDoc?.qr_link : undefined;
 
   const getLhdnBadgeClasses = (status?: string) => {
     switch (status) {
@@ -255,11 +279,15 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
               {qrLink && (
                 <div className="pt-3 border-t border-[#e5e5e5] space-y-2">
                   <span className="text-[#a1a1aa] block text-[12px]">MyInvois share QR</span>
-                  <img
-                    alt="MyInvois QR"
-                    className="h-28 w-28 border border-[#e5e5e5] bg-white"
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrLink)}`}
-                  />
+                  {qrImageUrl ? (
+                    <img
+                      alt="MyInvois QR"
+                      className="h-28 w-28 border border-[#e5e5e5] bg-white"
+                      src={qrImageUrl}
+                    />
+                  ) : (
+                    <div className="h-28 w-28 border border-[#e5e5e5] bg-[#fafafa]" />
+                  )}
                   <a href={qrLink} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-blue-700 break-all underline">
                     {qrLink}
                   </a>

@@ -227,7 +227,7 @@ public class MyInvoisLoopTests
         var doc = new TaxDocument(org, "INV-P", "hash", "<Invoice/>");
         repo.GetTaxDocumentByInternalIdAsync(org, "INV-P", Arg.Any<CancellationToken>()).Returns(doc);
         var links = Substitute.For<ILhdnLinkService>();
-        links.GetPortalUrl().Returns("https://preprod.myinvois.hasil.gov.my");
+        links.GetPortalUrl(Arg.Any<string?>()).Returns("https://preprod.myinvois.hasil.gov.my");
         var handler = new GetLhdnDocumentStatusQueryHandler(repo, links);
         var result = await handler.Handle(new GetLhdnDocumentStatusQuery(org, "INV-P"), CancellationToken.None);
         result!.Qr_link.Should().BeNull();
@@ -242,12 +242,36 @@ public class MyInvoisLoopTests
         doc.MarkAsSubmitted("sub", "uuid-1");
         doc.MarkAsValid("long-1");
         repo.GetTaxDocumentByInternalIdAsync(org, "INV-V", Arg.Any<CancellationToken>()).Returns(doc);
+        repo.GetTenantConfigAsync(org, Arg.Any<CancellationToken>())
+            .Returns(new LhdnTenantConfig(org, false, "C1", "BRN", "1", "SANDBOX"));
         var links = Substitute.For<ILhdnLinkService>();
-        links.GetPortalUrl().Returns("https://preprod.myinvois.hasil.gov.my");
+        links.GetPortalUrl(Arg.Any<string?>()).Returns("https://preprod.myinvois.hasil.gov.my");
         var handler = new GetLhdnDocumentStatusQueryHandler(repo, links);
         var result = await handler.Handle(new GetLhdnDocumentStatusQuery(org, "INV-V"), CancellationToken.None);
         result!.Qr_link.Should().Contain("/share/");
         result.Status.Should().Be("VALID");
+    }
+
+    [Test]
+    public async Task GetDocument_Valid_ProdEnvironment_UsesProductionPortalHost()
+    {
+        var repo = Substitute.For<ILhdnRepository>();
+        var org = Guid.CreateVersion7();
+        var doc = new TaxDocument(org, "INV-P1", "hash", "<Invoice/>");
+        doc.MarkAsSubmitted("sub", "uuid-prod");
+        doc.MarkAsValid("long-prod");
+        repo.GetTaxDocumentByInternalIdAsync(org, "INV-P1", Arg.Any<CancellationToken>()).Returns(doc);
+        repo.GetTenantConfigAsync(org, Arg.Any<CancellationToken>())
+            .Returns(new LhdnTenantConfig(org, false, "C1", "BRN", "1", "PROD"));
+        var links = Substitute.For<ILhdnLinkService>();
+        links.GetPortalUrl("PROD").Returns("https://myinvois.hasil.gov.my");
+        var handler = new GetLhdnDocumentStatusQueryHandler(repo, links);
+
+        var result = await handler.Handle(new GetLhdnDocumentStatusQuery(org, "INV-P1"), CancellationToken.None);
+
+        result!.Qr_link.Should().Be("https://myinvois.hasil.gov.my/uuid-prod/share/long-prod");
+        await repo.Received(1).GetTenantConfigAsync(org, Arg.Any<CancellationToken>());
+        _ = links.Received(1).GetPortalUrl("PROD");
     }
 
     [Test]

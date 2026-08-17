@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Events;
+using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 
 namespace Modules.Lhdn.Application.Commands;
@@ -34,18 +35,22 @@ public class DispatchExternalWebhookCommandHandler : ICommandHandler<DispatchExt
 
     private readonly IEventBus _eventBus;
     private readonly ILhdnLinkService _linkService;
+    private readonly ILhdnRepository _repository;
 
     public DispatchExternalWebhookCommandHandler(
         [FromKeyedServices("LhdnEventBus")] IEventBus eventBus,
-        ILhdnLinkService linkService)
+        ILhdnLinkService linkService,
+        ILhdnRepository repository)
     {
         _eventBus = eventBus;
         _linkService = linkService;
+        _repository = repository;
     }
 
     public async Task Handle(DispatchExternalWebhookCommand request, CancellationToken ct)
     {
-        var portalUrl = _linkService.GetPortalUrl();
+        var config = await _repository.GetTenantConfigAsync(request.OrganizationId, ct);
+        var portalUrl = _linkService.GetPortalUrl(config?.Environment);
 
         var qrLink = (!string.IsNullOrEmpty(request.LhdnUuid) && !string.IsNullOrEmpty(request.LongId))
             ? $"{portalUrl}/{request.LhdnUuid}/share/{request.LongId}"

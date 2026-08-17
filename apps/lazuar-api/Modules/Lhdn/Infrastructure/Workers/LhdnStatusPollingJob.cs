@@ -90,7 +90,7 @@ public class LhdnStatusPollingJob : BackgroundService
                     {
                         doc.MarkAsValid(result.LongId!, result.Uuid);
 
-                        var portalUrl = linkService.GetPortalUrl();
+                        var portalUrl = linkService.GetPortalUrl(config.Environment);
                         var qrLink = (!string.IsNullOrEmpty(result.Uuid) && !string.IsNullOrEmpty(result.LongId))
                             ? $"{portalUrl}/{result.Uuid}/share/{result.LongId}"
                             : null;

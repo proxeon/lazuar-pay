@@ -83,10 +83,18 @@ public class LhdnEndpointsAuthorizationTests
             e.RoutePattern.RawText is { } raw
             && raw.Contains("documents", System.StringComparison.OrdinalIgnoreCase)
             && !raw.Contains("cancel", System.StringComparison.OrdinalIgnoreCase)
+            && !raw.Contains("/qr", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "GET"));
+
+        var getQr = endpoints.SingleOrDefault(e =>
+            e.RoutePattern.RawText is { } raw
+            && raw.Contains("/qr", System.StringComparison.OrdinalIgnoreCase)
             && HasMethod(e, "GET"));
 
         Assert.That(getDocument, Is.Not.Null, $"GET document not found. Routes: {Dump(endpoints)}");
+        Assert.That(getQr, Is.Not.Null, $"GET document QR not found. Routes: {Dump(endpoints)}");
         AssertPolicy(getDocument, "IntegrationLhdnDocumentsRead", "GET /lhdn/documents/{internalId}");
+        AssertPolicy(getQr, "IntegrationLhdnDocumentsRead", "GET /lhdn/documents/{internalId}/qr");
     }
 
     [Test]

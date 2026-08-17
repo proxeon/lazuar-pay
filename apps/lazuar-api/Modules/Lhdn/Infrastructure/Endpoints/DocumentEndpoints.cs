@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Lhdn.Application.Commands;
 using Modules.Lhdn.Application.Queries;
+using Modules.Lhdn.Infrastructure.Services;
 
 namespace Modules.Lhdn.Infrastructure;
 
@@ -76,6 +77,23 @@ public static class DocumentEndpoints
         {
             var result = await mediator.Send(new GetLhdnDocumentStatusQuery(ctx.TenantId, internalId));
             return result != null ? TypedResults.Ok(result) : TypedResults.NotFound();
+        });
+
+        documentsRead.MapGet("/documents/{internalId}/qr", async Task<IResult> (
+            string internalId,
+            IExecutionContextAccessor ctx,
+            IMediator mediator) =>
+        {
+            var result = await mediator.Send(new GetLhdnDocumentStatusQuery(ctx.TenantId, internalId));
+            if (result?.Qr_link is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.File(
+                MyInvoisQrPng.Encode(result.Qr_link),
+                "image/png",
+                fileDownloadName: null);
         });
 
         documentsRead.MapPost("/taxpayer/validate", async Task<Results<Ok<ValidateTinResponseDto>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (

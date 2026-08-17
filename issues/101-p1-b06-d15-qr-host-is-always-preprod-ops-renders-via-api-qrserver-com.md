@@ -2,7 +2,8 @@
 number: "101"
 id: B06-D15
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/101-qr-host-preprod
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 101 — B06-D15 — QR host is always preprod; ops renders via `api.qrserver.com`
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/101-qr-host-preprod`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

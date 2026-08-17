@@ -2,5 +2,8 @@ namespace Modules.Lhdn.Application.Services;
 
 public interface ILhdnLinkService
 {
-    string GetPortalUrl();
+    /// <summary>
+    /// MyInvois share-portal host for the tenant's Environment (PROD vs SANDBOX).
+    /// </summary>
+    string GetPortalUrl(string? environment = null);
 }

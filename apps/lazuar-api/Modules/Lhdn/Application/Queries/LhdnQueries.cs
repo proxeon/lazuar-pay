@@ -31,7 +31,8 @@ public class GetLhdnDocumentStatusQueryHandler : IQueryHandler<GetLhdnDocumentSt
         var doc = await _repository.GetTaxDocumentByInternalIdAsync(request.OrganizationId, request.InternalId, ct);
         if (doc == null) return null;
 
-        var portalUrl = _linkService.GetPortalUrl();
+        var config = await _repository.GetTenantConfigAsync(request.OrganizationId, ct);
+        var portalUrl = _linkService.GetPortalUrl(config?.Environment);
 
         var qrLink = (string.Equals(doc.ValidationStatus, "VALID", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(doc.LhdnUuid)

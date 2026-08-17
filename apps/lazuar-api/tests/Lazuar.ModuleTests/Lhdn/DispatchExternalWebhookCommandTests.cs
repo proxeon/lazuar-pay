@@ -6,7 +6,9 @@ using BuildingBlocks.Application;
 using FluentAssertions;
 using Modules.Commerce.Contracts.Events;
 using Modules.Lhdn.Application.Commands;
+using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
+using Modules.Lhdn.Domain.Aggregates;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -30,8 +32,11 @@ public class DispatchExternalWebhookCommandTests
     {
         _eventBus = Substitute.For<IEventBus>();
         _linkService = Substitute.For<ILhdnLinkService>();
-        _linkService.GetPortalUrl().Returns("https://preprod.myinvois.hasil.gov.my");
-        _handler = new DispatchExternalWebhookCommandHandler(_eventBus, _linkService);
+        _linkService.GetPortalUrl(Arg.Any<string?>()).Returns("https://preprod.myinvois.hasil.gov.my");
+        var repo = Substitute.For<ILhdnRepository>();
+        repo.GetTenantConfigAsync(OrgId, Arg.Any<CancellationToken>())
+            .Returns(new LhdnTenantConfig(OrgId, false, "C1", "BRN", "1", "SANDBOX"));
+        _handler = new DispatchExternalWebhookCommandHandler(_eventBus, _linkService, repo);
     }
 
     [Test]
@@ -104,7 +109,7 @@ public class DispatchExternalWebhookCommandTests
     [Test]
     public async Task Does_Not_Use_FireAndForget_Sender_Path()
     {
-        // Handler only takes IEventBus + ILhdnLinkService — pure One publish (R43).
+        // Handler publishes via One event bus (R43); portal host comes from tenant Environment.
         // Publish is the sole side effect.
         await _handler.Handle(
             new DispatchExternalWebhookCommand(
