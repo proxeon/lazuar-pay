@@ -104,6 +104,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 092 | B05-L22 | `fix/092-pdf-retry-after-processed` | Payment retry still generates the PDF after the ledger row exists |
 | 093 | B05-L23 | `fix/093-cn-including-tax` | Type 02 CN treats RefundedAmount as gross, not net+tax |
 | 094 | B06-D06 | `fix/094-tax-invoice-badge-honesty` | Cons VALID does not badge RCPT rows; ops empty state is sales documents |
+| 095 | B06-D08 | `fix/095-offline-product-b2b` | Offline product mark-paid keeps RequiresTaxId as IsB2bRequired |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

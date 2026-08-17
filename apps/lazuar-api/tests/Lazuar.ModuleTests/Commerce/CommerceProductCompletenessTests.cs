@@ -307,6 +307,34 @@ public class CommerceProductCompletenessTests
     }
 
     [Test]
+    public async Task MarkCheckoutAsPaidOffline_ProductRequiresTaxId_PublishesB2b()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, requiresTaxId: true);
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+
+        var eventBus = Substitute.For<IEventBus>();
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        {
+            Id = clientId.ToString(),
+            Full_name = "Offline Buyer",
+            Email = "offline@example.com"
+        });
+
+        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(repository, eventBus, crm);
+        await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
+
+        await eventBus.Received().PublishAsync(Arg.Is<ManualSubscriberEnrolledIntegrationEvent>(e =>
+            e.IsB2bRequired));
+    }
+
+    [Test]
     public async Task MarkCheckoutAsPaidOffline_CustomSession_CompletesWithoutSubscription()
     {
         var orgId = Guid.CreateVersion7();

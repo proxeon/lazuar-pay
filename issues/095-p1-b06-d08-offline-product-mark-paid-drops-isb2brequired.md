@@ -2,17 +2,21 @@
 number: "095"
 id: B06-D08
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/095-offline-product-b2b
 ---
 
 # 095 — B06-D08 — Offline product mark-paid drops `IsB2bRequired`
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/095-offline-product-b2b`
+
+Offline product mark-paid publishes `IsB2bRequired` from the product `RequiresTaxId` flag.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

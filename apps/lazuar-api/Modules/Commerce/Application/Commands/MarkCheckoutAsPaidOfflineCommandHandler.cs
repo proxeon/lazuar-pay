@@ -177,7 +177,8 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
                 currency,
                 "MANUAL_OFFLINE",
                 $"Manual settlement for session {session.Id}",
-                txLog.Id));
+                txLog.Id,
+                session.IsB2bRequired || product.CheckoutConfiguration.RequiresTaxId));
         }
 
         await _repository.SaveChangesAsync(ct);
