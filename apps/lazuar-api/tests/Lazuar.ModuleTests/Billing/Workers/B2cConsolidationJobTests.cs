@@ -210,6 +210,29 @@ public class B2cConsolidationJobTests
     }
 
     [Test]
+    public async Task Eligibility_Excludes_GatewayRefund()
+    {
+        var prior = PriorMonthUtcMid();
+        SeedSale("tx_sale", LhdnValidationStatuses.B2cReceipt, ConsolidationStatuses.Pending, prior);
+
+        var refund = new LedgerEntry(_orgId, LedgerReferenceTypes.GatewayRefund, "tx_refund", "refund", "B2C");
+        refund.AddLine(AccountTypes.AssetCash, -108m, "MYR", -108m, "MYR");
+        refund.AddLine(AccountTypes.ContraRevenueRefunds, 100m, "MYR", 100m, "MYR");
+        refund.AddLine(AccountTypes.LiabilityTaxPayable, 8m, "MYR", 8m, "MYR");
+        refund.ValidateBalanced();
+        typeof(LedgerEntry).GetProperty(nameof(LedgerEntry.Timestamp))!.SetValue(refund, prior);
+        _db.LedgerEntries.Add(refund);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloadedRefund = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_refund");
+        var reloadedSale = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_sale");
+        Assert.That(reloadedRefund.ConsolidationStatus, Is.Null);
+        Assert.That(reloadedSale.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
+    }
+
+    [Test]
     public async Task Eligibility_Excludes_B2b_And_NotRequired_And_CurrentMonth()
     {
         var prior = PriorMonthUtcMid();

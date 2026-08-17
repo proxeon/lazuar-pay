@@ -82,6 +82,7 @@ public class GatewayRefundCompletedHandlerTests
         var refund = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
             .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund);
 
+        Assert.That(refund.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.NotRequired));
         var taxLine = refund.Lines.Single(l => l.AccountType == AccountTypes.LiabilityTaxPayable);
         Assert.That(taxLine.Amount, Is.EqualTo(8m));
         var contra = refund.Lines.Single(l => l.AccountType == AccountTypes.ContraRevenueRefunds);

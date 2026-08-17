@@ -69,6 +69,7 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         }
 
         entry.ValidateBalanced();
+        entry.MarkConsolidationNotRequired();
 
         var creditNoteNumber = await _mediator.Send(
             new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.CreditNotePrefix()));
