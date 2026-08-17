@@ -49,6 +49,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 037 | B02-C02 | `fix/037-pending-product-after-load` | Missing pending product no longer commits a ghost ProductId |
 | 038 | B02-C03 | `fix/038-pending-plan-billing-interval` | Pending plan snapshot / preview use BillingInterval, not catalog default |
 | 039 | B02-C04 | `fix/039-no-refresh-snapshot-on-renewal` | Renewal webhook does not RefreshSnapshot / unfreeze UnitAmount |
+| 040 | B02-C05 | `fix/040-record-payment-billing-interval` | Record-payment advances with BillingInterval, not catalog Interval |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -2,17 +2,21 @@
 number: "040"
 id: B02-C05
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/02-commerce-subscriptions-billing-engine.md
 head: "297ba98"
+resolved_branch: fix/040-record-payment-billing-interval
 ---
 
 # 040 — B02-C05 — Record-payment advances with product.Interval, not BillingInterval
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/02-commerce-subscriptions-billing-engine.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/040-record-payment-billing-interval`
+
+Clerk record-payment advances with `ResolveInterval(sub, product)`. Clerk override date is unchanged.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

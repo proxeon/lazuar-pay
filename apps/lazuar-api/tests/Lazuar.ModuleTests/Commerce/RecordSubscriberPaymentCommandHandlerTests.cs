@@ -166,6 +166,19 @@ public class RecordSubscriberPaymentCommandHandlerTests
         fx.Subscription.IsReminderOnly.Should().BeTrue();
     }
 
+    [Test]
+    public async Task YearlyBillingInterval_AdvancesOneYear_NotCatalogMonth()
+    {
+        var fx = await ActAsync(
+            status: "ACTIVE",
+            amount: 500m,
+            method: "BANK_TRANSFER",
+            interval: "mo",
+            billingInterval: "yr");
+
+        fx.Subscription.NextBillingDate.Should().BeCloseTo(DateTime.UtcNow.AddYears(1), TimeSpan.FromSeconds(5));
+    }
+
     private static async Task<RecordFx> ActAsync(
         string status,
         decimal amount,
@@ -174,6 +187,7 @@ public class RecordSubscriberPaymentCommandHandlerTests
         string interval = "mo",
         DateTime? nextBilling = null,
         bool reminderOnly = true,
+        string? billingInterval = null,
         RecordFx? existing = null)
     {
         if (existing != null)
@@ -229,6 +243,11 @@ public class RecordSubscriberPaymentCommandHandlerTests
         else if (status == "ACTIVE")
         {
             sub.AssignDunningCampaign(campaign.Id);
+        }
+
+        if (!string.IsNullOrWhiteSpace(billingInterval))
+        {
+            sub.SetBillingInterval(billingInterval);
         }
 
         var logs = new List<CommerceTransactionLog>();

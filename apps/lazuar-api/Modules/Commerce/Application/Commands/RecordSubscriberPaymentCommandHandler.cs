@@ -87,7 +87,9 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
 
         var periodEnd = DateTime.UtcNow;
         var nextBilling = request.NextBillingDate
-            ?? (product.Interval == "yr" ? periodEnd.AddYears(1) : periodEnd.AddMonths(1));
+            ?? SubscriptionBillingAmount.AdvanceFrom(
+                periodEnd,
+                SubscriptionBillingAmount.ResolveInterval(subscription, product));
 
         if (wasInArrears)
         {
