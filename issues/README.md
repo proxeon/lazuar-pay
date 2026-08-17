@@ -80,6 +80,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 068 | B04-P11 | `fix/068-razorpay-no-card-registration` | Razorpay SetupFutureUsage mints a payment link, not a card-registration mandate |
 | 069 | B04-P12 | `fix/069-razorpay-invoice-expired` | Razorpay invoice.expired is ignored, not PAYMENT_FAILED |
 | 070 | B04-P13 | `fix/070-refund-pending-idempotency` | Stripe pending is not refund success; CHIP/Xendit/Razorpay send refund idempotency keys |
+| 071 | B04-P14 | `fix/071-xendit-refund-payment-id` | Xendit refund uses payment_id from the invoice when present |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

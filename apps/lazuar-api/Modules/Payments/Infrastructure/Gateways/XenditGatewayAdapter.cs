@@ -121,17 +121,13 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         try
         {
             var client = _httpFactory.CreateClient();
+            var paymentId = await ResolveRefundPaymentIdAsync(client, apiKey, transactionId);
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{LiveApiBase}/refunds");
             request.Headers.Authorization = BasicAuth(apiKey);
             request.Headers.TryAddWithoutValidation(
                 "Idempotency-key",
                 GatewayCommon.FormatRefundIdempotencyKey(transactionId, amount));
-            request.Content = JsonContent.Create(new Dictionary<string, object>
-            {
-                ["invoice_id"] = transactionId,
-                ["amount"] = amount,
-                ["reason"] = "REQUESTED_BY_CUSTOMER"
-            });
+            request.Content = JsonContent.Create(BuildRefundPayload(transactionId, paymentId, amount));
 
             var response = await client.SendAsync(request);
             if (!response.IsSuccessStatusCode)
@@ -148,6 +144,79 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
             _logger.LogError(ex, "Xendit refund exception for {TransactionId}", transactionId);
             return false;
         }
+    }
+
+    internal static Dictionary<string, object> BuildRefundPayload(string transactionId, string? paymentId, decimal amount)
+    {
+        var payload = new Dictionary<string, object>
+        {
+            ["amount"] = amount,
+            ["reason"] = "REQUESTED_BY_CUSTOMER"
+        };
+        if (!string.IsNullOrWhiteSpace(paymentId))
+        {
+            payload["payment_id"] = paymentId;
+        }
+        else
+        {
+            payload["invoice_id"] = transactionId;
+        }
+
+        return payload;
+    }
+
+    internal static string? TryReadPaymentId(string invoiceJson)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(invoiceJson);
+            var invoice = doc.RootElement;
+            if (invoice.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
+            {
+                invoice = data;
+            }
+
+            var direct = ReadString(invoice, "payment_id")
+                ?? ReadString(invoice, "credit_card_charge_id");
+            if (!string.IsNullOrWhiteSpace(direct))
+            {
+                return direct;
+            }
+
+            if (invoice.TryGetProperty("payments", out var payments) && payments.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var payment in payments.EnumerateArray())
+                {
+                    var id = ReadString(payment, "id") ?? ReadString(payment, "payment_id");
+                    if (!string.IsNullOrWhiteSpace(id))
+                    {
+                        return id;
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    private async Task<string?> ResolveRefundPaymentIdAsync(HttpClient client, string apiKey, string transactionId)
+    {
+        using var get = new HttpRequestMessage(HttpMethod.Get, $"{LiveApiBase}/v2/invoices/{transactionId}");
+        get.Headers.Authorization = BasicAuth(apiKey);
+        var response = await client.SendAsync(get);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Xendit invoice lookup for refund {TransactionId} failed: {Status}",
+                transactionId, response.StatusCode);
+            return null;
+        }
+
+        return TryReadPaymentId(await response.Content.ReadAsStringAsync());
     }
 
     public Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)

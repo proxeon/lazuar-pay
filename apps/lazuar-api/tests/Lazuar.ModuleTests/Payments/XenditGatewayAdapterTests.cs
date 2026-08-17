@@ -91,6 +91,31 @@ public class XenditGatewayAdapterTests
     }
 
     [Test]
+    public void TryReadPaymentId_PrefersPaymentIdOverInvoice()
+    {
+        XenditGatewayAdapter.TryReadPaymentId("""{"id":"inv_1","payment_id":"py-abc"}""")
+            .Should().Be("py-abc");
+        XenditGatewayAdapter.TryReadPaymentId("""{"id":"inv_1","payments":[{"id":"py-from-list"}]}""")
+            .Should().Be("py-from-list");
+        XenditGatewayAdapter.TryReadPaymentId("""{"id":"inv_1"}""")
+            .Should().BeNull();
+    }
+
+    [Test]
+    public void BuildRefundPayload_UsesPaymentIdWhenPresent()
+    {
+        var withPayment = XenditGatewayAdapter.BuildRefundPayload("inv_1", "py-abc", 10m);
+        withPayment.Should().ContainKey("payment_id");
+        withPayment["payment_id"].Should().Be("py-abc");
+        withPayment.Should().NotContainKey("invoice_id");
+
+        var fallback = XenditGatewayAdapter.BuildRefundPayload("inv_1", null, 10m);
+        fallback.Should().ContainKey("invoice_id");
+        fallback["invoice_id"].Should().Be("inv_1");
+        fallback.Should().NotContainKey("payment_id");
+    }
+
+    [Test]
     public void BuildInvoicePayload_KeepsPayingTenant_AndStampsPlatformTenant()
     {
         var paying = Guid.CreateVersion7();
