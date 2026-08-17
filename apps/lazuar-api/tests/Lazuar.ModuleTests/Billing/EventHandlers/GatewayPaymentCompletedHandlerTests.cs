@@ -221,4 +221,37 @@ public class GatewayPaymentCompletedHandlerTests
         captured.Lines.Should().Contain(l => l.AccountType == AccountTypes.LiabilityTaxPayable && l.Amount == -8m);
         captured.Lines.Sum(l => l.Amount).Should().Be(0m);
     }
+
+    [Test]
+    public async Task HandleAsync_B2bUsesResolvedSstNotRawEventTax()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
+        repository.HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("INV-2026-00002");
+
+        await handler.HandleAsync(new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: Guid.CreateVersion7(),
+            GatewayTransactionId: "pi_b2b_sst",
+            AmountPaid: 108m,
+            Currency: "MYR",
+            GatewayFee: 0m,
+            TaxAmount: 0m,
+            NetAmount: 108m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string>
+            {
+                ["is_b2b_required"] = "true",
+                ["sst_tax_amount"] = "8.00",
+                ["sst_tax_type"] = "02"
+            }));
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<B2bTaxInvoiceRequestedIntegrationEvent>(e =>
+            e.TaxAmount == 8m && e.AmountExcludingTax == 100m));
+    }
 }

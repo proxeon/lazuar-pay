@@ -135,7 +135,7 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
                 entry.CustomerDocumentNumber!,
                 @event.GatewayTransactionId,
                 grossRevenue,
-                @event.TaxAmount,
+                taxAmount,
                 @event.Currency,
                 correlation));
         }
