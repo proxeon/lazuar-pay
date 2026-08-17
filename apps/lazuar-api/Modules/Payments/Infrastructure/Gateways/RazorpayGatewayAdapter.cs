@@ -36,67 +36,14 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
     {
         try
         {
+            // Reminder-only: we do not claim e-mandate. SetupFutureUsage still mints a
+            // payment link, not a card-registration mandate (max_amount = 10× first charge).
+            _ = setupFutureUsage;
             var client = GetClient(apiKey);
-            var amountPaise = GatewayCommon.ToMinorUnitsTruncating(amount, quantity);
-            var finalDescription = GatewayCommon.ProductDescription(productName, quantity);
-            
-            metadata.TryGetValue("customer_name", out var customerName);
-            metadata.TryGetValue("customer_phone", out var customerPhone);
-
-            var finalName = !string.IsNullOrWhiteSpace(customerName) ? customerName : GatewayCommon.ExtractName(customerEmail);
-            var finalPhone = !string.IsNullOrWhiteSpace(customerPhone) ? customerPhone : "+60100000000";
-
-            var customer = new Dictionary<string, object>
-            {
-                { "name", finalName },
-                { "email", customerEmail },
-                { "contact", finalPhone }
-            };
-            
-            var notes = metadata.ToDictionary(k => k.Key, v => (object)v.Value);
-
-            if (setupFutureUsage)
-            {
-                var subReg = new Dictionary<string, object>
-                {
-                    { "method", "card" }, 
-                    { "max_amount", amountPaise * 10 },
-                    { "expire_at", DateTimeOffset.UtcNow.AddYears(10).ToUnixTimeSeconds() }
-                };
-
-                var req = new Dictionary<string, object>
-                {
-                    { "type", "link" },
-                    { "amount", amountPaise },
-                    { "currency", currency.ToUpperInvariant() },
-                    { "description", finalDescription },
-                    { "customer", customer },
-                    { "subscription_registration", subReg },
-                    { "receipt", "rcpt_" + Guid.NewGuid().ToString("N")[..10] },
-                    { "notes", notes },
-                    { "callback_url", successUrl },      
-                    { "callback_method", "get" }         
-                };
-
-                var invoice = client.Invoice.CreateRegistrationLink(req);
-                return Task.FromResult(new GatewayCheckoutResult(true, invoice["short_url"].ToString(), invoice["id"].ToString(), null));
-            }
-            else
-            {
-                var req = new Dictionary<string, object>
-                {
-                    { "amount", amountPaise },
-                    { "currency", currency.ToUpperInvariant() },
-                    { "description", finalDescription },
-                    { "customer", customer },
-                    { "notes", notes },
-                    { "callback_url", successUrl },
-                    { "callback_method", "get" }
-                };
-
-                var link = client.PaymentLink.Create(req);
-                return Task.FromResult(new GatewayCheckoutResult(true, link["short_url"].ToString(), link["id"].ToString(), null));
-            }
+            var req = BuildPaymentLinkRequest(
+                amount, currency, productName, customerEmail, successUrl, metadata, quantity);
+            var link = client.PaymentLink.Create(req);
+            return Task.FromResult(new GatewayCheckoutResult(true, link["short_url"].ToString(), link["id"].ToString(), null));
         }
         catch (Exception ex)
         {
@@ -291,6 +238,39 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
     public Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)
     {
         throw new InvalidOperationException("Razorpay does not provide a managed customer billing portal.");
+    }
+
+    internal static Dictionary<string, object> BuildPaymentLinkRequest(
+        decimal amount,
+        string currency,
+        string productName,
+        string customerEmail,
+        string successUrl,
+        Dictionary<string, string> metadata,
+        int quantity)
+    {
+        var amountPaise = GatewayCommon.ToMinorUnitsTruncating(amount, quantity);
+        var finalDescription = GatewayCommon.ProductDescription(productName, quantity);
+        metadata.TryGetValue("customer_name", out var customerName);
+        metadata.TryGetValue("customer_phone", out var customerPhone);
+        var finalName = !string.IsNullOrWhiteSpace(customerName) ? customerName : GatewayCommon.ExtractName(customerEmail);
+        var finalPhone = !string.IsNullOrWhiteSpace(customerPhone) ? customerPhone : "+60100000000";
+        var notes = metadata.ToDictionary(k => k.Key, v => (object)v.Value);
+        return new Dictionary<string, object>
+        {
+            ["amount"] = amountPaise,
+            ["currency"] = currency.ToUpperInvariant(),
+            ["description"] = finalDescription,
+            ["customer"] = new Dictionary<string, object>
+            {
+                ["name"] = finalName,
+                ["email"] = customerEmail,
+                ["contact"] = finalPhone
+            },
+            ["notes"] = notes,
+            ["callback_url"] = successUrl,
+            ["callback_method"] = "get"
+        };
     }
 
     internal static string? ResolveEventId(

@@ -24,6 +24,19 @@ public class RazorpayGatewayAdapterTests
             Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
 
     [Test]
+    public void BuildPaymentLinkRequest_NeverMintsCardRegistration()
+    {
+        var req = RazorpayGatewayAdapter.BuildPaymentLinkRequest(
+            10m, "myr", "Plan", "buyer@example.com", "https://ok",
+            new Dictionary<string, string>(), 1);
+
+        req.Should().NotContainKey("subscription_registration");
+        req.Should().NotContainKey("type");
+        req["amount"].Should().Be(1000);
+        req["currency"].Should().Be("MYR");
+    }
+
+    [Test]
     public async Task ParseWebhook_MissingSignature_IsNotVerified()
     {
         var result = await CreateAdapter().ParseWebhookAsync(

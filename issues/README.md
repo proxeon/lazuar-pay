@@ -77,6 +77,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 065 | B04-P08 | `fix/065-ignore-late-payment-failed` | Late PAYMENT_FAILED after COMPLETED on the same object is ignored |
 | 066 | B04-P09 | `fix/066-razorpay-eventid-fallback` | Razorpay EventId fallback is namespaced, not the bare payment id |
 | 067 | B04-P10 | `fix/067-offsession-fail-txid` | Off-session fail transaction id is per charge attempt, not per seat |
+| 068 | B04-P11 | `fix/068-razorpay-no-card-registration` | Razorpay SetupFutureUsage mints a payment link, not a card-registration mandate |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
