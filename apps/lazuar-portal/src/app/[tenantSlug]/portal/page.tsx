@@ -168,7 +168,7 @@ export default async function AggregatedPortalPage({
                     )}
                     {(isHealthyActive || isPastDue || isFlagged) && !(sub as { is_reminder_only?: boolean }).is_reminder_only && (
                       <a
-                        href={`/${tenantSlug}/update-payment/${sub.id}?token=${token}`}
+                        href={`/${tenantSlug}/update-payment/${sub.id}?token=${encodeURIComponent(token)}`}
                         className="h-9 px-4 border border-border bg-background text-[11px] font-bold uppercase tracking-widest hover:bg-secondary transition-colors rounded-none inline-flex items-center"
                       >
                         Update payment method

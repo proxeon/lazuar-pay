@@ -71,7 +71,7 @@ export default async function UpdatePaymentPage({
               {data.product_name} is paid by invoice each cycle. We will email the next Billplz link.
               There is no card on file to update.
             </p>
-            <Link href={`/${tenantSlug}/portal`} className="block w-full">
+            <Link href={token ? `/${tenantSlug}/portal?token=${encodeURIComponent(token)}` : `/${tenantSlug}/portal`} className="block w-full">
               <button className="w-full h-12 text-xs font-bold tracking-widest uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
                 Go to Dashboard
               </button>
@@ -107,7 +107,7 @@ export default async function UpdatePaymentPage({
                 Your subscription to <strong className="text-foreground">{data.product_name}</strong> is currently active and does not require an immediate payment update.
               </p>
             </div>
-            <Link href={`/${tenantSlug}/portal`} className="block w-full">
+            <Link href={token ? `/${tenantSlug}/portal?token=${encodeURIComponent(token)}` : `/${tenantSlug}/portal`} className="block w-full">
               <button className="w-full h-12 text-xs font-bold tracking-widest uppercase bg-foreground text-background hover:bg-foreground/90 rounded-none transition-colors">
                 Go to Dashboard
               </button>

@@ -33,6 +33,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 020 | B08-M02 | `fix/011-quote-b2b-crm-arity` | Same quote CRM arity as 011 |
 | 021 | B09-U01 | `fix/021-checkout-success-portal-token` | COMPLETED checkout status mints a portal token |
 | 022 | B09-U02 | `fix/022-portal-no-token-shows-form` | Tokenless portal shows the magic-link form, not 404 |
+| 023 | B09-U03 | `fix/023-portal-token-hrefs` | Portal/update-payment hrefs never use `token=undefined` |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -2,17 +2,21 @@
 number: "023"
 id: B09-U03
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/09-frontends-ops-portal-admin.md
 head: "297ba98"
+resolved_branch: fix/023-portal-token-hrefs
 ---
 
 # 023 — B09-U03 — “Update payment method” from a cookie/tokenless portal interpolates `token=undefined`
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/09-frontends-ops-portal-admin.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/023-portal-token-hrefs`
+
+Portal and update-payment links encode a real token and never interpolate the string `"undefined"`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

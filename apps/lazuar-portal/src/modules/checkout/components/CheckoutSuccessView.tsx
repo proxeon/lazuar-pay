@@ -159,7 +159,7 @@ export function CheckoutSuccessView({ tenantSlug, product, displayName, returnHr
           >
             {t("success.checkAgain")}
           </button>
-          <Link href={`/${tenantSlug}/portal`} className="block w-full">
+          <Link href={accessToken ? `/${tenantSlug}/portal?token=${encodeURIComponent(accessToken)}` : `/${tenantSlug}/portal`} className="block w-full">
             <button className="w-full h-12 text-sm font-bold tracking-wide uppercase border border-border bg-background hover:bg-accent text-foreground rounded-none transition-colors">
               {t("success.dashboard")}
             </button>
