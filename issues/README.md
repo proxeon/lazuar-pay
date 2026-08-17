@@ -51,6 +51,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 039 | B02-C04 | `fix/039-no-refresh-snapshot-on-renewal` | Renewal webhook does not RefreshSnapshot / unfreeze UnitAmount |
 | 040 | B02-C05 | `fix/040-record-payment-billing-interval` | Record-payment advances with BillingInterval, not catalog Interval |
 | 041 | B02-C06 | `fix/041-stats-mrr-billing-interval` | Stats MRR uses BillingInterval so yearly seats are /12 |
+| 042 | B02-C07 | `fix/042-arpu-exclude-pastdue` | ARPU denominator is MRR contributors, not PAST_DUE |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

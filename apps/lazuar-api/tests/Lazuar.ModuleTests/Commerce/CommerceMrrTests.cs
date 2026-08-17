@@ -70,6 +70,23 @@ public class CommerceMrrTests
     }
 
     [Test]
+    public void Arpu_ExcludesPastDueFromDenominator()
+    {
+        var now = DateTime.UtcNow;
+        var mrr = 200m;
+        var seats = new[]
+        {
+            ("ACTIVE", (DateTime?)null, "mo"),
+            ("ACTIVE", (DateTime?)null, "mo"),
+            ("PAST_DUE", (DateTime?)null, "mo"),
+        }.Count(s => CommerceMrr.ContributesToMrr(s.Item1, s.Item2, now, s.Item3));
+
+        seats.Should().Be(2);
+        CommerceMrr.Arpu(mrr, seats).Should().Be(100d);
+        CommerceMrr.Arpu(mrr, 3).Should().BeApproximately(66.666, 0.01);
+    }
+
+    [Test]
     public void CatalogEditDoesNotChangeSnapshotMath()
     {
         var snapshot = CommerceMrr.MonthlyEquivalent("ACTIVE", null, DateTime.UtcNow, "mo", 100m, 1, fallbackUnit: 200m);

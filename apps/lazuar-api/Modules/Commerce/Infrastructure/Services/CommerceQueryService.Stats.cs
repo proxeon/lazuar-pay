@@ -59,7 +59,9 @@ public partial class CommerceQueryService
         var active30DaysAgo = activeSubs.Count + cancelledLast30 - newActiveLast30;
         
         double churnRate = active30DaysAgo > 0 ? Math.Round((double)cancelledLast30 / active30DaysAgo * 100, 2) : 0;
-        double arpu = activeSubs.Count > 0 ? (double)(mrr / activeSubs.Count) : 0;
+        var mrrSeats = subs.Count(s => CommerceMrr.ContributesToMrr(
+            s.Status, s.CollectionPausedUntil, now, s.Interval));
+        double arpu = CommerceMrr.Arpu(mrr, mrrSeats);
 
         // Revenue KPIs from TransactionLogs (honest ops dashboard — not stubbed zeros).
         const string txSql = @"

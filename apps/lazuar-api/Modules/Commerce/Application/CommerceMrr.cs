@@ -40,4 +40,26 @@ public static class CommerceMrr
     /// <summary>Stats SQL: COALESCE(NULLIF(TRIM(BillingInterval), ''), product.Interval).</summary>
     public static string CoalesceInterval(string? billingInterval, string productInterval) =>
         string.IsNullOrWhiteSpace(billingInterval) ? productInterval : billingInterval.Trim();
+
+    public static bool ContributesToMrr(
+        string status,
+        DateTime? collectionPausedUntil,
+        DateTime utcNow,
+        string? interval)
+    {
+        if (!string.Equals(status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (collectionPausedUntil.HasValue && collectionPausedUntil.Value > utcNow)
+        {
+            return false;
+        }
+
+        return interval is "mo" or "yr";
+    }
+
+    public static double Arpu(decimal mrr, int contributingSeats) =>
+        contributingSeats > 0 ? (double)(mrr / contributingSeats) : 0;
 }
