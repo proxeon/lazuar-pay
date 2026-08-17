@@ -243,7 +243,7 @@ namespace Modules.Billing.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ReferenceType", "ReferenceId")
+                    b.HasIndex("OrganizationId", "ReferenceType", "ReferenceId")
                         .IsUnique();
 
                     b.HasIndex("OrganizationId", "ConsolidationStatus", "Timestamp");

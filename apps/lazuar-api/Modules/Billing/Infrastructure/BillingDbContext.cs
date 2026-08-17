@@ -63,7 +63,7 @@ public class BillingDbContext : PlatformDbContext
         {
             builder.ToTable("LedgerEntries");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.ReferenceType, x.ReferenceId }).IsUnique();
+            builder.HasIndex(x => new { x.OrganizationId, x.ReferenceType, x.ReferenceId }).IsUnique();
             builder.Property(x => x.TaxInvoiceId).HasMaxLength(100);
             builder.Property(x => x.CustomerDocumentNumber).HasMaxLength(100);
             builder.Property(x => x.LhdnDocumentUuid).HasMaxLength(100);
