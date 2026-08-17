@@ -28,8 +28,8 @@ public interface ICommerceDocumentLookup
         CancellationToken ct = default);
 
     /// <summary>
-    /// Resolves customer display for a Billing document. Prefers an existing transaction log
-    /// email, then checkout-session CRM (first pay), then subscription CRM (off-session / manual).
+    /// Resolves customer display for a Billing document. Prefers checkout-session or
+    /// subscription CRM (TIN, company, address), then the transaction-log name/email.
     /// </summary>
     Task<CommerceCustomerDisplay?> GetCustomerForDocumentAsync(
         Guid organizationId,

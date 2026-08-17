@@ -96,10 +96,6 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
         CancellationToken ct = default)
     {
         var fromLog = await FindCustomerOnTransactionLogAsync(organizationId, referenceId, ct);
-        if (fromLog != null && !string.IsNullOrWhiteSpace(fromLog.Email))
-        {
-            return fromLog;
-        }
 
         foreach (var candidate in DistinctGuidCandidates(correlationId, referenceId))
         {

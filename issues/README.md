@@ -23,6 +23,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 010 | B05-L05 | `fix/010-renewal-sst-tax-payable` | Renewal SST books `LIABILITY_TAX_PAYABLE`, not all revenue |
 | 011 | B06-D01 | `fix/011-quote-b2b-crm-arity` | Quote B2B resolve uses named CRM args; company name is not `IdValue` |
 | 012 | B06-D02 | `fix/012-inv-not-tax-invoice-until-valid` | B2B pay PDF is `Invoice` until MyInvois VALID |
+| 013 | B06-D03 | `fix/013-document-pdf-keep-buyer-tin` | Document PDF billed-to uses CRM TIN/company, not log-only name |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

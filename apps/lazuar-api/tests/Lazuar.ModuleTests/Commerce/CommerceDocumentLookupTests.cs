@@ -72,6 +72,50 @@ public class CommerceDocumentLookupTests
         customer.Name.Should().Be("Renewal Buyer");
     }
 
+    [Test]
+    public async Task GetCustomerForDocument_PrefersCrmOverTransactionLog_WhenLogHasEmailOnly()
+    {
+        await using var db = CreateDb();
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, Guid.CreateVersion7(), null, DateTime.UtcNow.AddHours(1));
+        db.CheckoutSessions.Add(session);
+        db.TransactionLogs.Add(new CommerceTransactionLog(
+            orgId,
+            100m,
+            2m,
+            "MYR",
+            CommerceTransactionLog.StatusConfirmed,
+            "Person From Checkout",
+            "aisha@example.com",
+            "Plan",
+            "system",
+            "gw_txn_paid"));
+        await db.SaveChangesAsync();
+
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        {
+            Id = clientId.ToString(),
+            Full_name = "Aisha Merchant",
+            Email = "aisha@example.com",
+            Tin = "C12345678901",
+            Company_name = "Buyer Sdn Bhd",
+            Id_type = "BRN",
+            Id_value = "202401001234"
+        });
+
+        var lookup = new CommerceDocumentLookup(Substitute.For<ISqlConnectionFactory>(), crm, db);
+
+        var customer = await lookup.GetCustomerForDocumentAsync(orgId, "gw_txn_paid", session.Id.ToString());
+
+        customer.Should().NotBeNull();
+        customer!.Tin.Should().Be("C12345678901");
+        customer.CompanyName.Should().Be("Buyer Sdn Bhd");
+        customer.IdType.Should().Be("BRN");
+        customer.IdValue.Should().Be("202401001234");
+    }
+
     private static CommerceDbContext CreateDb() =>
         new(
             InMemoryDb.CreateOptions<CommerceDbContext>(),

@@ -2,17 +2,21 @@
 number: "013"
 id: B06-D03
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/013-document-pdf-keep-buyer-tin
 ---
 
 # 013 — B06-D03 — Transaction-log short-circuit strips buyer TIN / company / address from the PDF
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/013-document-pdf-keep-buyer-tin`
+
+Document lookup prefers checkout/subscription CRM (TIN, company, address) over the name/email-only transaction log.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
