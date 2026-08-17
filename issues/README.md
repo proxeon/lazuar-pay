@@ -30,6 +30,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 017 | B06-D19 | `fix/017-credit-note-tax-totals` | Type 02 CN does not add tax on top of a gross refund |
 | 018 | B07-I01 | `fix/018-invite-mail-platform-resend` | Invite mail uses platform Resend, not tenant BYOK |
 | 019 | B08-M01 | `fix/019-resend-svix-whsec-hmac` | Resend webhook verifies Svix `whsec_` HMAC correctly |
+| 020 | B08-M02 | `fix/011-quote-b2b-crm-arity` | Same quote CRM arity as 011 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

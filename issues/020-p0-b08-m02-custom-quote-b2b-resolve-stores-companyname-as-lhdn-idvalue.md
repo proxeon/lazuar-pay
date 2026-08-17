@@ -2,17 +2,20 @@
 number: "020"
 id: B08-M02
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/08-communications-messaging-crm.md
 head: "297ba98"
+resolved_branch: fix/011-quote-b2b-crm-arity
+resolved_by: "011"
 ---
 
 # 020 — B08-M02 — Custom-quote B2B resolve stores CompanyName as LHDN IdValue
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/08-communications-messaging-crm.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/011-quote-b2b-crm-arity` (same change as `011`)
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
