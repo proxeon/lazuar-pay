@@ -37,6 +37,30 @@ public class RazorpayGatewayAdapterTests
     }
 
     [Test]
+    public async Task ParseWebhook_InvoiceExpired_IsIgnoredNotPaymentFailed()
+    {
+        var body = """
+            {
+              "event": "invoice.expired",
+              "payload": {
+                "invoice": { "entity": { "id": "inv_exp_1" } }
+              }
+            }
+            """;
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-Razorpay-Signature"] = Sign(body)
+        };
+
+        var result = await CreateAdapter().ParseWebhookAsync("key:secret", WebhookSecret, body, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("invoice.expired");
+        result.EventType.Should().NotBe("PAYMENT_FAILED");
+        result.EventId.Should().BeEmpty();
+    }
+
+    [Test]
     public async Task ParseWebhook_MissingSignature_IsNotVerified()
     {
         var result = await CreateAdapter().ParseWebhookAsync(

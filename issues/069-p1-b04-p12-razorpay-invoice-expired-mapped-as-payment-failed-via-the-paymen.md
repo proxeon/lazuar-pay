@@ -2,17 +2,21 @@
 number: "069"
 id: B04-P12
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
+resolved_branch: fix/069-razorpay-invoice-expired
 ---
 
 # 069 — B04-P12 — Razorpay `invoice.expired` mapped as payment-failed via the payment entity
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/069-razorpay-invoice-expired`
+
+invoice.expired is ignored. It is not PAYMENT_FAILED and does not read payload.payment.entity.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

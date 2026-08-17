@@ -296,7 +296,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
     }
 
     internal static bool IsPaymentFailedEvent(string? eventType) =>
-        eventType is "payment.failed" or "invoice.expired";
+        eventType is "payment.failed";
 
     internal static bool TryReadCurrency(JsonElement paymentEntity, out string currency)
     {
