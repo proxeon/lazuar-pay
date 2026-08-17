@@ -2,17 +2,21 @@
 number: "035"
 id: B01-C09
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
+resolved_branch: fix/035-session-complete-cas
 ---
 
 # 035 — B01-C09 — OPEN session has no concurrency token; two completers can both fulfill
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/035-session-complete-cas`
+
+`TryComplete` is a no-op unless Status is OPEN. Status is an EF concurrency token so a second completer's SaveChanges loses.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

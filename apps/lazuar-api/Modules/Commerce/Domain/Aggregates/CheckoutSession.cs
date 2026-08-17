@@ -138,16 +138,38 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         }
     }
 
-    public void Complete()
+    public bool TryComplete()
     {
+        if (!string.Equals(Status, "OPEN", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         Status = "COMPLETED";
         UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    public void Complete()
+    {
+        TryComplete();
+    }
+
+    public bool TryExpire()
+    {
+        if (!string.Equals(Status, "OPEN", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        Status = "EXPIRED";
+        UpdatedAt = DateTime.UtcNow;
+        return true;
     }
 
     public void Expire()
     {
-        Status = "EXPIRED";
-        UpdatedAt = DateTime.UtcNow;
+        TryExpire();
     }
 
     public void SetMetadataJson(string? metadataJson)

@@ -41,7 +41,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             throw new InvalidOperationException("Checkout session not found.");
         }
 
-        if (session.Status != "OPEN")
+        if (!session.TryComplete())
         {
             throw new InvalidOperationException($"Cannot mark session as paid. Current status is {session.Status}.");
         }
@@ -100,8 +100,6 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             unitNet, quantity, product.SstTaxType, product.SstRatePercent, merchantHasSst);
         var totalAmount = breakdown.Gross;
         var currency = product.Currency;
-
-        session.Complete();
 
         Guid entitlementId;
         Guid? subscriptionId = null;
@@ -196,8 +194,6 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             _billingQueryService, session.OrganizationId);
         var totalAmount = SubscriptionBillingAmount.CustomQuoteBreakdown(customNet, merchantHasSst).Gross;
         const string currency = "MYR";
-
-        session.Complete();
 
         var externalRef = $"OFFLINE-{session.Id:N}"[..36];
         var txLog = new CommerceTransactionLog(

@@ -28,7 +28,10 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             }
         }
 
-        session.Complete();
+        if (!session.TryComplete())
+        {
+            return;
+        }
 
         if (type == "custom_payment_link")
         {
@@ -53,7 +56,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
                 "payment_link.paid",
                 payloadElement));
 
-            await _repository.SaveChangesAsync();
+            await TrySaveSessionCompletionAsync();
             return;
         }
 
@@ -140,6 +143,18 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
 
         var gatewayName = !string.IsNullOrWhiteSpace(product.GatewayName) ? product.GatewayName : session.GatewayName;
         await LogTransactionAsync(@event, session.ClientProfileId, product.Name, "SYSTEM", gatewayName, subscriptionId);
-        await _repository.SaveChangesAsync();
+        await TrySaveSessionCompletionAsync();
+    }
+
+    private async Task TrySaveSessionCompletionAsync()
+    {
+        try
+        {
+            await _repository.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Another completer already persisted COMPLETED for this OPEN row.
+        }
     }
 }

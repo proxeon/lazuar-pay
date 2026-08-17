@@ -205,6 +205,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.ToTable("CheckoutSessions");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.Status);
+            builder.Property(x => x.Status).IsConcurrencyToken();
 
             builder.Property(x => x.GatewayName).HasMaxLength(100);
             builder.Property(x => x.DueAt).HasColumnType("timestamp with time zone");

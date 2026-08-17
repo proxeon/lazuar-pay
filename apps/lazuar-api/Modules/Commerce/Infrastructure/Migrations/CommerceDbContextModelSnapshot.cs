@@ -170,6 +170,7 @@ namespace Modules.Commerce.Infrastructure.Migrations
                         .HasColumnType("character varying(128)");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasColumnType("text");
 

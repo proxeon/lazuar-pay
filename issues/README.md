@@ -44,6 +44,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 032 | B01-C06 | `fix/032-hop1-show-sst` | Hop-1 shows exclusive SST line + gross from product SST fields |
 | 033 | B01-C07 | `fix/033-validate-coupon-chosen-price` | Validate-coupon discounts the chosen price × qty; hop-1 drops the catalog ratio |
 | 034 | B01-C08 | `fix/034-quote-offline-sst` | Custom quotes and mark-paid book exclusive SST when the merchant has an SST id |
+| 035 | B01-C09 | `fix/035-session-complete-cas` | Only one completer wins: TryComplete + Status concurrency token |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

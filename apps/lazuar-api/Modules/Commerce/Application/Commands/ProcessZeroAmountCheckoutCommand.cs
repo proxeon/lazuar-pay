@@ -31,7 +31,7 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
     public async Task Handle(ProcessZeroAmountCheckoutCommand request, CancellationToken ct)
     {
         var session = await _repository.GetCheckoutSessionByIdAsync(request.SessionId, ct);
-        if (session == null || session.OrganizationId != request.OrganizationId || session.Status != "OPEN")
+        if (session == null || session.OrganizationId != request.OrganizationId || !session.TryComplete())
         {
             throw new InvalidOperationException("Checkout session is invalid or already processed.");
         }
@@ -71,8 +71,6 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         {
             lineDiscount = lineGross;
         }
-
-        session.Complete();
 
         if (product.Interval == "one_time")
         {

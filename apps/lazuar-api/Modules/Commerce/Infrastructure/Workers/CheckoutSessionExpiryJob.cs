@@ -78,17 +78,30 @@ public class CheckoutSessionExpiryJob : BackgroundService
 
         var couponMap = coupons.ToDictionary(c => c.Id);
 
+        var expiredCount = 0;
         foreach (var session in expired)
         {
-            session.Expire();
+            if (!session.TryExpire())
+            {
+                continue;
+            }
 
             if (session.CouponId.HasValue && couponMap.TryGetValue(session.CouponId.Value, out var coupon))
             {
                 coupon.ReleaseReservation();
             }
+
+            expiredCount++;
         }
 
-        await db.SaveChangesAsync(ct);
-        _logger.LogInformation("Expired {Count} checkout session(s).", expired.Count);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            _logger.LogInformation("Expired {Count} checkout session(s).", expiredCount);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "A session completed while the expiry job was running; leftover OPEN rows retry next tick.");
+        }
     }
 }
