@@ -24,18 +24,53 @@ namespace Lazuar.ModuleTests.Lhdn;
 public class GatewayRefundCompletedIntegrationEventHandlerTests
 {
     [Test]
-    public async Task PartialRefund_DoesNotCancelDocument()
+    public async Task PartialRefund_Within72h_SubmitsCreditNote_DoesNotCancel()
     {
         var orgId = Guid.CreateVersion7();
         var paymentId = Guid.CreateVersion7();
-        var (handler, repo, mediator, _) = CreateHandler();
+        var eventId = Guid.CreateVersion7();
+        var doc = new TaxDocument(orgId, "INV-2026-00001", "hash", "<xml/>");
+        doc.MarkAsSubmitted("sub-1", "lhdn-uuid-1");
+        doc.MarkAsValid("long-1");
+
+        var (handler, repo, mediator, billing, crm, lookup) = CreateHandlerFull();
+        billing.FindPaymentByGatewayTransactionAsync(orgId, "pi_1")
+            .Returns(new LedgerDocumentIdentity(
+                Guid.CreateVersion7(), "GATEWAY_PAYMENT", "pi_1", "INV-2026-00001",
+                "lhdn-uuid-1", "INV-2026-00001", "B2B", "VALID", 100m, "MYR", DateTime.UtcNow));
+        billing.FindLedgerByReferenceAsync(orgId, "GATEWAY_REFUND", paymentId.ToString("N") + ":" + eventId.ToString("N"))
+            .Returns(new LedgerDocumentIdentity(
+                Guid.CreateVersion7(), "GATEWAY_REFUND", "ref", "CN-2026-00040",
+                null, "CN-2026-00040", "B2B", null, 40m, "MYR", DateTime.UtcNow));
+        repo.GetTaxDocumentByInternalIdAsync(orgId, "INV-2026-00001").Returns(doc);
+        lookup.GetCustomerForDocumentAsync(orgId, "pi_1", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new CommerceCustomerDisplay("Buyer Co", "buyer@example.com", "C98765432109"));
+        crm.GetClientProfileByEmailAsync(orgId, "buyer@example.com")
+            .Returns(new ClientProfileDto
+            {
+                Id = Guid.CreateVersion7().ToString(),
+                Full_name = "Buyer Co",
+                Email = "buyer@example.com",
+                Phone = "60123456789",
+                Tin = "C98765432109",
+                Id_type = "BRN",
+                Id_value = "202001099999",
+                Consented_to_marketing = false
+            });
 
         await handler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
-            orgId, Guid.Empty, paymentId, "pi_1", 40m, "MYR", 0m, 40m, 0m, IsFullRefund: false));
+            orgId, Guid.Empty, paymentId, "pi_1", 40m, "MYR", 0m, 40m, 0m, IsFullRefund: false)
+        {
+            Id = eventId
+        });
 
-        await repo.DidNotReceive().GetTaxDocumentByInternalIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
         await mediator.DidNotReceive().Send(Arg.Any<CancelTaxDocumentCommand>(), Arg.Any<CancellationToken>());
-        await mediator.DidNotReceive().Send(Arg.Any<SubmitTaxDocumentCommand>(), Arg.Any<CancellationToken>());
+        await mediator.Received(1).Send(
+            Arg.Is<SubmitTaxDocumentCommand>(c =>
+                c.Payload.Document_type == SubmitDocumentRequestDtoDocument_type._02
+                && c.Payload.Internal_id == "CN-2026-00040"
+                && c.Payload.Total_including_tax == 40),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]

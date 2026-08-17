@@ -46,14 +46,6 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
     public async Task HandleAsync(GatewayRefundCompletedIntegrationEvent @event)
     {
-        if (!@event.IsFullRefund)
-        {
-            _logger.LogInformation(
-                "Skipping LHDN cancel/CN for partial refund PaymentRecordId {PaymentRecordId}.",
-                @event.PaymentRecordId);
-            return;
-        }
-
         var originalDocument = await ResolveOriginalTaxDocumentAsync(@event);
         if (originalDocument == null || originalDocument.ValidationStatus != "VALID" || string.IsNullOrEmpty(originalDocument.LhdnUuid))
         {
@@ -65,7 +57,8 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
         var hoursSinceValidation = (DateTime.UtcNow - originalDocument.ValidatedAt.GetValueOrDefault()).TotalHours;
 
-        if (hoursSinceValidation <= 72)
+        // Partial refunds cannot cancel the original invoice. Full refund ≤72h can.
+        if (@event.IsFullRefund && hoursSinceValidation <= 72)
         {
             await _mediator.Send(new CancelTaxDocumentCommand(
                 @event.OrganizationId,

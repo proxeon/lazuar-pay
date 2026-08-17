@@ -114,6 +114,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 102 | B06-D16 | `fix/102-environment-cosmetic-country-my` | PROD Environment hits api.myinvois; checkout country default is MYS |
 | 103 | B06-D17 | `fix/103-deduct-after-persist` | Live deduct already runs before persist (shipped with 091) |
 | 104 | B06-D18 | `fix/104-accepted-for-processing` | Integrator submit returns pending; B2B pay proceeds without MyInvois |
+| 105 | B06-D20 | `fix/105-partial-refunds-skip-lhdn` | Partial refunds file type 02; only a full ≤72h refund cancels |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
