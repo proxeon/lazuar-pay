@@ -44,7 +44,7 @@ public static class SubscriberEndpoints
               var csv = BuildSubscribersCsv(response.Data);
               var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv)).ToArray();
               return Results.File(bytes, "text/csv", $"subscribers_export_{DateTime.UtcNow:yyyyMMdd}.csv");
-          });
+          }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             CreateManualSubscriberDto req,
@@ -185,7 +185,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/quantity", async Task<Results<Ok<PlanChangePreviewDto>, BadRequest<StatusResponse>>> (
             Guid id,
@@ -207,7 +207,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/collection/pause", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             Guid id,
@@ -224,7 +224,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/collection/resume", async Task<Results<Ok<StatusResponse>, BadRequest<StatusResponse>>> (
             Guid id,
@@ -240,7 +240,7 @@ public static class SubscriberEndpoints
             {
                 return TypedResults.BadRequest(new StatusResponse { Status = ex.Message });
             }
-        });
+        }).RequireAuthorization("OrgMember");
 
         group.MapPost("/subscribers/{id:guid}/dunning/pause", async Task<Ok<StatusResponse>> (
             Guid id,

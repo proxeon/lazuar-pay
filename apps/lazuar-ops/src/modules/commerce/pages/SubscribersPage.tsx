@@ -13,11 +13,14 @@ import CreateSubscriberModal from "../components/CreateSubscriberModal";
 import RefundModal from "../components/RefundModal";
 import { canRefund, remainingAmount, statusBadgeClass, statusLabel } from "../components/transactionStatus";
 import type { components } from "../../../lib/api-client";
+import type { OpsOutletContext } from "../../../App";
 
 type TransactionLogDto = components["schemas"]["Commerce.TransactionLogDto"];
 
 export default function SubscribersPage() {
-  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string | null }>();
+  const { activeWorkspaceId, entitlements } = useOutletContext<OpsOutletContext>();
+  const canWrite = (entitlements.find(e => e.workspace_id === activeWorkspaceId)?.role ?? "")
+    .toUpperCase() !== "VIEWER";
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -305,6 +308,7 @@ export default function SubscribersPage() {
       breadcrumbs={[{ label: "Commerce", href: "/commerce/dashboard" }, { label: "Subscribers" }]}
       actionButton={
         <div className="flex items-center gap-2">
+          {canWrite && (
           <button 
             onClick={handleExport} 
             disabled={isExporting}
@@ -313,12 +317,15 @@ export default function SubscribersPage() {
             {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 
             Export CSV
           </button>
+          )}
+          {canWrite && (
           <button 
             onClick={() => setIsCreateModalOpen(true)}
             className="h-9 px-4 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#27272a] transition-colors"
           >
             <Plus size={14} /> Add Member
           </button>
+          )}
         </div>
       }
     >
@@ -571,7 +578,7 @@ export default function SubscribersPage() {
               </div>
             )}
 
-            {(selectedSub.status === "ACTIVE" || selectedSub.status === "TRIALING") && (
+            {canWrite && (selectedSub.status === "ACTIVE" || selectedSub.status === "TRIALING") && (
               <div className="space-y-3">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] border-b border-[#f4f4f5] pb-1">Plan &amp; seats</h3>
                 <p className="text-[11px] text-[#71717a]">No charge today. Changes start on the next billing date.</p>

@@ -2,17 +2,21 @@
 number: "024"
 id: B09-U04
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/09-frontends-ops-portal-admin.md
 head: "297ba98"
+resolved_branch: fix/024-viewer-cannot-change-plan
 ---
 
 # 024 — B09-U04 — Viewer can change plan, seats, and collection pause
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/09-frontends-ops-portal-admin.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/024-viewer-cannot-change-plan`
+
+Plan/seats/collection and subscriber export require OrgMember. Viewer UI no longer shows those actions.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

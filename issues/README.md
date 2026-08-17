@@ -34,6 +34,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 021 | B09-U01 | `fix/021-checkout-success-portal-token` | COMPLETED checkout status mints a portal token |
 | 022 | B09-U02 | `fix/022-portal-no-token-shows-form` | Tokenless portal shows the magic-link form, not 404 |
 | 023 | B09-U03 | `fix/023-portal-token-hrefs` | Portal/update-payment hrefs never use `token=undefined` |
+| 024 | B09-U04 | `fix/024-viewer-cannot-change-plan` | Viewer cannot change plan, seats, pause, or export |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

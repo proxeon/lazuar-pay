@@ -164,4 +164,43 @@ public class CommerceEndpointsAuthorizationTests
             e.RoutePattern.RawText == "/admin/commerce/subscribers" && HasMethod(e, "GET"));
         AssertPolicy(list, "OrgRead", "GET /admin/commerce/subscribers");
     }
+
+    [Test]
+    public void MapCommerceEndpoints_SubscriberWrites_Require_OrgMember()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Services.AddSingleton(Substitute.For<IMediator>());
+        builder.Services.AddSingleton(Substitute.For<global::BuildingBlocks.Application.IExecutionContextAccessor>());
+        builder.Services.AddSingleton(Substitute.For<Modules.Commerce.Application.Queries.ICommerceQueryService>());
+        var app = builder.Build();
+        var adminGroup = app.MapGroup("/admin/commerce").RequireAuthorization("OrgRead");
+        adminGroup.MapSubscriberEndpoints();
+
+        var endpoints = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(ds => ds.Endpoints)
+            .OfType<RouteEndpoint>()
+            .ToList();
+
+        var changePlan = endpoints.Single(e =>
+            e.RoutePattern.RawText!.Contains("change-plan", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "POST"));
+        var quantity = endpoints.Single(e =>
+            e.RoutePattern.RawText!.Contains("quantity", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "POST"));
+        var pauseCollection = endpoints.Single(e =>
+            e.RoutePattern.RawText!.Contains("collection/pause", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "POST"));
+        var resumeCollection = endpoints.Single(e =>
+            e.RoutePattern.RawText!.Contains("collection/resume", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "POST"));
+        var export = endpoints.Single(e =>
+            e.RoutePattern.RawText!.Contains("subscribers/export", System.StringComparison.OrdinalIgnoreCase)
+            && HasMethod(e, "GET"));
+
+        AssertPolicy(changePlan, "OrgMember", "POST /admin/commerce/subscribers/{id}/change-plan");
+        AssertPolicy(quantity, "OrgMember", "POST /admin/commerce/subscribers/{id}/quantity");
+        AssertPolicy(pauseCollection, "OrgMember", "POST /admin/commerce/subscribers/{id}/collection/pause");
+        AssertPolicy(resumeCollection, "OrgMember", "POST /admin/commerce/subscribers/{id}/collection/resume");
+        AssertPolicy(export, "OrgMember", "GET /admin/commerce/subscribers/export");
+    }
 }
