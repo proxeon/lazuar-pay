@@ -296,6 +296,29 @@ public class IntegrationCheckoutOutboundWebhookTests
     }
 
     [Test]
+    public async Task Failed_ThenCompleted_MarksCompleted_AndPublishesPaymentCompleted()
+    {
+        var session = AddOpenSession(amount: 50m, currency: "MYR");
+        await _handler.HandleAsync(FailedEvent(OrgId, session.Id, "pi_fail_then_pay"));
+
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusFailed);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == IntegrationCheckoutGatewayEventsHandler.EventTypeFailed));
+
+        _eventBus.ClearReceivedCalls();
+        var paid = CompletedEvent(OrgId, session.Id, amountPaid: 50m, gatewayTxId: "pi_fail_then_pay");
+        await _handler.HandleAsync(paid);
+
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusCompleted);
+        session.GatewayTransactionId.Should().Be("pi_fail_then_pay");
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == IntegrationCheckoutGatewayEventsHandler.EventTypeCompleted
+            && e.TargetUrl == null));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == IntegrationCheckoutGatewayEventsHandler.EventTypeFailed));
+    }
+
+    [Test]
     public async Task Failed_MissingCheckoutId_NoPublish()
     {
         AddOpenSession();

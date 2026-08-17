@@ -2,17 +2,21 @@
 number: "006"
 id: B04-P02
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
+resolved_branch: fix/006-m2m-fail-then-pay
 ---
 
 # 006 — B04-P02 — M2M fail-then-pay: session stays `failed`, outbound `payment.completed` never sent
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/006-m2m-fail-then-pay`
+
+`payment.completed` now recovers a `failed` (or expired) M2M session. Already-`completed` stays idempotent. Fail-then-pay publishes `payment.failed` then `payment.completed`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

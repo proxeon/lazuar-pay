@@ -56,8 +56,9 @@ public class IntegrationCheckoutGatewayEventsHandler :
             return;
         }
 
-        // Idempotent: only open → completed emits outbound once.
-        if (session.Status != IntegrationCheckoutSession.StatusOpen)
+        // Fail-then-pay: CHIP/Billplz can publish FAILED then COMPLETED for the same object.
+        // Completed money wins over failed/expired. Already-completed is idempotent.
+        if (session.Status == IntegrationCheckoutSession.StatusCompleted)
         {
             _logger.LogDebug(
                 "Integration checkout {CheckoutId} status is {Status}; skipping duplicate payment.completed outbound.",

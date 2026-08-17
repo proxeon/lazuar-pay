@@ -16,6 +16,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 003 | B03-C01 | `fix/003-update-payment-decline-not-pastdue` | `update_payment` decline stays ACTIVE |
 | 004 | B03-C02 | `fix/004-pastdue-renewal-checkout-cache` | PAST_DUE pay link cached; second complete does not roll dates |
 | 005 | B04-P01 | `fix/005-chip-preauthorized-vault` | CHIP `$0` `purchase.preauthorized` + token → `PAYMENT_COMPLETED` |
+| 006 | B04-P02 | `fix/006-m2m-fail-then-pay` | Failed M2M session can still complete when the buyer later pays |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
