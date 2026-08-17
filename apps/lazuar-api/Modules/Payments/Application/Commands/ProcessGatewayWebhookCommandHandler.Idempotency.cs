@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Modules.Payments.Contracts;
 
 namespace Modules.Payments.Application.Commands;
 
@@ -23,18 +24,33 @@ public partial class ProcessGatewayWebhookCommandHandler
     }
 
     internal static bool TryGetInboundTenantId(Dictionary<string, string>? metadata, out Guid tenantId)
+        => TryGetMetadataGuid(metadata, "tenant_id", out tenantId);
+
+    internal static bool TryGetMetadataGuid(Dictionary<string, string>? metadata, string key, out Guid value)
     {
-        tenantId = Guid.Empty;
+        value = Guid.Empty;
         if (metadata is null
-            || !metadata.TryGetValue("tenant_id", out var raw)
+            || !metadata.TryGetValue(key, out var raw)
             || string.IsNullOrWhiteSpace(raw)
-            || !Guid.TryParse(raw, out tenantId)
-            || tenantId == Guid.Empty)
+            || !Guid.TryParse(raw, out value)
+            || value == Guid.Empty)
         {
             return false;
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Platform checkout (Hub SaaS / credits) keeps the paying workspace in
+    /// <c>tenant_id</c> and stamps the system org as <c>platform_tenant_id</c>.
+    /// The webhook URL is the system org — that mismatch is expected.
+    /// </summary>
+    internal static bool IsPlatformCheckoutWebhook(Guid urlTenant, Dictionary<string, string>? metadata)
+    {
+        return urlTenant == PlatformCheckoutTypes.SystemOrganizationId
+            && TryGetMetadataGuid(metadata, "platform_tenant_id", out var platformTenant)
+            && platformTenant == urlTenant;
     }
 
     private async Task TrySaveChangesAsync(CancellationToken cancellationToken)

@@ -88,7 +88,8 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
         }
 
         if (TryGetInboundTenantId(parsedResult.Metadata, out var inboundTenant)
-            && inboundTenant != request.TenantId)
+            && inboundTenant != request.TenantId
+            && !IsPlatformCheckoutWebhook(request.TenantId, parsedResult.Metadata))
         {
             _logger.LogWarning(
                 "Rejected payment webhook: inbound tenant_id {InboundTenant} does not match URL tenant {UrlTenant}.",

@@ -15,8 +15,9 @@ resolved_branch: fix/063-webhook-tenant-eventid
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
 - **Resolved on:** `fix/063-webhook-tenant-eventid`
+- **Follow-up:** `fix/063-platform-webhook-paying-tenant` (allow paying `tenant_id` when `platform_tenant_id` is the system-org URL)
 
-Inbound `tenant_id` must match the URL tenant. Webhook logs are unique per `(OrganizationId, Provider, EventId)`.
+Inbound `tenant_id` must match the URL tenant, except platform checkout: paying `tenant_id` is allowed when `platform_tenant_id` equals the system-org URL. Webhook logs are unique per `(OrganizationId, Provider, EventId)`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

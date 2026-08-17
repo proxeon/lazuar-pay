@@ -72,7 +72,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 060 | B04-P03 | `fix/060-chip-recurring-token` | CHIP off-session does not GET /purchases/{recurring_token} as a purchase |
 | 061 | B04-P04 | `fix/061-chip-offsession-idempotency` | CHIP off-session sends Idempotency-Key + reference; retries reuse the purchase |
 | 062 | B04-P05 | `fix/062-chip-xendit-paying-tenant` | CHIP/Xendit generate keep paying tenant_id; system org is platform_tenant_id |
-| 063 | B04-P06 | `fix/063-webhook-tenant-eventid` | Inbound tenant_id must match URL tenant; EventId unique is per tenant |
+| 063 | B04-P06 | `fix/063-webhook-tenant-eventid` | Inbound tenant_id must match URL tenant (platform checkout: paying tenant_id + platform_tenant_id == system URL); EventId unique is per tenant |
 | 064 | B04-P07 | `fix/064-offsession-pending-not-success` | Stripe processing / CHIP pending_charge are not off-session success |
 | 065 | B04-P08 | `fix/065-ignore-late-payment-failed` | Late PAYMENT_FAILED after COMPLETED on the same object is ignored |
 | 066 | B04-P09 | `fix/066-razorpay-eventid-fallback` | Razorpay EventId fallback is namespaced, not the bare payment id |

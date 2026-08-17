@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Payments.Application.Commands;
 using Modules.Payments.Application.Ports;
 using Modules.Payments.Application.Services;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Events;
 using Modules.Payments.Domain.Aggregates;
 using Modules.Payments.Domain.Entities;
@@ -949,6 +950,91 @@ public class ProcessGatewayWebhookCommandHandlerTests
         logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
         await logRepo.DidNotReceive().GetByEventIdAsync(
             Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task Handle_PlatformCheckout_PayingTenantOnSystemUrl_Publishes()
+    {
+        var systemId = PlatformCheckoutTypes.SystemOrganizationId;
+        var payingTenant = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(systemId, "CHIP", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(systemId, "CHIP", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        StubFreshLogs(logRepo);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_COMPLETED", "PAYMENT_COMPLETED:purch_hub", 99m, "MYR", "purch_hub",
+                new Dictionary<string, string>
+                {
+                    ["type"] = PlatformCheckoutTypes.PlatformSaasFee,
+                    ["tenant_id"] = payingTenant.ToString(),
+                    ["platform_tenant_id"] = systemId.ToString()
+                },
+                0, 0, 99, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("CHIP").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(systemId, "CHIP", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentCompletedIntegrationEvent>(e =>
+            e.OrganizationId == systemId
+            && e.GatewayTransactionId == "purch_hub"
+            && e.Metadata["tenant_id"] == payingTenant.ToString()
+            && e.Metadata["type"] == PlatformCheckoutTypes.PlatformSaasFee));
+        logRepo.Received(1).Add(Arg.Is<PaymentWebhookLog>(l =>
+            l.EventId == "PAYMENT_COMPLETED:purch_hub"
+            && l.OrganizationId == systemId));
+    }
+
+    [Test]
+    public async Task Handle_PlatformTenantStampOnNonSystemUrl_DoesNotPublish()
+    {
+        var urlTenant = Guid.CreateVersion7();
+        var inboundTenant = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(urlTenant, "CHIP", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(urlTenant, "CHIP", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        StubFreshLogs(logRepo);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_COMPLETED", "PAYMENT_COMPLETED:purch_forge", 10m, "MYR", "purch_forge",
+                new Dictionary<string, string>
+                {
+                    ["tenant_id"] = inboundTenant.ToString(),
+                    ["platform_tenant_id"] = urlTenant.ToString()
+                },
+                0, 0, 10, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("CHIP").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(urlTenant, "CHIP", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
     }
 
