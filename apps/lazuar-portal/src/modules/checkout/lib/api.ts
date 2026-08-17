@@ -12,11 +12,24 @@ export type ProductDto = components["schemas"]["Commerce.ProductDto"];
 export type PublicCheckoutRequestDto = components["schemas"]["Commerce.PublicCheckoutRequestDto"];
 export type ValidateCouponResponseDto = components["schemas"]["Commerce.ValidateCouponResponseDto"];
 
-export async function validateCouponCode(tenantSlug: string, productSlug: string, code: string) {
+export async function validateCouponCode(
+  tenantSlug: string,
+  productSlug: string,
+  code: string,
+  opts?: { interval?: string; priceId?: string; quantity?: number },
+) {
+  const query: { code: string; product_slug: string } & Record<string, string> = {
+    code,
+    product_slug: productSlug,
+  };
+  if (opts?.interval) query.interval = opts.interval;
+  if (opts?.priceId) query.price_id = opts.priceId;
+  if (opts?.quantity != null) query.quantity = String(opts.quantity);
+
   const { data, error } = await browserClient.GET("/public/commerce/{tenantSlug}/validate-coupon", {
     params: {
       path: { tenantSlug },
-      query: { code, product_slug: productSlug }
+      query,
     }
   });
 

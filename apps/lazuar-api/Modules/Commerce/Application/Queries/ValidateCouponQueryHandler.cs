@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
+using Modules.Commerce.Application.Commands;
 
 namespace Modules.Commerce.Application.Queries;
 
@@ -29,15 +30,20 @@ public class ValidateCouponQueryHandler : IQueryHandler<ValidateCouponQuery, Val
             throw new InvalidOperationException("Invalid promo code.");
         }
 
-        coupon.Validate(product.Price, product.Id);
+        var quantity = Math.Clamp(request.Quantity, 1, 99);
+        var resolved = InitiateCheckoutCommandHandler.ResolveCheckoutPrice(
+            product, request.PriceId, request.Interval);
 
-        var discount = coupon.CalculateDiscount(product.Price);
-        var finalPrice = Math.Max(0, product.Price - discount);
+        coupon.Validate(resolved.Amount, product.Id);
+
+        var unitDiscount = coupon.CalculateDiscount(resolved.Amount);
+        var lineDiscount = unitDiscount * quantity;
+        var finalPrice = Math.Max(0, resolved.Amount - unitDiscount) * quantity;
 
         return new ValidateCouponResponseDto
         {
             Is_valid = true,
-            Discount_amount = (double)discount,
+            Discount_amount = (double)lineDiscount,
             Final_price = (double)finalPrice
         };
     }

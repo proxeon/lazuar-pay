@@ -76,12 +76,13 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     setGlobalError(null);
 
     try {
-      const data = await validateCouponCode(tenantSlug, product.slug, code);
-      const discountRatio = data.discount_amount / product.price;
-      const totalDiscount = basePriceForQuantity * discountRatio;
-      
-      setDiscountAmount(totalDiscount);
-      setFinalPrice(Math.max(0, basePriceForQuantity - totalDiscount));
+      const data = await validateCouponCode(tenantSlug, product.slug, code, {
+        interval: selectedInterval,
+        priceId: selectedPrice?.id,
+        quantity,
+      });
+      setDiscountAmount(data.discount_amount);
+      setFinalPrice(Math.max(0, data.final_price));
       setIsCouponApplied(true);
       setCouponCode(code);
     } catch (err: any) {

@@ -46,6 +46,9 @@ public static class PublicProductEndpoints
             string tenantSlug,
             [FromQuery] string code,
             [FromQuery] string product_slug,
+            [FromQuery] string? interval,
+            [FromQuery] string? price_id,
+            [FromQuery] int? quantity,
             IOneQueryService oneQueryService,
             IMediator mediator) =>
         {
@@ -54,7 +57,24 @@ public static class PublicProductEndpoints
 
             try
             {
-                var query = new ValidateCouponQuery(tenantId.Value, product_slug, code);
+                Guid? priceId = null;
+                if (!string.IsNullOrWhiteSpace(price_id))
+                {
+                    if (!Guid.TryParse(price_id, out var parsedPriceId))
+                    {
+                        throw new InvalidOperationException("price_id is not valid for this product.");
+                    }
+
+                    priceId = parsedPriceId;
+                }
+
+                var query = new ValidateCouponQuery(
+                    tenantId.Value,
+                    product_slug,
+                    code,
+                    priceId,
+                    interval,
+                    quantity ?? 1);
                 var result = await mediator.Send(query);
                 return TypedResults.Ok(result);
             }

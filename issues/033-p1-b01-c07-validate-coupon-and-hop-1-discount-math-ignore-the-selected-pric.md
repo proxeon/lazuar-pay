@@ -2,17 +2,21 @@
 number: "033"
 id: B01-C07
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
+resolved_branch: fix/033-validate-coupon-chosen-price
 ---
 
 # 033 — B01-C07 — Validate-coupon and hop-1 discount math ignore the selected price row
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/033-validate-coupon-chosen-price`
+
+Validate-coupon takes `interval` / `price_id` / `quantity` and returns line discount against the resolved price. Hop-1 uses those amounts; no catalog-price ratio.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

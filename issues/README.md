@@ -42,6 +42,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 030 | B01-C04 | `fix/030-idempotency-replay-open-only` | Idempotency replay only OPEN live URLs; resume empty-URL rows |
 | 031 | B01-C05 | `fix/031-quote-reuse-hop2-idem-key` | Quote hop-2 is reused; portal key is per session |
 | 032 | B01-C06 | `fix/032-hop1-show-sst` | Hop-1 shows exclusive SST line + gross from product SST fields |
+| 033 | B01-C07 | `fix/033-validate-coupon-chosen-price` | Validate-coupon discounts the chosen price × qty; hop-1 drops the catalog ratio |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
