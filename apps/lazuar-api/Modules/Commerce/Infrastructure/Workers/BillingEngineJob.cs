@@ -355,7 +355,7 @@ public class BillingEngineJob : BackgroundService
         }
 
         sub.MarkAsPastDue();
-        await StartPastDueDunningRunAsync(db, eventBus, config, billing, sub, ct);
+        await StartPastDueDunningRunAsync(db, eventBus, config, billing, crm, sub, ct);
 
         var payloadElement = CommerceWebhookPayload.From(
             sub, product, email, "PAST_DUE", checkoutUrl: checkoutUrl, merchantHasSst: merchantHasSst);
@@ -383,6 +383,7 @@ public class BillingEngineJob : BackgroundService
         IEventBus eventBus,
         IConfiguration? config,
         IBillingQueryService? billing,
+        ICrmQueryService? crm,
         Subscription sub,
         CancellationToken ct)
     {
@@ -390,6 +391,6 @@ public class BillingEngineJob : BackgroundService
         var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(db, ct);
         var whatsAppEnabled = config?.GetValue("Messaging:WhatsAppEnabled", false) ?? false;
         var processor = new PastDueDunningProcessor(_logger);
-        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct, billing);
+        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct, billing, crm);
     }
 }

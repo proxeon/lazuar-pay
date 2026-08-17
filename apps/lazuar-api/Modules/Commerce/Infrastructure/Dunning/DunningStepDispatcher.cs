@@ -8,6 +8,7 @@ using Modules.Commerce.Application;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Dunning;
 
@@ -55,7 +56,7 @@ internal static class DunningStepDispatcher
         return sub.CurrentRenewalCheckoutUrl;
     }
 
-    public static async Task DispatchCommunicationStepAsync(
+    public static async Task<bool> DispatchCommunicationStepAsync(
         CommerceDbContext db,
         Subscription sub,
         IDunningStepCopy step,
@@ -63,8 +64,18 @@ internal static class DunningStepDispatcher
         string effectiveActionType,
         IEventBus eventBus,
         CancellationToken ct,
-        IBillingQueryService? billing = null)
+        IBillingQueryService? billing = null,
+        ICrmQueryService? crm = null)
     {
+        if (crm != null)
+        {
+            var profile = await crm.GetClientProfileAsync(sub.ClientProfileId);
+            if (profile == null || string.IsNullOrWhiteSpace(profile.Email))
+            {
+                return false;
+            }
+        }
+
         var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
         var checkoutUrl = ResolveLiveRenewalCheckoutUrl(sub) ?? string.Empty;
         var amount = product == null
@@ -95,5 +106,6 @@ internal static class DunningStepDispatcher
 
         await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
             sub.OrganizationId, "COMMUNICATIONS", "reminder.dunning", payloadElement));
+        return true;
     }
 }

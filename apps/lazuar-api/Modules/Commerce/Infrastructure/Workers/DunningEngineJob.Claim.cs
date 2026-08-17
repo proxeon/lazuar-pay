@@ -37,6 +37,7 @@ public partial class DunningEngineJob
             var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
             var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("CommerceEventBus");
             var billing = scope.ServiceProvider.GetService<IBillingQueryService>();
+            var crm = scope.ServiceProvider.GetService<Modules.CRM.Contracts.ICrmQueryService>();
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             Subscription? sub;
@@ -65,11 +66,11 @@ public partial class DunningEngineJob
                 {
                     if (mode == ClaimMode.PreDunning)
                     {
-                        await ProcessPreDunningSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct, billing);
+                        await ProcessPreDunningSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct, billing, crm);
                     }
                     else
                     {
-                        await ProcessPastDueSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct, billing);
+                        await ProcessPastDueSubscriptionAsync(db, eventBus, campaigns, sub, whatsAppEnabled, ct, billing, crm);
                     }
 
                     await db.SaveChangesAsync(ct);

@@ -109,6 +109,44 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task PastDue_Day0Email_MissingCrmEmail_DoesNotConsumeOffset()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 0);
+        var campaign = Day0EmailCampaign(_orgId);
+
+        var crm = Substitute.For<Modules.CRM.Contracts.ICrmQueryService>();
+        crm.GetClientProfileAsync(sub.ClientProfileId).Returns((Lazuar.ApiTypes.ClientProfileDto?)null);
+
+        _sp.Dispose();
+        var services = new ServiceCollection();
+        services.AddSingleton(_db);
+        services.AddKeyedSingleton<IEventBus>("CommerceEventBus", _eventBus);
+        services.AddSingleton(crm);
+        _sp = services.BuildServiceProvider();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Messaging:WhatsAppEnabled"] = "false" })
+            .Build();
+        _job = new DunningEngineJob(
+            _sp.GetRequiredService<IServiceScopeFactory>(),
+            configuration,
+            NullLogger<DunningEngineJob>.Instance,
+            Options.Create(new BackgroundWorkerOptions()));
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.ReminderLogs.Should().BeEmpty();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task PastDue_Day0Email_IncludesCheckoutUrl_WhenMintedForCurrentDueDate()
     {
         var product = CreateProduct(_orgId, "BILLPLZ");

@@ -15,6 +15,7 @@ using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
 using Modules.Commerce.Domain.ValueObjects;
 using Modules.Payments.Contracts;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Dunning;
 
@@ -50,7 +51,8 @@ public sealed class PastDueDunningProcessor
         IReadOnlyList<DunningCampaign> campaigns,
         bool whatsAppEnabled,
         CancellationToken ct,
-        IBillingQueryService? billing = null)
+        IBillingQueryService? billing = null,
+        ICrmQueryService? crm = null)
     {
         var now = DateTime.UtcNow;
         var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId);
@@ -212,11 +214,21 @@ public sealed class PastDueDunningProcessor
                     }
                     else
                     {
-                        await DunningStepDispatcher.DispatchCommunicationStepAsync(
-                            db, sub, step, daysOverdue, effectiveAction, eventBus, ct, billing);
-                        _logger.LogInformation(
-                            "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id} as {Action}.",
-                            step.DayOffset, sub.Id, effectiveAction);
+                        var sent = await DunningStepDispatcher.DispatchCommunicationStepAsync(
+                            db, sub, step, daysOverdue, effectiveAction, eventBus, ct, billing, crm);
+                        if (!sent)
+                        {
+                            consumeOffset = false;
+                            _logger.LogWarning(
+                                "Did not consume DayOffset={DayOffset} for Subscription {Id}: CRM profile or email missing.",
+                                step.DayOffset, sub.Id);
+                        }
+                        else
+                        {
+                            _logger.LogInformation(
+                                "Dispatched communication dunning step DayOffset={DayOffset} for Subscription {Id} as {Action}.",
+                                step.DayOffset, sub.Id, effectiveAction);
+                        }
                     }
                 }
             }

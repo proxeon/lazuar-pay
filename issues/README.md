@@ -58,6 +58,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 046 | B02-C11 | `fix/046-orgread-subscriber-writes` | Change-plan / seats / pause / resume already require OrgMember |
 | 047 | B02-C12 | `fix/047-trial-convert-stall-pastdue` | Trial convert stall after attempt 1 becomes PAST_DUE |
 | 048 | B03-C03 | `fix/048-unique-dunning-dayoffset` | Campaign save rejects two steps on the same DayOffset |
+| 049 | B03-C04 | `fix/049-reminder-log-after-publish` | Missing CRM email does not consume the dunning reminder slot |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

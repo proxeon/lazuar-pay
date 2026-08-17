@@ -4,6 +4,7 @@ using BuildingBlocks.Application;
 using Modules.Billing.Contracts;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Infrastructure.Dunning;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -12,7 +13,7 @@ public partial class DunningEngineJob
     private static string? ResolveEffectiveCommunicationAction(Domain.Entities.DunningStep step, bool whatsAppEnabled) =>
         DunningStepDispatcher.ResolveEffectiveCommunicationAction(step, whatsAppEnabled);
 
-    private static Task DispatchCommunicationStepAsync(
+    private static Task<bool> DispatchCommunicationStepAsync(
         CommerceDbContext db,
         Subscription sub,
         Domain.Entities.DunningStep step,
@@ -20,7 +21,8 @@ public partial class DunningEngineJob
         string effectiveActionType,
         IEventBus eventBus,
         CancellationToken ct,
-        IBillingQueryService? billing = null) =>
+        IBillingQueryService? billing = null,
+        ICrmQueryService? crm = null) =>
         DunningStepDispatcher.DispatchCommunicationStepAsync(
-            db, sub, step, daysOverdue, effectiveActionType, eventBus, ct, billing);
+            db, sub, step, daysOverdue, effectiveActionType, eventBus, ct, billing, crm);
 }

@@ -2,17 +2,21 @@
 number: "049"
 id: B03-C04
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
+resolved_branch: fix/049-reminder-log-after-publish
 ---
 
 # 049 — B03-C04 — Reminder log is written when Commerce publishes, not when the buyer is emailed
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/049-reminder-log-after-publish`
+
+Missing CRM email skips publish and does not consume the DayOffset, so the next tick can retry.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

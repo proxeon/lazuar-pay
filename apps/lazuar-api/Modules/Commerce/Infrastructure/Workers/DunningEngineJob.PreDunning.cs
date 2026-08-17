@@ -9,6 +9,7 @@ using Modules.Billing.Contracts;
 using Modules.Commerce.Domain;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -21,7 +22,8 @@ public partial class DunningEngineJob
         Subscription sub,
         bool whatsAppEnabled,
         CancellationToken ct,
-        IBillingQueryService? billing = null)
+        IBillingQueryService? billing = null,
+        ICrmQueryService? crm = null)
     {
         var now = DateTime.UtcNow;
         var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId);
@@ -54,7 +56,15 @@ public partial class DunningEngineJob
                 continue;
             }
 
-            await DispatchCommunicationStepAsync(db, sub, step, daysOverdue: 0, effectiveAction, eventBus, ct, billing);
+            var sent = await DispatchCommunicationStepAsync(db, sub, step, daysOverdue: 0, effectiveAction, eventBus, ct, billing, crm);
+            if (!sent)
+            {
+                _logger.LogWarning(
+                    "Did not consume pre-dunning DayOffset={DayOffset} for Subscription {SubId}: CRM profile or email missing.",
+                    step.DayOffset, sub.Id);
+                continue;
+            }
+
             sub.RecordReminderDispatched(step.Id, targetDate, step.DayOffset);
             _logger.LogInformation(
                 "Dispatched pre-dunning step DayOffset={DayOffset} ({StepId}) for Subscription {SubId} as {Action}.",

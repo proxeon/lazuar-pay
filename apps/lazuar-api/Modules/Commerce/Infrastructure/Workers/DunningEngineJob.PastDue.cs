@@ -5,6 +5,7 @@ using BuildingBlocks.Application;
 using Modules.Billing.Contracts;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Infrastructure.Dunning;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -20,9 +21,10 @@ public partial class DunningEngineJob
         Subscription sub,
         bool whatsAppEnabled,
         CancellationToken ct,
-        IBillingQueryService? billing = null)
+        IBillingQueryService? billing = null,
+        ICrmQueryService? crm = null)
     {
         var processor = new PastDueDunningProcessor(_logger);
-        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct, billing);
+        await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct, billing, crm);
     }
 }
