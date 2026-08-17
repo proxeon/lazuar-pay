@@ -544,6 +544,42 @@ public class StripeGatewayAdapterTests
         result.EventId.Should().Be("evt_unmapped");
     }
 
+    [Test]
+    public async Task ParseWebhook_RefundUpdatedSucceeded_IsRefundCompleted()
+    {
+        var json = RefundUpdatedJson("evt_re_1", "re_1", "pi_1", "succeeded", 4000);
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", WebhookSecret, json, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("REFUND_COMPLETED");
+        result.EventId.Should().Be("re_1");
+        result.GatewayTransactionId.Should().Be("pi_1");
+        result.AmountPaid.Should().Be(40m);
+        result.Currency.Should().Be("MYR");
+    }
+
+    [Test]
+    public async Task ParseWebhook_RefundUpdatedPending_IsNotCompleted()
+    {
+        var json = RefundUpdatedJson("evt_re_pend", "re_pend", "pi_1", "pending", 4000);
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", WebhookSecret, json, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("refund.updated");
+    }
+
     private static string SetupSessionCompletedJson(
         string eventId,
         string sessionId,
@@ -593,6 +629,29 @@ public class StripeGatewayAdapterTests
               "object": "checkout.session",
               "amount_total": 5000,
               "currency": "myr",
+              "payment_intent": "{{paymentIntentId}}",
+              "metadata": {}
+            }
+          }
+        }
+        """;
+
+    private static string RefundUpdatedJson(
+        string eventId, string refundId, string paymentIntentId, string status, long amountMinor) =>
+        $$"""
+        {
+          "id": "{{eventId}}",
+          "object": "event",
+          "api_version": "{{StripeApiVersion}}",
+          "request": null,
+          "type": "refund.updated",
+          "data": {
+            "object": {
+              "id": "{{refundId}}",
+              "object": "refund",
+              "amount": {{amountMinor}},
+              "currency": "myr",
+              "status": "{{status}}",
               "payment_intent": "{{paymentIntentId}}",
               "metadata": {}
             }

@@ -290,6 +290,9 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 );
             }
 
+            if (TryMapRefundCompleted(stripeEvent) is { } refundParsed)
+                return refundParsed;
+
             return new GatewayWebhookParsedResult(true, stripeEvent.Type, stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "", null);
         }
         catch (StripeException ex)
@@ -403,6 +406,54 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
     internal static bool IsRefundSucceeded(string? status) =>
         string.Equals(status, "succeeded", StringComparison.OrdinalIgnoreCase);
+
+    internal static GatewayWebhookParsedResult? TryMapRefundCompleted(Event stripeEvent)
+    {
+        Refund? refund = stripeEvent.Data.Object as Refund;
+        var meta = new Dictionary<string, string>();
+
+        if (stripeEvent.Data.Object is Charge charge)
+        {
+            refund = charge.Refunds?.Data?.FirstOrDefault(r => IsRefundSucceeded(r.Status))
+                     ?? charge.Refunds?.Data?.FirstOrDefault();
+            if (charge.Metadata is { Count: > 0 })
+                meta = new Dictionary<string, string>(charge.Metadata);
+        }
+        else if (refund?.Metadata is { Count: > 0 })
+        {
+            meta = new Dictionary<string, string>(refund.Metadata);
+        }
+
+        if (refund is null || !IsRefundSucceeded(refund.Status))
+            return null;
+
+        if (!GatewayCommon.TryNormalizeCurrency(refund.Currency, out var currency))
+        {
+            return new GatewayWebhookParsedResult(
+                false, "REFUND_COMPLETED", refund.Id, 0, "", null, meta, 0, 0, 0, 1, "",
+                "Missing refund currency; refusing to invent MYR.");
+        }
+
+        var paymentIntentId = refund.PaymentIntentId;
+        if (string.IsNullOrEmpty(paymentIntentId) && stripeEvent.Data.Object is Charge chargeForPi)
+            paymentIntentId = chargeForPi.PaymentIntentId;
+
+        var amount = refund.Amount / 100m;
+        return new GatewayWebhookParsedResult(
+            Verified: true,
+            EventType: "REFUND_COMPLETED",
+            EventId: refund.Id,
+            AmountPaid: amount,
+            Currency: currency,
+            GatewayTransactionId: paymentIntentId,
+            Metadata: meta,
+            GatewayFee: 0,
+            TaxAmount: 0,
+            NetAmount: amount,
+            FxRate: 1,
+            BaseCurrency: currency,
+            Error: null);
+    }
 
     internal const string OffSessionIdempotencyKeyPrefix = "lazuar-offsession:";
 

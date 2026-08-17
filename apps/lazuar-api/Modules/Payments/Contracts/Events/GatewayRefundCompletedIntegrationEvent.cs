@@ -15,7 +15,8 @@ public record GatewayRefundCompletedIntegrationEvent(
     decimal TaxAmount = 0m,
     bool IsFullRefund = false,
     decimal FxRate = 1m,
-    string BaseCurrency = "") : IIntegrationEvent
+    string BaseCurrency = "",
+    string? RefundId = null) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;

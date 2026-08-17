@@ -82,7 +82,8 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
 
         if (parsedResult.EventType != "PAYMENT_COMPLETED"
             && parsedResult.EventType != "DISPUTE_CREATED"
-            && parsedResult.EventType != "PAYMENT_FAILED")
+            && parsedResult.EventType != "PAYMENT_FAILED"
+            && parsedResult.EventType != "REFUND_COMPLETED")
         {
             return;
         }
@@ -227,6 +228,28 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
                 Metadata: metadata);
             log.AssignOutboxMessageId(failedEvent.Id);
             await _eventBus.PublishAsync(failedEvent);
+            return;
+        }
+
+        if (parsedResult.EventType == "REFUND_COMPLETED")
+        {
+            var refunded = parsedResult.AmountPaid;
+            var refundEvent = new GatewayRefundCompletedIntegrationEvent(
+                OrganizationId: request.TenantId,
+                SubscriptionId: Guid.Empty,
+                PaymentRecordId: Guid.Empty,
+                GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
+                RefundedAmount: refunded,
+                Currency: parsedResult.Currency,
+                RefundedFee: 0m,
+                NetRefundedAmount: refunded,
+                TaxAmount: 0m,
+                IsFullRefund: false,
+                FxRate: parsedResult.FxRate,
+                BaseCurrency: parsedResult.BaseCurrency,
+                RefundId: parsedResult.EventId);
+            log.AssignOutboxMessageId(refundEvent.Id);
+            await _eventBus.PublishAsync(refundEvent);
             return;
         }
 

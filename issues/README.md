@@ -94,6 +94,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 082 | B05-L12 | `fix/082-refund-fx` | Refund journals copy sale FX into BaseCurrencyAmount |
 | 083 | B05-L13 | `fix/083-refund-tax-remainder` | Last partial-refund slice takes remaining tax |
 | 084 | B05-L14 | `fix/084-refund-cap-original` | Second Completed cannot book refunds past the original sale |
+| 085 | B05-L15 | `fix/085-inbound-refund-webhooks` | Succeeded inbound Stripe refunds publish Completed; pending is not success |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

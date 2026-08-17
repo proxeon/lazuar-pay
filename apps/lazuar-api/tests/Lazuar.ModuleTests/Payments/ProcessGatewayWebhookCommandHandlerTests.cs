@@ -116,6 +116,45 @@ public class ProcessGatewayWebhookCommandHandlerTests
     }
 
     [Test]
+    public async Task Handle_RefundCompleted_Publishes_GatewayRefundCompleted()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        StubFreshLogs(logRepo);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "REFUND_COMPLETED", "re_1", 40m, "MYR", "pi_1",
+                new Dictionary<string, string>(), 0, 0, 40, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<GatewayRefundCompletedIntegrationEvent>(e =>
+            e.OrganizationId == tenantId
+            && e.GatewayTransactionId == "pi_1"
+            && e.RefundedAmount == 40m
+            && e.RefundId == "re_1"
+            && e.PaymentRecordId == Guid.Empty));
+        logRepo.Received(1).Add(Arg.Is<PaymentWebhookLog>(l =>
+            l.EventId == "re_1" && l.BusinessKey == null && l.OrganizationId == tenantId));
+    }
+
+    [Test]
     public async Task Handle_PaymentFailed_Uses_EventId_When_GatewayTransactionId_Missing()
     {
         var tenantId = Guid.CreateVersion7();

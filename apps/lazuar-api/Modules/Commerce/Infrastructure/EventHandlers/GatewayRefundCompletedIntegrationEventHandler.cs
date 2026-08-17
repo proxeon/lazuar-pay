@@ -32,13 +32,32 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
             return;
         }
 
-        // Pending is the apply lock. Mark-refunded already applied; redelivery is a no-op.
-        if (!string.Equals(existingLog.Status, CommerceTransactionLog.StatusRefundPending, StringComparison.OrdinalIgnoreCase))
+        if (existingLog.RemainingAmount <= 0)
         {
             return;
         }
 
-        existingLog.ApplyRefund(@event.RefundedAmount);
+        var pending = string.Equals(
+            existingLog.Status, CommerceTransactionLog.StatusRefundPending, StringComparison.OrdinalIgnoreCase);
+        var open = string.Equals(existingLog.Status, CommerceTransactionLog.StatusConfirmed, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(existingLog.Status, CommerceTransactionLog.StatusRefundFailed, StringComparison.OrdinalIgnoreCase);
+        var inboundSlice = !string.IsNullOrWhiteSpace(@event.RefundId)
+                           && string.Equals(
+                               existingLog.Status,
+                               CommerceTransactionLog.StatusPartiallyRefunded,
+                               StringComparison.OrdinalIgnoreCase);
+
+        // Ops path: apply only while REFUND_PENDING so outbox redelivery does not double-add.
+        // Dashboard / Radar inbound: log is still CONFIRMED (or a later PARTIAL slice).
+        if (!pending && !open && !inboundSlice)
+        {
+            return;
+        }
+
+        var amount = existingLog.RemainingAmount < @event.RefundedAmount
+            ? existingLog.RemainingAmount
+            : @event.RefundedAmount;
+        existingLog.ApplyRefund(amount);
         await _dbContext.SaveChangesAsync();
     }
 }

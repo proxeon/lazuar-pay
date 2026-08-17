@@ -89,6 +89,23 @@ public class GatewayRefundCompletedIntegrationEventHandlerTests
     }
 
     [Test]
+    public async Task InboundConfirmed_AppliesWithoutPending()
+    {
+        await using var db = CreateDb();
+        var orgId = Guid.CreateVersion7();
+        var log = Confirmed(orgId, 100m, "pi_dash");
+        db.TransactionLogs.Add(log);
+        await db.SaveChangesAsync();
+
+        await new GatewayRefundCompletedIntegrationEventHandler(db).HandleAsync(
+            Completed(orgId, Guid.Empty, "pi_dash", 40m, refundId: "re_1"));
+
+        var stored = await db.TransactionLogs.IgnoreQueryFilters().SingleAsync();
+        stored.Status.Should().Be(CommerceTransactionLog.StatusPartiallyRefunded);
+        stored.RefundedAmount.Should().Be(40m);
+    }
+
+    [Test]
     public async Task Failed_OnPending_SetsRefundFailed()
     {
         await using var db = CreateDb();
@@ -120,8 +137,8 @@ public class GatewayRefundCompletedIntegrationEventHandlerTests
         new(orgId, amount, 0m, "MYR", CommerceTransactionLog.StatusConfirmed, "A", "a@b.com", "Plan", "SYSTEM", ext, "STRIPE");
 
     private static GatewayRefundCompletedIntegrationEvent Completed(
-        Guid orgId, Guid paymentRecordId, string gatewayTx, decimal amount) =>
-        new(orgId, Guid.Empty, paymentRecordId, gatewayTx, amount, "MYR", 0m, amount);
+        Guid orgId, Guid paymentRecordId, string gatewayTx, decimal amount, string? refundId = null) =>
+        new(orgId, Guid.Empty, paymentRecordId, gatewayTx, amount, "MYR", 0m, amount, RefundId: refundId);
 
     private static CommerceDbContext CreateDb() =>
         new(

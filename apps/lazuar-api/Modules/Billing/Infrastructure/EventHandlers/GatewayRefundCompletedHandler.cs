@@ -207,13 +207,17 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
     private async Task<List<LedgerEntry>> LoadSiblingRefundsAsync(GatewayRefundCompletedIntegrationEvent @event)
     {
         var prefix = @event.PaymentRecordId.ToString("N") + ":";
+        var marker = string.IsNullOrWhiteSpace(@event.GatewayTransactionId)
+            ? null
+            : "gateway tx " + @event.GatewayTransactionId;
         return await _dbContext.LedgerEntries
             .Include(e => e.Lines)
             .IgnoreQueryFilters()
             .Where(e =>
                 e.OrganizationId == @event.OrganizationId
                 && e.ReferenceType == LedgerReferenceTypes.GatewayRefund
-                && e.ReferenceId.StartsWith(prefix))
+                && (e.ReferenceId.StartsWith(prefix)
+                    || (marker != null && e.Description != null && e.Description.Contains(marker))))
             .ToListAsync();
     }
 

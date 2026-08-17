@@ -19,6 +19,11 @@ public partial class ProcessGatewayWebhookCommandHandler
             return null;
         }
 
+        // Per-refund EventId is the processor refund id. A PI-level business key
+        // would collapse later slices of the same payment.
+        if (eventType == "REFUND_COMPLETED")
+            return null;
+
         // Money events only (caller already filters to these)
         return eventType + ":" + gatewayTransactionId;
     }
