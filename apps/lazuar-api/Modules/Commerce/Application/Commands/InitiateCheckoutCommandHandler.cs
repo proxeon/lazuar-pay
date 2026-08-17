@@ -136,10 +136,11 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                     request.Name,
                     request.Email,
                     request.Phone ?? "",
-                    request.TaxId,
-                    null,
-                    request.CompanyName,
-                    customBillingAddress), ct);
+                    Tin: request.TaxId,
+                    IdType: request.IdType,
+                    IdValue: request.IdValue,
+                    BillingAddress: customBillingAddress,
+                    CompanyName: request.CompanyName), ct);
             }
 
             // Prefer gateway stored on the custom session; Payments falls back to first active → BILLPLZ.

@@ -21,6 +21,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 008 | B05-L03 | `fix/008-zero-amount-trial-ledger` | Non-vault trial $0 checkout books a balanced discount journal |
 | 009 | B05-L04 | `fix/009-chargeback-claw-idempotent` | Utility chargeback claw runs once per gateway tx |
 | 010 | B05-L05 | `fix/010-renewal-sst-tax-payable` | Renewal SST books `LIABILITY_TAX_PAYABLE`, not all revenue |
+| 011 | B06-D01 | `fix/011-quote-b2b-crm-arity` | Quote B2B resolve uses named CRM args; company name is not `IdValue` |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

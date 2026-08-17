@@ -108,6 +108,50 @@ public class CheckoutB2bIdentityTests
                 q.Metadata != null
                 && q.Metadata.GetValueOrDefault("is_b2b_required") == "true"),
             Arg.Any<CancellationToken>());
+
+        await mediator.Received(1).Send(
+            Arg.Is<ResolveClientProfileCommand>(c =>
+                c.Tin == "C12345678901"
+                && c.CompanyName == "Acme Sdn Bhd"
+                && c.IdValue != "Acme Sdn Bhd"
+                && c.IdValue == null
+                && c.IdType == null),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InitiateCheckout_CustomSession_PassesIdPairNamed_NotCompanyNameAsIdValue()
+    {
+        var orgId = Guid.CreateVersion7();
+        var session = new CheckoutSession(
+            orgId,
+            Guid.CreateVersion7(),
+            new[] { new AdHocLineItem("Consulting", 1, 250m) },
+            DateTime.UtcNow.AddDays(1),
+            isB2bRequired: true);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://gateway.test/pay/custom");
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Guid.CreateVersion7());
+
+        var handler = CreateHandler(orgId, repository, mediator);
+        await handler.Handle(
+            GuestCommand(taxId: "C12345678901", companyName: "Acme Sdn Bhd", idType: "BRN", idValue: "202401001234")
+                with { SessionId = session.Id },
+            CancellationToken.None);
+
+        await mediator.Received(1).Send(
+            Arg.Is<ResolveClientProfileCommand>(c =>
+                c.Tin == "C12345678901"
+                && c.CompanyName == "Acme Sdn Bhd"
+                && c.IdType == "BRN"
+                && c.IdValue == "202401001234"),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
