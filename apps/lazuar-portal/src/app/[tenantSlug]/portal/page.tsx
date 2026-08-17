@@ -22,18 +22,15 @@ export default async function AggregatedPortalPage({
   const token = resolvedSearchParams.token as string | undefined;
 
   if (!token) {
-    const { data: authCheck } = await serverClient.GET("/one/auth/me");
-    if (!authCheck) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
-          <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Enter the email on your subscription and we will send a secure link that expires in 24 hours.
-          </p>
-          <RequestMagicLinkForm tenantSlug={tenantSlug} />
-        </div>
-      );
-    }
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
+        <h1 className="text-2xl font-semibold mb-4 text-foreground">Welcome to your Dashboard</h1>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          Enter the email on your subscription and we will send a secure link that expires in 24 hours.
+        </p>
+        <RequestMagicLinkForm tenantSlug={tenantSlug} />
+      </div>
+    );
   }
 
   const { data: commerceData, error: commerceError } = await serverClient.GET("/public/commerce/{tenantSlug}/portal", {

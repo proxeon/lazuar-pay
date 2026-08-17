@@ -2,17 +2,21 @@
 number: "022"
 id: B09-U02
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/09-frontends-ops-portal-admin.md
 head: "297ba98"
+resolved_branch: fix/022-portal-no-token-shows-form
 ---
 
 # 022 — B09-U02 — Cookie session on `/{slug}/portal` is a 404
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/09-frontends-ops-portal-admin.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/022-portal-no-token-shows-form`
+
+`/{slug}/portal` without `?token=` shows the magic-link form. A staff cookie is not treated as buyer access.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
