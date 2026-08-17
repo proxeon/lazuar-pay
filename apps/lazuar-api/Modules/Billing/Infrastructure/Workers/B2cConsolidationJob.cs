@@ -208,6 +208,8 @@ public class B2cConsolidationJob : BackgroundService
         CancellationToken ct)
     {
         var consolidationRef = $"B2C-CONS-{periodKey}-{orgId:N}";
+        // Workers run with empty ambient TenantId. IgnoreQueryFilters so this
+        // short-circuit can see the issued B2C-CONS row (026 / 078).
         var alreadyConsolidated = await db.LedgerEntries
             .IgnoreQueryFilters()
             .AnyAsync(e =>

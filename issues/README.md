@@ -87,6 +87,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 075 | B05-L02 | `fix/075-skip-zero-gmv-setup` | $0 Stripe setup / coupon vault is not booked as GMV |
 | 076 | B05-L06 | `fix/076-b2b-tax-resolved-sst` | B2B MyInvois tax is resolved SST, not raw event.TaxAmount |
 | 077 | B05-L07 | `fix/077-refund-not-b2c-consolidation` | GATEWAY_REFUND is not required for B2C consolidation |
+| 078 | B05-L08 | `fix/078-already-consolidated-ignore-filters` | alreadyConsolidated already IgnoreQueryFilters; leftover PENDING does not re-issue |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
