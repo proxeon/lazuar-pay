@@ -1,5 +1,12 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
+using Modules.Commerce.Application.Queries;
+using Modules.Commerce.Contracts;
+using Modules.Commerce.Infrastructure;
 using Modules.Commerce.Infrastructure.Services;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Commerce;
@@ -53,5 +60,36 @@ public class GetCheckoutStatusTests
         dto!.Status.Should().Be("PENDING");
         dto.Status.Should().NotBe("COMPLETED");
         dto.Token.Should().BeNull();
+    }
+
+    [Test]
+    public async Task MintPortalTokenIfCompleted_CompletedWithSubscription_ReturnsToken()
+    {
+        var orgId = Guid.CreateVersion7();
+        var sessionId = Guid.CreateVersion7();
+        var subId = Guid.CreateVersion7();
+        var query = Substitute.For<ICommerceQueryService>();
+        query.FindSubscriptionIdForCheckoutSessionAsync(orgId, sessionId, Arg.Any<CancellationToken>())
+            .Returns(subId);
+        var tokens = Substitute.For<IMagicLinkTokenService>();
+        tokens.GenerateToken(subId).Returns("portal-token");
+
+        var minted = await PublicCheckoutEndpoints.MintPortalTokenIfCompletedAsync(
+            "COMPLETED", orgId, sessionId, query, tokens);
+
+        minted.Should().Be("portal-token");
+    }
+
+    [Test]
+    public async Task MintPortalTokenIfCompleted_Pending_IsNull()
+    {
+        var minted = await PublicCheckoutEndpoints.MintPortalTokenIfCompletedAsync(
+            "PENDING",
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            Substitute.For<ICommerceQueryService>(),
+            Substitute.For<IMagicLinkTokenService>());
+
+        minted.Should().BeNull();
     }
 }

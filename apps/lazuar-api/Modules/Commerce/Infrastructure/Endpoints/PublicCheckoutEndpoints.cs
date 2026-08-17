@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Modules.Commerce.Application.Queries;
+using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Commands;
 using Modules.One.Contracts;
 
@@ -87,12 +88,13 @@ public static class PublicCheckoutEndpoints
             }
         });
 
-        // Preferred: tenant-bound checkout status (no magic token mint).
+        // Preferred: tenant-bound checkout status. COMPLETED mints a 24h portal token when a subscription exists.
         group.MapGet("/{tenantSlug}/checkout/{sessionId}/status", async Task<Results<Ok<CheckoutStatusResponse>, NotFound>> (
             string tenantSlug,
             string sessionId,
             IOneQueryService oneQueryService,
             ICommerceQueryService queryService,
+            IMagicLinkTokenService tokenService,
             HttpContext httpContext) =>
         {
             if (!Guid.TryParse(sessionId, out var parsedSessionId))
@@ -114,18 +116,20 @@ public static class PublicCheckoutEndpoints
             var response = new CheckoutStatusResponse
             {
                 Status = result.Status,
-                Token = null
+                Token = await MintPortalTokenIfCompletedAsync(
+                    result.Status, tenantId.Value, parsedSessionId, queryService, tokenService)
             };
 
             return TypedResults.Ok(response);
         });
 
-        // Legacy path: still requires tenant_slug query; never mints portal tokens.
+        // Legacy path: still requires tenant_slug query; mints a portal token on COMPLETED like the tenant-bound route.
         group.MapGet("/checkout/{subId}/status", async Task<Results<Ok<CheckoutStatusResponse>, NotFound, BadRequest<string>>> (
             string subId,
             [FromQuery] string? tenant_slug,
             IOneQueryService oneQueryService,
             ICommerceQueryService queryService,
+            IMagicLinkTokenService tokenService,
             HttpContext httpContext) =>
         {
             if (!Guid.TryParse(subId, out var parsedSessionId))
@@ -152,12 +156,29 @@ public static class PublicCheckoutEndpoints
             var response = new CheckoutStatusResponse
             {
                 Status = result.Status,
-                Token = null
+                Token = await MintPortalTokenIfCompletedAsync(
+                    result.Status, tenantId.Value, parsedSessionId, queryService, tokenService)
             };
 
             return TypedResults.Ok(response);
         });
 
         return group;
+    }
+
+    internal static async Task<string?> MintPortalTokenIfCompletedAsync(
+        string status,
+        Guid organizationId,
+        Guid sessionId,
+        ICommerceQueryService queryService,
+        IMagicLinkTokenService tokenService)
+    {
+        if (!string.Equals(status, "COMPLETED", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var subscriptionId = await queryService.FindSubscriptionIdForCheckoutSessionAsync(organizationId, sessionId);
+        return subscriptionId.HasValue ? tokenService.GenerateToken(subscriptionId.Value) : null;
     }
 }

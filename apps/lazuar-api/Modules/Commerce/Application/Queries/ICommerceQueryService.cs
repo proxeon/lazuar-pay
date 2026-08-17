@@ -28,9 +28,14 @@ public interface ICommerceQueryService
     Task<IEnumerable<CouponDto>> GetCouponsAsync(Guid organizationId);
     Task<CommerceStatsDto> GetStatsAsync(Guid organizationId);
     /// <summary>
-    /// Poll checkout session status for a tenant. Does not mint portal magic tokens.
+    /// Poll checkout session status for a tenant. Token mint happens at the public endpoint.
     /// </summary>
     Task<CheckoutStatusDto?> GetCheckoutStatusAsync(Guid organizationId, Guid sessionId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Subscription created from a completed checkout session, if any.
+    /// </summary>
+    Task<Guid?> FindSubscriptionIdForCheckoutSessionAsync(Guid organizationId, Guid sessionId, CancellationToken ct = default);
 
     Task<PaginatedResponse<CustomCheckoutDto>> GetCustomCheckoutsAsync(Guid organizationId, int page, int limit);
     Task<CustomCheckoutDto?> GetCustomCheckoutBySessionIdAsync(Guid organizationId, Guid sessionId);

@@ -32,9 +32,35 @@ public partial class CommerceQueryService
         return MapPublicCheckoutStatus(session.Status);
     }
 
+    public async Task<Guid?> FindSubscriptionIdForCheckoutSessionAsync(
+        Guid organizationId,
+        Guid sessionId,
+        CancellationToken ct = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT s.""Id""
+            FROM commerce.""CheckoutSessions"" c
+            INNER JOIN commerce.""Subscriptions"" s
+                ON s.""OrganizationId"" = c.""OrganizationId""
+               AND s.""ClientProfileId"" = c.""ClientProfileId""
+               AND (c.""ProductId"" IS NULL OR s.""ProductId"" = c.""ProductId"")
+            WHERE c.""Id"" = @SessionId
+              AND c.""OrganizationId"" = @OrgId
+              AND c.""Status"" = 'COMPLETED'
+            ORDER BY s.""CreatedAt"" DESC
+            LIMIT 1";
+
+        return await connection.QuerySingleOrDefaultAsync<Guid?>(
+            sql,
+            new { SessionId = sessionId, OrgId = organizationId });
+    }
+
     /// <summary>
     /// Public poller contract: COMPLETED only when the row is COMPLETED; EXPIRED is honest;
-    /// OPEN (and anything else) is PENDING. Token is never minted.
+    /// OPEN (and anything else) is PENDING. Token is minted at the public endpoint.
     /// </summary>
     internal static CheckoutStatusDto? MapPublicCheckoutStatus(string? status)
     {

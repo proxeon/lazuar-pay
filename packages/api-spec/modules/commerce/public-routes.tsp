@@ -119,10 +119,10 @@ interface PublicCommerceOperations {
     | PortalDocumentsResponse
     | LazuarApi.Core.ProblemDetailsResponse;
 
-  /** Poll checkout session activation after payment redirect (tenant-bound; no magic token). */
+  /** Poll checkout session activation after payment redirect. COMPLETED mints a 24h portal token when a subscription exists. */
   @get
   @route("/{tenantSlug}/checkout/{sessionId}/status")
-  @doc("Checkout status poller for client-side success pages. Bound to workspace slug; does not mint portal tokens.")
+  @doc("Checkout status poller for client-side success pages. Bound to workspace slug. COMPLETED responses include a portal token when a subscription exists.")
   getCheckoutStatus(@path tenantSlug: string, @path sessionId: string):
     | CheckoutStatusResponse
     | LazuarApi.Core.ProblemDetailsResponse;

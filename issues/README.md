@@ -31,6 +31,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 018 | B07-I01 | `fix/018-invite-mail-platform-resend` | Invite mail uses platform Resend, not tenant BYOK |
 | 019 | B08-M01 | `fix/019-resend-svix-whsec-hmac` | Resend webhook verifies Svix `whsec_` HMAC correctly |
 | 020 | B08-M02 | `fix/011-quote-b2b-crm-arity` | Same quote CRM arity as 011 |
+| 021 | B09-U01 | `fix/021-checkout-success-portal-token` | COMPLETED checkout status mints a portal token |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
