@@ -62,6 +62,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 050 | B03-C05 | `fix/050-update-payment-myr-minimum` | ACTIVE update-payment is RM 2, not RM 1 |
 | 051 | B03-C06 | `fix/051-arrears-row-reminder-only` | Arrears reminder-only comes from the subscription row |
 | 052 | B03-C07 | `fix/052-dunning-pause-predunning` | Dunning pause also stops pre-dunning “renews soon” mail |
+| 053 | B03-C08 | `fix/053-zero-unit-gross` | Arrears Gross treats a written UnitAmount 0 as zero |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

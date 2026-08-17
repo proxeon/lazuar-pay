@@ -41,7 +41,7 @@ public static class PublicArrearsEndpoints
             using var connection = sqlFactory.CreateConnection();
             var query = @"
                 SELECT p.""Name"" as ProductName,
-                       s.""OrganizationId"", s.""UnitAmount"", s.""Quantity"", p.""Price"",
+                       s.""OrganizationId"", s.""UnitAmount"", s.""HasUnitSnapshot"", s.""Quantity"", p.""Price"",
                        p.""SstTaxType"", p.""SstRatePercent"",
                        p.""Currency"", s.""Status"", s.""IsReminderOnly"",
                        p.""GatewayName"" as ProductGatewayName
@@ -54,7 +54,7 @@ public static class PublicArrearsEndpoints
             if (row == null) return TypedResults.NotFound();
 
             var billing = http.RequestServices.GetService<IBillingQueryService>();
-            var amount = await ResolveGrossAsync(billing, row.OrganizationId, row.UnitAmount, row.Quantity, row.Price, row.SstTaxType, row.SstRatePercent);
+            var amount = await ResolveGrossAsync(billing, row.OrganizationId, row.HasUnitSnapshot, row.UnitAmount, row.Quantity, row.Price, row.SstTaxType, row.SstRatePercent);
 
             var dto = new ArrearsSummaryDto
             {
@@ -90,7 +90,7 @@ public static class PublicArrearsEndpoints
                 SELECT s.""OrganizationId"", s.""ProductId"", s.""ClientProfileId"", s.""Status"", s.""IsReminderOnly"", s.""CurrentDunningCampaignId"",
                        s.""CurrentRenewalCheckoutUrl"", s.""CurrentRenewalCheckoutForDate"", s.""NextBillingDate"",
                        p.""Name"" as ProductName,
-                       s.""UnitAmount"", s.""Quantity"", p.""Price"",
+                       s.""UnitAmount"", s.""HasUnitSnapshot"", s.""Quantity"", p.""Price"",
                        p.""SstTaxType"", p.""SstRatePercent"",
                        p.""Currency"", p.""GatewayName"" as ProductGatewayName
                 FROM commerce.""Subscriptions"" s
@@ -140,7 +140,7 @@ public static class PublicArrearsEndpoints
 
             var isActiveUpdate = sub.Status == "ACTIVE";
             var billing = http.RequestServices.GetService<IBillingQueryService>();
-            var unitNet = sub.UnitAmount > 0 ? sub.UnitAmount : sub.Price;
+            var unitNet = SubscriptionBillingAmount.ResolveUnit(sub.HasUnitSnapshot, sub.UnitAmount, sub.Price);
             var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, sub.OrganizationId);
             var breakdown = SubscriptionBillingAmount.GrossBreakdown(
                 unitNet, sub.Quantity, sub.SstTaxType, sub.SstRatePercent, merchantHasSst);
@@ -217,13 +217,14 @@ public static class PublicArrearsEndpoints
     private static async Task<decimal> ResolveGrossAsync(
         IBillingQueryService? billing,
         Guid organizationId,
+        bool hasUnitSnapshot,
         decimal unitAmount,
         int quantity,
         decimal productPrice,
         string? sstTaxType,
         decimal sstRatePercent)
     {
-        var unitNet = unitAmount > 0 ? unitAmount : productPrice;
+        var unitNet = SubscriptionBillingAmount.ResolveUnit(hasUnitSnapshot, unitAmount, productPrice);
         var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, organizationId);
         return SubscriptionBillingAmount.Gross(unitNet, quantity, sstTaxType, sstRatePercent, merchantHasSst);
     }
@@ -233,6 +234,7 @@ public static class PublicArrearsEndpoints
         public string ProductName { get; init; } = "";
         public Guid OrganizationId { get; init; }
         public decimal UnitAmount { get; init; }
+        public bool HasUnitSnapshot { get; init; }
         public int Quantity { get; init; }
         public decimal Price { get; init; }
         public string? SstTaxType { get; init; }
@@ -259,6 +261,7 @@ public static class PublicArrearsEndpoints
         public DateTime? NextBillingDate { get; init; }
         public string ProductName { get; init; } = "";
         public decimal UnitAmount { get; init; }
+        public bool HasUnitSnapshot { get; init; }
         public int Quantity { get; init; }
         public decimal Price { get; init; }
         public string? SstTaxType { get; init; }
