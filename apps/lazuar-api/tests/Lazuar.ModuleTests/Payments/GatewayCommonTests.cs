@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using FluentAssertions;
 using Modules.Payments.Infrastructure.Gateways;
 using NUnit.Framework;
@@ -51,5 +53,18 @@ public class GatewayCommonTests
         // Math.Round(10.005m * 100, 0) with default MidpointRounding.ToEven
         GatewayCommon.ToMinorUnitsRounded(10.005m).Should().Be((int)Math.Round(10.005m * 100m, 0));
         GatewayCommon.ToMinorUnitsRounded(10.50m, 2).Should().Be(2100);
+    }
+
+    [Test]
+    public void ApplyPayingTenantMetadata_PreservesPayingTenant_AndStampsPlatformTenant()
+    {
+        var paying = Guid.CreateVersion7();
+        var system = Guid.CreateVersion7();
+        var metadata = new Dictionary<string, string> { ["tenant_id"] = paying.ToString() };
+
+        GatewayCommon.ApplyPayingTenantMetadata(metadata, system);
+
+        metadata["tenant_id"].Should().Be(paying.ToString());
+        metadata["platform_tenant_id"].Should().Be(system.ToString());
     }
 }

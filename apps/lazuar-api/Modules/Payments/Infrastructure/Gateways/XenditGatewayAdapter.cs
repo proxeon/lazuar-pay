@@ -184,7 +184,7 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         int quantity)
     {
         var line = GatewayCommon.ToMinorUnitsRounded(amount, quantity) / 100m;
-        metadata["tenant_id"] = tenantId.ToString();
+        GatewayCommon.ApplyPayingTenantMetadata(metadata, tenantId);
 
         var payload = new Dictionary<string, object>
         {

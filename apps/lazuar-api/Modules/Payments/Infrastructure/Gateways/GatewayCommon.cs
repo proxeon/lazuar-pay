@@ -1,5 +1,6 @@
 // apps/lazuar-api/Modules/Payments/Infrastructure/Gateways/GatewayCommon.cs
 using System;
+using System.Collections.Generic;
 
 namespace Modules.Payments.Infrastructure.Gateways;
 
@@ -47,4 +48,22 @@ internal static class GatewayCommon
     /// </summary>
     public static int ToMinorUnitsTruncating(decimal amount, int quantity = 1) =>
         (int)(amount * quantity * 100m);
+
+    /// <summary>
+    /// Keep an existing paying <c>tenant_id</c> (platform charges). Stamp the adapter
+    /// tenant as <c>platform_tenant_id</c> when it differs so system checkout does not
+    /// overwrite the workspace that must be activated.
+    /// </summary>
+    public static void ApplyPayingTenantMetadata(Dictionary<string, string> metadata, Guid adapterTenantId)
+    {
+        var adapterId = adapterTenantId.ToString();
+        if (!metadata.TryGetValue("tenant_id", out var existing) || string.IsNullOrWhiteSpace(existing))
+        {
+            metadata["tenant_id"] = adapterId;
+            return;
+        }
+
+        if (!string.Equals(existing, adapterId, StringComparison.OrdinalIgnoreCase))
+            metadata["platform_tenant_id"] = adapterId;
+    }
 }

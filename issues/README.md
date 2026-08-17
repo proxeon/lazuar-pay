@@ -71,6 +71,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 059 | B03-C14 | `fix/059-autocharge-skip-open-dispute` | AUTO_CHARGE skips seats with an open dispute |
 | 060 | B04-P03 | `fix/060-chip-recurring-token` | CHIP off-session does not GET /purchases/{recurring_token} as a purchase |
 | 061 | B04-P04 | `fix/061-chip-offsession-idempotency` | CHIP off-session sends Idempotency-Key + reference; retries reuse the purchase |
+| 062 | B04-P05 | `fix/062-chip-xendit-paying-tenant` | CHIP/Xendit generate keep paying tenant_id; system org is platform_tenant_id |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

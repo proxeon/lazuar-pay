@@ -42,6 +42,39 @@ public class ChipCollectGatewayAdapterTests
     }
 
     [Test]
+    public async Task GenerateCheckout_KeepsPayingTenant_AndStampsPlatformTenant()
+    {
+        var paying = Guid.CreateVersion7();
+        var system = Guid.CreateVersion7();
+        var handler = new RecordingHandler();
+        var http = new HttpClient(handler);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(Arg.Any<string>()).Returns(http);
+        var adapter = new ChipCollectGatewayAdapter(
+            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+
+        handler.ResponseBody = """{"id":"purch_1","checkout_url":"https://chip.test/pay"}""";
+
+        var result = await adapter.GenerateCheckoutAsync(
+            "chip-key",
+            system,
+            10m,
+            "MYR",
+            "Plan",
+            "buyer@example.com",
+            "https://ok",
+            "https://no",
+            new Dictionary<string, string> { ["tenant_id"] = paying.ToString() },
+            "brand-1");
+
+        result.Success.Should().BeTrue();
+        handler.LastBody.Should().Contain(paying.ToString());
+        handler.LastBody.Should().Contain(system.ToString());
+        handler.LastBody.Should().Contain("platform_tenant_id");
+        handler.LastBody.Should().Contain("tenant_id");
+    }
+
+    [Test]
     public void ExtractVaultIds_RootRecurringTokenAndClientId()
     {
         using var doc = JsonDocument.Parse("""
@@ -402,6 +435,7 @@ public class ChipCollectGatewayAdapterTests
     {
         public HttpRequestMessage? LastRequest { get; private set; }
         public string? LastBody { get; private set; }
+        public string ResponseBody { get; set; } = "{}";
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -409,7 +443,7 @@ public class ChipCollectGatewayAdapterTests
             LastBody = request.Content == null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                Content = new StringContent(ResponseBody, Encoding.UTF8, "application/json")
             };
         }
     }

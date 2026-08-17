@@ -48,7 +48,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         var amountInCents = GatewayCommon.ToMinorUnitsRounded(amount, quantity);
         var finalDescription = GatewayCommon.ProductDescription(productName, quantity);
 
-        metadata["tenant_id"] = tenantId.ToString();
+        GatewayCommon.ApplyPayingTenantMetadata(metadata, tenantId);
         var clientName = GatewayCommon.ExtractName(customerEmail);
 
         var payload = new Dictionary<string, object>

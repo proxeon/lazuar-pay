@@ -91,6 +91,22 @@ public class XenditGatewayAdapterTests
     }
 
     [Test]
+    public void BuildInvoicePayload_KeepsPayingTenant_AndStampsPlatformTenant()
+    {
+        var paying = Guid.CreateVersion7();
+        var system = Guid.CreateVersion7();
+        var meta = new Dictionary<string, string> { ["tenant_id"] = paying.ToString() };
+
+        var payload = XenditGatewayAdapter.BuildInvoicePayload(
+            system, 10m, "MYR", "Plan", "buyer@example.com", "https://ok", "https://no", meta, 1);
+
+        payload.Should().ContainKey("metadata");
+        var stamped = (Dictionary<string, string>)payload["metadata"];
+        stamped["tenant_id"].Should().Be(paying.ToString());
+        stamped["platform_tenant_id"].Should().Be(system.ToString());
+    }
+
+    [Test]
     public void BuildInvoicePayload_FiltersUnknownChannels()
     {
         var meta = new Dictionary<string, string>

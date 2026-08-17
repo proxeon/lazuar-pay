@@ -454,18 +454,8 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     /// tenant as <c>platform_tenant_id</c> when it differs so system checkout does not
     /// overwrite the workspace that must be activated.
     /// </summary>
-    internal static void ApplyPayingTenantMetadata(Dictionary<string, string> metadata, Guid adapterTenantId)
-    {
-        var adapterId = adapterTenantId.ToString();
-        if (!metadata.TryGetValue("tenant_id", out var existing) || string.IsNullOrWhiteSpace(existing))
-        {
-            metadata["tenant_id"] = adapterId;
-            return;
-        }
-
-        if (!string.Equals(existing, adapterId, StringComparison.OrdinalIgnoreCase))
-            metadata["platform_tenant_id"] = adapterId;
-    }
+    internal static void ApplyPayingTenantMetadata(Dictionary<string, string> metadata, Guid adapterTenantId) =>
+        GatewayCommon.ApplyPayingTenantMetadata(metadata, adapterTenantId);
 
     internal static SessionCreateOptions CreateCheckoutSessionOptions(
         Guid tenantId,
