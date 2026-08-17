@@ -667,6 +667,31 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_ExpiredCollectionPause_SkipsBackInvoiceAndRollsNextBill()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-5), false, 1, 50m);
+        sub.StoreVaultedToken("cus", "pm");
+        sub.PauseCollection(DateTime.UtcNow.AddDays(10));
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        _db.Entry(sub).Property(s => s.CollectionPausedUntil).CurrentValue = DateTime.UtcNow.AddHours(-1);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.CollectionPausedUntil.Should().BeNull();
+        reloaded.NextBillingDate.Should().BeCloseTo(DateTime.UtcNow.AddMonths(1), TimeSpan.FromMinutes(2));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
     public async Task RunOnce_CollectionPausedDue_SiblingStillProcessed()
     {
         var product = CreateProduct(_orgId, "STRIPE");

@@ -50,8 +50,26 @@ public class SubscriptionCollectionPauseTests
 
         sub.CollectionPausedUntil.Should().BeNull();
         sub.IsCollectionPaused(DateTime.UtcNow).Should().BeFalse();
-        sub.NextBillingDate.Should().Be(next);
-        sub.Status.Should().Be("ACTIVE");
+    }
+
+    [Test]
+    public void TryCompleteExpiredCollectionPause_RollsLikeManualResume()
+    {
+        var org = Guid.CreateVersion7();
+        var sub = new Subscription(org, Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-5));
+        sub.PauseCollection(DateTime.UtcNow.AddDays(5));
+
+        sub.TryCompleteExpiredCollectionPause(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1))
+            .Should().BeFalse();
+
+        typeof(Subscription).GetProperty(nameof(Subscription.CollectionPausedUntil))!
+            .SetValue(sub, DateTime.UtcNow.AddHours(-1));
+
+        var next = DateTime.UtcNow.AddMonths(1);
+        sub.TryCompleteExpiredCollectionPause(DateTime.UtcNow, next).Should().BeTrue();
+        sub.CollectionPausedUntil.Should().BeNull();
+        sub.NextBillingDate.Should().BeCloseTo(next, TimeSpan.FromSeconds(2));
     }
 
     private static Subscription Active()

@@ -198,6 +198,20 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public bool IsCollectionPaused(DateTime utcNow) =>
         CollectionPausedUntil.HasValue && CollectionPausedUntil.Value > utcNow;
 
+    /// <summary>
+    /// Clock ended the holiday. Same skip-the-invoice rule as manual resume.
+    /// </summary>
+    public bool TryCompleteExpiredCollectionPause(DateTime utcNow, DateTime nextBill)
+    {
+        if (!CollectionPausedUntil.HasValue || CollectionPausedUntil.Value > utcNow)
+        {
+            return false;
+        }
+
+        ResumeCollection(nextBill);
+        return true;
+    }
+
     public void MarkHasOpenDispute()
     {
         HasOpenDispute = true;

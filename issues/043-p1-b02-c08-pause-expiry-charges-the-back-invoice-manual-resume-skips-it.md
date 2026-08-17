@@ -2,17 +2,21 @@
 number: "043"
 id: B02-C08
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/02-commerce-subscriptions-billing-engine.md
 head: "297ba98"
+resolved_branch: fix/043-pause-expiry-skip-back-invoice
 ---
 
 # 043 — B02-C08 — Pause expiry charges the back invoice; manual resume skips it
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/02-commerce-subscriptions-billing-engine.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/043-pause-expiry-skip-back-invoice`
+
+Pause expiry skips the back invoice and rolls `NextBillingDate` the same way as manual resume.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

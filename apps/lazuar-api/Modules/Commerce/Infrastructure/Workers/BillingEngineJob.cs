@@ -210,6 +210,19 @@ public class BillingEngineJob : BackgroundService
             return;
         }
 
+        if (sub.CollectionPausedUntil.HasValue)
+        {
+            var interval = SubscriptionBillingAmount.ResolveInterval(sub, product);
+            var next = SubscriptionBillingAmount.AdvanceFrom(DateTime.UtcNow, interval);
+            if (sub.TryCompleteExpiredCollectionPause(DateTime.UtcNow, next))
+            {
+                _logger.LogInformation(
+                    "Collection pause expired for subscription {Id}; skipped back invoice, next bill {Next}.",
+                    sub.Id, next);
+                return;
+            }
+        }
+
         if (sub.CancelAtPeriodEnd)
         {
             sub.Cancel();
