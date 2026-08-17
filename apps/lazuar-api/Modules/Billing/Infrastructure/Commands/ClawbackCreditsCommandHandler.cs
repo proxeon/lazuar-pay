@@ -24,6 +24,14 @@ public class ClawbackCreditsCommandHandler : ICommandHandler<ClawbackCreditsComm
 
         if (wallet == null) return;
 
+        var alreadyClawed = await _dbContext.CreditLedgers
+            .IgnoreQueryFilters()
+            .AnyAsync(l => l.TenantCreditBalanceId == wallet.Id && l.Reference == request.Reference, ct);
+        if (alreadyClawed)
+        {
+            return;
+        }
+
         wallet.Clawback(request.Amount, request.Reference);
         await _dbContext.SaveChangesAsync(ct);
     }

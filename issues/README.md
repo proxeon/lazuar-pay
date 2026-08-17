@@ -19,6 +19,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 006 | B04-P02 | `fix/006-m2m-fail-then-pay` | Failed M2M session can still complete when the buyer later pays |
 | 007 | B05-L01 | `fix/007-lhdn-cancel-skip-if-refunded` | ≤72h IRBM cancel after refund does not double-reverse cash/tax |
 | 008 | B05-L03 | `fix/008-zero-amount-trial-ledger` | Non-vault trial $0 checkout books a balanced discount journal |
+| 009 | B05-L04 | `fix/009-chargeback-claw-idempotent` | Utility chargeback claw runs once per gateway tx |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -122,6 +122,7 @@ public class ChargebackClawbackHandlerTests
             await _db.LedgerEntries.IgnoreQueryFilters()
                 .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback),
             Is.EqualTo(1));
+        await _mediator.Received(1).Send(Arg.Any<ClawbackCreditsCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

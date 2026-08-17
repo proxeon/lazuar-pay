@@ -2,17 +2,21 @@
 number: "009"
 id: B05-L04
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
+resolved_branch: fix/009-chargeback-claw-idempotent
 ---
 
 # 009 — B05-L04 — Utility chargeback claw is not idempotent
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/009-chargeback-claw-idempotent`
+
+A second dispute for the same gateway tx does not claw the wallet again. `ClawbackCreditsCommand` is also no-op when a credit ledger row already has that reference.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

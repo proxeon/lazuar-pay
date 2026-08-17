@@ -60,6 +60,16 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
         if (!@event.Metadata.TryGetValue("tenant_id", out var tenantIdStr) || !Guid.TryParse(tenantIdStr, out var tenantId))
             return;
 
+        var alreadyReversed = await _dbContext.LedgerEntries
+            .IgnoreQueryFilters()
+            .AnyAsync(e =>
+                e.ReferenceType == LedgerReferenceTypes.SystemCreditChargeback
+                && e.ReferenceId == @event.GatewayTransactionId);
+        if (alreadyReversed)
+        {
+            return;
+        }
+
         // Recompute the credits that were granted for the disputed amount (same package logic as PlatformTopUpEventHandler).
         var creditsToClawback = _creditOptions.Packages
             .Where(p => p.AmountMyr <= @event.AmountDisputed)
