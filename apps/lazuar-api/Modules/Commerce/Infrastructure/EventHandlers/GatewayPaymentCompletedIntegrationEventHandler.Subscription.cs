@@ -52,6 +52,22 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
             return;
         }
 
+        // Already recovered / renewed this cycle (second hosted checkout or replay).
+        // Off-session attempt 1 still has NextBillingDate in the past, so it continues below.
+        if (existingSub.Status == "ACTIVE"
+            && existingSub.NextBillingDate is { } paidThrough
+            && paidThrough > DateTime.UtcNow)
+        {
+            if (TryVaultIds(productInfo.GatewayName, @event.GatewayCustomerId, @event.GatewayTokenId, out var dupCustomerId, out var dupTokenId))
+            {
+                existingSub.StoreVaultedToken(dupCustomerId, dupTokenId);
+            }
+
+            await LogTransactionAsync(@event, existingSub.ClientProfileId, productInfo.Name, "SYSTEM", productInfo.GatewayName, existingSub.Id);
+            await _repository.SaveChangesAsync();
+            return;
+        }
+
         var wasInArrears = existingSub.Status is "PAST_DUE" or "SUSPENDED";
         var wasSuspended = existingSub.Status == "SUSPENDED";
 

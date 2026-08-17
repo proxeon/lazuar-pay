@@ -194,14 +194,12 @@ public static class PublicArrearsEndpoints
 
                 var checkoutUrl = await mediator.Send(checkoutQuery);
 
-                if (isActiveUpdate)
-                {
-                    await Dapper.SqlMapper.ExecuteAsync(connection, @"
-                        UPDATE commerce.""Subscriptions""
-                        SET ""CurrentRenewalCheckoutUrl"" = @Url, ""CurrentRenewalCheckoutForDate"" = @ForDate
-                        WHERE ""Id"" = @SubId",
-                        new { Url = checkoutUrl, ForDate = DateTime.UtcNow.Date, SubId = subId });
-                }
+                var forDate = CacheForDate(isActiveUpdate, sub.NextBillingDate, DateTime.UtcNow);
+                await Dapper.SqlMapper.ExecuteAsync(connection, @"
+                    UPDATE commerce.""Subscriptions""
+                    SET ""CurrentRenewalCheckoutUrl"" = @Url, ""CurrentRenewalCheckoutForDate"" = @ForDate
+                    WHERE ""Id"" = @SubId",
+                    new { Url = checkoutUrl, ForDate = forDate, SubId = subId });
 
                 return TypedResults.Ok(new CheckoutResponse { Url = checkoutUrl, Is_zero_amount_bypass = false });
             }
@@ -213,6 +211,9 @@ public static class PublicArrearsEndpoints
 
         return group;
     }
+
+    internal static DateTime CacheForDate(bool isActiveUpdate, DateTime? nextBilling, DateTime utcNow) =>
+        isActiveUpdate ? utcNow.Date : (nextBilling ?? utcNow).Date;
 
     private static async Task<decimal> ResolveGrossAsync(
         IBillingQueryService? billing,

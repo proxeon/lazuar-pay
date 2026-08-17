@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using FluentAssertions;
+using Modules.Commerce.Infrastructure;
 using NUnit.Framework;
 
 namespace Lazuar.ModuleTests.Commerce;
@@ -36,5 +38,21 @@ public class PublicArrearsEndpointsBoundaryTests
         Assert.That(text, Does.Contain("IOneQueryService"));
         Assert.That(text, Does.Contain("GetClientProfileAsync"));
         Assert.That(text, Does.Contain("GetWorkspaceByIdAsync"));
+    }
+
+    [Test]
+    public void CacheForDate_ActiveUpdate_UsesUtcToday()
+    {
+        var now = new DateTime(2026, 8, 17, 15, 0, 0, DateTimeKind.Utc);
+        var next = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+        PublicArrearsEndpoints.CacheForDate(isActiveUpdate: true, next, now).Should().Be(now.Date);
+    }
+
+    [Test]
+    public void CacheForDate_PastDue_UsesNextBillingDate()
+    {
+        var now = new DateTime(2026, 8, 17, 15, 0, 0, DateTimeKind.Utc);
+        var next = new DateTime(2026, 7, 1, 8, 0, 0, DateTimeKind.Utc);
+        PublicArrearsEndpoints.CacheForDate(isActiveUpdate: false, next, now).Should().Be(next.Date);
     }
 }

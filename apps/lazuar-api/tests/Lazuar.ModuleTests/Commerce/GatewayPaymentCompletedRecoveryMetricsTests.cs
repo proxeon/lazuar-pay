@@ -116,6 +116,51 @@ public class GatewayPaymentCompletedRecoveryMetricsTests
     }
 
     [Test]
+    public async Task H12_SecondCompletionAfterRecover_DoesNotAdvanceDatesAgain()
+    {
+        using var fx = await SeedPastDueAsync();
+        var first = PaymentEvent(fx, RecoveryAmount, new Dictionary<string, string>
+        {
+            ["type"] = "commerce_subscription",
+            ["subscription_id"] = fx.Subscription.Id.ToString(),
+            ["tenant_id"] = fx.OrgId.ToString(),
+            ["dunning_campaign_id"] = fx.Campaign.Id.ToString()
+        });
+        await fx.Handler.HandleAsync(first);
+
+        var afterFirst = await ReloadSubAsync(fx);
+        var paidThrough = afterFirst.NextBillingDate;
+        paidThrough.Should().NotBeNull();
+        paidThrough!.Value.Should().BeAfter(DateTime.UtcNow);
+
+        var second = new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: fx.OrgId,
+            GatewayTransactionId: "pi_recovery_second",
+            AmountPaid: RecoveryAmount,
+            Currency: "MYR",
+            GatewayFee: 1m,
+            TaxAmount: 0m,
+            NetAmount: RecoveryAmount - 1m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = "commerce_subscription",
+                ["subscription_id"] = fx.Subscription.Id.ToString(),
+                ["tenant_id"] = fx.OrgId.ToString()
+            });
+
+        await fx.Handler.HandleAsync(second);
+
+        var afterSecond = await ReloadSubAsync(fx);
+        afterSecond.Status.Should().Be("ACTIVE");
+        afterSecond.NextBillingDate.Should().BeCloseTo(paidThrough.Value, TimeSpan.FromSeconds(1));
+        await AssertRecoveredAsync(fx, expectedRevenue: RecoveryAmount, expectedSaved: 1);
+        await fx.EventBus.Received(1).PublishAsync(Arg.Any<SubscriptionActivatedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task H6_ActiveRenewal_DoesNotIncrement()
     {
         using var fx = await SeedActiveAsync();
