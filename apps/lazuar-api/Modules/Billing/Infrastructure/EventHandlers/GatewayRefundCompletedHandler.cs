@@ -42,6 +42,18 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
+        var capped = await CapRefundedAmountAsync(@event);
+        if (capped <= 0)
+            return;
+
+        var fee = Math.Min(@event.RefundedFee, capped);
+        @event = @event with
+        {
+            RefundedAmount = capped,
+            RefundedFee = fee,
+            NetRefundedAmount = capped - fee
+        };
+
         var taxRefund = await ResolveTaxRefundAmountAsync(@event);
         var (fxRate, baseCurrency) = await ResolveFxAsync(@event);
 
@@ -153,6 +165,43 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         }
 
         return Math.Min(proposed, remainingTax);
+    }
+
+    private async Task<decimal> CapRefundedAmountAsync(GatewayRefundCompletedIntegrationEvent @event)
+    {
+        if (string.IsNullOrWhiteSpace(@event.GatewayTransactionId))
+            return @event.RefundedAmount;
+
+        var originalEntry = await _dbContext.LedgerEntries
+            .Include(e => e.Lines)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e =>
+                e.OrganizationId == @event.OrganizationId
+                && e.ReferenceType == LedgerReferenceTypes.GatewayPayment
+                && e.ReferenceId == @event.GatewayTransactionId);
+
+        if (originalEntry == null)
+            return @event.RefundedAmount;
+
+        var originalGross = Math.Abs(originalEntry.Lines
+            .Where(l => l.AccountType == AccountTypes.RevenueGross)
+            .Sum(l => l.Amount));
+        var originalTax = Math.Abs(originalEntry.Lines
+            .Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable)
+            .Sum(l => l.Amount));
+        var originalPaid = originalGross + originalTax;
+        if (originalPaid <= 0)
+            return @event.RefundedAmount;
+
+        var siblings = await LoadSiblingRefundsAsync(@event);
+        var alreadyPaid = siblings.SelectMany(e => e.Lines)
+            .Where(l => l.AccountType is AccountTypes.ContraRevenueRefunds or AccountTypes.LiabilityTaxPayable)
+            .Sum(l => l.Amount);
+        var remaining = originalPaid - alreadyPaid;
+        if (remaining <= 0)
+            return 0m;
+
+        return Math.Min(@event.RefundedAmount, remaining);
     }
 
     private async Task<List<LedgerEntry>> LoadSiblingRefundsAsync(GatewayRefundCompletedIntegrationEvent @event)

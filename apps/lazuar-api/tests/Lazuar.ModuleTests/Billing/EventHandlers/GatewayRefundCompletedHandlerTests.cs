@@ -223,4 +223,24 @@ public class GatewayRefundCompletedHandlerTests
                 .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
             Is.EqualTo(2));
     }
+
+    [Test]
+    public async Task SecondFullRefund_DoesNotOvershootOriginal()
+    {
+        const string tx = "txn_double";
+        await SeedOriginalPaymentAsync(tx, gross: 100m, tax: 8m);
+        var paymentRecordId = Guid.CreateVersion7();
+
+        await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 108m));
+        await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 108m));
+
+        var refunds = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
+            .Where(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund)
+            .ToListAsync();
+        Assert.That(refunds, Has.Count.EqualTo(1));
+        var paidBack = refunds.SelectMany(e => e.Lines)
+            .Where(l => l.AccountType is AccountTypes.ContraRevenueRefunds or AccountTypes.LiabilityTaxPayable)
+            .Sum(l => l.Amount);
+        Assert.That(paidBack, Is.EqualTo(108m));
+    }
 }

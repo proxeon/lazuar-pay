@@ -93,6 +93,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 081 | B05-L11 | `fix/081-hasentry-tenant` | HasEntryBeenProcessed is per tenant, matching the unique ledger key |
 | 082 | B05-L12 | `fix/082-refund-fx` | Refund journals copy sale FX into BaseCurrencyAmount |
 | 083 | B05-L13 | `fix/083-refund-tax-remainder` | Last partial-refund slice takes remaining tax |
+| 084 | B05-L14 | `fix/084-refund-cap-original` | Second Completed cannot book refunds past the original sale |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
