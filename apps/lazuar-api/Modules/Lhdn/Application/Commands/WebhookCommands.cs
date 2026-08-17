@@ -1,15 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
-using MediatR;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Domain.Aggregates;
-using Modules.One.Application;
-using Modules.One.Application.Commands;
+using Modules.One.Contracts;
 
 namespace Modules.Lhdn.Application.Commands;
 
@@ -26,12 +23,12 @@ public record RegisterWebhookCommand(Guid OrganizationId, RegisterWebhookRequest
 public class RegisterWebhookCommandHandler : ICommandHandler<RegisterWebhookCommand, Guid>
 {
     private readonly ILhdnRepository _repository;
-    private readonly IMediator _mediator;
+    private readonly ITenantWebhookRegistry _webhooks;
 
-    public RegisterWebhookCommandHandler(ILhdnRepository repository, IMediator mediator)
+    public RegisterWebhookCommandHandler(ILhdnRepository repository, ITenantWebhookRegistry webhooks)
     {
         _repository = repository;
-        _mediator = mediator;
+        _webhooks = webhooks;
     }
 
     public async Task<Guid> Handle(RegisterWebhookCommand request, CancellationToken ct)
@@ -44,14 +41,7 @@ public class RegisterWebhookCommandHandler : ICommandHandler<RegisterWebhookComm
             ? request.Payload.Events
             : LhdnWorkspaceWebhookEvents.InvoiceEvents.ToList();
 
-        var live = await _mediator.Send(
-            new CreateWebhookEndpointCommand(
-                request.OrganizationId,
-                request.Payload.Url,
-                IsActive: true,
-                EnabledEvents: events),
-            ct);
-
+        var live = await _webhooks.RegisterAsync(request.OrganizationId, request.Payload.Url, events, ct);
         return live.Id;
     }
 }
@@ -64,25 +54,24 @@ public record DeleteWebhookCommand(Guid OrganizationId, Guid WebhookId) : IComma
 public class DeleteWebhookCommandHandler : ICommandHandler<DeleteWebhookCommand>
 {
     private readonly ILhdnRepository _repository;
-    private readonly IOneRepository _one;
+    private readonly ITenantWebhookRegistry _webhooks;
 
-    public DeleteWebhookCommandHandler(ILhdnRepository repository, IOneRepository one)
+    public DeleteWebhookCommandHandler(ILhdnRepository repository, ITenantWebhookRegistry webhooks)
     {
         _repository = repository;
-        _one = one;
+        _webhooks = webhooks;
     }
 
     public async Task Handle(DeleteWebhookCommand request, CancellationToken ct)
     {
-        var oneEndpoint = await _one.GetWebhookEndpointByIdAsync(request.WebhookId, ct);
-        if (oneEndpoint != null && oneEndpoint.OrganizationId == request.OrganizationId)
+        var live = await _webhooks.GetByIdAsync(request.OrganizationId, request.WebhookId, ct);
+        if (live != null)
         {
-            oneEndpoint.Disable();
-            await _one.SaveChangesAsync(ct);
+            await _webhooks.DisableAsync(request.OrganizationId, live.Id, ct);
 
             var lhdnMatches = await _repository.GetActiveWebhooksAsync(request.OrganizationId, ct);
             foreach (var match in lhdnMatches.Where(w =>
-                         string.Equals(w.Url, oneEndpoint.Url, StringComparison.Ordinal)))
+                         string.Equals(w.Url, live.Url, StringComparison.Ordinal)))
             {
                 match.Deactivate();
             }
@@ -98,15 +87,7 @@ public class DeleteWebhookCommandHandler : ICommandHandler<DeleteWebhookCommand>
         {
             target.Deactivate();
             await _repository.SaveChangesAsync(ct);
-
-            var ones = await _one.ListWebhookEndpointsAsync(request.OrganizationId, ct);
-            var live = ones.FirstOrDefault(e =>
-                e.IsActive && string.Equals(e.Url, target.Url, StringComparison.Ordinal));
-            if (live != null)
-            {
-                live.Disable();
-                await _one.SaveChangesAsync(ct);
-            }
+            await _webhooks.DisableByUrlAsync(request.OrganizationId, target.Url, ct);
         }
     }
 }

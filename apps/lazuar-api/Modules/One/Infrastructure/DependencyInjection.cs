@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IPlatformAdminAuthQuery, PlatformAdminAuthQuery>();
         services.AddScoped<IOneRepository, OneRepository>();
         services.AddScoped<IApiCredentialService, ApiCredentialService>();
+        services.AddScoped<ITenantWebhookRegistry, TenantWebhookRegistry>();
         services.AddScoped<IAuditRecorder, AuditRecorder>();
 
         services.AddSingleton<ITokenGeneratorService, TokenGeneratorService>();

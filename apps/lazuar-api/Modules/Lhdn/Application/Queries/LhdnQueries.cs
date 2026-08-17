@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain;
-using Modules.One.Application;
+using Modules.One.Contracts;
 
 namespace Modules.Lhdn.Application.Queries;
 
@@ -117,17 +117,17 @@ public record ListWebhooksQuery(Guid OrganizationId) : IQuery<IEnumerable<Webhoo
 public class ListWebhooksQueryHandler : IQueryHandler<ListWebhooksQuery, IEnumerable<WebhookSubscriptionDto>>
 {
     private readonly ILhdnRepository _repository;
-    private readonly IOneRepository _one;
+    private readonly ITenantWebhookRegistry _webhooks;
 
-    public ListWebhooksQueryHandler(ILhdnRepository repository, IOneRepository one)
+    public ListWebhooksQueryHandler(ILhdnRepository repository, ITenantWebhookRegistry webhooks)
     {
         _repository = repository;
-        _one = one;
+        _webhooks = webhooks;
     }
 
     public async Task<IEnumerable<WebhookSubscriptionDto>> Handle(ListWebhooksQuery request, CancellationToken ct)
     {
-        var live = await _one.ListWebhookEndpointsAsync(request.OrganizationId, ct);
+        var live = await _webhooks.ListAsync(request.OrganizationId, ct);
         var invoice = live
             .Where(e => e.IsActive && AcceptsInvoiceEvents(e.EnabledEvents))
             .Select(e => new WebhookSubscriptionDto

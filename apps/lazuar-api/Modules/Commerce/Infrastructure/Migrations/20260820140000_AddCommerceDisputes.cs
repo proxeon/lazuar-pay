@@ -1,11 +1,15 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Modules.Commerce.Infrastructure;
 
 #nullable disable
 
 namespace Modules.Commerce.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(CommerceDbContext))]
+    [Migration("20260820140000_AddCommerceDisputes")]
     public partial class AddCommerceDisputes : Migration
     {
         /// <inheritdoc />

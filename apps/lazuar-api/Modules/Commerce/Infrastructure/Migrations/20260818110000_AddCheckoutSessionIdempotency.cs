@@ -1,10 +1,14 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Modules.Commerce.Infrastructure;
 
 #nullable disable
 
 namespace Modules.Commerce.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(CommerceDbContext))]
+    [Migration("20260818110000_AddCheckoutSessionIdempotency")]
     public partial class AddCheckoutSessionIdempotency : Migration
     {
         /// <inheritdoc />

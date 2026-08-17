@@ -1,10 +1,14 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Modules.Commerce.Infrastructure;
 
 #nullable disable
 
 namespace Modules.Commerce.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(CommerceDbContext))]
+    [Migration("20260819120000_AddCheckoutSessionDocumentNumber")]
     public partial class AddCheckoutSessionDocumentNumber : Migration
     {
         /// <inheritdoc />
