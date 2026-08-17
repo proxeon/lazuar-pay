@@ -75,7 +75,9 @@ public class B2bTaxInvoiceRequestedIntegrationEventHandler : IIntegrationEventHa
             {
                 new()
                 {
-                    Description = "B2B sale",
+                    Description = string.IsNullOrWhiteSpace(@event.LineDescription)
+                        ? "Sale"
+                        : @event.LineDescription,
                     Classification_code = "022",
                     Quantity = 1,
                     Unit_price = (double)@event.AmountExcludingTax,

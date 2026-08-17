@@ -16,7 +16,8 @@ public record B2bTaxInvoiceRequestedIntegrationEvent(
     decimal AmountExcludingTax,
     decimal TaxAmount,
     string Currency,
-    string? CorrelationId = null) : IIntegrationEvent
+    string? CorrelationId = null,
+    string? LineDescription = null) : IIntegrationEvent
 {
     public Guid Id { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;

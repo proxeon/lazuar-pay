@@ -2,17 +2,21 @@
 number: "097"
 id: B06-D11
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/097-b2b-line-description
 ---
 
 # 097 — B06-D11 — One synthetic line `"B2B sale"` / classification `022`; quote lines discarded
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/097-b2b-line-description`
+
+Type 01 line description is the product/plan name from payment metadata, not the synthetic "B2B sale".
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

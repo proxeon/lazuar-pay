@@ -165,7 +165,22 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             grossRevenue,
             taxAmount,
             @event.Currency,
-            correlation));
+            correlation,
+            ResolveLineDescription(@event)));
+    }
+
+    private static string? ResolveLineDescription(GatewayPaymentCompletedIntegrationEvent @event)
+    {
+        if (@event.Metadata is null)
+            return null;
+
+        foreach (var key in new[] { "product_name", "plan_name", "product", "description" })
+        {
+            if (@event.Metadata.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+                return value.Trim();
+        }
+
+        return null;
     }
 
     private static string? ResolveDocumentCorrelation(GatewayPaymentCompletedIntegrationEvent @event)

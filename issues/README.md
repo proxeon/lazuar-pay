@@ -106,6 +106,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 094 | B06-D06 | `fix/094-tax-invoice-badge-honesty` | Cons VALID does not badge RCPT rows; ops empty state is sales documents |
 | 095 | B06-D08 | `fix/095-offline-product-b2b` | Offline product mark-paid keeps RequiresTaxId as IsB2bRequired |
 | 096 | B06-D10 | `fix/096-b2b-event-resolved-sst` | B2B MyInvois TaxAmount is resolved SST (shipped with 076) |
+| 097 | B06-D11 | `fix/097-b2b-line-description` | Type 01 line uses product name, not synthetic B2B sale |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -100,7 +100,42 @@ public class B2bTaxInvoiceRequestedIntegrationEventHandlerTests
                 && c.Payload.Internal_id == "INV-2026-00008"
                 && c.Payload.Buyer_tin == "C55555555555"
                 && c.Payload.Total_excluding_tax == 200
-                && c.Payload.Items!.First().Tax_rate == 8),
+                && c.Payload.Items!.First().Tax_rate == 8
+                && c.Payload.Items.First().Description == "Sale"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task RealTin_UsesProductLineDescription()
+    {
+        var orgId = Guid.CreateVersion7();
+        var mediator = Substitute.For<IMediator>();
+        var lookup = Substitute.For<ICommerceDocumentLookup>();
+        var crm = Substitute.For<ICrmQueryService>();
+        lookup.GetCustomerForDocumentAsync(orgId, "pi_1", Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new CommerceCustomerDisplay("Buyer Co", "buyer@example.com", "C55555555555"));
+        crm.GetClientProfileByEmailAsync(orgId, "buyer@example.com")
+            .Returns(new ClientProfileDto
+            {
+                Id = Guid.CreateVersion7().ToString(),
+                Full_name = "Buyer Co",
+                Email = "buyer@example.com",
+                Phone = "60111",
+                Tin = "C55555555555",
+                Id_type = "BRN",
+                Id_value = "202001012345",
+                Consented_to_marketing = false
+            });
+
+        var handler = new B2bTaxInvoiceRequestedIntegrationEventHandler(
+            mediator, lookup, crm, NullLogger<B2bTaxInvoiceRequestedIntegrationEventHandler>.Instance);
+
+        await handler.HandleAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
+            orgId, Guid.CreateVersion7(), "INV-2026-00009", "pi_1", 200m, 16m, "MYR",
+            LineDescription: "Pro Plan"));
+
+        await mediator.Received(1).Send(
+            Arg.Is<SubmitTaxDocumentCommand>(c => c.Payload.Items!.First().Description == "Pro Plan"),
             Arg.Any<CancellationToken>());
     }
 }
