@@ -120,7 +120,7 @@ public class PortalDocumentQueryService
             };
             items.Add(dto);
 
-            if (dto.Type is "Official Receipt" or "Tax Invoice"
+            if (dto.Type is "Official Receipt" or "Tax Invoice" or "Invoice"
                 && refToSub.TryGetValue(ledger.ReferenceId, out var subId))
             {
                 var key = subId.ToString();
@@ -182,7 +182,12 @@ public class PortalDocumentQueryService
             }
 
             sub.Document_url = latest.Download_url;
-            sub.Document_label = latest.Type == "Tax Invoice" ? "Download tax invoice" : "Download receipt";
+            sub.Document_label = latest.Type switch
+            {
+                "Tax Invoice" => "Download tax invoice",
+                "Invoice" => "Download invoice",
+                _ => "Download receipt"
+            };
         }
     }
 
@@ -195,7 +200,11 @@ public class PortalDocumentQueryService
         }
 
         if (ledger.CustomerType == "B2B" || DocumentSeries.IsInvoiceNumber(ledger.CustomerDocumentNumber))
-            return "Tax Invoice";
+        {
+            return string.Equals(ledger.LhdnValidationStatus, "VALID", StringComparison.OrdinalIgnoreCase)
+                ? "Tax Invoice"
+                : "Invoice";
+        }
 
         return "Official Receipt";
     }

@@ -87,8 +87,18 @@ public static class InvoiceDocumentFactory
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    internal static string? OfficialReceiptDisclaimer(string documentType) =>
-        string.Equals(documentType, "Official Receipt", StringComparison.OrdinalIgnoreCase)
-            ? "This Official Receipt confirms payment. It is not a validated MyInvois tax invoice."
-            : null;
+    internal static string? OfficialReceiptDisclaimer(string documentType)
+    {
+        if (string.Equals(documentType, "Official Receipt", StringComparison.OrdinalIgnoreCase))
+        {
+            return "This Official Receipt confirms payment. It is not a validated MyInvois tax invoice.";
+        }
+
+        if (string.Equals(documentType, "Invoice", StringComparison.OrdinalIgnoreCase))
+        {
+            return "This invoice is pending MyInvois validation. It is not a validated tax invoice.";
+        }
+
+        return null;
+    }
 }

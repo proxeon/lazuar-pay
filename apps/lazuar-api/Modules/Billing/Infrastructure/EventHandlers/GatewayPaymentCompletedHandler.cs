@@ -121,7 +121,7 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
                 entry.Id,
-                "Tax Invoice",
+                "Invoice",
                 CorrelationId: correlation
             ));
 

@@ -142,6 +142,9 @@ public class GatewayPaymentCompletedHandlerTests
         captured.CustomerDocumentNumber.Should().Be("INV-2026-00001");
         DocumentSeries.IsReceiptNumber(captured.CustomerDocumentNumber).Should().BeFalse();
         await mediator.Received().Send(
+            Arg.Is<GenerateAndStoreDocumentCommand>(c => c.DocumentType == "Invoice"),
+            Arg.Any<CancellationToken>());
+        await mediator.DidNotReceive().Send(
             Arg.Is<GenerateAndStoreDocumentCommand>(c => c.DocumentType == "Tax Invoice"),
             Arg.Any<CancellationToken>());
         await mediator.DidNotReceive().Send(

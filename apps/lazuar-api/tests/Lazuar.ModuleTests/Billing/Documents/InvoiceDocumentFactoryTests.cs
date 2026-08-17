@@ -83,10 +83,28 @@ public class InvoiceDocumentFactoryTests
     }
 
     [Test]
-    public void OfficialReceiptDisclaimer_OnlyForReceipts()
+    public void CreateHeader_PendingInvoice_AddsValidationDisclaimer()
+    {
+        var profile = new TenantBillingProfile(Guid.CreateVersion7(), "Acme Sdn Bhd", "C12345678901");
+        var model = InvoiceDocumentFactory.CreateHeader(
+            "Invoice",
+            "INV-2026-00001",
+            DateTime.UtcNow,
+            profile,
+            workspace: null,
+            customer: null,
+            logoBytes: null);
+
+        model.Notes.Should().Contain("pending MyInvois validation");
+    }
+
+    [Test]
+    public void OfficialReceiptDisclaimer_OnlyForReceiptsAndPendingInvoices()
     {
         InvoiceDocumentFactory.OfficialReceiptDisclaimer("Official Receipt")
             .Should().Contain("Official Receipt");
+        InvoiceDocumentFactory.OfficialReceiptDisclaimer("Invoice")
+            .Should().Contain("pending MyInvois validation");
         InvoiceDocumentFactory.OfficialReceiptDisclaimer("Tax Invoice").Should().BeNull();
     }
 }

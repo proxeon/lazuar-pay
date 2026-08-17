@@ -75,7 +75,7 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
                 entry.Id,
-                "Tax Invoice",
+                "Invoice",
                 CorrelationId: correlation));
 
             await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(

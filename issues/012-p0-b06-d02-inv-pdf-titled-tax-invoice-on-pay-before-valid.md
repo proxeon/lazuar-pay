@@ -2,17 +2,21 @@
 number: "012"
 id: B06-D02
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/012-inv-not-tax-invoice-until-valid
 ---
 
 # 012 — B06-D02 — `INV-` PDF titled “Tax Invoice” on pay, before VALID
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/012-inv-not-tax-invoice-until-valid`
+
+B2B pay now stores an `Invoice` with a pending-validation note. Portal labels `INV-` as Tax Invoice only after MyInvois `VALID`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
