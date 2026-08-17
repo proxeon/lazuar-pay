@@ -53,6 +53,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 041 | B02-C06 | `fix/041-stats-mrr-billing-interval` | Stats MRR uses BillingInterval so yearly seats are /12 |
 | 042 | B02-C07 | `fix/042-arpu-exclude-pastdue` | ARPU denominator is MRR contributors, not PAST_DUE |
 | 043 | B02-C08 | `fix/043-pause-expiry-skip-back-invoice` | Pause expiry skips the back invoice like manual resume |
+| 044 | B02-C09 | `fix/044-skip-open-dispute-billing` | Open disputes are not billed; close clears the flag |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

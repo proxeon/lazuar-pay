@@ -870,6 +870,27 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_HasOpenDispute_DoesNotCharge()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), false, 1, 50m);
+        sub.StoreVaultedToken("cus", "pm");
+        sub.MarkHasOpenDispute();
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("ACTIVE");
+        reloaded.HasOpenDispute.Should().BeTrue();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
     public async Task RunOnce_QuantityTimesUnitAmount()
     {
         var product = CreateProduct(_orgId, "STRIPE");

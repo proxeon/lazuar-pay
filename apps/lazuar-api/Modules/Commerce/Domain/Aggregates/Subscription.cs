@@ -218,6 +218,17 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void ClearHasOpenDispute()
+    {
+        if (!HasOpenDispute)
+        {
+            return;
+        }
+
+        HasOpenDispute = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void SchedulePlanChange(Guid productId)
     {
         if (productId == Guid.Empty)

@@ -141,6 +141,7 @@ public class BillingEngineJob : BackgroundService
               AND "NextBillingDate" <= NOW()
               AND "Status" NOT IN ('PENDING', 'PAST_DUE', 'SUSPENDED', 'CANCELED')
               AND ("CollectionPausedUntil" IS NULL OR "CollectionPausedUntil" <= NOW())
+              AND "HasOpenDispute" = FALSE
               {excludeClause}
             ORDER BY "NextBillingDate"
             LIMIT 1
@@ -168,6 +169,7 @@ public class BillingEngineJob : BackgroundService
                 && s.Status != "SUSPENDED"
                 && s.Status != "CANCELED"
                 && (s.CollectionPausedUntil == null || s.CollectionPausedUntil <= now)
+                && !s.HasOpenDispute
                 && !excludeIds.Contains(s.Id))
             .OrderBy(s => s.NextBillingDate)
             .FirstOrDefaultAsync(ct);
@@ -280,6 +282,7 @@ public class BillingEngineJob : BackgroundService
 
         var canCharge = PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
                         && !sub.IsReminderOnly
+                        && !sub.HasOpenDispute
                         && !string.IsNullOrEmpty(sub.VaultedTokenId)
                         && !string.IsNullOrEmpty(sub.VaultedCustomerId);
 

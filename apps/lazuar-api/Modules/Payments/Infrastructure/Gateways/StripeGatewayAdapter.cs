@@ -213,7 +213,8 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 return MapPaymentIntentPaymentFailed(failedPi, stripeEvent.Id);
             }
 
-            if (stripeEvent.Type == "charge.dispute.created" && stripeEvent.Data.Object is Dispute dispute)
+            if (stripeEvent.Type is "charge.dispute.created" or "charge.dispute.closed" or "charge.dispute.updated"
+                && stripeEvent.Data.Object is Dispute dispute)
             {
                 var meta = new Dictionary<string, string>();
                 var amount = dispute.Amount / 100m;
@@ -233,9 +234,25 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     }
                 }
 
+                var eventType = stripeEvent.Type == "charge.dispute.created"
+                    ? "DISPUTE_CREATED"
+                    : "DISPUTE_CLOSED";
+                if (stripeEvent.Type == "charge.dispute.updated"
+                    && !string.Equals(dispute.Status, "won", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(dispute.Status, "lost", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(dispute.Status, "warning_closed", StringComparison.OrdinalIgnoreCase))
+                {
+                    eventType = "DISPUTE_CREATED";
+                }
+
+                if (eventType == "DISPUTE_CLOSED")
+                {
+                    meta["dispute_outcome"] = dispute.Status ?? "closed";
+                }
+
                 return new GatewayWebhookParsedResult(
                     Verified: true,
-                    EventType: "DISPUTE_CREATED",
+                    EventType: eventType,
                     EventId: stripeEvent.Id,
                     AmountPaid: amount,
                     Currency: dispute.Currency ?? "myr",

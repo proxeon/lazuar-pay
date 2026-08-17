@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddTransient<DefaultTemplatesSeededIntegrationEventHandler>();
         services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
         services.AddTransient<CommerceGatewayDisputeCreatedHandler>();
+        services.AddTransient<CommerceGatewayDisputeClosedHandler>();
 
         return services;
     }
@@ -85,6 +86,7 @@ public static class DependencyInjection
         eventBus.Subscribe<DefaultTemplatesSeededIntegrationEvent, DefaultTemplatesSeededIntegrationEventHandler>();
         eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayDisputeCreatedIntegrationEvent, CommerceGatewayDisputeCreatedHandler>();
+        eventBus.Subscribe<GatewayDisputeClosedIntegrationEvent, CommerceGatewayDisputeClosedHandler>();
         return app;
     }
 }

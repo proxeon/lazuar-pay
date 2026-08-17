@@ -178,6 +178,19 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
             return;
         }
 
+        if (parsedResult.EventType == "DISPUTE_CLOSED")
+        {
+            metadata.TryGetValue("dispute_outcome", out var outcome);
+            var closedEvent = new GatewayDisputeClosedIntegrationEvent(
+                OrganizationId: request.TenantId,
+                GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
+                Outcome: outcome ?? "closed",
+                Metadata: metadata);
+            log.AssignOutboxMessageId(closedEvent.Id);
+            await _eventBus.PublishAsync(closedEvent);
+            return;
+        }
+
         if (parsedResult.EventType == "PAYMENT_FAILED")
         {
             var failedEvent = new GatewayPaymentFailedIntegrationEvent(

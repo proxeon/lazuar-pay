@@ -2,17 +2,21 @@
 number: "044"
 id: B02-C09
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/02-commerce-subscriptions-billing-engine.md
 head: "297ba98"
+resolved_branch: fix/044-skip-open-dispute-billing
 ---
 
 # 044 — B02-C09 — HasOpenDispute is set and billing ignores it
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/02-commerce-subscriptions-billing-engine.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/044-skip-open-dispute-billing`
+
+Billing claim/canCharge skip `HasOpenDispute`. Dispute closed (won/lost) clears the flag.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

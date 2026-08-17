@@ -124,6 +124,25 @@ public class CommerceGatewayDisputeCreatedHandlerTests
         await AssertDidNotReceiveGatewayRefundCompleted();
     }
 
+    [Test]
+    public async Task ClosedDispute_ClearsHasOpenDispute()
+    {
+        var sub = ActiveSub();
+        sub.MarkHasOpenDispute();
+        _db.Subscriptions.Add(sub);
+        _db.Disputes.Add(new CommerceDispute(_orgId, "pi_closed", 50m, "MYR", sub.Id));
+        await _db.SaveChangesAsync();
+
+        var closer = new CommerceGatewayDisputeClosedHandler(
+            _db, NullLogger<CommerceGatewayDisputeClosedHandler>.Instance);
+        await closer.HandleAsync(new GatewayDisputeClosedIntegrationEvent(
+            _orgId, "pi_closed", "won"));
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.HasOpenDispute.Should().BeFalse();
+        (await _db.Disputes.IgnoreQueryFilters().SingleAsync()).Status.Should().Be(CommerceDispute.StatusWon);
+    }
+
     private async Task AssertDidNotReceiveGatewayRefundCompleted()
     {
         (await _db.OutboxMessages.CountAsync()).Should().Be(0);
