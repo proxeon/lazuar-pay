@@ -40,8 +40,8 @@ public static class RenewalCheckoutIssuer
                 $"Workspace {sub.OrganizationId} not found for renewal checkout.");
 
         var clientUrl = config?["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
-        var successUrl = $"{clientUrl}/{workspace.Slug}/portal";
         var magicToken = tokenService.GenerateToken(sub.Id);
+        var successUrl = $"{clientUrl}/{workspace.Slug}/portal?token={magicToken}";
         var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{sub.Id}?token={magicToken}";
 
         var breakdown = await SubscriptionBillingAmount.GrossBreakdown(sub, product, billing);

@@ -1,6 +1,6 @@
-import { ReactNode } from "react";
-import Link from "next/link";
+import { ReactNode, Suspense } from "react";
 import { serverClient } from "../../../modules/core/lib/server-client";
+import { PortalDashboardLink } from "../../../modules/portal/components/PortalDashboardLink";
 
 export default async function PortalLayout({
   children,
@@ -18,12 +18,14 @@ export default async function PortalLayout({
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-black">
       <header className="sticky top-0 z-40 w-full bg-card border-b border-border/60 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link
-            href={`/${tenantSlug}`}
-            className="text-sm font-bold uppercase tracking-widest text-foreground hover:opacity-70 transition-opacity"
-          >
-            Buyer Dashboard
-          </Link>
+          <Suspense fallback={<span className="text-sm font-bold uppercase tracking-widest text-foreground">Buyer Dashboard</span>}>
+            <PortalDashboardLink
+              tenantSlug={tenantSlug}
+              className="text-sm font-bold uppercase tracking-widest text-foreground hover:opacity-70 transition-opacity"
+            >
+              Buyer Dashboard
+            </PortalDashboardLink>
+          </Suspense>
 
           <div className="flex items-center gap-4">
             <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground hidden sm:inline">

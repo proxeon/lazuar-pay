@@ -368,7 +368,7 @@ public class BillingEngineJobTests
             && q.Metadata["type"] == "commerce_subscription"
             && q.Metadata["subscription_id"] == sub.Id.ToString()
             && q.Metadata["tenant_id"] == _orgId.ToString()
-            && q.SuccessUrl == "https://portal.test/acme/portal"
+            && q.SuccessUrl == "https://portal.test/acme/portal?token=mint-token"
             && q.CancelUrl == $"https://portal.test/acme/update-payment/{sub.Id}?token=mint-token"),
             Arg.Any<CancellationToken>());
 

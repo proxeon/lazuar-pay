@@ -63,6 +63,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 051 | B03-C06 | `fix/051-arrears-row-reminder-only` | Arrears reminder-only comes from the subscription row |
 | 052 | B03-C07 | `fix/052-dunning-pause-predunning` | Dunning pause also stops pre-dunning “renews soon” mail |
 | 053 | B03-C08 | `fix/053-zero-unit-gross` | Arrears Gross treats a written UnitAmount 0 as zero |
+| 054 | B03-C09 | `fix/054-success-url-magic-token` | Success and dashboard links keep the portal HMAC |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
