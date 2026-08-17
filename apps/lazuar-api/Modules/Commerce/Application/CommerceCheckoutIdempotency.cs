@@ -46,4 +46,22 @@ public static class CommerceCheckoutIdempotency
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(material));
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
+
+    public static bool IsReplayableOpen(Domain.Aggregates.CheckoutSession session, DateTime utcNow) =>
+        session.Status == "OPEN" && session.ExpiresAt > utcNow;
+
+    public static bool TryReplayUrl(Domain.Aggregates.CheckoutSession session, DateTime utcNow, out string? url)
+    {
+        url = null;
+        if (!IsReplayableOpen(session, utcNow) || string.IsNullOrWhiteSpace(session.GatewayCheckoutUrl))
+        {
+            return false;
+        }
+
+        url = session.GatewayCheckoutUrl;
+        return true;
+    }
+
+    public static bool ShouldReleaseKey(Domain.Aggregates.CheckoutSession session, DateTime utcNow) =>
+        !IsReplayableOpen(session, utcNow);
 }

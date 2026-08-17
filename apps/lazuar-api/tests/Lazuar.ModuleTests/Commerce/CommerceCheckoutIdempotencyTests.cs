@@ -31,4 +31,29 @@ public class CommerceCheckoutIdempotencyTests
         a.Should().NotBe(b);
         a.Should().HaveLength(64);
     }
+
+    [Test]
+    public void TryReplayUrl_OnlyOpenUnexpiredWithUrl()
+    {
+        var org = Guid.CreateVersion7();
+        var open = new Modules.Commerce.Domain.Aggregates.CheckoutSession(
+            org, Guid.CreateVersion7(), Guid.CreateVersion7(), null, DateTime.UtcNow.AddHours(1));
+        open.SetGatewayCheckoutUrl("https://pay.example/hop2");
+
+        CommerceCheckoutIdempotency.TryReplayUrl(open, DateTime.UtcNow, out var url).Should().BeTrue();
+        url.Should().Be("https://pay.example/hop2");
+
+        open.Expire();
+        CommerceCheckoutIdempotency.TryReplayUrl(open, DateTime.UtcNow, out _).Should().BeFalse();
+        CommerceCheckoutIdempotency.ShouldReleaseKey(open, DateTime.UtcNow).Should().BeTrue();
+    }
+
+    [Test]
+    public void TryReplayUrl_OpenWithoutUrl_IsNotReplay()
+    {
+        var open = new Modules.Commerce.Domain.Aggregates.CheckoutSession(
+            Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7(), null, DateTime.UtcNow.AddHours(1));
+        CommerceCheckoutIdempotency.TryReplayUrl(open, DateTime.UtcNow, out _).Should().BeFalse();
+        CommerceCheckoutIdempotency.IsReplayableOpen(open, DateTime.UtcNow).Should().BeTrue();
+    }
 }

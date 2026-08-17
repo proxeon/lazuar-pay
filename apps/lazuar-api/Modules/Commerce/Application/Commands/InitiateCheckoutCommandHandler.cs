@@ -68,6 +68,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             request.Interval,
             request.PriceId);
 
+        CheckoutSession? reuseSession = null;
         if (idempotencyKey != null)
         {
             var existing = await _repository.GetCheckoutSessionByIdempotencyKeyAsync(
@@ -79,11 +80,21 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                     throw new InvalidOperationException("IDEMPOTENCY_CONFLICT: Idempotency-Key was reused with a different checkout payload.");
                 }
 
-                if (!string.IsNullOrWhiteSpace(existing.GatewayCheckoutUrl))
+                var now = DateTime.UtcNow;
+                if (CommerceCheckoutIdempotency.TryReplayUrl(existing, now, out var replayUrl))
                 {
-                    return new CheckoutResultDto(
-                        existing.GatewayCheckoutUrl,
-                        existing.Status == "COMPLETED");
+                    return new CheckoutResultDto(replayUrl!, existing.Status == "COMPLETED");
+                }
+
+                if (CommerceCheckoutIdempotency.IsReplayableOpen(existing, now)
+                    && string.IsNullOrWhiteSpace(existing.GatewayCheckoutUrl))
+                {
+                    reuseSession = existing;
+                }
+                else if (CommerceCheckoutIdempotency.ShouldReleaseKey(existing, now))
+                {
+                    existing.ClearIdempotency();
+                    await _repository.SaveChangesAsync(ct);
                 }
             }
         }
@@ -222,7 +233,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         decimal unitDiscount = 0m;
         Guid? couponId = null;
-        CheckoutSession? session = null;
+        CheckoutSession? session = reuseSession;
 
         async Task PersistReservationAndSessionAsync(CancellationToken persistCt)
         {
@@ -264,13 +275,16 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         try
         {
-            if (_repository is ICommerceTransactional transactional)
+            if (session == null)
             {
-                await transactional.ExecuteInTransactionAsync(PersistReservationAndSessionAsync, ct);
-            }
-            else
-            {
-                await PersistReservationAndSessionAsync(ct);
+                if (_repository is ICommerceTransactional transactional)
+                {
+                    await transactional.ExecuteInTransactionAsync(PersistReservationAndSessionAsync, ct);
+                }
+                else
+                {
+                    await PersistReservationAndSessionAsync(ct);
+                }
             }
         }
         catch (Exception) when (idempotencyKey != null)
@@ -288,9 +302,13 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 {
                     return new CheckoutResultDto(raced.GatewayCheckoutUrl, raced.Status == "COMPLETED");
                 }
-            }
 
-            throw;
+                session = raced;
+            }
+            else
+            {
+                throw;
+            }
         }
 
         if (session == null)

@@ -86,6 +86,13 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void ClearIdempotency()
+    {
+        IdempotencyKey = null;
+        RequestFingerprint = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void SetGatewayCheckoutUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url))

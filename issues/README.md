@@ -39,6 +39,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 027 | B10-X03 | `fix/027-lhdn-webhooks-dual-write` | POST /lhdn/webhooks dual-writes the live workspace dispatcher |
 | 028 | B01-C02 | `fix/028-coupon-lock-transaction` | Coupon `FOR UPDATE` + reserve + session insert share one transaction |
 | 029 | B01-C03 | `fix/029-zero-amount-offline-chosen-price` | $0 / mark-paid discount the chosen price row |
+| 030 | B01-C04 | `fix/030-idempotency-replay-open-only` | Idempotency replay only OPEN live URLs; resume empty-URL rows |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
