@@ -2,17 +2,21 @@
 number: "027"
 id: B10-X03
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/10-tenancy-workers-contracts-tests.md
 head: "297ba98"
+resolved_branch: fix/027-lhdn-webhooks-dual-write
 ---
 
 # 027 — B10-X03 — `POST /lhdn/webhooks` is a live dead register; Developers hub still teaches it
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/10-tenancy-workers-contracts-tests.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/027-lhdn-webhooks-dual-write`
+
+`POST /lhdn/webhooks` dual-writes a workspace endpoint for `invoice.valid` / `invoice.invalid`. Developers hub teaches `POST /one/workspaces/{id}/webhooks` and `t=,v1=` signing.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

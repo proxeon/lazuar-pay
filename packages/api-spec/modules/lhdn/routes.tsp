@@ -36,6 +36,7 @@ interface LhdnOperations {
     @body body: CancelDocumentRequestDto,
   ): LazuarApi.Core.StatusResponse | LazuarApi.Core.ProblemDetailsResponse;
 
+  @doc("Registers an invoice.valid / invoice.invalid workspace webhook (dual-writes One dispatcher). Prefer POST /one/workspaces/{id}/webhooks.")
   @post
   @route("/webhooks")
   registerWebhook(

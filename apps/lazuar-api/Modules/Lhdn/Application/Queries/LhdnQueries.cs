@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Modules.Lhdn.Application.Ports;
 using Modules.Lhdn.Application.Services;
 using Modules.Lhdn.Domain;
+using Modules.One.Application;
 
 namespace Modules.Lhdn.Application.Queries;
 
@@ -116,16 +117,35 @@ public record ListWebhooksQuery(Guid OrganizationId) : IQuery<IEnumerable<Webhoo
 public class ListWebhooksQueryHandler : IQueryHandler<ListWebhooksQuery, IEnumerable<WebhookSubscriptionDto>>
 {
     private readonly ILhdnRepository _repository;
+    private readonly IOneRepository _one;
 
-    public ListWebhooksQueryHandler(ILhdnRepository repository)
+    public ListWebhooksQueryHandler(ILhdnRepository repository, IOneRepository one)
     {
         _repository = repository;
+        _one = one;
     }
 
     public async Task<IEnumerable<WebhookSubscriptionDto>> Handle(ListWebhooksQuery request, CancellationToken ct)
     {
-        var webhooks = await _repository.GetActiveWebhooksAsync(request.OrganizationId, ct);
+        var live = await _one.ListWebhookEndpointsAsync(request.OrganizationId, ct);
+        var invoice = live
+            .Where(e => e.IsActive && AcceptsInvoiceEvents(e.EnabledEvents))
+            .Select(e => new WebhookSubscriptionDto
+            {
+                Id = e.Id.ToString(),
+                Url = e.Url,
+                Events = e.EnabledEvents.Count == 0
+                    ? new List<string> { "invoice.valid", "invoice.invalid" }
+                    : e.EnabledEvents.ToList(),
+                Is_active = e.IsActive,
+                Created_at = new DateTimeOffset(e.CreatedAt)
+            })
+            .ToList();
 
+        if (invoice.Count > 0)
+            return invoice;
+
+        var webhooks = await _repository.GetActiveWebhooksAsync(request.OrganizationId, ct);
         return webhooks.Select(w => new WebhookSubscriptionDto
         {
             Id = w.Id.ToString(),
@@ -134,6 +154,15 @@ public class ListWebhooksQueryHandler : IQueryHandler<ListWebhooksQuery, IEnumer
             Is_active = w.IsActive,
             Created_at = new DateTimeOffset(w.CreatedAt)
         });
+    }
+
+    private static bool AcceptsInvoiceEvents(IReadOnlyCollection<string> enabled)
+    {
+        if (enabled.Count == 0)
+            return true;
+        return enabled.Any(e =>
+            string.Equals(e, "invoice.valid", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(e, "invoice.invalid", StringComparison.OrdinalIgnoreCase));
     }
 }
 

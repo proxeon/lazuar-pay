@@ -36,6 +36,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 023 | B09-U03 | `fix/023-portal-token-hrefs` | Portal/update-payment hrefs never use `token=undefined` |
 | 024 | B09-U04 | `fix/024-viewer-cannot-change-plan` | Viewer cannot change plan, seats, pause, or export |
 | 026 | B10-X02 | `fix/026-b2c-already-consolidated-ignore-filters` | B2C alreadyConsolidated sees rows without ambient tenant |
+| 027 | B10-X03 | `fix/027-lhdn-webhooks-dual-write` | POST /lhdn/webhooks dual-writes the live workspace dispatcher |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

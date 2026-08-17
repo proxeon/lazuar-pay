@@ -223,11 +223,15 @@ export default function WebhooksCatalogPage() {
 
       <GuideSection title="LHDN document events">
         <p>
-          LHDN product webhooks (register via{" "}
-          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">POST /lhdn/webhooks</code> or
-          console when available) emit JSON with{" "}
-          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">event</code> derived from
-          document status:
+          LHDN document events are delivered through workspace webhooks (register via{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">POST /one/workspaces/{"{id}"}/webhooks</code>{" "}
+          or Ops → Developer → Webhooks).{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">POST /lhdn/webhooks</code>{" "}
+          dual-writes the same workspace endpoint for{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">invoice.valid</code> /{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">invoice.invalid</code>.
+          Payloads use the Standard Webhooks envelope with{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">event_type</code>:
         </p>
         <div className="border border-[#e5e5e5] bg-white overflow-hidden">
           <table className="w-full text-left text-[13px]">
@@ -251,11 +255,8 @@ export default function WebhooksCatalogPage() {
           </table>
         </div>
         <Callout>
-          LHDN path currently signs with HMAC-SHA256 hex of the raw body in{" "}
-          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">X-Lazuar-Signature</code>{" "}
-          (body-only). Workspace Commerce deliveries use the Standard Webhooks–style{" "}
-          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">t=,v1=</code> format below.
-          Prefer the workspace catalog for commerce unlock/revoke.
+          LHDN and Commerce deliveries both sign with the Standard Webhooks–style{" "}
+          <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">t=,v1=</code> header below.
         </Callout>
       </GuideSection>
 

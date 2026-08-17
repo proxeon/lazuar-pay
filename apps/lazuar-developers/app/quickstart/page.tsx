@@ -54,7 +54,7 @@ export default function QuickstartPage() {
           <li>
             Optional: webhook endpoint under{" "}
             <span className="font-mono text-[12px]">Developer → Webhooks</span> or{" "}
-            <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">POST /lhdn/webhooks</code>
+            <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">POST /one/workspaces/{"{id}"}/webhooks</code>
           </li>
         </ol>
         <Callout>

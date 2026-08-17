@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\Billing\Contracts\Modules.Billing.Contracts.csproj" />
     <ProjectReference Include="..\..\One\Contracts\Modules.One.Contracts.csproj" />
+    <ProjectReference Include="..\..\One\Application\Modules.One.Application.csproj" />
     <ProjectReference Include="..\..\Ops\Contracts\Modules.Ops.Contracts.csproj" />
     <!-- OutboundWebhookRequestedIntegrationEvent lives in Commerce.Contracts (workspace fan-out / R42 A1). -->
     <ProjectReference Include="..\..\Commerce\Contracts\Modules.Commerce.Contracts.csproj" />
