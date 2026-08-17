@@ -29,6 +29,23 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
             .Build());
 
     [Test]
+    public void ResolveFailureTransactionId_PrefersChargeAttempt_ThenEventId()
+    {
+        var subscriptionId = Guid.CreateVersion7();
+        var attempt = Guid.CreateVersion7();
+        var ev = new ExecuteOffSessionChargeIntegrationEvent(
+            Guid.CreateVersion7(), subscriptionId, 10m, "MYR", "cus", "pm", ChargeAttemptId: attempt);
+
+        ExecuteOffSessionChargeIntegrationEventHandler.ResolveFailureTransactionId(ev)
+            .Should().Be("off_session_attempt:" + attempt);
+
+        var noAttempt = new ExecuteOffSessionChargeIntegrationEvent(
+            Guid.CreateVersion7(), subscriptionId, 10m, "MYR", "cus", "pm");
+        ExecuteOffSessionChargeIntegrationEventHandler.ResolveFailureTransactionId(noAttempt)
+            .Should().Be("off_session:" + subscriptionId + ":" + noAttempt.Id);
+    }
+
+    [Test]
     public async Task HandleAsync_PassesCorrelationArgsToChargeOffSession()
     {
         var tenantId = Guid.CreateVersion7();
@@ -149,7 +166,7 @@ public class ExecuteOffSessionChargeIntegrationEventHandlerTests
 
         await eventBus.Received(1).PublishAsync(Arg.Is<GatewayPaymentFailedIntegrationEvent>(e =>
             e.OrganizationId == tenantId
-            && e.GatewayTransactionId == "off_session:" + subscriptionId
+            && e.GatewayTransactionId == "off_session_attempt:" + chargeAttemptId
             && e.Metadata["type"] == "commerce_subscription"
             && e.Metadata["subscription_id"] == subscriptionId.ToString()
             && e.Metadata["tenant_id"] == tenantId.ToString()

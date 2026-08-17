@@ -150,7 +150,17 @@ public class ExecuteOffSessionChargeIntegrationEventHandler : IIntegrationEventH
 
         await _eventBus.PublishAsync(new GatewayPaymentFailedIntegrationEvent(
             OrganizationId: @event.TenantId,
-            GatewayTransactionId: "off_session:" + @event.SubscriptionId,
+            GatewayTransactionId: ResolveFailureTransactionId(@event),
             Metadata: metadata));
+    }
+
+    internal static string ResolveFailureTransactionId(ExecuteOffSessionChargeIntegrationEvent @event)
+    {
+        if (@event.ChargeAttemptId is { } attempt && attempt != Guid.Empty)
+        {
+            return "off_session_attempt:" + attempt;
+        }
+
+        return "off_session:" + @event.SubscriptionId + ":" + @event.Id;
     }
 }
