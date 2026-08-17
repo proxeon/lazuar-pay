@@ -319,9 +319,12 @@ public class BillingEngineJob : BackgroundService
                 _logger.LogInformation(
                     "Dispatched auto-debit request for subscription {Id} (attempt {AttemptNumber}/{Max}).",
                     sub.Id, attempt.AttemptNumber, ChargeAttemptLimits.MaxAttemptsPerBillingCycle);
+                return;
             }
 
-            return;
+            _logger.LogWarning(
+                "Subscription {Id} still {Status} after attempt 1 with no webhook; marking PAST_DUE.",
+                sub.Id, sub.Status);
         }
 
         string? email = null;

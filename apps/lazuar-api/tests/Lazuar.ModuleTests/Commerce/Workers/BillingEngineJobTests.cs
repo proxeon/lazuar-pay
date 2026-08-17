@@ -646,6 +646,50 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_TrialDueVaulted_PublishesAttempt1_StaysTrialing()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.ActivateTrial(DateTime.UtcNow.AddDays(7), reminderOnly: false, 1, product.Price);
+        sub.StoreVaultedToken("cus_trial", "pm_trial");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+        _db.Entry(sub).Property(s => s.NextBillingDate).CurrentValue = DateTime.UtcNow.AddDays(-1);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("TRIALING");
+        await _eventBus.Received(1).PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task RunOnce_TrialDueAfterAttempt1_MarksPastDue()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        var due = DateTime.UtcNow.AddDays(-1);
+        sub.ActivateTrial(DateTime.UtcNow.AddDays(7), reminderOnly: false, 1, product.Price);
+        sub.StoreVaultedToken("cus_trial", "pm_trial");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+        _db.Entry(sub).Property(s => s.NextBillingDate).CurrentValue = due;
+        _db.ChargeAttemptLogs.Add(new ChargeAttemptLog(sub.Id, due.Date, 1, ChargeAttemptLog.SourceBilling));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.Status.Should().Be("PAST_DUE");
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
     public async Task RunOnce_CollectionPaused_SkipsChargeAndKeepsActive()
     {
         var product = CreateProduct(_orgId, "STRIPE");

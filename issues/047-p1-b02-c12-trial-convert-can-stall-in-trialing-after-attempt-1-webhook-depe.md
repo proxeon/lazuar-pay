@@ -2,17 +2,21 @@
 number: "047"
 id: B02-C12
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/02-commerce-subscriptions-billing-engine.md
 head: "297ba98"
+resolved_branch: fix/047-trial-convert-stall-pastdue
 ---
 
 # 047 — B02-C12 — Trial convert can stall in TRIALING after attempt 1 (webhook-dependent, job will not retry)
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/02-commerce-subscriptions-billing-engine.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/047-trial-convert-stall-pastdue`
+
+If attempt 1 is already out and the trial is still due, the job marks PAST_DUE instead of stalling.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
