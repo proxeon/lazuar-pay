@@ -82,6 +82,12 @@ public class DunningCampaign : Entity, IAggregateRoot, IMustHaveTenant
 
     public void AddStep(int dayOffset, string actionType, string? subject, string? emailBody, string? whatsAppBody)
     {
+        if (_steps.Any(s => s.DayOffset == dayOffset))
+        {
+            throw new InvalidOperationException(
+                $"A dunning campaign cannot have two steps on day offset {dayOffset}.");
+        }
+
         _steps.Add(new DunningStep(Id, dayOffset, actionType, subject, emailBody, whatsAppBody));
         UpdatedAt = DateTime.UtcNow;
     }

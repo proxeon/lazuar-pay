@@ -10,6 +10,16 @@ namespace Lazuar.ModuleTests.Commerce;
 public class DunningCampaignDomainTests
 {
     [Test]
+    public void AddStep_DuplicateDayOffset_Throws()
+    {
+        var campaign = new DunningCampaign(Guid.CreateVersion7(), "Dup", "NONE", 7);
+        campaign.AddStep(0, "EMAIL", "Pay", "Please pay", null);
+
+        var act = () => campaign.AddStep(0, "AUTO_CHARGE", null, null, null);
+        act.Should().Throw<InvalidOperationException>().WithMessage("*day offset 0*");
+    }
+
+    [Test]
     public void RecordRecovery_IncrementsRevenueAndSavedCount()
     {
         var campaign = new DunningCampaign(

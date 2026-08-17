@@ -2,17 +2,21 @@
 number: "048"
 id: B03-C03
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
+resolved_branch: fix/048-unique-dunning-dayoffset
 ---
 
 # 048 — B03-C03 — One reminder slot per DayOffset; same-day EMAIL + AUTO_CHARGE cannot both run
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/048-unique-dunning-dayoffset`
+
+Campaign save rejects two steps on the same DayOffset so EMAIL + AUTO_CHARGE cannot silently drop one.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

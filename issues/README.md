@@ -57,6 +57,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 045 | B02-C10 | `fix/045-zero-unit-snapshot` | Written UnitAmount 0 is 0; missing snapshot still uses catalog |
 | 046 | B02-C11 | `fix/046-orgread-subscriber-writes` | Change-plan / seats / pause / resume already require OrgMember |
 | 047 | B02-C12 | `fix/047-trial-convert-stall-pastdue` | Trial convert stall after attempt 1 becomes PAST_DUE |
+| 048 | B03-C03 | `fix/048-unique-dunning-dayoffset` | Campaign save rejects two steps on the same DayOffset |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
