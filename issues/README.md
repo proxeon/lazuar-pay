@@ -55,6 +55,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 043 | B02-C08 | `fix/043-pause-expiry-skip-back-invoice` | Pause expiry skips the back invoice like manual resume |
 | 044 | B02-C09 | `fix/044-skip-open-dispute-billing` | Open disputes are not billed; close clears the flag |
 | 045 | B02-C10 | `fix/045-zero-unit-snapshot` | Written UnitAmount 0 is 0; missing snapshot still uses catalog |
+| 046 | B02-C11 | `fix/046-orgread-subscriber-writes` | Change-plan / seats / pause / resume already require OrgMember |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
