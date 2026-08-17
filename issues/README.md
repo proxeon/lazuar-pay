@@ -112,6 +112,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 100 | B06-D14 | `fix/100-poll-uuid-on-valid` | Poller writes UUID onto TaxDocument when submit missed it |
 | 101 | B06-D15 | `fix/101-qr-host-preprod` | Share QR host follows tenant Environment; ops QR is same-origin |
 | 102 | B06-D16 | `fix/102-environment-cosmetic-country-my` | PROD Environment hits api.myinvois; checkout country default is MYS |
+| 103 | B06-D17 | `fix/103-deduct-after-persist` | Live deduct already runs before persist (shipped with 091) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

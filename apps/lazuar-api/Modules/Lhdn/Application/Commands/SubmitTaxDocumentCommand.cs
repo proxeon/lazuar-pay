@@ -115,6 +115,7 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 
         var (content, documentHashHex) = RenderDocument(request.Payload, config, requestedVersion, supplierSst);
 
+        // Deduct before persist (B06-D17 / B05-L21). A 402 must not leave a PENDING document.
         if (shouldMeter)
         {
             var deductionKey = !string.IsNullOrWhiteSpace(request.IdempotencyKey)
