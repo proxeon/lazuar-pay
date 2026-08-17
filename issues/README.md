@@ -102,6 +102,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 090 | B05-L20 | `fix/090-saas-zero-not-free` | AmountMyr 0 is unpaid Hub, not “free today” |
 | 091 | B05-L21 | `fix/091-lhdn-deduct-fail-closed` | Live LHDN deduct runs before persist so a 402 is not a free submit |
 | 092 | B05-L22 | `fix/092-pdf-retry-after-processed` | Payment retry still generates the PDF after the ledger row exists |
+| 093 | B05-L23 | `fix/093-cn-including-tax` | Type 02 CN treats RefundedAmount as gross, not net+tax |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

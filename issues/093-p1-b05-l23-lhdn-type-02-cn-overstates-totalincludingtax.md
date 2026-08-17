@@ -2,17 +2,21 @@
 number: "093"
 id: B05-L23
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
+resolved_branch: fix/093-cn-including-tax
 ---
 
 # 093 — B05-L23 — LHDN type-02 CN overstates `Total_including_tax`
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/093-cn-including-tax`
+
+Type 02 treats `RefundedAmount` as gross: `Total_including_tax` is cash, excluding tax is cash minus SST. Locked by `FullRefund_After72h_WithSst_DoesNotAddTaxTwice`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

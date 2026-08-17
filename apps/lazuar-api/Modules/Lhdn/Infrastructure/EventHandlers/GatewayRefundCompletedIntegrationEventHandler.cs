@@ -102,6 +102,7 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
         var creditNoteNumber = await ResolveCreditNoteNumberAsync(@event);
 
+        // RefundedAmount is Commerce cash (gross). Do not add TaxAmount again.
         var tax = @event.TaxAmount;
         var gross = @event.RefundedAmount;
         var net = tax > 0 && gross >= tax ? gross - tax : gross;
