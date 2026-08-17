@@ -36,7 +36,7 @@ public static class DocumentEndpoints
             try
             {
                 await mediator.Send(new SubmitTaxDocumentCommand(ctx.TenantId, idempotencyKey, req));
-                return TypedResults.Ok(new StatusResponse { Status = "accepted_for_processing" });
+                return TypedResults.Ok(new StatusResponse { Status = "pending" });
             }
             catch (BusinessRuleValidationException ex)
             {

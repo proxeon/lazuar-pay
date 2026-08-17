@@ -2,7 +2,8 @@
 number: "104"
 id: B06-D18
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/104-accepted-for-processing
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 104 — B06-D18 — Integrator `accepted_for_processing` is Lazuar, not MyInvois; product B2B checkout is coupled to MyInvois
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/104-accepted-for-processing`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

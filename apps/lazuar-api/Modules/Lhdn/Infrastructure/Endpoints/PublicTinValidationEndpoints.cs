@@ -16,7 +16,7 @@ public static class PublicTinValidationEndpoints
 {
     public static IEndpointRouteBuilder MapPublicTinValidationEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/public/commerce/{tenantSlug}/validate-tin", async Task<Results<Ok<ValidateTinResponseDto>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+        endpoints.MapPost("/public/commerce/{tenantSlug}/validate-tin", async Task<Results<Ok<ValidateTinResponseDto>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>, Conflict<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
             string tenantSlug,
             [FromBody] ValidateTinRequestDto req,
             IOneQueryService oneQueryService,
@@ -42,10 +42,20 @@ public static class PublicTinValidationEndpoints
             }
             catch (InvalidOperationException ex)
             {
-                var detail = ex.Message.Contains("configuration", StringComparison.OrdinalIgnoreCase)
-                    ? "Merchant has not connected MyInvois."
-                    : "TIN could not be validated.";
-                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = detail });
+                if (ex.Message.Contains("configuration", StringComparison.OrdinalIgnoreCase))
+                {
+                    return TypedResults.Conflict(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = 409,
+                        Detail = "Merchant has not connected MyInvois."
+                    });
+                }
+
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = 400,
+                    Detail = "TIN could not be validated."
+                });
             }
         });
 

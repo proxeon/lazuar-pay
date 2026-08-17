@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckoutAuthContext } from "../types";
 import { interpolateNodes, useCheckoutT } from "../i18n/CheckoutI18n";
 import { IdentityBanner } from "./IdentityBanner";
-import { submitCheckout, validateTin, PublicCheckoutRequestDto, ProductDto } from "../lib/api";
+import { submitCheckout, validateTin, TinValidationUnavailableError, PublicCheckoutRequestDto, ProductDto } from "../lib/api";
 
 interface CheckoutFormProps {
   tenantSlug: string;
@@ -103,9 +103,12 @@ export function CheckoutForm({
           }
           setTinHint(tin.taxpayer_name ? `Matched: ${tin.taxpayer_name}` : "TIN is valid.");
         } catch (err: any) {
-          onError(err.message || "Could not validate TIN.");
-          setIsSubmitting(false);
-          return;
+          if (!(err instanceof TinValidationUnavailableError)) {
+            onError(err.message || "Could not validate TIN.");
+            setIsSubmitting(false);
+            return;
+          }
+          setTinHint("MyInvois is not connected. TIN will be stored on the commercial invoice.");
         }
       }
 

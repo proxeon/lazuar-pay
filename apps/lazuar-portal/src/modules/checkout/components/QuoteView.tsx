@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, Download, Building2, CheckCircle2 } from "lucide-react";
 import { components } from "@repo/api-types-ts";
-import { submitCheckout, validateTin } from "../lib/api";
+import { submitCheckout, validateTin, TinValidationUnavailableError } from "../lib/api";
 import { customQuoteBreakdown } from "../lib/grossBreakdown";
 import { cn } from "../../../../lib/utils";
 import Link from "next/link";
@@ -59,13 +59,20 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
 
     try {
       if (checkout.is_b2b_required) {
-        const tin = await validateTin(tenantSlug, taxId.trim(), idType, idValue.trim());
-        if (!tin.is_valid) {
-          setGlobalError("This TIN / ID pair is not valid in MyInvois.");
-          setIsSubmitting(false);
-          return;
+        try {
+          const tin = await validateTin(tenantSlug, taxId.trim(), idType, idValue.trim());
+          if (!tin.is_valid) {
+            setGlobalError("This TIN / ID pair is not valid in MyInvois.");
+            setIsSubmitting(false);
+            return;
+          }
+          setTinHint(tin.taxpayer_name ? `Matched: ${tin.taxpayer_name}` : "TIN is valid.");
+        } catch (err: unknown) {
+          if (!(err instanceof TinValidationUnavailableError)) {
+            throw err;
+          }
+          setTinHint("MyInvois is not connected. TIN will be stored on the commercial invoice.");
         }
-        setTinHint(tin.taxpayer_name ? `Matched: ${tin.taxpayer_name}` : "TIN is valid.");
       }
 
       const payload = {

@@ -66,6 +66,13 @@ function checkoutIdempotencyKey(payload: PublicCheckoutRequestDto) {
   }
 }
 
+export class TinValidationUnavailableError extends Error {
+  constructor(message = "Merchant has not connected MyInvois.") {
+    super(message);
+    this.name = "TinValidationUnavailableError";
+  }
+}
+
 export async function validateTin(tenantSlug: string, tin: string, idType: string, idValue: string) {
   const res = await fetch(`${BROWSER_API_URL}/public/commerce/${encodeURIComponent(tenantSlug)}/validate-tin`, {
     method: "POST",
@@ -74,8 +81,11 @@ export async function validateTin(tenantSlug: string, tin: string, idType: strin
     body: JSON.stringify({ tin, id_type: idType, id_value: idValue }),
   });
   const data = await res.json().catch(() => null);
+  if (res.status === 409) {
+    throw new TinValidationUnavailableError(data?.detail);
+  }
   if (!res.ok) {
-    throw new Error(data?.detail || "Merchant has not connected MyInvois.");
+    throw new Error(data?.detail || "TIN could not be validated.");
   }
   return data as { is_valid: boolean; tin: string; taxpayer_name?: string };
 }

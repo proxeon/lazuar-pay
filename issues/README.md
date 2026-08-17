@@ -113,6 +113,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 101 | B06-D15 | `fix/101-qr-host-preprod` | Share QR host follows tenant Environment; ops QR is same-origin |
 | 102 | B06-D16 | `fix/102-environment-cosmetic-country-my` | PROD Environment hits api.myinvois; checkout country default is MYS |
 | 103 | B06-D17 | `fix/103-deduct-after-persist` | Live deduct already runs before persist (shipped with 091) |
+| 104 | B06-D18 | `fix/104-accepted-for-processing` | Integrator submit returns pending; B2B pay proceeds without MyInvois |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
