@@ -75,6 +75,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 063 | B04-P06 | `fix/063-webhook-tenant-eventid` | Inbound tenant_id must match URL tenant; EventId unique is per tenant |
 | 064 | B04-P07 | `fix/064-offsession-pending-not-success` | Stripe processing / CHIP pending_charge are not off-session success |
 | 065 | B04-P08 | `fix/065-ignore-late-payment-failed` | Late PAYMENT_FAILED after COMPLETED on the same object is ignored |
+| 066 | B04-P09 | `fix/066-razorpay-eventid-fallback` | Razorpay EventId fallback is namespaced, not the bare payment id |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

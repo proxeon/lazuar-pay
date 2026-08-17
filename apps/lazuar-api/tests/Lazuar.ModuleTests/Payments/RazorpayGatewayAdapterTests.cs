@@ -158,4 +158,56 @@ public class RazorpayGatewayAdapterTests
         result.Error.Should().Contain("currency");
         result.Currency.Should().NotBe("MYR");
     }
+
+    [Test]
+    public async Task ParseWebhook_FailThenCapture_WithoutHeader_UseDistinctEventIds()
+    {
+        var failBody = """
+            {
+              "event": "payment.failed",
+              "payload": {
+                "payment": {
+                  "entity": {
+                    "id": "pay_same",
+                    "amount": 5000,
+                    "currency": "MYR"
+                  }
+                }
+              }
+            }
+            """;
+        var captureBody = """
+            {
+              "event": "payment.captured",
+              "payload": {
+                "payment": {
+                  "entity": {
+                    "id": "pay_same",
+                    "amount": 5000,
+                    "currency": "MYR"
+                  }
+                }
+              }
+            }
+            """;
+        var failHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-Razorpay-Signature"] = Sign(failBody)
+        };
+        var captureHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-Razorpay-Signature"] = Sign(captureBody)
+        };
+
+        var failed = await CreateAdapter().ParseWebhookAsync("key:secret", WebhookSecret, failBody, failHeaders);
+        var captured = await CreateAdapter().ParseWebhookAsync("key:secret", WebhookSecret, captureBody, captureHeaders);
+
+        failed.Verified.Should().BeTrue();
+        captured.Verified.Should().BeTrue();
+        failed.EventId.Should().Be("PAYMENT_FAILED:pay_same");
+        captured.EventId.Should().Be("PAYMENT_COMPLETED:pay_same");
+        failed.EventId.Should().NotBe(captured.EventId);
+        failed.GatewayTransactionId.Should().Be("pay_same");
+        captured.GatewayTransactionId.Should().Be("pay_same");
+    }
 }

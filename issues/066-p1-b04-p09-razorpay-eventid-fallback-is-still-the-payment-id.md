@@ -2,17 +2,21 @@
 number: "066"
 id: B04-P09
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
+resolved_branch: fix/066-razorpay-eventid-fallback
 ---
 
 # 066 — B04-P09 — Razorpay EventId fallback is still the payment id
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/066-razorpay-eventid-fallback`
+
+Missing X-Razorpay-Event-Id uses PAYMENT_COMPLETED:pay_ / PAYMENT_FAILED:pay_ so fail-then-capture cannot collide.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

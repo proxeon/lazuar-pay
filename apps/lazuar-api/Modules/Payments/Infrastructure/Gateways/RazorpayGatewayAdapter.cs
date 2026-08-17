@@ -135,18 +135,9 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             var paymentEntity = doc.RootElement.GetProperty("payload").GetProperty("payment").GetProperty("entity");
             var paymentId = paymentEntity.TryGetProperty("id", out var paymentIdEl) ? paymentIdEl.GetString() : null;
 
-            // Prefer Razorpay delivery id; fall back to payment id. Never invent a Guid — fail closed.
-            var eventIdHeaderKey = headers.Keys.FirstOrDefault(k => k.Equals("X-Razorpay-Event-Id", StringComparison.OrdinalIgnoreCase));
-            string? eventId = null;
-            if (!string.IsNullOrEmpty(eventIdHeaderKey) && headers.TryGetValue(eventIdHeaderKey, out var headerEventId))
-            {
-                eventId = headerEventId;
-            }
-
-            if (string.IsNullOrWhiteSpace(eventId))
-            {
-                eventId = paymentId;
-            }
+            // Prefer Razorpay delivery id. Bare payment id is not an EventId — fail and
+            // capture for the same pay_ would otherwise collide (008 residual).
+            var eventId = ResolveEventId(headers, "PAYMENT_COMPLETED", paymentId);
 
             if (string.IsNullOrWhiteSpace(eventId))
             {
@@ -302,6 +293,28 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         throw new InvalidOperationException("Razorpay does not provide a managed customer billing portal.");
     }
 
+    internal static string? ResolveEventId(
+        Dictionary<string, string> headers,
+        string mappedEventType,
+        string? paymentId)
+    {
+        var eventIdHeaderKey = headers.Keys.FirstOrDefault(k =>
+            k.Equals("X-Razorpay-Event-Id", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrEmpty(eventIdHeaderKey)
+            && headers.TryGetValue(eventIdHeaderKey, out var headerEventId)
+            && !string.IsNullOrWhiteSpace(headerEventId))
+        {
+            return headerEventId.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(paymentId))
+        {
+            return null;
+        }
+
+        return mappedEventType + ":" + paymentId;
+    }
+
     internal static bool IsPaymentFailedEvent(string? eventType) =>
         eventType is "payment.failed" or "invoice.expired";
 
@@ -337,14 +350,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             ? paymentIdEl.GetString()
             : null;
 
-        var eventIdHeaderKey = headers.Keys.FirstOrDefault(k => k.Equals("X-Razorpay-Event-Id", StringComparison.OrdinalIgnoreCase));
-        string? eventId = null;
-        if (!string.IsNullOrEmpty(eventIdHeaderKey) && headers.TryGetValue(eventIdHeaderKey, out var headerEventId))
-        {
-            eventId = headerEventId;
-        }
-
-        eventId = string.IsNullOrWhiteSpace(eventId) ? paymentId : eventId;
+        var eventId = ResolveEventId(headers, "PAYMENT_FAILED", paymentId);
         if (string.IsNullOrWhiteSpace(eventId))
         {
             return new GatewayWebhookParsedResult(
