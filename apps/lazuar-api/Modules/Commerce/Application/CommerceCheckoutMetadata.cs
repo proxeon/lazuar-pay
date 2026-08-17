@@ -11,6 +11,7 @@ public static class CommerceCheckoutMetadata
 {
     public const string TypeCommerce = "commerce_subscription";
     public const string TypeSaas = "saas_subscription";
+    public const string TypeTrial = "trial";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -32,7 +33,8 @@ public static class CommerceCheckoutMetadata
 
     public static bool IsCommerceSubscriptionType(string? type) =>
         string.Equals(type, TypeCommerce, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(type, TypeSaas, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(type, TypeSaas, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(type, TypeTrial, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Merge client metadata into the Payments dictionary.

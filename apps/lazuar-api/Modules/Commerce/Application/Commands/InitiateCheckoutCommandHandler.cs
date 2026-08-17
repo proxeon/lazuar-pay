@@ -296,7 +296,6 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                     session.Id,
                     isB2bRequired);
                 vaultMetadata["client_profile_id"] = clientProfileId.ToString();
-                vaultMetadata["type"] = isTrial ? "trial" : "commerce_subscription";
                 var vaultQuery = new GenerateCheckoutSessionQuery(
                     tenantId.Value,
                     0m,

@@ -67,6 +67,7 @@ public class CommerceCheckoutMetadataTests
     {
         CommerceCheckoutMetadata.IsCommerceSubscriptionType("saas_subscription").Should().BeTrue();
         CommerceCheckoutMetadata.IsCommerceSubscriptionType("commerce_subscription").Should().BeTrue();
+        CommerceCheckoutMetadata.IsCommerceSubscriptionType("trial").Should().BeTrue();
         CommerceCheckoutMetadata.IsCommerceSubscriptionType("custom_payment_link").Should().BeFalse();
     }
 }

@@ -467,6 +467,99 @@ public class CommerceProductCompletenessTests
     }
 
     [Test]
+    public async Task InitiateCheckout_TrialStripeMonthly_MintsHop2WithCommerceType()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId);
+        product.SetTrialDays(14);
+
+        CheckoutSession? session = null;
+        GenerateCheckoutSessionQuery? payments = null;
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
+            .Do(ci => session = ci.Arg<CheckoutSession>());
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+        mediator.Send(Arg.Do<GenerateCheckoutSessionQuery>(q => payments = q), Arg.Any<CancellationToken>())
+            .Returns("https://checkout.stripe.test/cs_trial");
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        var result = await handler.Handle(GuestCheckoutCommand(couponCode: null), CancellationToken.None);
+
+        session.Should().NotBeNull();
+        session!.Status.Should().Be("OPEN");
+        result.IsZeroAmountBypass.Should().BeFalse();
+        result.Url.Should().Be("https://checkout.stripe.test/cs_trial");
+
+        payments.Should().NotBeNull();
+        payments!.Amount.Should().Be(0m);
+        payments.SetupFutureUsage.Should().BeTrue();
+        payments.Metadata["type"].Should().Be("commerce_subscription");
+        payments.Metadata.Should().NotContainValue("trial");
+
+        await mediator.DidNotReceive().Send(
+            Arg.Any<ProcessZeroAmountCheckoutCommand>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GatewayPaymentCompleted_TrialProduct_CommerceType_ActivatesTrialingWithVault()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId);
+        product.SetTrialDays(14);
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+
+        db.Products.Add(product);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        await handler.HandleAsync(CreateCommercePaymentCompleted(
+            orgId, session.Id, customerId: "cus_trial", tokenId: "pm_trial", amountPaid: 0m));
+
+        var reloaded = await db.CheckoutSessions.IgnoreQueryFilters().FirstAsync(s => s.Id == session.Id);
+        reloaded.Status.Should().Be("COMPLETED");
+
+        var sub = await db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.ClientProfileId == clientId);
+        sub.Status.Should().Be("TRIALING");
+        sub.IsReminderOnly.Should().BeFalse();
+        sub.VaultedCustomerId.Should().Be("cus_trial");
+        sub.VaultedTokenId.Should().Be("pm_trial");
+    }
+
+    [Test]
+    public async Task GatewayPaymentCompleted_LegacyTypeTrial_ActivatesTrialingWithVault()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId);
+        product.SetTrialDays(14);
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
+
+        db.Products.Add(product);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var handler = CreateOpenCheckoutPaymentHandler(db, clientId);
+        var ev = CreateCommercePaymentCompleted(
+            orgId, session.Id, customerId: "cus_trial", tokenId: "pm_trial", amountPaid: 0m);
+        ev.Metadata["type"] = "trial";
+
+        await handler.HandleAsync(ev);
+
+        var reloaded = await db.CheckoutSessions.IgnoreQueryFilters().FirstAsync(s => s.Id == session.Id);
+        reloaded.Status.Should().Be("COMPLETED");
+        var sub = await db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.ClientProfileId == clientId);
+        sub.Status.Should().Be("TRIALING");
+        sub.VaultedTokenId.Should().Be("pm_trial");
+    }
+
+    [Test]
     public async Task InitiateCheckout_HundredPercentCoupon_BillplzMonthly_StillBypasses()
     {
         var orgId = Guid.CreateVersion7();
