@@ -326,9 +326,11 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
             return false;
         }
 
-        var expected = Encoding.UTF8.GetBytes(webhookSecret);
-        var actual = Encoding.UTF8.GetBytes(presented);
-        return expected.Length == actual.Length && CryptographicOperations.FixedTimeEquals(expected, actual);
+        // Hash first so a length mismatch is still constant-time. Xendit does not
+        // send a body HMAC — this is a shared callback token, not a signature.
+        var expected = SHA256.HashData(Encoding.UTF8.GetBytes(webhookSecret));
+        var actual = SHA256.HashData(Encoding.UTF8.GetBytes(presented));
+        return CryptographicOperations.FixedTimeEquals(expected, actual);
     }
 
     internal static GatewayWebhookParsedResult MapInvoiceCallback(string rawBody)

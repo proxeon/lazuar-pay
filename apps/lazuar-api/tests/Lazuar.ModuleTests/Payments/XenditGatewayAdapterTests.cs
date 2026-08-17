@@ -16,6 +16,23 @@ public class XenditGatewayAdapterTests
         new(Substitute.For<System.Net.Http.IHttpClientFactory>(), NullLogger<XenditGatewayAdapter>.Instance);
 
     [Test]
+    public void VerifyCallbackToken_LengthMismatch_IsNotVerified()
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["x-callback-token"] = "short"
+        };
+
+        XenditGatewayAdapter.VerifyCallbackToken("a-much-longer-callback-secret", headers)
+            .Should().BeFalse();
+        XenditGatewayAdapter.VerifyCallbackToken("callback-secret", new Dictionary<string, string>
+        {
+            ["x-callback-token"] = "callback-secret"
+        }).Should().BeTrue();
+        XenditGatewayAdapter.VerifyCallbackToken("", headers).Should().BeFalse();
+    }
+
+    [Test]
     public async Task ParseWebhook_MissingToken_IsNotVerified()
     {
         var result = await CreateAdapter().ParseWebhookAsync(
