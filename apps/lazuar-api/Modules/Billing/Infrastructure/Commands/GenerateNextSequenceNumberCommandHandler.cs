@@ -1,44 +1,43 @@
-using System;
-using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
-using Dapper;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Contracts.Commands;
+using Modules.Billing.Domain.Entities;
 
 namespace Modules.Billing.Infrastructure.Commands;
 
 public class GenerateNextSequenceNumberCommandHandler : ICommandHandler<GenerateNextSequenceNumberCommand, string>
 {
-    private readonly ISqlConnectionFactory _connectionFactory;
+    private readonly BillingDbContext _db;
 
-    public GenerateNextSequenceNumberCommandHandler([FromKeyedServices("BillingSqlConnectionFactory")] ISqlConnectionFactory connectionFactory)
+    public GenerateNextSequenceNumberCommandHandler(BillingDbContext db)
     {
-        _connectionFactory = connectionFactory;
+        _db = db;
     }
 
     public async Task<string> Handle(GenerateNextSequenceNumberCommand request, CancellationToken ct)
     {
-        using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) connection.Open();
+        // Same DbContext as the ledger SaveChanges. Callers wrap both in
+        // IBillingTransactional so a failed persist rolls the increment back.
+        var seq = await _db.DocumentSequences
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                s => s.OrganizationId == request.OrganizationId && s.Prefix == request.Prefix,
+                ct);
 
-        // Atomically upserts and returns the incremented sequence value. 
-        // This is safe under concurrency and prevents sequence gaps during rollbacks.
-        const string sql = @"
-            INSERT INTO billing.""DocumentSequences"" (""Id"", ""OrganizationId"", ""Prefix"", ""CurrentValue"")
-            VALUES (@Id, @OrganizationId, @Prefix, 1)
-            ON CONFLICT (""OrganizationId"", ""Prefix"") 
-            DO UPDATE SET ""CurrentValue"" = billing.""DocumentSequences"".""CurrentValue"" + 1
-            RETURNING ""CurrentValue"";";
-
-        var nextValue = await connection.QuerySingleAsync<long>(sql, new
+        if (seq is null)
         {
-            Id = Guid.CreateVersion7(),
-            OrganizationId = request.OrganizationId,
-            Prefix = request.Prefix
-        });
+            seq = new DocumentSequence(request.OrganizationId, request.Prefix);
+            seq.Increment();
+            _db.DocumentSequences.Add(seq);
+        }
+        else
+        {
+            seq.Increment();
+        }
 
-        return $"{request.Prefix}-{nextValue:D5}";
+        await _db.SaveChangesAsync(ct);
+        return $"{request.Prefix}-{seq.CurrentValue:D5}";
     }
 }

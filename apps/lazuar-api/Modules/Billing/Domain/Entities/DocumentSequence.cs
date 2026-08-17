@@ -21,4 +21,10 @@ public class DocumentSequence : Entity, IMustHaveTenant
         Prefix = prefix;
         CurrentValue = startValue;
     }
+
+    public long Increment()
+    {
+        CurrentValue += 1;
+        return CurrentValue;
+    }
 }

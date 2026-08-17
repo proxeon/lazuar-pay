@@ -88,6 +88,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 076 | B05-L06 | `fix/076-b2b-tax-resolved-sst` | B2B MyInvois tax is resolved SST, not raw event.TaxAmount |
 | 077 | B05-L07 | `fix/077-refund-not-b2c-consolidation` | GATEWAY_REFUND is not required for B2C consolidation |
 | 078 | B05-L08 | `fix/078-already-consolidated-ignore-filters` | alreadyConsolidated already IgnoreQueryFilters; leftover PENDING does not re-issue |
+| 079 | B05-L09 | `fix/079-sequence-in-ledger-transaction` | Sequence increment shares the ledger SaveChanges transaction |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

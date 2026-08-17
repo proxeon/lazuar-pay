@@ -43,41 +43,51 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
 
         var taxRefund = await ResolveTaxRefundAmountAsync(@event);
 
-        var entry = new LedgerEntry(
-            @event.OrganizationId,
-            referenceType,
-            referenceId,
-            $"Refund processed for subscription {@event.SubscriptionId} (gateway tx {@event.GatewayTransactionId})");
-
-        var cashOutflow = @event.RefundedAmount - @event.RefundedFee;
-        var grossRefund = @event.RefundedAmount - taxRefund;
-
-        // Mirror GatewayPaymentCompletedHandler: cash/fee/revenue/tax symmetry with opposite signs.
-        entry.AddLine(AccountTypes.AssetCash, -cashOutflow, @event.Currency, -cashOutflow, @event.Currency);
-
-        if (@event.RefundedFee > 0)
+        async Task PersistAsync(CancellationToken ct)
         {
-            entry.AddLine(AccountTypes.ExpenseGatewayFee, -@event.RefundedFee, @event.Currency, -@event.RefundedFee, @event.Currency);
+            var entry = new LedgerEntry(
+                @event.OrganizationId,
+                referenceType,
+                referenceId,
+                $"Refund processed for subscription {@event.SubscriptionId} (gateway tx {@event.GatewayTransactionId})");
+
+            var cashOutflow = @event.RefundedAmount - @event.RefundedFee;
+            var grossRefund = @event.RefundedAmount - taxRefund;
+
+            entry.AddLine(AccountTypes.AssetCash, -cashOutflow, @event.Currency, -cashOutflow, @event.Currency);
+
+            if (@event.RefundedFee > 0)
+            {
+                entry.AddLine(AccountTypes.ExpenseGatewayFee, -@event.RefundedFee, @event.Currency, -@event.RefundedFee, @event.Currency);
+            }
+
+            entry.AddLine(AccountTypes.ContraRevenueRefunds, grossRefund, @event.Currency, grossRefund, @event.Currency);
+
+            if (taxRefund > 0)
+            {
+                entry.AddLine(AccountTypes.LiabilityTaxPayable, taxRefund, @event.Currency, taxRefund, @event.Currency);
+            }
+
+            entry.ValidateBalanced();
+            entry.MarkConsolidationNotRequired();
+
+            var creditNoteNumber = await _mediator.Send(
+                new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.CreditNotePrefix()), ct);
+            if (!string.IsNullOrWhiteSpace(creditNoteNumber))
+                entry.AssignCustomerDocumentNumber(creditNoteNumber);
+
+            _repository.Add(entry);
+            await _repository.SaveChangesAsync(ct);
         }
 
-        entry.AddLine(AccountTypes.ContraRevenueRefunds, grossRefund, @event.Currency, grossRefund, @event.Currency);
-
-        if (taxRefund > 0)
+        if (_repository is IBillingTransactional transactional)
         {
-            // Original payment credits LIABILITY_TAX_PAYABLE (negative); reverse with a debit (positive).
-            entry.AddLine(AccountTypes.LiabilityTaxPayable, taxRefund, @event.Currency, taxRefund, @event.Currency);
+            await transactional.ExecuteInTransactionAsync(PersistAsync);
         }
-
-        entry.ValidateBalanced();
-        entry.MarkConsolidationNotRequired();
-
-        var creditNoteNumber = await _mediator.Send(
-            new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.CreditNotePrefix()));
-        if (!string.IsNullOrWhiteSpace(creditNoteNumber))
-            entry.AssignCustomerDocumentNumber(creditNoteNumber);
-
-        _repository.Add(entry);
-        await _repository.SaveChangesAsync();
+        else
+        {
+            await PersistAsync(default);
+        }
     }
 
     /// <summary>

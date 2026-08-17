@@ -55,67 +55,78 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             return;
 
         var isB2b = @event.Metadata.TryGetValue("is_b2b_required", out var b2bFlag) && b2bFlag == "true";
-
-        // The LedgerEntry constructor assigns Timestamp = DateTime.UtcNow automatically.
-        // This ensures LHDN e-Invoices reflect the actual realization date of the recovered payment,
-        // rather than the original overdue NextBillingDate of the subscription.
-        var entry = new LedgerEntry(
-            @event.OrganizationId,
-            referenceType,
-            referenceId,
-            $"Gateway payment completed via {@event.Metadata.GetValueOrDefault("type", "UNKNOWN")}",
-            isB2b ? "B2B" : "B2C");
-
-        var baseCurrency = @event.BaseCurrency;
-        var fxRate = @event.FxRate;
         var taxAmount = ResolveTaxAmount(@event);
         var taxType = ResolveTaxType(@event, taxAmount);
         var msic = isB2b ? "022" : "004";
         var grossRevenue = @event.AmountPaid - taxAmount;
+        LedgerEntry? entry = null;
 
-        entry.AddLine(AccountTypes.AssetCash, @event.NetAmount, @event.Currency, @event.NetAmount * fxRate, baseCurrency);
-
-        if (@event.GatewayFee > 0)
+        async Task PersistAsync(CancellationToken ct)
         {
-            entry.AddLine(AccountTypes.ExpenseGatewayFee, @event.GatewayFee, @event.Currency, @event.GatewayFee * fxRate, baseCurrency);
-        }
+            entry = new LedgerEntry(
+                @event.OrganizationId,
+                referenceType,
+                referenceId,
+                $"Gateway payment completed via {@event.Metadata.GetValueOrDefault("type", "UNKNOWN")}",
+                isB2b ? "B2B" : "B2C");
 
-        entry.AddLine(AccountTypes.RevenueGross, -grossRevenue, @event.Currency, -grossRevenue * fxRate, baseCurrency, taxType, msic);
+            var baseCurrency = @event.BaseCurrency;
+            var fxRate = @event.FxRate;
 
-        if (taxAmount > 0)
-        {
-            entry.AddLine(AccountTypes.LiabilityTaxPayable, -taxAmount, @event.Currency, -taxAmount * fxRate, baseCurrency, taxType, msic);
-        }
+            entry.AddLine(AccountTypes.AssetCash, @event.NetAmount, @event.Currency, @event.NetAmount * fxRate, baseCurrency);
 
-        entry.ValidateBalanced();
-        _repository.Add(entry);
-
-        if (!isB2b)
-        {
-            var receiptNumber = await _mediator.Send(
-                new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.ReceiptPrefix()));
-            entry.AssignB2cReceipt(receiptNumber);
-            if (@event.AmountPaid > _b2cIndividualThresholdMyr)
+            if (@event.GatewayFee > 0)
             {
-                entry.MarkConsolidationNotRequired();
-                entry.UpdateLhdnStatus(null, LhdnValidationStatuses.NeedsBuyerTin);
+                entry.AddLine(AccountTypes.ExpenseGatewayFee, @event.GatewayFee, @event.Currency, @event.GatewayFee * fxRate, baseCurrency);
             }
+
+            entry.AddLine(AccountTypes.RevenueGross, -grossRevenue, @event.Currency, -grossRevenue * fxRate, baseCurrency, taxType, msic);
+
+            if (taxAmount > 0)
+            {
+                entry.AddLine(AccountTypes.LiabilityTaxPayable, -taxAmount, @event.Currency, -taxAmount * fxRate, baseCurrency, taxType, msic);
+            }
+
+            entry.ValidateBalanced();
+            _repository.Add(entry);
+
+            if (!isB2b)
+            {
+                var receiptNumber = await _mediator.Send(
+                    new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.ReceiptPrefix()), ct);
+                entry.AssignB2cReceipt(receiptNumber);
+                if (@event.AmountPaid > _b2cIndividualThresholdMyr)
+                {
+                    entry.MarkConsolidationNotRequired();
+                    entry.UpdateLhdnStatus(null, LhdnValidationStatuses.NeedsBuyerTin);
+                }
+            }
+            else
+            {
+                var invoiceNumber = await _mediator.Send(
+                    new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.InvoicePrefix()), ct);
+                entry.AssignB2bInvoice(invoiceNumber);
+            }
+
+            await _repository.SaveChangesAsync(ct);
+        }
+
+        if (_repository is IBillingTransactional transactional)
+        {
+            await transactional.ExecuteInTransactionAsync(PersistAsync);
         }
         else
         {
-            var invoiceNumber = await _mediator.Send(
-                new GenerateNextSequenceNumberCommand(@event.OrganizationId, DocumentSeries.InvoicePrefix()));
-            entry.AssignB2bInvoice(invoiceNumber);
+            await PersistAsync(default);
         }
 
-        await _repository.SaveChangesAsync();
-
+        var booked = entry!;
         var correlation = ResolveDocumentCorrelation(@event);
         if (!isB2b)
         {
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
-                entry.Id,
+                booked.Id,
                 "Official Receipt",
                 CorrelationId: correlation
             ));
@@ -124,15 +135,15 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
         {
             await _mediator.Send(new GenerateAndStoreDocumentCommand(
                 @event.OrganizationId,
-                entry.Id,
+                booked.Id,
                 "Invoice",
                 CorrelationId: correlation
             ));
 
             await _eventBus.PublishAsync(new B2bTaxInvoiceRequestedIntegrationEvent(
                 @event.OrganizationId,
-                entry.Id,
-                entry.CustomerDocumentNumber!,
+                booked.Id,
+                booked.CustomerDocumentNumber!,
                 @event.GatewayTransactionId,
                 grossRevenue,
                 taxAmount,
