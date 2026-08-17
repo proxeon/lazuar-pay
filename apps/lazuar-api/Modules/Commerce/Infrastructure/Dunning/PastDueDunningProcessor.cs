@@ -242,7 +242,7 @@ public sealed class PastDueDunningProcessor
         var terminalDay = ResolveTerminalDayOffset(
             snapshot.GracePeriodDays,
             snapshot.Steps.Select(s => s.DayOffset));
-        if (daysOverdue < terminalDay
+        if (daysOverdue <= terminalDay
             || (snapshot.FinalAction != "CANCEL" && snapshot.FinalAction != "SUSPEND"))
         {
             return;

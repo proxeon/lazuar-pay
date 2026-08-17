@@ -812,7 +812,7 @@ public class DunningEngineJobTests
     {
         var product = CreateProduct(_orgId, "STRIPE");
         var campaign = EmailCampaign(_orgId, "CANCEL", grace: 3, dayOffset: 7);
-        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 7);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 8);
         sub.AssignDunningCampaign(campaign.Id);
         var cancelsBefore = LazuarMetrics.DunningCancelsTotal;
 
@@ -870,7 +870,7 @@ public class DunningEngineJobTests
     {
         var product = CreateProduct(_orgId, "STRIPE");
         var campaign = EmailCampaign(_orgId, "SUSPEND", grace: 7, dayOffset: 3);
-        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 7);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 8);
         sub.AssignDunningCampaign(campaign.Id);
 
         _db.Products.Add(product);
@@ -895,7 +895,7 @@ public class DunningEngineJobTests
     }
 
     [Test]
-    public async Task GraceZero_DispatchesDayZeroThenCancels()
+    public async Task GraceZero_DispatchesDayZeroWithoutCancel()
     {
         var product = CreateProduct(_orgId, "STRIPE");
         var campaign = EmailCampaign(_orgId, "CANCEL", grace: 0, dayOffset: 0);
@@ -911,12 +911,32 @@ public class DunningEngineJobTests
 
         var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
             .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
-        reloaded.Status.Should().Be("CANCELED");
+        reloaded.Status.Should().Be("PAST_DUE");
         reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
 
         await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
             e.EventType == "reminder.dunning"
             && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
+    }
+
+    [Test]
+    public async Task GraceZero_CancelsOnTheNextDay()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var campaign = EmailCampaign(_orgId, "CANCEL", grace: 0, dayOffset: 0);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 1);
+        sub.AssignDunningCampaign(campaign.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        (await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id))
+            .Status.Should().Be("CANCELED");
         await _eventBus.Received(1).PublishAsync(Arg.Any<SubscriptionCanceledIntegrationEvent>());
     }
 
@@ -952,7 +972,7 @@ public class DunningEngineJobTests
     {
         var product = CreateProduct(_orgId, "STRIPE");
         var campaign = new DunningCampaign(_orgId, "Empty timeline", "CANCEL", gracePeriodDays: 3, priorityOrder: 1);
-        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 3);
+        var sub = PastDueSub(_orgId, product.Id, daysOverdue: 4);
         sub.AssignDunningCampaign(campaign.Id);
 
         _db.Products.Add(product);
