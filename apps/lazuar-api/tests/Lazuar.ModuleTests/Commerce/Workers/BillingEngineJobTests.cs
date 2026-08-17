@@ -473,6 +473,8 @@ public class BillingEngineJobTests
         _db.DunningCampaigns.Add(campaign);
         await _db.SaveChangesAsync();
 
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
+
         await _job.RunOnceAsync(CancellationToken.None);
 
         var a = await _db.Subscriptions.IgnoreQueryFilters()

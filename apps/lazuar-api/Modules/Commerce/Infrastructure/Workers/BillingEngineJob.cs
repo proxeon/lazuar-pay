@@ -322,9 +322,19 @@ public class BillingEngineJob : BackgroundService
                 return;
             }
 
+            // TRIALING never enters dunning; without a webhook it would stall forever.
+            // ACTIVE attempt-1 waits for the payment webhook (or a later failed handler).
+            if (!string.Equals(sub.Status, "TRIALING", StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "Subscription {Id} already has attempt 1 for {Date}; waiting for webhook.",
+                    sub.Id, targetDate);
+                return;
+            }
+
             _logger.LogWarning(
-                "Subscription {Id} still {Status} after attempt 1 with no webhook; marking PAST_DUE.",
-                sub.Id, sub.Status);
+                "Subscription {Id} still TRIALING after attempt 1 with no webhook; marking PAST_DUE.",
+                sub.Id);
         }
 
         string? email = null;
