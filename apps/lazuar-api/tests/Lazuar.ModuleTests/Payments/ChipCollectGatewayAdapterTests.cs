@@ -37,6 +37,7 @@ public class ChipCollectGatewayAdapterTests
         handler.LastRequest.Should().NotBeNull();
         handler.LastRequest!.Method.Should().Be(HttpMethod.Post);
         handler.LastRequest.RequestUri!.ToString().Should().Be("https://gate.chip-in.asia/api/v1/purchases/purch_99/refund/");
+        handler.LastRequest.Headers.Should().Contain(h => h.Key == "Idempotency-Key");
         handler.LastBody.Should().Contain("\"amount\"");
         handler.LastBody.Should().Contain("1234");
     }

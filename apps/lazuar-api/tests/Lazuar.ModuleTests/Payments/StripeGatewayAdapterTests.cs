@@ -20,6 +20,9 @@ public class StripeGatewayAdapterTests
     {
         StripeGatewayAdapter.FormatRefundIdempotencyKey("pi_abc", 12.34m)
             .Should().Be("lazuar-refund:pi_abc:1234");
+        StripeGatewayAdapter.IsRefundSucceeded("succeeded").Should().BeTrue();
+        StripeGatewayAdapter.IsRefundSucceeded("pending").Should().BeFalse();
+        StripeGatewayAdapter.IsRefundSucceeded("failed").Should().BeFalse();
     }
 
     [Test]

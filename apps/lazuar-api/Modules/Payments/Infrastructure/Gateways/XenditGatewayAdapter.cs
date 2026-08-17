@@ -123,6 +123,9 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
             var client = _httpFactory.CreateClient();
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{LiveApiBase}/refunds");
             request.Headers.Authorization = BasicAuth(apiKey);
+            request.Headers.TryAddWithoutValidation(
+                "Idempotency-key",
+                GatewayCommon.FormatRefundIdempotencyKey(transactionId, amount));
             request.Content = JsonContent.Create(new Dictionary<string, object>
             {
                 ["invoice_id"] = transactionId,

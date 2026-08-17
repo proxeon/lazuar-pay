@@ -329,7 +329,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             var refund = await service.CreateAsync(
                 options,
                 new RequestOptions { IdempotencyKey = FormatRefundIdempotencyKey(transactionId, amount) });
-            return refund.Status == "succeeded" || refund.Status == "pending";
+            return IsRefundSucceeded(refund.Status);
         }
         catch (StripeException ex)
         {
@@ -370,13 +370,13 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             GatewayTokenId: pi.PaymentMethodId);
     }
 
-    internal const string RefundIdempotencyKeyPrefix = "lazuar-refund:";
+    internal const string RefundIdempotencyKeyPrefix = GatewayCommon.RefundIdempotencyKeyPrefix;
 
-    internal static string FormatRefundIdempotencyKey(string transactionId, decimal amount)
-    {
-        var amountMinor = (long)(amount * 100);
-        return RefundIdempotencyKeyPrefix + transactionId + ":" + amountMinor;
-    }
+    internal static string FormatRefundIdempotencyKey(string transactionId, decimal amount) =>
+        GatewayCommon.FormatRefundIdempotencyKey(transactionId, amount);
+
+    internal static bool IsRefundSucceeded(string? status) =>
+        string.Equals(status, "succeeded", StringComparison.OrdinalIgnoreCase);
 
     internal const string OffSessionIdempotencyKeyPrefix = "lazuar-offsession:";
 

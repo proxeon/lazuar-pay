@@ -349,7 +349,12 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 payload = new { amount = GatewayCommon.ToMinorUnitsRounded(amount) };
             }
 
-            var response = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/{transactionId}/refund/", payload);
+            var response = await SendJsonAsync(
+                client,
+                HttpMethod.Post,
+                $"{ApiBaseUrl}purchases/{transactionId}/refund/",
+                payload,
+                GatewayCommon.FormatRefundIdempotencyKey(transactionId, amount));
 
             if (response.IsSuccessStatusCode)
             {

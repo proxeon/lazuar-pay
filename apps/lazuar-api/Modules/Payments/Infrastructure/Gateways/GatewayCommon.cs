@@ -54,6 +54,14 @@ internal static class GatewayCommon
     /// tenant as <c>platform_tenant_id</c> when it differs so system checkout does not
     /// overwrite the workspace that must be activated.
     /// </summary>
+    internal const string RefundIdempotencyKeyPrefix = "lazuar-refund:";
+
+    public static string FormatRefundIdempotencyKey(string transactionId, decimal amount)
+    {
+        var amountMinor = (long)(amount * 100);
+        return RefundIdempotencyKeyPrefix + transactionId + ":" + amountMinor;
+    }
+
     public static void ApplyPayingTenantMetadata(Dictionary<string, string> metadata, Guid adapterTenantId)
     {
         var adapterId = adapterTenantId.ToString();

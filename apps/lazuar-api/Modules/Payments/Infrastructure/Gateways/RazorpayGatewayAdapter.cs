@@ -224,7 +224,14 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         try
         {
             var client = GetClient(apiKey);
-            var refundReq = new Dictionary<string, object> { { "amount", GatewayCommon.ToMinorUnitsTruncating(amount) } };
+            var refundReq = new Dictionary<string, object>
+            {
+                ["amount"] = GatewayCommon.ToMinorUnitsTruncating(amount),
+                ["notes"] = new Dictionary<string, object>
+                {
+                    ["idempotency_key"] = GatewayCommon.FormatRefundIdempotencyKey(transactionId, amount)
+                }
+            };
             var refund = client.Payment.Fetch(transactionId).Refund(amount > 0 ? refundReq : null);
             return Task.FromResult(refund != null);
         }
