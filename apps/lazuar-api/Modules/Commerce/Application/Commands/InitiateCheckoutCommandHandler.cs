@@ -118,6 +118,16 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                     throw new InvalidOperationException("This payment request requires a tax ID.");
                 }
 
+                if (string.IsNullOrWhiteSpace(request.CompanyName))
+                {
+                    throw new InvalidOperationException("This payment request requires a company name.");
+                }
+
+                if (string.IsNullOrWhiteSpace(request.IdType) || string.IsNullOrWhiteSpace(request.IdValue))
+                {
+                    throw new InvalidOperationException("This payment request requires buyer ID type and ID value (BRN / NRIC / PASSPORT / ARMY).");
+                }
+
                 BillingAddressDto? customBillingAddress = null;
                 if (!string.IsNullOrEmpty(request.AddressLine1))
                 {

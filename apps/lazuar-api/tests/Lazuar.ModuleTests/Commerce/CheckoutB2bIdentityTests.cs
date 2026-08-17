@@ -100,7 +100,8 @@ public class CheckoutB2bIdentityTests
 
         var handler = CreateHandler(orgId, repository, mediator);
         await handler.Handle(
-            GuestCommand(taxId: "C12345678901", companyName: "Acme Sdn Bhd") with { SessionId = session.Id },
+            GuestCommand(taxId: "C12345678901", companyName: "Acme Sdn Bhd", idType: "BRN", idValue: "202401001234")
+                with { SessionId = session.Id },
             CancellationToken.None);
 
         await mediator.Received(1).Send(
@@ -113,10 +114,33 @@ public class CheckoutB2bIdentityTests
             Arg.Is<ResolveClientProfileCommand>(c =>
                 c.Tin == "C12345678901"
                 && c.CompanyName == "Acme Sdn Bhd"
-                && c.IdValue != "Acme Sdn Bhd"
-                && c.IdValue == null
-                && c.IdType == null),
+                && c.IdType == "BRN"
+                && c.IdValue == "202401001234"
+                && c.IdValue != "Acme Sdn Bhd"),
             Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task InitiateCheckout_CustomSession_MissingIdPair_Throws()
+    {
+        var orgId = Guid.CreateVersion7();
+        var session = new CheckoutSession(
+            orgId,
+            Guid.CreateVersion7(),
+            new[] { new AdHocLineItem("Consulting", 1, 250m) },
+            DateTime.UtcNow.AddDays(1),
+            isB2bRequired: true);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+
+        var handler = CreateHandler(orgId, repository, Substitute.For<IMediator>());
+        var act = async () => await handler.Handle(
+            GuestCommand(taxId: "C12345678901", companyName: "Acme Sdn Bhd") with { SessionId = session.Id },
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*ID type*");
     }
 
     [Test]

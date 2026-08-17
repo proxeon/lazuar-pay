@@ -24,6 +24,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 011 | B06-D01 | `fix/011-quote-b2b-crm-arity` | Quote B2B resolve uses named CRM args; company name is not `IdValue` |
 | 012 | B06-D02 | `fix/012-inv-not-tax-invoice-until-valid` | B2B pay PDF is `Invoice` until MyInvois VALID |
 | 013 | B06-D03 | `fix/013-document-pdf-keep-buyer-tin` | Document PDF billed-to uses CRM TIN/company, not log-only name |
+| 014 | B06-D04 | `fix/014-quoteview-id-pair-validate-tin` | Quote B2B collects ID pair and validates TIN |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

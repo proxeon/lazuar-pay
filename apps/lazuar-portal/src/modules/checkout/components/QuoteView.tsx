@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, Download, Building2, CheckCircle2 } from "lucide-react";
 import { components } from "@repo/api-types-ts";
-import { submitCheckout } from "../lib/api";
+import { submitCheckout, validateTin } from "../lib/api";
 import { cn } from "../../../../lib/utils";
 import Link from "next/link";
 import type { PublicWorkspaceBranding } from "../../core/lib/branding";
@@ -24,6 +24,9 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("");
   const [taxId, setTaxId] = useState("");
+  const [idType, setIdType] = useState("BRN");
+  const [idValue, setIdValue] = useState("");
+  const [tinHint, setTinHint] = useState<string | null>(null);
 
   const isCompleted = checkout.status === "COMPLETED";
   const isExpired = checkout.status === "EXPIRED" || new Date(checkout.expires_at).getTime() < Date.now();
@@ -34,23 +37,44 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
   const quoteNumber = checkout.document_number || "PENDING";
 
   const handleProceedToPayment = async () => {
+    if (checkout.is_b2b_required && !companyName.trim()) {
+      setGlobalError("Company name is required for this payment request.");
+      return;
+    }
     if (checkout.is_b2b_required && !taxId.trim()) {
       setGlobalError("Company tax ID (TIN) is required for this payment request.");
+      return;
+    }
+    if (checkout.is_b2b_required && !idValue.trim()) {
+      setGlobalError("Buyer ID type and ID value (BRN / NRIC / PASSPORT / ARMY) are required.");
       return;
     }
 
     setIsSubmitting(true);
     setGlobalError(null);
+    setTinHint(null);
 
     try {
+      if (checkout.is_b2b_required) {
+        const tin = await validateTin(tenantSlug, taxId.trim(), idType, idValue.trim());
+        if (!tin.is_valid) {
+          setGlobalError("This TIN / ID pair is not valid in MyInvois.");
+          setIsSubmitting(false);
+          return;
+        }
+        setTinHint(tin.taxpayer_name ? `Matched: ${tin.taxpayer_name}` : "TIN is valid.");
+      }
+
       const payload = {
         tenant_slug: tenantSlug,
         product_slug: "custom",
         session_id: checkout.id,
         name: checkout.client_name || "Customer",
         email: checkout.client_email || "customer@example.com",
-        company_name: checkout.is_b2b_required ? companyName.trim() || undefined : undefined,
+        company_name: checkout.is_b2b_required ? companyName.trim() : undefined,
         tax_id: checkout.is_b2b_required ? taxId.trim() : undefined,
+        id_type: checkout.is_b2b_required ? idType : undefined,
+        id_value: checkout.is_b2b_required ? idValue.trim() : undefined,
         is_guest_checkout: true
       };
 
@@ -177,6 +201,23 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
                   placeholder="Tax ID (TIN) *"
                   className="w-full h-9 border border-border bg-background px-3 text-sm"
                 />
+                <select
+                  value={idType}
+                  onChange={(e) => setIdType(e.target.value)}
+                  className="w-full h-9 border border-border bg-background px-3 text-sm"
+                >
+                  <option value="BRN">BRN</option>
+                  <option value="NRIC">NRIC</option>
+                  <option value="PASSPORT">PASSPORT</option>
+                  <option value="ARMY">ARMY</option>
+                </select>
+                <input
+                  value={idValue}
+                  onChange={(e) => setIdValue(e.target.value)}
+                  placeholder="SSM / NRIC / passport no. *"
+                  className="w-full h-9 border border-border bg-background px-3 text-sm"
+                />
+                {tinHint && <p className="text-[11px] text-emerald-700">{tinHint}</p>}
               </div>
             )}
           </div>

@@ -131,7 +131,9 @@ public class CreateCustomCheckoutAndInitiateSessionTests
 
         var result = await handler.Handle(new InitiateCheckoutCommand(
             "acme", "custom", "Buyer", "buyer@example.com", null, "C111122223333", "Buyer Sdn Bhd",
-            null, null, null, null, null, 1, true, null, session.Id), CancellationToken.None);
+            null, null, null, null, null, 1, true, null, session.Id,
+            IdType: "BRN",
+            IdValue: "202401001234"), CancellationToken.None);
 
         result.Url.Should().Be("https://pay.example/hop2");
         await mediator.Received().Send(
