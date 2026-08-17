@@ -2,17 +2,21 @@
 number: "036"
 id: B01-C10
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
+resolved_branch: fix/036-expire-vs-paid-revive
 ---
 
 # 036 — B01-C10 — Expiry job vs paid webhook: money captured, session EXPIRED, no entitlement
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/036-expire-vs-paid-revive`
+
+A paid webhook on an EXPIRED session revives and fulfills, and records the coupon use even after the reservation was released.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

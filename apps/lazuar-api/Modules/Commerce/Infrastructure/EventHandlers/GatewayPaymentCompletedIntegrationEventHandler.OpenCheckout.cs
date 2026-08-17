@@ -22,13 +22,13 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(c => c.Id == session.CouponId.Value && c.OrganizationId == session.OrganizationId);
 
-            if (coupon != null && coupon.ReservedCount > 0)
+            if (coupon != null)
             {
-                coupon.ConfirmReservation();
+                coupon.ConfirmPaidRedemption();
             }
         }
 
-        if (!session.TryComplete())
+        if (!session.TryCompleteFromPayment())
         {
             return;
         }

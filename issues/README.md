@@ -45,6 +45,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 033 | B01-C07 | `fix/033-validate-coupon-chosen-price` | Validate-coupon discounts the chosen price × qty; hop-1 drops the catalog ratio |
 | 034 | B01-C08 | `fix/034-quote-offline-sst` | Custom quotes and mark-paid book exclusive SST when the merchant has an SST id |
 | 035 | B01-C09 | `fix/035-session-complete-cas` | Only one completer wins: TryComplete + Status concurrency token |
+| 036 | B01-C10 | `fix/036-expire-vs-paid-revive` | Paid webhook revives an EXPIRED session and still fulfills |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

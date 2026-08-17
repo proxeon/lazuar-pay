@@ -55,7 +55,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler : IIntegrati
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(s => s.Id == correlationId && s.OrganizationId == @event.OrganizationId);
 
-        if (session != null && session.Status == "OPEN")
+        if (session != null && session.CanFulfillFromPayment)
         {
             await HandleOpenCheckoutSessionAsync(@event, session, type!);
             return;

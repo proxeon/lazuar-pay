@@ -140,6 +140,73 @@ public class CommerceProductCompletenessTests
     }
 
     [Test]
+    public async Task GatewayPaymentCompleted_ExpiredSession_RevivesAndFulfills()
+    {
+        using var db = CreateDb(out var orgId);
+        var product = CreateProduct(orgId);
+        var coupon = new Coupon(orgId, "SAVE10", "PERCENTAGE", 10m, maxUses: 10, expiresAt: null);
+        coupon.Reserve();
+        coupon.ReleaseReservation();
+
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(orgId, clientId, product.Id, coupon.Id, DateTime.UtcNow.AddHours(-2));
+        session.Expire();
+
+        db.Products.Add(product);
+        db.Coupons.Add(coupon);
+        db.CheckoutSessions.Add(session);
+        await db.SaveChangesAsync();
+
+        var subscriptions = new List<Subscription>();
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.When(r => r.AddSubscription(Arg.Any<Subscription>()))
+            .Do(ci =>
+            {
+                var sub = ci.Arg<Subscription>();
+                subscriptions.Add(sub);
+                db.Subscriptions.Add(sub);
+            });
+        repository.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(callInfo => db.SaveChangesAsync(callInfo.Arg<CancellationToken>()));
+
+        var eventBus = Substitute.For<IEventBus>();
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        {
+            Id = clientId.ToString(),
+            Full_name = "Late Payer",
+            Email = "late@example.com"
+        });
+
+        var handler = new GatewayPaymentCompletedIntegrationEventHandler(repository, eventBus, crm, db);
+        await handler.HandleAsync(new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: orgId,
+            GatewayTransactionId: "pi_late_1",
+            AmountPaid: 90m,
+            Currency: "MYR",
+            GatewayFee: 1m,
+            TaxAmount: 0m,
+            NetAmount: 89m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = "commerce_subscription",
+                ["subscription_id"] = session.Id.ToString(),
+                ["tenant_id"] = orgId.ToString()
+            }));
+
+        subscriptions.Should().HaveCount(1);
+        var reloadedSession = await db.CheckoutSessions.IgnoreQueryFilters().FirstAsync(s => s.Id == session.Id);
+        reloadedSession.Status.Should().Be("COMPLETED");
+        var reloadedCoupon = await db.Coupons.IgnoreQueryFilters().FirstAsync(c => c.Id == coupon.Id);
+        reloadedCoupon.UsedCount.Should().Be(1);
+        reloadedCoupon.ReservedCount.Should().Be(0);
+        await eventBus.Received().PublishAsync(Arg.Any<SubscriptionActivatedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task CheckoutSessionExpiryJob_ExpiresOpenSessions_AndReleasesCouponReservation()
     {
         using var db = CreateDb(out var orgId);

@@ -138,9 +138,28 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         }
     }
 
+    public bool CanFulfillFromPayment =>
+        string.Equals(Status, "OPEN", StringComparison.Ordinal)
+        || string.Equals(Status, "EXPIRED", StringComparison.Ordinal);
+
     public bool TryComplete()
     {
         if (!string.Equals(Status, "OPEN", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        Status = "COMPLETED";
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    /// <summary>
+    /// Paid webhook may revive an EXPIRED row (expiry raced a late processor settlement).
+    /// </summary>
+    public bool TryCompleteFromPayment()
+    {
+        if (!CanFulfillFromPayment)
         {
             return false;
         }

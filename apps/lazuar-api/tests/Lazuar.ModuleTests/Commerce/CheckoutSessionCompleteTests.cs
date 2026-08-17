@@ -41,6 +41,17 @@ public class CheckoutSessionCompleteTests
     }
 
     [Test]
+    public void TryCompleteFromPayment_RevivesExpired()
+    {
+        var session = ProductSession();
+        session.TryExpire().Should().BeTrue();
+
+        session.TryCompleteFromPayment().Should().BeTrue();
+        session.Status.Should().Be("COMPLETED");
+        session.TryCompleteFromPayment().Should().BeFalse();
+    }
+
+    [Test]
     public void CustomSession_TryComplete_SameGuard()
     {
         var session = new CheckoutSession(

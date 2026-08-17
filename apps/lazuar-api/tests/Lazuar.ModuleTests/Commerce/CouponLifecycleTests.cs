@@ -86,6 +86,19 @@ public class CouponLifecycleTests
     }
 
     [Test]
+    public void ConfirmPaidRedemption_AfterRelease_IncrementsUsedWithoutReserve()
+    {
+        var coupon = NewCoupon();
+        coupon.Reserve();
+        coupon.ReleaseReservation();
+
+        coupon.ConfirmPaidRedemption();
+
+        coupon.ReservedCount.Should().Be(0);
+        coupon.UsedCount.Should().Be(1);
+    }
+
+    [Test]
     public void CalculateDiscount_PercentageAndFixed()
     {
         var pct = new Coupon(Guid.CreateVersion7(), "P", "PERCENTAGE", 10m, 100, null);

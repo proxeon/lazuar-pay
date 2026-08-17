@@ -119,6 +119,21 @@ public class Coupon : Entity, IAggregateRoot, IMustHaveTenant
         AddDomainEvent(new CouponConfirmedDomainEvent(Id, OrganizationId, Code));
     }
 
+    /// <summary>
+    /// Payment landed after expiry released the reservation — still consume one use.
+    /// </summary>
+    public void ConfirmPaidRedemption()
+    {
+        if (ReservedCount > 0)
+        {
+            ConfirmReservation();
+            return;
+        }
+
+        UsedCount++;
+        AddDomainEvent(new CouponConfirmedDomainEvent(Id, OrganizationId, Code));
+    }
+
     public void ReleaseReservation()
     {
         if (ReservedCount > 0)
