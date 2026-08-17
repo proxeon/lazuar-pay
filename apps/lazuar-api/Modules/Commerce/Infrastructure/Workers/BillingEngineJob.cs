@@ -68,6 +68,7 @@ public class BillingEngineJob : BackgroundService
     private async Task ProcessBillingAsync(CancellationToken ct)
     {
         var failedIds = new HashSet<Guid>();
+        var processedIds = new HashSet<Guid>();
 
         for (var i = 0; i < BatchSize; i++)
         {
@@ -81,6 +82,9 @@ public class BillingEngineJob : BackgroundService
             var tokens = scope.ServiceProvider.GetService<IMagicLinkTokenService>();
             var billing = scope.ServiceProvider.GetService<IBillingQueryService>();
 
+            var excludeIds = new HashSet<Guid>(failedIds);
+            excludeIds.UnionWith(processedIds);
+
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;
             try
             {
@@ -88,7 +92,7 @@ public class BillingEngineJob : BackgroundService
                 if (db.Database.IsRelational())
                 {
                     tx = await db.Database.BeginTransactionAsync(ct);
-                    sub = await ClaimDueSubscriptionAsync(db, failedIds, ct);
+                    sub = await ClaimDueSubscriptionAsync(db, excludeIds, ct);
                     if (sub == null)
                     {
                         await tx.RollbackAsync(ct);
@@ -97,7 +101,7 @@ public class BillingEngineJob : BackgroundService
                 }
                 else
                 {
-                    sub = await ClaimDueSubscriptionInMemoryAsync(db, failedIds, ct);
+                    sub = await ClaimDueSubscriptionInMemoryAsync(db, excludeIds, ct);
                     if (sub == null) break;
                 }
 
@@ -106,6 +110,7 @@ public class BillingEngineJob : BackgroundService
                     await ProcessOneSubscriptionAsync(db, eventBus, crm, mediator, one, config, tokens, billing, sub, failedIds, ct);
                     await db.SaveChangesAsync(ct);
                     if (tx != null) await tx.CommitAsync(ct);
+                    processedIds.Add(sub.Id);
                 }
                 catch (Exception ex)
                 {

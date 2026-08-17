@@ -263,6 +263,62 @@ public class BillingEngineJobTests
     }
 
     [Test]
+    public async Task RunOnce_TwoVaultedDues_DispatchesBoth()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var earlier = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        earlier.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-2));
+        earlier.StoreVaultedToken("cus_a", "pm_a");
+        var later = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        later.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        later.StoreVaultedToken("cus_b", "pm_b");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(earlier, later);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == earlier.Id));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == later.Id));
+        earlier.NextBillingDate.Should().NotBeNull();
+        later.NextBillingDate.Should().NotBeNull();
+    }
+
+    [Test]
+    public async Task RunOnce_VaultedAttempt1DoesNotBlockSibling()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var waiting = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        var waitingDue = DateTime.UtcNow.AddDays(-3);
+        waiting.Activate(DateTime.UtcNow.AddDays(-40), waitingDue);
+        waiting.StoreVaultedToken("cus_wait", "pm_wait");
+        var sibling = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sibling.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1));
+        sibling.StoreVaultedToken("cus_sib", "pm_sib");
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(waiting, sibling);
+        _db.ChargeAttemptLogs.Add(new ChargeAttemptLog(
+            waiting.Id,
+            waitingDue.Date,
+            attemptNumber: 1,
+            source: ChargeAttemptLog.SourceBilling));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == waiting.Id));
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sibling.Id));
+        waiting.Status.Should().Be("ACTIVE");
+        waiting.NextBillingDate.Should().BeCloseTo(waitingDue, TimeSpan.FromSeconds(1));
+    }
+
+    [Test]
     public async Task RunOnce_ChipVaulted_PublishesOffSessionWithChipGateway()
     {
         var product = CreateProduct(_orgId, "CHIP");
