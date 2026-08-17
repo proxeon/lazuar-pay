@@ -75,6 +75,14 @@ public class ChipCollectGatewayAdapterTests
     }
 
     [Test]
+    public void IsOffSessionPaid_OnlyPaidIsTrue()
+    {
+        ChipCollectGatewayAdapter.IsOffSessionPaid("paid").Should().BeTrue();
+        ChipCollectGatewayAdapter.IsOffSessionPaid("pending_charge").Should().BeFalse();
+        ChipCollectGatewayAdapter.IsOffSessionPaid("created").Should().BeFalse();
+    }
+
+    [Test]
     public void ExtractVaultIds_RootRecurringTokenAndClientId()
     {
         using var doc = JsonDocument.Parse("""

@@ -305,7 +305,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 Metadata = meta
             };
             var intent = await service.CreateAsync(options, CreateOffSessionRequestOptions(resolvedKey));
-            return intent.Status == "succeeded" || intent.Status == "processing";
+            return IsOffSessionSucceeded(intent.Status);
         }
         catch (StripeException ex)
         {
@@ -429,6 +429,9 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
         return meta;
     }
+
+    internal static bool IsOffSessionSucceeded(string? status) =>
+        string.Equals(status, "succeeded", StringComparison.OrdinalIgnoreCase);
 
     internal static RequestOptions? CreateOffSessionRequestOptions(string? idempotencyKey)
     {

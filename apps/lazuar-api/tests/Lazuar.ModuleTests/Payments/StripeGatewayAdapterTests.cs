@@ -267,6 +267,15 @@ public class StripeGatewayAdapterTests
     }
 
     [Test]
+    public void IsOffSessionSucceeded_OnlySucceededIsTrue()
+    {
+        StripeGatewayAdapter.IsOffSessionSucceeded("succeeded").Should().BeTrue();
+        StripeGatewayAdapter.IsOffSessionSucceeded("processing").Should().BeFalse();
+        StripeGatewayAdapter.IsOffSessionSucceeded("requires_action").Should().BeFalse();
+        StripeGatewayAdapter.IsOffSessionSucceeded("failed").Should().BeFalse();
+    }
+
+    [Test]
     public void CreateOffSessionRequestOptions_WhenKeyPresent_SetsIdempotencyKey()
     {
         var eventId = Guid.CreateVersion7().ToString();

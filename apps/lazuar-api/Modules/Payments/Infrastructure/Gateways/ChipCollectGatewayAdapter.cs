@@ -388,7 +388,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 var existingStatus = existingDoc.RootElement.TryGetProperty("status", out var st)
                     ? st.GetString()
                     : null;
-                if (existingStatus is "paid" or "pending_charge")
+                if (IsOffSessionPaid(existingStatus))
                 {
                     return true;
                 }
@@ -410,7 +410,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var status = chargeDoc.RootElement.TryGetProperty("status", out var statusEl)
                 ? statusEl.GetString()
                 : null;
-            return status == "paid" || status == "pending_charge";
+            return IsOffSessionPaid(status);
         }
 
         var chargeError = await chargeResponse.Content.ReadAsStringAsync();
@@ -526,6 +526,9 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             : "Customer";
         return (brandId, clientEmail ?? GatewayCommon.PlaceholderEmail, clientName ?? "Customer");
     }
+
+    internal static bool IsOffSessionPaid(string? status) =>
+        string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Recurring token from root or purchase; client.id from root.client or purchase.client.
