@@ -33,6 +33,33 @@ public class GatewayPaymentCompletedHandlerTests
             .Build();
 
     [Test]
+    public async Task HandleAsync_ZeroAmount_DoesNotBookGmvOrAllocateReceipt()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new GatewayPaymentCompletedHandler(repository, mediator, eventBus, Config());
+
+        await handler.HandleAsync(new GatewayPaymentCompletedIntegrationEvent(
+            OrganizationId: Guid.CreateVersion7(),
+            GatewayTransactionId: "seti_zero",
+            AmountPaid: 0m,
+            Currency: "MYR",
+            GatewayFee: 0m,
+            TaxAmount: 0m,
+            NetAmount: 0m,
+            FxRate: 1m,
+            BaseCurrency: "MYR",
+            LineItems: new List<LineItemDto>(),
+            Metadata: new Dictionary<string, string> { ["type"] = "trial" }));
+
+        await repository.DidNotReceive().HasEntryBeenProcessedAsync(Arg.Any<string>(), Arg.Any<string>());
+        repository.DidNotReceive().Add(Arg.Any<LedgerEntry>());
+        await mediator.DidNotReceive().Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<B2bTaxInvoiceRequestedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task HandleAsync_WhenB2C_SavesChangesBeforeGeneratingDocument()
     {
         var repository = Substitute.For<ILedgerRepository>();

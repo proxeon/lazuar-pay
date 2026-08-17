@@ -44,6 +44,10 @@ public class GatewayPaymentCompletedHandler : IIntegrationEventHandler<GatewayPa
             && PlatformCheckoutTypes.IsPlatformCollected(paymentType))
             return;
 
+        // $0 Stripe setup / 100% coupon vault is not GMV. Do not burn a RCPT number.
+        if (@event.AmountPaid <= 0)
+            return;
+
         var referenceType = LedgerReferenceTypes.GatewayPayment;
         var referenceId = @event.GatewayTransactionId;
 

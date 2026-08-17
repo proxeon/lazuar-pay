@@ -84,6 +84,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 072 | B04-P15 | `fix/072-currency-normalize` | Webhook currency is fail-closed and published uppercase |
 | 073 | B04-P16 | `fix/073-xendit-callback-constant-time` | Xendit callback token compare is constant-time including length mismatch |
 | 074 | B04-P17 | `fix/074-minor-units-policy` | One ToMinorUnits policy; zero-decimal currencies are not ×100 |
+| 075 | B05-L02 | `fix/075-skip-zero-gmv-setup` | $0 Stripe setup / coupon vault is not booked as GMV |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

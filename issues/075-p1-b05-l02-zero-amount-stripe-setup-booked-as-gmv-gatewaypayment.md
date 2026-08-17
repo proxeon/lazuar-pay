@@ -2,17 +2,21 @@
 number: "075"
 id: B05-L02
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
+resolved_branch: fix/075-skip-zero-gmv-setup
 ---
 
 # 075 — B05-L02 — `$0` Stripe setup booked as GMV `GATEWAY_PAYMENT`
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/075-skip-zero-gmv-setup`
+
+AmountPaid 0 does not book GATEWAY_PAYMENT or allocate a RCPT number.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
