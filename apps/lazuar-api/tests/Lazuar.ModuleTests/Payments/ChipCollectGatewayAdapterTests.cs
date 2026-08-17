@@ -127,6 +127,86 @@ public class ChipCollectGatewayAdapterTests
     }
 
     [Test]
+    public async Task ChargeOffSession_SendsProcessorIdempotencyKeyOnCreateAndCharge()
+    {
+        var key = "lazuar-offsession:" + Guid.CreateVersion7();
+        var handler = new SequenceHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound),
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"brand_id":"brand_1","email":"a@b.com","full_name":"Ann"}""",
+                    Encoding.UTF8,
+                    "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("[]", Encoding.UTF8, "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"id":"purch_new"}""", Encoding.UTF8, "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"status":"paid"}""", Encoding.UTF8, "application/json")
+            });
+        var http = new HttpClient(handler);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(Arg.Any<string>()).Returns(http);
+        var adapter = new ChipCollectGatewayAdapter(
+            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+
+        var ok = await adapter.ChargeOffSessionAsync(
+            "chip-key", "cli_1", "purch_token", 10m, "MYR", "Plan", "sub-1", Guid.CreateVersion7(),
+            idempotencyKey: key);
+
+        ok.Should().BeTrue();
+        handler.Headers.Should().Contain(h =>
+            h.ContainsKey("Idempotency-Key") && h["Idempotency-Key"].ToString() == key);
+        handler.Bodies.Should().Contain(b => b != null && b.Contains("\"reference\"") && b.Contains(key));
+        handler.Uris.Should().Contain(u => u.Contains("/purchases/") && u.Contains("reference="));
+        handler.Uris.Should().Contain(u => u.Contains("/purchases/purch_new/charge/"));
+    }
+
+    [Test]
+    public async Task ChargeOffSession_ReusesExistingPurchaseForSameIdempotencyKey()
+    {
+        var key = "lazuar-offsession:" + Guid.CreateVersion7();
+        var handler = new SequenceHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound),
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"brand_id":"brand_1","email":"a@b.com","full_name":"Ann"}""",
+                    Encoding.UTF8,
+                    "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"results":[{"id":"purch_existing"}]}""", Encoding.UTF8, "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"id":"purch_existing","status":"paid"}""", Encoding.UTF8, "application/json")
+            });
+        var http = new HttpClient(handler);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(Arg.Any<string>()).Returns(http);
+        var adapter = new ChipCollectGatewayAdapter(
+            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+
+        var ok = await adapter.ChargeOffSessionAsync(
+            "chip-key", "cli_1", "purch_token", 10m, "MYR", "Plan", "sub-1", Guid.CreateVersion7(),
+            idempotencyKey: key);
+
+        ok.Should().BeTrue();
+        handler.Uris.Should().NotContain(u => u.EndsWith("/purchases/", StringComparison.Ordinal));
+        handler.Uris.Should().NotContain(u => u.Contains("/charge/"));
+        handler.Uris.Should().Contain(u => u.Contains("/purchases/purch_existing/"));
+    }
+
+    [Test]
     public void ExtractVaultIds_NoRecurring_ReturnsNulls()
     {
         using var doc = JsonDocument.Parse("""
@@ -293,18 +373,28 @@ public class ChipCollectGatewayAdapterTests
     {
         private readonly Queue<HttpResponseMessage> _responses;
         public List<string> Uris { get; } = new();
+        public List<Dictionary<string, string>> Headers { get; } = new();
+        public List<string?> Bodies { get; } = new();
 
         public SequenceHandler(params HttpResponseMessage[] responses)
         {
             _responses = new Queue<HttpResponseMessage>(responses);
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Uris.Add(request.RequestUri?.ToString() ?? "");
-            return Task.FromResult(_responses.Count > 0
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var header in request.Headers)
+            {
+                headers[header.Key] = string.Join(",", header.Value);
+            }
+
+            Headers.Add(headers);
+            Bodies.Add(request.Content == null ? null : await request.Content.ReadAsStringAsync(cancellationToken));
+            return _responses.Count > 0
                 ? _responses.Dequeue()
-                : new HttpResponseMessage(HttpStatusCode.NotFound));
+                : new HttpResponseMessage(HttpStatusCode.NotFound);
         }
     }
 

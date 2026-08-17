@@ -239,7 +239,6 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         decimal taxAmount = 0,
         string? taxType = null)
     {
-        _ = idempotencyKey; // CHIP purchase/charge has no idempotency key (best-effort).
         try
         {
             var client = _httpFactory.CreateClient();
@@ -281,6 +280,16 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 }
             }
 
+            var processorKey = string.IsNullOrWhiteSpace(idempotencyKey) ? null : idempotencyKey.Trim();
+            if (!string.IsNullOrWhiteSpace(processorKey))
+            {
+                var existingId = await TryFindPurchaseIdByReferenceAsync(client, processorKey);
+                if (!string.IsNullOrWhiteSpace(existingId))
+                {
+                    return await ChargeOrReusePurchaseAsync(client, existingId, tokenId, processorKey, lookupStatus: true);
+                }
+            }
+
             var amountInCents = GatewayCommon.ToMinorUnitsRounded(amount);
             var newPurchasePayload = new Dictionary<string, object>
             {
@@ -295,8 +304,13 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                     metadata = meta
                 }
             };
+            if (!string.IsNullOrWhiteSpace(processorKey))
+            {
+                newPurchasePayload["reference"] = processorKey;
+            }
 
-            var createResponse = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/", newPurchasePayload);
+            var createResponse = await SendJsonAsync(
+                client, HttpMethod.Post, $"{ApiBaseUrl}purchases/", newPurchasePayload, processorKey);
             if (!createResponse.IsSuccessStatusCode)
             {
                 var errorBody = await createResponse.Content.ReadAsStringAsync();
@@ -307,22 +321,12 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var createJson = await createResponse.Content.ReadAsStringAsync();
             using var createDoc = JsonDocument.Parse(createJson);
             var newPurchaseId = createDoc.RootElement.GetProperty("id").GetString();
-
-            var chargePayload = new { recurring_token = tokenId };
-            var chargeResponse = await client.PostAsJsonAsync($"{ApiBaseUrl}purchases/{newPurchaseId}/charge/", chargePayload);
-            
-            if (chargeResponse.IsSuccessStatusCode)
+            if (string.IsNullOrWhiteSpace(newPurchaseId))
             {
-                var chargeJson = await chargeResponse.Content.ReadAsStringAsync();
-                using var chargeDoc = JsonDocument.Parse(chargeJson);
-                var status = chargeDoc.RootElement.GetProperty("status").GetString();
-                
-                return status == "paid" || status == "pending_charge";
+                return false;
             }
 
-            var chargeError = await chargeResponse.Content.ReadAsStringAsync();
-            _logger.LogError("Failed to charge CHIP token {TokenId} for purchase {NewPurchaseId}. Error: {Error}", tokenId, newPurchaseId, chargeError);
-            return false;
+            return await ChargeOrReusePurchaseAsync(client, newPurchaseId, tokenId, processorKey, lookupStatus: false);
         }
         catch (Exception ex)
         {
@@ -366,6 +370,118 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
     public Task<string> GenerateCustomerPortalAsync(string apiKey, string customerEmail, string returnUrl)
     {
         throw new InvalidOperationException("CHIP Collect does not provide a managed customer billing portal.");
+    }
+
+    private async Task<bool> ChargeOrReusePurchaseAsync(
+        HttpClient client,
+        string purchaseId,
+        string tokenId,
+        string? processorKey,
+        bool lookupStatus)
+    {
+        if (lookupStatus)
+        {
+            var get = await client.GetAsync($"{ApiBaseUrl}purchases/{purchaseId}/");
+            if (get.IsSuccessStatusCode)
+            {
+                using var existingDoc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
+                var existingStatus = existingDoc.RootElement.TryGetProperty("status", out var st)
+                    ? st.GetString()
+                    : null;
+                if (existingStatus is "paid" or "pending_charge")
+                {
+                    return true;
+                }
+            }
+        }
+
+        var chargePayload = new { recurring_token = tokenId };
+        var chargeResponse = await SendJsonAsync(
+            client,
+            HttpMethod.Post,
+            $"{ApiBaseUrl}purchases/{purchaseId}/charge/",
+            chargePayload,
+            processorKey);
+
+        if (chargeResponse.IsSuccessStatusCode)
+        {
+            var chargeJson = await chargeResponse.Content.ReadAsStringAsync();
+            using var chargeDoc = JsonDocument.Parse(chargeJson);
+            var status = chargeDoc.RootElement.TryGetProperty("status", out var statusEl)
+                ? statusEl.GetString()
+                : null;
+            return status == "paid" || status == "pending_charge";
+        }
+
+        var chargeError = await chargeResponse.Content.ReadAsStringAsync();
+        _logger.LogError(
+            "Failed to charge CHIP token {TokenId} for purchase {PurchaseId}. Error: {Error}",
+            tokenId, purchaseId, chargeError);
+        return false;
+    }
+
+    private async Task<string?> TryFindPurchaseIdByReferenceAsync(HttpClient client, string reference)
+    {
+        var url = $"{ApiBaseUrl}purchases/?reference={Uri.EscapeDataString(reference)}";
+        var response = await client.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("results", out var results)
+                && results.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in results.EnumerateArray())
+                {
+                    var id = ReadString(item, "id");
+                    if (!string.IsNullOrWhiteSpace(id))
+                    {
+                        return id;
+                    }
+                }
+            }
+
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in root.EnumerateArray())
+                {
+                    var id = ReadString(item, "id");
+                    if (!string.IsNullOrWhiteSpace(id))
+                    {
+                        return id;
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    private static async Task<HttpResponseMessage> SendJsonAsync(
+        HttpClient client,
+        HttpMethod method,
+        string url,
+        object payload,
+        string? idempotencyKey)
+    {
+        using var request = new HttpRequestMessage(method, url);
+        request.Content = JsonContent.Create(payload);
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+        }
+
+        return await client.SendAsync(request);
     }
 
     private async Task<(string? BrandId, string ClientEmail, string ClientName)> ResolveOffSessionClientAsync(
