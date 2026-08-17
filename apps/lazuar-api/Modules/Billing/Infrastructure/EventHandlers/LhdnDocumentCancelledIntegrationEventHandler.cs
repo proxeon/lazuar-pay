@@ -42,14 +42,15 @@ public class LhdnDocumentCancelledIntegrationEventHandler : IIntegrationEventHan
 
         // Full refund already contra'd cash/tax. IRBM cancel is a document action only.
         var gatewayTx = originalEntry.ReferenceId ?? "";
-        var alreadyRefunded = gatewayTx.Length > 0
+        var refundMarker = gatewayTx.Length > 0 ? "gateway tx " + gatewayTx : null;
+        var alreadyRefunded = refundMarker != null
             && await _dbContext.LedgerEntries
                 .IgnoreQueryFilters()
                 .AnyAsync(e =>
                     e.OrganizationId == @event.OrganizationId
                     && e.ReferenceType == LedgerReferenceTypes.GatewayRefund
                     && e.Description != null
-                    && e.Description.Contains(gatewayTx));
+                    && e.Description.Contains(refundMarker));
 
         if (alreadyRefunded)
         {

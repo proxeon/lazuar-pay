@@ -154,12 +154,12 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
                 @event.OrganizationId,
                 @event.GatewayTransactionId);
 
+        // Never look up by PaymentRecordId (a Guid). Prefer UUID, then commercial number.
         var candidates = new[]
         {
-            payment?.CustomerDocumentNumber,
             payment?.LhdnDocumentUuid,
-            payment?.TaxInvoiceId,
-            @event.PaymentRecordId.ToString()
+            payment?.CustomerDocumentNumber,
+            LooksLikeUuid(payment?.TaxInvoiceId) ? null : payment?.TaxInvoiceId
         }.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal);
 
         foreach (var candidate in candidates)
@@ -175,6 +175,9 @@ public class GatewayRefundCompletedIntegrationEventHandler : IIntegrationEventHa
 
         return null;
     }
+
+    private static bool LooksLikeUuid(string? value) =>
+        Guid.TryParse(value, out _);
 
     private async Task<string?> ResolveCreditNoteNumberAsync(GatewayRefundCompletedIntegrationEvent @event)
     {

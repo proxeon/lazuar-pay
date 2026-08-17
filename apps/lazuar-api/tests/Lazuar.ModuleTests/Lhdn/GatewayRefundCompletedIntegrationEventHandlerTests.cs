@@ -117,6 +117,31 @@ public class GatewayRefundCompletedIntegrationEventHandlerTests
     }
 
     [Test]
+    public async Task FullRefund_ResolvesByUuid_DoesNotQueryPaymentRecordGuid()
+    {
+        var orgId = Guid.CreateVersion7();
+        var paymentId = Guid.CreateVersion7();
+        var doc = new TaxDocument(orgId, "INV-2026-00011", "hash", "<xml/>");
+        doc.MarkAsSubmitted("sub-11", "lhdn-uuid-11");
+        doc.MarkAsValid("long-11");
+
+        var (handler, repo, mediator, billing) = CreateHandler();
+        billing.FindPaymentByGatewayTransactionAsync(orgId, "pi_11")
+            .Returns(new LedgerDocumentIdentity(
+                Guid.CreateVersion7(), "GATEWAY_PAYMENT", "pi_11", "INV-2026-00011",
+                "lhdn-uuid-11", "lhdn-uuid-11", "B2B", "VALID", 100m, "MYR", DateTime.UtcNow));
+        repo.GetTaxDocumentByLhdnUuidAsync(orgId, "lhdn-uuid-11").Returns(doc);
+
+        await handler.HandleAsync(new GatewayRefundCompletedIntegrationEvent(
+            orgId, Guid.Empty, paymentId, "pi_11", 100m, "MYR", 0m, 100m, 0m, IsFullRefund: true));
+
+        await repo.DidNotReceive().GetTaxDocumentByInternalIdAsync(orgId, paymentId.ToString());
+        await mediator.Received(1).Send(
+            Arg.Is<CancelTaxDocumentCommand>(c => c.InternalId == "INV-2026-00011"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task NoTaxDocument_IsNoOp()
     {
         var orgId = Guid.CreateVersion7();

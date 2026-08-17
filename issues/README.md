@@ -116,6 +116,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 104 | B06-D18 | `fix/104-accepted-for-processing` | Integrator submit returns pending; B2B pay proceeds without MyInvois |
 | 105 | B06-D20 | `fix/105-partial-refunds-skip-lhdn` | Partial refunds file type 02; only a full ≤72h refund cancels |
 | 106 | B06-D21 | `fix/106-credit-note-pdf` | Refund books a Credit Note PDF; LHDN reuses Billing CN- |
+| 107 | B06-D22 | `fix/107-original-doc-cancel-double` | Original doc lookup prefers UUID; cancel+refund is one contra |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

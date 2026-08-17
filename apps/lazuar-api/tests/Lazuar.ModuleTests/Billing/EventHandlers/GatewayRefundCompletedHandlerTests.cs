@@ -157,6 +157,28 @@ public class GatewayRefundCompletedHandlerTests
     }
 
     [Test]
+    public async Task CancelFirst_DoesNotPostSecondContra()
+    {
+        const string tx = "txn_cancel_first";
+        await SeedOriginalPaymentAsync(tx, gross: 100m, tax: 0m);
+        var sale = await _db.LedgerEntries.IgnoreQueryFilters()
+            .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayPayment);
+        var cancel = new LedgerEntry(_orgId, LedgerReferenceTypes.LhdnCancellation, sale.CustomerDocumentNumber!, "IRBM cancel");
+        cancel.AddLine(AccountTypes.AssetCash, -100m, "MYR", -100m, "MYR");
+        cancel.AddLine(AccountTypes.RevenueGross, 100m, "MYR", 100m, "MYR");
+        cancel.ValidateBalanced();
+        _db.LedgerEntries.Add(cancel);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(RefundEvent(_orgId, Guid.CreateVersion7(), tx, amount: 100m));
+
+        Assert.That(
+            await _db.LedgerEntries.IgnoreQueryFilters()
+                .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund),
+            Is.EqualTo(0));
+    }
+
+    [Test]
     public async Task Refund_GeneratesCreditNotePdf()
     {
         const string tx = "txn_pdf";

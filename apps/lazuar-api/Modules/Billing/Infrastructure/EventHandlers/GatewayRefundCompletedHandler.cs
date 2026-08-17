@@ -42,6 +42,9 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         if (await _repository.HasEntryBeenProcessedAsync(@event.OrganizationId, referenceType, referenceId))
             return;
 
+        if (await AlreadyReversedByLhdnCancelAsync(@event))
+            return;
+
         var capped = await CapRefundedAmountAsync(@event);
         if (capped <= 0)
             return;
@@ -176,6 +179,30 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
         }
 
         return Math.Min(proposed, remainingTax);
+    }
+
+    private async Task<bool> AlreadyReversedByLhdnCancelAsync(GatewayRefundCompletedIntegrationEvent @event)
+    {
+        if (string.IsNullOrWhiteSpace(@event.GatewayTransactionId))
+            return false;
+
+        var original = await _dbContext.LedgerEntries
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e =>
+                e.OrganizationId == @event.OrganizationId
+                && e.ReferenceType == LedgerReferenceTypes.GatewayPayment
+                && e.ReferenceId == @event.GatewayTransactionId);
+
+        var invoiceNumber = original?.CustomerDocumentNumber;
+        if (string.IsNullOrWhiteSpace(invoiceNumber))
+            return false;
+
+        return await _dbContext.LedgerEntries
+            .IgnoreQueryFilters()
+            .AnyAsync(e =>
+                e.OrganizationId == @event.OrganizationId
+                && e.ReferenceType == LedgerReferenceTypes.LhdnCancellation
+                && e.ReferenceId == invoiceNumber);
     }
 
     private async Task<decimal> CapRefundedAmountAsync(GatewayRefundCompletedIntegrationEvent @event)
