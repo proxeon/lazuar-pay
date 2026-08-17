@@ -34,9 +34,28 @@ public class LhdnDocumentCancelledIntegrationEventHandler : IIntegrationEventHan
             @event.OrganizationId,
             @event.InternalReferenceId);
 
-        var originalEntry = matches.FirstOrDefault();
+        var originalEntry = matches.FirstOrDefault(e => e.ReferenceType == LedgerReferenceTypes.GatewayPayment)
+            ?? matches.FirstOrDefault();
         if (originalEntry == null)
             return;
+
+        // Full refund already contra'd cash/tax. IRBM cancel is a document action only.
+        var gatewayTx = originalEntry.ReferenceId ?? "";
+        var alreadyRefunded = gatewayTx.Length > 0
+            && await _dbContext.LedgerEntries
+                .IgnoreQueryFilters()
+                .AnyAsync(e =>
+                    e.OrganizationId == @event.OrganizationId
+                    && e.ReferenceType == LedgerReferenceTypes.GatewayRefund
+                    && e.Description != null
+                    && e.Description.Contains(gatewayTx));
+
+        if (alreadyRefunded)
+        {
+            originalEntry.UpdateLhdnStatus(@event.LhdnUuid, LhdnValidationStatuses.Cancelled);
+            await _repository.SaveChangesAsync();
+            return;
+        }
 
         // Apply contra entries dynamically based on original invoice lines
         var cancelEntry = new LedgerEntry(

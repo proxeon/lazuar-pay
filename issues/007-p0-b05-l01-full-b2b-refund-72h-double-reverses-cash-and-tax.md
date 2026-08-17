@@ -2,17 +2,21 @@
 number: "007"
 id: B05-L01
 severity: P0
-status: open
+status: resolved
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
+resolved_branch: fix/007-lhdn-cancel-skip-if-refunded
 ---
 
 # 007 — B05-L01 — Full B2B refund ≤72h double-reverses cash and tax
 
 - **Severity:** P0
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/007-lhdn-cancel-skip-if-refunded`
+
+If a `GATEWAY_REFUND` already exists for the same gateway tx, LHDN cancel only stamps `CANCELLED` on the sale. It does not post a second cash/tax contra. Cancel without a refund still posts `LHDN_CANCELLATION`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
