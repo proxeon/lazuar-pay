@@ -2,17 +2,21 @@
 number: "029"
 id: B01-C03
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
+resolved_branch: fix/029-zero-amount-offline-chosen-price
 ---
 
 # 029 — B01-C03 — Zero-amount and offline re-discount `product.Price`, not the chosen price row
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/029-zero-amount-offline-chosen-price`
+
+Zero-amount and mark-paid discount the chosen `PriceId` row. A 100% yearly coupon no longer throws.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

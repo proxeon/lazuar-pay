@@ -38,6 +38,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 026 | B10-X02 | `fix/026-b2c-already-consolidated-ignore-filters` | B2C alreadyConsolidated sees rows without ambient tenant |
 | 027 | B10-X03 | `fix/027-lhdn-webhooks-dual-write` | POST /lhdn/webhooks dual-writes the live workspace dispatcher |
 | 028 | B01-C02 | `fix/028-coupon-lock-transaction` | Coupon `FOR UPDATE` + reserve + session insert share one transaction |
+| 029 | B01-C03 | `fix/029-zero-amount-offline-chosen-price` | $0 / mark-paid discount the chosen price row |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

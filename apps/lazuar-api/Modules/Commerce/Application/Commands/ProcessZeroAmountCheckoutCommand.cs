@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Events;
+using Modules.Commerce.Domain.Aggregates;
 
 namespace Modules.Commerce.Application.Commands;
 
@@ -39,22 +40,22 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         if (product == null) throw new InvalidOperationException("Product not found.");
 
         var quantity = Math.Max(1, session.Quantity);
+        var chosen = product.Prices.FirstOrDefault(p => p.Id == session.PriceId);
+        var unitAmount = chosen?.Amount ?? product.Price;
         var unitDiscount = 0m;
         var couponCode = "NONE";
+        Coupon? coupon = null;
 
         if (session.CouponId.HasValue)
         {
-            var coupon = await _repository.GetCouponByIdAsync(session.CouponId.Value, ct);
+            coupon = await _repository.GetCouponByIdAsync(session.CouponId.Value, ct);
             if (coupon != null)
             {
-                unitDiscount = coupon.CalculateDiscount(product.Price);
+                unitDiscount = coupon.CalculateDiscount(unitAmount);
                 couponCode = coupon.Code;
-                coupon.ConfirmReservation();
             }
         }
 
-        var chosen = product.Prices.FirstOrDefault(p => p.Id == session.PriceId);
-        var unitAmount = chosen?.Amount ?? product.Price;
         var lineGross = unitAmount * quantity;
         var lineDiscount = unitDiscount * quantity;
         var isTrial = SubscriptionActivation.IsTrialOffer(product);
@@ -63,6 +64,8 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         {
             throw new InvalidOperationException("This checkout session requires payment and cannot bypass the gateway.");
         }
+
+        coupon?.ConfirmReservation();
 
         if (isTrial)
         {
