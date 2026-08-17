@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
@@ -93,47 +94,78 @@ public class GatewayRefundCompletedHandler : IIntegrationEventHandler<GatewayRef
 
     /// <summary>
     /// Prefer explicit TaxAmount on the event; otherwise proportionally reverse tax from the original
-    /// GATEWAY_PAYMENT ledger entry matched by gateway transaction id.
+    /// GATEWAY_PAYMENT. The last slice takes remaining tax so 4 dp rounding cannot leak or overshoot.
     /// </summary>
     private async Task<decimal> ResolveTaxRefundAmountAsync(GatewayRefundCompletedIntegrationEvent @event)
     {
-        if (@event.TaxAmount > 0)
-            return @event.TaxAmount;
-
-        if (string.IsNullOrWhiteSpace(@event.GatewayTransactionId))
+        if (string.IsNullOrWhiteSpace(@event.GatewayTransactionId) && @event.TaxAmount <= 0)
             return 0m;
 
-        var originalEntry = await _dbContext.LedgerEntries
-            .Include(e => e.Lines)
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(e =>
-                e.OrganizationId == @event.OrganizationId
-                && e.ReferenceType == LedgerReferenceTypes.GatewayPayment
-                && e.ReferenceId == @event.GatewayTransactionId);
+        var originalEntry = string.IsNullOrWhiteSpace(@event.GatewayTransactionId)
+            ? null
+            : await _dbContext.LedgerEntries
+                .Include(e => e.Lines)
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(e =>
+                    e.OrganizationId == @event.OrganizationId
+                    && e.ReferenceType == LedgerReferenceTypes.GatewayPayment
+                    && e.ReferenceId == @event.GatewayTransactionId);
 
         if (originalEntry == null)
-            return 0m;
+            return @event.TaxAmount > 0 ? @event.TaxAmount : 0m;
 
         var originalTax = Math.Abs(originalEntry.Lines
             .Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable)
             .Sum(l => l.Amount));
-
-        if (originalTax <= 0)
-            return 0m;
 
         var originalGross = Math.Abs(originalEntry.Lines
             .Where(l => l.AccountType == AccountTypes.RevenueGross)
             .Sum(l => l.Amount));
         var originalPaid = originalGross + originalTax;
 
-        if (originalPaid <= 0)
+        var siblings = await LoadSiblingRefundsAsync(@event);
+        var alreadyTax = siblings.SelectMany(e => e.Lines)
+            .Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable)
+            .Sum(l => l.Amount);
+        var alreadyPaid = siblings.SelectMany(e => e.Lines)
+            .Where(l => l.AccountType is AccountTypes.ContraRevenueRefunds or AccountTypes.LiabilityTaxPayable)
+            .Sum(l => l.Amount);
+
+        var remainingTax = Math.Max(0m, originalTax - alreadyTax);
+        var remainingPaid = Math.Max(0m, originalPaid - alreadyPaid);
+
+        if (remainingTax <= 0)
             return 0m;
 
-        // Full refund: reverse full tax. Partial: scale tax by refund ratio.
-        if (@event.RefundedAmount >= originalPaid)
-            return originalTax;
+        decimal proposed;
+        if (@event.TaxAmount > 0)
+        {
+            proposed = @event.TaxAmount;
+        }
+        else if (originalPaid <= 0 || @event.RefundedAmount >= remainingPaid)
+        {
+            proposed = remainingTax;
+        }
+        else
+        {
+            proposed = Math.Round(
+                @event.RefundedAmount / originalPaid * originalTax, 4, MidpointRounding.AwayFromZero);
+        }
 
-        return Math.Round(@event.RefundedAmount / originalPaid * originalTax, 4, MidpointRounding.AwayFromZero);
+        return Math.Min(proposed, remainingTax);
+    }
+
+    private async Task<List<LedgerEntry>> LoadSiblingRefundsAsync(GatewayRefundCompletedIntegrationEvent @event)
+    {
+        var prefix = @event.PaymentRecordId.ToString("N") + ":";
+        return await _dbContext.LedgerEntries
+            .Include(e => e.Lines)
+            .IgnoreQueryFilters()
+            .Where(e =>
+                e.OrganizationId == @event.OrganizationId
+                && e.ReferenceType == LedgerReferenceTypes.GatewayRefund
+                && e.ReferenceId.StartsWith(prefix))
+            .ToListAsync();
     }
 
     /// <summary>

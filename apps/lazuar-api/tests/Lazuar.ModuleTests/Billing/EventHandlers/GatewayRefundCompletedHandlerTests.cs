@@ -183,6 +183,32 @@ public class GatewayRefundCompletedHandlerTests
     }
 
     [Test]
+    public async Task LastSlice_TakesRemainingTax()
+    {
+        const string tx = "txn_odd";
+        await SeedOriginalPaymentAsync(tx, gross: 100m, tax: 8m);
+        var paymentRecordId = Guid.CreateVersion7();
+
+        await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 10m));
+        await _handler.HandleAsync(RefundEvent(_orgId, paymentRecordId, tx, amount: 98m));
+
+        var refunds = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
+            .Where(e => e.ReferenceType == LedgerReferenceTypes.GatewayRefund)
+            .ToListAsync();
+        var taxSum = refunds.SelectMany(e => e.Lines)
+            .Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable)
+            .Sum(l => l.Amount);
+
+        Assert.That(taxSum, Is.EqualTo(8m));
+        var firstTax = refunds
+            .SelectMany(e => e.Lines)
+            .Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable)
+            .OrderBy(l => l.Amount)
+            .First();
+        Assert.That(firstTax.Amount, Is.EqualTo(0.7407m));
+    }
+
+    [Test]
     public async Task TwoAttempts_TwoLedgerRows()
     {
         const string tx = "txn_two";

@@ -92,6 +92,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 080 | B05-L10 | `fix/080-ledger-unique-tenant` | Unique ledger key is per tenant, not global (ReferenceType, ReferenceId) |
 | 081 | B05-L11 | `fix/081-hasentry-tenant` | HasEntryBeenProcessed is per tenant, matching the unique ledger key |
 | 082 | B05-L12 | `fix/082-refund-fx` | Refund journals copy sale FX into BaseCurrencyAmount |
+| 083 | B05-L13 | `fix/083-refund-tax-remainder` | Last partial-refund slice takes remaining tax |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
