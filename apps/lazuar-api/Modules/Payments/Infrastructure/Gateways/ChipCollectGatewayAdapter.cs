@@ -151,9 +151,12 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
 
             var rawEventType = root.TryGetProperty("event_type", out var etProp) ? etProp.GetString() : null;
             var mappedEventType = "";
+            var (previewCustomerId, previewTokenId) = ExtractVaultIds(root);
 
-            // Only purchase.paid is settled money. purchase.preauthorized is an auth-hold — do not treat as paid.
-            if (rawEventType == "purchase.paid")
+            // purchase.paid is captured money. $0 skip_capture vaulting only fires
+            // purchase.preauthorized — treat that as completed when a recurring token is present.
+            if (rawEventType == "purchase.paid"
+                || (rawEventType == "purchase.preauthorized" && !string.IsNullOrWhiteSpace(previewTokenId)))
             {
                 mappedEventType = "PAYMENT_COMPLETED";
             }
@@ -200,7 +203,8 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 }
             }
 
-            var (customerId, tokenId) = ExtractVaultIds(root);
+            var customerId = previewCustomerId;
+            var tokenId = previewTokenId;
 
             return Task.FromResult(new GatewayWebhookParsedResult(
                 Verified: true,

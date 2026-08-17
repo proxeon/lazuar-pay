@@ -177,7 +177,7 @@ public class ChipCollectGatewayAdapterTests
     }
 
     [Test]
-    public async Task ParseWebhook_Preauthorized_IsVerified_NotPaymentCompleted()
+    public async Task ParseWebhook_PreauthorizedAuthHold_IsNotPaymentCompleted()
     {
         var body = """
             {
@@ -191,6 +191,36 @@ public class ChipCollectGatewayAdapterTests
         result.Verified.Should().BeTrue();
         result.EventType.Should().Be("purchase.preauthorized");
         result.EventType.Should().NotBe("PAYMENT_COMPLETED");
+    }
+
+    [Test]
+    public async Task ParseWebhook_PreauthorizedRecurringToken_IsPaymentCompletedWithVault()
+    {
+        var body = """
+            {
+              "id": "purch_setup",
+              "event_type": "purchase.preauthorized",
+              "is_recurring_token": true,
+              "recurring_token": "rt_setup_1",
+              "client": { "id": "cli_setup_1" },
+              "purchase": {
+                "id": "purch_setup",
+                "total": 0,
+                "currency": "MYR",
+                "metadata": { "type": "commerce_subscription", "tenant_id": "org" }
+              }
+            }
+            """;
+        var (result, _) = await ParseSignedAsync(body);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.EventId.Should().Be("PAYMENT_COMPLETED:purch_setup");
+        result.GatewayTransactionId.Should().Be("purch_setup");
+        result.AmountPaid.Should().Be(0m);
+        result.GatewayCustomerId.Should().Be("cli_setup_1");
+        result.GatewayTokenId.Should().Be("rt_setup_1");
+        result.Metadata["type"].Should().Be("commerce_subscription");
     }
 
     [Test]
