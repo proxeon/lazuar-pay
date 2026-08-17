@@ -154,6 +154,21 @@ public class LhdnSingleCreditPathTests
             Arg.Any<CancellationToken>());
     }
 
+    [Test]
+    public void Handle_DeductFails_DoesNotPersistDocument()
+    {
+        var orgId = Guid.CreateVersion7();
+        ArrangeValidSubmit(orgId);
+        _mediator.Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new InvalidOperationException("402: Insufficient API Credits"));
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _handler.Handle(new SubmitTaxDocumentCommand(orgId, "idem-fail", BuildPayload()), CancellationToken.None));
+
+        _repository.DidNotReceive().AddTaxDocument(Arg.Any<TaxDocument>());
+        _repository.DidNotReceive().AddIdempotencyLog(Arg.Any<Modules.Lhdn.Domain.Entities.IdempotencyLog>());
+    }
+
     private void ArrangeValidSubmit(Guid orgId)
     {
         var config = new LhdnTenantConfig(orgId, false, "C1234567890", "BRN", "20200101");

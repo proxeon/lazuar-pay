@@ -100,6 +100,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 088 | B05-L18 | `fix/088-clawback-granted-credits` | Utility claw uses credits granted on the original top-up |
 | 089 | B05-L19 | `fix/089-underpack-unmatched-cash` | Under-pack utility payment books unmatched cash, not a silent no-op |
 | 090 | B05-L20 | `fix/090-saas-zero-not-free` | AmountMyr 0 is unpaid Hub, not “free today” |
+| 091 | B05-L21 | `fix/091-lhdn-deduct-fail-closed` | Live LHDN deduct runs before persist so a 402 is not a free submit |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

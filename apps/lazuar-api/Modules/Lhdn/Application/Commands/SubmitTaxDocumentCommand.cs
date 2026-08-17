@@ -115,6 +115,19 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
 
         var (content, documentHashHex) = RenderDocument(request.Payload, config, requestedVersion, supplierSst);
 
+        if (shouldMeter)
+        {
+            var deductionKey = !string.IsNullOrWhiteSpace(request.IdempotencyKey)
+                ? $"lhdn:{request.IdempotencyKey}"
+                : $"lhdn:{Guid.CreateVersion7()}";
+
+            await _mediator.Send(new DeductTenantCreditCommand(
+                request.OrganizationId,
+                lhdnCost,
+                $"LHDN submission ({request.Payload.Document_type})",
+                deductionKey), ct);
+        }
+
         var taxDocument = new TaxDocument(
             request.OrganizationId,
             request.Payload.Internal_id,
@@ -143,30 +156,6 @@ public class SubmitTaxDocumentCommandHandler : ICommandHandler<SubmitTaxDocument
                 return concurrentDocId;
             }
             throw new InvalidOperationException("Concurrent idempotency collision unresolvable.");
-        }
-
-        // Deduct credits for the submission. Idempotent on the LHDN idempotency key (or document id),
-        // so a retried command cannot double-charge. Test mode and a configured cost of 0 skip
-        // Deduct (domain forbids Deduct(0)). The document is already persisted; a deduction
-        // failure is logged rather than failing the submission.
-        if (shouldMeter)
-        {
-            try
-            {
-                var deductionKey = !string.IsNullOrWhiteSpace(request.IdempotencyKey)
-                    ? $"lhdn:{request.IdempotencyKey}"
-                    : $"lhdn:{taxDocument.Id}";
-
-                await _mediator.Send(new DeductTenantCreditCommand(
-                    request.OrganizationId,
-                    lhdnCost,
-                    $"LHDN submission ({request.Payload.Document_type})",
-                    deductionKey), ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "LHDN document {DocId} saved for tenant {OrganizationId} but credit deduction failed.", taxDocument.Id, request.OrganizationId);
-            }
         }
 
         return taxDocument.Id;
