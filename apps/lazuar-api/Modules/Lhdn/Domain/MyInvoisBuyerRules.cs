@@ -5,6 +5,7 @@ public static class MyInvoisBuyerRules
 {
     public const string GeneralPublicTin = "EI00000000010";
     public const string StubBuyerTin = "C1234567890";
+    public const string GeneralPublicIgTin = "IG1234567890";
 
     public static bool IsGeneralPublic(string? tin, string? idValue)
     {
@@ -13,8 +14,13 @@ public static class MyInvoisBuyerRules
         return tinOk && (string.IsNullOrWhiteSpace(id) || string.Equals(id, "NA", StringComparison.OrdinalIgnoreCase));
     }
 
-    public static bool IsStubTin(string? tin) =>
-        string.Equals(tin?.Trim(), StubBuyerTin, StringComparison.OrdinalIgnoreCase);
+    public static bool IsStubTin(string? tin)
+    {
+        var value = tin?.Trim();
+        return string.Equals(value, StubBuyerTin, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(value, GeneralPublicIgTin, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(value, GeneralPublicTin, StringComparison.OrdinalIgnoreCase);
+    }
 
     public static bool RequiresTinValidation(string documentTypeCode, string? tin, string? idValue)
     {

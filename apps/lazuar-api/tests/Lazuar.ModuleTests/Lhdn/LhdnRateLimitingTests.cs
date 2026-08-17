@@ -50,7 +50,7 @@ public class LhdnRateLimitingTests
 
         var tin = Substitute.For<ITaxpayerValidationService>();
         tin.ValidateTinAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new TinValidationResponse(true, "IG1234567890", "Buyer"));
+            .Returns(new TinValidationResponse(true, "C55555555555", "Buyer"));
         _handler = new SubmitTaxDocumentCommandHandler(
             _repository,
             _strategyFactory,
@@ -86,7 +86,7 @@ public class LhdnRateLimitingTests
             Document_type = SubmitDocumentRequestDtoDocument_type._01,
             Issue_date = DateTimeOffset.UtcNow,
             Buyer_name = "Test Buyer",
-            Buyer_tin = "IG1234567890",
+            Buyer_tin = "C55555555555",
             Buyer_id_type = SubmitDocumentRequestDtoBuyer_id_type.BRN,
             Buyer_id_value = "20200101",
             Buyer_address = new LhdnAddressDto

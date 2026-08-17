@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Lazuar.ApiTypes;
+using Modules.Lhdn.Domain;
 using Modules.CRM.Contracts;
 using Modules.Commerce.Contracts;
 
@@ -8,16 +9,7 @@ namespace Modules.Lhdn.Infrastructure.Services;
 
 internal static class LhdnBuyerMapper
 {
-    internal static readonly string[] StubTins =
-    {
-        "C1234567890",
-        "IG1234567890",
-        "EI00000000010"
-    };
-
-    public static bool IsStubTin(string? tin) =>
-        !string.IsNullOrWhiteSpace(tin)
-        && StubTins.Contains(tin.Trim(), StringComparer.OrdinalIgnoreCase);
+    public static bool IsStubTin(string? tin) => MyInvoisBuyerRules.IsStubTin(tin);
 
     public static bool TryCreatePayloadBuyer(
         ClientProfileDto? profile,

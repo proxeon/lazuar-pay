@@ -108,6 +108,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 096 | B06-D10 | `fix/096-b2b-event-resolved-sst` | B2B MyInvois TaxAmount is resolved SST (shipped with 076) |
 | 097 | B06-D11 | `fix/097-b2b-line-description` | Type 01 line uses product name, not synthetic B2B sale |
 | 098 | B06-D12 | `fix/098-tin-200-not-valid` | TIN 200 with empty or garbage body is not valid |
+| 099 | B06-D13 | `fix/099-stub-tin-lists` | Stub TIN lists are the same (C / IG / EI) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
