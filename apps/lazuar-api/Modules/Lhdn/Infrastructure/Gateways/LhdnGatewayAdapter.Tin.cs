@@ -26,16 +26,7 @@ public partial class LhdnGatewayAdapter
 
         if (response.IsSuccessStatusCode)
         {
-            try
-            {
-                var json = JsonDocument.Parse(responseBody);
-                var taxpayerName = json.RootElement.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
-                return new LhdnTinValidationResult(true, true, taxpayerName, null);
-            }
-            catch
-            {
-                return new LhdnTinValidationResult(true, true, null, null);
-            }
+            return InterpretSuccessTinBody(responseBody);
         }
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -45,5 +36,31 @@ public partial class LhdnGatewayAdapter
 
         _logger.LogError("LHDN TIN Validation failed: {Status} {Body}", response.StatusCode, responseBody);
         return new LhdnTinValidationResult(false, false, null, responseBody);
+    }
+
+    internal static LhdnTinValidationResult InterpretSuccessTinBody(string? responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return new LhdnTinValidationResult(true, false, null, "Empty TIN validation body.");
+        }
+
+        try
+        {
+            var json = JsonDocument.Parse(responseBody);
+            if (json.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return new LhdnTinValidationResult(true, false, null, "TIN validation body was not a JSON object.");
+            }
+
+            var taxpayerName = json.RootElement.TryGetProperty("name", out var nameProp)
+                ? nameProp.GetString()
+                : null;
+            return new LhdnTinValidationResult(true, true, taxpayerName, null);
+        }
+        catch (JsonException)
+        {
+            return new LhdnTinValidationResult(true, false, null, "Unparseable TIN validation body.");
+        }
     }
 }

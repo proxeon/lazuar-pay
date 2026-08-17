@@ -2,17 +2,21 @@
 number: "098"
 id: B06-D12
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
+resolved_branch: fix/098-tin-200-not-valid
 ---
 
 # 098 — B06-D12 — TIN HTTP 200 with empty / unparseable body is treated as valid
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/098-tin-200-not-valid`
+
+HTTP 200 with an empty or non-JSON body is `IsValid=false`. Only a JSON object is accepted.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
