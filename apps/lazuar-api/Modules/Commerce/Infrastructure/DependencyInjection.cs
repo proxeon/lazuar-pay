@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<ICommerceDocumentLookup, CommerceDocumentLookup>();
 
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
+        services.AddSingleton<PortalMagicLinkRateLimiter>();
 
         services.AddKeyedScoped<IEventBus, OutboxEventBus<CommerceDbContext>>("CommerceEventBus");
 

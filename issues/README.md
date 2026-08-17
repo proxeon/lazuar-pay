@@ -64,6 +64,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 052 | B03-C07 | `fix/052-dunning-pause-predunning` | Dunning pause also stops pre-dunning “renews soon” mail |
 | 053 | B03-C08 | `fix/053-zero-unit-gross` | Arrears Gross treats a written UnitAmount 0 as zero |
 | 054 | B03-C09 | `fix/054-success-url-magic-token` | Success and dashboard links keep the portal HMAC |
+| 055 | B03-C10 | `fix/055-magic-link-throttle` | Magic-link is throttled 5 / 10 minutes per IP |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

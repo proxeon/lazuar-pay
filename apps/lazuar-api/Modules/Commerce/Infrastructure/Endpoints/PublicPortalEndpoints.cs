@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using Modules.Commerce.Application.Queries;
 using Modules.Commerce.Contracts;
 using Modules.Commerce.Contracts.Commands;
+using Modules.Commerce.Infrastructure.Security;
 using Modules.Commerce.Infrastructure.Services;
 using Modules.One.Contracts;
 
@@ -62,12 +63,28 @@ public static class PublicPortalEndpoints
             return TypedResults.Ok(documents);
         });
 
-        group.MapPost("/{tenantSlug}/portal/magic-link", async Task<Ok<StatusResponse>> (
+        group.MapPost("/{tenantSlug}/portal/magic-link", async Task<IResult> (
             string tenantSlug,
             [FromBody] RequestPortalMagicLinkRequest? body,
-            IMediator mediator) =>
+            IMediator mediator,
+            HttpContext http,
+            PortalMagicLinkRateLimiter rateLimiter) =>
         {
-            // Always 200. Existing public-route throttle (if configured) is the only rate limit.
+            var key = PortalMagicLinkRateLimiter.ClientKey(http, body?.Email);
+            if (!await rateLimiter.TryAcquireAsync(key, http.RequestAborted))
+            {
+                http.Response.Headers.RetryAfter = "600";
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status429TooManyRequests,
+                        Title = "Too Many Requests",
+                        Detail = "Too many magic-link requests. Retry later."
+                    },
+                    statusCode: StatusCodes.Status429TooManyRequests);
+            }
+
+            // Always 200 when under budget — do not reveal whether the email exists.
             await mediator.Send(new RequestPortalMagicLinkCommand(tenantSlug, body?.Email ?? ""));
             return TypedResults.Ok(new StatusResponse { Status = "ok" });
         });

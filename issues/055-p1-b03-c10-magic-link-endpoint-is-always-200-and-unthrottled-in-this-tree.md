@@ -2,17 +2,21 @@
 number: "055"
 id: B03-C10
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
+resolved_branch: fix/055-magic-link-throttle
 ---
 
 # 055 — B03-C10 — Magic-link endpoint is always-200 and unthrottled in this tree
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/055-magic-link-throttle`
+
+POST magic-link is 5 requests / 10 minutes per IP (and email+IP). Over budget returns 429.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
