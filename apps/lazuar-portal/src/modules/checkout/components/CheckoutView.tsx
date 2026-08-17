@@ -6,6 +6,7 @@ import { OrderSummaryCard } from "./OrderSummaryCard";
 import { PromoCodeInput } from "./PromoCodeInput";
 import { CheckoutForm } from "./CheckoutForm";
 import { validateCouponCode, type ProductDto } from "../lib/api";
+import { grossBreakdown, productSignalsSst } from "../lib/grossBreakdown";
 import { localizeCheckoutError } from "../i18n/errors";
 import { useCheckoutT } from "../i18n/CheckoutI18n";
 import {
@@ -44,7 +45,30 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
   const [finalPrice, setFinalPrice] = useState<number | null>(null);
   const [isCouponApplied, setIsCouponApplied] = useState(false);
 
-  const basePriceForQuantity = (product.pricing_model === "PWYW" ? customPrice : unitPrice) * quantity;
+  const unitNet = product.pricing_model === "PWYW" ? customPrice : unitPrice;
+  const basePriceForQuantity = unitNet * quantity;
+  const sstTaxType = product.sst_tax_type ?? "06";
+  const sstRatePercent = product.sst_rate_percent ?? 0;
+  const merchantHasSst = productSignalsSst(sstTaxType, sstRatePercent);
+  const unitNetAfterCoupon =
+    isCouponApplied && discountAmount !== null
+      ? Math.max(0, unitNet - discountAmount / quantity)
+      : unitNet;
+  const isTrialToday = trialDays > 0 && selectedInterval !== "one_time";
+  const todayBreakdown = grossBreakdown(
+    isTrialToday ? 0 : unitNetAfterCoupon,
+    quantity,
+    sstTaxType,
+    sstRatePercent,
+    merchantHasSst,
+  );
+  const recurringBreakdown = grossBreakdown(
+    unitNetAfterCoupon,
+    quantity,
+    sstTaxType,
+    sstRatePercent,
+    merchantHasSst,
+  );
 
   const handleApplyCoupon = async (code: string) => {
     setIsCouponValidating(true);
@@ -114,7 +138,7 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     pricingModel: product.pricing_model,
     basePrice: unitPrice,
     minimumPrice: product.minimum_price,
-    currentPrice: trialDays > 0 && selectedInterval !== "one_time" ? 0 : basePriceForQuantity,
+    currentPrice: isTrialToday ? 0 : basePriceForQuantity,
     interval: selectedInterval,
     supportsOffSession: product.supports_off_session,
     currency: product.currency,
@@ -125,6 +149,11 @@ export function CheckoutView({ tenantSlug, product, initialAuthContext, isCancel
     quantity,
     quantityAdjustable,
     trialDays: selectedInterval === "one_time" ? 0 : trialDays,
+    taxAmount: todayBreakdown.lineTax,
+    sstRatePercent,
+    sstTaxType: todayBreakdown.taxType,
+    grossAmount: todayBreakdown.gross,
+    recurringGrossAmount: recurringBreakdown.gross,
   };
 
   return (

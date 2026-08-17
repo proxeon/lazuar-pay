@@ -17,7 +17,7 @@ interface OrderSummaryCardProps {
 export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChange, promoCodeSlot }: OrderSummaryCardProps) {
   const { t, locale } = useCheckoutT();
   const money = (amount: number) => formatMoney(locale, context.currency || "MYR", amount);
-  const finalPriceToDisplay = context.finalPrice !== null ? context.finalPrice : context.currentPrice;
+  const finalPriceToDisplay = context.grossAmount;
   const intervalLabel = context.interval === "mo"
     ? t("summary.intervalMonth")
     : context.interval === "yr"
@@ -125,6 +125,15 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
             <span className="text-sm font-bold">- {money(context.discountAmount)}</span>
           </div>
         )}
+
+        {context.taxAmount > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <span className="text-sm text-muted-foreground min-w-0 break-words">
+              {t("summary.sst", { rate: String(context.sstRatePercent) })}
+            </span>
+            <span className="text-sm font-medium text-foreground">{money(context.taxAmount)}</span>
+          </div>
+        )}
       </div>
 
       {promoCodeSlot && (
@@ -142,12 +151,12 @@ export function OrderSummaryCard({ context, onCustomPriceChange, onQuantityChang
         </div>
         {isRecurring && (context.trialDays ?? 0) > 0 && (
           <p className="text-xs text-muted-foreground">
-            {t("summary.trialThen", { days: context.trialDays, amount: money(context.basePrice * context.quantity), interval: intervalLabel })}
+            {t("summary.trialThen", { days: context.trialDays, amount: money(context.recurringGrossAmount), interval: intervalLabel })}
           </p>
         )}
         {isRecurring && !(context.trialDays && context.trialDays > 0) && (
           <p className="text-xs text-muted-foreground">
-            {t("summary.thenRecurring", { amount: money(finalPriceToDisplay), interval: intervalLabel })}
+            {t("summary.thenRecurring", { amount: money(context.recurringGrossAmount), interval: intervalLabel })}
           </p>
         )}
       </div>

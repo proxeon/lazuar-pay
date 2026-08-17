@@ -18,6 +18,11 @@ export interface CheckoutContext {
   quantity: number;
   quantityAdjustable: boolean;
   trialDays?: number;
+  taxAmount: number;
+  sstRatePercent: number;
+  sstTaxType?: string;
+  grossAmount: number;
+  recurringGrossAmount: number;
 }
 
 export interface CheckoutAuthContext {
