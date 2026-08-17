@@ -10,13 +10,34 @@ using Modules.Commerce.Domain.Entities;
 
 namespace Modules.Commerce.Infrastructure.Repositories;
 
-public class CommerceRepository : ICommerceRepository
+public class CommerceRepository : ICommerceRepository, ICommerceTransactional
 {
     private readonly CommerceDbContext _context;
 
     public CommerceRepository(CommerceDbContext context)
     {
         _context = context;
+    }
+
+    public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken ct = default)
+    {
+        if (!_context.Database.IsRelational())
+        {
+            await action(ct);
+            return;
+        }
+
+        await using var tx = await _context.Database.BeginTransactionAsync(ct);
+        try
+        {
+            await action(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
     }
 
     public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default)

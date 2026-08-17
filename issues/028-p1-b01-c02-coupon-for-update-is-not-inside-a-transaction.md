@@ -2,17 +2,21 @@
 number: "028"
 id: B01-C02
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
+resolved_branch: fix/028-coupon-lock-transaction
 ---
 
 # 028 — B01-C02 — Coupon `FOR UPDATE` is not inside a transaction
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/028-coupon-lock-transaction`
+
+Hop-1 coupon lock, reserve, and session insert run in one Commerce transaction so `FOR UPDATE` holds until `SaveChanges`.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

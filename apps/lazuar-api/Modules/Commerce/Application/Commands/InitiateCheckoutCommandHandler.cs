@@ -222,60 +222,62 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         decimal unitDiscount = 0m;
         Guid? couponId = null;
+        CheckoutSession? session = null;
 
-        if (!isTrial && !string.IsNullOrWhiteSpace(request.CouponCode))
+        async Task PersistReservationAndSessionAsync(CancellationToken persistCt)
         {
-            var coupon = await _repository.GetCouponByCodeWithLockAsync(tenantId.Value, request.CouponCode, ct);
-            if (coupon == null)
+            if (!isTrial && !string.IsNullOrWhiteSpace(request.CouponCode))
             {
-                throw new InvalidOperationException($"Coupon with code '{request.CouponCode}' is invalid or expired.");
+                var coupon = await _repository.GetCouponByCodeWithLockAsync(tenantId.Value, request.CouponCode, persistCt);
+                if (coupon == null)
+                {
+                    throw new InvalidOperationException($"Coupon with code '{request.CouponCode}' is invalid or expired.");
+                }
+
+                coupon.Validate(resolved.Amount, product.Id);
+                unitDiscount = coupon.CalculateDiscount(resolved.Amount);
+                coupon.Reserve();
+                couponId = coupon.Id;
             }
 
-            coupon.Validate(resolved.Amount, product.Id);
-            unitDiscount = coupon.CalculateDiscount(resolved.Amount);
-            coupon.Reserve();
-            couponId = coupon.Id;
+            session = new CheckoutSession(
+                tenantId.Value,
+                clientProfileId,
+                product.Id,
+                couponId,
+                DateTime.UtcNow.AddHours(24),
+                quantity,
+                resolved.PriceId
+            );
+
+            var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, resolved.Interval);
+            if (!string.IsNullOrWhiteSpace(request.TaxId))
+            {
+                persistMeta["is_b2b_required"] = "true";
+            }
+            session.SetMetadataJson(CommerceCheckoutMetadata.Serialize(persistMeta));
+            session.SetIdempotency(idempotencyKey, fingerprint);
+
+            _repository.AddCheckoutSession(session);
+            await _repository.SaveChangesAsync(persistCt);
         }
 
-        var unitNet = isTrial ? 0m : Math.Max(0, resolved.Amount - unitDiscount);
-        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
-            _billingQueryService, tenantId.Value);
-        var breakdown = SubscriptionBillingAmount.GrossBreakdown(
-            unitNet, quantity, product.SstTaxType, product.SstRatePercent, merchantHasSst);
-        var sstType = breakdown.TaxType;
-        var unitTax = breakdown.UnitTax;
-        var unitGross = breakdown.UnitGross;
-        var lineNet = breakdown.Gross;
-
-        var session = new CheckoutSession(
-            tenantId.Value,
-            clientProfileId,
-            product.Id,
-            couponId,
-            DateTime.UtcNow.AddHours(24),
-            quantity,
-            resolved.PriceId
-        );
-
-        var isB2bRequired = !string.IsNullOrWhiteSpace(request.TaxId);
-        var persistMeta = CommerceCheckoutMetadata.ForPersistence(request.Metadata, resolved.Interval);
-        if (isB2bRequired)
-        {
-            persistMeta["is_b2b_required"] = "true";
-        }
-        session.SetMetadataJson(CommerceCheckoutMetadata.Serialize(persistMeta));
-        session.SetIdempotency(idempotencyKey, fingerprint);
-
-        _repository.AddCheckoutSession(session);
         try
         {
-            await _repository.SaveChangesAsync(ct);
+            if (_repository is ICommerceTransactional transactional)
+            {
+                await transactional.ExecuteInTransactionAsync(PersistReservationAndSessionAsync, ct);
+            }
+            else
+            {
+                await PersistReservationAndSessionAsync(ct);
+            }
         }
         catch (Exception) when (idempotencyKey != null)
         {
             var raced = await _repository.GetCheckoutSessionByIdempotencyKeyAsync(
                 tenantId.Value, idempotencyKey, ct);
-            if (raced != null && raced.Id != session.Id)
+            if (raced != null && (session == null || raced.Id != session.Id))
             {
                 if (!string.Equals(raced.RequestFingerprint, fingerprint, StringComparison.Ordinal))
                 {
@@ -290,6 +292,22 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
             throw;
         }
+
+        if (session == null)
+        {
+            throw new InvalidOperationException("Checkout session was not created.");
+        }
+
+        var unitNet = isTrial ? 0m : Math.Max(0, resolved.Amount - unitDiscount);
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+            _billingQueryService, tenantId.Value);
+        var breakdown = SubscriptionBillingAmount.GrossBreakdown(
+            unitNet, quantity, product.SstTaxType, product.SstRatePercent, merchantHasSst);
+        var sstType = breakdown.TaxType;
+        var unitTax = breakdown.UnitTax;
+        var unitGross = breakdown.UnitGross;
+        var lineNet = breakdown.Gross;
+        var isB2bRequired = !string.IsNullOrWhiteSpace(request.TaxId);
 
         // Same poller handle as the paid hop-2 return — buyer success must observe session COMPLETED.
         var successUrl = $"{clientUrl}/{request.TenantSlug}/checkout/{request.ProductSlug}/success?sub_id={session.Id}";
