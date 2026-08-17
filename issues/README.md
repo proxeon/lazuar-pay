@@ -83,6 +83,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 071 | B04-P14 | `fix/071-xendit-refund-payment-id` | Xendit refund uses payment_id from the invoice when present |
 | 072 | B04-P15 | `fix/072-currency-normalize` | Webhook currency is fail-closed and published uppercase |
 | 073 | B04-P16 | `fix/073-xendit-callback-constant-time` | Xendit callback token compare is constant-time including length mismatch |
+| 074 | B04-P17 | `fix/074-minor-units-policy` | One ToMinorUnits policy; zero-decimal currencies are not ×100 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

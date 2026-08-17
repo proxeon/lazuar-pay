@@ -40,18 +40,12 @@ public class GatewayCommonTests
     }
 
     [Test]
-    public void ToMinorUnitsTruncating_MatchesBillplzCast()
+    public void ToMinorUnits_UsesAwayFromZeroAndZeroDecimal()
     {
-        // (int)(10.009m * 1 * 100) truncates toward zero → 1000
-        GatewayCommon.ToMinorUnitsTruncating(10.009m).Should().Be(1000);
-        GatewayCommon.ToMinorUnitsTruncating(10.50m, 2).Should().Be(2100);
-    }
-
-    [Test]
-    public void ToMinorUnitsRounded_MatchesChipRound()
-    {
-        // Math.Round(10.005m * 100, 0) with default MidpointRounding.ToEven
-        GatewayCommon.ToMinorUnitsRounded(10.005m).Should().Be((int)Math.Round(10.005m * 100m, 0));
+        GatewayCommon.ToMinorUnits(10.005m).Should().Be(1001);
+        GatewayCommon.ToMinorUnits(10.50m, "MYR", 2).Should().Be(2100);
+        GatewayCommon.ToMinorUnits(1000m, "JPY").Should().Be(1000);
+        GatewayCommon.ToMinorUnitsTruncating(10.009m).Should().Be(1001);
         GatewayCommon.ToMinorUnitsRounded(10.50m, 2).Should().Be(2100);
     }
 

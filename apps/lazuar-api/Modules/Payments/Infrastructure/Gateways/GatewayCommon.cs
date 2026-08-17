@@ -37,17 +37,30 @@ internal static class GatewayCommon
             ? $"{productName} (x{quantity})"
             : (string.IsNullOrWhiteSpace(productName) ? DefaultProductName : productName);
 
-    /// <summary>
-    /// Minor units via banker's rounding (matches CHIP <c>Math.Round(..., 0)</c>).
-    /// </summary>
-    public static int ToMinorUnitsRounded(decimal amount, int quantity = 1) =>
-        (int)Math.Round(amount * quantity * 100m, 0);
+    private static readonly HashSet<string> ZeroDecimalCurrencies = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG",
+        "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF"
+    };
+
+    public static bool IsZeroDecimalCurrency(string? currency) =>
+        !string.IsNullOrWhiteSpace(currency) && ZeroDecimalCurrencies.Contains(currency.Trim());
 
     /// <summary>
-    /// Minor units via cast-truncate toward zero (matches Billplz/Razorpay <c>(int)(amount * qty * 100)</c>).
+    /// One money policy: half away from zero. Zero-decimal ISO currencies are not ×100.
     /// </summary>
+    public static long ToMinorUnits(decimal amount, string? currency = "MYR", int quantity = 1)
+    {
+        var qty = quantity < 1 ? 1 : quantity;
+        var factor = IsZeroDecimalCurrency(currency) ? 1m : 100m;
+        return (long)Math.Round(amount * qty * factor, 0, MidpointRounding.AwayFromZero);
+    }
+
+    public static int ToMinorUnitsRounded(decimal amount, int quantity = 1) =>
+        (int)ToMinorUnits(amount, "MYR", quantity);
+
     public static int ToMinorUnitsTruncating(decimal amount, int quantity = 1) =>
-        (int)(amount * quantity * 100m);
+        (int)ToMinorUnits(amount, "MYR", quantity);
 
     /// <summary>
     /// Keep an existing paying <c>tenant_id</c> (platform charges). Stamp the adapter
@@ -76,8 +89,7 @@ internal static class GatewayCommon
 
     public static string FormatRefundIdempotencyKey(string transactionId, decimal amount)
     {
-        var amountMinor = (long)(amount * 100);
-        return RefundIdempotencyKeyPrefix + transactionId + ":" + amountMinor;
+        return RefundIdempotencyKeyPrefix + transactionId + ":" + ToMinorUnits(amount);
     }
 
     public static void ApplyPayingTenantMetadata(Dictionary<string, string> metadata, Guid adapterTenantId)

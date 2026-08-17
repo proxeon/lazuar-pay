@@ -316,7 +316,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
             var options = new PaymentIntentCreateOptions
             {
-                Amount = (long)(amount * 100),
+                Amount = GatewayCommon.ToMinorUnits(amount, currency),
                 Currency = currency.ToLowerInvariant(),
                 Customer = customerId,
                 PaymentMethod = tokenId,
@@ -345,7 +345,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
             var options = new RefundCreateOptions
             {
                 PaymentIntent = transactionId,
-                Amount = (long)(amount * 100)
+                Amount = GatewayCommon.ToMinorUnits(amount)
             };
             var refund = await service.CreateAsync(
                 options,
@@ -532,7 +532,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     PriceData = new SessionLineItemPriceDataOptions
                     {
                         Currency = currency.ToLowerInvariant(),
-                        UnitAmountDecimal = amount * 100,
+                        UnitAmountDecimal = GatewayCommon.ToMinorUnits(amount, currency),
                         ProductData = new SessionLineItemPriceDataProductDataOptions
                         {
                             Name = string.IsNullOrWhiteSpace(productName) ? GatewayCommon.DefaultProductName : productName

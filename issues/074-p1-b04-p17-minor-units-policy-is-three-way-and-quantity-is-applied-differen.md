@@ -2,17 +2,21 @@
 number: "074"
 id: B04-P17
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
+resolved_branch: fix/074-minor-units-policy
 ---
 
 # 074 — B04-P17 — Minor-units policy is three-way and quantity is applied differently
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/074-minor-units-policy`
+
+One ToMinorUnits policy: half away from zero. Zero-decimal currencies are not ×100. Stripe uses the same helper.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
