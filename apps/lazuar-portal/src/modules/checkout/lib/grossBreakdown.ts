@@ -77,3 +77,10 @@ export function productSignalsSst(
 ): boolean {
   return sstTaxType === SST_SERVICE_TAX && sstRatePercent > 0;
 }
+
+/** Custom quotes have no product SST row; type 02 / 8% when the merchant has an SST id. */
+export const CUSTOM_QUOTE_SST_RATE_PERCENT = 8;
+
+export function customQuoteBreakdown(net: number, merchantHasSst: boolean): GrossBreakdown {
+  return grossBreakdown(net, 1, SST_SERVICE_TAX, CUSTOM_QUOTE_SST_RATE_PERCENT, merchantHasSst);
+}

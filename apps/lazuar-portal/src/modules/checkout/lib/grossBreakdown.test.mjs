@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   computeSstTax,
+  customQuoteBreakdown,
   grossBreakdown,
   productSignalsSst,
   roundMoney,
@@ -61,6 +62,20 @@ describe("grossBreakdown", () => {
     const then = grossBreakdown(100, 1, "02", 8);
     assert.equal(today.gross, 0);
     assert.equal(then.gross, 108);
+  });
+});
+
+describe("customQuoteBreakdown", () => {
+  it("adds 8% SST when the merchant has an SST id", () => {
+    const b = customQuoteBreakdown(5000, true);
+    assert.equal(b.lineTax, 400);
+    assert.equal(b.gross, 5400);
+  });
+
+  it("stays net when the merchant has no SST id", () => {
+    const b = customQuoteBreakdown(5000, false);
+    assert.equal(b.lineTax, 0);
+    assert.equal(b.gross, 5000);
   });
 });
 

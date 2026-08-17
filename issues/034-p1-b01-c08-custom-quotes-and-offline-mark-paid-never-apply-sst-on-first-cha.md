@@ -2,17 +2,21 @@
 number: "034"
 id: B01-C08
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
+resolved_branch: fix/034-quote-offline-sst
 ---
 
 # 034 — B01-C08 — Custom quotes and offline mark-paid never apply SST on first charge
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/034-quote-offline-sst`
+
+Custom quote hop-2 and clerk mark-paid run GrossBreakdown when the merchant has an SST id. Quote GET / QuoteView show the tax-inclusive payable.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

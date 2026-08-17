@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.Extensions.DependencyInjection;
+using Modules.Billing.Contracts;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Aggregates;
@@ -17,15 +18,18 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
     private readonly ICommerceRepository _repository;
     private readonly IEventBus _eventBus;
     private readonly ICrmQueryService _crmQueryService;
+    private readonly IBillingQueryService? _billingQueryService;
 
     public MarkCheckoutAsPaidOfflineCommandHandler(
         ICommerceRepository repository,
         [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
-        ICrmQueryService crmQueryService)
+        ICrmQueryService crmQueryService,
+        IBillingQueryService? billingQueryService = null)
     {
         _repository = repository;
         _eventBus = eventBus;
         _crmQueryService = crmQueryService;
+        _billingQueryService = billingQueryService;
     }
 
     public async Task Handle(MarkCheckoutAsPaidOfflineCommand request, CancellationToken ct)
@@ -89,9 +93,12 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             }
         }
 
-        var lineGross = unitAmount * quantity;
-        var lineDiscount = unitDiscount * quantity;
-        var totalAmount = Math.Max(0, lineGross - lineDiscount);
+        var unitNet = Math.Max(0, unitAmount - unitDiscount);
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+            _billingQueryService, session.OrganizationId);
+        var breakdown = SubscriptionBillingAmount.GrossBreakdown(
+            unitNet, quantity, product.SstTaxType, product.SstRatePercent, merchantHasSst);
+        var totalAmount = breakdown.Gross;
         var currency = product.Currency;
 
         session.Complete();
@@ -184,7 +191,10 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         string customerEmail,
         CancellationToken ct)
     {
-        var totalAmount = session.AdHocLineItems.Sum(x => x.UnitPrice * x.Quantity);
+        var customNet = session.AdHocLineItems.Sum(x => x.UnitPrice * x.Quantity);
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+            _billingQueryService, session.OrganizationId);
+        var totalAmount = SubscriptionBillingAmount.CustomQuoteBreakdown(customNet, merchantHasSst).Gross;
         const string currency = "MYR";
 
         session.Complete();

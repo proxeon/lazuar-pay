@@ -116,7 +116,12 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
             existingSession.SetIdempotency(idempotencyKey, fingerprint);
 
-            decimal customTotalAmount = existingSession.AdHocLineItems.Sum(x => x.UnitPrice * x.Quantity);
+            var customNet = existingSession.AdHocLineItems.Sum(x => x.UnitPrice * x.Quantity);
+            var customMerchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+                _billingQueryService, tenantId.Value);
+            var customBreakdown = SubscriptionBillingAmount.CustomQuoteBreakdown(
+                customNet, customMerchantHasSst);
+            var customTotalAmount = customBreakdown.Gross;
             
             var customSuccessUrl = $"{clientUrl}/{request.TenantSlug}/checkout/custom/success?sub_id={existingSession.Id}";
             var customCancelUrl = $"{clientUrl}/{request.TenantSlug}/pay/{existingSession.Id}?cancelled=true";
@@ -128,6 +133,12 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
                 { "tenant_id", tenantId.Value.ToString() },
                 { "is_b2b_required", existingSession.IsB2bRequired ? "true" : "false" }
             };
+            SubscriptionBillingAmount.StampSstMetadata(customMetadata, customBreakdown);
+            if (customBreakdown.UnitTax > 0)
+            {
+                customMetadata["sst_rate_percent"] =
+                    SubscriptionBillingAmount.DefaultServiceTaxRatePercent.ToString("0.##");
+            }
 
             if (existingSession.IsB2bRequired)
             {

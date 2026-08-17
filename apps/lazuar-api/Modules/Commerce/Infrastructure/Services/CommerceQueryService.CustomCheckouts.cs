@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Dapper;
 using Lazuar.ApiTypes;
+using Modules.Commerce.Application;
 
 namespace Modules.Commerce.Infrastructure.Services;
 
@@ -55,6 +56,8 @@ public partial class CommerceQueryService
         var profileMap = profiles.ToDictionary(p => Guid.Parse(p.Id), p => p);
 
         var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+            _billingQueryService, organizationId);
 
         var dtos = rawCheckouts.Select(c =>
         {
@@ -64,7 +67,7 @@ public partial class CommerceQueryService
                 ? new List<CustomLineItemDto>() 
                 : JsonSerializer.Deserialize<List<CustomLineItemDto>>(c.AdHocLineItems, jsonOptions) ?? new List<CustomLineItemDto>();
 
-            var totalAmount = lineItems.Sum(li => li.Unit_price * li.Quantity);
+            var totalAmount = CustomQuotePayable(lineItems, merchantHasSst);
 
             return new CustomCheckoutDto
             {
@@ -109,7 +112,9 @@ public partial class CommerceQueryService
             ? new List<CustomLineItemDto>() 
             : JsonSerializer.Deserialize<List<CustomLineItemDto>>(rawCheckout.AdHocLineItems, jsonOptions) ?? new List<CustomLineItemDto>();
 
-        var totalAmount = lineItems.Sum(li => li.Unit_price * li.Quantity);
+        var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+            _billingQueryService, organizationId);
+        var totalAmount = CustomQuotePayable(lineItems, merchantHasSst);
 
         return new CustomCheckoutDto
         {
@@ -163,6 +168,12 @@ public partial class CommerceQueryService
         }).ToList();
 
         return new PaginatedResponse<CommerceDisputeDto>(dtos, rows[0].TotalCount, page, limit);
+    }
+
+    private static decimal CustomQuotePayable(IEnumerable<CustomLineItemDto> lineItems, bool merchantHasSst)
+    {
+        var net = lineItems.Sum(li => (decimal)li.Unit_price * li.Quantity);
+        return SubscriptionBillingAmount.CustomQuoteBreakdown(net, merchantHasSst).Gross;
     }
 
     private record RawDisputeDto(

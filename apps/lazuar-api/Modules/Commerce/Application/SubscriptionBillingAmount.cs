@@ -33,6 +33,11 @@ public static class SubscriptionBillingAmount
     public static decimal Line(Subscription sub, Product product) =>
         Unit(sub, product) * Seats(sub);
 
+    public const decimal DefaultServiceTaxRatePercent = 8m;
+
+    public static Breakdown CustomQuoteBreakdown(decimal net, bool merchantHasSst) =>
+        GrossBreakdown(net, 1, SstTaxMath.ServiceTax, DefaultServiceTaxRatePercent, merchantHasSst);
+
     public static Breakdown GrossBreakdown(
         decimal unitNet,
         int seats,

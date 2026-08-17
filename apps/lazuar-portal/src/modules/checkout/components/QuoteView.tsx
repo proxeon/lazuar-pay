@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Download, Building2, CheckCircle2 } from "lucide-react";
 import { components } from "@repo/api-types-ts";
 import { submitCheckout, validateTin } from "../lib/api";
+import { customQuoteBreakdown } from "../lib/grossBreakdown";
 import { cn } from "../../../../lib/utils";
 import Link from "next/link";
 import type { PublicWorkspaceBranding } from "../../core/lib/branding";
@@ -35,6 +36,8 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
     : (branding?.name || "Merchant");
   const logoUrl = checkout.is_b2b_required ? (profile?.logo_url || branding?.logo_url) : branding?.logo_url;
   const quoteNumber = checkout.document_number || "PENDING";
+  const lineNet = checkout.line_items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+  const quoteSst = customQuoteBreakdown(lineNet, !!profile?.sst_registration_number);
 
   const handleProceedToPayment = async () => {
     if (checkout.is_b2b_required && !companyName.trim()) {
@@ -225,11 +228,17 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
           <div className="w-full md:w-auto min-w-[240px]">
             <div className="flex justify-between items-center py-2 border-b border-border/40">
               <span className="text-sm font-semibold text-muted-foreground">Subtotal</span>
-              <span className="text-base font-mono text-foreground font-medium">MYR {checkout.total_amount.toFixed(2)}</span>
+              <span className="text-base font-mono text-foreground font-medium">MYR {lineNet.toFixed(2)}</span>
             </div>
+            {quoteSst.lineTax > 0 && (
+              <div className="flex justify-between items-center py-2 border-b border-border/40">
+                <span className="text-sm font-semibold text-muted-foreground">SST (8%)</span>
+                <span className="text-base font-mono text-foreground font-medium">MYR {quoteSst.lineTax.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center py-4">
               <span className="text-base font-bold uppercase tracking-widest text-foreground">Total Due</span>
-              <span className="text-2xl font-mono font-bold text-foreground">MYR {checkout.total_amount.toFixed(2)}</span>
+              <span className="text-2xl font-mono font-bold text-foreground">MYR {quoteSst.gross.toFixed(2)}</span>
             </div>
           </div>
         </div>
