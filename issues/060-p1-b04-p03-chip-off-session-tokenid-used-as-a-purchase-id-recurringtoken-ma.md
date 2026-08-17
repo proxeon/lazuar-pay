@@ -2,17 +2,21 @@
 number: "060"
 id: B04-P03
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
+resolved_branch: fix/060-chip-recurring-token
 ---
 
 # 060 — B04-P03 — CHIP off-session: `tokenId` used as a purchase id; `recurring_token` may not be one
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/060-chip-recurring-token`
+
+CHIP off-session no longer treats a 404 GET /purchases/{token} as fatal. It falls back to the client record. Recurring fallback uses the nested purchase id.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

@@ -245,21 +245,15 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             var client = _httpFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-            var oldPurchaseResponse = await client.GetAsync($"{ApiBaseUrl}purchases/{tokenId}/");
-            if (!oldPurchaseResponse.IsSuccessStatusCode)
+            var (brandId, clientEmail, clientName) = await ResolveOffSessionClientAsync(
+                client, tokenId, customerId);
+            if (string.IsNullOrWhiteSpace(brandId))
             {
-                _logger.LogError("Failed to fetch original CHIP purchase {TokenId} for off-session charge.", tokenId);
+                _logger.LogError(
+                    "Failed to resolve CHIP brand for off-session charge (token {TokenId}, customer {CustomerId}).",
+                    tokenId, customerId);
                 return false;
             }
-
-            var oldPurchaseJson = await oldPurchaseResponse.Content.ReadAsStringAsync();
-            using var oldDoc = JsonDocument.Parse(oldPurchaseJson);
-            var oldRoot = oldDoc.RootElement;
-            
-            var brandId = oldRoot.GetProperty("brand_id").GetString();
-            var clientNode = oldRoot.GetProperty("client");
-            var clientEmail = clientNode.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : GatewayCommon.PlaceholderEmail;
-            var clientName = clientNode.TryGetProperty("full_name", out var nameProp) ? nameProp.GetString() : "Customer";
 
             var meta = new Dictionary<string, string>
             {
@@ -374,6 +368,49 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         throw new InvalidOperationException("CHIP Collect does not provide a managed customer billing portal.");
     }
 
+    private async Task<(string? BrandId, string ClientEmail, string ClientName)> ResolveOffSessionClientAsync(
+        HttpClient client,
+        string tokenId,
+        string customerId)
+    {
+        foreach (var candidate in new[] { tokenId, customerId }.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct())
+        {
+            var purchase = await client.GetAsync($"{ApiBaseUrl}purchases/{candidate}/");
+            if (purchase.IsSuccessStatusCode)
+            {
+                using var doc = JsonDocument.Parse(await purchase.Content.ReadAsStringAsync());
+                return ReadBrandAndClient(doc.RootElement);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(customerId))
+        {
+            var chipClient = await client.GetAsync($"{ApiBaseUrl}clients/{customerId}/");
+            if (chipClient.IsSuccessStatusCode)
+            {
+                using var doc = JsonDocument.Parse(await chipClient.Content.ReadAsStringAsync());
+                return ReadBrandAndClient(doc.RootElement);
+            }
+        }
+
+        return (null, GatewayCommon.PlaceholderEmail, "Customer");
+    }
+
+    private static (string? BrandId, string ClientEmail, string ClientName) ReadBrandAndClient(JsonElement root)
+    {
+        var brandId = root.TryGetProperty("brand_id", out var brand) ? brand.GetString() : null;
+        var clientNode = root.TryGetProperty("client", out var node) && node.ValueKind == JsonValueKind.Object
+            ? node
+            : root;
+        var clientEmail = clientNode.TryGetProperty("email", out var emailProp)
+            ? emailProp.GetString()
+            : GatewayCommon.PlaceholderEmail;
+        var clientName = clientNode.TryGetProperty("full_name", out var nameProp)
+            ? nameProp.GetString()
+            : "Customer";
+        return (brandId, clientEmail ?? GatewayCommon.PlaceholderEmail, clientName ?? "Customer");
+    }
+
     /// <summary>
     /// Recurring token from root or purchase; client.id from root.client or purchase.client.
     /// Charge path only needs the token — if customer is missing, customer falls back to token.
@@ -411,7 +448,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
         }
         else if (isRecurring)
         {
-            tokenId = purchaseId;
+            tokenId = ReadStablePurchaseId(root) ?? purchaseId;
         }
 
         var customerId = ReadClientId(root) ?? ReadClientId(purchaseNode);

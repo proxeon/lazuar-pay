@@ -78,6 +78,55 @@ public class ChipCollectGatewayAdapterTests
     }
 
     [Test]
+    public void ExtractVaultIds_IsRecurringFallback_UsesNestedPurchaseId()
+    {
+        using var doc = JsonDocument.Parse("""
+            {
+              "id": "evt_root",
+              "purchase": { "id": "purch_nested", "is_recurring_token": true }
+            }
+            """);
+
+        var (_, tokenId) = ChipCollectGatewayAdapter.ExtractVaultIds(doc.RootElement);
+        tokenId.Should().Be("purch_nested");
+    }
+
+    [Test]
+    public async Task ChargeOffSession_TokenGet404_FallsBackToClient()
+    {
+        var handler = new SequenceHandler(
+            new HttpResponseMessage(HttpStatusCode.NotFound),
+            new HttpResponseMessage(HttpStatusCode.NotFound),
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"brand_id":"brand_1","email":"a@b.com","full_name":"Ann"}""",
+                    Encoding.UTF8,
+                    "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"id":"purch_new"}""", Encoding.UTF8, "application/json")
+            },
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"status":"paid"}""", Encoding.UTF8, "application/json")
+            });
+        var http = new HttpClient(handler);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient(Arg.Any<string>()).Returns(http);
+        var adapter = new ChipCollectGatewayAdapter(
+            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+
+        var ok = await adapter.ChargeOffSessionAsync(
+            "chip-key", "cli_1", "rt_not_a_purchase", 10m, "MYR", "Plan", "sub-1", Guid.CreateVersion7());
+
+        ok.Should().BeTrue();
+        handler.Uris.Should().Contain(u => u.Contains("/clients/cli_1/"));
+        handler.Uris.Should().Contain(u => u.Contains("/purchases/purch_new/charge/"));
+    }
+
+    [Test]
     public void ExtractVaultIds_NoRecurring_ReturnsNulls()
     {
         using var doc = JsonDocument.Parse("""
@@ -238,6 +287,25 @@ public class ChipCollectGatewayAdapterTests
         result.EventType.Should().Be("PAYMENT_FAILED");
         result.EventId.Should().Be("PAYMENT_FAILED:purch_fail_1");
         result.GatewayTransactionId.Should().Be("purch_fail_1");
+    }
+
+    private sealed class SequenceHandler : HttpMessageHandler
+    {
+        private readonly Queue<HttpResponseMessage> _responses;
+        public List<string> Uris { get; } = new();
+
+        public SequenceHandler(params HttpResponseMessage[] responses)
+        {
+            _responses = new Queue<HttpResponseMessage>(responses);
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Uris.Add(request.RequestUri?.ToString() ?? "");
+            return Task.FromResult(_responses.Count > 0
+                ? _responses.Dequeue()
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
     }
 
     private sealed class RecordingHandler : HttpMessageHandler
