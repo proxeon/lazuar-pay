@@ -874,6 +874,48 @@ public class ProcessGatewayWebhookCommandHandlerTests
     }
 
     [Test]
+    public async Task Handle_LateFailed_AfterCompleted_SameObject_DoesNotPublish()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "CHIP", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "CHIP", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var completed = new PaymentWebhookLog(
+            "PAYMENT_COMPLETED:purch_1", "CHIP", "PAYMENT_COMPLETED:purch_1", Guid.CreateVersion7(),
+            organizationId: tenantId);
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        logRepo.GetByEventIdAsync("PAYMENT_FAILED:purch_1", "CHIP", tenantId, Arg.Any<CancellationToken>())
+            .Returns((PaymentWebhookLog?)null);
+        logRepo.GetByBusinessKeyAsync("PAYMENT_FAILED:purch_1", "CHIP", tenantId, Arg.Any<CancellationToken>())
+            .Returns((PaymentWebhookLog?)null);
+        logRepo.GetByBusinessKeyAsync("PAYMENT_COMPLETED:purch_1", "CHIP", tenantId, Arg.Any<CancellationToken>())
+            .Returns(completed);
+
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                true, "PAYMENT_FAILED", "PAYMENT_FAILED:purch_1", 0m, "MYR", "purch_1",
+                new Dictionary<string, string>(), 0, 0, 0, 1, "MYR", null));
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("CHIP").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "CHIP", "{}", new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentFailedIntegrationEvent>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task Handle_InboundTenantMismatch_DoesNotPublishOrLog()
     {
         var urlTenant = Guid.CreateVersion7();

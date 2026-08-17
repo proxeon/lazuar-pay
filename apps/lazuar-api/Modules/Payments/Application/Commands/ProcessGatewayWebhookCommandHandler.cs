@@ -111,6 +111,23 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
             return;
         }
 
+        if (parsedResult.EventType == "PAYMENT_FAILED"
+            && !string.IsNullOrWhiteSpace(parsedResult.GatewayTransactionId))
+        {
+            var completed = await _logRepository.GetByBusinessKeyAsync(
+                "PAYMENT_COMPLETED:" + parsedResult.GatewayTransactionId,
+                config.GatewayType,
+                request.TenantId,
+                cancellationToken);
+            if (completed is not null)
+            {
+                _logger.LogInformation(
+                    "Ignoring late PAYMENT_FAILED after PAYMENT_COMPLETED for {GatewayTransactionId}.",
+                    parsedResult.GatewayTransactionId);
+                return;
+            }
+        }
+
         // Rehydrate stripped gateway metadata from IntegrationCheckoutSession (Billplz bill id, etc.).
         var metadata = await MergeSessionMetadataAsync(
             request.TenantId,
