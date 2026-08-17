@@ -387,6 +387,27 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task PastDue_AutoCharge_OpenDispute_DoesNotPublish()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var disputed = PastDueSub(_orgId, product.Id);
+        disputed.StoreVaultedToken("cus", "pm");
+        disputed.MarkHasOpenDispute();
+        var auto = AutoChargeCampaign(_orgId);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(disputed);
+        _db.DunningCampaigns.Add(auto);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+        (await _db.ChargeAttemptLogs.IgnoreQueryFilters().CountAsync(l => l.SubscriptionId == disputed.Id))
+            .Should().Be(0);
+    }
+
+    [Test]
     public async Task PastDue_AutoCharge_ReminderOnlyNoVault_DoesNotPublish_RecordsReminder()
     {
         var product = CreateProduct(_orgId, "STRIPE");

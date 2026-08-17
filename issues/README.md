@@ -68,6 +68,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 056 | B03-C11 | `fix/056-magic-token-constant-time` | Portal HMAC is constant-time; missing Jwt:Secret fails closed |
 | 057 | B03-C12 | `fix/057-dunning-start-lock` | Fail handler / billing start-run lock the subscription before dunning |
 | 058 | B03-C13 | `fix/058-grace-zero-next-tick` | Grace 0 emails first; cancel is the next tick |
+| 059 | B03-C14 | `fix/059-autocharge-skip-open-dispute` | AUTO_CHARGE skips seats with an open dispute |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

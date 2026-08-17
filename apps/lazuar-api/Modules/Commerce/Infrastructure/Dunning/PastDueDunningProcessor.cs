@@ -116,6 +116,7 @@ public sealed class PastDueDunningProcessor
                 var cannotCharge = product == null
                     || !PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName)
                     || sub.IsReminderOnly
+                    || sub.HasOpenDispute
                     || nextAttempt > ChargeAttemptLimits.MaxAttemptsPerBillingCycle
                     || string.IsNullOrEmpty(sub.VaultedCustomerId)
                     || string.IsNullOrEmpty(sub.VaultedTokenId);

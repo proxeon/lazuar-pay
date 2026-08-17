@@ -2,17 +2,21 @@
 number: "059"
 id: B03-C14
 severity: P1
-status: open
+status: resolved
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
+resolved_branch: fix/059-autocharge-skip-open-dispute
 ---
 
 # 059 — B03-C14 — AUTO_CHARGE / Gross ignore `HasOpenDispute`
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/059-autocharge-skip-open-dispute`
+
+AUTO_CHARGE treats `HasOpenDispute` as cannotCharge.
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
