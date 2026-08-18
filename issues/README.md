@@ -167,6 +167,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 155 | B09-U26 | `fix/155-subscribers-pagination` | Subscribers have Prev/Next; status is filtered server-side |
 | 156 | B09-U27 | `fix/156-catchall-404` | Unknown ops/admin paths are 404, not a silent dashboard redirect |
 | 157 | B09-U28 | `fix/157-portal-plan-trialing` | Trial buyers can change plan on the portal, same as ops |
+| 158 | B09-U29 | `fix/158-quote-placeholder-email` | Quote pay requires a real email; customer@example.com is rejected |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

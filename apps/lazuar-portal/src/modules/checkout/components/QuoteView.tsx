@@ -28,6 +28,7 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
   const [idType, setIdType] = useState("BRN");
   const [idValue, setIdValue] = useState("");
   const [tinHint, setTinHint] = useState<string | null>(null);
+  const [buyerEmail, setBuyerEmail] = useState(checkout.client_email || "");
 
   const isCompleted = checkout.status === "COMPLETED";
   const [portalHref, setPortalHref] = useState(`/${tenantSlug}/portal`);
@@ -72,6 +73,11 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
       setGlobalError("Buyer ID type and ID value (BRN / NRIC / PASSPORT / ARMY) are required.");
       return;
     }
+    const email = (checkout.client_email || buyerEmail).trim();
+    if (!email || email.toLowerCase() === "customer@example.com") {
+      setGlobalError("A real buyer email is required.");
+      return;
+    }
 
     setIsSubmitting(true);
     setGlobalError(null);
@@ -100,7 +106,7 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
         product_slug: "custom",
         session_id: checkout.id,
         name: checkout.client_name || "Customer",
-        email: checkout.client_email || "customer@example.com",
+        email,
         company_name: checkout.is_b2b_required ? companyName.trim() : undefined,
         tax_id: checkout.is_b2b_required ? taxId.trim() : undefined,
         id_type: checkout.is_b2b_required ? idType : undefined,
@@ -186,7 +192,18 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
         <div className="p-8 sm:p-12 border-b border-border/40">
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Billed To</h3>
           <p className="text-base font-semibold text-foreground">{checkout.client_name || "Client"}</p>
-          <p className="text-sm text-muted-foreground">{checkout.client_email}</p>
+          {checkout.client_email ? (
+            <p className="text-sm text-muted-foreground">{checkout.client_email}</p>
+          ) : (
+            <input
+              type="email"
+              required
+              value={buyerEmail}
+              onChange={(e) => setBuyerEmail(e.target.value)}
+              placeholder="buyer@example.com"
+              className="mt-2 h-10 w-full max-w-sm border border-border bg-background px-3 text-sm"
+            />
+          )}
         </div>
 
         <div className="w-full overflow-x-auto">
