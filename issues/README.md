@@ -181,6 +181,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 169 | B10-X13 | `fix/169-clienturl-fallback` | App:ClientUrl default and missing-config fallbacks are localhost:3004 |
 | 170 | B10-X14 | `fix/170-jwt-document-secret` | Document HMAC rejects empty/default Jwt:Secret; Staging matches Production |
 | 171 | B10-X15 | `fix/171-m2m-status-filter` | M2M subscriptions pass status to GetSubscribersAsync so total_count is honest |
+| 172 | B10-X16 | `fix/172-payment-webhook-dto-honesty` | TypeSpec PaymentWebhookPayloadDto comment says it is not the wire envelope |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

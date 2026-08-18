@@ -48,8 +48,14 @@ model IntegrationCheckoutResponseDto {
 }
 
 /**
- * Outbound payment.* webhook envelope (snake_case JSON body).
+ * ORPHAN / NOT THE WIRE. Generated clients must not treat this as the
+ * outbound payment.* body. Runtime deliveries are
+ * `{ id, event_type, created_at, data }` (see events.md and
+ * examples/hub-cashier-next/lib/types.ts). `data` includes
+ * provider_session_id, description, customer_email, gateway.
+ * `workspace_id` and `occurred_at` are not emitted.
  * Signed with X-Lazuar-Signature: t=…,v1=… (HMAC-SHA256 of "{t}.{rawBody}").
+ * Do not flatten. Do not regenerate packages from this model in this fix.
  */
 model PaymentWebhookPayloadDto {
   event_id: string;
