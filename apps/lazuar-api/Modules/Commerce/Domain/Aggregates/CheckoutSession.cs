@@ -171,7 +171,10 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
 
     public void Complete()
     {
-        TryComplete();
+        if (!TryComplete())
+        {
+            throw new InvalidOperationException($"Cannot complete a checkout session in status '{Status}'.");
+        }
     }
 
     public bool TryExpire()
@@ -188,7 +191,10 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
 
     public void Expire()
     {
-        TryExpire();
+        if (!TryExpire())
+        {
+            throw new InvalidOperationException($"Cannot expire a checkout session in status '{Status}'.");
+        }
     }
 
     public void SetMetadataJson(string? metadataJson)

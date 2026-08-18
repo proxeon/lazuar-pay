@@ -2,7 +2,8 @@
 number: "183"
 id: B01-C13
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/183-session-status-guards
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 183 — B01-C13 — `CheckoutSession` status machine is two unguarded setters
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/183-session-status-guards`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

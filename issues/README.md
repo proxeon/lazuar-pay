@@ -192,6 +192,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 180 | B10-X24 | `fix/180-unify-outbox-inbox` | All modules register outbox/inbox through AddModuleOutboxInbox |
 | 181 | B01-C11 | `fix/181-hop1-sst-required-billing` | InitiateCheckout requires IBillingQueryService; hop-1 100/8% charges 108 |
 | 182 | B01-C12 | `fix/182-sst-per-unit-ssot` | SST SSoT is per-unit then × seats (hop-2 Amount × Quantity) |
+| 183 | B01-C13 | `fix/183-session-status-guards` | Complete/Expire only from OPEN; illegal transitions throw |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

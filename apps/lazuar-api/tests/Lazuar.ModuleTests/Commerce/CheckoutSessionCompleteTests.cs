@@ -52,6 +52,42 @@ public class CheckoutSessionCompleteTests
     }
 
     [Test]
+    public void Complete_FromCompleted_Throws()
+    {
+        var session = ProductSession();
+        session.Complete();
+
+        var act = () => session.Complete();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*COMPLETED*");
+        session.Status.Should().Be("COMPLETED");
+    }
+
+    [Test]
+    public void Expire_FromCompleted_Throws()
+    {
+        var session = ProductSession();
+        session.Complete();
+
+        var act = () => session.Expire();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*COMPLETED*");
+        session.Status.Should().Be("COMPLETED");
+    }
+
+    [Test]
+    public void Complete_FromExpired_Throws()
+    {
+        var session = ProductSession();
+        session.Expire();
+
+        var act = () => session.Complete();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*EXPIRED*");
+        session.Status.Should().Be("EXPIRED");
+    }
+
+    [Test]
     public void CustomSession_TryComplete_SameGuard()
     {
         var session = new CheckoutSession(
