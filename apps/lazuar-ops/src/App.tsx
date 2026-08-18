@@ -39,9 +39,17 @@ import CreditNotesPage from "./modules/invoicing/pages/CreditNotesPage";
 export interface OpsOutletContext {
   activeWorkspaceId: string | null;
   entitlements: EntitlementDto[];
+  role: string;
   onWorkspaceSelect: (id: string) => void;
   isMobile: boolean;
   onOpenSidebar: () => void;
+}
+
+export function workspaceRoleOf(
+  entitlements: EntitlementDto[],
+  workspaceId: string | null,
+): string {
+  return (entitlements.find((e) => e.workspace_id === workspaceId)?.role ?? "").toUpperCase();
 }
 
 function OpsLayout() {
@@ -148,6 +156,8 @@ function OpsLayout() {
 
   if (!user) return null;
 
+  const workspaceRole = workspaceRoleOf(entitlements || [], activeWorkspaceId);
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#f5f5f5] font-sans text-[#1a1a1a]">
       <Sidebar
@@ -155,6 +165,7 @@ function OpsLayout() {
         setIsOpen={handleToggleSidebar}
         isMobile={isMobile}
         user={user}
+        role={workspaceRole}
         onLogout={handleLogout}
       />
       
@@ -162,6 +173,7 @@ function OpsLayout() {
         <Outlet context={{ 
           activeWorkspaceId,
           entitlements: entitlements || [],
+          role: workspaceRole,
           onWorkspaceSelect: handleWorkspaceChange,
           isMobile,
           onOpenSidebar: () => setIsSidebarOpen(true)

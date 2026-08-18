@@ -19,7 +19,7 @@ interface PageLayoutProps {
 }
 
 export default function PageLayout({ title, description, breadcrumbs, actionButton, children }: PageLayoutProps) {
-  const { activeWorkspaceId, entitlements, onWorkspaceSelect, isMobile, onOpenSidebar } = useOutletContext<OpsOutletContext>();
+  const { activeWorkspaceId, entitlements, role, onWorkspaceSelect, isMobile, onOpenSidebar } = useOutletContext<OpsOutletContext>();
 
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -84,6 +84,11 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
               <span className="text-[11px] font-semibold text-[#09090b] truncate max-w-[120px] sm:max-w-[200px]">
                 {activeWorkspaceName}
               </span>
+              {role && (
+                <span className="hidden sm:inline text-[9px] font-bold uppercase tracking-widest text-[#71717a] border border-[#e5e5e5] px-1.5 py-0.5">
+                  {role.replace("_", " ")}
+                </span>
+              )}
               <ChevronDown size={12} className="text-[#a1a1aa] shrink-0" />
             </button>
 

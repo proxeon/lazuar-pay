@@ -152,6 +152,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 140 | B09-U11 | `fix/140-buyer-dashboard-header` | Header is /portal?token=; /{slug} redirects to the same |
 | 141 | B09-U12 | `fix/141-sales-docs-receipts` | Sales documents type is Official Receipt / Invoice / Tax Invoice, not B2C/B2B |
 | 142 | B09-U13 | `fix/142-portal-doc-lhdn-status` | Portal MyInvois column is blank on receipts and proformas |
+| 143 | B09-U14 | `fix/143-ops-role-chrome` | Ops shows the workspace role in the header and sidebar |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

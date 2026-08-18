@@ -20,6 +20,7 @@ interface SidebarProps {
   setIsOpen: () => void;
   isMobile?: boolean;
   user: AuthUser;
+  role?: string;
   onLogout: () => void;
 }
 
@@ -150,7 +151,7 @@ function ModuleNav({
 }
 
 export default function Sidebar({
-  isOpen, setIsOpen, isMobile, user, onLogout
+  isOpen, setIsOpen, isMobile, user, role, onLogout
 }: SidebarProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -288,6 +289,11 @@ export default function Sidebar({
             <motion.div initial={false} animate={{ opacity: expanded ? 1 : 0 }} className="flex flex-col gap-[2px] min-w-0 overflow-hidden pr-3">
               <span className="whitespace-nowrap text-[13px] font-medium leading-none text-[#09090b] truncate">{user.name}</span>
               <span className="whitespace-nowrap text-[11px] font-medium leading-none text-[#71717a] truncate">{user.email}</span>
+              {role && (
+                <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-widest text-[#52525b] truncate">
+                  {role.replace("_", " ")}
+                </span>
+              )}
             </motion.div>
           </button>
           
