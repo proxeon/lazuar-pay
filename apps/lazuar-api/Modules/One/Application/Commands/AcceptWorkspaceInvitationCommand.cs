@@ -1,4 +1,5 @@
 using BuildingBlocks.Application;
+using Modules.One.Contracts;
 using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
@@ -12,11 +13,16 @@ public class AcceptWorkspaceInvitationCommandHandler : ICommandHandler<AcceptWor
 {
     private readonly IOneRepository _repository;
     private readonly ITokenGeneratorService _tokenGenerator;
+    private readonly IAuditRecorder? _auditRecorder;
 
-    public AcceptWorkspaceInvitationCommandHandler(IOneRepository repository, ITokenGeneratorService tokenGenerator)
+    public AcceptWorkspaceInvitationCommandHandler(
+        IOneRepository repository,
+        ITokenGeneratorService tokenGenerator,
+        IAuditRecorder? auditRecorder = null)
     {
         _repository = repository;
         _tokenGenerator = tokenGenerator;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task Handle(AcceptWorkspaceInvitationCommand request, CancellationToken ct)
@@ -46,5 +52,18 @@ public class AcceptWorkspaceInvitationCommandHandler : ICommandHandler<AcceptWor
         _repository.AddTenantMembership(membership);
 
         await _repository.SaveChangesAsync(ct);
+
+        if (_auditRecorder != null)
+        {
+            await _auditRecorder.RecordAsync(
+                invitation.OrganizationId,
+                "member.accepted",
+                "invitation",
+                invitation.Id.ToString(),
+                new { email = user.Email, role = invitation.Role },
+                user.Id,
+                user.Email,
+                ct);
+        }
     }
 }

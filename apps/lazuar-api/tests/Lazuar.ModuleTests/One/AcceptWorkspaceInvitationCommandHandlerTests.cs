@@ -5,6 +5,7 @@ using BuildingBlocks.Application;
 using FluentAssertions;
 using Modules.One.Application;
 using Modules.One.Application.Commands;
+using Modules.One.Contracts;
 using Modules.One.Domain;
 using NSubstitute;
 using NUnit.Framework;
@@ -112,5 +113,35 @@ public class AcceptWorkspaceInvitationCommandHandlerTests
         invitation.Status.Should().Be("ACCEPTED");
         repo.DidNotReceive().AddTenantMembership(Arg.Any<TenantMembership>());
         await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Accept_RecordsAuditWithoutToken()
+    {
+        var orgId = Guid.CreateVersion7();
+        var user = new GlobalUser("staff@example.com", "Staff", "hash");
+        var invitation = new WorkspaceInvitation(
+            orgId, "staff@example.com", "MEMBER", "token-hash", "plain", DateTime.UtcNow.AddDays(7));
+
+        var repo = Substitute.For<IOneRepository>();
+        repo.GetUserByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        repo.GetInvitationByHashAsync("token-hash", Arg.Any<CancellationToken>()).Returns(invitation);
+
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.HashToken("plain").Returns("token-hash");
+        var audit = Substitute.For<IAuditRecorder>();
+
+        var handler = new AcceptWorkspaceInvitationCommandHandler(repo, tokens, audit);
+        await handler.Handle(new AcceptWorkspaceInvitationCommand(user.Id, "plain"), CancellationToken.None);
+
+        await audit.Received(1).RecordAsync(
+            orgId,
+            "member.accepted",
+            "invitation",
+            invitation.Id.ToString(),
+            Arg.Is<object>(m => m.ToString()!.Contains("staff@example.com") && !m.ToString()!.Contains("plain")),
+            user.Id,
+            user.Email,
+            Arg.Any<CancellationToken>());
     }
 }
