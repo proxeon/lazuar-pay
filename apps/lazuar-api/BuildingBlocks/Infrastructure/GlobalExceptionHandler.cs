@@ -57,7 +57,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             {
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "An unexpected error occurred",
-                Detail = exception.Message,
+                Detail = "An unexpected error occurred.",
                 Extensions = { ["code"] = "internal_error" }
             };
         }

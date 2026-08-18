@@ -131,6 +131,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 119 | B07-I11 | `fix/119-archive-revoke` | Archive revokes keys, drops members, unpublishes products |
 | 120 | B07-I12 | `fix/120-superadmin-403` | System admin switcher injects ADMIN so /admin/* is not 403 |
 | 121 | B07-I13 | `fix/121-login-rate-limit` | Login/forgot/resend throttled 5/10 min; failed login is HTTP 401; empty limiter keys deny |
+| 122 | B07-I19 | `fix/122-exception-message-500` | 500 ProblemDetails no longer echo exception.Message |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
