@@ -172,6 +172,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 160 | B10-X04 | `fix/160-inbox-non-notification` | Inbox fails a row that is not INotification instead of marking success |
 | 161 | B10-X05 | `fix/161-eventbus-no-handlers` | Outbox publish throws when an event has no Subscribe handlers |
 | 162 | B10-X06 | `fix/162-typeresolver-null-cache` | TypeResolver does not cache a miss for the process lifetime |
+| 163 | B10-X07 | `fix/163-repo-id-workers-see-rows` | Worker id lookups IgnoreQueryFilters so empty ambient still sees the row |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

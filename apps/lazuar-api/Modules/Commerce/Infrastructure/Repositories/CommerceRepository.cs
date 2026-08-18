@@ -73,7 +73,9 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
 
     public async Task<Coupon?> GetCouponByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Coupons.FirstOrDefaultAsync(c => c.Id == id, ct);
+        return await _context.Coupons
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
     }
 
     public async Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default)
@@ -98,7 +100,9 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
 
     public async Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.CheckoutSessions.FirstOrDefaultAsync(s => s.Id == id, ct);
+        return await _context.CheckoutSessions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == id, ct);
     }
 
     public async Task<CheckoutSession?> GetCheckoutSessionByIdempotencyKeyAsync(
@@ -139,7 +143,9 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
 
     public async Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Orders.FirstOrDefaultAsync(o => o.Id == id, ct);
+        return await _context.Orders
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(o => o.Id == id, ct);
     }
 
     public async Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid id, CancellationToken ct = default)
@@ -214,12 +220,14 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
     public async Task<bool> HasAnyDunningCampaignAsync(Guid organizationId, CancellationToken ct = default)
     {
         return await _context.DunningCampaigns
+            .IgnoreQueryFilters()
             .AnyAsync(c => c.OrganizationId == organizationId, ct);
     }
 
     public async Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid campaignId, CancellationToken ct = default)
     {
         return await _context.Subscriptions
+            .IgnoreQueryFilters()
             .AnyAsync(s => s.CurrentDunningCampaignId == campaignId && s.Status == "PAST_DUE", ct);
     }
 

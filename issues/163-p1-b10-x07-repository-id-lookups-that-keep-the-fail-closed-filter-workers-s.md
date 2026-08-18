@@ -2,7 +2,8 @@
 number: "163"
 id: B10-X07
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/163-repo-id-workers-see-rows
 source: plans/009-bugs/10-tenancy-workers-contracts-tests.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 163 — B10-X07 — Repository ID lookups that **keep** the fail-closed filter (workers see nothing)
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/10-tenancy-workers-contracts-tests.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/163-repo-id-workers-see-rows`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
