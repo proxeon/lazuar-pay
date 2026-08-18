@@ -200,6 +200,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 188 | B01-C18 | `fix/188-onetime-price-not-catalog-interval` | Open checkout / mark-paid / zero-amount key off the paid price interval |
 | 189 | B01-C19 | `fix/189-session-coupon-ignore-filters` | Session/coupon by-id already IgnoreQueryFilters + org (163/164) |
 | 190 | B01-C20 | `fix/190-country-alpha3` | Hop-1 posts MYS; handler NormalizeToAlpha3 maps MY → MYS |
+| 192 | B01-C22 | `fix/192-quote-refuse-placeholder-email` | QuoteView already rejects customer@example.com (158) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

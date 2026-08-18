@@ -2,7 +2,8 @@
 number: "192"
 id: B01-C22
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/192-quote-refuse-placeholder-email
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 192 — B01-C22 — Quote pay posts a fake email when CRM email is missing
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/192-quote-refuse-placeholder-email`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
