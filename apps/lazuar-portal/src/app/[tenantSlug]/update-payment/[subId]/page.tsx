@@ -14,6 +14,7 @@ export default async function UpdatePaymentPage({
   const { tenantSlug, subId } = await params;
   const resolvedSearchParams = await searchParams;
   const token = resolvedSearchParams.token as string | undefined;
+  const showError = resolvedSearchParams.err === "1" || resolvedSearchParams.err === 1;
   if (!token) {
     notFound();
   }
@@ -36,7 +37,7 @@ export default async function UpdatePaymentPage({
 
   async function handleUpdatePayment() {
     "use server";
-    const { data: checkoutData, error: checkoutError } = await serverClient.POST(
+    const { data: checkoutData } = await serverClient.POST(
       "/public/commerce/checkout/{subId}/update-payment",
       { params: { path: { subId }, query: { token } } },
     );
@@ -45,14 +46,17 @@ export default async function UpdatePaymentPage({
       redirect(checkoutData.url);
     }
 
-    if (checkoutError) {
-      redirect(`/${tenantSlug}/update-payment/${subId}?token=${token}&err=1`);
-    }
+    redirect(`/${tenantSlug}/update-payment/${subId}?token=${token}&err=1`);
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-zinc-50 dark:bg-black font-sans text-foreground">
       <div className="bg-card border border-border/60 shadow-sm p-8 sm:p-12 rounded-none max-w-md w-full">
+        {showError && (
+          <p className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+            Could not start payment update. Try again.
+          </p>
+        )}
         {(branding?.logo_url || branding?.name) && (
           <div className="flex items-center justify-center mb-6">
             {branding.logo_url ? (
