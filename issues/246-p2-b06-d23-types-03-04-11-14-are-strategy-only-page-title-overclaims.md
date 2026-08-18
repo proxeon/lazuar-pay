@@ -2,7 +2,8 @@
 number: "246"
 id: B06-D23
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/246-debit-notes-honesty
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -96,4 +97,8 @@ Rename the page to “Credit Notes.” Rewrite README §2 to “strategy exists;
 
 ### Evaluation notes
 Still P2 (copy + unused strategy). Adjacent cons mixup is sharper than the title and could be filed separately if an integrator is live. 255’s honesty fence still applies to any “self-billed VALID” claim. Not fixed by 161–200. Do not sell 03/04/11–14 until a publisher + sandbox log exist.
+
+## Resolution
+
+Credit Notes page title no longer says Debit. Lhdn README §2 labels 03/04/11–14 as strategy-only. Locked by `LhdnHonestyCopyTests`. No new composer.
 

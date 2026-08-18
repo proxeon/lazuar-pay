@@ -97,8 +97,8 @@ export default function CreditNotesPage() {
 
   return (
     <PageLayout 
-      title="Credit & Debit Notes" 
-      description="Audit contra-revenue records, refunds, and e-Invoice cancellations."
+      title="Credit Notes" 
+      description="Audit contra-revenue records, refunds, and e-Invoice cancellations. Debit notes are not issued."
       breadcrumbs={[{ label: "Invoicing" }, { label: "Credit Notes" }]}
     >
       <div className="flex flex-col gap-6">

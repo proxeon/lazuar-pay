@@ -8,23 +8,17 @@ The `Lhdn` module acts as a strict, high-performance **Infrastructure Port and C
 
 ## 2. Supported Document Types
 
-The module natively supports both standard and self-billed workflows under the **LHDN V1.0 (Unsigned)** specification, fully covering your platform's core operational, customer billing, and affiliate payout needs.
+Product publishers today file **type 01** (B2B invoice / B2C consolidated) and **type 02** (credit note on refund). Other codes have UBL strategies in the factory but **no ops composer and no production publisher**.
 
 ### Standard Workflows
-*   ✅ **Standard & Consolidated Invoice (01):** Supported via `StandardInvoiceStrategy.cs` and `ConsolidatedInvoiceStrategy.cs`.
-*   ✅ **Credit Note (02):** Supported via `CreditNoteStrategy.cs`.
-*   ✅ **Debit Note (03):** Supported via `CreditNoteStrategy.cs` (utilizing dynamic structural routing).
-*   ✅ **Refund Note (04):** Supported via `CreditNoteStrategy.cs` (utilizing dynamic structural routing).
-
-*Architecture Note:* In our `DocumentStrategyFactory.cs`, we group `02`, `03`, and `04` to use the same `CreditNoteStrategy` and `CreditNote.xml` template. Because the structural layout of Credit, Debit, and Refund notes is identical under UBL 2.1, the template dynamically injects `{{ doc_type_code }}`. This significantly minimizes template duplication.
+*   ✅ **Standard & Consolidated Invoice (01):** Live. B2B pay publishes `B2bTaxInvoiceRequested`; the 28th job publishes `ConsolidatedInvoiceIssued`.
+*   ✅ **Credit Note (02):** Live. Refund handler hardcodes `_02`.
+*   ⚠️ **Debit Note (03) / Refund Note (04):** Strategy-only. Factory routes them to `CreditNoteStrategy`. Nothing in this repo submits 03 or 04.
 
 ### Self-Billed Workflows (Affiliates & Contractors)
-*   ✅ **Self-Billed Invoice (11):** Supported via `SelfBilledInvoiceStrategy.cs` and `SelfBilledInvoice.xml`.
-*   ✅ **Self-Billed Credit Note (12):** Supported via `SelfBilledCreditNoteStrategy.cs`.
-*   ✅ **Self-Billed Debit Note (13):** Supported via `SelfBilledCreditNoteStrategy.cs`.
-*   ✅ **Self-Billed Refund Note (14):** Supported via `SelfBilledCreditNoteStrategy.cs`.
+*   ⚠️ **Types 11–14:** Strategy-only (`SelfBilledInvoice` / `SelfBilledCredit`). `ViewModelMapper` can entity-swap, but no production publisher files them. Do not sell self-billed affiliate invoices.
 
-*Architecture Note:* Self-billed transactions occur when the Lazuar Tenant acts as the Buyer but issues the invoice *on behalf of* an external unregistered supplier (e.g. paying out an affiliate). Our `ViewModelMapper.cs` automatically executes an **"Entity Swap"**—routing the tenant configuration to the Buyer XML nodes and the incoming partner data to the Supplier XML nodes—allowing you to use standard API payloads transparently.
+A type `01` with a blank buyer TIN is treated as B2C consolidated (General Public). That is not a self-bill path.
 
 ---
 

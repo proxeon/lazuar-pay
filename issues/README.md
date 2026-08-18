@@ -255,6 +255,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 243 | B05-L39 | `fix/243-chargeback-comment` | ChargebackClawback XML/README name Hub SaaS reverse; GMV stays on lost handler |
 | 244 | B05-L40 | `fix/244-manual-payment-event` | ManualPaymentRecorded stays parked; no production publisher |
 | 245 | B06-D07 | `fix/245-productform-tin-subtitle` | Product/create forms say checkout validates TIN; old lie is locked out |
+| 246 | B06-D23 | `fix/246-debit-notes-honesty` | Credit Notes title + Lhdn README: 03/04/11–14 are strategy-only |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
