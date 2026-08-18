@@ -2,7 +2,8 @@
 number: "257"
 id: B07-I09
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/257-team-pending-invites
 source: plans/009-bugs/07-one-identity-invites-keys.md
 head: "297ba98"
 ---
@@ -87,4 +88,8 @@ On Team page, `useQuery` `GET /one/workspaces/{id}/invites` keyed with the works
 
 ### Evaluation notes
 Still P2: API is complete, UI is not. **154** closed the VIEWER-sees-form slice. **114** pending unique index makes a second send fail closed — which is worse UX without a list. **268** (no resend, revoke has no audit) is adjacent; do not block 257 on 268, but add audit if you touch revoke. Not a 161–200 fail-closed leftover.
+
+## Resolution
+
+Team page lists invitations (email, role, status, expiry). ADMIN/SUPER_ADMIN can revoke PENDING. Invite success invalidates the invites query. No resend.
 

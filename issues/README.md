@@ -266,6 +266,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 254 | B06-D35 | `fix/254-quotes-tracking-copy` | Quotes toolbar tracks quotes & proforma, not invoices |
 | 255 | B06-D36 | `fix/255-lhdn-valid-honesty` | Sandbox VALID honesty fence locked; signer unit test is not ACCEPT |
 | 256 | B07-I08 | `fix/256-accept-invite-4xx-cache` | Accept-invite 4xx is not cached; Sign in evicts the token |
+| 257 | B07-I09 | `fix/257-team-pending-invites` | Team page lists and revokes pending invitations |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

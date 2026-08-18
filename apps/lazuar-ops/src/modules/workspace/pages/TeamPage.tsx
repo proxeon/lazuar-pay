@@ -8,6 +8,7 @@ import PageLayout from "../../core/components/PageLayout";
 import type { OpsOutletContext } from "../../../App";
 
 type WorkspaceMemberDto = components["schemas"]["One.WorkspaceMemberDto"];
+type WorkspaceInvitationDto = components["schemas"]["One.WorkspaceInvitationDto"];
 
 export default function TeamPage() {
   const { activeWorkspaceId, role: workspaceRole } = useOutletContext<OpsOutletContext>();
@@ -28,6 +29,18 @@ export default function TeamPage() {
     enabled: !!activeWorkspaceId,
   });
 
+  const { data: invites, isLoading: invitesLoading } = useQuery({
+    queryKey: ["workspace-invites", activeWorkspaceId],
+    queryFn: async () => {
+      const { data, error } = await client.GET("/one/workspaces/{id}/invites", {
+        params: { path: { id: activeWorkspaceId } },
+      });
+      if (error) throw new Error(error.detail);
+      return data as WorkspaceInvitationDto[];
+    },
+    enabled: !!activeWorkspaceId,
+  });
+
   const inviteMutation = useMutation({
     mutationFn: async () => {
       const { error } = await client.POST("/one/workspaces/{id}/invites", {
@@ -40,8 +53,23 @@ export default function TeamPage() {
       toast.success("Invitation sent");
       setEmail("");
       queryClient.invalidateQueries({ queryKey: ["workspace-members", activeWorkspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-invites", activeWorkspaceId] });
     },
     onError: (err: Error) => toast.error(err.message || "Failed to invite"),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: async (inviteId: string) => {
+      const { error } = await client.DELETE("/one/workspaces/{id}/invites/{inviteId}", {
+        params: { path: { id: activeWorkspaceId, inviteId } },
+      });
+      if (error) throw new Error(error.detail);
+    },
+    onSuccess: () => {
+      toast.success("Invitation revoked");
+      queryClient.invalidateQueries({ queryKey: ["workspace-invites", activeWorkspaceId] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to revoke"),
   });
 
   const removeMutation = useMutation({
@@ -136,6 +164,42 @@ export default function TeamPage() {
           })}
           {!isLoading && (members?.length ?? 0) === 0 && (
             <div className="p-8 text-center text-[12px] text-[#71717a]">No members yet.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white border border-[#e5e5e5] flex flex-col mt-6">
+        <div className="px-5 py-3 border-b border-[#f4f4f5] text-[10px] font-bold uppercase tracking-widest text-[#71717a]">
+          Pending invitations
+        </div>
+        <div className="divide-y divide-[#f4f4f5]">
+          {invitesLoading && (
+            <div className="p-8 flex justify-center text-[#71717a]">
+              <Loader2 size={16} className="animate-spin" />
+            </div>
+          )}
+          {invites?.map((invite) => (
+            <div key={invite.id} className="px-5 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium text-[#09090b] truncate">{invite.email}</div>
+                <div className="text-[11px] text-[#71717a] truncate">
+                  {invite.role} · {invite.status} · expires {new Date(invite.expires_at).toLocaleString("en-GB")}
+                </div>
+              </div>
+              {canInvite && invite.status === "PENDING" && (
+                <button
+                  type="button"
+                  onClick={() => revokeMutation.mutate(invite.id)}
+                  disabled={revokeMutation.isPending}
+                  className="text-[11px] font-bold uppercase tracking-widest text-rose-700 hover:underline disabled:opacity-50"
+                >
+                  Revoke
+                </button>
+              )}
+            </div>
+          ))}
+          {!invitesLoading && (invites?.length ?? 0) === 0 && (
+            <div className="p-8 text-center text-[12px] text-[#71717a]">No invitations.</div>
           )}
         </div>
       </div>
