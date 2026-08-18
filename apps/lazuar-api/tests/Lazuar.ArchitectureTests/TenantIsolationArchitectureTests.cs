@@ -111,6 +111,15 @@ public class TenantIsolationArchitectureTests
     }
 
     [Test]
+    public void Boot_Migrate_Does_Not_Swallow_PendingModelChanges()
+    {
+        var path = FindRepoFile("src", "Lazuar.Api", "Composition", "DatabaseMigrationExtensions.cs");
+        var source = File.ReadAllText(path);
+        Assert.That(source, Does.Not.Contain("PendingModelChanges"));
+        Assert.That(source, Does.Contain("throw;"));
+    }
+
+    [Test]
     public void CommerceRepository_IgnoreQueryFilters_Id_Lookups_Require_OrganizationId()
     {
         var path = FindRepoFile(
