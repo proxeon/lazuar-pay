@@ -40,4 +40,21 @@ public class SuppressionEntry : Entity, IAggregateRoot, IMustHaveTenant
         Source = source;
         CreatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// UNSUBSCRIBE only blocks marketing. A later bounce/complaint/anonymize
+    /// must close the transactional lane without inserting a second row.
+    /// Hard reasons never downgrade.
+    /// </summary>
+    public bool TryUpgrade(string reason, string? source = null)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) return false;
+        var incoming = reason.Trim().ToUpperInvariant();
+        if (Reason != "UNSUBSCRIBE") return false;
+        if (incoming is not ("BOUNCE" or "COMPLAINT" or "ANONYMIZED")) return false;
+
+        Reason = incoming;
+        Source = source;
+        return true;
+    }
 }

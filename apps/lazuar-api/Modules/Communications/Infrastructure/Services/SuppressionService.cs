@@ -52,12 +52,19 @@ public class SuppressionService : ISuppressionService
         if (string.IsNullOrWhiteSpace(email)) return;
         var normalized = email.Trim().ToLowerInvariant();
 
-        var exists = await _dbContext.SuppressionEntries
+        var existing = await _dbContext.SuppressionEntries
             .IgnoreQueryFilters()
-            .AnyAsync(s => s.OrganizationId == organizationId && s.Email == normalized);
-        if (exists) return;
+            .FirstOrDefaultAsync(s => s.OrganizationId == organizationId && s.Email == normalized);
+        if (existing is null)
+        {
+            _dbContext.SuppressionEntries.Add(new SuppressionEntry(organizationId, normalized, reason, source));
+            await _dbContext.SaveChangesAsync();
+            return;
+        }
 
-        _dbContext.SuppressionEntries.Add(new SuppressionEntry(organizationId, normalized, reason, source));
-        await _dbContext.SaveChangesAsync();
+        if (existing.TryUpgrade(reason, source))
+        {
+            await _dbContext.SaveChangesAsync();
+        }
     }
 }

@@ -136,6 +136,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 124 | B07-I25 | `fix/124-cors-fail-closed` | Empty App:CorsOrigins fails boot in Production/Staging |
 | 125 | B07-I26 | `fix/125-apikey-cache-revoke` | Revoke evicts the API-key cache; middleware re-checks IsActive |
 | 126 | B08-M03 | `fix/126-crm-email-merge` | Resolve matches email+phone; LHDN prefers checkout snapshot over CRM |
+| 127 | B08-M04 | `fix/127-suppression-upgrade` | Bounce/complaint upgrades an unsubscribe row (no transactional-lane hole) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
