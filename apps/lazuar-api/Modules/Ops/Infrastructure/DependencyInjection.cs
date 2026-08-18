@@ -37,11 +37,9 @@ public static class DependencyInjection
         services.AddScoped<ILlmOrchestratorService, LlmOrchestratorService>();
         services.AddScoped<IOpsRepository, OpsRepository>();
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<OpsDbContext>>("OpsEventBus");
+        services.AddModuleOutboxInbox<OpsDbContext, OpsOutboxPublisherJob, OpsInboxConsumerJob>("OpsEventBus");
 
-        services.AddHostedService<OpsInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("ops");
-        services.AddHostedService<OpsOutboxPublisherJob>();
 
         return services;
     }

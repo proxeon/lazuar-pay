@@ -113,6 +113,19 @@ public class TenantIsolationArchitectureTests
     }
 
     [Test]
+    public void Every_Module_Registers_OutboxInbox_Via_Helper()
+    {
+        string[] modules = ["One", "Messaging", "CRM", "Payments", "Ops", "Billing", "Lhdn", "Commerce", "Communications"];
+        foreach (var module in modules)
+        {
+            var path = FindRepoFile("Modules", module, "Infrastructure", "DependencyInjection.cs");
+            var source = File.ReadAllText(path);
+            Assert.That(source, Does.Contain("AddModuleOutboxInbox<"),
+                $"{module} must register outbox/inbox through AddModuleOutboxInbox.");
+        }
+    }
+
+    [Test]
     public void MessageDeliveryLog_Is_IMustHaveTenant_PaymentWebhookLog_Is_Allowlisted()
     {
         Assert.That(typeof(Modules.Messaging.Domain.MessageDeliveryLog)

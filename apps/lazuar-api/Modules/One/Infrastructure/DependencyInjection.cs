@@ -68,13 +68,11 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(15);
         });
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<OneDbContext>>("OneEventBus");
+        services.AddModuleOutboxInbox<OneDbContext, OneOutboxPublisherJob, OneInboxConsumerJob>("OneEventBus");
 
         services.Configure<DemoTenantSettings>(configuration.GetSection(DemoTenantSettings.SectionName));
         services.AddHostedService<SystemGenesisBootstrapperJob>();
-        services.AddHostedService<OneInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("one");
-        services.AddHostedService<OneOutboxPublisherJob>();
         services.AddHostedService<OutboundWebhookDispatcherJob>();
 
         services.AddTransient<OutboundWebhookEventHandlers>();

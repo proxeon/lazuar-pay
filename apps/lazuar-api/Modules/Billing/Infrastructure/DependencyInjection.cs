@@ -45,7 +45,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("BillingSqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<BillingDbContext>>("BillingEventBus");
+        services.AddModuleOutboxInbox<BillingDbContext, BillingOutboxPublisherJob, BillingInboxConsumerJob>("BillingEventBus");
         
         services.AddScoped<ILedgerRepository, LedgerRepository>();
         services.AddScoped<IBillingQueryService, BillingQueryService>();
@@ -69,9 +69,7 @@ public static class DependencyInjection
         services.AddTransient<GatewayDisputeLostHandler>();
         services.AddTransient<ApiCreditPurchasedHandler>();
 
-        services.AddHostedService<BillingInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("billing");
-        services.AddHostedService<BillingOutboxPublisherJob>();
         // PARKED (decisions.md 00.3 / Phase 17): RevenueRecognitionJob is unregistered by design
         // until a product epic owns deferred revenue schedule creation (finance / Xero track).
         // Entity/table may remain; no shipping claim that recognition runs. Do not uncomment

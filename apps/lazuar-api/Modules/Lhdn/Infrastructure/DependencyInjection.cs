@@ -37,7 +37,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("LhdnSqlConnectionFactory", (sp, key) =>
             new NpgsqlConnectionFactory(connectionString));
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<LhdnDbContext>>("LhdnEventBus");
+        services.AddModuleOutboxInbox<LhdnDbContext, LhdnOutboxPublisherJob, LhdnInboxConsumerJob>("LhdnEventBus");
 
         services.AddScoped<ILhdnRepository, LhdnRepository>();
         services.AddScoped<ILhdnQueryService, LhdnQueryService>();
@@ -67,8 +67,7 @@ public static class DependencyInjection
         services.AddHostedService<LhdnSubmissionJob>();
         services.AddHostedService<LhdnStatusPollingJob>();
         services.AddHostedService<LhdnReferenceDataSeederJob>();
-        services.AddHostedService<LhdnOutboxPublisherJob>();
-        services.AddHostedService<LhdnInboxConsumerJob>();
+
 
         // R35: outbox schema metrics + product stuck contributor (owns TaxDocuments SQL)
         services.AddOutboxSchemaMetrics("lhdn");

@@ -48,11 +48,9 @@ public static class DependencyInjection
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddSingleton<PortalMagicLinkRateLimiter>();
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<CommerceDbContext>>("CommerceEventBus");
+        services.AddModuleOutboxInbox<CommerceDbContext, CommerceOutboxPublisherJob, CommerceInboxConsumerJob>("CommerceEventBus");
 
-        services.AddHostedService<CommerceInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("commerce");
-        services.AddHostedService<CommerceOutboxPublisherJob>();
         
         services.AddHostedService<BillingEngineJob>();
         services.AddHostedService<DunningEngineJob>();

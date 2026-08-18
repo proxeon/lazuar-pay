@@ -46,11 +46,9 @@ public static class DependencyInjection
             ConnectCallback = PublicDnsFallback.ConnectAsync,
         });
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<PaymentsDbContext>>("PaymentsEventBus");
+        services.AddModuleOutboxInbox<PaymentsDbContext, PaymentsOutboxPublisherJob, PaymentsInboxConsumerJob>("PaymentsEventBus");
 
-        services.AddHostedService<PaymentsInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("payments");
-        services.AddHostedService<PaymentsOutboxPublisherJob>();
 
         services.AddTransient<GatewayRefundRequestedIntegrationEventHandler>();
         services.AddTransient<ExecuteOffSessionChargeIntegrationEventHandler>();

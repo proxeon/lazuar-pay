@@ -40,11 +40,9 @@ public static class DependencyInjection
         services.AddScoped<ICommunicationsQueryService, CommunicationsQueryService>();
         services.AddScoped<ISuppressionService, SuppressionService>();
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<CommunicationsDbContext>>("CommunicationsEventBus");
+        services.AddModuleOutboxInbox<CommunicationsDbContext, CommunicationsOutboxPublisherJob, CommunicationsInboxConsumerJob>("CommunicationsEventBus");
 
-        services.AddHostedService<CommunicationsInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("communications");
-        services.AddHostedService<CommunicationsOutboxPublisherJob>();
         services.AddHostedService<BroadcastFanoutJob>();
 
         services.AddTransient<AppEntitlementGrantedIntegrationEventHandler>();

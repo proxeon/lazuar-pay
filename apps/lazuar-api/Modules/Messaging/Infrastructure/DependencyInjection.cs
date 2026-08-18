@@ -33,7 +33,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<ISqlConnectionFactory, NpgsqlConnectionFactory>("MessagingSqlConnectionFactory", (sp, key) => new NpgsqlConnectionFactory(connectionString));
         services.AddScoped<ITenantReplicaRepository, TenantReplicaRepository>();
 
-        services.AddKeyedScoped<IEventBus, OutboxEventBus<MessagingDbContext>>("MessagingEventBus");
+        services.AddModuleOutboxInbox<MessagingDbContext, MessagingOutboxPublisherJob, MessagingInboxConsumerJob>("MessagingEventBus");
 
         // R34 — email + channel ports owned by Messaging (not BuildingBlocks).
         // Named HttpClient "Resend" is also used by Communications SaveEmailConfig (domains validation).
@@ -58,8 +58,7 @@ public static class DependencyInjection
         services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
 
         services.AddOutboxSchemaMetrics("messaging");
-        services.AddHostedService<MessagingOutboxPublisherJob>();
-        services.AddHostedService<MessagingInboxConsumerJob>();
+
 
         return services;
     }
