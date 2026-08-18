@@ -85,7 +85,9 @@ public class OneDbContext : PlatformDbContext
             builder.ToTable("WorkspaceInvitations");
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.TokenHash).IsUnique();
-            builder.HasIndex(x => new { x.OrganizationId, x.Email }).HasFilter("\"Status\" = 'PENDING'");
+            builder.HasIndex(x => new { x.OrganizationId, x.Email })
+                .IsUnique()
+                .HasFilter("\"Status\" = 'PENDING'");
         });
 
         var jsonOptions = new JsonSerializerOptions

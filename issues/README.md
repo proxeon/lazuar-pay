@@ -123,6 +123,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 111 | B06-D29 | `fix/111-tax-invoice-email-fallback` | Tax Invoice / CN have their own templates; no receipt fallback |
 | 112 | B07-I02 | `fix/112-reset-verify-404` | Reset/verify links go to ops pages; verify works logged out |
 | 113 | B07-I03 | `fix/113-double-accept-500` | Already-member accept is 400, not a unique-index 500 |
+| 114 | B07-I04 | `fix/114-pending-invite-unique` | One pending invite per org+email; second invite is 400 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

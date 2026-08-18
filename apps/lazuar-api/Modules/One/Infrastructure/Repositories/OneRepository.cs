@@ -83,6 +83,16 @@ public class OneRepository : IOneRepository
 
     public void AddWorkspaceInvitation(WorkspaceInvitation invitation) => _context.WorkspaceInvitations.Add(invitation);
 
+    public async Task<WorkspaceInvitation?> GetPendingInvitationAsync(Guid organizationId, string email, CancellationToken ct = default)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        return await _context.WorkspaceInvitations
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                i => i.OrganizationId == organizationId && i.Email == normalized && i.Status == "PENDING",
+                ct);
+    }
+
     public async Task<WorkspaceInvitation?> GetInvitationByHashAsync(string hash, CancellationToken ct = default)
     {
         return await _context.WorkspaceInvitations

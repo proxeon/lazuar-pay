@@ -491,6 +491,7 @@ namespace Modules.One.Infrastructure.Migrations
                         .IsUnique();
 
                     b.HasIndex("OrganizationId", "Email")
+                        .IsUnique()
                         .HasFilter("\"Status\" = 'PENDING'");
 
                     b.ToTable("WorkspaceInvitations", "one");

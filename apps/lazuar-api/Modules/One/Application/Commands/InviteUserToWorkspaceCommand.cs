@@ -38,6 +38,10 @@ public class InviteUserToWorkspaceCommandHandler : ICommandHandler<InviteUserToW
 
         var role = WorkspaceStaffRoles.NormalizeInvitedRole(request.Role);
 
+        var pending = await _repository.GetPendingInvitationAsync(request.OrganizationId, request.Email, ct);
+        if (pending != null)
+            throw new InvalidOperationException("A pending invitation already exists for this email.");
+
         var existingMember = await _repository.GetUserByEmailAsync(request.Email, ct);
         if (existingMember != null)
         {

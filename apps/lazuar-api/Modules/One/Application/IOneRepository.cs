@@ -27,6 +27,7 @@ public interface IOneRepository
     void AddGlobalUser(GlobalUser user);
 
     void AddWorkspaceInvitation(WorkspaceInvitation invitation);
+    Task<WorkspaceInvitation?> GetPendingInvitationAsync(Guid organizationId, string email, CancellationToken ct = default);
     Task<WorkspaceInvitation?> GetInvitationByHashAsync(string hash, CancellationToken ct = default);
     Task<WorkspaceInvitation?> GetInvitationByIdAsync(Guid id, CancellationToken ct = default);
 

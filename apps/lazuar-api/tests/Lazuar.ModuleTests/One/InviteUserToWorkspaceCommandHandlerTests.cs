@@ -138,4 +138,25 @@ public class InviteUserToWorkspaceCommandHandlerTests
             admin.Email,
             Arg.Any<CancellationToken>());
     }
+
+    [Test]
+    public async Task Invite_PendingAlreadyExists_Throws()
+    {
+        var orgId = Guid.CreateVersion7();
+        var admin = new GlobalUser("admin@example.com", "Admin", "hash");
+        var repo = Substitute.For<IOneRepository>();
+        repo.GetMembershipAsync(admin.Id, orgId, Arg.Any<CancellationToken>())
+            .Returns(new TenantMembership(admin.Id, orgId, "ADMIN"));
+        repo.GetUserByIdAsync(admin.Id, Arg.Any<CancellationToken>()).Returns(admin);
+        repo.GetPendingInvitationAsync(orgId, "book@example.com", Arg.Any<CancellationToken>())
+            .Returns(new WorkspaceInvitation(orgId, "book@example.com", "MEMBER", "h", "p", DateTime.UtcNow.AddDays(1)));
+
+        var handler = new InviteUserToWorkspaceCommandHandler(repo, Substitute.For<ITokenGeneratorService>());
+        var act = () => handler.Handle(
+            new InviteUserToWorkspaceCommand(orgId, admin.Id, "book@example.com", "MEMBER"),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*pending invitation*");
+        repo.DidNotReceive().AddWorkspaceInvitation(Arg.Any<WorkspaceInvitation>());
+    }
 }
