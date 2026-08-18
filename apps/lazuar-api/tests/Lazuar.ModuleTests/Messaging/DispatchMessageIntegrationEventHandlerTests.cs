@@ -312,8 +312,9 @@ public class DispatchMessageIntegrationEventHandlerTests
         await _billing.DidNotReceive().HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>());
 
         var log = await Logs().SingleAsync();
-        log.Status.Should().Be("SENT");
+        log.Status.Should().Be("SKIPPED");
         log.Channel.Should().Be("WHATSAPP");
+        log.Error.Should().Contain("WhatsApp channel disabled");
     }
 
     [Test]
@@ -334,13 +335,14 @@ public class DispatchMessageIntegrationEventHandlerTests
 
         await sut.HandleAsync(evt);
 
-        await _messaging.Received(1).SendMessageAsync("+6012", "hi");
+        await _messaging.DidNotReceive().SendMessageAsync(Arg.Any<string>(), Arg.Any<string>());
         await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
         await _billing.DidNotReceive().HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>());
 
         var log = await Logs().SingleAsync();
-        log.Status.Should().Be("SENT");
+        log.Status.Should().Be("SKIPPED");
         log.Channel.Should().Be("WHATSAPP");
+        log.Error.Should().Contain("WhatsApp channel disabled");
     }
 
     [Test]

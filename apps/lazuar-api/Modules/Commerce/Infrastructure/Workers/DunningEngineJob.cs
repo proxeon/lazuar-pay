@@ -73,7 +73,8 @@ public partial class DunningEngineJob : BackgroundService
             .AsNoTracking()
             .ToListAsync(ct);
 
-        var whatsAppEnabled = _configuration.GetValue("Messaging:WhatsAppEnabled", false);
+        // Wave 5 has not shipped. Ignore Messaging:WhatsAppEnabled so flipping it is not a send (B03-C27).
+        const bool whatsAppEnabled = false;
 
         await ProcessClaimedBatchAsync(
             ClaimMode.PreDunning,

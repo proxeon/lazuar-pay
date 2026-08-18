@@ -409,7 +409,7 @@ public class BillingEngineJob : BackgroundService
         await CommerceSubscriptionLock.AcquireAsync(db, sub.Id, ct);
         await db.Entry(sub).Collection(s => s.ReminderLogs).LoadAsync(ct);
         var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(db, ct);
-        var whatsAppEnabled = config?.GetValue("Messaging:WhatsAppEnabled", false) ?? false;
+        const bool whatsAppEnabled = false;
         var processor = new PastDueDunningProcessor(_logger);
         await processor.ProcessAsync(db, eventBus, sub, campaigns, whatsAppEnabled, ct, billing, crm);
     }

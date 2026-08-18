@@ -57,7 +57,8 @@ public class DispatchMessageIntegrationEventHandler : IIntegrationEventHandler<D
         var isSystemTenant = @event.OrganizationId == Guid.Empty
             || @event.OrganizationId.ToString() == "00000000-0000-0000-0000-000000000001";
 
-        var whatsAppEnabled = _configuration.GetValue("Messaging:WhatsAppEnabled", false);
+        // Wave 5 has not shipped. The config flag must not make console-stub WhatsApp look sent (B03-C27).
+        var whatsAppEnabled = false;
 
         var wantsEmail = @event.Channel is "EMAIL" or "ALL"
             && !string.IsNullOrWhiteSpace(@event.ToEmail)

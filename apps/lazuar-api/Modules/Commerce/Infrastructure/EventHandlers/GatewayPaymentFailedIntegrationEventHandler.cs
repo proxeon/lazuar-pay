@@ -112,7 +112,7 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         }
 
         var campaigns = await PastDueDunningProcessor.LoadActiveCampaignsAsync(_dbContext, CancellationToken.None);
-        var whatsAppEnabled = _configuration.GetValue("Messaging:WhatsAppEnabled", false);
+        const bool whatsAppEnabled = false;
         var processor = new PastDueDunningProcessor(_logger);
         await processor.ProcessAsync(
             _dbContext, _eventBus, sub, campaigns, whatsAppEnabled, CancellationToken.None, _billingQueryService, _crmQueryService);
