@@ -73,4 +73,33 @@ public class OneLinkServiceTests
             && !e.HtmlEmailBody.Contains("localhost:3004")
             && !e.HtmlEmailBody.Contains("http://localhost:3004")));
     }
+
+    [Test]
+    public async Task ResetAndVerifyEmails_UseOpsUrl_NotClientUrl()
+    {
+        var links = Substitute.For<IOneLinkService>();
+        links.GetOpsBaseUrl().Returns("http://localhost:3003");
+        links.GetClientBaseUrl().Returns("http://localhost:3004");
+
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new NotificationDispatchDomainEventHandlers(eventBus, links);
+
+        await handler.Handle(
+            new PasswordResetRequestedDomainEvent(Guid.CreateVersion7(), "staff@example.com", "reset-token"),
+            CancellationToken.None);
+        await handler.Handle(
+            new EmailVerificationRequestedDomainEvent(Guid.CreateVersion7(), "staff@example.com", "Ada", "verify-token"),
+            CancellationToken.None);
+
+        await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
+            e.HtmlEmailBody != null
+            && e.HtmlEmailBody.Contains("http://localhost:3003/reset-password?")
+            && e.HtmlEmailBody.Contains("token=reset-token")
+            && !e.HtmlEmailBody.Contains("localhost:3004")));
+        await eventBus.Received(1).PublishAsync(Arg.Is<DispatchMessageIntegrationEvent>(e =>
+            e.HtmlEmailBody != null
+            && e.HtmlEmailBody.Contains("http://localhost:3003/verify-email?")
+            && e.HtmlEmailBody.Contains("token=verify-token")
+            && !e.HtmlEmailBody.Contains("localhost:3004")));
+    }
 }

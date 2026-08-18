@@ -28,7 +28,7 @@ public class NotificationDispatchDomainEventHandlers :
 
     public async Task Handle(PasswordResetRequestedDomainEvent notification, CancellationToken ct)
     {
-        var resetLink = $"{_linkService.GetClientBaseUrl()}/reset-password?email={Uri.EscapeDataString(notification.Email)}&token={notification.PlainToken}";
+        var resetLink = $"{_linkService.GetOpsBaseUrl()}/reset-password?email={Uri.EscapeDataString(notification.Email)}&token={notification.PlainToken}";
         var subject = "Password Reset Request";
         
         var rawMarkdown = $@"Hi,
@@ -47,7 +47,7 @@ If you did not request this, please ignore this email.";
 
     public async Task Handle(EmailVerificationRequestedDomainEvent notification, CancellationToken ct)
     {
-        var verifyLink = $"{_linkService.GetClientBaseUrl()}/verify-email?email={Uri.EscapeDataString(notification.Email)}&token={notification.PlainToken}";
+        var verifyLink = $"{_linkService.GetOpsBaseUrl()}/verify-email?email={Uri.EscapeDataString(notification.Email)}&token={notification.PlainToken}";
         var subject = "Verify your email address";
 
         var rawMarkdown = $@"Hi {notification.Name},

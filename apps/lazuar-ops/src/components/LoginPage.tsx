@@ -186,6 +186,11 @@ export default function LoginPage() {
 
               <div className="mt-8 text-center space-y-2">
                 <p className="text-[12px] text-[#71717a]">
+                  <Link to="/forgot-password" className="text-[#09090b] font-semibold hover:underline">
+                    Forgot password?
+                  </Link>
+                </p>
+                <p className="text-[12px] text-[#71717a]">
                   Don't have an account?{" "}
                   <Link to={signupHref} className="text-[#09090b] font-semibold hover:underline">
                     Sign up

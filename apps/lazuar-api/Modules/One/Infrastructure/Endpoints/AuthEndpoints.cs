@@ -118,14 +118,43 @@ public static class AuthEndpoints
             return TypedResults.Ok(new StatusResponse { Status = "reset" });
         });
 
-        group.MapPost("/auth/verify-email", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (VerifyEmailRequestDto req, IExecutionContextAccessor ctx, IMediator mediator, OneDbContext db) =>
+        group.MapPost("/auth/verify-email", async Task<Results<Ok<StatusResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+            VerifyEmailRequestDto req,
+            string? email,
+            IExecutionContextAccessor ctx,
+            IMediator mediator,
+            OneDbContext db) =>
         {
-            var user = await db.GlobalUsers.FindAsync(ctx.UserId);
-            if (user == null) return TypedResults.Unauthorized();
+            var targetEmail = email;
+            if (string.IsNullOrWhiteSpace(targetEmail) && ctx.UserId != Guid.Empty)
+            {
+                var user = await db.GlobalUsers.FindAsync(ctx.UserId);
+                targetEmail = user?.Email;
+            }
 
-            await mediator.Send(new VerifyEmailCommand(user.Email, req.Token));
-            return TypedResults.Ok(new StatusResponse { Status = "verified" });
-        }).RequireAuthorization();
+            if (string.IsNullOrWhiteSpace(targetEmail))
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = 400,
+                    Detail = "Email is required to verify."
+                });
+            }
+
+            try
+            {
+                await mediator.Send(new VerifyEmailCommand(targetEmail, req.Token));
+                return TypedResults.Ok(new StatusResponse { Status = "verified" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = 400,
+                    Detail = ex.Message
+                });
+            }
+        });
 
         group.MapPost("/auth/resend-verification", async Task<Ok<StatusResponse>> (ResendVerificationRequestDto req, IMediator mediator) =>
         {

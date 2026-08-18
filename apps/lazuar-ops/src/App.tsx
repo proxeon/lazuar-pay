@@ -4,6 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
 import PricingPage from "./components/PricingPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import EmptyWorkspaceState from "./components/EmptyWorkspaceState";
 import { client, type AuthUser, type EntitlementDto } from "./lib/api-client";
 
@@ -212,6 +215,9 @@ export default function App() {
       <Route path="/signup" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route element={<OpsLayout />}>
         <Route path="/commerce/dashboard" element={<DashboardPage />} />
         <Route path="/commerce/products" element={<ProductsPage />} />
