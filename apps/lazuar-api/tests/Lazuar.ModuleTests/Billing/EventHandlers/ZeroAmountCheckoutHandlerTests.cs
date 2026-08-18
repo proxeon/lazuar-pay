@@ -45,4 +45,25 @@ public class ZeroAmountCheckoutHandlerTests
             added.Lines.Single(l => l.AccountType == AccountTypes.RevenueGross).Amount,
             Is.EqualTo(-150m));
     }
+
+    [Test]
+    public async Task ZeroListPrice_DoesNotWriteEmptyJournal()
+    {
+        var repo = Substitute.For<ILedgerRepository>();
+        repo.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+
+        var handler = new ZeroAmountCheckoutHandler(repo);
+        await handler.HandleAsync(new ZeroAmountCheckoutCompletedIntegrationEvent(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            OriginalAmount: 0m,
+            DiscountAmount: 0m,
+            Currency: "MYR",
+            CouponCode: "FREE",
+            Metadata: new Dictionary<string, string>()));
+
+        repo.DidNotReceive().Add(Arg.Any<LedgerEntry>());
+        await repo.DidNotReceive().SaveChangesAsync();
+    }
 }
