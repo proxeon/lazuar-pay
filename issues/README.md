@@ -126,6 +126,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 114 | B07-I04 | `fix/114-pending-invite-unique` | One pending invite per org+email; second invite is 400 |
 | 115 | B07-I05 | `fix/115-accept-audit` | Accept pre-checks membership and writes member.accepted |
 | 116 | B07-I06 | `fix/116-logout-cookie-domain` | Logout/stamp delete uses the same Domain/Path as set |
+| 117 | B07-I07 | `fix/117-security-stamp-middleware` | JWT stamp is checked on every cookie request, not only /auth/me |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

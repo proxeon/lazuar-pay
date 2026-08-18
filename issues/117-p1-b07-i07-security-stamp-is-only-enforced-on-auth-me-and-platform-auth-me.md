@@ -2,7 +2,8 @@
 number: "117"
 id: B07-I07
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/117-security-stamp-middleware
 source: plans/009-bugs/07-one-identity-invites-keys.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 117 — B07-I07 — Security stamp is only enforced on `/auth/me` and platform `/auth/me`
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/07-one-identity-invites-keys.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/117-security-stamp-middleware`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

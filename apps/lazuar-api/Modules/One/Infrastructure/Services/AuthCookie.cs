@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Modules.One.Infrastructure.Services;
 
-internal static class AuthCookie
+public static class AuthCookie
 {
     public const string MerchantName = "lazuar_auth";
     public const string AdminName = "lazuar_admin_auth";
@@ -28,7 +28,7 @@ internal static class AuthCookie
     }
 
     public static bool IsDevelopment(HttpContext ctx) =>
-        ctx.RequestServices.GetService(typeof(IWebHostEnvironment)) is IWebHostEnvironment env
+        ctx.RequestServices?.GetService(typeof(IWebHostEnvironment)) is IWebHostEnvironment env
         && env.IsDevelopment();
 
     public static void DeleteMerchant(HttpContext ctx) =>

@@ -23,6 +23,7 @@ public static class MiddlewarePipelineExtensions
         app.UseCors();
         app.UseAuthentication();
         app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
+        app.UseMiddleware<SecurityStampMiddleware>();
         app.UseMiddleware<TenantSecurityMiddleware>();
         app.UseAuthorization();
         return app;
