@@ -197,6 +197,26 @@ public class RegisterPublicUserCommandHandlerTests
     }
 
     [Test]
+    public async Task Empty_Workspace_Creates_User_Only()
+    {
+        var repo = Substitute.For<IOneRepository>();
+        var handler = CreateHandler(repo, out var users, out var orgs, out var memberships, out var entitlements, out var published, out _, out _);
+
+        var userId = await handler.Handle(
+            new RegisterPublicUserCommand("invitee@example.com", "secret", "Invitee", "", ""),
+            CancellationToken.None);
+
+        Assert.That(userId, Is.Not.EqualTo(Guid.Empty));
+        Assert.That(users, Has.Count.EqualTo(1));
+        Assert.That(orgs, Is.Empty);
+        Assert.That(memberships, Is.Empty);
+        Assert.That(entitlements, Is.Empty);
+        Assert.That(published, Is.Empty);
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await repo.DidNotReceive().IsSlugUniqueAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public void Handler_And_OneDbContext_Have_No_AppAccessRequest()
     {
         var oneTypes = typeof(RegisterPublicUserCommandHandler).Assembly.GetTypes()

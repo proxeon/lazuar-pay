@@ -41,8 +41,10 @@ public static class AuthEndpoints
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(req.Password))
                 throw new InvalidOperationException("Email and password are required.");
 
-            if (string.IsNullOrEmpty(req.Workspace_name) || string.IsNullOrEmpty(req.Tenant_slug))
-                throw new InvalidOperationException("Workspace name and slug are required.");
+            var hasWorkspaceName = !string.IsNullOrWhiteSpace(req.Workspace_name);
+            var hasWorkspaceSlug = !string.IsNullOrWhiteSpace(req.Tenant_slug);
+            if (hasWorkspaceName != hasWorkspaceSlug)
+                throw new InvalidOperationException("Workspace name and slug are required together.");
 
             if (req.Accepted_terms != true)
                 throw new InvalidOperationException("You must accept the Terms of Service and Privacy Policy.");

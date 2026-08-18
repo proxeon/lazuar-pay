@@ -88,19 +88,25 @@ export default function LoginPage() {
       return;
     }
 
-    const slug = slugify(tenantSlug);
-    setTenantSlug(slug);
-    const slugError = validateSlug(slug);
-    if (slugError) {
-      setError(slugError);
-      setIsLoading(false);
-      return;
-    }
+    let workspace_name = workspaceName.trim();
+    let tenant_slug = slugify(tenantSlug);
+    if (inviteReturn) {
+      workspace_name = "";
+      tenant_slug = "";
+    } else {
+      setTenantSlug(tenant_slug);
+      const slugError = validateSlug(tenant_slug);
+      if (slugError) {
+        setError(slugError);
+        setIsLoading(false);
+        return;
+      }
 
-    if (!workspaceName.trim()) {
-      setError("Workspace name is required.");
-      setIsLoading(false);
-      return;
+      if (!workspace_name) {
+        setError("Workspace name is required.");
+        setIsLoading(false);
+        return;
+      }
     }
 
     if (!acceptedTerms) {
@@ -115,8 +121,8 @@ export default function LoginPage() {
           email,
           password,
           name: email.split("@")[0],
-          workspace_name: workspaceName.trim(),
-          tenant_slug: slug,
+          workspace_name,
+          tenant_slug,
           accepted_terms: true,
         },
       });
@@ -217,6 +223,7 @@ export default function LoginPage() {
               </div>
 
               <form onSubmit={handleSignUpSubmit} className="space-y-4">
+                {!inviteReturn && (
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Workspace Name</label>
                   <input
@@ -246,6 +253,7 @@ export default function LoginPage() {
                     3–63 chars: a–z, 0–9, hyphens. Not reserved (login, admin, portal, …).
                   </p>
                 </div>
+                )}
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Email Address</label>

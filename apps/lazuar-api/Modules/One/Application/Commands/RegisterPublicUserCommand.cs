@@ -34,7 +34,9 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
     public async Task<Guid> Handle(RegisterPublicUserCommand request, CancellationToken ct)
     {
         var email = request.Email.Trim().ToLowerInvariant();
-        var slug = request.TenantSlug.Trim().ToLowerInvariant();
+        var createWorkspace = !string.IsNullOrWhiteSpace(request.WorkspaceName)
+            && !string.IsNullOrWhiteSpace(request.TenantSlug);
+        var slug = (request.TenantSlug ?? "").Trim().ToLowerInvariant();
 
         var existingUser = await _repository.GetUserByEmailAsync(email, ct);
         if (existingUser != null)
@@ -42,31 +44,42 @@ public class RegisterPublicUserCommandHandler : ICommandHandler<RegisterPublicUs
             throw new InvalidOperationException("An account with this email address already exists.");
         }
 
-        var isSlugUnique = await _repository.IsSlugUniqueAsync(slug, ct);
-        if (!isSlugUnique)
+        if (createWorkspace)
         {
-            throw new InvalidOperationException("The requested workspace slug is already taken. Please choose another.");
+            var isSlugUnique = await _repository.IsSlugUniqueAsync(slug, ct);
+            if (!isSlugUnique)
+            {
+                throw new InvalidOperationException("The requested workspace slug is already taken. Please choose another.");
+            }
         }
 
         var passwordHash = _passwordService.Hash(request.Password);
         var name = string.IsNullOrWhiteSpace(request.Name) ? email.Split('@')[0] : request.Name.Trim();
 
-        // Validate slug before tracking a user so reserved/malformed slugs write nothing.
-        var organization = new Organization(request.WorkspaceName, slug);
+        Organization? organization = null;
+        if (createWorkspace)
+        {
+            // Validate slug before tracking a user so reserved/malformed slugs write nothing.
+            organization = new Organization(request.WorkspaceName, slug);
+        }
 
         var user = new GlobalUser(email, name, passwordHash, isSystemAdmin: false);
         _repository.AddGlobalUser(user);
-        _repository.AddOrganization(organization);
 
-        var membership = new TenantMembership(user.Id, organization.Id, "ADMIN");
-        _repository.AddTenantMembership(membership);
-
-        foreach (var module in CoreModules)
+        if (organization is not null)
         {
-            var entitlement = new TenantAppEntitlement(organization.Id, module);
-            _repository.AddEntitlement(entitlement);
-            
-            await _eventBus.PublishAsync(new AppEntitlementGrantedIntegrationEvent(organization.Id, module));
+            _repository.AddOrganization(organization);
+
+            var membership = new TenantMembership(user.Id, organization.Id, "ADMIN");
+            _repository.AddTenantMembership(membership);
+
+            foreach (var module in CoreModules)
+            {
+                var entitlement = new TenantAppEntitlement(organization.Id, module);
+                _repository.AddEntitlement(entitlement);
+
+                await _eventBus.PublishAsync(new AppEntitlementGrantedIntegrationEvent(organization.Id, module));
+            }
         }
 
         await _repository.SaveChangesAsync(ct);
