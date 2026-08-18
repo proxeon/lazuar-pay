@@ -139,6 +139,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 127 | B08-M04 | `fix/127-suppression-upgrade` | Bounce/complaint upgrades an unsubscribe row (no transactional-lane hole) |
 | 128 | B08-M05 | `fix/128-email-config-decrypt` | HasValidEmailConfig requires a decryptable (or legacy re_) sender key |
 | 129 | B08-M06 | `fix/129-email-html-encode` | Email HTML encodes buyer names; markdown disables raw HTML |
+| 130 | B08-M07 | `fix/130-anonymize-honest` | Delivery logs scrub inbox; filed PDFs/MyInvois stay; ops copy is honest |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

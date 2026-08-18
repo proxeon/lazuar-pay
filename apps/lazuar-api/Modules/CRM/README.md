@@ -29,7 +29,7 @@ Do not invent an Application layer without an intentional epic (ports extraction
 * **`GlobalUserProfileUpdatedIntegrationEvent`** (from `One`): When a user changes their name or email in their global launchpad, this handler finds all linked `ClientProfileEntity` records across all tenants and updates them to maintain data consistency.
 
 ### Published
-* **`ClientProfileAnonymizedIntegrationEvent`**: Fired when a GDPR deletion request is processed. Downstream modules (notably **Commerce** for subscription cancellation, and **Communications** for email suppression) listen to this event for the affected `ClientProfileId`.
+* **`ClientProfileAnonymizedIntegrationEvent`**: Fired when a GDPR deletion request is processed. Downstream modules listen for the affected `ClientProfileId`: **Commerce** cancels subscriptions, **Communications** suppresses mail, **Messaging** scrubs delivery-log recipients. Official receipt PDFs and MyInvois submissions keep the buyer identity that was filed — they are legal records, not rewritten.
 
 ## 6. Cross-Module Contracts (Synchronous Queries)
 To prevent cross-schema database joins, the CRM module exposes a read-only contract for other modules to consume:

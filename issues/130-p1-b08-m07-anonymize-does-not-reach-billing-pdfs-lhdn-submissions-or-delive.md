@@ -2,7 +2,8 @@
 number: "130"
 id: B08-M07
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/130-anonymize-honest
 source: plans/009-bugs/08-communications-messaging-crm.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 130 — B08-M07 — Anonymize does not reach Billing PDFs, LHDN submissions, or delivery logs
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/08-communications-messaging-crm.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/130-anonymize-honest`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

@@ -684,7 +684,7 @@ export default function SubscribersPage() {
                   onClick={() => {
                     if (!selectedSub) return;
                     const ok = window.confirm(
-                      `Anonymize ${selectedSub.customer_email}?\n\nThis cannot be undone. Subscriptions cancel. Emails stop.`,
+                      `Anonymize ${selectedSub.customer_email}?\n\nThis cannot be undone. Subscriptions cancel. Emails stop. Official receipts and MyInvois submissions keep the buyer identity that was filed.`,
                     );
                     if (ok) actionMutation.mutate({ action: "anonymize" });
                   }}

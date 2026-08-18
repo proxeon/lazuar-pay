@@ -42,4 +42,22 @@ public class MessageDeliveryLogTests
         var skipped = new MessageDeliveryLog(Guid.CreateVersion7(), "WHATSAPP", "+6012", "SKIPPED", null, "WhatsApp channel disabled");
         skipped.Status.Should().Be("SKIPPED");
     }
+
+    [Test]
+    public void Anonymize_Replaces_Recipient_Keeps_Provider_Id()
+    {
+        var profileId = Guid.CreateVersion7();
+        var log = new MessageDeliveryLog(
+            Guid.CreateVersion7(),
+            "EMAIL",
+            "buyer@example.com",
+            "SENT",
+            "re_abc123");
+
+        log.Anonymize(profileId);
+
+        log.Recipient.Should().Be($"deleted_{profileId}@localhost");
+        log.ProviderMessageId.Should().Be("re_abc123");
+        log.Status.Should().Be("SENT");
+    }
 }

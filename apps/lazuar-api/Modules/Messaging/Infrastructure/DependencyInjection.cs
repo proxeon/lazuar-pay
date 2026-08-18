@@ -14,6 +14,7 @@ using Modules.Messaging.Infrastructure.Messaging;
 using Modules.Messaging.Infrastructure.Workers;
 using Modules.Messaging.Contracts;
 using Modules.One.Contracts;
+using Modules.CRM.Contracts;
 
 namespace Modules.Messaging.Infrastructure;
 
@@ -54,6 +55,7 @@ public static class DependencyInjection
         services.AddTransient<TenantUpdatedIntegrationEventHandler>();
         services.AddTransient<WorkspaceUpdatedIntegrationEventHandler>();
         services.AddTransient<DispatchMessageIntegrationEventHandler>();
+        services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
 
         services.AddOutboxSchemaMetrics("messaging");
         services.AddHostedService<MessagingOutboxPublisherJob>();
@@ -70,6 +72,7 @@ public static class DependencyInjection
         eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedIntegrationEventHandler>();
         eventBus.Subscribe<WorkspaceUpdatedIntegrationEvent, WorkspaceUpdatedIntegrationEventHandler>();
         eventBus.Subscribe<DispatchMessageIntegrationEvent, DispatchMessageIntegrationEventHandler>();
+        eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
 
         return app;
     }

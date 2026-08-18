@@ -42,4 +42,9 @@ public class MessageDeliveryLog : Entity, IAggregateRoot
         CorrelationEventId = correlationEventId;
         CreatedAt = DateTime.UtcNow;
     }
+
+    public void Anonymize(Guid clientProfileId)
+    {
+        Recipient = $"deleted_{clientProfileId}@localhost";
+    }
 }
