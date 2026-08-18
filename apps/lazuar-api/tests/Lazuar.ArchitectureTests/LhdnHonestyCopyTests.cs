@@ -48,4 +48,18 @@ public class LhdnHonestyCopyTests
         Assert.That(text, Does.Not.Contain("B2bSaleSubmitHandler"));
         Assert.That(text, Does.Not.Contain("B2bSaleReadyForEinvoice"));
     }
+
+    [Test]
+    public void LhdnReadme_NamesJsonSigner_AndDoesNotClaimXades()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "Lhdn", "README.md"));
+        var text = File.ReadAllText(path);
+        Assert.That(text, Does.Contain("JsonUblDocumentSigner"));
+        Assert.That(text, Does.Contain("unsigned XML UBL **1.0**"));
+        Assert.That(text, Does.Contain("XML XAdES / XML-DSig is not used"));
+        Assert.That(text, Does.Not.Contain("Signatures (XMLDSig/XAdES):** Unimplemented"));
+    }
 }

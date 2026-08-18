@@ -22,12 +22,11 @@ A type `01` with a blank buyer TIN is treated as B2C consolidated (General Publi
 
 ---
 
-## 3. Pending/Future Roadmap
+## 3. Signatures
 
-### Cryptographic Signatures (XAdES v1.1)
-*   ❌ **Signatures (XMLDSig/XAdES):** Unimplemented.
-*   *Staging Status:* During our architectural stabilization, we bypassed the V1.1 signature pipeline in favor of absolute V1.0 stability. The XML templates already contain the `<ext:UBLExtensions>` and `<!-- SIGNATURE_PLACEHOLDER -->` blocks wrapped in `{{ if document_version == "1.1" }}` conditionals, keeping the infrastructure fully prepared. 
-*   *Action Required:* Once the business procures official **Sandbox Test Certificates (.p12)** from Pos Digicert, MSC Trustgate, or TM Node, the cryptographic signing (C14N canonicalization, hashing, and RSA-SHA256 signing) can be safely activated and verified against the gateway.
+*   **Default submit** is unsigned XML UBL **1.0**.
+*   **Optional JSON UBL 1.1** is signed by `JsonUblDocumentSigner` when `Lhdn:Signing=Auto` and a stored `.p12` decrypts. The unit test uses a self-signed cert; that is **not** MyInvois ACCEPT (see `docs/honesty/lhdn-sandbox-valid.md`).
+*   **XML XAdES / XML-DSig is not used.** LHDN's XML-DSig path is known-broken. Do not claim XAdES v1.1.
 
 ---
 

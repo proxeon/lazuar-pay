@@ -257,6 +257,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 245 | B06-D07 | `fix/245-productform-tin-subtitle` | Product/create forms say checkout validates TIN; old lie is locked out |
 | 246 | B06-D23 | `fix/246-debit-notes-honesty` | Credit Notes title + Lhdn README: 03/04/11–14 are strategy-only |
 | 247 | B06-D27 | `fix/247-invoiceissued-comments` | InvoiceIssued no-op comments name B2bTaxInvoiceRequested |
+| 248 | B06-D28 | `fix/248-lhdn-signer-readme` | Lhdn README names JsonUblDocumentSigner; XAdES is not used |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

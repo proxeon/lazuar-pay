@@ -2,7 +2,8 @@
 number: "248"
 id: B06-D28
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/248-lhdn-signer-readme
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -80,4 +81,8 @@ Replace §3 with: default unsigned XML 1.0; optional JSON UBL 1.1 via `JsonUblDo
 
 ### Evaluation notes
 Paired with **255** (signer exists; ACCEPT does not). W2-LP-117-done.md is already more honest than the module README. Still P2 as docs. Not a 161–200 fail-closed residual.
+
+## Resolution
+
+README §3 names `JsonUblDocumentSigner`, default unsigned 1.0, and says XML XAdES is not used. Does not claim sandbox ACCEPT. Locked by `LhdnReadme_NamesJsonSigner_AndDoesNotClaimXades`.
 
