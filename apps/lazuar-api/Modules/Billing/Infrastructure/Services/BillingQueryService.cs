@@ -55,11 +55,11 @@ public class BillingQueryService : IBillingQueryService
 
         if (typeFilter == "sales")
         {
-            sqlBuilder.Append($@" AND e.""ReferenceType"" NOT IN ('{LedgerReferenceTypes.GatewayRefund}', '{LedgerReferenceTypes.LhdnCancellation}')");
+            sqlBuilder.Append($@" AND e.""ReferenceType"" IN {LedgerTypeFilters.SalesSqlIn()}");
         }
         else if (typeFilter == "reversals")
         {
-            sqlBuilder.Append($@" AND e.""ReferenceType"" IN ('{LedgerReferenceTypes.GatewayRefund}', '{LedgerReferenceTypes.LhdnCancellation}')");
+            sqlBuilder.Append($@" AND e.""ReferenceType"" IN {LedgerTypeFilters.ReversalsSqlIn()}");
         }
 
         if (fromDate.HasValue)

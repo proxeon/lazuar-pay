@@ -240,6 +240,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 228 | B05-L24 | `fix/228-validate-balanced` | ValidateBalanced rejects empty and per-currency imbalance; $0 header is not saved |
 | 229 | B05-L25 | `fix/229-document-year-myt` | Receipt/invoice/CN year uses MYT, same clock as B2C consolidation |
 | 230 | B05-L26 | `fix/230-summary-cash-label` | Summary/dashboard/agent label net revenue, not cash in bank; math unchanged |
+| 231 | B05-L27 | `fix/231-ledger-type-filter` | reversals include chargeback/dispute; sales is payment + manual enroll only |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
