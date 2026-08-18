@@ -75,7 +75,7 @@ public class PortalAccessEmailHandlers :
         var customerName = string.IsNullOrWhiteSpace(profile.Full_name) ? "Customer" : profile.Full_name;
 
         var portalBase = BuildingBlocks.Infrastructure.AppClientUrl.Resolve(_configuration);
-        var token = _tokenService.GenerateToken(subscriptionId);
+        var token = MagicLinkTokens.ToQueryValue(_tokenService.GenerateToken(subscriptionId));
         var portalMagicLink = $"{portalBase}/{slug}/portal?token={token}";
 
         string Populate(string text, bool htmlEncode)

@@ -1,4 +1,6 @@
+using System;
 using System.Globalization;
+using Modules.Commerce.Contracts;
 
 namespace Modules.Communications.Application;
 
@@ -33,12 +35,12 @@ public static class MessageLinkBuilder
             : $"{portalBase}/{workspaceSlug}/update-payment/{subId}";
         if (!string.IsNullOrEmpty(magicToken))
         {
-            updatePaymentLink += $"?token={magicToken}";
+            updatePaymentLink += $"?token={MagicLinkTokens.ToQueryValue(magicToken)}";
         }
         var portalPath = $"{portalBase}/{workspaceSlug}/portal";
         var portalMagicLink = string.IsNullOrEmpty(magicToken)
             ? portalPath
-            : $"{portalPath}?token={magicToken}";
+            : $"{portalPath}?token={MagicLinkTokens.ToQueryValue(magicToken)}";
         return (updatePaymentLink, portalMagicLink, updatePaymentLink);
     }
 }

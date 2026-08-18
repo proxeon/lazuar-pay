@@ -7,7 +7,8 @@ using Modules.Commerce.Contracts;
 namespace Modules.Commerce.Infrastructure.Security;
 
 /// <summary>
-/// HMAC-SHA256 portal tokens: Base64("{subscriptionId}:{expiryUnix}:{hmacHex}"), 24h TTL.
+/// HMAC-SHA256 portal tokens: Base64url("{subscriptionId}:{expiryUnix}:{hmacHex}"), 24h TTL.
+/// Validate also accepts legacy standard Base64 (in-flight emails).
 /// Secret source: Jwt:Secret (parity with pre-move BB impl — do not change without deliberate token versioning).
 /// </summary>
 public class MagicLinkTokenService : IMagicLinkTokenService
@@ -34,14 +35,14 @@ public class MagicLinkTokenService : IMagicLinkTokenService
             Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
 
         var tokenString = $"{payload}:{hash}";
-        return Convert.ToBase64String(Encoding.UTF8.GetBytes(tokenString));
+        return ToBase64Url(Encoding.UTF8.GetBytes(tokenString));
     }
 
     public Guid? ValidateToken(string token)
     {
         try
         {
-            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(token));
+            var decoded = Encoding.UTF8.GetString(FromBase64UrlOrStd(token));
             var parts = decoded.Split(':');
             if (parts.Length != 3) return null;
             if (!Guid.TryParse(parts[0], out var subId)) return null;
@@ -66,6 +67,29 @@ public class MagicLinkTokenService : IMagicLinkTokenService
         catch
         {
             return null;
+        }
+    }
+
+    internal static string ToBase64Url(byte[] bytes) =>
+        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    internal static byte[] FromBase64UrlOrStd(string token)
+    {
+        // In-flight emails still carry standard Base64 (padding / + /).
+        try
+        {
+            return Convert.FromBase64String(token);
+        }
+        catch (FormatException)
+        {
+            var std = token.Replace('-', '+').Replace('_', '/');
+            switch (std.Length % 4)
+            {
+                case 2: std += "=="; break;
+                case 3: std += "="; break;
+            }
+
+            return Convert.FromBase64String(std);
         }
     }
 }

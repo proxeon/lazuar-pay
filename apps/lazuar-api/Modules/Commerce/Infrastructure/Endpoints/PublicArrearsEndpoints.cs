@@ -135,8 +135,9 @@ public static class PublicArrearsEndpoints
             if (workspace == null) return TypedResults.BadRequest("Subscription not found.");
 
             var clientUrl = config["App:ClientUrl"]?.TrimEnd('/') ?? "http://localhost:3004";
-            var successUrl = $"{clientUrl}/{workspace.Slug}/portal?token={token}";
-            var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}?token={token}";
+            var encodedToken = MagicLinkTokens.ToQueryValue(token);
+            var successUrl = $"{clientUrl}/{workspace.Slug}/portal?token={encodedToken}";
+            var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}?token={encodedToken}";
 
             var isActiveUpdate = sub.Status == "ACTIVE";
             var billing = http.RequestServices.GetRequiredService<IBillingQueryService>();

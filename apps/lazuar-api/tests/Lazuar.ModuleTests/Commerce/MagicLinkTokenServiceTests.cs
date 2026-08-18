@@ -42,7 +42,10 @@ public class MagicLinkTokenServiceTests
         var sut = CreateSut();
 
         var token = sut.GenerateToken(subscriptionId);
-        var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(token));
+        token.Should().NotContain("+");
+        token.Should().NotContain("/");
+        token.Should().NotContain("=");
+        var decoded = Encoding.UTF8.GetString(MagicLinkTokenService.FromBase64UrlOrStd(token));
         var parts = decoded.Split(':');
 
         parts.Should().HaveCount(3);
@@ -61,10 +64,10 @@ public class MagicLinkTokenServiceTests
         var sut = CreateSut();
         var token = sut.GenerateToken(subscriptionId);
 
-        var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(token));
+        var decoded = Encoding.UTF8.GetString(MagicLinkTokenService.FromBase64UrlOrStd(token));
         var parts = decoded.Split(':');
         parts[0] = Guid.CreateVersion7().ToString();
-        var tampered = Convert.ToBase64String(Encoding.UTF8.GetBytes(string.Join(':', parts)));
+        var tampered = MagicLinkTokenService.ToBase64Url(Encoding.UTF8.GetBytes(string.Join(':', parts)));
 
         sut.ValidateToken(tampered).Should().BeNull();
     }
@@ -108,5 +111,20 @@ public class MagicLinkTokenServiceTests
         var token = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{payload}:{hash}"));
 
         sut.ValidateToken(token).Should().BeNull();
+    }
+
+    [Test]
+    public void ValidateToken_LegacyStandardBase64_StillAccepted()
+    {
+        var subscriptionId = Guid.CreateVersion7();
+        var sut = CreateSut();
+        var expiry = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
+        var payload = $"{subscriptionId}:{expiry}";
+        var hash = Convert.ToHexString(System.Security.Cryptography.HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(Secret),
+            Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+        var legacy = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{payload}:{hash}"));
+
+        sut.ValidateToken(legacy).Should().Be(subscriptionId);
     }
 }

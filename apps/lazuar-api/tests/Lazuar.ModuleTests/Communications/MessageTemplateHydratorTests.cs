@@ -127,6 +127,16 @@ public class MessageTemplateHydratorTests
     }
 
     [Test]
+    public void RenewalLink_EscapesTokenForQueryString()
+    {
+        var padded = "abc+def/ghi=";
+        var links = MessageLinkBuilder.Build("https://portal.test", "acme", "sub-1", padded);
+        var expected = "abc%2Bdef%2Fghi%3D";
+        links.UpdatePaymentLink.Should().Be($"https://portal.test/acme/update-payment/sub-1?token={expected}");
+        links.PortalMagicLink.Should().Be($"https://portal.test/acme/portal?token={expected}");
+    }
+
+    [Test]
     public void FormatPeriodEnd_UsesEnGbHumanDate()
     {
         MessageTemplateHydrator.FormatPeriodEnd("2026-12-31").Should().Be("31 Dec 2026");
