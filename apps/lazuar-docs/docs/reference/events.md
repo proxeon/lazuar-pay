@@ -43,7 +43,7 @@ Headers:
 
 | event_type | When | Your action | `data` keys |
 |------------|------|-------------|-------------|
-| `subscription.activated` | First paid period or recovery that lands `ACTIVE` | Unlock SaaS access | `subscription_id`, `client_profile_id`, `customer_id`, `product_id`, `status`, `current_period_end?`, `customer_email?`, `amount?`, `currency?`, `interval?`, `is_first_payment?`, `metadata?`, `checkout_url?` |
+| `subscription.activated` | First paid period (`data.status=ACTIVE`) **or** trial start (`data.status=TRIALING`, `amount=0`) | Unlock SaaS access | `subscription_id`, `client_profile_id`, `customer_id`, `product_id`, `status`, `current_period_end?`, `customer_email?`, `amount?`, `currency?`, `interval?`, `is_first_payment?`, `metadata?`, `checkout_url?` |
 | `subscription.resumed` | Recovered from `SUSPENDED` | Restore access | Same as activated |
 | `subscription.past_due` | Renewal failed; collection in progress | Restrict or warn | Same as activated |
 | `subscription.canceled` | Immediate cancel, period-end finalize, dunning terminal, or PDPA | Revoke access | Same as activated |

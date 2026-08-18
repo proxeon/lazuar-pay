@@ -182,6 +182,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 170 | B10-X14 | `fix/170-jwt-document-secret` | Document HMAC rejects empty/default Jwt:Secret; Staging matches Production |
 | 171 | B10-X15 | `fix/171-m2m-status-filter` | M2M subscriptions pass status to GetSubscribersAsync so total_count is honest |
 | 172 | B10-X16 | `fix/172-payment-webhook-dto-honesty` | TypeSpec PaymentWebhookPayloadDto comment says it is not the wire envelope |
+| 173 | B10-X17 | `fix/173-trialing-catalog` | Catalog and lifecycle tests document TRIALING on subscription.activated |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

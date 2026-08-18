@@ -134,6 +134,23 @@ public class SubscriptionLifecycleWebhookTests
         Assert.That(payload.GetProperty("metadata").GetProperty("aura_org_id").GetString(), Is.EqualTo(auraOrgId.ToString()));
     }
 
+    [Test]
+    public void Payload_ActivateTrial_EmitsTrialingAndZeroAmount()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = new Modules.Commerce.Domain.Aggregates.Product(
+            orgId, "Plan", "plan", 149m, "FIXED", 0m, "MYR", "mo", "STRIPE",
+            new Modules.Commerce.Domain.ValueObjects.CheckoutConfiguration(false, false, false),
+            Array.Empty<string>());
+        var sub = new Modules.Commerce.Domain.Aggregates.Subscription(orgId, Guid.CreateVersion7(), product.Id);
+        sub.ActivateTrial(DateTime.UtcNow.AddDays(14), reminderOnly: false);
+
+        var payload = CommerceWebhookPayload.From(sub, product, "a@b.c", "TRIALING");
+
+        Assert.That(payload.GetProperty("status").GetString(), Is.EqualTo("TRIALING"));
+        Assert.That(payload.GetProperty("amount").GetDecimal(), Is.EqualTo(0m));
+    }
+
     private static (SubscriptionLifecycleIntegrationEventHandlers Handler, IEventBus Bus, ICommerceRepository Repo) CreateHandler()
     {
         var bus = Substitute.For<IEventBus>();

@@ -14,7 +14,7 @@ type RotateWebhookSecretResponseDto = components["schemas"]["One.RotateWebhookSe
 
 /** Catalog of outbound events currently emitted to workspace endpoints. Empty selection = all events. */
 const WEBHOOK_EVENT_OPTIONS = [
-  { value: "subscription.activated", label: "Subscription activated", hint: "New paid subscription" },
+  { value: "subscription.activated", label: "Subscription activated", hint: "New subscription (paid or trial)" },
   { value: "subscription.resumed", label: "Subscription resumed", hint: "Recovered from past due / suspend" },
   { value: "subscription.suspended", label: "Subscription suspended", hint: "Dunning final action" },
   { value: "subscription.canceled", label: "Subscription canceled", hint: "Cancel or dunning cancel" },

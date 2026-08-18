@@ -10,7 +10,7 @@ const COMMERCE_EVENTS = [
   {
     type: "subscription.activated",
     label: "Subscription activated",
-    hint: "New paid subscription unlocked",
+    hint: "New subscription unlocked (paid or trial)",
   },
   {
     type: "subscription.resumed",
