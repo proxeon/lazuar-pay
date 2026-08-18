@@ -46,8 +46,8 @@ public class CancelTaxDocumentCommandHandler : ICommandHandler<CancelTaxDocument
             throw new InvalidOperationException("Tenant configuration or API credentials missing.");
         }
 
-        // Apply domain rule enforcement in-memory (e.g., the 72-hour window limit).
-        doc.Cancel();
+        // Check the 72h window before calling MyInvois. Mutate persisted status only after success.
+        doc.EnsureCanCancel();
 
         var clientSecret = _secretVault.DecryptOrPlaintext(config.MyInvoisClientSecret);
         var token = await _gatewayAdapter.GetTokenAsync(config.OrganizationId, config.MyInvoisClientId, clientSecret, config.IntermediaryMode, config.SupplierTin, ct, config.Environment);
@@ -58,6 +58,7 @@ public class CancelTaxDocumentCommandHandler : ICommandHandler<CancelTaxDocument
             throw new InvalidOperationException($"LHDN Cancellation failed: {result.ErrorMessage}");
         }
 
+        doc.Cancel();
         await _eventBus.PublishAsync(new LhdnDocumentCancelledIntegrationEvent(request.OrganizationId, request.InternalId, doc.LhdnUuid, request.Reason));
         await _repository.SaveChangesAsync(ct);
     }

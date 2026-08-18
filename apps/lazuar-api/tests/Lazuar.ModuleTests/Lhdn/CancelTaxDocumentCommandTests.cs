@@ -43,6 +43,37 @@ public class CancelTaxDocumentCommandTests
 
         await gateway.Received(1).CancelDocumentAsync("cid", "tok", "uuid-1", "wrong TIN", false, "C1", Arg.Any<CancellationToken>());
         doc.ValidationStatus.Should().Be("CANCELLED");
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GatewayFails_LeavesDocumentValid()
+    {
+        var org = Guid.CreateVersion7();
+        var repo = Substitute.For<ILhdnRepository>();
+        var gateway = Substitute.For<ILhdnGatewayAdapter>();
+        var vault = Substitute.For<ISecretVault>();
+        vault.DecryptOrPlaintext("secret").Returns("plain");
+
+        var config = new LhdnTenantConfig(org, false, "C1", "BRN", "1");
+        config.UpdateApiCredentials("cid", "secret");
+        repo.GetTenantConfigAsync(org, Arg.Any<CancellationToken>()).Returns(config);
+
+        var doc = new TaxDocument(org, "INV-2026-2", "h", "<Invoice/>");
+        doc.MarkAsSubmitted("sub", "uuid-2");
+        doc.MarkAsValid("long");
+        repo.GetTaxDocumentByInternalIdAsync(org, "INV-2026-2", Arg.Any<CancellationToken>()).Returns(doc);
+
+        gateway.GetTokenAsync(org, "cid", "plain", false, "C1", Arg.Any<CancellationToken>(), Arg.Any<string?>()).Returns("tok");
+        gateway.CancelDocumentAsync("cid", "tok", "uuid-2", "retry", false, "C1", Arg.Any<CancellationToken>())
+            .Returns(new LhdnCancelResult(false, null, "already cancelled"));
+
+        var handler = new CancelTaxDocumentCommandHandler(repo, gateway, Substitute.For<IEventBus>(), vault);
+        var act = () => handler.Handle(new CancelTaxDocumentCommand(org, "INV-2026-2", "retry"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Cancellation failed*");
+        doc.ValidationStatus.Should().Be("VALID");
+        await repo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Test]

@@ -261,6 +261,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 249 | B06-D30 | `fix/249-draft-proforma-identity` | Draft proforma prints CRM TIN, session date, and exclusive SST |
 | 250 | B06-D31 | `fix/250-quote-portal-token` | Quote-only completed checkout mints a ClientProfile portal token |
 | 251 | B06-D32 | `fix/251-needs-buyer-tin` | Ops collect-TIN converts parked large B2C to type-01 B2B submit |
+| 252 | B06-D33 | `fix/252-cancel-split-brain` | Supplier cancel mutates status only after MyInvois accepts |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -2,7 +2,8 @@
 number: "252"
 id: B06-D33
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/252-cancel-split-brain
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -91,4 +92,8 @@ Do **not** implement buyer reject in this P2 unless product explicitly wants IRB
 
 ### Evaluation notes
 Honestly labelled, still a gap. Split-brain is the only code defect worth a small PR. 091/103 made **submit deduct** fail-closed; cancel persist is still fail-open in the opposite direction. 107 is the commercial double-row on refund+cancel. Still P2. Do not mark resolved because the footer is true.
+
+## Resolution
+
+Buyer reject stays unimplemented (footer kept). Supplier cancel now checks the 72h window, calls MyInvois, then `Cancel()` + SaveChanges. A gateway failure leaves the row VALID.
 

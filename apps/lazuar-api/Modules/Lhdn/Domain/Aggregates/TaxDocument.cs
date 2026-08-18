@@ -115,7 +115,7 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Cancel()
+    public void EnsureCanCancel()
     {
         if (ValidationStatus != "VALID" || string.IsNullOrEmpty(LhdnUuid))
         {
@@ -123,7 +123,11 @@ public class TaxDocument : Entity, IAggregateRoot, IMustHaveTenant
         }
 
         CheckRule(new CancelWindowMustBeValidRule(ValidatedAt));
-        
+    }
+
+    public void Cancel()
+    {
+        EnsureCanCancel();
         ValidationStatus = "CANCELLED";
         NextPollAt = null;
         UpdatedAt = DateTime.UtcNow;
