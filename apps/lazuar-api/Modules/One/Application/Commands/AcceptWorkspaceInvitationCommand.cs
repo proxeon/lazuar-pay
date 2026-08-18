@@ -33,6 +33,13 @@ public class AcceptWorkspaceInvitationCommandHandler : ICommandHandler<AcceptWor
         if (user.Email != invitation.Email)
             throw new InvalidOperationException("This invitation belongs to a different email address.");
 
+        if (await _repository.HasMembershipAsync(user.Id, invitation.OrganizationId, ct))
+        {
+            invitation.Accept();
+            await _repository.SaveChangesAsync(ct);
+            throw new InvalidOperationException("User is already a member of this workspace.");
+        }
+
         invitation.Accept();
 
         var membership = new TenantMembership(user.Id, invitation.OrganizationId, invitation.Role);

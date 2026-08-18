@@ -122,6 +122,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 110 | B06-D26 | `fix/110-placeholder-invalid` | Missing state is 17; no dummy phone; period is One-time unless cons |
 | 111 | B06-D29 | `fix/111-tax-invoice-email-fallback` | Tax Invoice / CN have their own templates; no receipt fallback |
 | 112 | B07-I02 | `fix/112-reset-verify-404` | Reset/verify links go to ops pages; verify works logged out |
+| 113 | B07-I03 | `fix/113-double-accept-500` | Already-member accept is 400, not a unique-index 500 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

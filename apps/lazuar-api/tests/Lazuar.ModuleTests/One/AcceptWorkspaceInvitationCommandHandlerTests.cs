@@ -87,4 +87,30 @@ public class AcceptWorkspaceInvitationCommandHandlerTests
         invitation.Status.Should().Be("PENDING");
         await repo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
+
+    [Test]
+    public async Task Accept_AlreadyMember_Is400AndDoesNotInsert()
+    {
+        var orgId = Guid.CreateVersion7();
+        var user = new GlobalUser("staff@example.com", "Staff", "hash");
+        var invitation = new WorkspaceInvitation(
+            orgId, "staff@example.com", "MEMBER", "token-hash", "plain", DateTime.UtcNow.AddDays(7));
+
+        var repo = Substitute.For<IOneRepository>();
+        repo.GetUserByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        repo.GetInvitationByHashAsync("token-hash", Arg.Any<CancellationToken>()).Returns(invitation);
+        repo.HasMembershipAsync(user.Id, orgId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var tokens = Substitute.For<ITokenGeneratorService>();
+        tokens.HashToken("plain").Returns("token-hash");
+
+        var handler = new AcceptWorkspaceInvitationCommandHandler(repo, tokens);
+        var act = () => handler.Handle(new AcceptWorkspaceInvitationCommand(user.Id, "plain"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*already a member*");
+        invitation.Status.Should().Be("ACCEPTED");
+        repo.DidNotReceive().AddTenantMembership(Arg.Any<TenantMembership>());
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
 }
