@@ -3,6 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { client } from "../lib/api-client";
 
+function isSafeReturnUrl(value: string): boolean {
+  return value.startsWith("/") && !value.startsWith("//");
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -23,12 +27,9 @@ export default function LoginPage() {
 
       if (apiError) throw new Error(apiError.detail || "Invalid credentials or unauthorized access.");
 
-      const returnUrl = searchParams.get("returnUrl");
-      if (returnUrl) {
-        window.location.href = returnUrl;
-      } else {
-        window.location.href = "/platform/gateways";
-      }
+      const raw = searchParams.get("returnUrl");
+      const returnUrl = raw && isSafeReturnUrl(raw) ? raw : "/platform/gateways";
+      navigate(returnUrl, { replace: true });
     } catch (err: any) {
       setError(err.message || "Invalid credentials.");
     } finally {
