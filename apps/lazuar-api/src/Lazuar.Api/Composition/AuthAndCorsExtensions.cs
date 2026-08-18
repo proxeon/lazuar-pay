@@ -187,18 +187,18 @@ public static class AuthAndCorsExtensions
 
     public static IServiceCollection AddLazuarCors(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
+        var corsOrigins = configuration["App:CorsOrigins"];
+        EnsureCorsOriginsConfigured(corsOrigins, environment);
+
         services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
             {
-                var corsOrigins = configuration["App:CorsOrigins"];
-                if (!string.IsNullOrEmpty(corsOrigins))
+                if (TryParseCorsOrigins(corsOrigins, out var origins))
                 {
-                    var origins = corsOrigins.Split(
-                        ',',
-                        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                     policy.WithOrigins(origins)
                         .AllowAnyHeader()
                         .AllowAnyMethod()
@@ -214,5 +214,35 @@ public static class AuthAndCorsExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Production/Staging must list origins. Empty in those environments is a boot failure,
+    /// not AllowAnyOrigin.
+    /// </summary>
+    internal static void EnsureCorsOriginsConfigured(string? corsOrigins, IHostEnvironment environment)
+    {
+        if (TryParseCorsOrigins(corsOrigins, out _))
+        {
+            return;
+        }
+
+        if (environment.IsProduction() || environment.IsStaging())
+        {
+            throw new InvalidOperationException(
+                "App:CorsOrigins must be configured in Production and Staging.");
+        }
+    }
+
+    internal static bool TryParseCorsOrigins(string? corsOrigins, out string[] origins)
+    {
+        origins = Array.Empty<string>();
+        if (string.IsNullOrWhiteSpace(corsOrigins))
+        {
+            return false;
+        }
+
+        origins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return origins.Length > 0;
     }
 }

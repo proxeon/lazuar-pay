@@ -210,7 +210,7 @@ builder.Services.AddTransient<Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrati
 
 builder.Services.AddLazuarAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddLazuarAuthorizationPolicies();
-builder.Services.AddLazuarCors(builder.Configuration);
+builder.Services.AddLazuarCors(builder.Configuration, builder.Environment);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
