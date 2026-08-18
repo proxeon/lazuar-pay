@@ -205,6 +205,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 193 | B02-C13 | `fix/193-excludeids-parameterized` | Billing/dunning excludeIds already use parameterized ALL() (178) |
 | 194 | B02-C14 | `fix/194-clear-trial-ends-at` | Activate / recover / resume / cancel clear TrialEndsAt |
 | 195 | B02-C16 | `fix/195-period-end-is-next` | Paid Activate writes CurrentPeriodEnd = next billing date |
+| 196 | B02-C17 | `fix/196-resume-period-end` | Resume sets CurrentPeriodEnd to the new next billing date |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

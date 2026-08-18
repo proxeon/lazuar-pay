@@ -332,6 +332,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         SuspendedAt = null;
         TrialEndsAt = null;
         NextBillingDate = newNextBillingDate;
+        CurrentPeriodEnd = newNextBillingDate;
         ClearScheduledCancel();
         ClearDunning();
         ClearCurrentRenewalCheckout();

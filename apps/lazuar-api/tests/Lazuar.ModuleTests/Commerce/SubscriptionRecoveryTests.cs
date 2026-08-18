@@ -78,6 +78,7 @@ public class SubscriptionRecoveryTests
 
         sub.Status.Should().Be("ACTIVE");
         sub.NextBillingDate.Should().BeCloseTo(nextBilling, TimeSpan.FromSeconds(1));
+        sub.CurrentPeriodEnd.Should().BeCloseTo(nextBilling, TimeSpan.FromSeconds(1));
         sub.CurrentDunningCampaignId.Should().BeNull();
         sub.DunningCampaignSnapshotJson.Should().BeNull();
         sub.SuspendedAt.Should().BeNull();
