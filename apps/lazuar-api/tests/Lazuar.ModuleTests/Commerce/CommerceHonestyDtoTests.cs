@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using FluentAssertions;
 using Modules.Commerce.Infrastructure.Services;
 using NUnit.Framework;
@@ -120,5 +121,37 @@ public class CommerceHonestyDtoTests
             1);
 
         CommerceQueryService.MapTransactionLog(raw).Supports_api_refund.Should().BeFalse();
+    }
+
+    [Test]
+    public void IntegrationCancel_ContractAndEndpoint_AreImmediateOnly()
+    {
+        var root = FindRepoRoot();
+        var tsp = File.ReadAllText(Path.Combine(root, "packages/api-spec/modules/commerce/integration-routes.tsp"));
+        tsp.Should().Contain("Immediate cancel (same as admin cancel without at_period_end)");
+        tsp.Should().NotContain("at_period_end?:");
+        tsp.Should().NotContain("@body");
+
+        var endpoint = File.ReadAllText(Path.Combine(
+            root,
+            "apps/lazuar-api/Modules/Commerce/Infrastructure/Endpoints/IntegrationSubscriptionEndpoints.cs"));
+        endpoint.Should().Contain("AtPeriodEnd: false");
+        endpoint.Should().Contain("M2M cancel is immediate only");
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "packages/api-spec/modules/commerce/integration-routes.tsp")))
+            {
+                return dir.FullName;
+            }
+
+            dir = dir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repo root from " + AppContext.BaseDirectory);
     }
 }

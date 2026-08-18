@@ -76,6 +76,9 @@ public static class IntegrationSubscriptionEndpoints
 
             try
             {
+                // B02-C23: M2M cancel is immediate only. The TypeSpec route has no body and no
+                // at_period_end query. Portal can schedule; this surface cannot. Do not document
+                // "integrator can schedule period-end" until a request DTO exists.
                 var status = await mediator.Send(new CancelAdminSubscriptionCommand(ctx.TenantId, id, AtPeriodEnd: false));
                 return Results.Ok(new StatusResponse { Status = status });
             }

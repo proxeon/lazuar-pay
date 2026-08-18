@@ -211,6 +211,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 199 | B02-C20 | `fix/199-sst-line-tax-ssot` | Same per-unit SST SSoT as 182 (33.33 × 3 tax 8.01, not 8.00) |
 | 200 | B02-C21 | `fix/200-activate-from-arrears-throws` | Activate throws from PAST_DUE/SUSPENDED; RecoverFromPayment/Resume only |
 | 201 | B02-C22 | `fix/201-applypending-same-product` | ApplyPendingPlanChange no-ops when pending == current; job does not re-snapshot |
+| 202 | B02-C23 | `fix/202-integration-cancel-immediate-only` | M2M cancel stays immediate; TypeSpec/docs/test do not claim period-end |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

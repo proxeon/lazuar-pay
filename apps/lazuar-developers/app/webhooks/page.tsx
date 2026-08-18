@@ -133,7 +133,7 @@ export default function WebhooksCatalogPage() {
           <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">
             /integrations/commerce/subscriptions
           </code>
-          . Product CRUD stays console-only.
+          . Cancel is immediate (no <code className="font-mono text-[12px] bg-[#f4f4f5] px-1">at_period_end</code> body). Product CRUD stays console-only.
         </Callout>
         <div className="border border-[#e5e5e5] bg-white overflow-hidden">
           <table className="w-full text-left text-[13px]">
