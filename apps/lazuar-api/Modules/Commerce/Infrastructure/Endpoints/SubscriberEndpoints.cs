@@ -25,12 +25,13 @@ public static class SubscriberEndpoints
             [FromQuery] int? page,
             [FromQuery] int? limit,
             [FromQuery] string? search,
+            [FromQuery] string? status,
             IExecutionContextAccessor ctx,
             ICommerceQueryService queryService) =>
           {
               var p = page ?? 1;
               var l = limit ?? 50;
-              var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l, search);
+              var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l, search, status);
               return TypedResults.Ok(response);
           });
 

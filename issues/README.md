@@ -164,6 +164,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 152 | B09-U23 | `fix/152-period-started-label` | current_period_end is labeled Period ends, not Period started |
 | 153 | B09-U24 | `fix/153-admin-returnurl-search` | Admin login returnUrl keeps the query string, like ops |
 | 154 | B09-U25 | `fix/154-role-gated-buttons` | Anonymize, Invite, and Save credentials only show for ADMIN |
+| 155 | B09-U26 | `fix/155-subscribers-pagination` | Subscribers have Prev/Next; status is filtered server-side |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

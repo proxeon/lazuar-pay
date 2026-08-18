@@ -55,10 +55,17 @@ export default function SubscribersPage() {
   });
 
   const { data: subscribersData, isLoading } = useQuery({
-    queryKey: ["commerce-subscribers", page, debouncedSearchTerm],
+    queryKey: ["commerce-subscribers", page, debouncedSearchTerm, statusFilter],
     queryFn: async () => {
       const { data, error } = await client.GET("/admin/commerce/subscribers", {
-        params: { query: { page, limit: 50, search: debouncedSearchTerm || undefined } }
+        params: {
+          query: {
+            page,
+            limit: 50,
+            search: debouncedSearchTerm || undefined,
+            status: statusFilter === "ALL" ? undefined : statusFilter,
+          } as { page?: number; limit?: number; search?: string; status?: string },
+        }
       });
       if (error) throw new Error(error.detail);
       return data;
@@ -300,7 +307,8 @@ export default function SubscribersPage() {
     onError: (err: any) => toast.error("Action Failed", { description: err.message })
   });
 
-  const displayedSubscribers = (subscribersData?.data || []).filter(sub => statusFilter === "ALL" || sub.status === statusFilter);
+  const displayedSubscribers = subscribersData?.data || [];
+  const totalPages = subscribersData?.total_pages || 1;
 
   return (
     <PageLayout 
@@ -344,7 +352,10 @@ export default function SubscribersPage() {
           </div>
           <select 
             value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="h-8 px-2 text-[10px] font-bold uppercase tracking-widest bg-white border border-[#e5e5e5] text-[#09090b] focus:outline-none focus:border-[#09090b]"
           >
             <option value="ALL">ALL STATUSES</option>
@@ -438,6 +449,29 @@ export default function SubscribersPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="px-5 py-3 border-t border-[#e5e5e5] bg-[#fafafa]/50 flex items-center justify-between shrink-0">
+          <span className="text-[11px] text-[#71717a]">
+            Page {page} of {totalPages}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || isLoading}
+              className="h-8 px-3 border border-[#e5e5e5] bg-white text-[#09090b] text-[11px] font-bold uppercase tracking-widest hover:bg-[#f4f4f5] disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages || isLoading}
+              className="h-8 px-3 border border-[#e5e5e5] bg-white text-[#09090b] text-[11px] font-bold uppercase tracking-widest hover:bg-[#f4f4f5] disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 

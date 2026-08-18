@@ -44,7 +44,8 @@ public partial class CommerceQueryService
         Guid organizationId, 
         int page, 
         int limit, 
-        string? searchTerm = null)
+        string? searchTerm = null,
+        string? status = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
@@ -94,6 +95,11 @@ public partial class CommerceQueryService
                 d.Customer_name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || 
                 d.Customer_email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
             );
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && !string.Equals(status, "ALL", StringComparison.OrdinalIgnoreCase))
+        {
+            dtos = dtos.Where(d => string.Equals(d.Status, status, StringComparison.OrdinalIgnoreCase));
         }
 
         var filteredList = dtos.ToList();
