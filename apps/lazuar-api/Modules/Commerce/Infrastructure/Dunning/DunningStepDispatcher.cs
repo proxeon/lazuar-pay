@@ -96,8 +96,10 @@ internal static class DunningStepDispatcher
             total_price = amount,
             currency = product?.Currency ?? string.Empty,
             days_overdue = daysOverdue,
-            current_period_end = sub.NextBillingDate.HasValue
-                ? sub.NextBillingDate.Value.ToString("yyyy-MM-dd")
+            // PAST_DUE: this is the missed due date, not a future renews-on (B03-C29 / 195).
+            // Pre-dunning copy may say "renews on"; day-0+ default seed says "due".
+            current_period_end = (sub.CurrentPeriodEnd ?? sub.NextBillingDate).HasValue
+                ? (sub.CurrentPeriodEnd ?? sub.NextBillingDate)!.Value.ToString("yyyy-MM-dd")
                 : string.Empty,
             checkout_url = checkoutUrl
         };

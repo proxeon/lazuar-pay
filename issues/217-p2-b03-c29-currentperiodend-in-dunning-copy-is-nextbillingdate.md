@@ -2,7 +2,8 @@
 number: "217"
 id: B03-C29
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/217-dunning-period-end-honesty
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 217 — B03-C29 — `current_period_end` in dunning copy is `NextBillingDate`
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/217-dunning-period-end-honesty`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

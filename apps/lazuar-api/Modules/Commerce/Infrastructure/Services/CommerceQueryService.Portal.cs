@@ -39,7 +39,7 @@ public partial class CommerceQueryService
 
         const string subsSql = @"
             SELECT s.""Id"", s.""ProductId"", p.""Name"" as ProductName, s.""Status"",
-                   s.""NextBillingDate"" as CurrentPeriodEnd, s.""CancelAtPeriodEnd"",
+                   s.""CurrentPeriodEnd"", s.""CancelAtPeriodEnd"",
                    s.""IsReminderOnly"", s.""Quantity"", s.""PendingProductId"",
                    pp.""Name"" as PendingProductName, s.""TrialEndsAt""
             FROM commerce.""Subscriptions"" s

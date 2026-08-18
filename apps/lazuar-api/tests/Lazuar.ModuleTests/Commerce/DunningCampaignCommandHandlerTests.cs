@@ -123,7 +123,8 @@ public class DunningCampaignCommandHandlerTests
             && s.ActionType == "EMAIL"
             && !string.IsNullOrWhiteSpace(s.EmailBody)
             && !s.EmailBody!.Contains("{{update_payment_link}}")
-            && s.EmailBody.Contains("{{current_period_end}}"));
+            && s.EmailBody.Contains("{{current_period_end}}")
+            && s.EmailBody.Contains("renews on"));
         saved.Steps.Should().Contain(s =>
             s.DayOffset == 0
             && s.ActionType == "EMAIL"

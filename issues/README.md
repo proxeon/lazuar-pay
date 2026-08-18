@@ -226,6 +226,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 214 | B03-C26 | `fix/214-infer-online-gateway-from-product` | Infer ONLINE_GATEWAY from product gateway, not vault-id |
 | 215 | B03-C27 | `fix/215-whatsapp-not-shipping` | WhatsApp is not shipping; flag=true no longer dispatches |
 | 216 | B03-C28 | `fix/216-arrears-slug-bind` | Arrears/update-payment require workspace slug to match the token org |
+| 217 | B03-C29 | `fix/217-dunning-period-end-honesty` | Dunning/portal current_period_end uses CurrentPeriodEnd (missed date if PAST_DUE) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
