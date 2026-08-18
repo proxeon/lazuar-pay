@@ -302,7 +302,8 @@ namespace Modules.Lhdn.Infrastructure.Migrations
 
                     b.HasIndex("ValidationStatus");
 
-                    b.HasIndex("OrganizationId", "InternalReferenceId");
+                    b.HasIndex("OrganizationId", "InternalReferenceId")
+                        .IsUnique();
 
                     b.HasIndex("OrganizationId", "ValidationStatus");
 

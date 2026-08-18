@@ -118,6 +118,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 106 | B06-D21 | `fix/106-credit-note-pdf` | Refund books a Credit Note PDF; LHDN reuses Billing CN- |
 | 107 | B06-D22 | `fix/107-original-doc-cancel-double` | Original doc lookup prefers UUID; cancel+refund is one contra |
 | 108 | B06-D24 | `fix/108-cons-banner-valid` | VALID keeps B2C-CONS- on TaxInvoiceId; cons submit key is stable |
+| 109 | B06-D25 | `fix/109-taxdocument-internal-unique` | TaxDocument (org, InternalReferenceId) is unique |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
