@@ -134,4 +134,60 @@ public class PlatformSaasInvoiceTests
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<InvoiceIssuedIntegrationEvent>());
         await eventBus.DidNotReceive().PublishAsync(Arg.Any<DocumentPublishedIntegrationEvent>());
     }
+
+    [Test]
+    public async Task StoreHandler_NullDocumentNumbers_PrintsPendingNotGuidSlice()
+    {
+        var orgId = Guid.CreateVersion7();
+        await using var db = new BillingDbContext(
+            InMemoryDb.CreateOptions<BillingDbContext>(),
+            FakeExecutionContextAccessor.ForTenant(orgId),
+            InMemoryDb.NullMediator,
+            new DatabaseJobTrigger());
+
+        var entry = new LedgerEntry(orgId, LedgerReferenceTypes.SystemSaasFee, "tx_bare", "Hub Starter", "B2B");
+        entry.AddLine(AccountTypes.ExpenseSoftwareSubscription, 99m, "MYR", 99m, "MYR");
+        entry.AddLine(AccountTypes.AssetCash, -99m, "MYR", -99m, "MYR");
+        entry.ValidateBalanced();
+        entry.MarkConsolidationNotRequired();
+        db.LedgerEntries.Add(entry);
+        await db.SaveChangesAsync();
+
+        Assert.That(entry.CustomerDocumentNumber, Is.Null);
+        Assert.That(entry.TaxInvoiceId, Is.Null);
+
+        var printed = GenerateAndStorePlatformSaasInvoiceCommandHandler.ResolvePrintedInvoiceNumber(
+            entry.CustomerDocumentNumber,
+            entry.TaxInvoiceId);
+        Assert.That(printed, Is.EqualTo("PENDING"));
+        Assert.That(printed, Is.Not.EqualTo(entry.Id.ToString()[..8].ToUpperInvariant()));
+
+        var r2 = Substitute.For<IR2StorageService>();
+        var one = Substitute.For<IOneQueryService>();
+        one.GetWorkspaceByIdAsync(orgId).Returns(new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
+        one.GetWorkspaceMembersAsync(orgId).Returns(Array.Empty<WorkspaceMemberSnapshotDto>());
+
+        var handler = new GenerateAndStorePlatformSaasInvoiceCommandHandler(
+            db,
+            r2,
+            one,
+            Substitute.For<IEventBus>(),
+            Microsoft.Extensions.Options.Options.Create(new SaasOptions
+            {
+                Plan = new SaasPlanOptions { Name = "Hub Starter", Interval = "mo" },
+                Seller = new SaasSellerOptions { LegalName = "Lazuar" }
+            }),
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["R2_BUCKET_NAME"] = "test-bucket" })
+                .Build());
+
+        await handler.Handle(new GenerateAndStorePlatformSaasInvoiceCommand(orgId, entry.Id), CancellationToken.None);
+
+        await r2.Received(1).UploadAsync(
+            Arg.Any<Stream>(),
+            "test-bucket",
+            Arg.Is<string>(key => key == $"vault/{orgId}/documents/{entry.Id}.pdf"),
+            "application/pdf",
+            Arg.Any<CancellationToken>());
+    }
 }

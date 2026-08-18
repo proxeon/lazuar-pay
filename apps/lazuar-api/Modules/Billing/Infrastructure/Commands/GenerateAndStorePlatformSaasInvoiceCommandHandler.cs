@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Infrastructure.Documents;
 using Modules.Billing.Infrastructure.Services;
@@ -60,9 +61,9 @@ public class GenerateAndStorePlatformSaasInvoiceCommandHandler
         var buyerName = workspace?.Name ?? "Workspace";
         var buyerEmail = admin?.Email ?? members.FirstOrDefault()?.Email ?? "";
 
-        var invoiceNumber = entry.CustomerDocumentNumber
-            ?? entry.TaxInvoiceId
-            ?? entry.Id.ToString()[..8].ToUpperInvariant();
+        var invoiceNumber = ResolvePrintedInvoiceNumber(
+            entry.CustomerDocumentNumber,
+            entry.TaxInvoiceId);
 
         var model = PlatformSaasInvoiceFactory.Create(
             _saas,
@@ -79,4 +80,8 @@ public class GenerateAndStorePlatformSaasInvoiceCommandHandler
         using var stream = new MemoryStream(pdfBytes);
         await _r2Service.UploadAsync(stream, _bucketName, storageKey, "application/pdf", ct);
     }
+
+    /// <summary>Customer-facing Hub SaaS "No:" — never a Guid slice.</summary>
+    internal static string ResolvePrintedInvoiceNumber(string? customerDocumentNumber, string? taxInvoiceId) =>
+        DocumentSeries.CustomerFacingNumber(customerDocumentNumber, taxInvoiceId);
 }

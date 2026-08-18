@@ -2,7 +2,8 @@
 number: "241"
 id: B05-L37
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/241-platform-invoice-guid-fallback
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
 ---
@@ -64,4 +65,8 @@ Replace the fallback with `DocumentSeries.CustomerFacingNumber(entry.CustomerDoc
 
 ### Evaluation notes
 009’s “whitespace skips assign” is **false** for current `AssignPlatformDocumentNumber` (throws). Fallback code still present → still broken, not speculation. Still P2. Not blocked. 161–200 did not touch this handler.
+
+## Resolution
+
+`GenerateAndStorePlatformSaasInvoiceCommandHandler` now prints `DocumentSeries.CustomerFacingNumber` (`PENDING` when both commercial fields are empty or UUID-shaped). It never slices `entry.Id`. Happy-path `SAAS-yyyy-#####` is unchanged. Locked by `StoreHandler_NullDocumentNumbers_PrintsPendingNotGuidSlice`.
 
