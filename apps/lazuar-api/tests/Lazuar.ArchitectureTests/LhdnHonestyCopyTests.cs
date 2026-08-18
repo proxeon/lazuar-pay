@@ -87,4 +87,17 @@ public class LhdnHonestyCopyTests
         Assert.That(text, Does.Contain("Tracking quotes"));
         Assert.That(text, Does.Not.Contain("Tracking ad-hoc invoices"));
     }
+
+    [Test]
+    public void LhdnSandboxValidHonesty_StillNotCaptured()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..", "..", "..",
+            "docs", "honesty", "lhdn-sandbox-valid.md"));
+        var text = File.ReadAllText(path);
+        Assert.That(text, Does.Contain("**Status: not captured.**"));
+        Assert.That(text, Does.Contain("not** MyInvois ACCEPT"));
+        Assert.That(text, Does.Not.Contain("overallStatus=Valid captured"));
+    }
 }

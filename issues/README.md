@@ -264,6 +264,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 252 | B06-D33 | `fix/252-cancel-split-brain` | Supplier cancel mutates status only after MyInvois accepts |
 | 253 | B06-D34 | `fix/253-tin-not-on-file-docs` | W2 stationery done-file matches omit-empty-TIN factory |
 | 254 | B06-D35 | `fix/254-quotes-tracking-copy` | Quotes toolbar tracks quotes & proforma, not invoices |
+| 255 | B06-D36 | `fix/255-lhdn-valid-honesty` | Sandbox VALID honesty fence locked; signer unit test is not ACCEPT |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

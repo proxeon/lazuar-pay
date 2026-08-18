@@ -2,7 +2,8 @@
 number: "255"
 id: B06-D36
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/255-lhdn-valid-honesty
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -100,6 +101,10 @@ Do not change product code for D36. Land one sandbox ACCEPT+VALID (unsigned 1.0 
 
 ### Evaluation notes
 Explicitly **not** a code bug. Fence around 012/094/141 VALID-shaped UI and around 248’s signer claim. 091/103 fail-closed deduct does not prove MyInvois ACCEPT. Still P2 as an honesty ticket. Do not mark resolved when the signer test is green.
+
+## Resolution
+
+Honesty file still says **not captured**. It now names the self-signed signer test as not ACCEPT. Architecture test locks the fence. No sandbox VALID artifact was produced.
 
 ---
 
