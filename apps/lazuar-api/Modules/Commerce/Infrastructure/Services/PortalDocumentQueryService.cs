@@ -37,12 +37,8 @@ public class PortalDocumentQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string profileSql = @"
-            SELECT ""ClientProfileId"" FROM commerce.""Subscriptions""
-            WHERE ""Id"" = @SubId AND ""OrganizationId"" = @OrgId LIMIT 1";
-
-        var clientProfileId = await connection.QuerySingleOrDefaultAsync<Guid?>(
-            profileSql, new { SubId = referenceSubscriptionId, OrgId = organizationId });
+        var clientProfileId = await ResolvePortalProfileIdAsync(
+            connection, organizationId, referenceSubscriptionId);
 
         if (clientProfileId == null)
             return new PortalDocumentsResponse { Items = new List<PortalDocumentDto>() };
@@ -148,6 +144,30 @@ public class PortalDocumentQueryService
                 .OrderByDescending(i => i.Issued_at)
                 .ToList()
         };
+    }
+
+    internal static async Task<Guid?> ResolvePortalProfileIdAsync(
+        IDbConnection connection,
+        Guid organizationId,
+        Guid tokenSubject)
+    {
+        const string fromSub = @"
+            SELECT ""ClientProfileId"" FROM commerce.""Subscriptions""
+            WHERE ""Id"" = @Subject AND ""OrganizationId"" = @OrgId LIMIT 1";
+        var fromSubscription = await connection.QuerySingleOrDefaultAsync<Guid?>(
+            fromSub, new { Subject = tokenSubject, OrgId = organizationId });
+        if (fromSubscription is { } subProfile && subProfile != Guid.Empty)
+            return subProfile;
+
+        const string fromSession = @"
+            SELECT ""ClientProfileId"" FROM commerce.""CheckoutSessions""
+            WHERE ""OrganizationId"" = @OrgId
+              AND (""ClientProfileId"" = @Subject OR ""Id"" = @Subject)
+              AND ""ClientProfileId"" != '00000000-0000-0000-0000-000000000000'
+            LIMIT 1";
+        var fromCheckout = await connection.QuerySingleOrDefaultAsync<Guid?>(
+            fromSession, new { Subject = tokenSubject, OrgId = organizationId });
+        return fromCheckout is { } profile && profile != Guid.Empty ? profile : null;
     }
 
     public IReadOnlyDictionary<string, PortalDocumentDto> LastLatestBySubscription { get; private set; } =

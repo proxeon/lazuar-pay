@@ -29,11 +29,8 @@ public partial class CommerceQueryService
         using var connection = _connectionFactory.CreateConnection();
         if (connection.State != ConnectionState.Open) connection.Open();
 
-        const string clientProfileSql = @"
-            SELECT ""ClientProfileId"" FROM commerce.""Subscriptions"" 
-            WHERE ""Id"" = @SubId AND ""OrganizationId"" = @OrgId LIMIT 1";
-
-        var clientProfileId = await connection.QuerySingleOrDefaultAsync<Guid?>(clientProfileSql, new { SubId = referenceSubscriptionId, OrgId = organizationId });
+        var clientProfileId = await PortalDocumentQueryService.ResolvePortalProfileIdAsync(
+            connection, organizationId, referenceSubscriptionId);
 
         if (clientProfileId == null) return null;
 

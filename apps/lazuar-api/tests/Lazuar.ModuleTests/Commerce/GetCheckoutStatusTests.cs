@@ -81,6 +81,27 @@ public class GetCheckoutStatusTests
     }
 
     [Test]
+    public async Task MintPortalTokenIfCompleted_CompletedWithoutSubscription_MintsProfileToken()
+    {
+        var orgId = Guid.CreateVersion7();
+        var sessionId = Guid.CreateVersion7();
+        var profileId = Guid.CreateVersion7();
+        var query = Substitute.For<ICommerceQueryService>();
+        query.FindSubscriptionIdForCheckoutSessionAsync(orgId, sessionId, Arg.Any<CancellationToken>())
+            .Returns((Guid?)null);
+        query.FindClientProfileIdForCheckoutSessionAsync(orgId, sessionId, Arg.Any<CancellationToken>())
+            .Returns(profileId);
+        var tokens = Substitute.For<IMagicLinkTokenService>();
+        tokens.GenerateToken(profileId).Returns("profile-portal-token");
+
+        var minted = await PublicCheckoutEndpoints.MintPortalTokenIfCompletedAsync(
+            "COMPLETED", orgId, sessionId, query, tokens);
+
+        minted.Should().Be("profile-portal-token");
+        tokens.Received(1).GenerateToken(profileId);
+    }
+
+    [Test]
     public async Task MintPortalTokenIfCompleted_Pending_IsNull()
     {
         var minted = await PublicCheckoutEndpoints.MintPortalTokenIfCompletedAsync(

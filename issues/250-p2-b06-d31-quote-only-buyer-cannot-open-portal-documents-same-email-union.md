@@ -2,7 +2,8 @@
 number: "250"
 id: B06-D31
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/250-quote-portal-token
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -101,4 +102,8 @@ Do not mint a fake subscription. Either (a) mint a document-scoped token bound t
 
 ### Evaluation notes
 **138** and **021** fixed the CTA/poller for **subscription** sessions; they did not give quote-only buyers a subject. **213** is the same-email half (still open). **126** (CRM resolve merge) is a write-path sibling and is resolved; it does not remove this read-time union. Still P2 for the union; quote-only empty history is the daily UX miss. Not blocked by 161–200.
+
+## Resolution
+
+Completed quote-only checkout mints a portal token bound to `ClientProfileId`. Portal data + document list resolve that subject (no fake subscription). Email union stays gone (213). Quote rows list by profile id.
 

@@ -58,6 +58,29 @@ public partial class CommerceQueryService
             new { SessionId = sessionId, OrgId = organizationId });
     }
 
+    public async Task<Guid?> FindClientProfileIdForCheckoutSessionAsync(
+        Guid organizationId,
+        Guid sessionId,
+        CancellationToken ct = default)
+    {
+        using var connection = _connectionFactory.CreateConnection();
+        if (connection.State != ConnectionState.Open) connection.Open();
+
+        const string sql = @"
+            SELECT ""ClientProfileId""
+            FROM commerce.""CheckoutSessions""
+            WHERE ""Id"" = @SessionId
+              AND ""OrganizationId"" = @OrgId
+              AND ""Status"" = 'COMPLETED'
+              AND ""ClientProfileId"" != '00000000-0000-0000-0000-000000000000'
+            LIMIT 1";
+
+        var profileId = await connection.QuerySingleOrDefaultAsync<Guid?>(
+            sql,
+            new { SessionId = sessionId, OrgId = organizationId });
+        return profileId is { } id && id != Guid.Empty ? id : null;
+    }
+
     /// <summary>
     /// Public poller contract: COMPLETED only when the row is COMPLETED; EXPIRED is honest;
     /// OPEN (and anything else) is PENDING. Token is minted at the public endpoint.

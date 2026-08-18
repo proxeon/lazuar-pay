@@ -179,6 +179,10 @@ public static class PublicCheckoutEndpoints
         }
 
         var subscriptionId = await queryService.FindSubscriptionIdForCheckoutSessionAsync(organizationId, sessionId);
-        return subscriptionId.HasValue ? tokenService.GenerateToken(subscriptionId.Value) : null;
+        if (subscriptionId.HasValue)
+            return tokenService.GenerateToken(subscriptionId.Value);
+
+        var profileId = await queryService.FindClientProfileIdForCheckoutSessionAsync(organizationId, sessionId);
+        return profileId.HasValue ? tokenService.GenerateToken(profileId.Value) : null;
     }
 }

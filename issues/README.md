@@ -259,6 +259,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 247 | B06-D27 | `fix/247-invoiceissued-comments` | InvoiceIssued no-op comments name B2bTaxInvoiceRequested |
 | 248 | B06-D28 | `fix/248-lhdn-signer-readme` | Lhdn README names JsonUblDocumentSigner; XAdES is not used |
 | 249 | B06-D30 | `fix/249-draft-proforma-identity` | Draft proforma prints CRM TIN, session date, and exclusive SST |
+| 250 | B06-D31 | `fix/250-quote-portal-token` | Quote-only completed checkout mints a ClientProfile portal token |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

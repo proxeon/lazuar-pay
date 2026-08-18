@@ -37,6 +37,11 @@ public interface ICommerceQueryService
     /// </summary>
     Task<Guid?> FindSubscriptionIdForCheckoutSessionAsync(Guid organizationId, Guid sessionId, CancellationToken ct = default);
 
+    /// <summary>
+    /// CRM profile on a completed checkout session (quote-only buyers have no subscription).
+    /// </summary>
+    Task<Guid?> FindClientProfileIdForCheckoutSessionAsync(Guid organizationId, Guid sessionId, CancellationToken ct = default);
+
     Task<PaginatedResponse<CustomCheckoutDto>> GetCustomCheckoutsAsync(Guid organizationId, int page, int limit);
     Task<CustomCheckoutDto?> GetCustomCheckoutBySessionIdAsync(Guid organizationId, Guid sessionId);
     Task<PaginatedResponse<CommerceDisputeDto>> GetDisputesAsync(Guid organizationId, int page, int limit);
