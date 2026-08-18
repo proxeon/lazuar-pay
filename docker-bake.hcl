@@ -37,6 +37,10 @@ variable "NEXT_BASE_PATH" {
   default = "/portal"
 }
 
+variable "NEXT_PUBLIC_OPS_URL" {
+  default = "https://hub.lazuar.com"
+}
+
 variable "VITE_BASE_PATH_ADMIN" {
   default = "/admin/"
 }
@@ -84,6 +88,7 @@ target "lazuar-portal" {
   args = {
     NEXT_PUBLIC_API_URL = NEXT_PUBLIC_API_URL
     NEXT_BASE_PATH      = NEXT_BASE_PATH
+    NEXT_PUBLIC_OPS_URL = NEXT_PUBLIC_OPS_URL
   }
   labels = {
     "org.opencontainers.image.title" = "lazuar-hub-portal"

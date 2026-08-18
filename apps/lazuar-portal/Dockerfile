@@ -20,8 +20,10 @@ COPY apps/lazuar-portal apps/lazuar-portal
 
 ARG NEXT_PUBLIC_API_URL=https://hub.lazuar.com/api/v1
 ARG NEXT_BASE_PATH=/portal
+ARG NEXT_PUBLIC_OPS_URL=https://hub.lazuar.com
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_BASE_PATH=$NEXT_BASE_PATH
+ENV NEXT_PUBLIC_OPS_URL=$NEXT_PUBLIC_OPS_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm --filter ./apps/lazuar-portal build

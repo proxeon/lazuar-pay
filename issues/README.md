@@ -144,6 +144,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 132 | B08-M09 | `fix/132-unsubscribe-empty-jwt` | Empty Jwt:Secret fails closed on unsubscribe (503); broadcasts skip the URL |
 | 133 | B08-M10 | `fix/133-cancel-mail-gross` | Cancel/lifecycle mail {{amount}} is Gross this cycle, same as dunning |
 | 134 | B09-U05 | `fix/134-mobile-nav-hamburger` | Ops/admin mobile header has a hamburger; resize no longer force-closes |
+| 135 | B09-U06 | `fix/135-portal-accept-invite-ops-url` | Portal image bakes NEXT_PUBLIC_OPS_URL=https://hub.lazuar.com |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

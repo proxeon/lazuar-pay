@@ -2,7 +2,8 @@
 number: "135"
 id: B09-U06
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/135-portal-accept-invite-ops-url
 source: plans/009-bugs/09-frontends-ops-portal-admin.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 135 — B09-U06 — Production portal `/accept-invite` 302s to `localhost:3003`
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/09-frontends-ops-portal-admin.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/135-portal-accept-invite-ops-url`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

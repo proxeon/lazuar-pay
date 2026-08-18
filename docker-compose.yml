@@ -69,6 +69,7 @@ services:
       dockerfile: apps/lazuar-portal/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api/v1}
+        NEXT_PUBLIC_OPS_URL: ${NEXT_PUBLIC_OPS_URL:-http://localhost:3003}
     image: ghcr.io/proxeon/lazuar-hub-portal:local
     container_name: lazuar-portal
     ports:
