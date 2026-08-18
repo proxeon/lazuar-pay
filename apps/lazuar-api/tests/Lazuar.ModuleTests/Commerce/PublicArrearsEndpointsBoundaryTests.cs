@@ -38,6 +38,28 @@ public class PublicArrearsEndpointsBoundaryTests
         Assert.That(text, Does.Contain("IOneQueryService"));
         Assert.That(text, Does.Contain("GetClientProfileAsync"));
         Assert.That(text, Does.Contain("GetWorkspaceByIdAsync"));
+
+        // B03-C30: token is required. A future optional token would skip ArrearsAccess.
+        Assert.That(text, Does.Contain("[FromQuery] string token"));
+        Assert.That(text, Does.Not.Contain("[FromQuery] string? token"));
+        Assert.That(text, Does.Contain("TypedResults.Unauthorized()"));
+    }
+
+    [Test]
+    public void MissingToken_IsUnauthorized_NotAnonymousOk()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "Commerce", "Infrastructure", "Endpoints", "PublicArrearsEndpoints.cs"));
+        var text = File.ReadAllText(path);
+        var arrears = text.IndexOf("MapGet(\"/checkout/{subId:guid}/arrears\"", StringComparison.Ordinal);
+        var update = text.IndexOf("MapPost(\"/checkout/{subId:guid}/update-payment\"", StringComparison.Ordinal);
+        Assert.That(arrears, Is.GreaterThanOrEqualTo(0));
+        Assert.That(update, Is.GreaterThanOrEqualTo(0));
+        var arrearsBlock = text.Substring(arrears, update - arrears);
+        Assert.That(arrearsBlock, Does.Contain("IsAuthorizedAsync"));
+        Assert.That(arrearsBlock, Does.Contain("TypedResults.Unauthorized()"));
     }
 
     [Test]
