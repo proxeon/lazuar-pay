@@ -41,6 +41,12 @@ public static class SubscriptionBillingAmount
     public static Breakdown CustomQuoteBreakdown(decimal net, bool merchantHasSst) =>
         GrossBreakdown(net, 1, SstTaxMath.ServiceTax, DefaultServiceTaxRatePercent, merchantHasSst);
 
+    /// <summary>
+    /// Exclusive SST is rounded on the unit, then × seats (B01-C12 / B02-C20).
+    /// Hop-2 adapters multiply <c>Amount × Quantity</c>, so the charged line is
+    /// <c>unitGross * seats</c>. Do not switch this helper to tax(<c>unitNet * seats</c>)
+    /// without also changing the adapter contract — that mix is a sen off on odd prices.
+    /// </summary>
     public static Breakdown GrossBreakdown(
         decimal unitNet,
         int seats,

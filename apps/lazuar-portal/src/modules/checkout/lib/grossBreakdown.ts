@@ -43,6 +43,7 @@ export function computeSstTax(
 
 /**
  * Exclusive SST on the unit, then × seats — same as SubscriptionBillingAmount.GrossBreakdown.
+ * Per-unit is the SSoT because hop-2 adapters charge Amount × Quantity.
  * Hop-1 treats a product configured as type 02 with a rate as "SST applies".
  */
 export function grossBreakdown(

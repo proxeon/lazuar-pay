@@ -46,6 +46,23 @@ public class SubscriptionBillingAmountTests
     }
 
     [Test]
+    public void GrossBreakdown_PerUnitThenSeats_PinsSenSplit()
+    {
+        // 10.03 × 8% = 0.8024 → 0.80; × 3 = 2.40; gross 32.49.
+        // Line-level tax(30.09 × 8%) = 2.41 / 32.50 — not the hop-2 SSoT.
+        var odd = SubscriptionBillingAmount.GrossBreakdown(10.03m, 3, "02", 8m, merchantHasSst: true);
+        odd.UnitTax.Should().Be(0.80m);
+        odd.Gross.Should().Be(32.49m);
+        SubscriptionBillingAmount.LineTax(odd).Should().Be(2.40m);
+
+        // 33.33 × 8% = 2.6664 → 2.67; × 3 = 8.01. Line-level would be 8.00.
+        var seats = SubscriptionBillingAmount.GrossBreakdown(33.33m, 3, "02", 8m, merchantHasSst: true);
+        seats.UnitTax.Should().Be(2.67m);
+        SubscriptionBillingAmount.LineTax(seats).Should().Be(8.01m);
+        seats.Gross.Should().Be(108.00m);
+    }
+
+    [Test]
     public void Unit_WrittenZeroSnapshot_IsZeroNotCatalog()
     {
         var orgId = Guid.CreateVersion7();
