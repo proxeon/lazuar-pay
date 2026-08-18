@@ -74,7 +74,7 @@ public class PortalAccessEmailHandlers :
         var businessName = string.IsNullOrWhiteSpace(workspace?.Name) ? "Business" : workspace.Name;
         var customerName = string.IsNullOrWhiteSpace(profile.Full_name) ? "Customer" : profile.Full_name;
 
-        var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
+        var portalBase = BuildingBlocks.Infrastructure.AppClientUrl.Resolve(_configuration);
         var token = _tokenService.GenerateToken(subscriptionId);
         var portalMagicLink = $"{portalBase}/{slug}/portal?token={token}";
 

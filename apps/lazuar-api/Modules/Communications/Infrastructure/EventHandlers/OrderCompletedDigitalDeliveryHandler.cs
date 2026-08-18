@@ -75,7 +75,7 @@ public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<Ord
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(@event.OrganizationId);
         var workspaceSlug = workspace?.Slug ?? "";
         var businessName = workspace?.Name ?? "Business";
-        var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
+        var portalBase = BuildingBlocks.Infrastructure.AppClientUrl.Resolve(_configuration);
         var portalLink = string.IsNullOrEmpty(workspaceSlug)
             ? portalBase
             : $"{portalBase}/{workspaceSlug}/portal";

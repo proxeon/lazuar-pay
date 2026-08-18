@@ -74,7 +74,7 @@ public class InvoiceReminderJob : BackgroundService
             return;
         }
 
-        var portalBase = (config?["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
+        var portalBase = BuildingBlocks.Infrastructure.AppClientUrl.Resolve(config);
         var sentCount = 0;
 
         foreach (var session in sessions)

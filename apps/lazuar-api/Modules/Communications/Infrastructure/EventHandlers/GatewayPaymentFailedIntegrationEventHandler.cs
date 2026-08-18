@@ -75,7 +75,7 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         }
 
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(@event.OrganizationId);
-        var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
+        var portalBase = BuildingBlocks.Infrastructure.AppClientUrl.Resolve(_configuration);
         var token = _tokenService.GenerateToken(subscriptionId);
         var links = MessageLinkBuilder.Build(portalBase, workspace?.Slug ?? "", subscriptionId.ToString(), token);
 

@@ -5,9 +5,9 @@ public sealed class AppOptions
     public const string SectionName = "App";
 
     /// <summary>
-    /// The primary client-facing frontend URL (portal / public checkout surfaces, typically port 3020).
+    /// The primary client-facing frontend URL (portal / public checkout surfaces, typically port 3004).
     /// </summary>
-    public string ClientUrl { get; init; } = "http://localhost:3020";
+    public string ClientUrl { get; init; } = "http://localhost:3004";
 
     /// <summary>
     /// Staff ops console URL (workspace invite accept, typically port 3003).

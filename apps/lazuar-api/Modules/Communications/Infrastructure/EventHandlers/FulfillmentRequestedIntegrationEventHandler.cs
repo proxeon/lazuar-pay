@@ -98,7 +98,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
         var workspace = await _oneQueryService.GetWorkspaceByIdAsync(@event.OrganizationId);
         var workspaceSlug = workspace?.Slug ?? "";
 
-        var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
+        var portalBase = BuildingBlocks.Infrastructure.AppClientUrl.Resolve(_configuration);
         string? magicToken = null;
         if (Guid.TryParse(subIdStr, out var subscriptionId))
         {

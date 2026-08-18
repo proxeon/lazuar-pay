@@ -57,7 +57,7 @@ public class LifecycleEventHandlers : IIntegrationEventHandler<SubscriptionCance
         var mail = await _subscriberQueryService.GetSubscriptionMailContextAsync(
             @event.OrganizationId, @event.SubscriptionId);
 
-        var portalBase = (_configuration["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
+        var portalBase = BuildingBlocks.Infrastructure.AppClientUrl.Resolve(_configuration);
         var token = _tokenService.GenerateToken(@event.SubscriptionId);
         var links = MessageLinkBuilder.Build(portalBase, workspace?.Slug ?? "", @event.SubscriptionId.ToString(), token);
         var amount = mail == null ? "" : MessageTemplateHydrator.FormatMoney(mail.Price);

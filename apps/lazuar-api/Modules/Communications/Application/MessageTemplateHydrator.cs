@@ -58,9 +58,9 @@ public static class MessageTemplateHydrator
         Currency: "MYR",
         DaysOverdue: "3",
         CurrentPeriodEnd: "31 Dec 2026",
-        RenewalLink: "https://portal.lazuar.com/acme/update-payment/11111111-1111-1111-1111-111111111111",
-        PortalMagicLink: "https://portal.lazuar.com/acme/portal?token=test_token",
-        UpdatePaymentLink: "https://portal.lazuar.com/acme/update-payment/11111111-1111-1111-1111-111111111111");
+        RenewalLink: "http://localhost:3004/acme/update-payment/11111111-1111-1111-1111-111111111111",
+        PortalMagicLink: "http://localhost:3004/acme/portal?token=test_token",
+        UpdatePaymentLink: "http://localhost:3004/acme/update-payment/11111111-1111-1111-1111-111111111111");
 
     public static string Populate(string? text, MessageTemplateContext ctx, bool htmlEncode = false)
     {

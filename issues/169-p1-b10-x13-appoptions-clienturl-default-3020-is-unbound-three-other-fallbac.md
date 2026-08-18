@@ -2,7 +2,8 @@
 number: "169"
 id: B10-X13
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/169-clienturl-fallback
 source: plans/009-bugs/10-tenancy-workers-contracts-tests.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 169 — B10-X13 — `AppOptions.ClientUrl` default 3020 is unbound; three other fallbacks disagree
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/10-tenancy-workers-contracts-tests.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/169-clienturl-fallback`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
