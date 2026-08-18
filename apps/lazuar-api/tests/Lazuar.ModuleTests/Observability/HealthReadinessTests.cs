@@ -86,4 +86,26 @@ public class HealthReadinessTests
         Assert.That(result.Status, Is.EqualTo("ready"));
         Assert.That(result.OutboxLagSeconds, Is.EqualTo(30));
     }
+
+    [Test]
+    public async Task Evaluate_Returns_Unhealthy_When_Dead_Letters_Present()
+    {
+        var collector = Substitute.For<IPlatformMetricsCollector>();
+        collector.CanConnectAsync(Arg.Any<CancellationToken>()).Returns(true);
+        collector.CollectAsync(Arg.Any<CancellationToken>()).Returns(new PlatformMetricsSnapshot
+        {
+            CollectedAtUtc = DateTime.UtcNow,
+            OutboxLagSeconds = 1,
+            DeadLetterCount = 3,
+            DatabaseReachable = true,
+            Schemas = Array.Empty<SchemaOutboxMetrics>()
+        });
+
+        var result = await HealthReadiness.EvaluateAsync(
+            collector,
+            new ObservabilityOptions { FailReadyOnDeadLetters = true });
+
+        Assert.That(result.IsReady, Is.False);
+        Assert.That(result.Reason, Does.Contain("Dead letters"));
+    }
 }

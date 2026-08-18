@@ -24,6 +24,11 @@ public sealed class ObservabilityOptions
     public TimeSpan? OutboxLagReadyThreshold { get; set; }
 
     /// <summary>
+    /// When true (and a snapshot is collected), <c>/health/ready</c> fails if DeadLetterCount &gt; 0.
+    /// </summary>
+    public bool FailReadyOnDeadLetters { get; set; }
+
+    /// <summary>
     /// How often <see cref="PlatformMetricsRefreshJob"/> refreshes gauge snapshots.
     /// Default: 30 seconds.
     /// </summary>

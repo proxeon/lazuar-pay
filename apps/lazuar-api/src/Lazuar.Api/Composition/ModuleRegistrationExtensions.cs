@@ -84,6 +84,7 @@ public static class ModuleRegistrationExtensions
         // Super-admin auth is One-owned (L-02 / R12); payment-config remains Payments.
         platformGroup.MapPlatformAuthEndpoints();
         platformGroup.MapPlatformEndpoints();
+        platformGroup.MapDeadLetterRedriveEndpoints();
 
         return app;
     }

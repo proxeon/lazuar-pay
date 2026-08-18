@@ -36,7 +36,8 @@ public static class HealthReadiness
                 Reason: "Database connection failed.");
         }
 
-        if (options.OutboxLagReadyThreshold is not { } lagThreshold || lagThreshold <= TimeSpan.Zero)
+        var collectForLag = options.OutboxLagReadyThreshold is { } lag && lag > TimeSpan.Zero;
+        if (!collectForLag && !options.FailReadyOnDeadLetters)
         {
             return new Result(
                 IsReady: true,
@@ -57,23 +58,35 @@ public static class HealthReadiness
                 Reason: snapshot.Error ?? "Metrics collection failed.");
         }
 
-        var lag = snapshot.OutboxLagSeconds;
-        var thresholdSeconds = lagThreshold.TotalSeconds;
-        if (lag > thresholdSeconds)
+        if (collectForLag)
+        {
+            var thresholdSeconds = options.OutboxLagReadyThreshold!.Value.TotalSeconds;
+            if (snapshot.OutboxLagSeconds > thresholdSeconds)
+            {
+                return new Result(
+                    IsReady: false,
+                    Status: "unhealthy",
+                    DatabaseReachable: true,
+                    OutboxLagSeconds: snapshot.OutboxLagSeconds,
+                    Reason: $"Outbox lag {snapshot.OutboxLagSeconds:F0}s exceeds threshold {thresholdSeconds:F0}s.");
+            }
+        }
+
+        if (options.FailReadyOnDeadLetters && snapshot.DeadLetterCount > 0)
         {
             return new Result(
                 IsReady: false,
                 Status: "unhealthy",
                 DatabaseReachable: true,
-                OutboxLagSeconds: lag,
-                Reason: $"Outbox lag {lag:F0}s exceeds threshold {thresholdSeconds:F0}s.");
+                OutboxLagSeconds: snapshot.OutboxLagSeconds,
+                Reason: $"Dead letters present ({snapshot.DeadLetterCount}).");
         }
 
         return new Result(
             IsReady: true,
             Status: "ready",
             DatabaseReachable: true,
-            OutboxLagSeconds: lag,
+            OutboxLagSeconds: snapshot.OutboxLagSeconds,
             Reason: null);
     }
 
