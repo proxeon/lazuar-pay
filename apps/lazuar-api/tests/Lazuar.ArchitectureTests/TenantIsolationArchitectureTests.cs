@@ -113,6 +113,18 @@ public class TenantIsolationArchitectureTests
     }
 
     [Test]
+    public void MessageDeliveryLog_Is_IMustHaveTenant_PaymentWebhookLog_Is_Allowlisted()
+    {
+        Assert.That(typeof(Modules.Messaging.Domain.MessageDeliveryLog)
+            .GetInterfaces()
+            .Any(i => i == typeof(BuildingBlocks.Domain.IMustHaveTenant)), Is.True);
+        Assert.That(typeof(Modules.Payments.Domain.Entities.PaymentWebhookLog)
+            .GetInterfaces()
+            .Any(i => i == typeof(BuildingBlocks.Domain.IMustHaveTenant)), Is.False,
+            "PaymentWebhookLog stays global for provider EventId idempotency.");
+    }
+
+    [Test]
     public void Billing_And_Dunning_ExcludeIds_Are_Parameterized()
     {
         var billing = File.ReadAllText(FindRepoFile(

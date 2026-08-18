@@ -7,10 +7,10 @@ namespace Modules.Messaging.Domain;
 /// Support-facing record of a dispatch attempt (email/WhatsApp).
 /// Status vocabulary: SENT | FAILED | SKIPPED.
 /// </summary>
-public class MessageDeliveryLog : Entity, IAggregateRoot
+public class MessageDeliveryLog : Entity, IAggregateRoot, IMustHaveTenant
 {
     public Guid Id { get; private set; }
-    public Guid OrganizationId { get; private set; }
+    public Guid OrganizationId { get; set; }
     public string Channel { get; private set; } = "";
     public string Recipient { get; private set; } = "";
     public string Status { get; private set; } = "";

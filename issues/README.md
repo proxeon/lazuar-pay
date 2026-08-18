@@ -188,6 +188,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 176 | B10-X20 | `fix/176-accept-invite-membership` | Accept-invite already checks membership and writes member.accepted (115) |
 | 177 | B10-X21 | `fix/177-workspaces-has-tenant-access` | Invite/remove/update/archive check HasTenantAccess before the handler |
 | 178 | B10-X22 | `fix/178-excludeids-parameterized` | Billing and dunning claim excludeIds use a parameterized ALL() |
+| 179 | B10-X23 | `fix/179-delivery-log-tenant` | MessageDeliveryLog is IMustHaveTenant; PaymentWebhookLog stays global |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
