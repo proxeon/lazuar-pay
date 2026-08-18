@@ -2,7 +2,8 @@
 number: "208"
 id: B03-C20
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/208-expired-card-is-hard
 source: plans/009-bugs/03-commerce-dunning-arrears-portal.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 208 — B03-C20 — `DeclineClassifier` is a Stripe hard-code table; `expired_card` is soft
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/03-commerce-dunning-arrears-portal.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/208-expired-card-is-hard`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

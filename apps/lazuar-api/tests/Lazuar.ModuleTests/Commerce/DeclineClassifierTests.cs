@@ -16,6 +16,9 @@ public class DeclineClassifierTests
     [TestCase("authentication_required")]
     [TestCase("highest_risk_level")]
     [TestCase("transaction_not_allowed")]
+    [TestCase("expired_card")]
+    [TestCase("invalid_expiry_month")]
+    [TestCase("invalid_expiry_year")]
     [TestCase("STOLEN_CARD")]
     public void HardCodes_AreHard(string code)
     {
@@ -29,6 +32,8 @@ public class DeclineClassifierTests
     [TestCase("charge_declined")]
     [TestCase("card_declined")]
     [TestCase("generic_decline")]
+    [TestCase("chip_error")]
+    [TestCase("purchase.payment_failure")]
     public void EverythingElse_IsSoft(string? code)
     {
         DeclineClassifier.Classify(code).Should().Be(DeclineClassifier.Soft);
