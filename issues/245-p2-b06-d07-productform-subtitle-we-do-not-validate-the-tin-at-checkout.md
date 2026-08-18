@@ -2,7 +2,8 @@
 number: "245"
 id: B06-D07
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/245-productform-tin-subtitle
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -77,4 +78,8 @@ No product code change required for D07. Optionally add the same one-line helper
 
 ### Evaluation notes
 Superseded by **145** (P1, resolved) plus **014** for quotes. Severity as a live lie is no longer P2; leftover is the open YAML status and the two subtitle-less create forms. Not blocked. Not a 161–200 fail-closed residual.
+
+## Resolution
+
+ProductForm already honest (145). Both CreateProductForm checkboxes now use the same helper. `OpsTinCopyTests` locks the validate-TIN sentence and forbids the old lie.
 

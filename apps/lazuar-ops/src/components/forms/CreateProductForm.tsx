@@ -128,9 +128,12 @@ export default function CreateProductForm({ prefillData, onSubmit, onCancel }: C
               <input type="checkbox" checked={requiresAddress} onChange={e => setRequiresAddress(e.target.checked)} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
               <span className="text-[12px] font-medium text-[#09090b]">Require Full Billing Address</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer w-fit">
-              <input type="checkbox" checked={requiresTaxId} onChange={e => setRequiresTaxId(e.target.checked)} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
-              <span className="text-[12px] font-medium text-[#09090b]">Require Company Name &amp; Tax ID (LHDN B2B)</span>
+            <label className="flex items-start gap-2 cursor-pointer w-fit">
+              <input type="checkbox" checked={requiresTaxId} onChange={e => setRequiresTaxId(e.target.checked)} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b] mt-0.5" />
+              <span>
+                <span className="text-[12px] font-medium text-[#09090b] block">Require Company Name &amp; Tax ID (LHDN B2B)</span>
+                <span className="text-[11px] text-[#71717a] block mt-0.5">Collects buyer company + TIN. Checkout validates the TIN against MyInvois when LHDN is connected.</span>
+              </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input type="checkbox" checked={requiresPhone} onChange={e => setRequiresPhone(e.target.checked)} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b]" />
