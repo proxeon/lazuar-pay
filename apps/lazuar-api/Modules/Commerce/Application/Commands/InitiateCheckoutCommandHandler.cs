@@ -250,6 +250,13 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         var clientProfileId = await _mediator.Send(resolveCrmProfileCmd, ct);
 
+        if (resolved.Interval is "mo" or "yr"
+            && await _repository.HasActiveSubscriptionAsync(tenantId.Value, clientProfileId, product.Id, ct))
+        {
+            throw new InvalidOperationException(
+                "An active subscription already exists for this customer and product.");
+        }
+
         decimal unitDiscount = 0m;
         Guid? couponId = null;
         CheckoutSession? session = reuseSession;

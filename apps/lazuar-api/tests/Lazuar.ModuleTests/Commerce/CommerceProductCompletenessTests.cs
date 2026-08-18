@@ -375,6 +375,28 @@ public class CommerceProductCompletenessTests
     }
 
     [Test]
+    public async Task InitiateCheckout_AlreadyActiveSameClientProduct_Throws()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+        repository.HasActiveSubscriptionAsync(orgId, clientId, product.Id, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>()).Returns(clientId);
+
+        var handler = CreateInitiateHandler(orgId, repository, mediator);
+        var act = async () => await handler.Handle(GuestCheckoutCommand(couponCode: null), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*already exists*");
+        await mediator.DidNotReceive().Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task InitiateCheckout_EnforcesRequiresPhone()
     {
         var orgId = Guid.CreateVersion7();
