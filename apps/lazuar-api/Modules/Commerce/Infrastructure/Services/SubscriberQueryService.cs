@@ -8,8 +8,10 @@ using BuildingBlocks.Infrastructure;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Modules.CRM.Contracts;
+using Modules.Billing.Contracts;
+using Modules.Commerce.Application;
 using Modules.Commerce.Contracts;
+using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Services;
 
@@ -18,15 +20,18 @@ public class SubscriberQueryService : ISubscriberQueryService
     private readonly ISqlConnectionFactory _connectionFactory;
     private readonly ICrmQueryService _crmQueryService;
     private readonly CommerceDbContext _dbContext;
+    private readonly IBillingQueryService? _billingQueryService;
 
     public SubscriberQueryService(
         [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
         ICrmQueryService crmQueryService,
-        CommerceDbContext dbContext)
+        CommerceDbContext dbContext,
+        IBillingQueryService? billingQueryService = null)
     {
         _connectionFactory = connectionFactory;
         _crmQueryService = crmQueryService;
         _dbContext = dbContext;
+        _billingQueryService = billingQueryService;
     }
 
     public async Task<int> GetActiveSubscriberCountAsync(Guid organizationId)
@@ -93,11 +98,15 @@ public class SubscriberQueryService : ISubscriberQueryService
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == sub.ProductId);
 
+        var price = product == null
+            ? 0m
+            : await SubscriptionBillingAmount.Gross(sub, product, _billingQueryService);
+
         return new SubscriptionMailContext(
             sub.Id,
             sub.ProductId,
             product?.Name ?? "",
-            product?.Price ?? 0m,
+            price,
             product?.Currency ?? "",
             sub.NextBillingDate,
             sub.Status);

@@ -18,7 +18,7 @@ public interface ISubscriberQueryService
     Task<IReadOnlyList<SubscriberRecipient>> GetActiveSubscriberRecipientsAsync(Guid organizationId, int page, int limit);
 
     /// <summary>
-    /// Commerce-schema snapshot for dunning / lifecycle mail (plan, list price, next bill).
+    /// Commerce-schema snapshot for dunning / lifecycle mail (plan, Gross this cycle, next bill).
     /// Null when the subscription is missing or belongs to another org.
     /// </summary>
     Task<SubscriptionMailContext?> GetSubscriptionMailContextAsync(Guid organizationId, Guid subscriptionId);

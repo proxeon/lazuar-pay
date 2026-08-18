@@ -90,8 +90,8 @@ public class CommunicationsQueryService : ICommunicationsQueryService
                 {
                     new TemplateVariableDto { Tag = "{{business_name}}", Description = "The workspace / merchant display name." },
                     new TemplateVariableDto { Tag = "{{plan_name}}", Description = "The subscription name (e.g. Premium Tier)." },
-                    new TemplateVariableDto { Tag = "{{amount}}", Description = "Product list price, formatted 0.00." },
-                    new TemplateVariableDto { Tag = "{{total_price}}", Description = "Same as amount until invoice totals exist." },
+                    new TemplateVariableDto { Tag = "{{amount}}", Description = "Gross this cycle (seats × snapshot + SST when the merchant is SST-registered). Same number dunning uses." },
+                    new TemplateVariableDto { Tag = "{{total_price}}", Description = "Same as amount — Gross this cycle (seats × snapshot + SST when the merchant is SST-registered)." },
                     new TemplateVariableDto { Tag = "{{currency}}", Description = "ISO currency code (e.g. MYR)." },
                     new TemplateVariableDto { Tag = "{{days_overdue}}", Description = "Calendar days past NextBillingDate. Pre-dunning is 0." },
                     new TemplateVariableDto { Tag = "{{current_period_end}}", Description = "Next billing / paid-through date (NextBillingDate)." },
