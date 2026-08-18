@@ -249,6 +249,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 237 | B05-L33 | `fix/237-skip-empty-zero-journal` | $0 list-price checkout does not persist a no-line ZERO_AMOUNT_CHECKOUT |
 | 238 | B05-L34 | `fix/238-credit-note-pdf-assert` | Credit Note PDF totals include contra 100 + tax 8 = 108 |
 | 239 | B05-L35 | `fix/239-billplz-fee-honesty` | Billplz journals stay gross-only; estimated fee knobs stay unused |
+| 240 | B05-L36 | `fix/240-saas-dispute-reverse-fee` | Hub SaaS dispute marks PAST_DUE and idempotently reverses SYSTEM_SAAS_FEE |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

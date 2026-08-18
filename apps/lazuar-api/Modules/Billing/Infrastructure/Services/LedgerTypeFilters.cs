@@ -27,7 +27,8 @@ internal static class LedgerTypeFilters
             return referenceType is LedgerReferenceTypes.GatewayRefund
                 or LedgerReferenceTypes.LhdnCancellation
                 or LedgerReferenceTypes.SystemCreditChargeback
-                or LedgerReferenceTypes.GatewayDispute;
+                or LedgerReferenceTypes.GatewayDispute
+                or LedgerReferenceTypes.SystemSaasFeeReverse;
         }
 
         return true;
@@ -37,5 +38,5 @@ internal static class LedgerTypeFilters
         $"('{LedgerReferenceTypes.GatewayPayment}', '{LedgerReferenceTypes.ManualEnrollment}')";
 
     public static string ReversalsSqlIn() =>
-        $"('{LedgerReferenceTypes.GatewayRefund}', '{LedgerReferenceTypes.LhdnCancellation}', '{LedgerReferenceTypes.SystemCreditChargeback}', '{LedgerReferenceTypes.GatewayDispute}')";
+        $"('{LedgerReferenceTypes.GatewayRefund}', '{LedgerReferenceTypes.LhdnCancellation}', '{LedgerReferenceTypes.SystemCreditChargeback}', '{LedgerReferenceTypes.GatewayDispute}', '{LedgerReferenceTypes.SystemSaasFeeReverse}')";
 }

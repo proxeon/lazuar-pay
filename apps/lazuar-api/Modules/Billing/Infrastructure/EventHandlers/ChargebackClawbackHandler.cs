@@ -19,9 +19,7 @@ namespace Modules.Billing.Infrastructure.EventHandlers;
 /// Consumes gateway dispute events and claws back credits granted for a disputed utility-credit
 /// top-up, and reverses the matching SYSTEM_CREDIT_TOPUP ledger entry.
 ///
-/// Scope (A.6 / C.1 MVP): utility clawback only.
-/// - Handles only metadata.type == "utility_credit_topup" (platform credit purchases).
-/// - Does NOT suspend commerce subscriptions or reverse merchant GMV ledger entries.
+/// Utility top-up claw + Hub SaaS fee reverse. Does not cancel Commerce seats.
 /// </summary>
 public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDisputeCreatedIntegrationEvent>
 {
@@ -122,10 +120,66 @@ public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDispute
         }
 
         subscription.MarkPastDue();
+        await ReverseSaasFeeLedgerAsync(tenantId, @event);
         await _dbContext.SaveChangesAsync();
         _logger.LogWarning(
             "Marked Hub SaaS subscription PAST_DUE for tenant {TenantId} after dispute {GatewayTxId}; credits unchanged.",
             tenantId, @event.GatewayTransactionId);
+    }
+
+    private async Task ReverseSaasFeeLedgerAsync(
+        Guid tenantId,
+        GatewayDisputeCreatedIntegrationEvent @event)
+    {
+        var referenceType = LedgerReferenceTypes.SystemSaasFeeReverse;
+        var referenceId = @event.GatewayTransactionId;
+
+        var alreadyReversed = await _dbContext.LedgerEntries
+            .IgnoreQueryFilters()
+            .AnyAsync(e =>
+                e.OrganizationId == tenantId
+                && e.ReferenceType == referenceType
+                && e.ReferenceId == referenceId);
+        if (alreadyReversed)
+            return;
+
+        var original = await _dbContext.LedgerEntries
+            .Include(e => e.Lines)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e =>
+                e.OrganizationId == tenantId
+                && e.ReferenceType == LedgerReferenceTypes.SystemSaasFee
+                && e.ReferenceId == referenceId);
+        if (original == null)
+        {
+            _logger.LogWarning(
+                "No SYSTEM_SAAS_FEE ledger entry for disputed Hub tx {GatewayTxId}; PAST_DUE only.",
+                referenceId);
+            return;
+        }
+
+        var reverseEntry = new LedgerEntry(
+            tenantId,
+            referenceType,
+            referenceId,
+            $"Dispute reverse of Hub SaaS fee {@event.GatewayTransactionId}",
+            "B2B");
+
+        foreach (var line in original.Lines)
+        {
+            reverseEntry.AddLine(
+                line.AccountType,
+                -line.Amount,
+                line.Currency,
+                -line.BaseCurrencyAmount,
+                line.BaseCurrency,
+                line.TaxTypeCode,
+                line.MsicCode);
+        }
+
+        reverseEntry.ValidateBalanced();
+        reverseEntry.MarkConsolidationNotRequired();
+        _dbContext.LedgerEntries.Add(reverseEntry);
     }
 
     private int CreditsGrantedOnTopUp(LedgerEntry originalTopUp)

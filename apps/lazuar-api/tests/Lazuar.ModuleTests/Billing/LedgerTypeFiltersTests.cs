@@ -15,6 +15,7 @@ public class LedgerTypeFiltersTests
         LedgerTypeFilters.Matches("reversals", LedgerReferenceTypes.LhdnCancellation).Should().BeTrue();
         LedgerTypeFilters.Matches("reversals", LedgerReferenceTypes.SystemCreditChargeback).Should().BeTrue();
         LedgerTypeFilters.Matches("reversals", LedgerReferenceTypes.GatewayDispute).Should().BeTrue();
+        LedgerTypeFilters.Matches("reversals", LedgerReferenceTypes.SystemSaasFeeReverse).Should().BeTrue();
         LedgerTypeFilters.Matches("reversals", LedgerReferenceTypes.GatewayPayment).Should().BeFalse();
         LedgerTypeFilters.Matches("reversals", LedgerReferenceTypes.SystemSaasFee).Should().BeFalse();
     }

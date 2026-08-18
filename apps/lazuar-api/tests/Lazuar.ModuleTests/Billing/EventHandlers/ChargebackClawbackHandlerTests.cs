@@ -151,11 +151,23 @@ public class ChargebackClawbackHandlerTests
     public async Task PlatformSaasFeeDispute_MarksPastDue_DoesNotClawCredits()
     {
         var sub = new WorkspaceSaasSubscription(_tenantId, "hub_starter");
-        sub.ActivateFromPayment(DateTime.UtcNow, "mo", "txn_saas_cb");
+        var paidAt = DateTime.UtcNow;
+        sub.ActivateFromPayment(paidAt, "mo", "txn_saas_cb");
         _db.WorkspaceSaasSubscriptions.Add(sub);
         var wallet = new TenantCreditBalance(_tenantId);
         wallet.TopUp(50, "starter");
         _db.TenantCreditBalances.Add(wallet);
+        var fee = new LedgerEntry(
+            _tenantId,
+            LedgerReferenceTypes.SystemSaasFee,
+            "txn_saas_cb",
+            "Hub SaaS",
+            "B2B");
+        fee.AddLine(AccountTypes.ExpenseSoftwareSubscription, 99m, "MYR", 99m, "MYR");
+        fee.AddLine(AccountTypes.AssetCash, -99m, "MYR", -99m, "MYR");
+        fee.ValidateBalanced();
+        fee.MarkConsolidationNotRequired();
+        _db.LedgerEntries.Add(fee);
         await _db.SaveChangesAsync();
 
         await _handler.HandleAsync(new GatewayDisputeCreatedIntegrationEvent(
@@ -172,10 +184,34 @@ public class ChargebackClawbackHandlerTests
         var updated = await _db.WorkspaceSaasSubscriptions.IgnoreQueryFilters()
             .SingleAsync(s => s.OrganizationId == _tenantId);
         Assert.That(updated.Status, Is.EqualTo(WorkspaceSaasStatuses.PastDue));
+        Assert.That(updated.CurrentPeriodEnd, Is.EqualTo(sub.CurrentPeriodEnd));
         var credits = await _db.TenantCreditBalances.IgnoreQueryFilters()
             .SingleAsync(w => w.OrganizationId == _tenantId);
         Assert.That(credits.AvailableCredits, Is.EqualTo(50));
         await _mediator.DidNotReceive().Send(Arg.Any<ClawbackCreditsCommand>(), Arg.Any<CancellationToken>());
+
+        var reverse = await _db.LedgerEntries.IgnoreQueryFilters().Include(e => e.Lines)
+            .SingleAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemSaasFeeReverse);
+        Assert.That(reverse.ReferenceId, Is.EqualTo("txn_saas_cb"));
+        Assert.That(reverse.Lines.Sum(l => l.BaseCurrencyAmount), Is.EqualTo(0m));
+        Assert.That(
+            reverse.Lines.Single(l => l.AccountType == AccountTypes.ExpenseSoftwareSubscription).Amount,
+            Is.EqualTo(-99m));
+
+        await _handler.HandleAsync(new GatewayDisputeCreatedIntegrationEvent(
+            OrganizationId: _tenantId,
+            GatewayTransactionId: "txn_saas_cb",
+            AmountDisputed: 99m,
+            Currency: "MYR",
+            Metadata: new Dictionary<string, string>
+            {
+                ["type"] = "platform_saas_fee",
+                ["tenant_id"] = _tenantId.ToString()
+            }));
+        Assert.That(
+            await _db.LedgerEntries.IgnoreQueryFilters()
+                .CountAsync(e => e.ReferenceType == LedgerReferenceTypes.SystemSaasFeeReverse),
+            Is.EqualTo(1));
     }
 
     [Test]

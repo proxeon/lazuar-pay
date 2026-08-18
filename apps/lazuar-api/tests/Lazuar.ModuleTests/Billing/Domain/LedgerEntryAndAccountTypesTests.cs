@@ -74,6 +74,7 @@ public class LedgerEntryAndAccountTypesTests
         Assert.That(AccountTypes.ExpenseGatewayFee, Is.EqualTo("EXPENSE_GATEWAY_FEE"));
         Assert.That(LedgerReferenceTypes.SystemCreditChargeback, Is.EqualTo("SYSTEM_CREDIT_CHARGEBACK"));
         Assert.That(LedgerReferenceTypes.SystemSaasFee, Is.EqualTo("SYSTEM_SAAS_FEE"));
+        Assert.That(LedgerReferenceTypes.SystemSaasFeeReverse, Is.EqualTo("SYSTEM_SAAS_FEE_REVERSE"));
     }
 
     [Test]
