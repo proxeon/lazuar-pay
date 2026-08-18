@@ -243,6 +243,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 231 | B05-L27 | `fix/231-ledger-type-filter` | reversals include chargeback/dispute; sales is payment + manual enroll only |
 | 232 | B05-L28 | `fix/232-refunded-fee-honesty` | RefundedFee stays 0 by policy; fees are not reversed on refund |
 | 233 | B05-L29 | `fix/233-manual-enroll-sst` | Manual enroll / mark-paid split SST and pass TaxAmount to B2B type-01 |
+| 234 | B05-L30 | `fix/234-billing-dead-writers` | README lists live vs parked Billing writers; recognition stays unhosted |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

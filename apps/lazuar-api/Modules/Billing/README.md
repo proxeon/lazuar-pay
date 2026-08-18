@@ -33,12 +33,17 @@ This is a known inversion vs Commerce/Lhdn (Application-owned handlers). A full 
 * **`DeferredRevenueSchedule`**: Table/entity retained for future amortization; recognition job is **not registered** until product-period schedules are created.
 
 ## 5. Integration Events (Consumed)
-The Billing module listens to the global event bus to build the ledger. It does *not* publish events that trigger side-effects; it is the terminal sink for financial data.
-* **From Payments:** `GatewayPaymentCompletedIntegrationEvent`, `GatewayRefundCompletedIntegrationEvent`, `GatewayDisputeCreatedIntegrationEvent` (utility chargeback).
-* **From Commerce:** `ZeroAmountCheckoutCompletedIntegrationEvent` (Records 100% coupon discounts for ROI tracking).
-* **From B2B/Invoicing:** `InvoiceIssuedIntegrationEvent`, `ManualPaymentRecordedIntegrationEvent`.
-* **From Affiliates:** `CommissionAccruedIntegrationEvent`.
-* **From LHDN:** `LhdnDocumentValidated|Cancelled` (touch LHDN fields only; never overwrite `CustomerDocumentNumber`).
+Live money writers:
+* **From Payments:** `GatewayPaymentCompleted` (GMV + Hub SaaS + top-up), `GatewayRefundCompleted`, `GatewayDisputeCreated` / `Closed`.
+* **From Commerce:** `ZeroAmountCheckoutCompleted` (100% coupon/trial write-off), `ManualSubscriberEnrolled` (offline / clerk cash).
+* **From Affiliates:** `CommissionAccrued`.
+* **From LHDN:** `LhdnDocumentValidated|Cancelled|Submitted` (status only).
+
+Parked / unused (do not invent publishers):
+* `InvoiceIssuedIntegrationEvent` is subscribed but **never constructed in production** (AR/deferred writer is dormant).
+* `ManualPaymentRecordedIntegrationEvent` is contract-only (architecture unused-list).
+* `ApiCreditPurchasedIntegrationEvent` is subscribed but never published; live credits are `PlatformTopUpEventHandler`.
+* `RevenueRecognitionJob` is **not hosted**.
 
 ## 6. Background Workers
 * **`BillingInboxConsumerJob`**: Processes incoming integration events and writes them to the ledger transactionally.
