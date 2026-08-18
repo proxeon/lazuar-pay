@@ -106,6 +106,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         }
 
         Status = "ACTIVE";
+        TrialEndsAt = null;
         IsReminderOnly = isReminderOnly;
         SuspendedAt = null;
         if (quantity.HasValue || unitAmount.HasValue)
@@ -329,6 +330,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         Status = "ACTIVE";
         SuspendedAt = null;
+        TrialEndsAt = null;
         NextBillingDate = newNextBillingDate;
         ClearScheduledCancel();
         ClearDunning();
@@ -343,6 +345,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     public void RecoverFromPayment(DateTime periodEnd, DateTime nextBilling)
     {
         Status = "ACTIVE";
+        TrialEndsAt = null;
         CurrentPeriodEnd = periodEnd;
         NextBillingDate = nextBilling;
         SuspendedAt = null;
@@ -386,6 +389,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         Status = "CANCELED";
         CancelAtPeriodEnd = false;
+        TrialEndsAt = null;
         UpdatedAt = DateTime.UtcNow;
     }
 

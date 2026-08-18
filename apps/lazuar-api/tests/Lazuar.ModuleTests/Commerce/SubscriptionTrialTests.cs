@@ -27,6 +27,19 @@ public class SubscriptionTrialTests
     }
 
     [Test]
+    public void RecoverFromPayment_ClearsTrialEndsAt()
+    {
+        var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        sub.ActivateTrial(DateTime.UtcNow.AddDays(7), reminderOnly: false);
+        sub.MarkAsPastDue();
+
+        sub.RecoverFromPayment(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
+
+        sub.Status.Should().Be("ACTIVE");
+        sub.TrialEndsAt.Should().BeNull();
+    }
+
+    [Test]
     public void ActivateTrial_PastEnd_Throws()
     {
         var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
