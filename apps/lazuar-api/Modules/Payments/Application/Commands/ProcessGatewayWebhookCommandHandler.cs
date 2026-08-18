@@ -77,6 +77,12 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
 
         if (!parsedResult.Verified)
         {
+            if (parsedResult.UnusableAfterVerify)
+            {
+                throw new PaymentWebhookUnusablePayloadException(
+                    parsedResult.Error ?? "Unusable webhook payload.");
+            }
+
             throw new InvalidOperationException($"Webhook signature verification failed: {parsedResult.Error}");
         }
 

@@ -164,6 +164,10 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             {
                 mappedEventType = "PAYMENT_FAILED";
             }
+            else if (rawEventType == "payment.refunded")
+            {
+                mappedEventType = "REFUND_COMPLETED";
+            }
             else
             {
                 return Task.FromResult(new GatewayWebhookParsedResult(true, rawEventType ?? "", "", 0, "", null, new(), 0, 0, 0, 1, "", null));
@@ -174,7 +178,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             {
                 return Task.FromResult(new GatewayWebhookParsedResult(
                     false, mappedEventType, "", 0, "", null, new(), 0, 0, 0, 1, "",
-                    "Missing stable CHIP purchase id"));
+                    "Missing stable CHIP purchase id").AsUnusable());
             }
 
             var eventId = $"{mappedEventType}:{purchaseId}";
@@ -190,7 +194,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             {
                 return Task.FromResult(new GatewayWebhookParsedResult(
                     false, mappedEventType, eventId, 0, "", purchaseId, new(), 0, 0, 0, 1, "",
-                    "Missing purchase currency; refusing to default to MYR."));
+                    "Missing purchase currency; refusing to default to MYR.").AsUnusable());
             }
 
             decimal gatewayFee = 0m;

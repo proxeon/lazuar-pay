@@ -172,7 +172,7 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             {
                 return Task.FromResult(new GatewayWebhookParsedResult(
                     false, "", "", 0, "", null, new(), 0, 0, 0, 1, "",
-                    "Missing stable Billplz bill id"));
+                    "Missing stable Billplz bill id").AsUnusable());
             }
 
             var paidAmountCents = int.TryParse(formData.GetValueOrDefault("paid_amount", "0"), out var pac) ? pac : 0;

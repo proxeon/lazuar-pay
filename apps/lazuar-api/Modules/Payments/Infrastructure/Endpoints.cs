@@ -74,6 +74,12 @@ public static class Endpoints
                 // Intake ACK only. Domain fulfillment lives in Commerce / Billing / M2M session.
                 return Results.Ok(new { received = true });
             }
+            catch (PaymentWebhookUnusablePayloadException ex)
+            {
+                // Verified signature, unusable body (missing id/currency). ACK 400 so the gateway stops.
+                logger.LogWarning(ex, "Unusable payment webhook payload for tenant {TenantId}.", tenantId);
+                return Results.BadRequest(new { error = ex.Message });
+            }
             catch (Exception ex) when (ex is NotSupportedException
                 || (ex is InvalidOperationException ioe
                     && ioe.Message.Contains("is not supported", StringComparison.OrdinalIgnoreCase)))

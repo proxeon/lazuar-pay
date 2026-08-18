@@ -434,6 +434,26 @@ public class ChipCollectGatewayAdapterTests
     }
 
     [Test]
+    public async Task ParseWebhook_PaymentRefunded_IsRefundCompleted()
+    {
+        var body = """
+            {
+              "id": "purch_ref_1",
+              "event_type": "payment.refunded",
+              "purchase": { "id": "purch_ref_1", "total": 4000, "currency": "MYR" }
+            }
+            """;
+        var (result, _) = await ParseSignedAsync(body);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("REFUND_COMPLETED");
+        result.EventId.Should().Be("REFUND_COMPLETED:purch_ref_1");
+        result.GatewayTransactionId.Should().Be("purch_ref_1");
+        result.AmountPaid.Should().Be(40m);
+        result.Currency.Should().Be("MYR");
+    }
+
+    [Test]
     public async Task ParseWebhook_PaymentFailure_UsesStablePurchaseId()
     {
         var body = """

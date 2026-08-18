@@ -20,4 +20,17 @@ public class PaymentWebhookEmptyBodyTests
         text.Should().Contain("Results.BadRequest");
         text.Should().NotContain("throw new InvalidOperationException(\"Empty request body.\")");
     }
+
+    [Test]
+    public void UnusablePayload_ReturnsBadRequest_SignatureFailureDoesNot()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "Payments", "Infrastructure", "Endpoints.cs"));
+        File.Exists(path).Should().BeTrue();
+        var text = File.ReadAllText(path);
+        text.Should().Contain("PaymentWebhookUnusablePayloadException");
+        text.Should().Contain("Results.BadRequest");
+    }
 }

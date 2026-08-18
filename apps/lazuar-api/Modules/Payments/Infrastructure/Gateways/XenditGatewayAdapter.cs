@@ -353,7 +353,7 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         var invoiceId = ReadString(invoice, "id");
         if (string.IsNullOrWhiteSpace(invoiceId))
         {
-            return new GatewayWebhookParsedResult(false, mapped, "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing Xendit invoice id.");
+            return new GatewayWebhookParsedResult(false, mapped, "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing Xendit invoice id.").AsUnusable();
         }
 
         var currency = ReadString(invoice, "currency");
@@ -361,7 +361,7 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         {
             return new GatewayWebhookParsedResult(
                 false, mapped, "", 0, "", null, new(), 0, 0, 0, 1, "",
-                "Missing invoice currency; refusing to default to MYR.");
+                "Missing invoice currency; refusing to default to MYR.").AsUnusable();
         }
 
         var amount = 0m;

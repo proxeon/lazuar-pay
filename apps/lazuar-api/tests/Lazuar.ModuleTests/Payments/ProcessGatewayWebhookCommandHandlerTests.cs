@@ -695,6 +695,40 @@ public class ProcessGatewayWebhookCommandHandlerTests
     }
 
     [Test]
+    public async Task Handle_UnusableAfterVerify_ThrowsUnusablePayload_NotSignatureFailure()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var config = new TenantPaymentConfiguration(tenantId, "STRIPE", "sk_test", "whsec_test", null);
+        var configRepo = Substitute.For<ITenantPaymentConfigRepository>();
+        configRepo.GetByTenantAndGatewayAsync(tenantId, "STRIPE", Arg.Any<CancellationToken>())
+            .Returns(config);
+
+        var logRepo = Substitute.For<IPaymentWebhookLogRepository>();
+        var adapter = Substitute.For<IPaymentGatewayAdapter>();
+        adapter.ParseWebhookAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>(),
+                Arg.Any<decimal>(), Arg.Any<decimal>(), Arg.Any<decimal>())
+            .Returns(new GatewayWebhookParsedResult(
+                false, "PAYMENT_COMPLETED", "evt_nocy", 0, "", "pi_1",
+                new Dictionary<string, string>(), 0, 0, 0, 1, "",
+                "Missing session currency; refusing to invent MYR.").AsUnusable());
+
+        var gatewayFactory = Substitute.For<IPaymentGatewayFactory>();
+        gatewayFactory.GetAdapter("STRIPE").Returns(adapter);
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = CreateHandler(configRepo, logRepo, gatewayFactory, eventBus);
+
+        var ex = Assert.ThrowsAsync<PaymentWebhookUnusablePayloadException>(async () => await handler.Handle(
+            new ProcessGatewayWebhookCommand(tenantId, "STRIPE", "{}", new Dictionary<string, string>()),
+            CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("currency"));
+        Assert.That(ex.Message, Does.Not.Contain("verification failed"));
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<GatewayPaymentCompletedIntegrationEvent>());
+        logRepo.DidNotReceive().Add(Arg.Any<PaymentWebhookLog>());
+    }
+
+    [Test]
     public async Task Handle_MissingConfig_ThrowsInvalidOperation()
     {
         var tenantId = Guid.CreateVersion7();

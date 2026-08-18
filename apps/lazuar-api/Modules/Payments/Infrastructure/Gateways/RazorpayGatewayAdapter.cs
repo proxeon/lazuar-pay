@@ -90,7 +90,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             {
                 return Task.FromResult(new GatewayWebhookParsedResult(
                     false, "", "", 0, "", null, new(), 0, 0, 0, 1, "",
-                    "Missing stable EventId: no X-Razorpay-Event-Id header and no payment id."));
+                    "Missing stable EventId: no X-Razorpay-Event-Id header and no payment id.").AsUnusable());
             }
 
             var amount = paymentEntity.GetProperty("amount").GetDecimal() / 100m;
@@ -113,7 +113,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             {
                 return Task.FromResult(new GatewayWebhookParsedResult(
                     false, "", "", 0, "", null, new(), 0, 0, 0, 1, "",
-                    "Missing payment currency; refusing to default to MYR."));
+                    "Missing payment currency; refusing to default to MYR.").AsUnusable());
             }
 
             return Task.FromResult(new GatewayWebhookParsedResult(
@@ -342,7 +342,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         {
             return new GatewayWebhookParsedResult(
                 false, "", "", 0, "", null, new(), 0, 0, 0, 1, "",
-                "Missing stable EventId for failed payment.");
+                "Missing stable EventId for failed payment.").AsUnusable();
         }
 
         var meta = new Dictionary<string, string>();
@@ -364,7 +364,7 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
             {
                 return new GatewayWebhookParsedResult(
                     false, "", "", 0, "", null, new(), 0, 0, 0, 1, "",
-                    "Missing payment currency; refusing to default to MYR.");
+                    "Missing payment currency; refusing to default to MYR.").AsUnusable();
             }
         }
         else

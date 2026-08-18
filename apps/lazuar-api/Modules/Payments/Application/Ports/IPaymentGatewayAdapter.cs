@@ -22,7 +22,11 @@ public record GatewayWebhookParsedResult(
     string BaseCurrency,
     string? Error,
     string? GatewayCustomerId = null,
-    string? GatewayTokenId = null);
+    string? GatewayTokenId = null,
+    bool UnusableAfterVerify = false)
+{
+    public GatewayWebhookParsedResult AsUnusable() => this with { UnusableAfterVerify = true };
+}
 
 public interface IPaymentGatewayAdapter
 {

@@ -1,4 +1,5 @@
 // apps/lazuar-api/Modules/Payments/Infrastructure/Gateways/StripeGatewayAdapter.cs
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application;
 using Modules.Payments.Application.Ports;
@@ -54,7 +55,22 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                 return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", "Missing Stripe-Signature header.");
             }
 
-            var stripeEvent = EventUtility.ConstructEvent(rawBody, signature, webhookSecret);
+            Event stripeEvent;
+            try
+            {
+                stripeEvent = EventUtility.ConstructEvent(rawBody, signature, webhookSecret);
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex, "Stripe webhook verification failed");
+                return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Stripe webhook payload could not be constructed");
+                return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message)
+                    .AsUnusable();
+            }
 
             if (stripeEvent.Type == "checkout.session.completed" || stripeEvent.Type == "payment_intent.succeeded")
             {
@@ -69,7 +85,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     {
                         return new GatewayWebhookParsedResult(
                             false, "PAYMENT_COMPLETED", stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "",
-                            "Missing session currency; refusing to invent MYR.");
+                            "Missing session currency; refusing to invent MYR.").AsUnusable();
                     }
 
                     string baseCurrency = sessionCurrency;
@@ -168,7 +184,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     {
                         return new GatewayWebhookParsedResult(
                             false, "PAYMENT_COMPLETED", stripeEvent.Id, 0, "", pi.Id, new(), 0, 0, 0, 1, "",
-                            "Missing PaymentIntent currency; refusing to invent MYR.");
+                            "Missing PaymentIntent currency; refusing to invent MYR.").AsUnusable();
                     }
 
                     string baseCurrency = piCurrency;
@@ -289,9 +305,15 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
             return new GatewayWebhookParsedResult(true, stripeEvent.Type, stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "", null);
         }
-        catch (StripeException ex)
+        catch (JsonException ex)
         {
-            _logger.LogError(ex, "Stripe webhook verification failed");
+            _logger.LogError(ex, "Stripe webhook payload unusable after verify");
+            return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message)
+                .AsUnusable();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Stripe webhook mapping failed");
             return new GatewayWebhookParsedResult(false, "", "", 0, "", null, new(), 0, 0, 0, 1, "", ex.Message);
         }
     }
@@ -372,7 +394,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         {
             return new GatewayWebhookParsedResult(
                 false, "PAYMENT_FAILED", eventId, 0, "", pi.Id, meta, 0, 0, 0, 1, "",
-                "Missing PaymentIntent currency; refusing to invent MYR.");
+                "Missing PaymentIntent currency; refusing to invent MYR.").AsUnusable();
         }
 
         return new GatewayWebhookParsedResult(
@@ -425,7 +447,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         {
             return new GatewayWebhookParsedResult(
                 false, "REFUND_COMPLETED", refund.Id, 0, "", null, meta, 0, 0, 0, 1, "",
-                "Missing refund currency; refusing to invent MYR.");
+                "Missing refund currency; refusing to invent MYR.").AsUnusable();
         }
 
         var paymentIntentId = refund.PaymentIntentId;
