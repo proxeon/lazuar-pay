@@ -1,11 +1,11 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Modules.Commerce.Domain.Aggregates;
 
 namespace Modules.Commerce.Infrastructure.Workers;
 
@@ -46,62 +46,105 @@ public class CheckoutSessionExpiryJob : BackgroundService
 
     /// <summary>
     /// Exposed for unit tests — same core as the background loop body.
+    /// One session per transaction so two replicas cannot ReleaseReservation twice.
     /// </summary>
     public async Task ExpireSessionsAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
-
-        var now = DateTime.UtcNow;
-        var expired = await db.CheckoutSessions
-            .IgnoreQueryFilters()
-            .Where(s => s.Status == "OPEN" && s.ExpiresAt < now)
-            .ToListAsync(ct);
-
-        if (expired.Count == 0)
-        {
-            return;
-        }
-
-        var couponIds = expired
-            .Where(s => s.CouponId.HasValue)
-            .Select(s => s.CouponId!.Value)
-            .Distinct()
-            .ToList();
-
-        var coupons = couponIds.Count == 0
-            ? []
-            : await db.Coupons
-                .IgnoreQueryFilters()
-                .Where(c => couponIds.Contains(c.Id))
-                .ToListAsync(ct);
-
-        var couponMap = coupons.ToDictionary(c => c.Id);
-
         var expiredCount = 0;
-        foreach (var session in expired)
+
+        while (true)
         {
-            if (!session.TryExpire())
+            CheckoutSession? session;
+            if (db.Database.IsRelational())
             {
-                continue;
-            }
+                await using var tx = await db.Database.BeginTransactionAsync(ct);
+                session = await ClaimExpiredSessionAsync(db, ct);
+                if (session == null)
+                {
+                    await tx.CommitAsync(ct);
+                    break;
+                }
 
-            if (session.CouponId.HasValue && couponMap.TryGetValue(session.CouponId.Value, out var coupon))
+                if (await ExpireOneAsync(db, session, ct))
+                {
+                    expiredCount++;
+                }
+
+                await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+            }
+            else
             {
-                coupon.ReleaseReservation();
-            }
+                session = await db.CheckoutSessions
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(s => s.Status == "OPEN" && s.ExpiresAt < DateTime.UtcNow, ct);
+                if (session == null)
+                {
+                    break;
+                }
 
-            expiredCount++;
+                if (await ExpireOneAsync(db, session, ct))
+                {
+                    expiredCount++;
+                }
+
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    _logger.LogWarning(ex, "A session completed while the expiry job was running; leftover OPEN rows retry next tick.");
+                    break;
+                }
+            }
         }
 
-        try
+        if (expiredCount > 0)
         {
-            await db.SaveChangesAsync(ct);
             _logger.LogInformation("Expired {Count} checkout session(s).", expiredCount);
         }
-        catch (DbUpdateConcurrencyException ex)
+    }
+
+    internal static async Task<CheckoutSession?> ClaimExpiredSessionAsync(
+        CommerceDbContext db,
+        CancellationToken ct)
+    {
+        const string sql = """
+            SELECT * FROM commerce."CheckoutSessions"
+            WHERE "Status" = 'OPEN' AND "ExpiresAt" < NOW()
+            ORDER BY "ExpiresAt"
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED;
+            """;
+
+        return await db.CheckoutSessions
+            .FromSqlRaw(sql)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private static async Task<bool> ExpireOneAsync(
+        CommerceDbContext db,
+        CheckoutSession session,
+        CancellationToken ct)
+    {
+        if (!session.TryExpire())
         {
-            _logger.LogWarning(ex, "A session completed while the expiry job was running; leftover OPEN rows retry next tick.");
+            return false;
         }
+
+        if (!session.CouponId.HasValue)
+        {
+            return true;
+        }
+
+        var coupon = await db.Coupons
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == session.CouponId.Value, ct);
+        coupon?.ReleaseReservation();
+        return true;
     }
 }

@@ -74,14 +74,6 @@ public class InvoiceReminderJob : BackgroundService
             return;
         }
 
-        var sessionIds = sessions.Select(s => s.Id).ToList();
-        var existing = await db.InvoiceReminderDispatchLogs
-            .Where(l => sessionIds.Contains(l.SessionId))
-            .ToListAsync(ct);
-        var sent = existing
-            .Select(l => (l.SessionId, l.DayOffset))
-            .ToHashSet();
-
         var portalBase = (config?["App:ClientUrl"] ?? "https://portal.lazuar.com").TrimEnd('/');
         var sentCount = 0;
 
@@ -94,7 +86,9 @@ public class InvoiceReminderJob : BackgroundService
                 continue;
             }
 
-            if (sent.Contains((session.Id, dayOffset)))
+            var already = await db.InvoiceReminderDispatchLogs
+                .AnyAsync(l => l.SessionId == session.Id && l.DayOffset == dayOffset, ct);
+            if (already)
             {
                 continue;
             }
@@ -124,20 +118,27 @@ public class InvoiceReminderJob : BackgroundService
                 payloadObj,
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
 
+            db.InvoiceReminderDispatchLogs.Add(new Domain.Entities.InvoiceReminderDispatchLog(session.Id, dayOffset));
             await eventBus.PublishAsync(new FulfillmentRequestedIntegrationEvent(
                 session.OrganizationId,
                 "COMMUNICATIONS",
                 "invoice.reminder",
                 payloadElement));
 
-            db.InvoiceReminderDispatchLogs.Add(new Domain.Entities.InvoiceReminderDispatchLog(session.Id, dayOffset));
-            sent.Add((session.Id, dayOffset));
-            sentCount++;
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                sentCount++;
+            }
+            catch (DbUpdateException)
+            {
+                // Unique (SessionId, DayOffset): another replica already claimed this offset.
+                db.ChangeTracker.Clear();
+            }
         }
 
         if (sentCount > 0)
         {
-            await db.SaveChangesAsync(ct);
             _logger.LogInformation("Dispatched {Count} invoice reminder(s).", sentCount);
         }
     }

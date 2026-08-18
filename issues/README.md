@@ -175,6 +175,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 163 | B10-X07 | `fix/163-repo-id-workers-see-rows` | Worker id lookups IgnoreQueryFilters so empty ambient still sees the row |
 | 164 | B10-X08 | `fix/164-repo-id-org-predicate` | Commerce id lookups require OrganizationId even when filters are ignored |
 | 165 | B10-X09 | `fix/165-crm-profile-org-scope` | CRM profile-by-id reads require OrganizationId |
+| 166 | B10-X10 | `fix/166-reminder-expiry-claim` | Expiry claims one session; invoice reminders save per session |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
