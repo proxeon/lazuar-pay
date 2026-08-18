@@ -149,7 +149,7 @@ public class BroadcastFanoutJob : BackgroundService
         try
         {
             var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
-            var jwtSecret = _configuration["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+            var hasJwtSecret = PublicComplianceEndpoints.TryJwtHmacSecret(_configuration, out var jwtSecret);
 
             var page = 1;
             while (true)
@@ -165,11 +165,15 @@ public class BroadcastFanoutJob : BackgroundService
                         continue;
                     }
 
-                    var unsubscribeUrl = PublicComplianceEndpoints.BuildUnsubscribeUrl(
-                        apiBaseUrl,
-                        broadcast.OrganizationId,
-                        recipient.Email,
-                        jwtSecret);
+                    string? unsubscribeUrl = null;
+                    if (hasJwtSecret)
+                    {
+                        unsubscribeUrl = PublicComplianceEndpoints.BuildUnsubscribeUrl(
+                            apiBaseUrl,
+                            broadcast.OrganizationId,
+                            recipient.Email,
+                            jwtSecret);
+                    }
 
                     await eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
                         OrganizationId: broadcast.OrganizationId,

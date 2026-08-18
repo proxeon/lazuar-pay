@@ -47,7 +47,9 @@ public static class PublicComplianceEndpoints
             if (!Guid.TryParse(org, out var orgId) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(sig))
                 return Results.BadRequest("Invalid unsubscribe link.");
 
-            var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+            if (!TryJwtHmacSecret(config, out var secret))
+                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+
             var expected = ComputeSig(secret, $"{orgId}:{email}");
             if (!CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(sig.ToLowerInvariant())))
@@ -75,7 +77,9 @@ public static class PublicComplianceEndpoints
             if (!Guid.TryParse(org, out var orgId) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(sig))
                 return Results.BadRequest("Invalid unsubscribe link.");
 
-            var secret = config["Jwt:Secret"] ?? "secure_development_key_minimum_32_characters_long";
+            if (!TryJwtHmacSecret(config, out var secret))
+                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+
             var expected = ComputeSig(secret, $"{orgId}:{email}");
             if (!CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(sig.ToLowerInvariant())))
@@ -166,6 +170,15 @@ public static class PublicComplianceEndpoints
         });
 
         return endpoints;
+    }
+
+    /// <summary>
+    /// Empty Jwt:Secret is not a working HMAC key. Do not fall back to a well-known string.
+    /// </summary>
+    public static bool TryJwtHmacSecret(IConfiguration config, out string secret)
+    {
+        secret = config["Jwt:Secret"] ?? "";
+        return !string.IsNullOrWhiteSpace(secret);
     }
 
     private static string ComputeSig(string secret, string payload)

@@ -2,7 +2,8 @@
 number: "132"
 id: B08-M09
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/132-unsubscribe-empty-jwt
 source: plans/009-bugs/08-communications-messaging-crm.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 132 — B08-M09 — Empty `Jwt:Secret` is a working HMAC key on unsubscribe
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/08-communications-messaging-crm.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/132-unsubscribe-empty-jwt`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
