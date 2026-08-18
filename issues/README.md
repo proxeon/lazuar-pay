@@ -231,6 +231,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 219 | B04-P18 | `fix/219-empty-webhook-body-400` | Empty payment webhook body is HTTP 400, not 500 |
 | 220 | B04-P19 | `fix/220-chip-webhook-register-idempotent` | CHIP webhook register is idempotent; verify PEM is Webhook.public_key |
 | 221 | B04-P20 | `fix/221-stripe-setup-null-token` | Setup session without a PM is not PAYMENT_COMPLETED; setup_intent.succeeded vaults |
+| 222 | B04-P21 | `fix/222-fee-expand-unknown` | Stripe/CHIP fee miss stamps gateway_fee_status=unknown; still fulfills |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

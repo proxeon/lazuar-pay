@@ -311,6 +311,28 @@ public class ChipCollectGatewayAdapterTests
         result.EventId.Should().Be("PAYMENT_COMPLETED:purch_root_1");
         result.GatewayTransactionId.Should().Be("purch_root_1");
         Guid.TryParse(result.EventId, out _).Should().BeFalse();
+        result.GatewayFee.Should().Be(0m);
+        result.Metadata[GatewayCommon.GatewayFeeStatusKey].Should().Be(GatewayCommon.GatewayFeeStatusUnknown);
+    }
+
+    [Test]
+    public async Task ParseWebhook_PurchasePaid_WithPaymentFee_IsKnownFee()
+    {
+        var body = """
+            {
+              "id": "purch_fee_1",
+              "event_type": "purchase.paid",
+              "purchase": { "id": "purch_fee_1", "total": 5000, "currency": "MYR" },
+              "payment": { "fee_amount": 150, "net_amount": 4850 }
+            }
+            """;
+        var (result, _) = await ParseSignedAsync(body);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.GatewayFee.Should().Be(1.50m);
+        result.NetAmount.Should().Be(48.50m);
+        result.Metadata[GatewayCommon.GatewayFeeStatusKey].Should().Be(GatewayCommon.GatewayFeeStatusKnown);
     }
 
     [Test]

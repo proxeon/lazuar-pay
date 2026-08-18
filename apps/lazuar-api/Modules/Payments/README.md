@@ -7,7 +7,7 @@ The `Payments` module acts as a strict **Infrastructure Port and Gateway Orchest
 * **Gateway Orchestration:** Generating checkout sessions and customer portal URLs via provider-specific adapters.
 * **Webhook Ingestion:** Receiving raw HTTP callbacks from payment gateways, verifying cryptographic signatures, and parsing the payloads.
 * **Idempotency Enforcement:** Guaranteeing that duplicate webhook retries from gateways do not result in duplicate internal events using the `PaymentWebhookLog`.
-* **Fee & Tax Extraction:** Extracting exact gateway processing fees and FX rates directly from gateway payloads (or estimating them via tenant profiles) before publishing events.
+* **Fee & Tax Extraction:** Extracting gateway processing fees and FX rates from the payload when the processor includes them. Stripe expand / CHIP `payment` misses stamp `gateway_fee_status=unknown` and still fulfill; `GatewayFee=0` then is not "the fee is zero".
 
 ## 3. Architectural Boundaries (What this module is NOT)
 * **Not an Accounting Ledger:** This module does *not* calculate MRR, Net Profit, Recognized Revenue, or Tax Liabilities. It only reports the *Gross Amount* and *Gateway Fee* extracted from the provider.
@@ -27,7 +27,7 @@ The Payments module publishes universal financial events to the Outbox. Other mo
 
 ## 6. Adapters (Ports & Adapters Pattern)
 * **`IPaymentGatewayAdapter`**: The strict port interface.
-* **`StripeGatewayAdapter`**: Integrates with Stripe.net SDK. Extracts exact fees from the `balance_transaction` object.
+* **`StripeGatewayAdapter`**: Integrates with Stripe.net SDK. Copies fees from `balance_transaction` when expand succeeds; otherwise metadata `gateway_fee_status=unknown`.
 * **`BillplzGatewayAdapter`**: Integrates with Billplz REST API. Uses HMACSHA256 for webhook verification and relies on `TenantPaymentConfiguration` for fee estimation since Billplz webhooks lack fee data.
 
 ## 7. Database Schema

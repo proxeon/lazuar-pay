@@ -59,6 +59,18 @@ public class GatewayCommonTests
     }
 
     [Test]
+    public void StampGatewayFeeStatus_DoesNotTreatUnknownZeroAsKnownFee()
+    {
+        var unknown = new Dictionary<string, string>();
+        GatewayCommon.StampGatewayFeeStatus(unknown, feeKnown: false);
+        unknown[GatewayCommon.GatewayFeeStatusKey].Should().Be(GatewayCommon.GatewayFeeStatusUnknown);
+
+        var known = new Dictionary<string, string>();
+        GatewayCommon.StampGatewayFeeStatus(known, feeKnown: true);
+        known[GatewayCommon.GatewayFeeStatusKey].Should().Be(GatewayCommon.GatewayFeeStatusKnown);
+    }
+
+    [Test]
     public void ApplyPayingTenantMetadata_PreservesPayingTenant_AndStampsPlatformTenant()
     {
         var paying = Guid.CreateVersion7();

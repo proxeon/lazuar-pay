@@ -195,10 +195,16 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
 
             decimal gatewayFee = 0m;
             decimal netAmount = amountPaid;
+            var feeKnown = false;
 
             if (root.TryGetProperty("payment", out var paymentNode) && paymentNode.ValueKind == JsonValueKind.Object)
             {
-                gatewayFee = paymentNode.TryGetProperty("fee_amount", out var faProp) ? faProp.GetDecimal() / 100m : 0m;
+                if (paymentNode.TryGetProperty("fee_amount", out var faProp))
+                {
+                    gatewayFee = faProp.GetDecimal() / 100m;
+                    feeKnown = true;
+                }
+
                 netAmount = paymentNode.TryGetProperty("net_amount", out var naProp) ? naProp.GetDecimal() / 100m : amountPaid;
             }
 
@@ -210,6 +216,8 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                     meta[prop.Name] = prop.Value.GetString() ?? "";
                 }
             }
+
+            GatewayCommon.StampGatewayFeeStatus(meta, feeKnown);
 
             var customerId = previewCustomerId;
             var tokenId = previewTokenId;

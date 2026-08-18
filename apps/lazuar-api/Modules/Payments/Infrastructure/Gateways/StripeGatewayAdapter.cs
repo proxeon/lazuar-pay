@@ -76,6 +76,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     decimal taxAmount = (session.TotalDetails?.AmountTax ?? 0L) / 100m;
                     string? customerId = session.CustomerId;
                     string? paymentMethodId = null;
+                    var feeKnown = string.IsNullOrEmpty(session.PaymentIntentId);
 
                     if (!string.IsNullOrEmpty(session.PaymentIntentId))
                     {
@@ -89,26 +90,12 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                             });
                             
                             paymentMethodId = pi.PaymentMethodId;
-
-                            var charge = pi.LatestCharge as Charge;
-                            if (charge?.BalanceTransaction != null)
-                            {
-                                var bt = charge.BalanceTransaction;
-                                gatewayFee = Math.Abs(bt.Fee / 100m);
-                                
-                                if (bt.ExchangeRate.HasValue)
-                                {
-                                    fxRate = bt.ExchangeRate.Value;
-                                }
-                                if (GatewayCommon.TryNormalizeCurrency(bt.Currency, out var btCurrency))
-                                {
-                                    baseCurrency = btCurrency;
-                                }
-                            }
+                            feeKnown = ApplyBalanceTransactionFee(pi.LatestCharge as Charge, ref gatewayFee, ref fxRate, ref baseCurrency);
                         }
                         catch (Exception ex)
                         {
                             _logger.LogWarning(ex, "Failed to fetch Stripe balance transaction for fee extraction.");
+                            feeKnown = false;
                         }
                     }
                     else
@@ -148,6 +135,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                     }
 
                     decimal netAmount = amount - gatewayFee;
+                    GatewayCommon.StampGatewayFeeStatus(meta, feeKnown);
 
                     return new GatewayWebhookParsedResult(
                         Verified: true,
@@ -185,6 +173,7 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
                     string baseCurrency = piCurrency;
 
+                    var feeKnown = false;
                     try
                     {
                         var client = new StripeClient(apiKey);
@@ -194,27 +183,17 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                             Expand = new List<string> { "latest_charge.balance_transaction" }
                         });
 
-                        var charge = expanded.LatestCharge as Charge;
-                        if (charge?.BalanceTransaction != null)
-                        {
-                            var bt = charge.BalanceTransaction;
-                            gatewayFee = Math.Abs(bt.Fee / 100m);
-
-                            if (bt.ExchangeRate.HasValue)
-                            {
-                                fxRate = bt.ExchangeRate.Value;
-                            }
-
-                            baseCurrency = bt.Currency ?? baseCurrency;
-                        }
+                        feeKnown = ApplyBalanceTransactionFee(expanded.LatestCharge as Charge, ref gatewayFee, ref fxRate, ref baseCurrency);
                     }
                     catch (Exception ex)
                     {
                         _logger.LogWarning(ex, "Failed to expand Stripe PaymentIntent {PaymentIntentId} for fee extraction; GatewayFee=0.", pi.Id);
                         gatewayFee = 0;
+                        feeKnown = false;
                     }
 
                     decimal netAmount = amount - gatewayFee;
+                    GatewayCommon.StampGatewayFeeStatus(meta, feeKnown);
 
                     return new GatewayWebhookParsedResult(
                         Verified: true,
@@ -619,6 +598,36 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
         ApplyCardWalletPaymentMethodTypes(options);
         ApplySetupFutureUsage(options, setupFutureUsage);
         return options;
+    }
+
+    /// <summary>
+    /// Copies Stripe Balance Transaction MDR/FX when the charge is expanded.
+    /// Returns false when the fee is unknown so callers can stamp
+    /// <c>gateway_fee_status=unknown</c> without blocking fulfillment.
+    /// </summary>
+    internal static bool ApplyBalanceTransactionFee(
+        Charge? charge,
+        ref decimal gatewayFee,
+        ref decimal fxRate,
+        ref string baseCurrency)
+    {
+        if (charge?.BalanceTransaction is not { } bt)
+        {
+            return false;
+        }
+
+        gatewayFee = Math.Abs(bt.Fee / 100m);
+        if (bt.ExchangeRate.HasValue)
+        {
+            fxRate = bt.ExchangeRate.Value;
+        }
+
+        if (GatewayCommon.TryNormalizeCurrency(bt.Currency, out var btCurrency))
+        {
+            baseCurrency = btCurrency;
+        }
+
+        return true;
     }
 
     /// <summary>

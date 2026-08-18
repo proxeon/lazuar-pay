@@ -85,6 +85,17 @@ internal static class GatewayCommon
         return true;
     }
 
+    /// <summary>
+    /// Set when we know (or do not know) the processor MDR. A zero
+    /// <c>GatewayFee</c> with status <c>unknown</c> is not "the fee is zero".
+    /// </summary>
+    public const string GatewayFeeStatusKey = "gateway_fee_status";
+    public const string GatewayFeeStatusKnown = "known";
+    public const string GatewayFeeStatusUnknown = "unknown";
+
+    public static void StampGatewayFeeStatus(Dictionary<string, string> meta, bool feeKnown) =>
+        meta[GatewayFeeStatusKey] = feeKnown ? GatewayFeeStatusKnown : GatewayFeeStatusUnknown;
+
     internal const string RefundIdempotencyKeyPrefix = "lazuar-refund:";
 
     public static string FormatRefundIdempotencyKey(string transactionId, decimal amount)

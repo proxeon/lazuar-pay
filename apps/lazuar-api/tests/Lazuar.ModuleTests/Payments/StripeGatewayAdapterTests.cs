@@ -383,6 +383,42 @@ public class StripeGatewayAdapterTests
     }
 
     [Test]
+    public void ApplyBalanceTransactionFee_MissingCharge_IsUnknown()
+    {
+        decimal fee = 0;
+        decimal fx = 1;
+        var baseCurrency = "MYR";
+
+        StripeGatewayAdapter.ApplyBalanceTransactionFee(null, ref fee, ref fx, ref baseCurrency).Should().BeFalse();
+        fee.Should().Be(0m);
+
+        var noBt = new Charge { Id = "ch_1" };
+        StripeGatewayAdapter.ApplyBalanceTransactionFee(noBt, ref fee, ref fx, ref baseCurrency).Should().BeFalse();
+        fee.Should().Be(0m);
+    }
+
+    [Test]
+    public void ApplyBalanceTransactionFee_ExpandedBalanceTransaction_IsKnown()
+    {
+        decimal fee = 0;
+        decimal fx = 1;
+        var baseCurrency = "MYR";
+        var charge = new Charge
+        {
+            BalanceTransaction = new BalanceTransaction
+            {
+                Fee = 123,
+                Currency = "myr",
+                ExchangeRate = 1.0m
+            }
+        };
+
+        StripeGatewayAdapter.ApplyBalanceTransactionFee(charge, ref fee, ref fx, ref baseCurrency).Should().BeTrue();
+        fee.Should().Be(1.23m);
+        baseCurrency.Should().Be("MYR");
+    }
+
+    [Test]
     public void MapPaymentIntentPaymentFailed_CopiesDeclineCode()
     {
         var pi = new PaymentIntent
