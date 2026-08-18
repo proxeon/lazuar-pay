@@ -187,7 +187,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
             var customGatewayQuery = new GenerateCheckoutSessionQuery(
                 tenantId.Value,
                 customTotalAmount,
-                "MYR",
+                existingSession.Currency,
                 "Custom Payment Request",
                 request.Email,
                 customSuccessUrl,

@@ -20,6 +20,9 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
     /// Product checkouts resolve gateway from Product.GatewayName instead.
     /// </summary>
     public string? GatewayName { get; private set; }
+
+    /// <summary>ISO-4217 for custom quotes. Product checkouts use Product.Currency.</summary>
+    public string Currency { get; private set; } = "MYR";
     
     public string Status { get; private set; }
     public DateTime ExpiresAt { get; private set; }
@@ -66,6 +69,7 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         ProductId = productId;
         CouponId = couponId;
         GatewayName = null;
+        Currency = "MYR";
         Status = "OPEN";
         ExpiresAt = expiresAt;
         IsB2bRequired = false;
@@ -94,6 +98,18 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void SetCurrency(string? currency)
+    {
+        var code = string.IsNullOrWhiteSpace(currency) ? "MYR" : currency.Trim().ToUpperInvariant();
+        if (code.Length != 3 || !code.All(char.IsLetter))
+        {
+            throw new InvalidOperationException("Currency must be a 3-letter ISO-4217 code.");
+        }
+
+        Currency = code;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void SetGatewayCheckoutUrl(string url)
     {
         if (string.IsNullOrWhiteSpace(url))
@@ -111,7 +127,8 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         IEnumerable<AdHocLineItem> lineItems,
         DateTime expiresAt,
         bool isB2bRequired,
-        string? gatewayName = null)
+        string? gatewayName = null,
+        string? currency = null)
     {
         Id = Guid.CreateVersion7();
         OrganizationId = organizationId;
@@ -121,6 +138,7 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         GatewayName = string.IsNullOrWhiteSpace(gatewayName)
             ? null
             : gatewayName.Trim().ToUpperInvariant();
+        SetCurrency(currency);
         Status = "OPEN";
         ExpiresAt = expiresAt;
         IsB2bRequired = isB2bRequired;

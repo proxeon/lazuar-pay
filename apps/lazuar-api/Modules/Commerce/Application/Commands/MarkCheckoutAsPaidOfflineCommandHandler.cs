@@ -195,7 +195,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
             _billingQueryService, session.OrganizationId);
         var totalAmount = SubscriptionBillingAmount.CustomQuoteBreakdown(customNet, merchantHasSst).Gross;
-        const string currency = "MYR";
+        var currency = session.Currency;
 
         var externalRef = $"OFFLINE-{session.Id:N}"[..36];
         var txLog = new CommerceTransactionLog(

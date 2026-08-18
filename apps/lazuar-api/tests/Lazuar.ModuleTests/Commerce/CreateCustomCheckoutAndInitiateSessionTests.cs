@@ -116,6 +116,44 @@ public class CreateCustomCheckoutAndInitiateSessionTests
     }
 
     [Test]
+    public async Task InitiateCheckout_CustomSession_UsesPersistedCurrency()
+    {
+        var orgId = Guid.CreateVersion7();
+        var session = new CheckoutSession(
+            orgId,
+            Guid.CreateVersion7(),
+            new[] { new AdHocLineItem("Work", 1, 100m) },
+            DateTime.UtcNow.AddDays(7),
+            isB2bRequired: false,
+            "BILLPLZ",
+            "SGD");
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        var one = Substitute.For<IOneQueryService>();
+        one.GetTenantIdBySlugAsync("acme").Returns(orgId);
+        var comms = Substitute.For<ICommunicationsQueryService>();
+        comms.HasValidEmailConfigAsync(orgId).Returns(true);
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://pay.example/hop2");
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["App:ClientUrl"] = "http://localhost:3004" })
+            .Build();
+
+        var handler = new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, CommerceBillingStubs.NoSstBilling());
+
+        await handler.Handle(new InitiateCheckoutCommand(
+            "acme", "custom", "Buyer", "buyer@example.com", null, null, null,
+            null, null, null, null, null, 1, true, null, session.Id), CancellationToken.None);
+
+        await mediator.Received().Send(
+            Arg.Is<GenerateCheckoutSessionQuery>(q => q.Currency == "SGD"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task InitiateCheckout_SessionId_StampsB2bMetadataAndRequiresTin()
     {
         var orgId = Guid.CreateVersion7();

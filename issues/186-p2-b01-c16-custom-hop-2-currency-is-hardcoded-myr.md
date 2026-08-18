@@ -2,7 +2,8 @@
 number: "186"
 id: B01-C16
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/186-custom-quote-currency
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 186 — B01-C16 — Custom hop-2 currency is hardcoded `MYR`
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/186-custom-quote-currency`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

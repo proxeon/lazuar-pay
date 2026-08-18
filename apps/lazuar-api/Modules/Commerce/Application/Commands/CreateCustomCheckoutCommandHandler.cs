@@ -64,7 +64,8 @@ public class CreateCustomCheckoutCommandHandler : ICommandHandler<CreateCustomCh
             domainLineItems,
             expiresAt,
             request.IsB2bRequired,
-            gatewayName
+            gatewayName,
+            request.Currency
         );
 
         var quoteNumber = await _mediator.Send(

@@ -124,6 +124,13 @@ namespace Modules.Commerce.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("MYR");
+
                     b.Property<DateTime?>("DueAt")
                         .HasColumnType("timestamp with time zone");
 

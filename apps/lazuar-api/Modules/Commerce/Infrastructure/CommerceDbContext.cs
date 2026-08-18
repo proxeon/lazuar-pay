@@ -209,6 +209,7 @@ public class CommerceDbContext : PlatformDbContext
             builder.Property(x => x.Status).IsConcurrencyToken();
 
             builder.Property(x => x.GatewayName).HasMaxLength(100);
+            builder.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("MYR");
             builder.Property(x => x.DueAt).HasColumnType("timestamp with time zone");
             builder.Property(x => x.DocumentNumber).HasMaxLength(40);
             builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
