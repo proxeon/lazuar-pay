@@ -265,6 +265,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 253 | B06-D34 | `fix/253-tin-not-on-file-docs` | W2 stationery done-file matches omit-empty-TIN factory |
 | 254 | B06-D35 | `fix/254-quotes-tracking-copy` | Quotes toolbar tracks quotes & proforma, not invoices |
 | 255 | B06-D36 | `fix/255-lhdn-valid-honesty` | Sandbox VALID honesty fence locked; signer unit test is not ACCEPT |
+| 256 | B07-I08 | `fix/256-accept-invite-4xx-cache` | Accept-invite 4xx is not cached; Sign in evicts the token |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

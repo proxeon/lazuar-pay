@@ -2,7 +2,8 @@
 number: "256"
 id: B07-I08
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/256-accept-invite-4xx-cache
 source: plans/009-bugs/07-one-identity-invites-keys.md
 head: "297ba98"
 ---
@@ -84,4 +85,8 @@ Keep the Map for **in-flight** accepts only. On any terminal 4xx, either do not 
 
 ### Evaluation notes
 Duplicates **159** (P1, resolved) for the lying 5xx sentence. Residual is cache + Sign in. Severity can stay P2 for the leftover Map; do not re-open 159. **113/176** already fail-closed already-member. **122** means a raw 500 detail is no longer a Postgres unique-violation string.
+
+## Resolution
+
+4xx outcomes evict the token Map. Sign in deletes the same way Sign out does. 5xx stay “Try again.” In-flight accepts still share one Promise.
 

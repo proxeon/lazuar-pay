@@ -47,6 +47,7 @@ async function acceptInvite(token: string): Promise<AcceptOutcome> {
     }
 
     if (error) {
+      acceptByToken.delete(token);
       const detail = error.detail || "Unable to accept this invitation.";
       return {
         kind: "error",
@@ -173,7 +174,11 @@ export default function AcceptInvitePage() {
                 </>
               )}
               {!view.wrongEmail && (
-                <Link to="/login" className="inline-block text-[12px] font-semibold text-[#09090b] hover:underline">
+                <Link
+                  to="/login"
+                  onClick={() => acceptByToken.delete(token)}
+                  className="inline-block text-[12px] font-semibold text-[#09090b] hover:underline"
+                >
                   Sign in
                 </Link>
               )}
