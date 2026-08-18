@@ -70,6 +70,44 @@ public class QuoteOfflineSstTests
     }
 
     [Test]
+    public async Task InitiateProduct_SstMerchant_ChargesUnitGross108()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = new Product(
+            orgId, "Plan", "pro-plan", 100m, "FIXED", 0m, "MYR", "mo", "BILLPLZ",
+            new CheckoutConfiguration(false, false, false),
+            new[] { "telegram" });
+        product.SetSst("02", 8m);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetProductBySlugAsync(orgId, "pro-plan", Arg.Any<CancellationToken>()).Returns(product);
+
+        var one = Substitute.For<IOneQueryService>();
+        one.GetTenantIdBySlugAsync("acme").Returns(orgId);
+        var comms = Substitute.For<ICommunicationsQueryService>();
+        comms.HasValidEmailConfigAsync(orgId).Returns(true);
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<ResolveClientProfileCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Guid.CreateVersion7());
+        mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
+            .Returns("https://pay.example/hop2");
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["App:ClientUrl"] = "http://localhost:3004" })
+            .Build();
+
+        var handler = new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, SstBilling(orgId));
+
+        await handler.Handle(new InitiateCheckoutCommand(
+            "acme", "pro-plan", "Ada", "ada@example.com", null, null, null,
+            null, null, null, null, null, 1, true, null), CancellationToken.None);
+
+        await mediator.Received().Send(
+            Arg.Is<GenerateCheckoutSessionQuery>(q => q.Amount == 108m && q.Currency == "MYR"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
     public async Task MarkPaid_ProductSst_BooksGross()
     {
         var orgId = Guid.CreateVersion7();

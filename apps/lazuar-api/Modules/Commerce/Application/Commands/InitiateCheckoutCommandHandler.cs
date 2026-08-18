@@ -26,7 +26,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
     private readonly IMediator _mediator;
     private readonly IConfiguration _configuration;
     private readonly ICommunicationsQueryService _communicationsQueryService;
-    private readonly IBillingQueryService? _billingQueryService;
+    private readonly IBillingQueryService _billingQueryService;
 
     public InitiateCheckoutCommandHandler(
         IOneQueryService oneQueryService,
@@ -34,7 +34,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
         IMediator mediator,
         IConfiguration configuration,
         ICommunicationsQueryService communicationsQueryService,
-        IBillingQueryService? billingQueryService = null)
+        IBillingQueryService billingQueryService)
     {
         _oneQueryService = oneQueryService;
         _repository = repository;

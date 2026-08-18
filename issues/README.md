@@ -190,6 +190,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 178 | B10-X22 | `fix/178-excludeids-parameterized` | Billing and dunning claim excludeIds use a parameterized ALL() |
 | 179 | B10-X23 | `fix/179-delivery-log-tenant` | MessageDeliveryLog is IMustHaveTenant; PaymentWebhookLog stays global |
 | 180 | B10-X24 | `fix/180-unify-outbox-inbox` | All modules register outbox/inbox through AddModuleOutboxInbox |
+| 181 | B01-C11 | `fix/181-hop1-sst-required-billing` | InitiateCheckout requires IBillingQueryService; hop-1 100/8% charges 108 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
