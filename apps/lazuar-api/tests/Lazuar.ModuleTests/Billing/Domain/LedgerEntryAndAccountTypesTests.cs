@@ -90,6 +90,33 @@ public class LedgerEntryAndAccountTypesTests
     }
 
     [Test]
+    public void ConvertNeedsBuyerTinToB2b_FlipsType_KeepsReceiptNumber()
+    {
+        var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.GatewayPayment, "tx1", "sale", "B2C");
+        entry.AssignB2cReceipt("RCPT-2026-00009");
+        entry.MarkConsolidationNotRequired();
+        entry.UpdateLhdnStatus(null, LhdnValidationStatuses.NeedsBuyerTin);
+
+        entry.ConvertNeedsBuyerTinToB2b();
+
+        Assert.That(entry.CustomerType, Is.EqualTo("B2B"));
+        Assert.That(entry.CustomerDocumentNumber, Is.EqualTo("RCPT-2026-00009"));
+        Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.NotRequired));
+        Assert.That(entry.LhdnValidationStatus, Is.Null);
+    }
+
+    [Test]
+    public void ConvertNeedsBuyerTinToB2b_RefusesOtherStatuses()
+    {
+        var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.GatewayPayment, "tx1", "sale", "B2C");
+        entry.AssignB2cReceipt("RCPT-2026-00010");
+
+        Assert.That(
+            () => entry.ConvertNeedsBuyerTinToB2b(),
+            Throws.InvalidOperationException.With.Message.Contains("NEEDS_BUYER_TIN"));
+    }
+
+    [Test]
     public void AssignB2bInvoice_DoesNotOverwriteExistingNumber()
     {
         var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.GatewayPayment, "tx1", "sale", "B2B");

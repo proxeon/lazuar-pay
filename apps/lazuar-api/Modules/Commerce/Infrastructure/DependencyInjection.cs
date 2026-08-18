@@ -44,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<PortalDocumentQueryService>();
         services.AddScoped<ISubscriberQueryService, SubscriberQueryService>();
         services.AddScoped<ICommerceDocumentLookup, CommerceDocumentLookup>();
+        services.AddScoped<ICommerceBuyerIdentity, CommerceBuyerIdentity>();
 
         services.AddSingleton<IMagicLinkTokenService, MagicLinkTokenService>();
         services.AddSingleton<PortalMagicLinkRateLimiter>();

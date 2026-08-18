@@ -27,6 +27,12 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [buyerTin, setBuyerTin] = useState("");
+  const [buyerIdType, setBuyerIdType] = useState("BRN");
+  const [buyerIdValue, setBuyerIdValue] = useState("");
+  const [buyerCompany, setBuyerCompany] = useState("");
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState("");
 
   const lhdnInternalId = invoice?.customer_document_number
     || (invoice?.tax_invoice_id && !/^[0-9a-f-]{36}$/i.test(invoice.tax_invoice_id) ? invoice.tax_invoice_id : null);
@@ -69,6 +75,38 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
       onClose();
     },
     onError: (err: any) => toast.error("Cancellation Failed", { description: err.message })
+  });
+
+  const collectTinMutation = useMutation({
+    mutationFn: async () => {
+      if (!invoice) throw new Error("No document selected.");
+      const response = await fetch(`${API_URL}/admin/billing/ledger/${invoice.id}/collect-buyer-tin`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-Id": localStorage.getItem("ops_active_workspace_id") || "",
+        },
+        body: JSON.stringify({
+          tin: buyerTin.trim(),
+          id_type: buyerIdType,
+          id_value: buyerIdValue.trim(),
+          company_name: buyerCompany.trim(),
+          full_name: buyerName.trim(),
+          email: buyerEmail.trim(),
+        }),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "Could not attach buyer TIN.");
+      }
+    },
+    onSuccess: () => {
+      toast.success("Buyer TIN saved. Type 01 submit queued.");
+      queryClient.invalidateQueries({ queryKey: ["billing-ledger-invoices"] });
+      onClose();
+    },
+    onError: (err: Error) => toast.error("Collect TIN failed", { description: err.message }),
   });
 
   const handleDownload = async () => {
@@ -298,6 +336,41 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
               )}
             </div>
           </div>
+
+          {liveStatus === "NEEDS_BUYER_TIN" && (
+            <form
+              className="space-y-3 pt-4 border-t border-[#f4f4f5]"
+              onSubmit={(e) => {
+                e.preventDefault();
+                collectTinMutation.mutate();
+              }}
+            >
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] pb-1">Collect buyer TIN</h4>
+              <p className="text-[11px] text-[#71717a] leading-relaxed">
+                This sale is above the B2C individual threshold. Attach a TIN / ID pair to file an individual type 01. It stays out of monthly consolidation.
+              </p>
+              <input required value={buyerTin} onChange={(e) => setBuyerTin(e.target.value)} placeholder="TIN" className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px]" />
+              <div className="grid grid-cols-2 gap-2">
+                <select value={buyerIdType} onChange={(e) => setBuyerIdType(e.target.value)} className="h-9 border border-[#e5e5e5] px-2 text-[13px]">
+                  <option value="BRN">BRN</option>
+                  <option value="NRIC">NRIC</option>
+                  <option value="PASSPORT">PASSPORT</option>
+                  <option value="ARMY">ARMY</option>
+                </select>
+                <input required value={buyerIdValue} onChange={(e) => setBuyerIdValue(e.target.value)} placeholder="ID value" className="h-9 border border-[#e5e5e5] px-3 text-[13px]" />
+              </div>
+              <input required value={buyerCompany} onChange={(e) => setBuyerCompany(e.target.value)} placeholder="Company name" className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px]" />
+              <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="Contact name" className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px]" />
+              <input required type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} placeholder="Buyer email" className="w-full h-9 border border-[#e5e5e5] px-3 text-[13px]" />
+              <button
+                type="submit"
+                disabled={collectTinMutation.isPending}
+                className="h-9 w-full border border-[#09090b] bg-[#09090b] text-[11px] font-bold uppercase tracking-widest text-white disabled:opacity-50"
+              >
+                {collectTinMutation.isPending ? "Submitting…" : "File individual tax invoice"}
+              </button>
+            </form>
+          )}
 
           <div className="space-y-4 pt-4 border-t border-[#f4f4f5]">
             <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#71717a] pb-1">Operations</h4>

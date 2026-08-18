@@ -2,7 +2,8 @@
 number: "251"
 id: B06-D32
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/251-needs-buyer-tin
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -83,4 +84,8 @@ Smallest honest increment: keep the badge and add an ops action that writes CRM 
 
 ### Evaluation notes
 Honesty of the badge is still correct (do not “fix” it to VALID). W2-LP-114 shipped the park only. 108/026/078 are cons idempotency, not this gap. Still P2 as a missing product; legally sharper if a merchant is already live on large B2C. Not blocked.
+
+## Resolution
+
+Ops Sales document detail can collect TIN/ID and file type 01. Command writes CRM via `ICommerceBuyerIdentity`, converts the row to B2B (stays out of consolidation), and publishes `B2bTaxInvoiceRequested`. Receipt number is kept. Not titled Tax Invoice until VALID.
 

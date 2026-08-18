@@ -116,6 +116,20 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
         ConsolidationStatus = ConsolidationStatuses.NotRequired;
     }
 
+    /// <summary>
+    /// Large B2C parked as NEEDS_BUYER_TIN becomes an individual B2B filing once a TIN exists.
+    /// Does not overwrite <see cref="CustomerDocumentNumber"/> and does not mark VALID.
+    /// </summary>
+    public void ConvertNeedsBuyerTinToB2b()
+    {
+        if (LhdnValidationStatus != LhdnValidationStatuses.NeedsBuyerTin)
+            throw new InvalidOperationException("Only NEEDS_BUYER_TIN receipts can be converted to B2B.");
+
+        CustomerType = "B2B";
+        MarkConsolidationNotRequired();
+        LhdnValidationStatus = null;
+    }
+
     public void MarkConsolidationIgnored(string reasonStatus = LhdnValidationStatuses.IgnoredNoRevenue)
     {
         ConsolidationStatus = ConsolidationStatuses.Ignored;

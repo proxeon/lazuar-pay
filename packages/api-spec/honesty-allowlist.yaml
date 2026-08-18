@@ -64,5 +64,12 @@ impl_only:
     path: /admin/communications/templates/legacy-cleanup
     reason: Temporary ops utility for legacy template cleanup; not product surface
 
+  # --- Billing: large B2C TIN collect (ops clerk only) ---
+  - method: POST
+    path: /admin/billing/ledger/{id}/collect-buyer-tin
+    reason: >
+      Ops-only clerk form to attach TIN/ID and file type 01 for NEEDS_BUYER_TIN
+      receipts. Not a typed product/SDK surface (issue 251).
+
 # OpenAPI paths that may lack a 1:1 Map (rare; prefer fix TypeSpec)
 openapi_only_exceptions: []
