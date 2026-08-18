@@ -18,6 +18,14 @@ public class DocumentSeriesTests
     }
 
     [Test]
+    public void Prefix_UsesMalaysiaYear_OnUtcNewYearsEve()
+    {
+        // 31 Dec 2025 18:00 UTC = 1 Jan 2026 02:00 MYT
+        var utc = new DateTime(2025, 12, 31, 18, 0, 0, DateTimeKind.Utc);
+        Assert.That(DocumentSeries.ReceiptPrefix(utc), Is.EqualTo("RCPT-2026"));
+    }
+
+    [Test]
     public void CustomerFacingNumber_NeverUsesRawUuid()
     {
         var uuid = Guid.CreateVersion7().ToString();

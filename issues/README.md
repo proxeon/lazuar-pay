@@ -238,6 +238,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 226 | B04-P25 | `fix/226-expired-then-completed` | Expired M2M session still completes on late pay; GET expire stays open-only |
 | 227 | B04-P26 | `fix/227-placeholder-pii-fail-closed` | Blank / customer@example.com refused on generate; Razorpay omits dummy phone |
 | 228 | B05-L24 | `fix/228-validate-balanced` | ValidateBalanced rejects empty and per-currency imbalance; $0 header is not saved |
+| 229 | B05-L25 | `fix/229-document-year-myt` | Receipt/invoice/CN year uses MYT, same clock as B2C consolidation |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

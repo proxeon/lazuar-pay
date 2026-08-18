@@ -13,8 +13,11 @@ public static class DocumentSeries
     public const string Invoice = "INV";
     public const string CreditNote = "CN";
 
-    public static string Prefix(string series, DateTime? utcNow = null) =>
-        $"{series}-{(utcNow ?? DateTime.UtcNow):yyyy}";
+    public static string Prefix(string series, DateTime? utcNow = null)
+    {
+        var myt = MalaysiaTime.ToMyt(utcNow ?? DateTime.UtcNow);
+        return $"{series}-{myt:yyyy}";
+    }
 
     public static string ReceiptPrefix(DateTime? utcNow = null) => Prefix(Receipt, utcNow);
     public static string QuotePrefix(DateTime? utcNow = null) => Prefix(Quote, utcNow);

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Events;
 using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
@@ -17,7 +18,7 @@ namespace Modules.Billing.Infrastructure.Workers;
 
 public class B2cConsolidationJob : BackgroundService
 {
-    private static readonly TimeZoneInfo MalaysiaTimeZone = ResolveMalaysiaTimeZone();
+    private static readonly TimeZoneInfo MalaysiaTimeZone = MalaysiaTime.Zone;
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<B2cConsolidationJob> _logger;
@@ -342,15 +343,4 @@ public class B2cConsolidationJob : BackgroundService
             .Where(l => l.AccountType == AccountTypes.AssetCash)
             .Sum(l => l.BaseCurrencyAmount);
 
-    private static TimeZoneInfo ResolveMalaysiaTimeZone()
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur");
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById("Singapore Standard Time");
-        }
-    }
 }
