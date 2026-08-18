@@ -102,7 +102,7 @@ public static class AuthEndpoints
 
         group.MapPost("/auth/logout", (HttpContext ctx) =>
         {
-            ctx.Response.Cookies.Delete("lazuar_auth");
+            AuthCookie.DeleteMerchant(ctx);
             return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
         });
 
@@ -170,14 +170,14 @@ public static class AuthEndpoints
             var user = await db.GlobalUsers.FindAsync(userId);
             if (user == null || !user.IsActive)
             {
-                ctx.Response.Cookies.Delete("lazuar_auth");
+                AuthCookie.DeleteMerchant(ctx);
                 return TypedResults.Unauthorized();
             }
 
             var stampClaim = principal.FindFirst("security_stamp")?.Value;
             if (stampClaim != user.SecurityStamp.ToString())
             {
-                ctx.Response.Cookies.Delete("lazuar_auth");
+                AuthCookie.DeleteMerchant(ctx);
                 return TypedResults.Unauthorized();
             }
 
@@ -232,14 +232,7 @@ public static class AuthEndpoints
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
         var isDev = ctx.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
 
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = !isDev,
-            SameSite = SameSiteMode.Lax,
-            Domain = isDev ? null : ".lazuar.com",
-            Expires = DateTime.UtcNow.AddHours(expiryHours)
-        };
+        var cookieOptions = AuthCookie.MerchantOptions(isDev, DateTime.UtcNow.AddHours(expiryHours));
 
         ctx.Response.Cookies.Append("lazuar_auth", token, cookieOptions);
     }

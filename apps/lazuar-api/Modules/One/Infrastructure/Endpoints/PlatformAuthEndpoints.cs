@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Modules.One.Contracts;
+using Modules.One.Infrastructure.Services;
 
 namespace Modules.One.Infrastructure;
 
@@ -65,7 +66,7 @@ public static class PlatformAuthEndpoints
 
         group.MapPost("/auth/logout", (HttpContext ctx) =>
         {
-            ctx.Response.Cookies.Delete("lazuar_admin_auth", new CookieOptions { Path = "/api/v1/platform" });
+            AuthCookie.DeleteAdmin(ctx);
             return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
         }).AllowAnonymous();
 
@@ -84,14 +85,14 @@ public static class PlatformAuthEndpoints
 
             if (user == null || !user.IsActive || !user.IsSystemAdmin)
             {
-                ctx.Response.Cookies.Delete("lazuar_admin_auth", new CookieOptions { Path = "/api/v1/platform" });
+                AuthCookie.DeleteAdmin(ctx);
                 return TypedResults.Unauthorized();
             }
 
             var stampClaim = principal.FindFirst("security_stamp")?.Value;
             if (stampClaim != user.SecurityStamp.ToString())
             {
-                ctx.Response.Cookies.Delete("lazuar_admin_auth", new CookieOptions { Path = "/api/v1/platform" });
+                AuthCookie.DeleteAdmin(ctx);
                 return TypedResults.Unauthorized();
             }
 
@@ -132,15 +133,7 @@ public static class PlatformAuthEndpoints
         var token = jwtService.GenerateToken(claims, secret, issuer, audience, expiryHours);
         var isDev = env.IsDevelopment();
 
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = !isDev,
-            SameSite = SameSiteMode.Lax,
-            Domain = isDev ? null : ".lazuar.com",
-            Path = "/api/v1/platform",
-            Expires = DateTime.UtcNow.AddHours(expiryHours)
-        };
+        var cookieOptions = AuthCookie.AdminOptions(isDev, DateTime.UtcNow.AddHours(expiryHours));
 
         ctx.Response.Cookies.Append("lazuar_admin_auth", token, cookieOptions);
     }
