@@ -153,6 +153,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 141 | B09-U12 | `fix/141-sales-docs-receipts` | Sales documents type is Official Receipt / Invoice / Tax Invoice, not B2C/B2B |
 | 142 | B09-U13 | `fix/142-portal-doc-lhdn-status` | Portal MyInvois column is blank on receipts and proformas |
 | 143 | B09-U14 | `fix/143-ops-role-chrome` | Ops shows the workspace role in the header and sidebar |
+| 144 | B09-U15 | `fix/144-dashboard-member-403` | Member 403 on billing/keys is not RM 0.00 or a gateway-down banner |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

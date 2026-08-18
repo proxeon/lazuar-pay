@@ -28,24 +28,26 @@ export default function ProductsPage() {
     enabled: !!activeWorkspaceId
   });
 
-  const { data: paymentConfigs, error: paymentConfigError } = useQuery({
+  const { data: paymentConfigs } = useQuery({
     queryKey: ["payment-config-status"],
     queryFn: async () => {
       const { data, error, response } = await client.GET("/admin/commerce/payment-config");
-      if (response.status === 404) return [];
+      if (response.status === 403) return { forbidden: true as const, items: [] as NonNullable<typeof data> };
+      if (response.status === 404) return { forbidden: false as const, items: [] as NonNullable<typeof data> };
       if (error) throw new Error(error.detail);
-      return data;
+      return { forbidden: false as const, items: data ?? [] };
     },
     enabled: !!activeWorkspaceId
   });
 
-  const { data: emailConfig, error: emailConfigError } = useQuery({
+  const { data: emailConfig } = useQuery({
     queryKey: ["email-config-status"],
     queryFn: async () => {
       const { data, error, response } = await client.GET("/admin/communications/email-config");
-      if (response.status === 404) return null;
+      if (response.status === 403) return { forbidden: true as const, config: null };
+      if (response.status === 404) return { forbidden: false as const, config: null };
       if (error) throw new Error(error.detail);
-      return data;
+      return { forbidden: false as const, config: data };
     },
     enabled: !!activeWorkspaceId
   });
@@ -61,8 +63,10 @@ export default function ProductsPage() {
   const activeWorkspaceSlug = entitlements?.find(e => e.workspace_id === activeWorkspaceId)?.workspace_slug;
   
   // FIX: Check if the array is empty or if no gateways have a valid API key
-  const showGatewayWarning = paymentConfigError || !paymentConfigs || paymentConfigs.length === 0 || !paymentConfigs.some(c => c.is_active && (c.has_api_key || c.has_secret_key));
-  const hasValidEmailConfig = !emailConfigError && emailConfig && emailConfig.is_active && (emailConfig.has_api_key ?? true);
+  const showGatewayWarning = !!paymentConfigs && !paymentConfigs.forbidden
+    && (paymentConfigs.items.length === 0 || !paymentConfigs.items.some(c => c.is_active && (c.has_api_key || c.has_secret_key)));
+  const hasValidEmailConfig = !!emailConfig && (emailConfig.forbidden
+    || (!!emailConfig.config && emailConfig.config.is_active && (emailConfig.config.has_api_key ?? true)));
 
   const renderFulfillmentBadges = (targets: string[] | undefined) => {
     const visible = filterHiddenFulfillmentTargets(targets);

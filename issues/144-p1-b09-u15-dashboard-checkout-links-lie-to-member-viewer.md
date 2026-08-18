@@ -2,7 +2,8 @@
 number: "144"
 id: B09-U15
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/144-dashboard-member-403
 source: plans/009-bugs/09-frontends-ops-portal-admin.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 144 — B09-U15 — Dashboard + Checkout Links lie to Member/Viewer
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/09-frontends-ops-portal-admin.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/144-dashboard-member-403`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

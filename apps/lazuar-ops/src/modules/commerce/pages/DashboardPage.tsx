@@ -27,9 +27,10 @@ export default function DashboardPage() {
   const { data: financials, isLoading: financialsLoading } = useQuery({
     queryKey: ["financial-summary"],
     queryFn: async () => {
-      const { data, error } = await client.GET("/admin/billing/summary");
+      const { data, error, response } = await client.GET("/admin/billing/summary");
+      if (response.status === 403) return { forbidden: true as const, data: null };
       if (error) throw new Error(error.detail);
-      return data;
+      return { forbidden: false as const, data };
     }
   });
 
@@ -42,23 +43,25 @@ export default function DashboardPage() {
     }
   });
 
-  const { data: paymentConfigs, error: paymentConfigError, isLoading: paymentConfigLoading } = useQuery({
+  const { data: paymentConfigs, isLoading: paymentConfigLoading } = useQuery({
     queryKey: ["payment-config-status"],
     queryFn: async () => {
       const { data, error, response } = await client.GET("/admin/commerce/payment-config");
-      if (response.status === 404) return [];
+      if (response.status === 403) return { forbidden: true as const, items: [] as NonNullable<typeof data> };
+      if (response.status === 404) return { forbidden: false as const, items: [] as NonNullable<typeof data> };
       if (error) throw new Error(error.detail);
-      return data;
+      return { forbidden: false as const, items: data ?? [] };
     }
   });
 
-  const { data: emailConfig, error: emailConfigError, isLoading: emailConfigLoading } = useQuery({
+  const { data: emailConfig, isLoading: emailConfigLoading } = useQuery({
     queryKey: ["email-config-status"],
     queryFn: async () => {
       const { data, error, response } = await client.GET("/admin/communications/email-config");
-      if (response.status === 404) return null;
+      if (response.status === 403) return { forbidden: true as const, config: null };
+      if (response.status === 404) return { forbidden: false as const, config: null };
       if (error) throw new Error(error.detail);
-      return data;
+      return { forbidden: false as const, config: data };
     }
   });
 
@@ -73,7 +76,7 @@ export default function DashboardPage() {
   const formatMYR = (val: number) => `RM ${val.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const topMetrics = [
-    { label: "Net Cash in Bank", value: formatMYR(financials?.net_revenue || 0), icon: DollarSign },
+    { label: "Net Cash in Bank", value: financials?.forbidden ? "—" : formatMYR(financials?.data?.net_revenue || 0), icon: DollarSign },
     { label: "MRR", value: formatMYR(stats?.mrr || 0), icon: DollarSign, tip: "Committed monthly equivalent of active memberships. Not cash. Past-due is excluded." },
     { label: "ARR", value: formatMYR(stats?.arr ?? ((stats?.mrr || 0) * 12)), icon: DollarSign, tip: "Committed monthly equivalent of active memberships. Not cash. Past-due is excluded." },
     { label: "Active Subscribers", value: stats?.active_subscribers || 0, icon: Users },
@@ -82,8 +85,10 @@ export default function DashboardPage() {
     { label: "Recovered (lifetime)", value: formatMYR(stats?.recovered_revenue || 0), icon: RotateCcw },
   ];
 
-  const gatewayReady = !paymentConfigError && !!paymentConfigs?.some((c) => c.is_active && (c.has_api_key || c.has_secret_key));
-  const emailReady = !emailConfigError && !!emailConfig && emailConfig.is_active && emailConfig.has_api_key !== false;
+  const gatewayReady = !!paymentConfigs?.forbidden
+    || !!paymentConfigs?.items?.some((c) => c.is_active && (c.has_api_key || c.has_secret_key));
+  const emailReady = !!emailConfig?.forbidden
+    || (!!emailConfig?.config && emailConfig.config.is_active && emailConfig.config.has_api_key !== false);
   const firstProduct = (products || [])[0] as { slug?: string } | undefined;
   const productReady = (products || []).length > 0;
   const linkReady = productReady && !!workspaceSlug && !!firstProduct?.slug;
