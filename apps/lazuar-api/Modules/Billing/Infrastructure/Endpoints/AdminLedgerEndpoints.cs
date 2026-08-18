@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Modules.Billing.Contracts;
 
@@ -33,17 +34,25 @@ public static class AdminLedgerEndpoints
             return TypedResults.Ok(response);
         });
 
-        admin.MapGet("/ledger/{id:guid}/document", Task<Ok<DocumentDownloadUrlDto>> (
+        admin.MapGet("/ledger/{id:guid}/document", async Task<Results<Ok<DocumentDownloadUrlDto>, NotFound>> (
             Guid id,
             IExecutionContextAccessor ctx,
+            BillingDbContext db,
             IR2StorageService r2Service,
             IConfiguration config) =>
         {
+            var exists = await db.LedgerEntries.AsNoTracking()
+                .AnyAsync(e => e.Id == id && e.OrganizationId == ctx.TenantId);
+            if (!exists)
+            {
+                return TypedResults.NotFound();
+            }
+
             var bucket = config["R2_BUCKET_NAME"] ?? "lazuar-vault-test";
             var key = $"vault/{ctx.TenantId}/documents/{id}.pdf";
 
             var downloadUrl = r2Service.GetPresignedDownloadUrl(bucket, key, 5);
-            return Task.FromResult(TypedResults.Ok(new DocumentDownloadUrlDto { Url = downloadUrl }));
+            return TypedResults.Ok(new DocumentDownloadUrlDto { Url = downloadUrl });
         });
 
         admin.MapGet("/summary", async Task<Ok<FinancialSummaryDto>> (

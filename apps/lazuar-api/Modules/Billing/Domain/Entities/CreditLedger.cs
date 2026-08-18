@@ -3,6 +3,10 @@ using BuildingBlocks.Domain;
 
 namespace Modules.Billing.Domain.Entities;
 
+/// <summary>
+/// Child of the org-scoped wallet. No OrganizationId — query only via
+/// TenantCreditBalanceId from a tenant-filtered wallet.
+/// </summary>
 public class CreditLedger : Entity
 {
     public Guid Id { get; private set; }

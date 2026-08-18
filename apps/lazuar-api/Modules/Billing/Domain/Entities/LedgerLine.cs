@@ -3,6 +3,10 @@ using BuildingBlocks.Domain;
 
 namespace Modules.Billing.Domain.Entities;
 
+/// <summary>
+/// Child of <see cref="Aggregates.LedgerEntry"/>. No OrganizationId — query only via
+/// org-scoped header ids (never raw DbSet&lt;LedgerLine&gt;).
+/// </summary>
 public class LedgerLine : Entity
 {
     public Guid Id { get; private set; }

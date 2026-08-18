@@ -245,6 +245,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 233 | B05-L29 | `fix/233-manual-enroll-sst` | Manual enroll / mark-paid split SST and pass TaxAmount to B2B type-01 |
 | 234 | B05-L30 | `fix/234-billing-dead-writers` | README lists live vs parked Billing writers; recognition stays unhosted |
 | 235 | B05-L31 | `fix/235-credit-hold-unique` | CreditHold unique per org+correlation; exhaust SETTLED; remainder RELEASED |
+| 236 | B05-L32 | `fix/236-ledger-document-404` | Ledger PDF 404 unless header belongs to tenant; child tables stay parent-scoped |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
