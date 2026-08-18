@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from "./components/Sidebar";
@@ -40,6 +40,8 @@ export interface OpsOutletContext {
   activeWorkspaceId: string | null;
   entitlements: EntitlementDto[];
   onWorkspaceSelect: (id: string) => void;
+  isMobile: boolean;
+  onOpenSidebar: () => void;
 }
 
 function OpsLayout() {
@@ -52,11 +54,15 @@ function OpsLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const wasMobile = useRef<boolean | null>(null);
   useEffect(() => {
     const checkMobile = () => {
       const mobileStatus = window.innerWidth < 768;
       setIsMobile(mobileStatus);
-      if (mobileStatus) setIsSidebarOpen(false);
+      if (wasMobile.current !== true && mobileStatus) {
+        setIsSidebarOpen(false);
+      }
+      wasMobile.current = mobileStatus;
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -156,7 +162,9 @@ function OpsLayout() {
         <Outlet context={{ 
           activeWorkspaceId,
           entitlements: entitlements || [],
-          onWorkspaceSelect: handleWorkspaceChange
+          onWorkspaceSelect: handleWorkspaceChange,
+          isMobile,
+          onOpenSidebar: () => setIsSidebarOpen(true)
         }} />
         
         {isMobile && isSidebarOpen && (

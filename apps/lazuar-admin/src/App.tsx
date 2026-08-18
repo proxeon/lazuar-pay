@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
 import { client, type AuthUser } from "./lib/api-client";
 import PlatformPaymentSettingsPage from "./modules/platform/pages/PlatformPaymentSettingsPage";
+
+export interface AdminOutletContext {
+  isMobile: boolean;
+  onOpenSidebar: () => void;
+}
 
 function SuperadminLayout() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -14,11 +19,15 @@ function SuperadminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const wasMobile = useRef<boolean | null>(null);
   useEffect(() => {
     const checkMobile = () => {
       const mobileStatus = window.innerWidth < 768;
       setIsMobile(mobileStatus);
-      if (mobileStatus) setIsSidebarOpen(false);
+      if (wasMobile.current !== true && mobileStatus) {
+        setIsSidebarOpen(false);
+      }
+      wasMobile.current = mobileStatus;
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -73,7 +82,7 @@ function SuperadminLayout() {
       />
       
       <main className="flex-1 flex flex-col overflow-hidden w-full relative bg-white">
-        <Outlet />
+        <Outlet context={{ isMobile, onOpenSidebar: () => setIsSidebarOpen(true) }} />
         
         {isMobile && isSidebarOpen && (
           <div className="fixed inset-0 bg-black/10 z-20 backdrop-blur-sm" onClick={handleToggleSidebar} />

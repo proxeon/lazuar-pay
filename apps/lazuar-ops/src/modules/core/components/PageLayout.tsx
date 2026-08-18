@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect, useRef } from "react";
 import { Link, useOutletContext } from "react-router-dom";
-import { ChevronRight, ChevronDown, Check, Plus, Building2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Check, Plus, Building2, PanelLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { OpsOutletContext } from "../../../App";
 import CreateWorkspaceModal from "../../workspace/components/CreateWorkspaceModal";
@@ -19,7 +19,7 @@ interface PageLayoutProps {
 }
 
 export default function PageLayout({ title, description, breadcrumbs, actionButton, children }: PageLayoutProps) {
-  const { activeWorkspaceId, entitlements, onWorkspaceSelect } = useOutletContext<OpsOutletContext>();
+  const { activeWorkspaceId, entitlements, onWorkspaceSelect, isMobile, onOpenSidebar } = useOutletContext<OpsOutletContext>();
 
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -43,7 +43,16 @@ export default function PageLayout({ title, description, breadcrumbs, actionButt
       {/* Locked to h-14 to perfectly align with the Sidebar grid */}
       <div className="flex h-14 items-center px-6 md:px-8 border-b border-[#e5e5e5] bg-white shrink-0 z-20">
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
-          
+          {isMobile && (
+            <button
+              type="button"
+              onClick={onOpenSidebar}
+              className="md:hidden mr-3 -ml-1 h-8 w-8 inline-flex items-center justify-center text-[#52525b] hover:bg-[#f4f4f5] rounded-sm"
+              aria-label="Open navigation"
+            >
+              <PanelLeft size={16} />
+            </button>
+          )}
           <nav className="flex items-center gap-1.5 shrink-0 pr-4">
             {breadcrumbs && breadcrumbs.map((bc, idx) => (
               <div key={idx} className="flex items-center gap-1.5">
