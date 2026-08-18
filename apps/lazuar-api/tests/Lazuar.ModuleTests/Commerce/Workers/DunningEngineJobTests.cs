@@ -1311,6 +1311,47 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task Snapshot_GuidOnlyPin_LiveEditBeforeFirstTick_DoesNotBackfillEditedPlan()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5, assignSnapshot: false);
+        sub.AssignDunningCampaign(campaign.Id);
+        await _db.SaveChangesAsync();
+
+        ReplaceLiveSteps(campaign, (0, "EMAIL", "Edited", "New live body", null));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.DunningCampaignSnapshotJson.Should().BeNull();
+        reloaded.ReminderLogs.Should().BeEmpty();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("email_body").GetString() == "New live body"));
+    }
+
+    [Test]
+    public async Task Snapshot_CorruptJson_DoesNotCopyLive()
+    {
+        var (_, sub, campaign) = await SeedSnapshotRunAsync(daysOverdue: 5, assignSnapshot: true);
+        typeof(Subscription).GetProperty(nameof(Subscription.DunningCampaignSnapshotJson))!
+            .SetValue(sub, "{not-json");
+        await _db.SaveChangesAsync();
+
+        ReplaceLiveSteps(campaign, (0, "EMAIL", "Edited", "Should not send", null));
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await ReloadSubAsync(sub.Id);
+        reloaded.DunningCampaignSnapshotJson.Should().Be("{not-json");
+        reloaded.ReminderLogs.Should().BeEmpty();
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("email_body").GetString() == "Should not send"));
+    }
+
+    [Test]
     public async Task Snapshot_E8_SecondTickDoesNotReinsertSameOffset()
     {
         var (_, sub, _) = await SeedSnapshotRunAsync(daysOverdue: 5);

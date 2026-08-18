@@ -309,8 +309,9 @@ public sealed class PastDueDunningProcessor
     }
 
     /// <summary>
-    /// Prefer the frozen JSON. If id is set and JSON is missing/corrupt, copy the live campaign
-    /// (including archived) so pre-migration rows do not run without a plan.
+    /// Prefer the frozen JSON. Null JSON (pre-migration / Guid-only pin) may copy live once,
+    /// but never after the campaign was edited (B03-C19). Corrupt JSON and CampaignId
+    /// mismatch fail closed — they must not adopt later live edits.
     /// </summary>
     private async Task<DunningCampaignSnapshot?> ResolveSnapshotAsync(
         CommerceDbContext db,
@@ -321,6 +322,22 @@ public sealed class PastDueDunningProcessor
         if (parsed != null && parsed.CampaignId == sub.CurrentDunningCampaignId)
         {
             return parsed;
+        }
+
+        if (parsed != null)
+        {
+            _logger.LogWarning(
+                "Frozen dunning snapshot campaign {SnapshotCampaignId} does not match assigned {AssignedCampaignId} for subscription {SubscriptionId}; not copying live.",
+                parsed.CampaignId, sub.CurrentDunningCampaignId, sub.Id);
+            return parsed;
+        }
+
+        if (!string.IsNullOrWhiteSpace(sub.DunningCampaignSnapshotJson))
+        {
+            _logger.LogWarning(
+                "Corrupt dunning snapshot on subscription {SubscriptionId}; not backfilling from live.",
+                sub.Id);
+            return null;
         }
 
         if (sub.CurrentDunningCampaignId == null)
@@ -339,6 +356,15 @@ public sealed class PastDueDunningProcessor
             _logger.LogWarning(
                 "No dunning campaign {CampaignId} for subscription {SubscriptionId}; cannot backfill snapshot.",
                 sub.CurrentDunningCampaignId, sub.Id);
+            return null;
+        }
+
+        // Guid-only pin then an operator edit: first tick must not freeze the edited plan.
+        if (live.UpdatedAt > sub.UpdatedAt)
+        {
+            _logger.LogWarning(
+                "Not backfilling snapshot for subscription {SubscriptionId}: campaign {CampaignId} was edited after the pin.",
+                sub.Id, live.Id);
             return null;
         }
 

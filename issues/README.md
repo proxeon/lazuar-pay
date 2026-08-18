@@ -216,6 +216,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 204 | B03-C16 | `fix/204-predunning-include-trialing` | Pre-dunning claim includes TRIALING (trial-ending comms) |
 | 205 | B03-C17 | `fix/205-base64url-portal-tokens` | Portal tokens are Base64url; mint sites Uri.EscapeDataString |
 | 206 | B03-C18 | `fix/206-setupfutureusage-only-when-vaults` | Renewal/arrears SetupFutureUsage only on Stripe/CHIP |
+| 207 | B03-C19 | `fix/207-snapshot-no-live-backfill` | Dunning snapshot does not copy a live campaign edited after pin |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
