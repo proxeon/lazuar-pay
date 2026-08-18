@@ -219,7 +219,7 @@ export default async function AggregatedPortalPage({
                   <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Number</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Amount</th>
-                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">MyInvois</th>
                   <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"></th>
                 </tr>
               </thead>
@@ -230,7 +230,11 @@ export default async function AggregatedPortalPage({
                     <td className="px-4 py-3 text-xs font-mono font-semibold">{doc.document_number || "—"}</td>
                     <td className="px-4 py-3 text-xs">{doc.type}</td>
                     <td className="px-4 py-3 text-xs font-mono text-right">{doc.currency} {doc.amount.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{doc.lhdn_status || "—"}</td>
+                    <td className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {doc.type === "Official Receipt" || doc.type === "Proforma Invoice" || doc.type === "Draft Quotation"
+                        ? "—"
+                        : (doc.lhdn_status && doc.lhdn_status !== "B2C_RECEIPT" ? doc.lhdn_status : "—")}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       {doc.download_url ? (
                         <a href={doc.download_url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase tracking-widest text-foreground hover:underline">
