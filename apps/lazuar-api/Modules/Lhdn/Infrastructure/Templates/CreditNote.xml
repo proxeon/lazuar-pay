@@ -18,13 +18,13 @@
 	<cac:InvoicePeriod>
 		<cbc:StartDate>{{ billing_period_start_string }}</cbc:StartDate>
 		<cbc:EndDate>{{ billing_period_end_string }}</cbc:EndDate>
-		<cbc:Description>Monthly</cbc:Description>
+		<cbc:Description>{{ billing_period_description }}</cbc:Description>
 	</cac:InvoicePeriod>
 
 	<!-- Original Invoice Reference -->
 	<cac:BillingReference>
 		<cac:InvoiceDocumentReference>
-			<cbc:ID>NA</cbc:ID>
+			<cbc:ID>{{ if original_lhdn_uuid != "" }}{{ original_lhdn_uuid }}{{ else }}NA{{ end }}</cbc:ID>
 			<cbc:UUID>{{ original_lhdn_uuid }}</cbc:UUID>
 		</cac:InvoiceDocumentReference>
 	</cac:BillingReference>

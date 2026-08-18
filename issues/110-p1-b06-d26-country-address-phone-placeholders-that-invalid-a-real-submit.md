@@ -2,7 +2,8 @@
 number: "110"
 id: B06-D26
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/110-placeholder-invalid
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 110 — B06-D26 — Country / address / phone placeholders that INVALID a real submit
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/06-lhdn-invoices-documents.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/110-placeholder-invalid`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

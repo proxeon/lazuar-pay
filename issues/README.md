@@ -119,6 +119,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 107 | B06-D22 | `fix/107-original-doc-cancel-double` | Original doc lookup prefers UUID; cancel+refund is one contra |
 | 108 | B06-D24 | `fix/108-cons-banner-valid` | VALID keeps B2C-CONS- on TaxInvoiceId; cons submit key is stable |
 | 109 | B06-D25 | `fix/109-taxdocument-internal-unique` | TaxDocument (org, InternalReferenceId) is unique |
+| 110 | B06-D26 | `fix/110-placeholder-invalid` | Missing state is 17; no dummy phone; period is One-time unless cons |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

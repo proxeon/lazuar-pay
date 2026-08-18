@@ -12,6 +12,7 @@ public class UblInvoiceViewModel
     public string IssueTimeString { get; set; } = "";
     public string BillingPeriodStartString { get; set; } = "";
     public string BillingPeriodEndString { get; set; } = "";
+    public string BillingPeriodDescription { get; set; } = "One-time";
 
     public decimal TotalExcludingTax { get; set; }
     public decimal TotalTax { get; set; }

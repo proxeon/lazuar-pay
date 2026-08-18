@@ -40,12 +40,12 @@ public static class ViewModelMapper
             IdType = string.IsNullOrWhiteSpace(config.IdType) ? "BRN" : config.IdType,
             IdValue = string.IsNullOrWhiteSpace(config.IdValue) ? "NA" : config.IdValue,
             MsicCode = string.IsNullOrWhiteSpace(config.MsicCode) ? "00000" : config.MsicCode,
-            Phone = "+60000000000",
+            Phone = "",
             Email = "",
             AddressLine1 = string.IsNullOrWhiteSpace(config.AddressLine1) ? "NA" : config.AddressLine1,
             City = string.IsNullOrWhiteSpace(config.City) ? "NA" : config.City,
             PostalCode = string.IsNullOrWhiteSpace(config.Postal) ? "00000" : config.Postal,
-            StateCode = string.IsNullOrWhiteSpace(config.State) ? "14" : config.State.TrimStart('_'),
+            StateCode = string.IsNullOrWhiteSpace(config.State) ? "17" : config.State.TrimStart('_'),
             CountryCode = string.IsNullOrWhiteSpace(config.Country) ? "MYS" : config.Country,
             SstNumber = string.IsNullOrWhiteSpace(supplierSstNumber) ? null : supplierSstNumber.Trim()
         };
@@ -57,11 +57,13 @@ public static class ViewModelMapper
             IdType = request.Buyer_id_type.ToString(),
             IdValue = string.IsNullOrWhiteSpace(request.Buyer_id_value) ? "NA" : request.Buyer_id_value,
             Email = string.IsNullOrWhiteSpace(request.Buyer_email) ? "" : request.Buyer_email,
-            Phone = string.IsNullOrWhiteSpace(request.Buyer_phone) ? "+60000000000" : request.Buyer_phone,
+            Phone = string.IsNullOrWhiteSpace(request.Buyer_phone) ? "" : request.Buyer_phone,
             AddressLine1 = string.IsNullOrWhiteSpace(request.Buyer_address?.Line1) ? "NA" : request.Buyer_address.Line1,
             City = string.IsNullOrWhiteSpace(request.Buyer_address?.City) ? "NA" : request.Buyer_address.City,
             PostalCode = string.IsNullOrWhiteSpace(request.Buyer_address?.Postal_code) ? "00000" : request.Buyer_address.Postal_code,
-            StateCode = request.Buyer_address?.State_code.ToString().TrimStart('_') ?? "14",
+            StateCode = string.IsNullOrWhiteSpace(request.Buyer_address?.Line1)
+                ? "17"
+                : request.Buyer_address.State_code.ToString().TrimStart('_'),
             CountryCode = string.IsNullOrWhiteSpace(request.Buyer_address?.Country_code) ? "MYS" : request.Buyer_address.Country_code,
             MsicCode = "00000" 
         };
@@ -76,6 +78,7 @@ public static class ViewModelMapper
             IssueTimeString = issueDate.ToString("HH:mm:ssZ"),
             BillingPeriodStartString = startDate.ToString("yyyy-MM-dd"),
             BillingPeriodEndString = endDate.ToString("yyyy-MM-dd"),
+            BillingPeriodDescription = isConsolidatedB2c ? "Monthly" : "One-time",
             TotalExcludingTax = (decimal)request.Total_excluding_tax,
             TotalTax = (decimal)request.Total_tax,
             TotalIncludingTax = (decimal)request.Total_including_tax,

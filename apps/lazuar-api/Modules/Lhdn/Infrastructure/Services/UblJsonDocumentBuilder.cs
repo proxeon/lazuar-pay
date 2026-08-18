@@ -24,7 +24,9 @@ public static class UblJsonDocumentBuilder
             {
                 ["StartDate"] = Text(model.BillingPeriodStartString),
                 ["EndDate"] = Text(model.BillingPeriodEndString),
-                ["Description"] = Text("Monthly")
+                ["Description"] = Text(string.IsNullOrWhiteSpace(model.BillingPeriodDescription)
+                    ? "One-time"
+                    : model.BillingPeriodDescription)
             }),
             ["AccountingSupplierParty"] = new JsonArray(new JsonObject
             {

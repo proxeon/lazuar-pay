@@ -18,7 +18,7 @@
 	<cac:InvoicePeriod>
 		<cbc:StartDate>{{ billing_period_start_string }}</cbc:StartDate>
 		<cbc:EndDate>{{ billing_period_end_string }}</cbc:EndDate>
-		<cbc:Description>Monthly</cbc:Description>
+		<cbc:Description>{{ billing_period_description }}</cbc:Description>
 	</cac:InvoicePeriod>
 
 	<cac:BillingReference>
