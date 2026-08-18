@@ -2,7 +2,8 @@
 number: "230"
 id: B05-L26
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/230-summary-cash-label
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 230 — B05-L26 — Summary is P&amp;L net, labelled cash, currency hardcoded MYR
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/230-summary-cash-label`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

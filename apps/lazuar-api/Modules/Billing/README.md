@@ -6,7 +6,7 @@ The `Billing` module is the **Core Domain for Financial Truth**. It acts as the 
 ## 2. Core Responsibilities
 * **Double-Entry Bookkeeping:** Recording every financial event as balanced `LedgerEntry` and `LedgerLine` records (Assets, Liabilities, Revenue, Expenses).
 * **Revenue Recognition:** Amortizing upfront annual payments or event tickets into realized MRR over time via `DeferredRevenueSchedule` (**not live** until schedules are created from product periods — see §6).
-* **Net Profit Calculation:** Deducting exact Gateway Fees (Stripe/Billplz) and Affiliate Commissions from Gross Revenue to calculate actual cash in the bank (`GET /admin/billing/net-profit`).
+* **Net revenue / net profit:** `GET /admin/billing/summary` `net_revenue` is P&L net (gross − refunds − discounts − booked gateway fees − tax). It is **not** `SUM(ASSET_CASH)` and ignores Hub/pack expense. `GET /admin/billing/net-profit` also subtracts commission.
 * **Tax Liability Tracking:** Separating collected SST/VAT into liability accounts so it is never miscounted as platform profit.
 * **Accounts Receivable (AR) & Payable (AP):** Tracking unpaid B2B invoices and accrued affiliate payouts.
 * **LHDN e-Invoice Prep:** Maintaining customer receipt numbers, consolidation eligibility, and LHDN document UUIDs/statuses for Malaysian compliance.

@@ -75,7 +75,7 @@ export const PROMPT_LIBRARY: PromptCategory[] = [
     title: "Financial Health",
     description: "Revenue, fees, and tax liabilities",
     prompts: [
-      { label: "Net Profit & Fees", query: "What is our exact Net Cash in Bank after deducting Stripe and Billplz gateway fees?" },
+      { label: "Net Profit & Fees", query: "What is our net revenue after booked gateway fees and tax? Do not call it cash in the bank." },
       { label: "Tax Liabilities", query: "How much SST/Tax liability do we currently owe the government from our recent sales?" },
       { label: "Gross vs Net Revenue", query: "Give me a breakdown of our Gross Revenue versus our actual Recognized Revenue." },
     ]

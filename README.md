@@ -59,7 +59,7 @@ Marketing and presentation layers are fully decoupled from our transactional cor
 We do not act as a Merchant of Record (MoR) and we do not take 8% transaction fees. You plug in your own Stripe, Billplz, or CHIP API keys. Money flows instantly to your merchant accounts. 
 
 ### 3. Absolute Financial Truth (Double-Entry Ledger)
-To the Ledger, all money looks the same. Whether a customer pays via Stripe, FPX, or Bitcoin, the `Billing` module executes strict double-entry bookkeeping (`Cash` + `Fee` - `Gross Revenue` - `Tax` = `0`). This isolates exact gateway fees and tax liabilities, giving founders a true "Net Cash in Bank" metric.
+To the Ledger, all money looks the same. Whether a customer pays via Stripe, FPX, or Bitcoin, the `Billing` module executes strict double-entry bookkeeping (`Cash` + `Fee` - `Gross Revenue` - `Tax` = `0`). Summary `net_revenue` is that P&L net (not bank cash).
 
 ### 4. Prepaid Utility Wallet
 Live LHDN MyInvois submissions deduct micro-credits from a prepaid `TenantCreditBalance` wallet. Console/stub WhatsApp is **not** billed. We do not take a GMV cut.

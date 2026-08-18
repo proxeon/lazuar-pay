@@ -76,7 +76,7 @@ export default function DashboardPage() {
   const formatMYR = (val: number) => `RM ${val.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const topMetrics = [
-    { label: "Net Cash in Bank", value: financials?.forbidden ? "—" : formatMYR(financials?.data?.net_revenue || 0), icon: DollarSign },
+    { label: "Net revenue (after fees & tax)", value: financials?.forbidden ? "—" : formatMYR(financials?.data?.net_revenue || 0), icon: DollarSign, tip: "P&L net from the ledger (gross − refunds − discounts − known gateway fees − tax). Not bank cash. Hub/pack spend is excluded." },
     { label: "MRR", value: formatMYR(stats?.mrr || 0), icon: DollarSign, tip: "Committed monthly equivalent of active memberships. Not cash. Past-due is excluded." },
     { label: "ARR", value: formatMYR(stats?.arr ?? ((stats?.mrr || 0) * 12)), icon: DollarSign, tip: "Committed monthly equivalent of active memberships. Not cash. Past-due is excluded." },
     { label: "Active Subscribers", value: stats?.active_subscribers || 0, icon: Users },
