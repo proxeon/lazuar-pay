@@ -19,8 +19,9 @@ type TransactionLogDto = components["schemas"]["Commerce.TransactionLogDto"];
 
 export default function SubscribersPage() {
   const { activeWorkspaceId, entitlements } = useOutletContext<OpsOutletContext>();
-  const canWrite = (entitlements.find(e => e.workspace_id === activeWorkspaceId)?.role ?? "")
-    .toUpperCase() !== "VIEWER";
+  const workspaceRole = (entitlements.find(e => e.workspace_id === activeWorkspaceId)?.role ?? "").toUpperCase();
+  const canWrite = workspaceRole !== "VIEWER";
+  const canAnonymize = workspaceRole === "ADMIN" || workspaceRole === "SUPER_ADMIN";
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -680,6 +681,7 @@ export default function SubscribersPage() {
                     {activeAction === "keep" && <Loader2 size={12} className="animate-spin" />} Keep plan
                   </button>
                 )}
+                {canAnonymize && (
                 <button
                   onClick={() => {
                     if (!selectedSub) return;
@@ -693,6 +695,7 @@ export default function SubscribersPage() {
                 >
                   {activeAction === "anonymize" && <Loader2 size={12} className="animate-spin" />} Anonymize
                 </button>
+                )}
                 {!selectedSub.is_reminder_only && (
                   <button
                     onClick={async () => {

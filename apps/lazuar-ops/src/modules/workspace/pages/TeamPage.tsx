@@ -5,11 +5,13 @@ import { toast } from "sonner";
 import { client, type components } from "../../../lib/api-client";
 import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
+import type { OpsOutletContext } from "../../../App";
 
 type WorkspaceMemberDto = components["schemas"]["One.WorkspaceMemberDto"];
 
 export default function TeamPage() {
-  const { activeWorkspaceId } = useOutletContext<{ activeWorkspaceId: string }>();
+  const { activeWorkspaceId, role: workspaceRole } = useOutletContext<OpsOutletContext>();
+  const canInvite = workspaceRole === "ADMIN" || workspaceRole === "SUPER_ADMIN";
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("MEMBER");
@@ -63,6 +65,7 @@ export default function TeamPage() {
       breadcrumbs={[{ label: "Workspace", href: "/workspace/general" }, { label: "Team" }]}
     >
       <div className="bg-white border border-[#e5e5e5] flex flex-col">
+        {canInvite && (
         <form
           className="px-5 py-4 border-b border-[#f4f4f5] flex flex-col sm:flex-row gap-3 bg-[#fafafa]/50"
           onSubmit={(e) => {
@@ -96,6 +99,7 @@ export default function TeamPage() {
             {inviteMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : "Invite"}
           </button>
         </form>
+        )}
 
         <div className="divide-y divide-[#f4f4f5]">
           {isLoading && (

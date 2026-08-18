@@ -163,6 +163,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 151 | B09-U22 | `fix/151-email-missing-not-gateway` | Missing Resend is not labeled a payment-gateway outage |
 | 152 | B09-U23 | `fix/152-period-started-label` | current_period_end is labeled Period ends, not Period started |
 | 153 | B09-U24 | `fix/153-admin-returnurl-search` | Admin login returnUrl keeps the query string, like ops |
+| 154 | B09-U25 | `fix/154-role-gated-buttons` | Anonymize, Invite, and Save credentials only show for ADMIN |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

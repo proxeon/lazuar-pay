@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { client } from "../../../lib/api-client";
+import { useOutletContext } from "react-router-dom";
 import PageLayout from "../../core/components/PageLayout";
+import type { OpsOutletContext } from "../../../App";
 
 type GatewayType = "STRIPE" | "BILLPLZ" | "RAZORPAY" | "CHIP" | "XENDIT";
 
@@ -20,6 +22,8 @@ type PaymentConfigRow = {
 };
 
 export default function PaymentSettingsPage() {
+  const { role } = useOutletContext<OpsOutletContext>();
+  const canSaveVault = role === "ADMIN" || role === "SUPER_ADMIN";
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -80,6 +84,7 @@ export default function PaymentSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSaveVault) return;
 
     if (gatewayType === "BILLPLZ") {
       if (!hasWebhookSecret && webhookSecret.trim().length !== 128) {
@@ -430,6 +435,7 @@ export default function PaymentSettingsPage() {
               </div>
             </div>
 
+            {canSaveVault && (
             <div className="flex items-center justify-end p-5 border-t border-[#f4f4f5] bg-[#fafafa]/50 mt-auto">
               <button
                 type="submit"
@@ -439,6 +445,7 @@ export default function PaymentSettingsPage() {
                 {isSaving && <Loader2 size={13} className="animate-spin" />} Save Credentials
               </button>
             </div>
+            )}
           </form>
         )}
       </div>
