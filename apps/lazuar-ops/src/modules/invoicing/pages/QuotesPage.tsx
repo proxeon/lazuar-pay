@@ -54,7 +54,7 @@ export default function QuotesPage() {
       <div className="bg-white border border-[#e5e5e5] rounded-none flex flex-col h-full min-h-[600px]">
         <div className="px-5 py-4 border-b border-[#f4f4f5] flex items-center justify-between bg-[#fafafa]/50">
           <div className="flex items-center gap-2 text-[11px] text-[#71717a] font-mono">
-            <FileText size={14} /> Tracking ad-hoc invoices
+            <FileText size={14} /> Tracking quotes &amp; proforma
           </div>
           <div className="text-[11px] text-[#71717a] font-mono">
             {response ? `Total: ${response.total_count}` : "..."}

@@ -2,7 +2,8 @@
 number: "254"
 id: B06-D35
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/254-quotes-tracking-copy
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -63,4 +64,8 @@ Change the toolbar to “Tracking quotes & proforma” (or drop the chip). Do no
 
 ### Evaluation notes
 Cheap leftover lie listed in 009 §10 item 10 with D07/D27/D28. Still P2. Not blocked. Not a 161–200 residual.
+
+## Resolution
+
+Quotes toolbar now says “Tracking quotes & proforma.” Paid INV- objects are unchanged.
 

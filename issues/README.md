@@ -263,6 +263,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 251 | B06-D32 | `fix/251-needs-buyer-tin` | Ops collect-TIN converts parked large B2C to type-01 B2B submit |
 | 252 | B06-D33 | `fix/252-cancel-split-brain` | Supplier cancel mutates status only after MyInvois accepts |
 | 253 | B06-D34 | `fix/253-tin-not-on-file-docs` | W2 stationery done-file matches omit-empty-TIN factory |
+| 254 | B06-D35 | `fix/254-quotes-tracking-copy` | Quotes toolbar tracks quotes & proforma, not invoices |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -75,4 +75,16 @@ public class LhdnHonestyCopyTests
         Assert.That(text, Does.Contain("omits** the TIN line"));
         Assert.That(text, Does.Contain("never “TIN not on file”"));
     }
+
+    [Test]
+    public void QuotesPage_DoesNotTrackAdHocInvoices()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..", "..",
+            "lazuar-ops", "src", "modules", "invoicing", "pages", "QuotesPage.tsx"));
+        var text = File.ReadAllText(path);
+        Assert.That(text, Does.Contain("Tracking quotes"));
+        Assert.That(text, Does.Not.Contain("Tracking ad-hoc invoices"));
+    }
 }
