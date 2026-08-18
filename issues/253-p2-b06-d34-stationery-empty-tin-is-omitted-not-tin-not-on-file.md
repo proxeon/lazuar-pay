@@ -2,7 +2,8 @@
 number: "253"
 id: B06-D34
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/253-tin-not-on-file-docs
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -84,4 +85,8 @@ Edit W2-LP-107-done.md to match W4-LP-100-done.md / the factory (omit empty TIN;
 
 ### Evaluation notes
 This is an honesty leftover, not a stationery bug. 012/094 are the real title/VALID lies. Still P2 as docs. Not blocked. Do not change YAML status.
+
+## Resolution
+
+W2-LP-107-done.md now matches the factory: omit empty TIN; workspace name or `"Merchant"`. QuestPDF unchanged.
 

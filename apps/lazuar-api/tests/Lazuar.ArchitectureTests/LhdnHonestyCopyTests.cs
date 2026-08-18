@@ -62,4 +62,17 @@ public class LhdnHonestyCopyTests
         Assert.That(text, Does.Contain("XML XAdES / XML-DSig is not used"));
         Assert.That(text, Does.Not.Contain("Signatures (XMLDSig/XAdES):** Unimplemented"));
     }
+
+    [Test]
+    public void Wave2StationeryDoneFile_DoesNotClaimTinNotOnFile()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..", "..", "..",
+            "plans", "007-feats", "impl", "W2-LP-107-done.md"));
+        Assert.That(File.Exists(path), Is.True, path);
+        var text = File.ReadAllText(path);
+        Assert.That(text, Does.Contain("omits** the TIN line"));
+        Assert.That(text, Does.Contain("never “TIN not on file”"));
+    }
 }
