@@ -95,7 +95,7 @@ function OpsLayout() {
     verifySession();
   }, [navigate, location.pathname, location.search]);
 
-  const { data: entitlements, isLoading: isEntitlementsLoading } = useQuery({
+  const { data: entitlements, isLoading: isEntitlementsLoading, isError: isEntitlementsError, refetch: refetchEntitlements } = useQuery({
     queryKey: ["entitlements"],
     queryFn: async () => {
       const { data, error } = await client.GET("/one/me/entitlements");
@@ -139,6 +139,30 @@ function OpsLayout() {
 
   if (isAuthLoading || (user && isEntitlementsLoading)) {
     return <div className="flex h-screen w-full items-center justify-center bg-[#f5f5f5] text-[11px] font-bold uppercase tracking-widest text-[#71717a]">Loading Environment...</div>;
+  }
+
+  if (user && isEntitlementsError) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#f5f5f5] gap-4 px-6">
+        <p className="text-[13px] text-[#71717a] text-center max-w-sm">
+          Could not load your workspaces. The last workspace id is not used until this succeeds.
+        </p>
+        <button
+          type="button"
+          onClick={() => { void refetchEntitlements(); }}
+          className="h-9 px-6 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest"
+        >
+          Retry
+        </button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="h-9 px-6 text-[11px] font-bold uppercase tracking-widest text-[#71717a]"
+        >
+          Log out
+        </button>
+      </div>
+    );
   }
 
   if (user && entitlements?.length === 0) {
