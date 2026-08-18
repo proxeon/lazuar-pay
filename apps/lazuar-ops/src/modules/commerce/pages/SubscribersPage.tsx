@@ -507,7 +507,7 @@ export default function SubscribersPage() {
                   <span className="text-[#a1a1aa] block mb-1">Paid through / Next due</span>
                   <span className="font-mono text-[#52525b]">{selectedSub.next_billing_date ? new Date(selectedSub.next_billing_date).toLocaleDateString() : '-'}</span>
                   {selectedSub.current_period_end && (
-                    <span className="block text-[10px] text-[#a1a1aa] mt-0.5">Period started {new Date(selectedSub.current_period_end).toLocaleDateString()}</span>
+                    <span className="block text-[10px] text-[#a1a1aa] mt-0.5">Period ends {new Date(selectedSub.current_period_end).toLocaleDateString()}</span>
                   )}
                 </div>
                 <div><span className="text-[#a1a1aa] block mb-1">Seats</span><span className="font-medium text-[#09090b]">{selectedSub.quantity ?? 1}{selectedSub.pending_quantity != null ? ` → ${selectedSub.pending_quantity}` : ""}</span></div>
