@@ -124,9 +124,10 @@ public partial class DunningEngineJob
 
         string sql = mode switch
         {
+            // TRIALING uses NextBillingDate = TrialEndsAt (B03-C16).
             ClaimMode.PreDunning => $"""
                 SELECT s.* FROM commerce."Subscriptions" s
-                WHERE s."Status" = 'ACTIVE'
+                WHERE s."Status" IN ('ACTIVE', 'TRIALING')
                   AND s."CancelAtPeriodEnd" IS NOT TRUE
                   AND (s."CollectionPausedUntil" IS NULL OR s."CollectionPausedUntil" <= NOW())
                   AND (s."DunningPausedUntil" IS NULL OR s."DunningPausedUntil" <= NOW())
@@ -186,7 +187,7 @@ public partial class DunningEngineJob
         query = mode switch
         {
             ClaimMode.PreDunning => query.Where(s =>
-                s.Status == "ACTIVE"
+                (s.Status == "ACTIVE" || s.Status == "TRIALING")
                 && !s.CancelAtPeriodEnd
                 && (s.CollectionPausedUntil == null || s.CollectionPausedUntil <= now)
                 && (s.DunningPausedUntil == null || s.DunningPausedUntil <= now)

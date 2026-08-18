@@ -213,6 +213,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 201 | B02-C22 | `fix/201-applypending-same-product` | ApplyPendingPlanChange no-ops when pending == current; job does not re-snapshot |
 | 202 | B02-C23 | `fix/202-integration-cancel-immediate-only` | M2M cancel stays immediate; TypeSpec/docs/test do not claim period-end |
 | 203 | B03-C15 | `fix/203-predunning-claim-window` | Pre-dunning claim window is max(|negative offset|), floor 14, cap 90 |
+| 204 | B03-C16 | `fix/204-predunning-include-trialing` | Pre-dunning claim includes TRIALING (trial-ending comms) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

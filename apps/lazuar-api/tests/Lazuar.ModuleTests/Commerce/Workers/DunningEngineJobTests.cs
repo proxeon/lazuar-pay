@@ -326,6 +326,32 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task PreDunning_TrialingDueInThreeDays_FiresEmail()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var trial = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        trial.ActivateTrial(DateTime.UtcNow.Date.AddDays(3).AddHours(12), reminderOnly: false);
+        var campaign = new DunningCampaign(_orgId, "Pre", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
+        campaign.AddStep(-3, "EMAIL", "Trial ending", "Your trial ends soon.", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(trial);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == trial.Id);
+        reloaded.Status.Should().Be("TRIALING");
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == -3);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == trial.Id.ToString()
+            && e.Payload.GetProperty("subject").GetString() == "Trial ending"));
+    }
+
+    [Test]
     public async Task PreDunning_PausedUntilFuture_NotClaimed()
     {
         var product = CreateProduct(_orgId, "STRIPE");
