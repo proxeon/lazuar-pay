@@ -11,4 +11,10 @@ public static class ChargeAttemptLimits
     /// Billing owns attempt 1; dunning AUTO_CHARGE owns attempts 2–Max.
     /// </summary>
     public const int MaxAttemptsPerBillingCycle = 4;
+
+    /// <summary>
+    /// PENDING rows older than this are treated as a lost webhook (B03-C21) so AUTO_CHARGE can retry.
+    /// Fresh PENDING still defers.
+    /// </summary>
+    public static readonly TimeSpan PendingTimeout = TimeSpan.FromHours(24);
 }

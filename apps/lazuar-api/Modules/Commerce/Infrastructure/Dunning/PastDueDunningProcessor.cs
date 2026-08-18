@@ -102,6 +102,7 @@ public sealed class PastDueDunningProcessor
         var cycleAttempts = await db.ChargeAttemptLogs
             .Where(l => l.SubscriptionId == sub.Id && l.TargetBillingDate == targetDate)
             .ToListAsync(ct);
+        ExpireStalePendingAttempts(cycleAttempts, now);
         var publishedOffSessionThisTick = false;
 
         foreach (var step in dueSteps)
@@ -374,6 +375,16 @@ public sealed class PastDueDunningProcessor
             "Backfilled dunning campaign snapshot for subscription {SubscriptionId} from campaign {CampaignId}.",
             sub.Id, live.Id);
         return snapshot;
+    }
+
+    internal static void ExpireStalePendingAttempts(IEnumerable<ChargeAttemptLog> cycleAttempts, DateTime nowUtc)
+    {
+        foreach (var pending in cycleAttempts.Where(l =>
+                     l.Status == ChargeAttemptLog.StatusPending
+                     && nowUtc - l.AttemptedAt > ChargeAttemptLimits.PendingTimeout))
+        {
+            pending.MarkFailed("pending_timeout", declineClass: DeclineClassifier.Soft);
+        }
     }
 
     /// <summary>

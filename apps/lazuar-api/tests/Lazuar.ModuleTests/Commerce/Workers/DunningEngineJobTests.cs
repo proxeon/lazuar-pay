@@ -791,6 +791,38 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task PastDue_StalePendingAttempt_TimesOutAndRetries()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = PastDueSub(_orgId, product.Id);
+        sub.StoreVaultedToken("cus_live", "pm_live");
+        var campaign = AutoChargeCampaign(_orgId, dayOffset: 1);
+        var target = sub.NextBillingDate!.Value.Date;
+        var stale = new ChargeAttemptLog(sub.Id, target, 2, ChargeAttemptLog.SourceDunning, campaign.Id);
+        typeof(ChargeAttemptLog).GetProperty(nameof(ChargeAttemptLog.AttemptedAt))!
+            .SetValue(stale, DateTime.UtcNow.AddHours(-25));
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        _db.ChargeAttemptLogs.Add(FailedBillingAttempt(sub.Id, target));
+        _db.ChargeAttemptLogs.Add(stale);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var attempts = await _db.ChargeAttemptLogs.IgnoreQueryFilters()
+            .Where(l => l.SubscriptionId == sub.Id)
+            .OrderBy(l => l.AttemptNumber)
+            .ToListAsync();
+        attempts.Should().HaveCount(3);
+        attempts[1].Status.Should().Be(ChargeAttemptLog.StatusFailed);
+        attempts[1].FailureReason.Should().Be("pending_timeout");
+        attempts[2].Status.Should().Be(ChargeAttemptLog.StatusPending);
+        await _eventBus.Received(1).PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+    }
+
+    [Test]
     public async Task PastDue_TwoAutoChargeOffsetsDue_OnlyOneChargeThisTick()
     {
         var product = CreateProduct(_orgId, "STRIPE");

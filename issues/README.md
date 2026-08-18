@@ -218,6 +218,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 206 | B03-C18 | `fix/206-setupfutureusage-only-when-vaults` | Renewal/arrears SetupFutureUsage only on Stripe/CHIP |
 | 207 | B03-C19 | `fix/207-snapshot-no-live-backfill` | Dunning snapshot does not copy a live campaign edited after pin |
 | 208 | B03-C20 | `fix/208-expired-card-is-hard` | expired_card / invalid expiry are HARD; CHIP-shaped codes stay soft |
+| 209 | B03-C21 | `fix/209-pending-charge-timeout` | PENDING ChargeAttempt older than 24h times out so AUTO_CHARGE can retry |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
