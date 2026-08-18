@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddTransient<StarterCreditSeederHandler>();
         services.AddTransient<ChargebackClawbackHandler>();
         services.AddTransient<GatewayDisputeLostHandler>();
+        services.AddTransient<ApiCreditPurchasedHandler>();
 
         services.AddHostedService<BillingInboxConsumerJob>();
         services.AddOutboxSchemaMetrics("billing");
@@ -104,6 +105,7 @@ public static class DependencyInjection
         eventBus.Subscribe<AppEntitlementGrantedIntegrationEvent, StarterCreditSeederHandler>();
         eventBus.Subscribe<GatewayDisputeCreatedIntegrationEvent, ChargebackClawbackHandler>();
         eventBus.Subscribe<GatewayDisputeClosedIntegrationEvent, GatewayDisputeLostHandler>();
+        eventBus.Subscribe<ApiCreditPurchasedIntegrationEvent, ApiCreditPurchasedHandler>();
 
         return app;
     }

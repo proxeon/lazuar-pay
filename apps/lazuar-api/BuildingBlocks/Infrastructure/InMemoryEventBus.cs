@@ -29,10 +29,10 @@ public class InMemoryEventBus : IEventBus, IEventBusSubscriptions
         // Use runtime type name instead of compile-time generic parameter (typeof(TEvent).Name)
         // This prevents static compiler dispatch issues when events are invoked through interface casts
         var eventName = @event.GetType().Name;
-        if (!_handlers.TryGetValue(eventName, out var handlers))
+        if (!_handlers.TryGetValue(eventName, out var handlers) || handlers.Count == 0)
         {
-            _logger.LogInformation("Event {EventName} was published but has no registered handlers.", eventName);
-            return;
+            throw new InvalidOperationException(
+                $"Event {eventName} was published but has no registered handlers.");
         }
 
         using var scope = _serviceProvider.CreateScope();
