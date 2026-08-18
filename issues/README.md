@@ -168,6 +168,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 156 | B09-U27 | `fix/156-catchall-404` | Unknown ops/admin paths are 404, not a silent dashboard redirect |
 | 157 | B09-U28 | `fix/157-portal-plan-trialing` | Trial buyers can change plan on the portal, same as ops |
 | 158 | B09-U29 | `fix/158-quote-placeholder-email` | Quote pay requires a real email; customer@example.com is rejected |
+| 159 | B09-U30 | `fix/159-accept-invite-5xx` | Accept-invite 5xx is a retry, not “already accepted” |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

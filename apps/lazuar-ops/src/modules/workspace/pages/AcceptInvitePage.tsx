@@ -38,9 +38,10 @@ async function acceptInvite(token: string): Promise<AcceptOutcome> {
     if (response.status === 401) return { kind: "unauth" };
 
     if (response.status >= 500) {
+      acceptByToken.delete(token);
       return {
         kind: "error",
-        message: "This invite may already have been accepted. Try signing in.",
+        message: "Something went wrong accepting this invite. Try again.",
         wrongEmail: false,
       };
     }
