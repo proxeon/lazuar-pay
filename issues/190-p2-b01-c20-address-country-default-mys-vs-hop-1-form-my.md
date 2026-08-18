@@ -2,7 +2,8 @@
 number: "190"
 id: B01-C20
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/190-country-alpha3
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 190 — B01-C20 — Address country default `MYS` vs hop-1 form `MY`
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/190-country-alpha3`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

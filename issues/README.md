@@ -199,6 +199,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 187 | B01-C17 | `fix/187-release-coupon-on-fail` | Hop-2 PAYMENT_FAILED releases the coupon and expires the OPEN session |
 | 188 | B01-C18 | `fix/188-onetime-price-not-catalog-interval` | Open checkout / mark-paid / zero-amount key off the paid price interval |
 | 189 | B01-C19 | `fix/189-session-coupon-ignore-filters` | Session/coupon by-id already IgnoreQueryFilters + org (163/164) |
+| 190 | B01-C20 | `fix/190-country-alpha3` | Hop-1 posts MYS; handler NormalizeToAlpha3 maps MY → MYS |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
