@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using MediatR;
@@ -33,14 +32,7 @@ public static class IntegrationSubscriptionEndpoints
 
             var p = page is null or < 1 ? 1 : page.Value;
             var l = limit is null or < 1 or > 100 ? 50 : limit.Value;
-            var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l);
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                var filtered = response.Data.Where(s =>
-                    string.Equals(s.Status, status, StringComparison.OrdinalIgnoreCase)).ToList();
-                response = new PaginatedResponse<CommerceSubscriptionDto>(filtered, filtered.Count, p, l);
-            }
-
+            var response = await queryService.GetSubscribersAsync(ctx.TenantId, p, l, searchTerm: null, status);
             return Results.Ok(response);
         }).RequireAuthorization("IntegrationCommerceSubscriptionsRead");
 
