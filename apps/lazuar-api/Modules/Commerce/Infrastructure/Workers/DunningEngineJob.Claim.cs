@@ -36,7 +36,7 @@ public partial class DunningEngineJob
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
             var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("CommerceEventBus");
-            var billing = scope.ServiceProvider.GetService<IBillingQueryService>();
+            var billing = scope.ServiceProvider.GetRequiredService<IBillingQueryService>();
             var crm = scope.ServiceProvider.GetService<Modules.CRM.Contracts.ICrmQueryService>();
 
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = null;

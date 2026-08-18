@@ -53,7 +53,7 @@ public static class PublicArrearsEndpoints
                 connection, query, new { SubId = subId });
             if (row == null) return TypedResults.NotFound();
 
-            var billing = http.RequestServices.GetService<IBillingQueryService>();
+            var billing = http.RequestServices.GetRequiredService<IBillingQueryService>();
             var amount = await ResolveGrossAsync(billing, row.OrganizationId, row.HasUnitSnapshot, row.UnitAmount, row.Quantity, row.Price, row.SstTaxType, row.SstRatePercent);
 
             var dto = new ArrearsSummaryDto
@@ -139,7 +139,7 @@ public static class PublicArrearsEndpoints
             var cancelUrl = $"{clientUrl}/{workspace.Slug}/update-payment/{subId}?token={token}";
 
             var isActiveUpdate = sub.Status == "ACTIVE";
-            var billing = http.RequestServices.GetService<IBillingQueryService>();
+            var billing = http.RequestServices.GetRequiredService<IBillingQueryService>();
             var unitNet = SubscriptionBillingAmount.ResolveUnit(sub.HasUnitSnapshot, sub.UnitAmount, sub.Price);
             var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(billing, sub.OrganizationId);
             var breakdown = SubscriptionBillingAmount.GrossBreakdown(

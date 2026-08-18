@@ -80,7 +80,7 @@ public class BillingEngineJob : BackgroundService
             var one = scope.ServiceProvider.GetService<IOneQueryService>();
             var config = scope.ServiceProvider.GetService<IConfiguration>();
             var tokens = scope.ServiceProvider.GetService<IMagicLinkTokenService>();
-            var billing = scope.ServiceProvider.GetService<IBillingQueryService>();
+            var billing = scope.ServiceProvider.GetRequiredService<IBillingQueryService>();
 
             var excludeIds = new HashSet<Guid>(failedIds);
             excludeIds.UnionWith(processedIds);

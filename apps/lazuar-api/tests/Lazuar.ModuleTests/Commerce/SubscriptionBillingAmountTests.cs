@@ -76,7 +76,7 @@ public class SubscriptionBillingAmountTests
     {
         var (sub, product) = Create(unitAmount: 100m, quantity: 1);
 
-        (await SubscriptionBillingAmount.Gross(sub, product, billing: null)).Should().Be(100m);
+        (await SubscriptionBillingAmount.Gross(sub, product, SstBilling(sub.OrganizationId, sstNumber: ""))).Should().Be(100m);
         SubscriptionBillingAmount.Line(sub, product).Should().Be(100m);
         sub.UnitAmount.Should().Be(100m);
     }
@@ -115,6 +115,13 @@ public class SubscriptionBillingAmountTests
         var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1), false, quantity, unitAmount);
         return (sub, product);
+    }
+
+    [Test]
+    public async Task MerchantHasSst_Null_Billing_Throws()
+    {
+        var act = () => SubscriptionBillingAmount.MerchantHasSstAsync(null, Guid.CreateVersion7());
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*refusing to undercharge*");
     }
 
     private static IBillingQueryService SstBilling(Guid organizationId, string sstNumber)

@@ -50,9 +50,12 @@ public class DunningEngineJobTests
         _db = new CommerceDbContext(options, ctx, Substitute.For<IMediator>(), new DatabaseJobTrigger());
 
         _eventBus = Substitute.For<IEventBus>();
+        var billing = Substitute.For<Modules.Billing.Contracts.IBillingQueryService>();
+        billing.GetBillingProfileAsync(Arg.Any<Guid>()).Returns((Lazuar.ApiTypes.TenantBillingProfileDto?)null);
         var services = new ServiceCollection();
         services.AddSingleton(_db);
         services.AddKeyedSingleton<IEventBus>("CommerceEventBus", _eventBus);
+        services.AddSingleton(billing);
         _sp = services.BuildServiceProvider();
 
         var configuration = new ConfigurationBuilder()
@@ -123,6 +126,9 @@ public class DunningEngineJobTests
         services.AddSingleton(_db);
         services.AddKeyedSingleton<IEventBus>("CommerceEventBus", _eventBus);
         services.AddSingleton(crm);
+        var billing = Substitute.For<Modules.Billing.Contracts.IBillingQueryService>();
+        billing.GetBillingProfileAsync(Arg.Any<Guid>()).Returns((Lazuar.ApiTypes.TenantBillingProfileDto?)null);
+        services.AddSingleton(billing);
         _sp = services.BuildServiceProvider();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Messaging:WhatsAppEnabled"] = "false" })

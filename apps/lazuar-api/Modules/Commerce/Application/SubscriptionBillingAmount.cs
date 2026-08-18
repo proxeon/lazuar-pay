@@ -94,7 +94,8 @@ public static class SubscriptionBillingAmount
     {
         if (billing == null)
         {
-            return false;
+            throw new InvalidOperationException(
+                "IBillingQueryService is required to decide SST; refusing to undercharge.");
         }
 
         var profile = await billing.GetBillingProfileAsync(organizationId);

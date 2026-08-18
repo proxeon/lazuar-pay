@@ -176,6 +176,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 164 | B10-X08 | `fix/164-repo-id-org-predicate` | Commerce id lookups require OrganizationId even when filters are ignored |
 | 165 | B10-X09 | `fix/165-crm-profile-org-scope` | CRM profile-by-id reads require OrganizationId |
 | 166 | B10-X10 | `fix/166-reminder-expiry-claim` | Expiry claims one session; invoice reminders save per session |
+| 167 | B10-X11 | `fix/167-sst-fail-closed` | Missing IBillingQueryService refuses to undercharge instead of dropping SST |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
