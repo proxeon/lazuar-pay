@@ -2,7 +2,8 @@
 number: "259"
 id: B07-I15
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/259-register-role-honesty
 source: plans/009-bugs/07-one-identity-invites-keys.md
 head: "297ba98"
 ---
@@ -81,4 +82,8 @@ Smallest honest change: register/login/`/auth/me` JSON `Role` = JWT role (`CLIEN
 
 ### Evaluation notes
 Docs/honesty more than a crash; still a live API lie, so not `DOCS / HONESTY ONLY` alone. Dual-realm is load-bearing (`/ops` allows `CLIENT`). Do not “unify” by putting `ADMIN` on the JWT — that bypasses tenant injection. Adjacent: **123** (injected `SUPER_ADMIN`), **263** (human ADMIN on Integration*), **267** (cookie vs Bearer). Stay P2.
+
+## Resolution
+
+Register JSON `user.role` matches the cookie JWT (`CLIENT` / `SUPER_ADMIN`). README staff roles are ADMIN/MEMBER/VIEWER. Invite still rejects CLIENT.
 

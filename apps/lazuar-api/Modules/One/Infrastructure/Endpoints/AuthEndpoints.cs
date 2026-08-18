@@ -68,9 +68,10 @@ public static class AuthEndpoints
 
             IssueCookie(ctx, user!, config);
 
+            var role = user!.IsSystemAdmin ? "SUPER_ADMIN" : "CLIENT";
             return TypedResults.Ok(new LoginResponse
             {
-                User = new AuthUser { Email = user!.Email, Name = user.Name, Role = "ADMIN", Is_email_verified = user.IsEmailVerified }
+                User = new AuthUser { Email = user.Email, Name = user.Name, Role = role, Is_email_verified = user.IsEmailVerified }
             });
         });
 

@@ -101,3 +101,31 @@ public class LhdnHonestyCopyTests
         Assert.That(text, Does.Not.Contain("overallStatus=Valid captured"));
     }
 }
+
+[TestFixture]
+public class OneRoleHonestyTests
+{
+    [Test]
+    public void RegisterResponse_UsesJwtRole_NotHardcodedAdmin()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "One", "Infrastructure", "Endpoints", "AuthEndpoints.cs"));
+        var text = File.ReadAllText(path);
+        Assert.That(text, Does.Contain("user!.IsSystemAdmin ? \"SUPER_ADMIN\" : \"CLIENT\""));
+        Assert.That(text, Does.Not.Contain("Role = \"ADMIN\""));
+    }
+
+    [Test]
+    public void OneReadme_StaffRolesAreNotClient()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "One", "README.md"));
+        var text = File.ReadAllText(path);
+        Assert.That(text, Does.Contain("ADMIN`, `MEMBER`, `VIEWER`"));
+        Assert.That(text, Does.Not.Contain("may grant a `TenantMembership` with the `CLIENT` role"));
+    }
+}

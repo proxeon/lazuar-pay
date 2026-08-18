@@ -19,7 +19,7 @@ The `One` module is the central nervous system of the Lazuar platform. It acts a
 ## 4. Key Domain Aggregates & Entities
 * **`GlobalUser`**: The aggregate root for platform-wide identity. Stores email, BCrypt password hash, security stamps, and system admin flags.
 * **`Organization`**: Represents a tenant/workspace. Enforces strict slug validation rules (e.g., blocking reserved system slugs).
-* **`TenantMembership`**: The junction entity linking a `GlobalUser` to an `Organization` with a specific `Role` (e.g., `ADMIN`, `CLIENT`).
+* **`TenantMembership`**: The junction entity linking a `GlobalUser` to an `Organization` with a staff `Role` (`ADMIN`, `MEMBER`, `VIEWER`). Cookie JWT role is separately `CLIENT` or `SUPER_ADMIN` and is injected with membership only after `X-Tenant-Id` / slug resolves.
 * **`TenantAppEntitlement`**: Tracks which ecosystem modules are actively provisioned and billed for a specific workspace.
 * **`WorkspaceInvitation`**: Time-bound, cryptographically hashed invitation tokens for onboarding new staff.
 
@@ -31,7 +31,7 @@ The `One` module is the central nervous system of the Lazuar platform. It acts a
 * **`AppEntitlementGrantedIntegrationEvent`**: Fired when a new app (e.g., `COMMERCE`) is toggled on for a tenant. Triggers JIT (Just-In-Time) seeding of default templates or configurations in the target module.
 
 ### Consumed
-* Subscription / portal membership activation is driven by live Commerce lifecycle integration events (not the deleted Community module). When a public user pays for a subscription, `One` may grant a `TenantMembership` with the `CLIENT` role for portal access to that workspace — confirm handlers in code rather than historical Community event names.
+* Subscription / portal membership activation is driven by live Commerce lifecycle integration events. Paying does **not** insert a `CLIENT` `TenantMembership` — that string is a JWT role, not staff. Invite still rejects `CLIENT`.
 
 ## 6. Background Workers
 * **`SystemGenesisBootstrapperJob`**: Runs on startup to guarantee the System Tenant exists and securely upserts root Superadmin credentials from environment variables.

@@ -7,7 +7,7 @@ public class TenantMembership : Entity, IMustHaveTenant
     public Guid Id { get; private set; }
     public Guid GlobalUserId { get; private set; }
     public Guid OrganizationId { get; set; }
-    public string Role { get; private set; } // e.g. "ADMIN", "CLIENT"
+    public string Role { get; private set; } // staff: ADMIN, MEMBER, VIEWER (JWT is CLIENT / SUPER_ADMIN)
     public DateTime CreatedAt { get; private set; }
 
 #pragma warning disable CS8618

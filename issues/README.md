@@ -268,6 +268,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 256 | B07-I08 | `fix/256-accept-invite-4xx-cache` | Accept-invite 4xx is not cached; Sign in evicts the token |
 | 257 | B07-I09 | `fix/257-team-pending-invites` | Team page lists and revokes pending invitations |
 | 258 | B07-I14 | `fix/258-register-invite-copy` | Invite signup no longer says Create workspace (user-only register stays) |
+| 259 | B07-I15 | `fix/259-register-role-honesty` | Register JSON role is JWT CLIENT, not membership ADMIN |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
