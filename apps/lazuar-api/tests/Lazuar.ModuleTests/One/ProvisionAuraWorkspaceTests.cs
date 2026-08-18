@@ -667,7 +667,7 @@ public class ProvisionAuraWorkspaceTests
     }
 
     [Test]
-    public void ProvisionAuth_Accepts_SuperAdmin_Jwt()
+    public void ProvisionAuth_Accepts_System_Admin_Jwt()
     {
         var settings = new IntegratorProvisionSettings { Secret = "super-secret-provision-key-32chars!!" };
         var userId = Guid.CreateVersion7();
@@ -676,7 +676,7 @@ public class ProvisionAuraWorkspaceTests
             new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Role, "SUPER_ADMIN"),
+                new Claim(ClaimTypes.Role, "CLIENT"),
                 new Claim("is_system_admin", "true")
             },
             authenticationType: "Jwt");
@@ -686,6 +686,26 @@ public class ProvisionAuraWorkspaceTests
         Assert.That(result.IsAuthorized, Is.True);
         Assert.That(result.IsSuperAdmin, Is.True);
         Assert.That(result.ActorUserId, Is.EqualTo(userId));
+    }
+
+    [Test]
+    public void ProvisionAuth_Rejects_Membership_SuperAdmin_Without_System_Admin_Claim()
+    {
+        var settings = new IntegratorProvisionSettings { Secret = "super-secret-provision-key-32chars!!" };
+        var http = new DefaultHttpContext();
+        var identity = new ClaimsIdentity(
+            new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, Guid.CreateVersion7().ToString()),
+                new Claim(ClaimTypes.Role, "SUPER_ADMIN"),
+                new Claim("is_system_admin", "false")
+            },
+            authenticationType: "Jwt");
+        http.User = new ClaimsPrincipal(identity);
+
+        var result = IntegratorProvisionAuth.Evaluate(http, settings);
+        Assert.That(result.IsAuthorized, Is.False);
+        Assert.That(result.StatusCode, Is.EqualTo(StatusCodes.Status403Forbidden));
     }
 
     [Test]

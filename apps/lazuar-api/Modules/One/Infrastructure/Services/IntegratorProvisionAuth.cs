@@ -10,7 +10,7 @@ namespace Modules.One.Infrastructure.Services;
 
 /// <summary>
 /// Auth for <c>POST /one/integrations/workspaces/provision</c>:
-/// bootstrap secret (header/bearer) <b>or</b> SUPER_ADMIN JWT.
+/// bootstrap secret (header/bearer) <b>or</b> platform admin JWT (`is_system_admin=true`).
 /// </summary>
 public static class IntegratorProvisionAuth
 {
@@ -66,13 +66,14 @@ public static class IntegratorProvisionAuth
             }
         }
 
-        // 3) Support / manual: SUPER_ADMIN JWT (cookie or Bearer JWT).
+        // 3) Support / manual: platform admin JWT (cookie or Bearer). Membership
+        // SUPER_ADMIN is tenant-scoped and is injected by TenantSecurityMiddleware
+        // when X-Tenant-Id is present — that must not mint a provision grant.
         var principal = http.User;
         if (principal?.Identity?.IsAuthenticated == true)
         {
             var isSystemAdmin =
-                string.Equals(principal.FindFirst("is_system_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase)
-                || principal.IsInRole("SUPER_ADMIN");
+                string.Equals(principal.FindFirst("is_system_admin")?.Value, "true", StringComparison.OrdinalIgnoreCase);
 
             if (isSystemAdmin)
             {
@@ -86,8 +87,8 @@ public static class IntegratorProvisionAuth
                 return new AuthResult(true, true, actor, null, StatusCodes.Status200OK);
             }
 
-            // Authenticated but not superadmin (CLIENT, OrgAdmin, API key, etc.).
-            return new AuthResult(false, false, null, "Provision requires SUPER_ADMIN or a valid integrator provision secret.", StatusCodes.Status403Forbidden);
+            // Authenticated but not a platform admin (CLIENT, workspace SUPER_ADMIN, API key, etc.).
+            return new AuthResult(false, false, null, "Provision requires a platform admin or a valid integrator provision secret.", StatusCodes.Status403Forbidden);
         }
 
         return new AuthResult(false, false, null, "Missing provision credentials.", StatusCodes.Status401Unauthorized);
