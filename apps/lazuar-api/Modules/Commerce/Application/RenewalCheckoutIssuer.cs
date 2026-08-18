@@ -8,6 +8,7 @@ using Modules.Billing.Contracts;
 using Modules.Commerce.Contracts;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.One.Contracts;
+using Modules.Payments.Contracts;
 using Modules.Payments.Contracts.Queries;
 
 namespace Modules.Commerce.Application;
@@ -62,7 +63,9 @@ public static class RenewalCheckoutIssuer
             successUrl,
             cancelUrl,
             metadata,
-            SetupFutureUsage: true,
+            // Razorpay/Billplz/Xendit are reminder-only. True here used to mint a
+            // Razorpay card-registration link for a reminder product (B03-C18).
+            SetupFutureUsage: PaymentGatewayCapabilities.SupportsOffSession(product.GatewayName),
             Quantity: 1,
             GatewayName: product.GatewayName), ct);
 

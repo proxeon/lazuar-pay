@@ -373,7 +373,7 @@ public class BillingEngineJobTests
             q.TenantId == _orgId
             && q.Amount == product.Price
             && q.Currency == product.Currency
-            && q.SetupFutureUsage
+            && !q.SetupFutureUsage
             && q.GatewayName == "BILLPLZ"
             && q.Metadata["type"] == "commerce_subscription"
             && q.Metadata["subscription_id"] == sub.Id.ToString()
@@ -386,6 +386,29 @@ public class BillingEngineJobTests
             e.EventType == "subscription.past_due"
             && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()
             && e.Payload.GetProperty("checkout_url").GetString() == "https://pay.test/bills/renew-1"));
+
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
+        (await _db.CheckoutSessions.IgnoreQueryFilters().CountAsync()).Should().Be(0);
+    }
+
+    [Test]
+    public async Task RunOnce_NonVaultedStripeDue_MintsWithSetupFutureUsage()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), isReminderOnly: false);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        ArrangeMint("buyer@example.com", "https://checkout.stripe.test/renew");
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        await _mediator.Received(1).Send(Arg.Is<GenerateCheckoutSessionQuery>(q =>
+            q.GatewayName == "STRIPE" && q.SetupFutureUsage),
+            Arg.Any<CancellationToken>());
 
         await _eventBus.DidNotReceive().PublishAsync(Arg.Any<ExecuteOffSessionChargeIntegrationEvent>());
         (await _db.CheckoutSessions.IgnoreQueryFilters().CountAsync()).Should().Be(0);

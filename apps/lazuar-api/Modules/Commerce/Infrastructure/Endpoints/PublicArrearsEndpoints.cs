@@ -187,9 +187,9 @@ public static class PublicArrearsEndpoints
                     successUrl,
                     cancelUrl,
                     metadata,
-                    true,
-                    1,
-                    productGateway
+                    SetupFutureUsage: PaymentGatewayCapabilities.SupportsOffSession(productGateway),
+                    Quantity: 1,
+                    GatewayName: productGateway
                 );
 
                 var checkoutUrl = await mediator.Send(checkoutQuery);
