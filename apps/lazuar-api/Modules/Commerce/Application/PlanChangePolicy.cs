@@ -53,6 +53,11 @@ public static class PlanChangePolicy
         {
             throw new InvalidOperationException($"Cannot change plan from status '{sub.Status}'.");
         }
+
+        if (sub.CancelAtPeriodEnd)
+        {
+            throw new InvalidOperationException("Keep the current plan before scheduling a different product.");
+        }
     }
 
     public static void GuardTargetProduct(Subscription sub, Product current, Product target)

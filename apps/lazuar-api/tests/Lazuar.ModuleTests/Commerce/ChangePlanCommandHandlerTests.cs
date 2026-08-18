@@ -44,6 +44,19 @@ public class ChangePlanCommandHandlerTests
     }
 
     [Test]
+    public async Task CancelAtPeriodEnd_Throws()
+    {
+        var fx = Arrange();
+        fx.Sub.ScheduleCancelAtPeriodEnd();
+
+        var act = () => fx.Handler.Handle(
+            new ChangePlanCommand(fx.OrgId, fx.Sub.Id, fx.Target.Id),
+            CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Keep the current plan*");
+        fx.Sub.PendingProductId.Should().BeNull();
+    }
+
+    [Test]
     public async Task ProrateTrue_Throws()
     {
         var fx = Arrange();

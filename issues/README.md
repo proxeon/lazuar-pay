@@ -207,6 +207,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 195 | B02-C16 | `fix/195-period-end-is-next` | Paid Activate writes CurrentPeriodEnd = next billing date |
 | 196 | B02-C17 | `fix/196-resume-period-end` | Resume sets CurrentPeriodEnd to the new next billing date |
 | 197 | B02-C18 | `fix/197-cycle-key-utc` | Cycle key / renewal checkout date are UTC calendar dates (documented SSoT) |
+| 198 | B02-C19 | `fix/198-no-plan-change-on-flagged` | Admin plan/qty change is refused when CancelAtPeriodEnd is set |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
