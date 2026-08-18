@@ -252,6 +252,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 240 | B05-L36 | `fix/240-saas-dispute-reverse-fee` | Hub SaaS dispute marks PAST_DUE and idempotently reverses SYSTEM_SAAS_FEE |
 | 241 | B05-L37 | `fix/241-platform-invoice-guid-fallback` | Hub SaaS PDF number uses CustomerFacingNumber (PENDING, never a Guid slice) |
 | 242 | B05-L38 | `fix/242-taxinvoiceid-lookup` | Consolidation no longer dumps B2C-CONS onto TaxInvoiceId; lookup ranks payment + Lhdn UUID |
+| 243 | B05-L39 | `fix/243-chargeback-comment` | ChargebackClawback XML/README name Hub SaaS reverse; GMV stays on lost handler |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

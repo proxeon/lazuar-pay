@@ -16,10 +16,13 @@ using Modules.Payments.Contracts.Events;
 namespace Modules.Billing.Infrastructure.EventHandlers;
 
 /// <summary>
-/// Consumes gateway dispute events and claws back credits granted for a disputed utility-credit
-/// top-up, and reverses the matching SYSTEM_CREDIT_TOPUP ledger entry.
-///
-/// Utility top-up claw + Hub SaaS fee reverse. Does not cancel Commerce seats.
+/// Consumes <c>GatewayDisputeCreated</c>.
+/// <list type="bullet">
+/// <item>Utility top-up: claw credits and reverse <c>SYSTEM_CREDIT_TOPUP</c>.</item>
+/// <item>Hub SaaS (<c>platform_saas_fee</c>): mark PAST_DUE and reverse <c>SYSTEM_SAAS_FEE</c>.</item>
+/// </list>
+/// Does not cancel Commerce seats. Merchant GMV disputes stay on
+/// <see cref="GatewayDisputeLostHandler"/>.
 /// </summary>
 public class ChargebackClawbackHandler : IIntegrationEventHandler<GatewayDisputeCreatedIntegrationEvent>
 {

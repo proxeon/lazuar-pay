@@ -2,7 +2,8 @@
 number: "243"
 id: B05-L39
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/243-chargeback-comment
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
 ---
@@ -68,4 +69,8 @@ Rewrite the summary to: utility claw + reverse; Hub SaaS → `PAST_DUE` only (jo
 
 ### Evaluation notes
 Do not “fix” 240 under this number. 009 claw-retry / pack-table issues (**009 / 088**) were on the utility branch and are out of scope. Still P2 on the ticket; implementer should treat as docs. Not blocked. 161–200 did not refresh this XML.
+
+## Resolution
+
+Class XML and Billing README §5 now list utility claw **and** Hub SaaS PAST_DUE / fee reverse. GMV stays on `GatewayDisputeLostHandler`. No behaviour change.
 

@@ -34,7 +34,7 @@ This is a known inversion vs Commerce/Lhdn (Application-owned handlers). A full 
 
 ## 5. Integration Events (Consumed)
 Live money writers:
-* **From Payments:** `GatewayPaymentCompleted` (GMV + Hub SaaS + top-up), `GatewayRefundCompleted`, `GatewayDisputeCreated` / `Closed`.
+* **From Payments:** `GatewayPaymentCompleted` (GMV + Hub SaaS + top-up), `GatewayRefundCompleted`, `GatewayDisputeCreated` (utility claw + Hub SaaS PAST_DUE / fee reverse; GMV lost is `GatewayDisputeLostHandler`) / `Closed`.
 * **From Commerce:** `ZeroAmountCheckoutCompleted` (100% coupon/trial write-off), `ManualSubscriberEnrolled` (offline / clerk cash).
 * **From Affiliates:** `CommissionAccrued`.
 * **From LHDN:** `LhdnDocumentValidated|Cancelled|Submitted` (status only).
