@@ -68,6 +68,24 @@ public static class DefaultMessageTemplates
             ["{{customer_name}}", "{{business_name}}"]),
 
         new Definition(
+            "Tax Invoice",
+            "ALL",
+            "Your tax invoice from {{business_name}}",
+            "Hi {{customer_name}},\n\nYour tax invoice from {{business_name}} is ready. You can download the document securely using the link below:\n\n[Download Tax Invoice]({{document_link}})\n\n— {{business_name}}",
+            "Hi {{customer_name}}, your tax invoice from {{business_name}} is ready: {{document_link}}",
+            ["{{document_link}}"],
+            ["{{customer_name}}", "{{business_name}}"]),
+
+        new Definition(
+            "Credit Note",
+            "ALL",
+            "Your credit note from {{business_name}}",
+            "Hi {{customer_name}},\n\nA credit note from {{business_name}} has been issued. You can download the document securely using the link below:\n\n[Download Credit Note]({{document_link}})\n\n— {{business_name}}",
+            "Hi {{customer_name}}, a credit note from {{business_name}} is ready: {{document_link}}",
+            ["{{document_link}}"],
+            ["{{customer_name}}", "{{business_name}}"]),
+
+        new Definition(
             "Portal Access",
             "EMAIL",
             "Access your {{business_name}} dashboard",

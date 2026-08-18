@@ -22,6 +22,8 @@ public class DefaultMessageTemplatesTests
             "Digital Product Delivery",
             "Quotation Ready",
             "Official Receipt",
+            "Tax Invoice",
+            "Credit Note",
             "Portal Access",
             "Invoice Reminder"
         });

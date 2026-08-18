@@ -120,6 +120,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 108 | B06-D24 | `fix/108-cons-banner-valid` | VALID keeps B2C-CONS- on TaxInvoiceId; cons submit key is stable |
 | 109 | B06-D25 | `fix/109-taxdocument-internal-unique` | TaxDocument (org, InternalReferenceId) is unique |
 | 110 | B06-D26 | `fix/110-placeholder-invalid` | Missing state is 17; no dummy phone; period is One-time unless cons |
+| 111 | B06-D29 | `fix/111-tax-invoice-email-fallback` | Tax Invoice / CN have their own templates; no receipt fallback |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

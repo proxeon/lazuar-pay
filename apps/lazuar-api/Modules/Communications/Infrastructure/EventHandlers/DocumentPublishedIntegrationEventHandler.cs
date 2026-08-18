@@ -39,24 +39,16 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
         {
             "Official Receipt" => "Official Receipt",
             "Draft Quotation" => "Quotation Ready",
+            "Proforma Invoice" => "Quotation Ready",
             "Tax Invoice" => "Tax Invoice",
             "Credit Note" => "Credit Note",
             _ => null
         };
         if (preferredTemplate == null) return;
 
-        var fallbackTemplate = preferredTemplate is "Tax Invoice" or "Credit Note"
-            ? "Official Receipt"
-            : null;
-
         var template = await _dbContext.MessageTemplates
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(t => t.OrganizationId == @event.OrganizationId && t.Name == preferredTemplate)
-            ?? (fallbackTemplate == null
-                ? null
-                : await _dbContext.MessageTemplates
-                    .IgnoreQueryFilters()
-                    .FirstOrDefaultAsync(t => t.OrganizationId == @event.OrganizationId && t.Name == fallbackTemplate));
+            .FirstOrDefaultAsync(t => t.OrganizationId == @event.OrganizationId && t.Name == preferredTemplate);
 
         if (template == null) return;
 
