@@ -73,9 +73,10 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
 
         if (sub == null)
         {
-            _logger.LogDebug(
-                "GatewayPaymentFailed {GatewayTxId}: subscription {SubscriptionId} not found for org {OrgId}.",
-                @event.GatewayTransactionId, subscriptionId, @event.OrganizationId);
+            // Hop-2 first charge stamps subscription_id = checkout session id.
+            await TryReleaseOpenCheckoutCouponAsync(subscriptionId, @event.OrganizationId);
+            await _dbContext.SaveChangesAsync();
+            if (tx != null) await tx.CommitAsync();
             return;
         }
 
@@ -197,6 +198,25 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             .OrderByDescending(l => l.AttemptNumber)
             .ThenByDescending(l => l.AttemptedAt)
             .FirstOrDefaultAsync();
+    }
+
+    private async Task TryReleaseOpenCheckoutCouponAsync(Guid sessionId, Guid organizationId)
+    {
+        var session = await _dbContext.CheckoutSessions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId);
+
+        if (session == null || session.Status != "OPEN" || !session.CouponId.HasValue)
+        {
+            return;
+        }
+
+        var coupon = await _dbContext.Coupons
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == session.CouponId.Value && c.OrganizationId == organizationId);
+
+        coupon?.ReleaseReservation();
+        session.TryExpire();
     }
 
     internal static bool IsUpdatePayment(GatewayPaymentFailedIntegrationEvent @event)

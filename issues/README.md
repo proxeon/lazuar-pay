@@ -196,6 +196,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 184 | B01-C14 | `fix/184-checkout-already-subscribed` | Public checkout rejects a second ACTIVE/TRIALING seat for the same client+product |
 | 185 | B01-C15 | `fix/185-adhoc-line-validation` | Ad-hoc lines require qty ≥ 1, unit ≥ 0, and a positive quote total |
 | 186 | B01-C16 | `fix/186-custom-quote-currency` | Custom quotes persist ISO currency and pass it to hop-2 / mark-paid |
+| 187 | B01-C17 | `fix/187-release-coupon-on-fail` | Hop-2 PAYMENT_FAILED releases the coupon and expires the OPEN session |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

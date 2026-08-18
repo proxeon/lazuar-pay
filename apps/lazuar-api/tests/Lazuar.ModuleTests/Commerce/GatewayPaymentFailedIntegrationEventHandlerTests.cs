@@ -340,6 +340,29 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
     }
 
     [Test]
+    public async Task HandleAsync_OpenCheckoutHop2Fail_ReleasesCouponAndExpires()
+    {
+        var coupon = new Coupon(_orgId, "SAVE10", "PERCENTAGE", 10m, maxUses: 1, expiresAt: null);
+        coupon.Reserve();
+        var session = new CheckoutSession(
+            _orgId, Guid.CreateVersion7(), _productId, coupon.Id, DateTime.UtcNow.AddHours(24));
+
+        _db.Coupons.Add(coupon);
+        _db.CheckoutSessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        await _handler.HandleAsync(new GatewayPaymentFailedIntegrationEvent(
+            _orgId,
+            "pi_hop2_fail",
+            new Dictionary<string, string> { ["subscription_id"] = session.Id.ToString() }));
+
+        (await _db.Coupons.IgnoreQueryFilters().SingleAsync(c => c.Id == coupon.Id))
+            .ReservedCount.Should().Be(0);
+        (await _db.CheckoutSessions.IgnoreQueryFilters().SingleAsync(s => s.Id == session.Id))
+            .Status.Should().Be("EXPIRED");
+    }
+
+    [Test]
     public async Task HandleAsync_DoesNotPublishDispatchMessage()
     {
         var sub = new Subscription(_orgId, Guid.CreateVersion7(), _productId);
