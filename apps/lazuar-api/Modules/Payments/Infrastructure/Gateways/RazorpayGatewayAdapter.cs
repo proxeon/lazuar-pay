@@ -261,19 +261,23 @@ public class RazorpayGatewayAdapter : IPaymentGatewayAdapter
         metadata.TryGetValue("customer_name", out var customerName);
         metadata.TryGetValue("customer_phone", out var customerPhone);
         var finalName = !string.IsNullOrWhiteSpace(customerName) ? customerName : GatewayCommon.ExtractName(customerEmail);
-        var finalPhone = !string.IsNullOrWhiteSpace(customerPhone) ? customerPhone : "+60100000000";
+        var customer = new Dictionary<string, object>
+        {
+            ["name"] = finalName,
+            ["email"] = customerEmail
+        };
+        if (!string.IsNullOrWhiteSpace(customerPhone))
+        {
+            customer["contact"] = customerPhone;
+        }
+
         var notes = metadata.ToDictionary(k => k.Key, v => (object)v.Value);
         return new Dictionary<string, object>
         {
             ["amount"] = amountPaise,
             ["currency"] = currency.ToUpperInvariant(),
             ["description"] = finalDescription,
-            ["customer"] = new Dictionary<string, object>
-            {
-                ["name"] = finalName,
-                ["email"] = customerEmail,
-                ["contact"] = finalPhone
-            },
+            ["customer"] = customer,
             ["notes"] = notes,
             ["callback_url"] = successUrl,
             ["callback_method"] = "get"

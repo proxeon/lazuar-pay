@@ -236,6 +236,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 224 | B04-P23 | `fix/224-m2m-amount-decimal` | M2M checkout amount binds as decimal JSON, not (decimal)double |
 | 225 | B04-P24 | `fix/225-payments-dead-code-honesty` | Payments README lists five adapters + M2M sessions; unused CHIP/Billplz symbols gone |
 | 226 | B04-P25 | `fix/226-expired-then-completed` | Expired M2M session still completes on late pay; GET expire stays open-only |
+| 227 | B04-P26 | `fix/227-placeholder-pii-fail-closed` | Blank / customer@example.com refused on generate; Razorpay omits dummy phone |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

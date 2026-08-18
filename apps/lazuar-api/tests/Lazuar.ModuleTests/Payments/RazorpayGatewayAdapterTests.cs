@@ -34,6 +34,8 @@ public class RazorpayGatewayAdapterTests
         req.Should().NotContainKey("type");
         req["amount"].Should().Be(1000);
         req["currency"].Should().Be("MYR");
+        var customer = (Dictionary<string, object>)req["customer"];
+        customer.Should().NotContainKey("contact");
     }
 
     [Test]

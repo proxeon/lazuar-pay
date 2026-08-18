@@ -50,6 +50,11 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
         _ = merchantId;
         _ = setupFutureUsage; // hosted invoice only — no token vault in v1
 
+        if (!GatewayCommon.TryResolveEmail(customerEmail, out _, out var emailError))
+        {
+            return new GatewayCheckoutResult(false, null, null, emailError);
+        }
+
         var payload = BuildInvoicePayload(tenantId, amount, currency, productName, customerEmail, successUrl, cancelUrl, metadata, quantity);
 
         try
@@ -266,7 +271,9 @@ public class XenditGatewayAdapter : IPaymentGatewayAdapter
                 ? iso
                 : throw new InvalidOperationException("Currency is required."),
             ["description"] = GatewayCommon.ProductDescription(productName, quantity),
-            ["payer_email"] = GatewayCommon.ResolveEmail(customerEmail),
+            ["payer_email"] = GatewayCommon.TryResolveEmail(customerEmail, out var buyerEmail, out _)
+                ? buyerEmail
+                : throw new InvalidOperationException("Customer email is required."),
             ["success_redirect_url"] = successUrl,
             ["failure_redirect_url"] = cancelUrl,
             ["metadata"] = metadata

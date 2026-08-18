@@ -58,6 +58,11 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
             return new GatewayCheckoutResult(false, null, null, "MerchantId (Collection ID) is required for Billplz.");
         }
 
+        if (!GatewayCommon.TryResolveEmail(customerEmail, out var buyerEmail, out var emailError))
+        {
+            return new GatewayCheckoutResult(false, null, null, emailError);
+        }
+
         var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
         if (!BillplzPublicBase.TryResolveCallbackBase(_configuration, apiBaseUrl, out var callbackBase, out var baseError))
         {
@@ -93,8 +98,8 @@ public class BillplzGatewayAdapter : IPaymentGatewayAdapter
         var payload = new Dictionary<string, object>
         {
             ["collection_id"] = merchantId,
-            ["email"] = GatewayCommon.ResolveEmail(customerEmail),
-            ["name"] = GatewayCommon.ExtractName(customerEmail),
+            ["email"] = buyerEmail,
+            ["name"] = GatewayCommon.ExtractName(buyerEmail),
             ["amount"] = totalAmountCents,
             ["description"] = finalDescription,
             ["callback_url"] = webhookUrl,

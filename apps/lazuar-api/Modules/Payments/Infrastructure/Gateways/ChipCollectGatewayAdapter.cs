@@ -41,18 +41,23 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             return new GatewayCheckoutResult(false, null, null, "MerchantId (Brand ID) is required for CHIP Collect.");
         }
 
+        if (!GatewayCommon.TryResolveEmail(customerEmail, out var buyerEmail, out var emailError))
+        {
+            return new GatewayCheckoutResult(false, null, null, emailError);
+        }
+
         var amountInCents = GatewayCommon.ToMinorUnitsRounded(amount, quantity);
         var finalDescription = GatewayCommon.ProductDescription(productName, quantity);
 
         GatewayCommon.ApplyPayingTenantMetadata(metadata, tenantId);
-        var clientName = GatewayCommon.ExtractName(customerEmail);
+        var clientName = GatewayCommon.ExtractName(buyerEmail);
 
         var payload = new Dictionary<string, object>
         {
             ["brand_id"] = merchantId,
             ["client"] = new
             {
-                email = GatewayCommon.ResolveEmail(customerEmail),
+                email = buyerEmail,
                 full_name = clientName
             },
             ["purchase"] = new
@@ -267,6 +272,14 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
                 _logger.LogError(
                     "Failed to resolve CHIP brand for off-session charge (token {TokenId}, customer {CustomerId}).",
                     tokenId, customerId);
+                return false;
+            }
+
+            if (!GatewayCommon.IsUsableBuyerEmail(clientEmail))
+            {
+                _logger.LogError(
+                    "CHIP off-session charge refused: no buyer email for token {TokenId}.",
+                    tokenId);
                 return false;
             }
 
@@ -530,7 +543,7 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             }
         }
 
-        return (null, GatewayCommon.PlaceholderEmail, "Customer");
+        return (null, "", "Customer");
     }
 
     private static (string? BrandId, string ClientEmail, string ClientName) ReadBrandAndClient(JsonElement root)
@@ -541,11 +554,11 @@ public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
             : root;
         var clientEmail = clientNode.TryGetProperty("email", out var emailProp)
             ? emailProp.GetString()
-            : GatewayCommon.PlaceholderEmail;
+            : "";
         var clientName = clientNode.TryGetProperty("full_name", out var nameProp)
             ? nameProp.GetString()
             : "Customer";
-        return (brandId, clientEmail ?? GatewayCommon.PlaceholderEmail, clientName ?? "Customer");
+        return (brandId, clientEmail ?? "", clientName ?? "Customer");
     }
 
     internal static bool IsOffSessionPaid(string? status) =>

@@ -24,10 +24,38 @@ internal static class GatewayCommon
     }
 
     /// <summary>
-    /// Placeholder email when the customer address is blank (Billplz/CHIP gateways require one).
+    /// Never send this to a processor as a real buyer. Quotes already refuse it (158/192).
     /// </summary>
-    public static string ResolveEmail(string? email) =>
-        string.IsNullOrWhiteSpace(email) ? PlaceholderEmail : email;
+    public static bool IsUsableBuyerEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email)
+        && !string.Equals(email.Trim(), PlaceholderEmail, StringComparison.OrdinalIgnoreCase);
+
+    public static bool TryResolveEmail(string? email, out string resolved, out string? error)
+    {
+        if (!IsUsableBuyerEmail(email))
+        {
+            resolved = "";
+            error = "Customer email is required.";
+            return false;
+        }
+
+        resolved = email!.Trim();
+        error = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Fail-closed: blank / <see cref="PlaceholderEmail"/> throws instead of inventing a processor customer.
+    /// </summary>
+    public static string ResolveEmail(string? email)
+    {
+        if (!TryResolveEmail(email, out var resolved, out var error))
+        {
+            throw new InvalidOperationException(error);
+        }
+
+        return resolved;
+    }
 
     /// <summary>
     /// Product line description with optional quantity suffix and default name.

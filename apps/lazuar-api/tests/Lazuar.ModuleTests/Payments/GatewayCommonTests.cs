@@ -22,12 +22,15 @@ public class GatewayCommonTests
     }
 
     [Test]
-    public void ResolveEmail_UsesPlaceholderWhenBlank()
+    public void TryResolveEmail_RefusesBlankAndPlaceholder()
     {
-        GatewayCommon.ResolveEmail(null).Should().Be(GatewayCommon.PlaceholderEmail);
-        GatewayCommon.ResolveEmail("").Should().Be(GatewayCommon.PlaceholderEmail);
-        GatewayCommon.ResolveEmail("  ").Should().Be(GatewayCommon.PlaceholderEmail);
-        GatewayCommon.ResolveEmail("user@example.com").Should().Be("user@example.com");
+        GatewayCommon.TryResolveEmail(null, out _, out _).Should().BeFalse();
+        GatewayCommon.TryResolveEmail("", out _, out _).Should().BeFalse();
+        GatewayCommon.TryResolveEmail("  ", out _, out _).Should().BeFalse();
+        GatewayCommon.TryResolveEmail(GatewayCommon.PlaceholderEmail, out _, out _).Should().BeFalse();
+        GatewayCommon.TryResolveEmail("user@example.com", out var email, out var error).Should().BeTrue();
+        email.Should().Be("user@example.com");
+        error.Should().BeNull();
     }
 
     [Test]

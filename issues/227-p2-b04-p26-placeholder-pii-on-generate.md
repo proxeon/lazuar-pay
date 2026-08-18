@@ -2,7 +2,8 @@
 number: "227"
 id: B04-P26
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/227-placeholder-pii-fail-closed
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 227 — B04-P26 — Placeholder PII on generate
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/227-placeholder-pii-fail-closed`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
