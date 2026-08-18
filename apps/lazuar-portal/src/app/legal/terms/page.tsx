@@ -17,7 +17,7 @@ export default function TermsOfServicePage() {
 
       <h2 className="text-foreground border-b border-border/60 pb-2 mt-8">1. Role of Lazuar</h2>
       <p>
-        Lazuar is a technology platform that enables independent creators, educators, and businesses ("Creators") to sell subscriptions, access to private communities, and digital products. Lazuar is not a party to the transaction between you and the Creator. We are not responsible for the quality, accuracy, delivery, or legality of the content provided by the Creator.
+        Lazuar is a technology platform that enables independent creators, educators, and businesses ("Creators") to sell subscriptions and digital products. Lazuar is not a party to the transaction between you and the Creator. We are not responsible for the quality, accuracy, delivery, or legality of the content provided by the Creator.
       </p>
 
       <h2 className="text-foreground border-b border-border/60 pb-2 mt-8">2. Transactions and Liability</h2>
@@ -30,7 +30,7 @@ export default function TermsOfServicePage() {
 
       <h2 className="text-foreground border-b border-border/60 pb-2 mt-8">3. Access and Uptime</h2>
       <p>
-        While Lazuar strives to maintain 99.9% platform uptime, we are not liable for temporary service interruptions that may prevent access to a Creator's community, checkout page, or digital content. 
+        While Lazuar strives to maintain 99.9% platform uptime, we are not liable for temporary service interruptions that may prevent access to a Creator's checkout page, buyer portal, or digital content. 
       </p>
 
       <h2 className="text-foreground border-b border-border/60 pb-2 mt-8">4. Account Security</h2>

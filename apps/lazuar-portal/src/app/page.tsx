@@ -11,7 +11,7 @@ export default function GlobalLandingPage() {
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Lazuar Secure Portal</h1>
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Please use the secure, personal magic links sent to your email to access your subscriptions, courses, and downloads.
+          Please use the secure, personal magic links sent to your email to access your subscriptions and receipts.
         </p>
       </div>
     </div>

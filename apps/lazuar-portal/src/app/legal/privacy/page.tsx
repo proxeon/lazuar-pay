@@ -24,10 +24,10 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <h2 className="text-foreground border-b border-border/60 pb-2 mt-8">2. Information Processed</h2>
-      <p>To facilitate your purchase and grant you access to community resources, the Creator uses our platform to collect:</p>
+      <p>To facilitate your purchase and grant you access to receipts and the buyer portal, the Creator uses our platform to collect:</p>
       <ul>
         <li><strong>Identity data:</strong> Full name</li>
-        <li><strong>Contact data:</strong> Email address and phone number (used for WhatsApp delivery)</li>
+        <li><strong>Contact data:</strong> Email address and phone number</li>
         <li><strong>Usage data:</strong> Subscription status and transaction history</li>
       </ul>
       <p>
@@ -38,7 +38,6 @@ export default function PrivacyPolicyPage() {
       <p>To deliver the service on behalf of the Creator, Lazuar utilizes secure third-party sub-processors:</p>
       <ul>
         <li><strong>Resend:</strong> For delivering transactional emails (receipts, magic links).</li>
-        <li><strong>Meta (WhatsApp):</strong> For delivering automated session reminders and invite links.</li>
         <li><strong>Cloudflare:</strong> For secure edge routing and content delivery.</li>
       </ul>
 
