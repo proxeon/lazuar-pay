@@ -177,6 +177,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 165 | B10-X09 | `fix/165-crm-profile-org-scope` | CRM profile-by-id reads require OrganizationId |
 | 166 | B10-X10 | `fix/166-reminder-expiry-claim` | Expiry claims one session; invoice reminders save per session |
 | 167 | B10-X11 | `fix/167-sst-fail-closed` | Missing IBillingQueryService refuses to undercharge instead of dropping SST |
+| 168 | B10-X12 | `fix/168-comms-fail-closed` | Reminder jobs require One/CRM; no slug or email means no dispatch and no PAST_DUE |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

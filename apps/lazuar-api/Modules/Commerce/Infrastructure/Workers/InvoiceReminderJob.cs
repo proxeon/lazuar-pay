@@ -58,8 +58,8 @@ public class InvoiceReminderJob : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
         var eventBus = scope.ServiceProvider.GetRequiredKeyedService<IEventBus>("CommerceEventBus");
-        var one = scope.ServiceProvider.GetService<IOneQueryService>();
-        var config = scope.ServiceProvider.GetService<IConfiguration>();
+        var one = scope.ServiceProvider.GetRequiredService<IOneQueryService>();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
         var today = DateTime.UtcNow.Date;
         var sessions = await db.CheckoutSessions
@@ -93,11 +93,17 @@ public class InvoiceReminderJob : BackgroundService
                 continue;
             }
 
-            var workspace = one == null ? null : await one.GetWorkspaceByIdAsync(session.OrganizationId);
-            var slug = workspace?.Slug ?? "";
-            var payUrl = string.IsNullOrEmpty(slug)
-                ? $"{portalBase}/pay/{session.Id}"
-                : $"{portalBase}/{slug}/pay/{session.Id}";
+            var workspace = await one.GetWorkspaceByIdAsync(session.OrganizationId);
+            var slug = workspace?.Slug?.Trim() ?? "";
+            if (string.IsNullOrEmpty(slug))
+            {
+                _logger.LogWarning(
+                    "Skipping invoice reminder for session {SessionId}: workspace slug missing.",
+                    session.Id);
+                continue;
+            }
+
+            var payUrl = $"{portalBase}/{slug}/pay/{session.Id}";
 
             var total = session.AdHocLineItems.Sum(i => i.Quantity * i.UnitPrice);
             var payloadObj = new

@@ -337,32 +337,29 @@ public class BillingEngineJob : BackgroundService
                 sub.Id);
         }
 
-        string? email = null;
-        if (crm != null)
+        if (crm == null)
         {
-            var profile = await crm.GetClientProfileAsync(sub.OrganizationId, sub.ClientProfileId);
-            email = profile?.Email;
+            throw new InvalidOperationException(
+                "Cannot mark PAST_DUE without ICrmQueryService to mint a recoverable checkout.");
         }
 
-        string? checkoutUrl = null;
+        var profile = await crm.GetClientProfileAsync(sub.OrganizationId, sub.ClientProfileId);
+        var email = profile?.Email;
         if (string.IsNullOrWhiteSpace(email))
         {
-            _logger.LogWarning(
-                "Subscription {Id} has no CRM email; marking PAST_DUE without a renewal checkout URL.",
-                sub.Id);
+            throw new InvalidOperationException(
+                $"Cannot mark PAST_DUE for subscription {sub.Id} without a CRM email to mint a renewal checkout.");
         }
-        else
-        {
-            if (mediator == null || one == null || tokens == null)
-            {
-                throw new InvalidOperationException(
-                    "Cannot mint a renewal checkout: IMediator, IOneQueryService, and IMagicLinkTokenService are required.");
-            }
 
-            checkoutUrl = await RenewalCheckoutIssuer.MintAsync(
-                mediator, one, config, tokens, sub, product, email, ct, billing);
-            sub.SetCurrentRenewalCheckout(checkoutUrl, sub.NextBillingDate!.Value);
+        if (mediator == null || one == null || tokens == null)
+        {
+            throw new InvalidOperationException(
+                "Cannot mint a renewal checkout: IMediator, IOneQueryService, and IMagicLinkTokenService are required.");
         }
+
+        var checkoutUrl = await RenewalCheckoutIssuer.MintAsync(
+            mediator, one, config, tokens, sub, product, email, ct, billing);
+        sub.SetCurrentRenewalCheckout(checkoutUrl, sub.NextBillingDate!.Value);
 
         sub.MarkAsPastDue();
         await StartPastDueDunningRunAsync(db, eventBus, config, billing, crm, sub, ct);

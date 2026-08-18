@@ -2,7 +2,8 @@
 number: "168"
 id: B10-X12
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/168-comms-fail-closed
 source: plans/009-bugs/10-tenancy-workers-contracts-tests.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 168 — B10-X12 — `GetService` CRM / One / tokens / config fail-open on money comms
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/10-tenancy-workers-contracts-tests.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/168-comms-fail-closed`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

@@ -82,6 +82,32 @@ public class InvoiceReminderJobTests
     }
 
     [Test]
+    public async Task MissingWorkspaceSlug_DoesNotDispatchOrLog()
+    {
+        var session = CustomOpen(_orgId, DateTime.UtcNow);
+        _db.CheckoutSessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        var one = Substitute.For<IOneQueryService>();
+        one.GetWorkspaceByIdAsync(_orgId).Returns((WorkspaceSnapshotDto?)null);
+        _sp.Dispose();
+        var services = new ServiceCollection();
+        services.AddSingleton(_db);
+        services.AddKeyedSingleton<IEventBus>("CommerceEventBus", _eventBus);
+        services.AddSingleton(one);
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["App:ClientUrl"] = "http://localhost:3004" })
+            .Build());
+        _sp = services.BuildServiceProvider();
+        _job = new InvoiceReminderJob(_sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<InvoiceReminderJob>.Instance);
+
+        await _job.RunOnceAsync();
+
+        (await _db.InvoiceReminderDispatchLogs.CountAsync()).Should().Be(0);
+        await _eventBus.DidNotReceive().PublishAsync(Arg.Any<FulfillmentRequestedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task Completed_IsSkipped()
     {
         var session = CustomOpen(_orgId, DateTime.UtcNow);
