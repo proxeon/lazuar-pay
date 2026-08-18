@@ -7,6 +7,7 @@ import { cn } from "../../../lib/utils";
 import PageLayout from "../../core/components/PageLayout";
 import TaxInvoiceDetailPanel from "../components/TaxInvoiceDetailPanel";
 import { useDebounce } from "../../../hooks/use-debounce";
+import { classifySalesDocument } from "../lib/salesDocumentType";
 
 type BaseLedgerEntryDto = components["schemas"]["Billing.LedgerEntryDto"];
 
@@ -198,7 +199,7 @@ export default function TaxInvoicesPage() {
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-[11px] font-semibold text-[#52525b] uppercase tracking-wider">
-                          {entry.customer_type || "B2C"}
+                          {classifySalesDocument(entry)}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right">

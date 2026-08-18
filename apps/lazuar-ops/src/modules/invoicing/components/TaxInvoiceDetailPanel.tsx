@@ -6,6 +6,7 @@ import { API_URL, client, type components } from "../../../lib/api-client";
 import { cn } from "../../../lib/utils";
 import SidePanel from "../../core/components/SidePanel";
 import QuickCopy from "../../core/components/QuickCopy";
+import { classifySalesDocument } from "../lib/salesDocumentType";
 
 type BaseLedgerEntryDto = components["schemas"]["Billing.LedgerEntryDto"];
 
@@ -150,7 +151,9 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
   const hoursSinceValid = Number.isFinite(validatedAtMs)
     ? (Date.now() - validatedAtMs) / (1000 * 60 * 60)
     : Number.POSITIVE_INFINITY;
-  const isCancelable = isLhdnValidated && hoursSinceValid < 72;
+  const documentKind = classifySalesDocument(invoice);
+  const isTaxInvoice = documentKind === "Tax Invoice";
+  const isCancelable = isTaxInvoice && isLhdnValidated && hoursSinceValid < 72;
 
   const getLhdnBadgeClasses = (status?: string) => {
     switch (status) {
@@ -172,7 +175,7 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
       <SidePanel
         isOpen={!!invoice}
         onClose={onClose}
-        title="Tax Document Details"
+        title={`${documentKind} details`}
         disableOutsideClick={cancelMutation.isPending || isDownloading}
       >
         <div className="space-y-8 animate-in fade-in duration-200">
@@ -307,8 +310,9 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
                 {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Download PDF Document
               </button>
               
-              {isLhdnValidated && (
-                isCancelable ? (
+              {isTaxInvoice && (
+                <>
+                {isCancelable ? (
                   <button 
                     onClick={() => setIsCancelModalOpen(true)}
                     className="h-9 w-full border border-rose-200 bg-rose-50 text-[11px] font-bold uppercase tracking-widest text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1.5 rounded-sm"
@@ -319,11 +323,12 @@ export default function TaxInvoiceDetailPanel({ invoice, onClose }: TaxInvoiceDe
                   <div className="h-9 w-full border border-zinc-200 bg-zinc-50 text-[11px] font-bold uppercase tracking-widest text-zinc-400 flex items-center justify-center rounded-sm cursor-not-allowed" title="The 72-hour cancellation window has expired. Issue a Credit Note instead.">
                     Cancel window closed — issue a credit note
                   </div>
-                )
-              )}
+                )}
               <p className="text-[11px] text-[#71717a] leading-relaxed">
                 Supplier cancel only, within 72 hours of MyInvois VALID. Buyer reject is not implemented.
               </p>
+                </>
+              )}
             </div>
           </div>
 
