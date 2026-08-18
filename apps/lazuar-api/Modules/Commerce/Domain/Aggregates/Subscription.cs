@@ -92,18 +92,15 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
         int? quantity = null,
         decimal? unitAmount = null)
     {
-        // Prevent cycle advancement if the subscription was in arrears and is just updating config
-        if (Status == "PAST_DUE" || Status == "SUSPENDED")
+        if (Status is "PAST_DUE" or "SUSPENDED")
         {
-            NextBillingDate = NextBillingDate; 
-            CurrentPeriodEnd = CurrentPeriodEnd;
+            throw new InvalidOperationException(
+                "Activate cannot recover arrears; use RecoverFromPayment (PAST_DUE) or Resume (SUSPENDED).");
         }
-        else
-        {
-            CurrentPeriodEnd = currentPeriodEnd;
-            NextBillingDate = nextBillingDate;
-            ClearCurrentRenewalCheckout();
-        }
+
+        CurrentPeriodEnd = currentPeriodEnd;
+        NextBillingDate = nextBillingDate;
+        ClearCurrentRenewalCheckout();
 
         Status = "ACTIVE";
         TrialEndsAt = null;

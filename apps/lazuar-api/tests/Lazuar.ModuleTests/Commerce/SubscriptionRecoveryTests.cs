@@ -44,21 +44,20 @@ public class SubscriptionRecoveryTests
     }
 
     [Test]
-    public void Activate_FromPastDue_DoesNotAdvanceBillingDates()
+    public void Activate_FromPastDue_Throws()
     {
-        // Documents intentional Activate semantics: arrears config updates must not skip a cycle.
-        // Recovery must use RecoverFromPayment (or Resume for SUSPENDED) instead.
         var sub = new Subscription(Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
         var originalNext = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc);
         var originalPeriodEnd = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc);
         sub.Activate(originalPeriodEnd, originalNext);
         sub.MarkAsPastDue();
 
-        var newNext = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
-        var newPeriodEnd = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
-        sub.Activate(newPeriodEnd, newNext);
+        var act = () => sub.Activate(
+            new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc));
 
-        sub.Status.Should().Be("ACTIVE");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*RecoverFromPayment*");
+        sub.Status.Should().Be("PAST_DUE");
         sub.NextBillingDate.Should().Be(originalNext);
         sub.CurrentPeriodEnd.Should().Be(originalPeriodEnd);
     }
