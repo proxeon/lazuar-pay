@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Download, Building2, CheckCircle2 } from "lucide-react";
 import { components } from "@repo/api-types-ts";
-import { submitCheckout, validateTin, TinValidationUnavailableError } from "../lib/api";
+import { submitCheckout, validateTin, TinValidationUnavailableError, getCheckoutStatus } from "../lib/api";
 import { customQuoteBreakdown } from "../lib/grossBreakdown";
 import { cn } from "../../../../lib/utils";
 import Link from "next/link";
@@ -30,6 +30,26 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
   const [tinHint, setTinHint] = useState<string | null>(null);
 
   const isCompleted = checkout.status === "COMPLETED";
+  const [portalHref, setPortalHref] = useState(`/${tenantSlug}/portal`);
+
+  useEffect(() => {
+    if (!isCompleted) return;
+    let cancelled = false;
+    getCheckoutStatus(tenantSlug, checkout.id)
+      .then((response) => {
+        if (cancelled) return;
+        const minted = response.token;
+        if (minted) {
+          setPortalHref(`/${tenantSlug}/portal?token=${encodeURIComponent(minted)}`);
+        }
+      })
+      .catch(() => {
+        /* leave tokenless portal (magic-link form) */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCompleted, tenantSlug, checkout.id]);
   const isExpired = checkout.status === "EXPIRED" || new Date(checkout.expires_at).getTime() < Date.now();
   const sellerName = checkout.is_b2b_required
     ? (profile?.legal_name || branding?.name || "Merchant")
@@ -127,7 +147,7 @@ export function QuoteView({ tenantSlug, checkout, branding, profile, isCancelled
               <p className="text-sm font-medium">This payment request has been successfully completed.</p>
             </div>
           </div>
-          <Link href={`/${tenantSlug}/portal`} className="h-10 px-6 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-widest transition-colors shrink-0 flex items-center justify-center whitespace-nowrap">
+          <Link href={portalHref} className="h-10 px-6 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-widest transition-colors shrink-0 flex items-center justify-center whitespace-nowrap">
             Open buyer portal
           </Link>
         </div>

@@ -22,7 +22,9 @@ export function CheckoutSuccessView({ tenantSlug, product, displayName, returnHr
   const subId = searchParams.get("sub_id");
   const label = displayName || product?.name || "Payment request";
   const productName = <strong className="text-foreground">{label}</strong>;
-  const checkoutReturnHref = returnHref || (product ? `/${tenantSlug}/checkout/${product.slug}` : `/${tenantSlug}/portal`);
+  const checkoutReturnHref = returnHref
+    || (product ? `/${tenantSlug}/checkout/${product.slug}` : null)
+    || (subId ? `/${tenantSlug}/pay/${subId}` : `/${tenantSlug}/portal`);
 
   const [status, setStatus] = useState<"VERIFYING" | "SUCCESS" | "TIMEOUT" | "EXPIRED" | "ERROR">("VERIFYING");
   const [accessToken, setAccessToken] = useState<string | null>(null);

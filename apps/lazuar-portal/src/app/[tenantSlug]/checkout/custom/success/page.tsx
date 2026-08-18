@@ -19,7 +19,6 @@ export default async function CustomCheckoutSuccessPage({
       <CheckoutSuccessView
         tenantSlug={tenantSlug}
         displayName="Payment request"
-        returnHref={`/${tenantSlug}/portal`}
       />
     </Suspense>
   );
