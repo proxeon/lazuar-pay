@@ -72,22 +72,36 @@ public static class AuthEndpoints
             });
         });
 
-        group.MapPost("/auth/login", async Task<Results<Ok<LoginResponse>, BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>> (
+        group.MapPost("/auth/login", async Task<IResult> (
             [FromBody] LoginRequest req,
             IConfiguration config,
             IPasswordService passwordService,
             OneDbContext db,
-            HttpContext ctx) =>
+            HttpContext ctx,
+            PublicAuthRateLimiter rateLimiter) =>
         {
             var email = req.Email?.Trim().ToLowerInvariant();
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(req.Password))
                 return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 400, Detail = "Email and password are required." });
 
+            var clientKey = ResolveRegisterClientKey(ctx, email);
+            if (!await rateLimiter.TryAcquireAsync(clientKey, ctx.RequestAborted))
+            {
+                return TooManyAuthAttempts(ctx);
+            }
+
             var user = await db.GlobalUsers.FirstOrDefaultAsync(u => u.Email == email);
 
             if (user == null || !user.IsActive || !passwordService.Verify(req.Password, user.PasswordHash))
             {
-                return TypedResults.BadRequest(new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = 401, Detail = "Invalid email or password." });
+                return Results.Json(
+                    new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status401Unauthorized,
+                        Title = "Unauthorized",
+                        Detail = "Invalid email or password."
+                    },
+                    statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var role = user.IsSystemAdmin ? "SUPER_ADMIN" : "CLIENT";
@@ -106,9 +120,20 @@ public static class AuthEndpoints
             return TypedResults.Ok(new StatusResponse { Status = "logged_out" });
         });
 
-        group.MapPost("/auth/forgot-password", async Task<Ok<StatusResponse>> (ForgotPasswordRequestDto req, IMediator mediator) =>
+        group.MapPost("/auth/forgot-password", async Task<IResult> (
+            ForgotPasswordRequestDto req,
+            IMediator mediator,
+            HttpContext ctx,
+            PublicAuthRateLimiter rateLimiter) =>
         {
-            await mediator.Send(new ForgotPasswordCommand(req.Email));
+            var email = req.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+            var clientKey = ResolveRegisterClientKey(ctx, email);
+            if (!await rateLimiter.TryAcquireAsync(clientKey, ctx.RequestAborted))
+            {
+                return TooManyAuthAttempts(ctx);
+            }
+
+            await mediator.Send(new ForgotPasswordCommand(email));
             return TypedResults.Ok(new StatusResponse { Status = "requested" });
         });
 
@@ -156,9 +181,20 @@ public static class AuthEndpoints
             }
         });
 
-        group.MapPost("/auth/resend-verification", async Task<Ok<StatusResponse>> (ResendVerificationRequestDto req, IMediator mediator) =>
+        group.MapPost("/auth/resend-verification", async Task<IResult> (
+            ResendVerificationRequestDto req,
+            IMediator mediator,
+            HttpContext ctx,
+            PublicAuthRateLimiter rateLimiter) =>
         {
-            await mediator.Send(new ResendVerificationEmailCommand(req.Email));
+            var email = req.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+            var clientKey = ResolveRegisterClientKey(ctx, email);
+            if (!await rateLimiter.TryAcquireAsync(clientKey, ctx.RequestAborted))
+            {
+                return TooManyAuthAttempts(ctx);
+            }
+
+            await mediator.Send(new ResendVerificationEmailCommand(email));
             return TypedResults.Ok(new StatusResponse { Status = "requested" });
         });
 
@@ -209,6 +245,19 @@ public static class AuthEndpoints
 
         ip ??= "unknown";
         return $"email:{email}|ip:{ip}";
+    }
+
+    internal static IResult TooManyAuthAttempts(HttpContext ctx)
+    {
+        ctx.Response.Headers.RetryAfter = "600";
+        return Results.Json(
+            new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "Too Many Requests",
+                Detail = "Too many attempts. Retry later."
+            },
+            statusCode: StatusCodes.Status429TooManyRequests);
     }
 
     private static void IssueCookie(HttpContext ctx, GlobalUser user, IConfiguration config)

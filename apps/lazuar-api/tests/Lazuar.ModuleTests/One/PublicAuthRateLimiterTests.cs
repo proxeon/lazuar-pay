@@ -5,13 +5,13 @@ using NUnit.Framework;
 namespace Lazuar.ModuleTests.One;
 
 [TestFixture]
-public class PublicRegisterRateLimiterTests
+public class PublicAuthRateLimiterTests
 {
     [Test]
     public async Task Blocks_After_Budget()
     {
-        var limiter = new PublicRegisterRateLimiter();
-        for (var i = 0; i < PublicRegisterRateLimiter.Limit; i++)
+        var limiter = new PublicAuthRateLimiter();
+        for (var i = 0; i < PublicAuthRateLimiter.Limit; i++)
         {
             Assert.That(await limiter.TryAcquireAsync("email:a@b.co|ip:1.1.1.1"), Is.True);
         }
@@ -23,8 +23,9 @@ public class PublicRegisterRateLimiterTests
     [Test]
     public async Task Empty_Key_Is_Denied()
     {
-        var limiter = new PublicRegisterRateLimiter();
+        var limiter = new PublicAuthRateLimiter();
         Assert.That(await limiter.TryAcquireAsync(""), Is.False);
         Assert.That(await limiter.TryAcquireAsync("   "), Is.False);
+        Assert.That(await limiter.TryAcquireAsync(null!), Is.False);
     }
 }

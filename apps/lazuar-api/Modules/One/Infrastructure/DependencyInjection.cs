@@ -52,6 +52,7 @@ public static class DependencyInjection
         });
         services.AddSingleton<IntegratorProvisionRateLimiter>();
         services.AddSingleton<PublicRegisterRateLimiter>();
+        services.AddSingleton<PublicAuthRateLimiter>();
 
         services.AddScoped<IOneQueryService, OneQueryService>();
         services.AddScoped<IPlatformAdminAuthQuery, PlatformAdminAuthQuery>();
