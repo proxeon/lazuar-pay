@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BuildingBlocks.Domain;
 using Modules.Commerce.Domain.ValueObjects;
 
@@ -135,6 +136,11 @@ public class CheckoutSession : Entity, IAggregateRoot, IMustHaveTenant
         if (_adHocLineItems.Count == 0)
         {
             CheckRule(new GenericBusinessRule("Custom checkout sessions must have at least one line item."));
+        }
+
+        if (_adHocLineItems.Sum(x => x.UnitPrice * x.Quantity) <= 0)
+        {
+            CheckRule(new GenericBusinessRule("Custom checkout sessions must have a positive total."));
         }
     }
 

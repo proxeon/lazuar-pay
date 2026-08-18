@@ -93,6 +93,29 @@ public class CreateCustomCheckoutAndInitiateSessionTests
     }
 
     [Test]
+    public void AdHocLineItem_RejectsNonPositiveQtyAndNegativePrice()
+    {
+        var qty = () => new AdHocLineItem("Work", 0, 100m);
+        qty.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("quantity");
+
+        var price = () => new AdHocLineItem("Work", 1, -1m);
+        price.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("unitPrice");
+    }
+
+    [Test]
+    public void CustomSession_ZeroMoney_Throws()
+    {
+        var act = () => new CheckoutSession(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            new[] { new AdHocLineItem("Work", 1, 0m) },
+            DateTime.UtcNow.AddDays(1),
+            false);
+
+        act.Should().Throw<Exception>().WithMessage("*positive total*");
+    }
+
+    [Test]
     public async Task InitiateCheckout_SessionId_StampsB2bMetadataAndRequiresTin()
     {
         var orgId = Guid.CreateVersion7();

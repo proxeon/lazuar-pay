@@ -194,6 +194,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 182 | B01-C12 | `fix/182-sst-per-unit-ssot` | SST SSoT is per-unit then × seats (hop-2 Amount × Quantity) |
 | 183 | B01-C13 | `fix/183-session-status-guards` | Complete/Expire only from OPEN; illegal transitions throw |
 | 184 | B01-C14 | `fix/184-checkout-already-subscribed` | Public checkout rejects a second ACTIVE/TRIALING seat for the same client+product |
+| 185 | B01-C15 | `fix/185-adhoc-line-validation` | Ad-hoc lines require qty ≥ 1, unit ≥ 0, and a positive quote total |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -2,7 +2,8 @@
 number: "185"
 id: B01-C15
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/185-adhoc-line-validation
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 185 — B01-C15 — Ad-hoc lines accept qty ≤ 0 and negative prices
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/185-adhoc-line-validation`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
