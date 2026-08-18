@@ -53,8 +53,7 @@ public class ConsolidatedInvoiceIssuedIntegrationEventHandler : IIntegrationEven
             Total_including_tax = (double)@event.TotalIncludingTax
         };
 
-        // Added dynamic idempotency key generation for internal system events
-        var idempotencyKey = Guid.CreateVersion7().ToString();
+        var idempotencyKey = $"b2c-cons:{@event.OrganizationId:N}:{@event.InternalReferenceId}";
         var command = new SubmitTaxDocumentCommand(@event.OrganizationId, idempotencyKey, payload);
         
         await _mediator.Send(command);

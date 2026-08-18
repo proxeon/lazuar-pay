@@ -216,7 +216,8 @@ public class B2cConsolidationJob : BackgroundService
             .IgnoreQueryFilters()
             .AnyAsync(e =>
                 e.OrganizationId == orgId
-                && e.TaxInvoiceId == consolidationRef, ct);
+                && (e.TaxInvoiceId == consolidationRef
+                    || e.CustomerDocumentNumber == consolidationRef), ct);
 
         if (alreadyConsolidated)
         {

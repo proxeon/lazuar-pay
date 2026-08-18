@@ -142,8 +142,6 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
         if (!string.IsNullOrWhiteSpace(lhdnDocumentUuid))
         {
             LhdnDocumentUuid = lhdnDocumentUuid;
-            // Legacy dual-use: TaxInvoiceId held UUID after validation for PDF QR.
-            TaxInvoiceId = lhdnDocumentUuid;
         }
 
         LhdnValidationStatus = status;

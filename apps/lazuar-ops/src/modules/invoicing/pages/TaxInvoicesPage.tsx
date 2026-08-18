@@ -119,7 +119,13 @@ export default function TaxInvoicesPage() {
     >
       {lastConsRow && (
         <div className="mb-3 border border-[#e5e5e5] bg-[#fafafa] px-4 py-3 text-[12px] text-[#52525b]">
-          Last B2C consolidation: <span className="font-mono font-semibold text-[#09090b]">{lastConsRow.tax_invoice_id || lastConsRow.customer_document_number}</span>
+          Last B2C consolidation: <span className="font-mono font-semibold text-[#09090b]">{
+            lastConsRow.customer_document_number?.startsWith("B2C-CONS-")
+              ? lastConsRow.customer_document_number
+              : lastConsRow.tax_invoice_id?.startsWith("B2C-CONS-")
+                ? lastConsRow.tax_invoice_id
+                : lastConsRow.customer_document_number || lastConsRow.tax_invoice_id
+          }</span>
           {" · "}
           LHDN {lastConsRow.lhdn_validation_status || "pending"}
           <span className="block text-[11px] text-[#71717a] mt-1">

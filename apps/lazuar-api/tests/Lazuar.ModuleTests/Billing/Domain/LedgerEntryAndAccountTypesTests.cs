@@ -35,6 +35,20 @@ public class LedgerEntryAndAccountTypesTests
         Assert.That(entry.CustomerDocumentNumber, Is.EqualTo("RCPT-KEEP"));
         Assert.That(entry.LhdnDocumentUuid, Is.EqualTo("uuid-from-myinvois"));
         Assert.That(entry.LhdnValidationStatus, Is.EqualTo(LhdnValidationStatuses.Valid));
+        Assert.That(entry.TaxInvoiceId, Is.Not.EqualTo("uuid-from-myinvois"));
+    }
+
+    [Test]
+    public void UpdateLhdnStatus_KeepsConsolidationTaxInvoiceId()
+    {
+        var entry = new LedgerEntry(Guid.CreateVersion7(), LedgerReferenceTypes.GatewayPayment, "tx1", "sale", "B2C");
+        entry.AssignB2cReceipt("RCPT-KEEP");
+        entry.MarkConsolidatedPending("B2C-CONS-202607-abc");
+
+        entry.UpdateLhdnStatus("uuid-from-myinvois", LhdnValidationStatuses.Valid);
+
+        Assert.That(entry.TaxInvoiceId, Is.EqualTo("B2C-CONS-202607-abc"));
+        Assert.That(entry.LhdnDocumentUuid, Is.EqualTo("uuid-from-myinvois"));
     }
 
     [Test]
