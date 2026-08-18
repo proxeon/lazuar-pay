@@ -160,6 +160,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 148 | B09-U19 | `fix/148-pricing-lhdn-live` | Pricing no longer says LHDN merchant UI is not live |
 | 149 | B09-U20 | `fix/149-legal-copy` | Legal, privacy, and landing no longer sell WhatsApp, communities, or courses |
 | 150 | B09-U21 | `fix/150-superadmin-general-settings` | SUPER_ADMIN can save General Settings (same as ADMIN) |
+| 151 | B09-U22 | `fix/151-email-missing-not-gateway` | Missing Resend is not labeled a payment-gateway outage |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

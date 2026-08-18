@@ -133,7 +133,7 @@ describe("classifyCheckoutError", () => {
     );
     assert.equal(
       classifyCheckoutError("Workspace has not configured an active email provider."),
-      "error.gatewayDown",
+      "error.emailMissing",
     );
     assert.equal(
       classifyCheckoutError("Buyer requires a phone number"),

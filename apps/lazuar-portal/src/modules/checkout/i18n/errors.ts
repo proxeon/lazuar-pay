@@ -20,11 +20,11 @@ export function classifyCheckoutError(
   if (PROMO_NOT_APPLICABLE.some((needle) => lower.includes(needle))) {
     return "error.promoNotApplicable";
   }
-  if (
-    lower.includes("payment gateway") ||
-    lower.includes("not configured an active email provider")
-  ) {
+  if (lower.includes("payment gateway")) {
     return "error.gatewayDown";
+  }
+  if (lower.includes("not configured an active email provider")) {
+    return "error.emailMissing";
   }
   if (lower.includes("confirmation link was missing")) return "error.missingConfirmUrl";
   if (lower.includes("checkout submission failed")) return "error.submitFailed";

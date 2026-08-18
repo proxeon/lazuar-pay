@@ -69,6 +69,8 @@ export const en = {
   "error.promoNotApplicable": "This code cannot be applied.",
   "error.gatewayDown":
     "This creator is currently updating their payment settings. Please try again later.",
+  "error.emailMissing":
+    "This creator has not finished setting up receipts. Please try again later or contact them.",
   "error.missingConfirmUrl":
     "Checkout completed but the confirmation link was missing. Please check your email.",
   "error.submitFailed": "Checkout submission failed.",
@@ -173,6 +175,8 @@ export const ms: Record<MessageKey, string> = {
   "error.promoNotApplicable": "Kod ini tidak boleh digunakan.",
   "error.gatewayDown":
     "Peniaga ini sedang mengemas kini tetapan pembayaran. Sila cuba lagi kemudian.",
+  "error.emailMissing":
+    "Peniaga ini belum selesai menyediakan resit. Sila cuba lagi kemudian atau hubungi mereka.",
   "error.missingConfirmUrl":
     "Checkout selesai tetapi pautan pengesahan tiada. Sila semak e-mel anda.",
   "error.submitFailed": "Checkout gagal dihantar.",
