@@ -247,6 +247,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 235 | B05-L31 | `fix/235-credit-hold-unique` | CreditHold unique per org+correlation; exhaust SETTLED; remainder RELEASED |
 | 236 | B05-L32 | `fix/236-ledger-document-404` | Ledger PDF 404 unless header belongs to tenant; child tables stay parent-scoped |
 | 237 | B05-L33 | `fix/237-skip-empty-zero-journal` | $0 list-price checkout does not persist a no-line ZERO_AMOUNT_CHECKOUT |
+| 238 | B05-L34 | `fix/238-credit-note-pdf-assert` | Credit Note PDF totals include contra 100 + tax 8 = 108 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -14,6 +14,7 @@ using Modules.Billing.Domain;
 using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure;
 using Modules.Billing.Infrastructure.Commands;
+using Modules.Billing.Infrastructure.Documents;
 using Modules.Commerce.Contracts;
 using Modules.One.Contracts;
 using NSubstitute;
@@ -153,6 +154,13 @@ public class GenerateAndStoreDocumentCommandHandlerTests
             Arg.Any<Stream>(), Arg.Any<string>(), Arg.Any<string>(), "application/pdf", Arg.Any<CancellationToken>());
         await eventBus.Received(1).PublishAsync(Arg.Is<DocumentPublishedIntegrationEvent>(e =>
             e.DocumentType == "Credit Note"));
+
+        var model = new InvoiceDocumentModel();
+        GenerateAndStoreDocumentCommandHandler.ApplyDocumentLines(model, entry, isCreditNote: true);
+        model.Subtotal.Should().Be(100m);
+        model.Tax.Should().Be(8m);
+        model.Total.Should().Be(108m);
+        model.LineItems.Should().ContainSingle(i => i.Amount == 100m);
     }
 
     private static GenerateAndStoreDocumentCommandHandler CreateHandler(

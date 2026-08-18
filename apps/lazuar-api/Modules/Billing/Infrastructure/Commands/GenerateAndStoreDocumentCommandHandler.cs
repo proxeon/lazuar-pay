@@ -11,6 +11,7 @@ using Modules.Billing.Contracts;
 using Modules.Billing.Contracts.Commands;
 using Modules.Billing.Contracts.Events;
 using Modules.Billing.Domain;
+using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure.Documents;
 using Modules.Commerce.Contracts;
 using Modules.One.Contracts;
@@ -82,24 +83,7 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
             request.LhdnQrLink);
 
         var isCreditNote = string.Equals(request.DocumentType, "Credit Note", StringComparison.OrdinalIgnoreCase);
-        var sourceLines = entry.Lines.Where(l =>
-            l.AccountType == AccountTypes.RevenueGross
-            || l.AccountType == AccountTypes.RevenueRecognized
-            || (isCreditNote && l.AccountType == AccountTypes.ContraRevenueRefunds)).ToList();
-        foreach (var line in sourceLines)
-        {
-            model.LineItems.Add(new InvoiceLineItemModel
-            {
-                Description = isCreditNote ? "Refund" : entry.Description ?? "Payment",
-                Amount = Math.Abs(line.Amount)
-            });
-            model.Currency = line.Currency;
-        }
-
-        model.Subtotal = model.LineItems.Sum(x => x.Amount);
-        model.Discount = entry.Lines.Where(l => l.AccountType == AccountTypes.ExpenseDiscount).Sum(l => Math.Abs(l.Amount));
-        model.Tax = entry.Lines.Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable).Sum(l => Math.Abs(l.Amount));
-        model.Total = model.Subtotal - model.Discount + model.Tax;
+        ApplyDocumentLines(model, entry, isCreditNote);
         if (entry.Lines.Any(l => l.TaxTypeCode == "02") || !string.IsNullOrWhiteSpace(profile?.SstRegistrationNumber) && model.Tax > 0)
         {
             model.TaxLabel = "SST:";
@@ -122,5 +106,27 @@ public class GenerateAndStoreDocumentCommandHandler : ICommandHandler<GenerateAn
             customerName,
             customerEmail
         ));
+    }
+
+    internal static void ApplyDocumentLines(InvoiceDocumentModel model, LedgerEntry entry, bool isCreditNote)
+    {
+        var sourceLines = entry.Lines.Where(l =>
+            l.AccountType == AccountTypes.RevenueGross
+            || l.AccountType == AccountTypes.RevenueRecognized
+            || (isCreditNote && l.AccountType == AccountTypes.ContraRevenueRefunds)).ToList();
+        foreach (var line in sourceLines)
+        {
+            model.LineItems.Add(new InvoiceLineItemModel
+            {
+                Description = isCreditNote ? "Refund" : entry.Description ?? "Payment",
+                Amount = Math.Abs(line.Amount)
+            });
+            model.Currency = line.Currency;
+        }
+
+        model.Subtotal = model.LineItems.Sum(x => x.Amount);
+        model.Discount = entry.Lines.Where(l => l.AccountType == AccountTypes.ExpenseDiscount).Sum(l => Math.Abs(l.Amount));
+        model.Tax = entry.Lines.Where(l => l.AccountType == AccountTypes.LiabilityTaxPayable).Sum(l => Math.Abs(l.Amount));
+        model.Total = model.Subtotal - model.Discount + model.Tax;
     }
 }
