@@ -2,7 +2,8 @@
 number: "244"
 id: B05-L40
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/244-manual-payment-event
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
 ---
@@ -92,4 +93,8 @@ Smallest honest change: delete or park the contract, remove it from README §5 (
 
 ### Evaluation notes
 Duplicates the `ManualPaymentRecordedIntegrationEvent: contract only, no handler` bullet on **234** (B05-L30). Sibling orphan is `InvoiceIssuedIntegrationEvent` (247 + 234). Residual after 161: unused events are explicit, not silent success. Still P2 (honesty / dead contract, no live path). Do not mark YAML resolved.
+
+## Resolution
+
+README §5 already parked this event (234). Contract XML now says parked / do not journal twice. Architecture test locks no production `new ManualPaymentRecordedIntegrationEvent`. Allow-list kept so a forgotten publisher still fail-closes.
 

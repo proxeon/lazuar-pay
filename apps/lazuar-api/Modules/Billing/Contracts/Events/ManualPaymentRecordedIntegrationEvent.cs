@@ -3,6 +3,11 @@ using BuildingBlocks.Application;
 
 namespace Modules.Billing.Contracts.Events;
 
+/// <summary>
+/// Parked. Nothing in production publishes or handles this type.
+/// Offline / clerk cash is <c>ManualSubscriberEnrolledIntegrationEvent</c>.
+/// Do not add a second cash journal here.
+/// </summary>
 public record ManualPaymentRecordedIntegrationEvent(
     Guid OrganizationId,
     string InvoiceNumber,
