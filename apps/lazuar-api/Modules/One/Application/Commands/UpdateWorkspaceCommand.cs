@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Modules.One.Domain;
 
 namespace Modules.One.Application.Commands;
 
@@ -29,7 +30,9 @@ public class UpdateWorkspaceCommandHandler : ICommandHandler<UpdateWorkspaceComm
     public async Task Handle(UpdateWorkspaceCommand request, CancellationToken ct)
     {
         var membership = await _repository.GetMembershipAsync(request.RequesterUserId, request.OrganizationId, ct);
-        if (membership == null || membership.Role != "ADMIN")
+        var requester = await _repository.GetUserByIdAsync(request.RequesterUserId, ct);
+        var canUpdate = WorkspaceStaffRoles.CanManageMembers(membership?.Role) || requester?.IsSystemAdmin == true;
+        if (!canUpdate)
         {
             throw new InvalidOperationException("Unauthorized to update workspace.");
         }
