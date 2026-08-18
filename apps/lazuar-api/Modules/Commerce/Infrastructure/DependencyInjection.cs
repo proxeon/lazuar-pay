@@ -18,6 +18,7 @@ using Modules.Commerce.Infrastructure.EventHandlers;
 using Modules.Payments.Contracts.Events;
 using Modules.Communications.Contracts.Events;
 using Modules.CRM.Contracts;
+using Modules.One.Contracts;
 using System;
 
 namespace Modules.Commerce.Infrastructure;
@@ -68,6 +69,7 @@ public static class DependencyInjection
         services.AddTransient<ClientProfileAnonymizedIntegrationEventHandler>();
         services.AddTransient<CommerceGatewayDisputeCreatedHandler>();
         services.AddTransient<CommerceGatewayDisputeClosedHandler>();
+        services.AddTransient<TenantUpdatedUnpublishProductsHandler>();
 
         return services;
     }
@@ -88,6 +90,7 @@ public static class DependencyInjection
         eventBus.Subscribe<ClientProfileAnonymizedIntegrationEvent, ClientProfileAnonymizedIntegrationEventHandler>();
         eventBus.Subscribe<GatewayDisputeCreatedIntegrationEvent, CommerceGatewayDisputeCreatedHandler>();
         eventBus.Subscribe<GatewayDisputeClosedIntegrationEvent, CommerceGatewayDisputeClosedHandler>();
+        eventBus.Subscribe<TenantUpdatedIntegrationEvent, TenantUpdatedUnpublishProductsHandler>();
         return app;
     }
 }

@@ -78,6 +78,22 @@ public class OneRepository : IOneRepository
                 ct);
     }
 
+    public async Task<IReadOnlyList<TenantMembership>> ListMembershipsAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.TenantMemberships
+            .IgnoreQueryFilters()
+            .Where(m => m.OrganizationId == organizationId)
+            .ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<WorkspaceInvitation>> ListPendingInvitationsAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.WorkspaceInvitations
+            .IgnoreQueryFilters()
+            .Where(i => i.OrganizationId == organizationId && i.Status == "PENDING")
+            .ToListAsync(ct);
+    }
+
     public async Task<GlobalUser?> GetUserByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.GlobalUsers.FirstOrDefaultAsync(u => u.Id == id, ct);

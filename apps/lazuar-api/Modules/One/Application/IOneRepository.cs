@@ -22,6 +22,8 @@ public interface IOneRepository
     Task<bool> HasMembershipAsync(Guid globalUserId, Guid organizationId, CancellationToken ct = default);
     Task<TenantMembership?> GetMembershipAsync(Guid globalUserId, Guid organizationId, CancellationToken ct = default);
     Task<int> CountManagingMembersAsync(Guid organizationId, CancellationToken ct = default);
+    Task<IReadOnlyList<TenantMembership>> ListMembershipsAsync(Guid organizationId, CancellationToken ct = default);
+    Task<IReadOnlyList<WorkspaceInvitation>> ListPendingInvitationsAsync(Guid organizationId, CancellationToken ct = default);
 
     Task<GlobalUser?> GetUserByIdAsync(Guid id, CancellationToken ct = default);
     Task<GlobalUser?> GetUserByEmailAsync(string email, CancellationToken ct = default);
