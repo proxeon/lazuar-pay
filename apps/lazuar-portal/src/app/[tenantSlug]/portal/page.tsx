@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { serverClient } from "../../../modules/core/lib/server-client";
 import { RequestMagicLinkForm } from "../../../modules/portal/components/RequestMagicLinkForm";
@@ -8,6 +8,35 @@ import { ShieldCheck, FileText } from "lucide-react";
 function formatPaidThrough(value?: string | null) {
   if (!value) return null;
   return new Date(value).toLocaleDateString();
+}
+
+async function cancelPortalSubscription(
+  tenantSlug: string,
+  token: string,
+  subscriptionId: string,
+  atPeriodEnd: boolean,
+) {
+  "use server";
+  const { error } = await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
+    params: { path: { tenantSlug }, query: { token } },
+    body: { subscription_id: subscriptionId, at_period_end: atPeriodEnd },
+  });
+  if (error) {
+    redirect(`/${tenantSlug}/portal?token=${encodeURIComponent(token)}&err=action`);
+  }
+  revalidatePath(`/${tenantSlug}/portal`);
+}
+
+async function keepPortalSubscription(tenantSlug: string, token: string, subscriptionId: string) {
+  "use server";
+  const { error } = await serverClient.POST("/public/commerce/{tenantSlug}/portal/keep", {
+    params: { path: { tenantSlug }, query: { token } },
+    body: { subscription_id: subscriptionId },
+  });
+  if (error) {
+    redirect(`/${tenantSlug}/portal?token=${encodeURIComponent(token)}&err=action`);
+  }
+  revalidatePath(`/${tenantSlug}/portal`);
 }
 
 export default async function AggregatedPortalPage({
@@ -20,6 +49,7 @@ export default async function AggregatedPortalPage({
   const { tenantSlug } = await params;
   const resolvedSearchParams = await searchParams;
   const token = resolvedSearchParams.token as string | undefined;
+  const actionError = resolvedSearchParams.err === "action";
 
   if (!token) {
     return (
@@ -32,6 +62,8 @@ export default async function AggregatedPortalPage({
       </div>
     );
   }
+
+  const accessToken = token;
 
   const { data: commerceData, error: commerceError } = await serverClient.GET("/public/commerce/{tenantSlug}/portal", {
     params: { path: { tenantSlug }, query: { token: token ?? "" } },
@@ -50,6 +82,12 @@ export default async function AggregatedPortalPage({
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
+      {actionError && (
+        <p className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+          That change could not be saved. Try again.
+        </p>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-emerald-50/50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900 gap-2">
         <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-500 flex items-center gap-1.5">
           <ShieldCheck size={14} /> Identity Verified
@@ -126,26 +164,12 @@ export default async function AggregatedPortalPage({
                     )}
                     {isHealthyForCancel && (
                       <>
-                        <form action={async () => {
-                          "use server";
-                          await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
-                            params: { path: { tenantSlug }, query: { token: token ?? "" } },
-                            body: { subscription_id: sub.id, at_period_end: true }
-                          });
-                          revalidatePath(`/${tenantSlug}/portal`);
-                        }}>
+                        <form action={cancelPortalSubscription.bind(null, tenantSlug, accessToken, sub.id, true)}}>
                           <button className="h-9 px-4 border border-red-200 bg-background text-red-600 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors rounded-none">
                             Cancel Plan
                           </button>
                         </form>
-                        <form action={async () => {
-                          "use server";
-                          await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
-                            params: { path: { tenantSlug }, query: { token: token ?? "" } },
-                            body: { subscription_id: sub.id, at_period_end: false }
-                          });
-                          revalidatePath(`/${tenantSlug}/portal`);
-                        }}>
+                        <form action={cancelPortalSubscription.bind(null, tenantSlug, accessToken, sub.id, false)}}>
                           <button className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-red-600 transition-colors">
                             Cancel immediately
                           </button>
@@ -153,14 +177,7 @@ export default async function AggregatedPortalPage({
                       </>
                     )}
                     {isFlagged && (
-                      <form action={async () => {
-                        "use server";
-                        await serverClient.POST("/public/commerce/{tenantSlug}/portal/keep", {
-                          params: { path: { tenantSlug }, query: { token: token ?? "" } },
-                          body: { subscription_id: sub.id }
-                        });
-                        revalidatePath(`/${tenantSlug}/portal`);
-                      }}>
+                      <form action={keepPortalSubscription.bind(null, tenantSlug, accessToken, sub.id)}}>
                         <button className="h-9 px-4 border border-emerald-200 bg-background text-emerald-700 text-[11px] font-bold uppercase tracking-widest hover:bg-emerald-50 transition-colors rounded-none">
                           Keep plan
                         </button>
@@ -175,14 +192,7 @@ export default async function AggregatedPortalPage({
                       </a>
                     )}
                     {isPastDue && (
-                      <form action={async () => {
-                        "use server";
-                        await serverClient.POST("/public/commerce/{tenantSlug}/portal/cancel", {
-                          params: { path: { tenantSlug }, query: { token: token ?? "" } },
-                          body: { subscription_id: sub.id, at_period_end: false }
-                        });
-                        revalidatePath(`/${tenantSlug}/portal`);
-                      }}>
+                      <form action={cancelPortalSubscription.bind(null, tenantSlug, accessToken, sub.id, false)}}>
                         <button className="h-9 px-4 border border-red-200 bg-background text-red-600 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 transition-colors rounded-none">
                           Cancel immediately
                         </button>

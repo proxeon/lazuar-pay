@@ -146,6 +146,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 134 | B09-U05 | `fix/134-mobile-nav-hamburger` | Ops/admin mobile header has a hamburger; resize no longer force-closes |
 | 135 | B09-U06 | `fix/135-portal-accept-invite-ops-url` | Portal image bakes NEXT_PUBLIC_OPS_URL=https://hub.lazuar.com |
 | 136 | B09-U07 | `fix/136-admin-login-open-redirect` | Admin login only follows same-origin relative returnUrl |
+| 137 | B09-U08 | `fix/137-portal-cancel-errors` | Portal cancel/keep surface API errors instead of silently revalidating |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
