@@ -228,6 +228,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 216 | B03-C28 | `fix/216-arrears-slug-bind` | Arrears/update-payment require workspace slug to match the token org |
 | 217 | B03-C29 | `fix/217-dunning-period-end-honesty` | Dunning/portal current_period_end uses CurrentPeriodEnd (missed date if PAST_DUE) |
 | 218 | B03-C30 | `fix/218-arrears-missing-token-401` | Tests lock arrears token as required; missing token is Unauthorized |
+| 219 | B04-P18 | `fix/219-empty-webhook-body-400` | Empty payment webhook body is HTTP 400, not 500 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

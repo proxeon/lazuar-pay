@@ -42,9 +42,10 @@ public static class Endpoints
             var rawBody = await reader.ReadToEndAsync();
             context.Request.Body.Position = 0;
 
-            if (string.IsNullOrEmpty(rawBody))
+            if (string.IsNullOrWhiteSpace(rawBody))
             {
-                throw new InvalidOperationException("Empty request body.");
+                // Health checks / empty retries must not 500 (B04-P18).
+                return Results.BadRequest(new { error = "Empty request body." });
             }
 
             var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
