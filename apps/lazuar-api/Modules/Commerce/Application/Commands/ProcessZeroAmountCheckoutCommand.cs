@@ -65,7 +65,10 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             throw new InvalidOperationException("This checkout session requires payment and cannot bypass the gateway.");
         }
 
-        coupon?.ConfirmReservation();
+        if (coupon is { ReservedCount: > 0 })
+        {
+            coupon.ConfirmReservation();
+        }
 
         if (isTrial)
         {

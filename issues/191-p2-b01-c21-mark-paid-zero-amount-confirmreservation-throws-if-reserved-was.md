@@ -2,7 +2,8 @@
 number: "191"
 id: B01-C21
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/191-confirm-reservation-guard
 source: plans/009-bugs/01-commerce-checkout-activation.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 191 — B01-C21 — Mark-paid / zero-amount `ConfirmReservation` throws if reserved was already released
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/01-commerce-checkout-activation.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/191-confirm-reservation-guard`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

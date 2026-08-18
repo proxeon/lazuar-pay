@@ -89,7 +89,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             if (coupon != null)
             {
                 unitDiscount = coupon.CalculateDiscount(unitAmount);
-                coupon.ConfirmReservation();
+                coupon.ConfirmPaidRedemption();
             }
         }
 

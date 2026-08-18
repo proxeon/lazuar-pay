@@ -80,6 +80,40 @@ public class ChosenPriceDiscountTests
         log!.Amount.Should().Be(900m);
     }
 
+    [Test]
+    public async Task MarkPaid_ReleasedReservation_StillCompletesAndConsumesUse()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = DualPriceProduct(orgId);
+        var yearly = product.GetPrice("yr")!;
+        var coupon = new Coupon(orgId, "SAVE10", "PERCENTAGE", 10m, maxUses: 10, expiresAt: null);
+        coupon.Reserve();
+        coupon.ReleaseReservation();
+        var session = new CheckoutSession(
+            orgId, Guid.CreateVersion7(), product.Id, coupon.Id, DateTime.UtcNow.AddHours(1), 1, yearly.Id);
+
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), session.ClientProfileId).Returns(new ClientProfileDto
+        {
+            Id = session.ClientProfileId.ToString(),
+            Full_name = "Buyer",
+            Email = "buyer@example.com"
+        });
+
+        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(
+            repository, Substitute.For<IEventBus>(), crm, CommerceBillingStubs.NoSstBilling());
+        await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
+
+        session.Status.Should().Be("COMPLETED");
+        coupon.UsedCount.Should().Be(1);
+        coupon.ReservedCount.Should().Be(0);
+    }
+
     private static Product DualPriceProduct(Guid orgId)
     {
         var product = new Product(
