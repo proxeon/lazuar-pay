@@ -140,6 +140,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 128 | B08-M05 | `fix/128-email-config-decrypt` | HasValidEmailConfig requires a decryptable (or legacy re_) sender key |
 | 129 | B08-M06 | `fix/129-email-html-encode` | Email HTML encodes buyer names; markdown disables raw HTML |
 | 130 | B08-M07 | `fix/130-anonymize-honest` | Delivery logs scrub inbox; filed PDFs/MyInvois stay; ops copy is honest |
+| 131 | B08-M08 | `fix/131-digital-delivery-https` | Digital delivery mail only when the product has an https fulfillment URL |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

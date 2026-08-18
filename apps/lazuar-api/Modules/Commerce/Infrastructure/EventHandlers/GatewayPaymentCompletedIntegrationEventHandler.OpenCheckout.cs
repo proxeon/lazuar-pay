@@ -137,7 +137,8 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
                 order.Id,
                 order.ClientProfileId,
                 order.ProductId,
-                product.FulfillmentTargets.ToList()
+                product.FulfillmentTargets.ToList(),
+                product.Name
             ));
         }
 

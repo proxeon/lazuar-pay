@@ -2,7 +2,8 @@
 number: "131"
 id: B08-M08
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/131-digital-delivery-https
 source: plans/009-bugs/08-communications-messaging-crm.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 131 — B08-M08 — Digital Product Delivery fires for every one-time order and lies about the file
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/08-communications-messaging-crm.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/131-digital-delivery-https`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

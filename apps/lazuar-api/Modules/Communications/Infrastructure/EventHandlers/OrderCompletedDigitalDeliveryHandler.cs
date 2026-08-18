@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +15,7 @@ using Modules.One.Contracts;
 namespace Modules.Communications.Infrastructure.EventHandlers;
 
 /// <summary>
-/// On order completion, send the Digital Product Delivery template when present.
-/// Uses portal magic link as fulfillment_url when no dedicated download URL exists on the product.
+/// On order completion, send Digital Product Delivery only when the product has an https fulfillment target.
 /// </summary>
 public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<OrderCompletedIntegrationEvent>
 {
@@ -49,6 +49,15 @@ public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<Ord
             .FirstOrDefaultAsync(t =>
                 t.OrganizationId == @event.OrganizationId && t.Name == "Digital Product Delivery");
 
+        var fulfillmentUrl = FirstHttpsFulfillment(@event.FulfillmentTargets);
+        if (fulfillmentUrl is null)
+        {
+            _logger.LogDebug(
+                "OrderCompleted digital delivery skipped: no https fulfillment target for order {OrderId}.",
+                @event.OrderId);
+            return;
+        }
+
         if (template == null)
         {
             _logger.LogDebug(
@@ -70,9 +79,7 @@ public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<Ord
         var portalLink = string.IsNullOrEmpty(workspaceSlug)
             ? portalBase
             : $"{portalBase}/{workspaceSlug}/portal";
-
-        // No dedicated digital asset URL on products yet — portal is the best available fulfillment surface.
-        var fulfillmentUrl = portalLink;
+        var planName = string.IsNullOrWhiteSpace(@event.ProductName) ? "your purchase" : @event.ProductName;
 
         string Populate(string text, bool htmlEncode)
         {
@@ -81,7 +88,7 @@ public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<Ord
                 ? MessageTemplateHydrator.HtmlEncode(profile.Full_name ?? "Customer")
                 : (profile.Full_name ?? "Customer");
             var business = htmlEncode ? MessageTemplateHydrator.HtmlEncode(businessName) : businessName;
-            var plan = htmlEncode ? MessageTemplateHydrator.HtmlEncode("your purchase") : "your purchase";
+            var plan = htmlEncode ? MessageTemplateHydrator.HtmlEncode(planName) : planName;
             return text
                 .Replace("{{customer_name}}", name, StringComparison.OrdinalIgnoreCase)
                 .Replace("{{business_name}}", business, StringComparison.OrdinalIgnoreCase)
@@ -98,5 +105,23 @@ public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<Ord
             MarkdownParser.ToHtml(Populate(template.EmailBody, htmlEncode: true)),
             Populate(template.WhatsAppBody, htmlEncode: false),
             template.Channel));
+    }
+
+    internal static string? FirstHttpsFulfillment(IEnumerable<string>? targets)
+    {
+        if (targets is null) return null;
+        foreach (var raw in targets)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            var target = raw.Trim();
+            if (target.StartsWith("internal:", StringComparison.OrdinalIgnoreCase)) continue;
+            if (Uri.TryCreate(target, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
+            {
+                return target;
+            }
+        }
+
+        return null;
     }
 }

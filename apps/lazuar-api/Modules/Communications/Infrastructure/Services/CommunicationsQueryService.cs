@@ -98,7 +98,7 @@ public class CommunicationsQueryService : ICommunicationsQueryService
                     new TemplateVariableDto { Tag = "{{update_payment_link}}", Description = "Hosted update-payment URL for this subscription." },
                     new TemplateVariableDto { Tag = "{{renewal_link}}", Description = "Hosted pay-this-cycle checkout when minted; otherwise the update-payment page." },
                     new TemplateVariableDto { Tag = "{{checkout_url}}", Description = "Same as renewal_link (hosted bill when minted)." },
-                    new TemplateVariableDto { Tag = "{{portal_magic_link}}", Description = "Secure, 24-hour auto-login link to the subscriber portal (dunning and lifecycle)." }
+                    new TemplateVariableDto { Tag = "{{portal_magic_link}}", Description = "24h token on dunning/lifecycle only; digital delivery is the logged-out portal URL." }
                 }
             },
             new TemplateVariableCategoryDto
@@ -106,7 +106,7 @@ public class CommunicationsQueryService : ICommunicationsQueryService
                 Title = "Fulfillment Assets",
                 Items = new List<TemplateVariableDto>
                 {
-                    new TemplateVariableDto { Tag = "{{fulfillment_url}}", Description = "Cloudflare R2 Download Link." }
+                    new TemplateVariableDto { Tag = "{{fulfillment_url}}", Description = "First https fulfillment target on the product (not R2)." }
                 }
             }
         };

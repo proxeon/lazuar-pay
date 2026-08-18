@@ -122,7 +122,8 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
                 order.Id,
                 session.ClientProfileId,
                 product.Id,
-                product.FulfillmentTargets.ToList()));
+                product.FulfillmentTargets.ToList(),
+                product.Name));
         }
         else
         {

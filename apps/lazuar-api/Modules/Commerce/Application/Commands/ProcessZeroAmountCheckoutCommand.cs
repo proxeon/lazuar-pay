@@ -85,7 +85,7 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             _repository.AddOrder(order);
 
             await _eventBus.PublishAsync(new OrderCompletedIntegrationEvent(
-                session.OrganizationId, order.Id, session.ClientProfileId, product.Id, product.FulfillmentTargets.ToList()));
+                session.OrganizationId, order.Id, session.ClientProfileId, product.Id, product.FulfillmentTargets.ToList(), product.Name));
         }
         else
         {
