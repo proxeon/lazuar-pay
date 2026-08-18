@@ -55,7 +55,8 @@ public sealed class PastDueDunningProcessor
         ICrmQueryService? crm = null)
     {
         var now = DateTime.UtcNow;
-        var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId);
+        var productForMatch = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+        var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId, productForMatch?.GatewayName);
         int daysOverdue = (now.Date - sub.NextBillingDate!.Value.Date).Days;
         var targetDate = sub.NextBillingDate.Value.Date;
 

@@ -434,6 +434,35 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public async Task PastDue_UnvaultedStripe_MatchesOnlineGatewayCampaign()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = PastDueSub(_orgId, product.Id);
+        var campaign = new DunningCampaign(
+            _orgId,
+            "Online only",
+            "CANCEL",
+            gracePeriodDays: 7,
+            priorityOrder: 1,
+            targetPaymentMethods: new[] { DunningCampaignMatcher.OnlineGateway });
+        campaign.AddStep(0, "EMAIL", "Past due", "Please pay", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == sub.Id);
+        reloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == 0);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == sub.Id.ToString()));
+    }
+
+    [Test]
     public async Task PastDue_PausedUntilFuture_NotClaimed()
     {
         var product = CreateProduct(_orgId, "STRIPE");

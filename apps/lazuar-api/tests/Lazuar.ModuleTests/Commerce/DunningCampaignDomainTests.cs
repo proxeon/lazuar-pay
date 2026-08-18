@@ -93,6 +93,16 @@ public class DunningCampaignDomainTests
     }
 
     [Test]
+    public void InferPaymentMethod_UnvaultedOnlineGateway_IsOnline()
+    {
+        DunningCampaignMatcher.InferPaymentMethod(null, "STRIPE").Should().Be(DunningCampaignMatcher.OnlineGateway);
+        DunningCampaignMatcher.InferPaymentMethod("", "BILLPLZ").Should().Be(DunningCampaignMatcher.OnlineGateway);
+        DunningCampaignMatcher.InferPaymentMethod(null, "CASH").Should().Be(DunningCampaignMatcher.Manual);
+        DunningCampaignMatcher.InferPaymentMethod("pm_1", "CASH").Should().Be(DunningCampaignMatcher.OnlineGateway);
+        DunningCampaignMatcher.InferPaymentMethod(null, null).Should().Be(DunningCampaignMatcher.Manual);
+    }
+
+    [Test]
     public void Archive_DeactivatesCampaign()
     {
         var campaign = new DunningCampaign(Guid.CreateVersion7(), "To archive", "NONE", 7);

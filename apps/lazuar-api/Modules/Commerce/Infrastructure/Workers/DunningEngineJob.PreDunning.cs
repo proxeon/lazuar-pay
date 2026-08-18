@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Modules.Billing.Contracts;
 using Modules.Commerce.Domain;
@@ -26,7 +27,8 @@ public partial class DunningEngineJob
         ICrmQueryService? crm = null)
     {
         var now = DateTime.UtcNow;
-        var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId);
+        var product = await db.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == sub.ProductId, ct);
+        var inferredPaymentMethod = DunningCampaignMatcher.InferPaymentMethod(sub.VaultedTokenId, product?.GatewayName);
         var campaign = DunningCampaignMatcher.FindBest(
             campaigns, sub.OrganizationId, sub.ProductId, inferredPaymentMethod);
 

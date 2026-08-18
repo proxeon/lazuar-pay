@@ -14,8 +14,20 @@ public static class DunningCampaignMatcher
     public const string Manual = "MANUAL";
     public const string OnlineGateway = "ONLINE_GATEWAY";
 
-    public static string InferPaymentMethod(string? vaultedTokenId) =>
-        string.IsNullOrEmpty(vaultedTokenId) ? Manual : OnlineGateway;
+    /// <summary>
+    /// ONLINE_GATEWAY is the collection surface, not "has a vault token" (B03-C26).
+    /// Unvaulted Stripe/CHIP/Billplz/Xendit/Razorpay still match ONLINE_GATEWAY campaigns.
+    /// </summary>
+    public static string InferPaymentMethod(string? vaultedTokenId, string? gatewayName = null)
+    {
+        var g = (gatewayName ?? "").Trim().ToUpperInvariant();
+        if (g is "STRIPE" or "CHIP" or "BILLPLZ" or "XENDIT" or "RAZORPAY")
+        {
+            return OnlineGateway;
+        }
+
+        return string.IsNullOrEmpty(vaultedTokenId) ? Manual : OnlineGateway;
+    }
 
     public static DunningCampaign? FindBest(
         IEnumerable<DunningCampaign> campaigns,

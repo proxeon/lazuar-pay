@@ -223,6 +223,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 211 | B03-C23 | `fix/211-newest-sub-status-filter` | Magic-link subject prefers live seats over newer CANCELED/PENDING |
 | 212 | B03-C24 | `fix/212-dunning-batch-size` | Dunning claims 200 seats per mode per hour (Workers:DunningEngineBatchSize) |
 | 213 | B03-C25 | `fix/213-portal-docs-profile-scope` | Portal documents list only the token profile, not sibling emails |
+| 214 | B03-C26 | `fix/214-infer-online-gateway-from-product` | Infer ONLINE_GATEWAY from product gateway, not vault-id |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
