@@ -2,7 +2,8 @@
 number: "220"
 id: B04-P19
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/220-chip-webhook-register-idempotent
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 220 — B04-P19 — CHIP webhook auto-register duplicates; verify key may not be `Webhook.public_key`
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/220-chip-webhook-register-idempotent`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

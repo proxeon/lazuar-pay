@@ -10,6 +10,7 @@ using BuildingBlocks.Domain;
 using Modules.Payments.Contracts.Commands;
 using Modules.Payments.Domain;
 using Modules.Payments.Domain.Aggregates;
+using Modules.Payments.Infrastructure.Gateways;
 
 namespace Modules.Payments.Infrastructure.Commands;
 
@@ -113,12 +114,6 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
                 client.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", resolvedPlainApiKey);
 
-                var pubKeyResponse = await client.GetAsync("https://gate.chip-in.asia/api/v1/public_key/", ct);
-                pubKeyResponse.EnsureSuccessStatusCode();
-                var rawKey = await pubKeyResponse.Content.ReadAsStringAsync(ct);
-
-                resolvedPlainWebhook = rawKey.Trim('"').Replace("\\n", "\n");
-
                 var apiBaseUrl = _configuration["App:ApiBaseUrl"]?.TrimEnd('/') ?? "http://localhost:8080/api/v1";
                 var webhookUrl = $"{apiBaseUrl}/webhooks/payments/chip/{request.OrganizationId}";
 
@@ -127,15 +122,7 @@ public class UpdatePaymentConfigCommandHandler : ICommandHandler<UpdatePaymentCo
                     webhookUrl = webhookUrl.Replace("localhost", "lazuar-local-dev.com", StringComparison.OrdinalIgnoreCase);
                 }
 
-                var webhookPayload = new
-                {
-                    title = "Lazuar Platform Webhook",
-                    events = new[] { "purchase.paid", "purchase.payment_failure", "payment.refunded", "purchase.preauthorized" },
-                    callback = webhookUrl
-                };
-
-                var webhookResponse = await client.PostAsJsonAsync("https://gate.chip-in.asia/api/v1/webhooks/", webhookPayload, ct);
-                webhookResponse.EnsureSuccessStatusCode();
+                resolvedPlainWebhook = await ChipWebhookRegistrar.EnsureRegisteredAsync(client, webhookUrl, ct);
             }
             catch (Exception ex)
             {
