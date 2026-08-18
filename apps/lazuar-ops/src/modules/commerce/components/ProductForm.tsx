@@ -219,7 +219,7 @@ export default function ProductForm({
               <input type="checkbox" checked={reqTaxId} onChange={e => setReqTaxId(e.target.checked)} disabled={isPending} className="rounded-sm border-[#e5e5e5] text-[#09090b] focus:ring-[#09090b] mt-0.5" />
               <span>
                 <span className="text-[12px] font-medium text-[#09090b] block">Require Company Name &amp; Tax ID (LHDN B2B)</span>
-                <span className="text-[11px] text-[#71717a] block mt-0.5">Collects buyer company + TIN. We do not validate the TIN at checkout.</span>
+                <span className="text-[11px] text-[#71717a] block mt-0.5">Collects buyer company + TIN. Checkout validates the TIN against MyInvois when LHDN is connected.</span>
               </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer w-fit">

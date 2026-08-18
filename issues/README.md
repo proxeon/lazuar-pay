@@ -154,6 +154,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 142 | B09-U13 | `fix/142-portal-doc-lhdn-status` | Portal MyInvois column is blank on receipts and proformas |
 | 143 | B09-U14 | `fix/143-ops-role-chrome` | Ops shows the workspace role in the header and sidebar |
 | 144 | B09-U15 | `fix/144-dashboard-member-403` | Member 403 on billing/keys is not RM 0.00 or a gateway-down banner |
+| 145 | B09-U16 | `fix/145-tin-copy` | Ops and checkout say TIN is validated at pay when MyInvois is connected |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
