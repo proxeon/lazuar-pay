@@ -234,6 +234,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 222 | B04-P21 | `fix/222-fee-expand-unknown` | Stripe/CHIP fee miss stamps gateway_fee_status=unknown; still fulfills |
 | 223 | B04-P22 | `fix/223-leftover-event-maps` | CHIP payment.refunded maps REFUND_COMPLETED; unusable payload is HTTP 400 |
 | 224 | B04-P23 | `fix/224-m2m-amount-decimal` | M2M checkout amount binds as decimal JSON, not (decimal)double |
+| 225 | B04-P24 | `fix/225-payments-dead-code-honesty` | Payments README lists five adapters + M2M sessions; unused CHIP/Billplz symbols gone |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

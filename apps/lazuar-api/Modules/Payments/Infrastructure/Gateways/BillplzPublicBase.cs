@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 
 namespace Modules.Payments.Infrastructure.Gateways;
@@ -11,13 +10,6 @@ namespace Modules.Payments.Infrastructure.Gateways;
 internal static class BillplzPublicBase
 {
     public const string CallbackBaseNotPublic = "CALLBACK_BASE_NOT_PUBLIC";
-
-    private static readonly HashSet<string> ProductionHosts = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "api.lazuar.com",
-        "pay.lazuar.com",
-        "hub.lazuar.com",
-    };
 
     public static bool IsProductionApi(IConfiguration config, string? apiBaseUrl, string? configEnvironment = null)
     {
@@ -36,9 +28,9 @@ internal static class BillplzPublicBase
             || string.Equals(configEnvironment, "sandbox", StringComparison.OrdinalIgnoreCase))
             return false;
 
+        // Live vs sandbox follows App:BillplzEnvironment then tenant environment.
         // Do not infer from Hub hostname (pay-local.lazuar.com must never go live).
         _ = apiBaseUrl;
-        _ = ProductionHosts;
         return false;
     }
 

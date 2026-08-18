@@ -2,7 +2,8 @@
 number: "225"
 id: B04-P24
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/225-payments-dead-code-honesty
 source: plans/009-bugs/04-payments-adapters-webhooks.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 225 — B04-P24 — Dead / unused in this module
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/04-payments-adapters-webhooks.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/225-payments-dead-code-honesty`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

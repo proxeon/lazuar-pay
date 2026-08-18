@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Payments.Infrastructure.Gateways;
 using NSubstitute;
@@ -28,7 +27,6 @@ public class ChipCollectGatewayAdapterTests
 
         var adapter = new ChipCollectGatewayAdapter(
             factory,
-            new ConfigurationBuilder().Build(),
             NullLogger<ChipCollectGatewayAdapter>.Instance);
 
         var ok = await adapter.IssueRefundAsync("chip-key", "purch_99", 12.34m);
@@ -52,7 +50,7 @@ public class ChipCollectGatewayAdapterTests
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient(Arg.Any<string>()).Returns(http);
         var adapter = new ChipCollectGatewayAdapter(
-            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+            factory, NullLogger<ChipCollectGatewayAdapter>.Instance);
 
         handler.ResponseBody = """{"id":"purch_1","checkout_url":"https://chip.test/pay"}""";
 
@@ -158,7 +156,7 @@ public class ChipCollectGatewayAdapterTests
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient(Arg.Any<string>()).Returns(http);
         var adapter = new ChipCollectGatewayAdapter(
-            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+            factory, NullLogger<ChipCollectGatewayAdapter>.Instance);
 
         var ok = await adapter.ChargeOffSessionAsync(
             "chip-key", "cli_1", "rt_not_a_purchase", 10m, "MYR", "Plan", "sub-1", Guid.CreateVersion7());
@@ -197,7 +195,7 @@ public class ChipCollectGatewayAdapterTests
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient(Arg.Any<string>()).Returns(http);
         var adapter = new ChipCollectGatewayAdapter(
-            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+            factory, NullLogger<ChipCollectGatewayAdapter>.Instance);
 
         var ok = await adapter.ChargeOffSessionAsync(
             "chip-key", "cli_1", "purch_token", 10m, "MYR", "Plan", "sub-1", Guid.CreateVersion7(),
@@ -236,7 +234,7 @@ public class ChipCollectGatewayAdapterTests
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient(Arg.Any<string>()).Returns(http);
         var adapter = new ChipCollectGatewayAdapter(
-            factory, new ConfigurationBuilder().Build(), NullLogger<ChipCollectGatewayAdapter>.Instance);
+            factory, NullLogger<ChipCollectGatewayAdapter>.Instance);
 
         var ok = await adapter.ChargeOffSessionAsync(
             "chip-key", "cli_1", "purch_token", 10m, "MYR", "Plan", "sub-1", Guid.CreateVersion7(),
@@ -519,7 +517,6 @@ public class ChipCollectGatewayAdapterTests
     private static ChipCollectGatewayAdapter CreateAdapter() =>
         new(
             Substitute.For<IHttpClientFactory>(),
-            new ConfigurationBuilder().Build(),
             NullLogger<ChipCollectGatewayAdapter>.Instance);
 
     private static (ChipCollectGatewayAdapter Adapter, string PublicPem) CreateSignedAdapter()

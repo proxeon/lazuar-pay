@@ -9,7 +9,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Modules.Payments.Application.Ports;
 
@@ -18,18 +17,15 @@ namespace Modules.Payments.Infrastructure.Gateways;
 public class ChipCollectGatewayAdapter : IPaymentGatewayAdapter
 {
     private readonly IHttpClientFactory _httpFactory;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<ChipCollectGatewayAdapter> _logger;
 
     private const string ApiBaseUrl = "https://gate.chip-in.asia/api/v1/";
 
     public ChipCollectGatewayAdapter(
         IHttpClientFactory httpFactory,
-        IConfiguration configuration,
         ILogger<ChipCollectGatewayAdapter> logger)
     {
         _httpFactory = httpFactory;
-        _configuration = configuration;
         _logger = logger;
     }
 
