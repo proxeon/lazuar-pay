@@ -217,7 +217,7 @@ export default function LoginPage() {
                 <h1 className="text-xl font-semibold tracking-tight text-[#09090b]">Create Account</h1>
                 <p className="text-[13px] text-[#71717a] mt-1.5">
                   {inviteReturn
-                    ? "Sign in with the invited email."
+                    ? "Create an account with the invited email."
                     : "Register a global identity and workspace."}
                 </p>
               </div>
@@ -317,7 +317,7 @@ export default function LoginPage() {
                   disabled={isLoading}
                   className="w-full h-11 bg-[#09090b] text-white text-[11px] font-bold uppercase tracking-widest rounded-none flex items-center justify-center hover:bg-[#27272a] disabled:opacity-50 transition-colors mt-2"
                 >
-                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Create workspace"}
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : inviteReturn ? "Create account" : "Create workspace"}
                 </button>
               </form>
 

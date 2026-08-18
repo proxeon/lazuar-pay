@@ -2,7 +2,8 @@
 number: "258"
 id: B07-I14
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/258-register-invite-copy
 source: plans/009-bugs/07-one-identity-invites-keys.md
 head: "297ba98"
 ---
@@ -81,4 +82,8 @@ None for the product hole. Optional copy: invite signup button “Create account
 
 ### Evaluation notes
 Duplicate of resolved **146**. Leave YAML `open` as instructed. **259** still lies that register’s JSON `Role` is `ADMIN` even on the user-only path (cookie JWT is still `CLIENT`). Not blocked. Not a 161–200 fail-closed item.
+
+## Resolution
+
+Product hole already closed by 146. Invite signup subtitle/button now say create account, not create workspace.
 
