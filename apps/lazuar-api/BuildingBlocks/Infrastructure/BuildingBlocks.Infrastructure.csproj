@@ -3,6 +3,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Lazuar.ModuleTests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Application\BuildingBlocks.Application.csproj" />
   </ItemGroup>
   <ItemGroup>

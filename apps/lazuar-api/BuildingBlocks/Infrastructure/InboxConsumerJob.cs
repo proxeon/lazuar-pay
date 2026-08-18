@@ -68,10 +68,8 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
                             if (eventType == null) throw new InvalidOperationException($"Type '{message.Type}' cannot be resolved by the TypeResolver.");
 
                             var inboxEvent = JsonSerializer.Deserialize(message.Data, eventType);
-                            if (inboxEvent is INotification notification)
-                            {
-                                await mediator.Publish(notification, stoppingToken);
-                            }
+                            var notification = InboxNotificationRequirement.Require(inboxEvent, message.Id);
+                            await mediator.Publish(notification, stoppingToken);
 
                             MessageProcessingResultApplier.ApplySuccess(message, DateTime.UtcNow);
                         }
@@ -105,5 +103,18 @@ public abstract class InboxConsumerJob<TDbContext> : BackgroundService where TDb
             }
             catch (OperationCanceledException) { }
         }
+    }
+}
+
+internal static class InboxNotificationRequirement
+{
+    public static INotification Require(object? payload, Guid messageId)
+    {
+        if (payload is INotification notification)
+        {
+            return notification;
+        }
+
+        throw new InvalidOperationException($"Message {messageId} is not a valid INotification.");
     }
 }
