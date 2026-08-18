@@ -162,6 +162,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 150 | B09-U21 | `fix/150-superadmin-general-settings` | SUPER_ADMIN can save General Settings (same as ADMIN) |
 | 151 | B09-U22 | `fix/151-email-missing-not-gateway` | Missing Resend is not labeled a payment-gateway outage |
 | 152 | B09-U23 | `fix/152-period-started-label` | current_period_end is labeled Period ends, not Period started |
+| 153 | B09-U24 | `fix/153-admin-returnurl-search` | Admin login returnUrl keeps the query string, like ops |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

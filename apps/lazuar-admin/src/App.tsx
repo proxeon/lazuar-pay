@@ -39,7 +39,7 @@ function SuperadminLayout() {
       try {
         const { data, error } = await client.GET("/platform/auth/me");
         if (error || !data) {
-          navigate(`/login?returnUrl=${encodeURIComponent(location.pathname)}`);
+          navigate(`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`);
           return;
         }
 
@@ -51,7 +51,7 @@ function SuperadminLayout() {
       }
     }
     verifySession();
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, location.search]);
 
   const handleToggleSidebar = () => {
     setIsSidebarOpen((prev) => {
