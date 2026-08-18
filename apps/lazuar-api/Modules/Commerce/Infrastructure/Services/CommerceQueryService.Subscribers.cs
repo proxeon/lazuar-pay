@@ -79,7 +79,7 @@ public partial class CommerceQueryService
         }
 
         var profileIds = rawSubs.Select(s => s.ClientProfileId).Distinct().ToList();
-        var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
+        var profiles = await _crmQueryService.GetClientProfilesAsync(organizationId, profileIds);
         var profileMap = profiles.ToDictionary(p => Guid.Parse(p.Id), p => p);
 
         var now = DateTime.UtcNow;

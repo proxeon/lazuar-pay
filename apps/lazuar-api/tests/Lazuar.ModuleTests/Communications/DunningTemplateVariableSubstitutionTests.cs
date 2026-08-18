@@ -34,7 +34,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
 
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
@@ -84,7 +84,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
@@ -111,7 +111,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns((ClientProfileDto?)null);
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns((ClientProfileDto?)null);
 
         var handler = CreateHandler(
             db,
@@ -168,7 +168,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "No Email",
@@ -199,7 +199,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
@@ -240,7 +240,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
@@ -278,7 +278,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
@@ -313,7 +313,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
@@ -351,7 +351,7 @@ public class DunningTemplateVariableSubstitutionTests
         const string hosted = "https://www.billplz-sandbox.com/bills/renew-1";
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));
@@ -392,7 +392,7 @@ public class DunningTemplateVariableSubstitutionTests
         var subscriptionId = Guid.CreateVersion7();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(Profile(clientId));
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(Profile(clientId));
         var one = Substitute.For<IOneQueryService>();
         one.GetWorkspaceByIdAsync(orgId).Returns(
             new WorkspaceSnapshotDto(orgId, "Acme Studio", "acme", true, DateTime.UtcNow));

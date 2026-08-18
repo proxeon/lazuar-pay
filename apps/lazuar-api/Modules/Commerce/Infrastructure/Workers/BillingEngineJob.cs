@@ -340,7 +340,7 @@ public class BillingEngineJob : BackgroundService
         string? email = null;
         if (crm != null)
         {
-            var profile = await crm.GetClientProfileAsync(sub.ClientProfileId);
+            var profile = await crm.GetClientProfileAsync(sub.OrganizationId, sub.ClientProfileId);
             email = profile?.Email;
         }
 

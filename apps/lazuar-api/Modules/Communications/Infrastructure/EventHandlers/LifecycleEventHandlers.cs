@@ -43,7 +43,7 @@ public class LifecycleEventHandlers : IIntegrationEventHandler<SubscriptionCance
 
     public async Task HandleAsync(SubscriptionCanceledIntegrationEvent @event)
     {
-        var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(@event.OrganizationId, @event.ClientProfileId);
         var toEmail = profile?.Email;
         if (profile == null || string.IsNullOrEmpty(toEmail)) return;
 

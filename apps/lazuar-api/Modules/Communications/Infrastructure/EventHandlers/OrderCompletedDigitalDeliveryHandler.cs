@@ -66,7 +66,7 @@ public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<Ord
             return;
         }
 
-        var profile = await _crmQueryService.GetClientProfileAsync(@event.ClientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(@event.OrganizationId, @event.ClientProfileId);
         if (profile == null || string.IsNullOrWhiteSpace(profile.Email))
         {
             return;

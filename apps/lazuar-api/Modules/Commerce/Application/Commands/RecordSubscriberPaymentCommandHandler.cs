@@ -107,7 +107,7 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
             campaign?.RecordRecovery(amount);
         }
 
-        var clientProfile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
+        var clientProfile = await _crmQueryService.GetClientProfileAsync(subscription.OrganizationId, subscription.ClientProfileId);
         var customerName = clientProfile?.Full_name ?? "Unknown Customer";
         var customerEmail = clientProfile?.Email ?? string.Empty;
 

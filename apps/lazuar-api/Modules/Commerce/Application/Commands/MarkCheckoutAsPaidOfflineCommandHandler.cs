@@ -46,7 +46,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             throw new InvalidOperationException($"Cannot mark session as paid. Current status is {session.Status}.");
         }
 
-        var clientProfile = await _crmQueryService.GetClientProfileAsync(session.ClientProfileId);
+        var clientProfile = await _crmQueryService.GetClientProfileAsync(session.OrganizationId, session.ClientProfileId);
         var customerName = clientProfile?.Full_name ?? "Unknown Customer";
         var customerEmail = clientProfile?.Email ?? string.Empty;
 

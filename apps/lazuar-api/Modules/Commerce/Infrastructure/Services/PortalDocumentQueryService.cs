@@ -51,7 +51,7 @@ public class PortalDocumentQueryService
         if (clientProfileId == null)
             return new PortalDocumentsResponse { Items = new List<PortalDocumentDto>() };
 
-        var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId.Value);
+        var profile = await _crmQueryService.GetClientProfileAsync(organizationId, clientProfileId.Value);
         var email = profile?.Email ?? "";
 
         var profileIds = new HashSet<Guid> { clientProfileId.Value };

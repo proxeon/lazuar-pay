@@ -55,7 +55,7 @@ public class PortalAccessEmailHandlers :
 
     private async Task DispatchPortalAccessAsync(Guid organizationId, Guid subscriptionId, Guid clientProfileId)
     {
-        var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(organizationId, clientProfileId);
         if (profile == null || string.IsNullOrWhiteSpace(profile.Email))
         {
             return;

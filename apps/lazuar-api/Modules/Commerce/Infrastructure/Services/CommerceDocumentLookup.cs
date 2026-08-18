@@ -78,7 +78,7 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         Guid clientProfileId = sessionData.ClientProfileId;
         var profile = clientProfileId != Guid.Empty
-            ? await _crmQueryService.GetClientProfileAsync(clientProfileId)
+            ? await _crmQueryService.GetClientProfileAsync(organizationId, clientProfileId)
             : null;
 
         // Former LEFT JOIN semantics: missing profile → defaults.
@@ -169,7 +169,7 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         if (session == null) return null;
 
-        return await FromCrmAsync(session.ClientProfileId);
+        return await FromCrmAsync(organizationId, session.ClientProfileId);
     }
 
     private async Task<CommerceCustomerDisplay?> FindCustomerOnSubscriptionAsync(
@@ -184,14 +184,14 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         if (sub == null) return null;
 
-        return await FromCrmAsync(sub.ClientProfileId);
+        return await FromCrmAsync(organizationId, sub.ClientProfileId);
     }
 
-    private async Task<CommerceCustomerDisplay?> FromCrmAsync(Guid clientProfileId)
+    private async Task<CommerceCustomerDisplay?> FromCrmAsync(Guid organizationId, Guid clientProfileId)
     {
         if (clientProfileId == Guid.Empty) return null;
 
-        var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(organizationId, clientProfileId);
         if (profile == null) return null;
 
         return new CommerceCustomerDisplay(

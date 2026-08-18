@@ -2,7 +2,8 @@
 number: "165"
 id: B10-X09
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/165-crm-profile-org-scope
 source: plans/009-bugs/10-tenancy-workers-contracts-tests.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 165 — B10-X09 — `CrmQueryService.GetClientProfileAsync` is a global PII read by GUID
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/10-tenancy-workers-contracts-tests.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/165-crm-profile-org-scope`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

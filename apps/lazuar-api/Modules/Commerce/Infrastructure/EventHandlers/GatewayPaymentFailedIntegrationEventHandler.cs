@@ -135,7 +135,7 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
         var product = await _dbContext.Products
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == sub.ProductId);
-        var profile = await _crmQueryService.GetClientProfileAsync(sub.ClientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(sub.OrganizationId, sub.ClientProfileId);
         var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
             _billingQueryService, sub.OrganizationId);
         var payload = CommerceWebhookPayload.From(

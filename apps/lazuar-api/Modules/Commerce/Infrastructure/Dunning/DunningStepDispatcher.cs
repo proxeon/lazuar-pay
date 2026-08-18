@@ -69,7 +69,7 @@ internal static class DunningStepDispatcher
     {
         if (crm != null)
         {
-            var profile = await crm.GetClientProfileAsync(sub.ClientProfileId);
+            var profile = await crm.GetClientProfileAsync(sub.OrganizationId, sub.ClientProfileId);
             if (profile == null || string.IsNullOrWhiteSpace(profile.Email))
             {
                 return false;

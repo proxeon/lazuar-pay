@@ -88,7 +88,7 @@ public class OutboundWebhookRequestedPersistTests
     private static SubscriptionLifecycleIntegrationEventHandlers CreateLifecycleHandler(CommerceDbContext db)
     {
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns((ClientProfileDto?)null);
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns((ClientProfileDto?)null);
         return new SubscriptionLifecycleIntegrationEventHandlers(
             new OutboxEventBus<CommerceDbContext>(db),
             new CommerceRepository(db),

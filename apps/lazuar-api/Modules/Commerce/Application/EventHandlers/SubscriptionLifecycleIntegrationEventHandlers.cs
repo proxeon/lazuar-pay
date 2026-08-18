@@ -102,7 +102,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         var product = sub != null
             ? await _repository.GetProductByIdAsync(sub.OrganizationId, sub.ProductId)
             : await _repository.GetProductByIdAsync(organizationId, productId);
-        var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(organizationId, clientProfileId);
         var email = profile?.Email;
 
         if (sub != null)

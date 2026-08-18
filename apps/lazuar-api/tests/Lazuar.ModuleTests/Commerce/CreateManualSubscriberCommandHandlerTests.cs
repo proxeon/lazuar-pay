@@ -193,7 +193,7 @@ public class CreateManualSubscriberCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Ahmad Ali",

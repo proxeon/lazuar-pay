@@ -116,7 +116,7 @@ public class DunningEngineJobTests
         var campaign = Day0EmailCampaign(_orgId);
 
         var crm = Substitute.For<Modules.CRM.Contracts.ICrmQueryService>();
-        crm.GetClientProfileAsync(sub.ClientProfileId).Returns((Lazuar.ApiTypes.ClientProfileDto?)null);
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), sub.ClientProfileId).Returns((Lazuar.ApiTypes.ClientProfileDto?)null);
 
         _sp.Dispose();
         var services = new ServiceCollection();

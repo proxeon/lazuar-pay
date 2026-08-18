@@ -46,7 +46,7 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
 
         _eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns(ci => new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns(ci => new ClientProfileDto
         {
             Id = ci.Arg<Guid>().ToString(),
             Full_name = "Buyer",

@@ -104,7 +104,7 @@ public class CommerceProductCompletenessTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Test User",
@@ -171,7 +171,7 @@ public class CommerceProductCompletenessTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Late Payer",
@@ -284,7 +284,7 @@ public class CommerceProductCompletenessTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Offline Buyer",
@@ -320,7 +320,7 @@ public class CommerceProductCompletenessTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Offline Buyer",
@@ -356,7 +356,7 @@ public class CommerceProductCompletenessTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Custom Buyer",
@@ -438,7 +438,7 @@ public class CommerceProductCompletenessTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Past Due User",
@@ -1329,7 +1329,7 @@ public class CommerceProductCompletenessTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Offline Buyer",
@@ -1423,7 +1423,7 @@ public class CommerceProductCompletenessTests
             .Returns(callInfo => db.SaveChangesAsync(callInfo.Arg<CancellationToken>()));
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Test User",

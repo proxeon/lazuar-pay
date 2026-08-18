@@ -139,7 +139,7 @@ public class SubscriptionLifecycleWebhookTests
         var bus = Substitute.For<IEventBus>();
         var repo = Substitute.For<ICommerceRepository>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns((ClientProfileDto?)null);
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns((ClientProfileDto?)null);
         return (new SubscriptionLifecycleIntegrationEventHandlers(bus, repo, crm), bus, repo);
     }
 }

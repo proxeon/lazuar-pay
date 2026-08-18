@@ -393,7 +393,7 @@ public class BillingEngineJobTests
         _db.Subscriptions.Add(sub);
         await _db.SaveChangesAsync();
 
-        _crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        _crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Buyer",
@@ -983,7 +983,7 @@ public class BillingEngineJobTests
 
     private void ArrangeMint(string email, string checkoutUrl)
     {
-        _crm.GetClientProfileAsync(Arg.Any<Guid>()).Returns(new ClientProfileDto
+        _crm.GetClientProfileAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns(new ClientProfileDto
         {
             Id = Guid.CreateVersion7().ToString(),
             Full_name = "Buyer",

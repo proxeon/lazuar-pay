@@ -52,7 +52,7 @@ public partial class CommerceQueryService
         int totalCount = rawCheckouts.First().TotalCount;
 
         var profileIds = rawCheckouts.Select(c => c.ClientProfileId).Distinct().ToList();
-        var profiles = await _crmQueryService.GetClientProfilesAsync(profileIds);
+        var profiles = await _crmQueryService.GetClientProfilesAsync(organizationId, profileIds);
         var profileMap = profiles.ToDictionary(p => Guid.Parse(p.Id), p => p);
 
         var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
@@ -105,7 +105,7 @@ public partial class CommerceQueryService
 
         if (rawCheckout == null) return null;
 
-        var profile = await _crmQueryService.GetClientProfileAsync(rawCheckout.ClientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(organizationId, rawCheckout.ClientProfileId);
 
         var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
         var lineItems = string.IsNullOrWhiteSpace(rawCheckout.AdHocLineItems) 

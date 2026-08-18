@@ -32,7 +32,7 @@ public class AnonymizeSubscriberCommandHandler : ICommandHandler<AnonymizeSubscr
             throw new InvalidOperationException("Subscription not found.");
         }
 
-        var profile = await _crmQueryService.GetClientProfileAsync(subscription.ClientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(subscription.OrganizationId, subscription.ClientProfileId);
         if (profile == null)
         {
             throw new InvalidOperationException("Client profile not found.");

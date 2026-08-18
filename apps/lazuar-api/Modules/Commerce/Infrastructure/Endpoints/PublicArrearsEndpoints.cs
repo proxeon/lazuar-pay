@@ -128,7 +128,7 @@ public static class PublicArrearsEndpoints
             }
 
             // Former multi-schema JOIN semantics: missing profile/org → not found.
-            var profile = await crmQueryService.GetClientProfileAsync(sub.ClientProfileId);
+            var profile = await crmQueryService.GetClientProfileAsync(sub.OrganizationId, sub.ClientProfileId);
             if (profile == null) return TypedResults.BadRequest("Subscription not found.");
 
             var workspace = await oneQueryService.GetWorkspaceByIdAsync(sub.OrganizationId);

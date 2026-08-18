@@ -100,7 +100,7 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
 
         _repository.AddSubscription(subscription);
 
-        var clientProfile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var clientProfile = await _crmQueryService.GetClientProfileAsync(request.OrganizationId, clientProfileId);
         var clerkRef = string.IsNullOrWhiteSpace(request.ReferenceNumber) ? null : request.ReferenceNumber.Trim();
         var txLog = new CommerceTransactionLog(
             request.OrganizationId,

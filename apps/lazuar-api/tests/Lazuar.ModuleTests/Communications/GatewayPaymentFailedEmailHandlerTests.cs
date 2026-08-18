@@ -39,7 +39,7 @@ public class GatewayPaymentFailedEmailHandlerTests
             .Returns(new CommerceSubscriptionCommsContext(clientId, "PAST_DUE", "Premium Plan"));
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Aisha Merchant",

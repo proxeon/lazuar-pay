@@ -49,7 +49,7 @@ public class AnonymizeSubscriberCommandHandlerTests
         await db.SaveChangesAsync();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(profileId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), profileId).Returns(new ClientProfileDto
         {
             Id = profileId.ToString(),
             Full_name = "Ahmad",
@@ -86,7 +86,7 @@ public class AnonymizeSubscriberCommandHandlerTests
         repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(profileId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), profileId).Returns(new ClientProfileDto
         {
             Id = profileId.ToString(),
             Full_name = "Anonymized User",

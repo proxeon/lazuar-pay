@@ -74,7 +74,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
                 $"Dunning hydrate failed: missing or invalid client_profile_id for organization {@event.OrganizationId} subscription {subIdStr}.");
         }
 
-        var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(@event.OrganizationId, clientProfileId);
         if (profile == null)
         {
             if (!isDunning && !isInvoiceReminder) return;

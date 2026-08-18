@@ -67,7 +67,7 @@ public class LifecycleEventHandlersTests
         await db.SaveChangesAsync();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns((ClientProfileDto?)null);
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns((ClientProfileDto?)null);
         var eventBus = Substitute.For<IEventBus>();
 
         var handler = new LifecycleEventHandlers(
@@ -144,7 +144,7 @@ public class LifecycleEventHandlersTests
         await db.SaveChangesAsync();
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Aisha Merchant",

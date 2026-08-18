@@ -59,7 +59,7 @@ public class GatewayPaymentFailedIntegrationEventHandler : IIntegrationEventHand
             return;
         }
 
-        var profile = await _crmQueryService.GetClientProfileAsync(context.ClientProfileId);
+        var profile = await _crmQueryService.GetClientProfileAsync(@event.OrganizationId, context.ClientProfileId);
         var toEmail = profile?.Email;
         if (profile == null || string.IsNullOrWhiteSpace(toEmail))
         {

@@ -45,7 +45,7 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         string? gatewayName,
         Guid? subscriptionId = null)
     {
-        var clientProfile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
+        var clientProfile = await _crmQueryService.GetClientProfileAsync(@event.OrganizationId, clientProfileId);
         var customerName = clientProfile?.Full_name ?? "Unknown Customer";
         var customerEmail = clientProfile?.Email ?? string.Empty;
 

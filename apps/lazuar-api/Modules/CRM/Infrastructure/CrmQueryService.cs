@@ -51,17 +51,17 @@ public class CrmQueryService : ICrmQueryService
         };
     }
 
-    public async Task<ClientProfileDto?> GetClientProfileAsync(Guid profileId)
+    public async Task<ClientProfileDto?> GetClientProfileAsync(Guid organizationId, Guid profileId)
     {
         var profile = await _dbContext.ClientProfiles
             .AsNoTracking()
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.Id == profileId);
+            .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Id == profileId);
 
         return profile == null ? null : MapToDto(profile);
     }
 
-    public async Task<IEnumerable<ClientProfileDto>> GetClientProfilesAsync(IEnumerable<Guid> profileIds)
+    public async Task<IEnumerable<ClientProfileDto>> GetClientProfilesAsync(Guid organizationId, IEnumerable<Guid> profileIds)
     {
         var ids = profileIds.Distinct().ToList();
         if (ids.Count == 0) return Enumerable.Empty<ClientProfileDto>();
@@ -69,7 +69,7 @@ public class CrmQueryService : ICrmQueryService
         var profiles = await _dbContext.ClientProfiles
             .AsNoTracking()
             .IgnoreQueryFilters()
-            .Where(p => ids.Contains(p.Id))
+            .Where(p => p.OrganizationId == organizationId && ids.Contains(p.Id))
             .ToListAsync();
 
         return profiles.Select(MapToDto);

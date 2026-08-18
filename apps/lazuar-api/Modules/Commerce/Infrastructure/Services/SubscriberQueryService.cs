@@ -68,7 +68,7 @@ public class SubscriberQueryService : ISubscriberQueryService
         if (!rows.Any()) return Array.Empty<SubscriberRecipient>();
 
         var profileIds = rows.Select(r => r.ClientProfileId).Distinct().ToList();
-        var profiles = (await _crmQueryService.GetClientProfilesAsync(profileIds)).ToDictionary(p => Guid.Parse(p.Id));
+        var profiles = (await _crmQueryService.GetClientProfilesAsync(organizationId, profileIds)).ToDictionary(p => Guid.Parse(p.Id));
 
         var result = new List<SubscriberRecipient>(rows.Count);
         foreach (var row in rows)

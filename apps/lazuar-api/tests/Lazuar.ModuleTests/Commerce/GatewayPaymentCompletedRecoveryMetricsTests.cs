@@ -304,7 +304,7 @@ public class GatewayPaymentCompletedRecoveryMetricsTests
         fx.Db.CheckoutSessions.Add(session);
         await fx.Db.SaveChangesAsync();
 
-        fx.Crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        fx.Crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "New Buyer",
@@ -419,7 +419,7 @@ public class GatewayPaymentCompletedRecoveryMetricsTests
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(clientId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
         {
             Id = clientId.ToString(),
             Full_name = "Past Due User",

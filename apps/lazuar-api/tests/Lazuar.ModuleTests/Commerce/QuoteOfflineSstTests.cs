@@ -89,7 +89,7 @@ public class QuoteOfflineSstTests
             .Do(ci => log = ci.Arg<CommerceTransactionLog>());
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(session.ClientProfileId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), session.ClientProfileId).Returns(new ClientProfileDto
         {
             Id = session.ClientProfileId.ToString(),
             Full_name = "Buyer",
@@ -122,7 +122,7 @@ public class QuoteOfflineSstTests
             .Do(ci => log = ci.Arg<CommerceTransactionLog>());
 
         var crm = Substitute.For<ICrmQueryService>();
-        crm.GetClientProfileAsync(session.ClientProfileId).Returns(new ClientProfileDto
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), session.ClientProfileId).Returns(new ClientProfileDto
         {
             Id = session.ClientProfileId.ToString(),
             Full_name = "Buyer",
