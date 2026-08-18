@@ -133,7 +133,7 @@ public class BillingEngineJob : BackgroundService
     {
         var excludeClause = excludeIds.Count == 0
             ? ""
-            : $""" AND "Id" NOT IN ({string.Join(",", excludeIds.Select(id => $"'{id}'"))})""";
+            : """ AND "Id" <> ALL({0})""";
 
         var sql = $"""
             SELECT * FROM commerce."Subscriptions"
@@ -148,8 +148,11 @@ public class BillingEngineJob : BackgroundService
             FOR UPDATE SKIP LOCKED;
             """;
 
-        return await db.Subscriptions
-            .FromSqlRaw(sql)
+        var query = excludeIds.Count == 0
+            ? db.Subscriptions.FromSqlRaw(sql)
+            : db.Subscriptions.FromSqlRaw(sql, excludeIds.ToArray());
+
+        return await query
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(ct);
     }

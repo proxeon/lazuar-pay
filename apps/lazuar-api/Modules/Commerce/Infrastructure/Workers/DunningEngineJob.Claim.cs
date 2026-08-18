@@ -99,7 +99,7 @@ public partial class DunningEngineJob
     {
         var excludeClause = excludeIds.Count == 0
             ? ""
-            : $""" AND s."Id" NOT IN ({string.Join(",", excludeIds.Select(id => $"'{id}'"))})""";
+            : """ AND s."Id" <> ALL({0})""";
 
         string sql = mode switch
         {
@@ -130,8 +130,10 @@ public partial class DunningEngineJob
             _ => throw new ArgumentOutOfRangeException(nameof(mode))
         };
 
-        var sub = await db.Subscriptions
-            .FromSqlRaw(sql)
+        var query = excludeIds.Count == 0
+            ? db.Subscriptions.FromSqlRaw(sql)
+            : db.Subscriptions.FromSqlRaw(sql, excludeIds.ToArray());
+        var sub = await query
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(ct);
 

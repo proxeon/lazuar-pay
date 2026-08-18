@@ -113,6 +113,19 @@ public class TenantIsolationArchitectureTests
     }
 
     [Test]
+    public void Billing_And_Dunning_ExcludeIds_Are_Parameterized()
+    {
+        var billing = File.ReadAllText(FindRepoFile(
+            "Modules", "Commerce", "Infrastructure", "Workers", "BillingEngineJob.cs"));
+        var dunning = File.ReadAllText(FindRepoFile(
+            "Modules", "Commerce", "Infrastructure", "Workers", "DunningEngineJob.Claim.cs"));
+        Assert.That(billing, Does.Contain("<> ALL({0})"));
+        Assert.That(dunning, Does.Contain("<> ALL({0})"));
+        Assert.That(billing, Does.Not.Contain("string.Join(\",\", excludeIds"));
+        Assert.That(dunning, Does.Not.Contain("string.Join(\",\", excludeIds"));
+    }
+
+    [Test]
     public void WorkspaceEndpoints_Id_Scoped_Maps_Check_HasTenantAccess()
     {
         var path = FindRepoFile(
