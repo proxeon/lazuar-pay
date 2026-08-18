@@ -129,6 +129,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 117 | B07-I07 | `fix/117-security-stamp-middleware` | JWT stamp is checked on every cookie request, not only /auth/me |
 | 118 | B07-I10 | `fix/118-last-admin` | Last admin cannot be removed; Team hides that action |
 | 119 | B07-I11 | `fix/119-archive-revoke` | Archive revokes keys, drops members, unpublishes products |
+| 120 | B07-I12 | `fix/120-superadmin-403` | System admin switcher injects ADMIN so /admin/* is not 403 |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -176,6 +176,38 @@ public class TenantIsolationHardeningTests
     }
 
     [Test]
+    public async Task Middleware_SystemAdmin_WithoutMembership_GetsAdminRole()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var userId = Guid.CreateVersion7();
+        var oneQuery = Substitute.For<IOneQueryService>();
+        oneQuery.GetTenantRoleAsync(userId, tenantId).Returns((string?)null);
+
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/api/v1/admin/commerce";
+        context.Request.Headers["X-Tenant-Id"] = tenantId.ToString();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim("is_system_admin", "true")
+            ],
+            authenticationType: "Bearer"));
+
+        var nextCalled = false;
+        var middleware = new TenantSecurityMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(context, oneQuery);
+
+        nextCalled.Should().BeTrue();
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        context.User.IsInRole("ADMIN").Should().BeTrue();
+    }
+
+    [Test]
     public async Task GatewayPaymentCompleted_CrossTenant_Session_Is_NoOp()
     {
         var sessionOrg = Guid.CreateVersion7();

@@ -82,10 +82,20 @@ public class TenantSecurityMiddleware
                 {
                     var role = await oneQueryService.GetTenantRoleAsync(userId, resolvedTenantId.Value);
 
+                    var isSystemAdmin = string.Equals(
+                        context.User.FindFirst("is_system_admin")?.Value,
+                        "true",
+                        StringComparison.OrdinalIgnoreCase);
+
                     if (!string.IsNullOrEmpty(role))
                     {
                         var identity = context.User.Identity as ClaimsIdentity;
                         identity?.AddClaim(new Claim(ClaimTypes.Role, role));
+                    }
+                    else if (isSystemAdmin)
+                    {
+                        var identity = context.User.Identity as ClaimsIdentity;
+                        identity?.AddClaim(new Claim(ClaimTypes.Role, "ADMIN"));
                     }
                     else if (!isExempt)
                     {
