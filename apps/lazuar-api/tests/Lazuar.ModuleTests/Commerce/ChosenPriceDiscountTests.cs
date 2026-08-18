@@ -70,7 +70,10 @@ public class ChosenPriceDiscountTests
             Email = "buyer@example.com"
         });
 
-        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(repository, Substitute.For<IEventBus>(), crm);
+        // Issue 167: MerchantHasSstAsync fail-closes when IBillingQueryService is null.
+        // Empty SST so the yearly 10% coupon stays at 900, not 972 (registered 8%).
+        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(
+            repository, Substitute.For<IEventBus>(), crm, CommerceBillingStubs.NoSstBilling());
         await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
 
         log.Should().NotBeNull();

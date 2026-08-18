@@ -262,6 +262,10 @@ public class CheckoutB2bIdentityTests
             })
             .Build();
 
-        return new InitiateCheckoutCommandHandler(one, repository, mediator, config, comms);
+        // Issue 167: MerchantHasSstAsync fail-closes when IBillingQueryService is null.
+        // SST runs before B2B / session-id checks. Empty SST so hop-2 stays at net
+        // (do not reuse QuoteOfflineSstTests registered SST — 100→108).
+        return new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, CommerceBillingStubs.NoSstBilling());
     }
 }

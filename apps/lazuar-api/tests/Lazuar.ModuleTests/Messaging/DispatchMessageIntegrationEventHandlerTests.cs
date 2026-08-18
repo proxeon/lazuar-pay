@@ -10,6 +10,7 @@ using Modules.Billing.Contracts.Commands;
 using Modules.Communications.Contracts;
 using Modules.Messaging.Application;
 using Modules.Messaging.Contracts;
+using Modules.Messaging.Domain;
 using Modules.Messaging.Infrastructure;
 using Modules.Messaging.Infrastructure.EventHandlers;
 using Modules.Messaging.Infrastructure.Messaging;
@@ -39,6 +40,7 @@ public class DispatchMessageIntegrationEventHandlerTests
             .Options;
 
         var executionContext = Substitute.For<IExecutionContextAccessor>();
+        // Inbox-worker contract (issue 179): empty ambient. Reads must IgnoreQueryFilters.
         executionContext.TenantId.Returns(Guid.Empty);
 
         _db = new MessagingDbContext(
@@ -88,6 +90,13 @@ public class DispatchMessageIntegrationEventHandlerTests
     [TearDown]
     public void TearDown() => _db.Dispose();
 
+    // Empty ambient TenantId is the inbox-worker contract (issue 179).
+    // MessageDeliveryLog is IMustHaveTenant, so the global filter is
+    // OrganizationId == Guid.Empty and hides the row written with a real org.
+    // Worker-style reads must IgnoreQueryFilters (see ClientProfileAnonymizedDeliveryLogTests).
+    private IQueryable<MessageDeliveryLog> Logs() =>
+        _db.MessageDeliveryLogs.IgnoreQueryFilters();
+
     [Test]
     public async Task HandleAsync_EmailChannel_WrapsBrandAndSendsViaIEmailService()
     {
@@ -133,7 +142,7 @@ public class DispatchMessageIntegrationEventHandlerTests
         await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
         _creditCost.DidNotReceive().GetCost(CreditAction.EmailSend);
 
-        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        var log = await Logs().SingleAsync();
         log.Status.Should().Be("SENT");
         log.Channel.Should().Be("EMAIL");
         log.ProviderMessageId.Should().Be("re_abc");
@@ -173,7 +182,7 @@ public class DispatchMessageIntegrationEventHandlerTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*No platform fallback*");
 
-        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        var log = await Logs().SingleAsync();
         log.Status.Should().Be("FAILED");
         log.Channel.Should().Be("EMAIL");
         log.Error.Should().Contain("No platform fallback");
@@ -210,7 +219,7 @@ public class DispatchMessageIntegrationEventHandlerTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*No platform fallback*");
 
-        (await _db.MessageDeliveryLogs.SingleAsync()).Status.Should().Be("FAILED");
+        (await Logs().SingleAsync()).Status.Should().Be("FAILED");
     }
 
     [Test]
@@ -243,7 +252,7 @@ public class DispatchMessageIntegrationEventHandlerTests
             Arg.Any<string?>(),
             Arg.Any<string?>());
 
-        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        var log = await Logs().SingleAsync();
         log.Status.Should().Be("SKIPPED");
         log.Channel.Should().Be("EMAIL");
         log.Error.Should().Contain("suppressed");
@@ -266,7 +275,7 @@ public class DispatchMessageIntegrationEventHandlerTests
 
         await _messaging.DidNotReceive().SendMessageAsync(Arg.Any<string>(), Arg.Any<string>());
         await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
-        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        var log = await Logs().SingleAsync();
         log.Status.Should().Be("SKIPPED");
         log.Channel.Should().Be("WHATSAPP");
         log.Error.Should().Contain("WhatsApp channel disabled");
@@ -302,7 +311,7 @@ public class DispatchMessageIntegrationEventHandlerTests
         await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
         await _billing.DidNotReceive().HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>());
 
-        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        var log = await Logs().SingleAsync();
         log.Status.Should().Be("SENT");
         log.Channel.Should().Be("WHATSAPP");
     }
@@ -329,7 +338,7 @@ public class DispatchMessageIntegrationEventHandlerTests
         await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
         await _billing.DidNotReceive().HasSufficientCreditsAsync(Arg.Any<Guid>(), Arg.Any<int>());
 
-        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        var log = await Logs().SingleAsync();
         log.Status.Should().Be("SENT");
         log.Channel.Should().Be("WHATSAPP");
     }
@@ -355,7 +364,7 @@ public class DispatchMessageIntegrationEventHandlerTests
         await _messaging.DidNotReceive().SendMessageAsync(Arg.Any<string>(), Arg.Any<string>());
         await _mediator.DidNotReceive().Send(Arg.Any<DeductTenantCreditCommand>(), Arg.Any<CancellationToken>());
 
-        var log = await _db.MessageDeliveryLogs.SingleAsync();
+        var log = await Logs().SingleAsync();
         log.Status.Should().Be("SKIPPED");
         log.Error.Should().Contain("WhatsApp channel disabled");
     }

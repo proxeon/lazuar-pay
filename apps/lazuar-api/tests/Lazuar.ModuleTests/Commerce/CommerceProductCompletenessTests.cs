@@ -291,7 +291,7 @@ public class CommerceProductCompletenessTests
             Email = "offline@example.com"
         });
 
-        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(repository, eventBus, crm);
+        var handler = CreateMarkPaidHandler(repository, eventBus, crm);
         await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
 
         session.Status.Should().Be("COMPLETED");
@@ -327,7 +327,7 @@ public class CommerceProductCompletenessTests
             Email = "offline@example.com"
         });
 
-        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(repository, eventBus, crm);
+        var handler = CreateMarkPaidHandler(repository, eventBus, crm);
         await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
 
         await eventBus.Received().PublishAsync(Arg.Is<ManualSubscriberEnrolledIntegrationEvent>(e =>
@@ -363,7 +363,7 @@ public class CommerceProductCompletenessTests
             Email = "custom@example.com"
         });
 
-        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(repository, eventBus, crm);
+        var handler = CreateMarkPaidHandler(repository, eventBus, crm);
         await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
 
         session.Status.Should().Be("COMPLETED");
@@ -392,7 +392,10 @@ public class CommerceProductCompletenessTests
         var mediator = Substitute.For<IMediator>();
         var config = Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>();
 
-        var handler = new InitiateCheckoutCommandHandler(one, repository, mediator, config, comms);
+        // Issue 167: phone check is first, but still compose billing so a later
+        // SST-before-phone reorder would not change this fixture's exception.
+        var handler = new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, CommerceBillingStubs.NoSstBilling());
 
         var act = async () => await handler.Handle(new InitiateCheckoutCommand(
             "acme",
@@ -668,8 +671,10 @@ public class CommerceProductCompletenessTests
         repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
             .Do(ci => session = ci.Arg<CheckoutSession>());
+        // GetCheckoutSessionByIdAsync(organizationId, sessionId) — two Guid args.
+        // Arg<Guid>() is ambiguous (same NSubstitute pitfall as issue 165).
         repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
+            .Returns(ci => session != null && session.Id == ci.ArgAt<Guid>(1) ? session : null);
         repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
 
@@ -709,8 +714,10 @@ public class CommerceProductCompletenessTests
         repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
             .Do(ci => session = ci.Arg<CheckoutSession>());
+        // GetCheckoutSessionByIdAsync(organizationId, sessionId) — two Guid args.
+        // Arg<Guid>() is ambiguous (same NSubstitute pitfall as issue 165).
         repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
+            .Returns(ci => session != null && session.Id == ci.ArgAt<Guid>(1) ? session : null);
         repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
 
@@ -737,7 +744,8 @@ public class CommerceProductCompletenessTests
             })
             .Build();
 
-        var handler = new InitiateCheckoutCommandHandler(one, repository, mediator, config, comms);
+        var handler = new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, CommerceBillingStubs.NoSstBilling());
         var result = await handler.Handle(GuestCheckoutCommand("FREE100"), CancellationToken.None);
 
         session.Should().NotBeNull();
@@ -777,7 +785,8 @@ public class CommerceProductCompletenessTests
             })
             .Build();
 
-        var handler = new InitiateCheckoutCommandHandler(one, repository, mediator, config, comms);
+        var handler = new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, CommerceBillingStubs.NoSstBilling());
         var result = await handler.Handle(GuestCheckoutCommand(couponCode: null), CancellationToken.None);
 
         session.Should().NotBeNull();
@@ -1281,8 +1290,10 @@ public class CommerceProductCompletenessTests
         repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
             .Do(ci => session = ci.Arg<CheckoutSession>());
+        // GetCheckoutSessionByIdAsync(organizationId, sessionId) — two Guid args.
+        // Arg<Guid>() is ambiguous (same NSubstitute pitfall as issue 165).
         repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
+            .Returns(ci => session != null && session.Id == ci.ArgAt<Guid>(1) ? session : null);
         repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddOrder(Arg.Any<Order>())).Do(ci => orders.Add(ci.Arg<Order>()));
@@ -1336,7 +1347,7 @@ public class CommerceProductCompletenessTests
             Email = "offline@example.com"
         });
 
-        var handler = new MarkCheckoutAsPaidOfflineCommandHandler(repository, eventBus, crm);
+        var handler = CreateMarkPaidHandler(repository, eventBus, crm);
         await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
 
         session.Status.Should().Be("COMPLETED");
@@ -1407,8 +1418,19 @@ public class CommerceProductCompletenessTests
             })
             .Build();
 
-        return new InitiateCheckoutCommandHandler(one, repository, mediator, config, comms);
+        // Issue 167: MerchantHasSstAsync fail-closes when IBillingQueryService is null.
+        // Empty SST so quantity / coupon money asserts stay at net (do not reuse
+        // QuoteOfflineSstTests registered SST).
+        return new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, CommerceBillingStubs.NoSstBilling());
     }
+
+    private static MarkCheckoutAsPaidOfflineCommandHandler CreateMarkPaidHandler(
+        ICommerceRepository repository,
+        IEventBus eventBus,
+        ICrmQueryService crm) =>
+        // Same 167 contract as CreateInitiateHandler — merchant not SST-registered.
+        new(repository, eventBus, crm, CommerceBillingStubs.NoSstBilling());
 
     private static GatewayPaymentCompletedIntegrationEventHandler CreateOpenCheckoutPaymentHandler(
         CommerceDbContext db,

@@ -116,7 +116,10 @@ public class CreateCustomCheckoutAndInitiateSessionTests
             .AddInMemoryCollection(new Dictionary<string, string?> { ["App:ClientUrl"] = "http://localhost:3004" })
             .Build();
 
-        var handler = new InitiateCheckoutCommandHandler(one, repository, mediator, config, comms);
+        // Issue 167: SST is evaluated before the B2B tax-ID check; empty SST keeps this
+        // test on the original *tax ID* assertion (do not use registered SST).
+        var handler = new InitiateCheckoutCommandHandler(
+            one, repository, mediator, config, comms, CommerceBillingStubs.NoSstBilling());
 
         var missingTin = async () => await handler.Handle(new InitiateCheckoutCommand(
             "acme", "custom", "Buyer", "buyer@example.com", null, null, null,
@@ -162,8 +165,11 @@ public class CreateCustomCheckoutAndInitiateSessionTests
         var comms = Substitute.For<ICommunicationsQueryService>();
         comms.HasValidEmailConfigAsync(orgId).Returns(true);
 
+        // Issue 167: same empty-SST stub so a completed session still fails for *completed*,
+        // not for a missing IBillingQueryService.
         var handler = new InitiateCheckoutCommandHandler(
-            one, repository, Substitute.For<IMediator>(), new ConfigurationBuilder().Build(), comms);
+            one, repository, Substitute.For<IMediator>(), new ConfigurationBuilder().Build(), comms,
+            CommerceBillingStubs.NoSstBilling());
 
         var act = async () => await handler.Handle(new InitiateCheckoutCommand(
             "acme", "custom", "Buyer", "buyer@example.com", null, null, null,

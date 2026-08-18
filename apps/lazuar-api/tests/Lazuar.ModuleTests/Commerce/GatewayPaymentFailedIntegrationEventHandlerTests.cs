@@ -46,18 +46,22 @@ public class GatewayPaymentFailedIntegrationEventHandlerTests
 
         _eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
+        // GetClientProfileAsync(organizationId, profileId) — two Guid args (issue 165).
+        // Arg<Guid>() is ambiguous (NSubstitute AmbiguousArgumentsException).
         crm.GetClientProfileAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns(ci => new ClientProfileDto
         {
-            Id = ci.Arg<Guid>().ToString(),
+            Id = ci.ArgAt<Guid>(1).ToString(),
             Full_name = "Buyer",
             Email = "buyer@example.com"
         });
+        // Issue 167: PublishPastDueAsync calls MerchantHasSstAsync; null billing fail-closes.
         _handler = new GatewayPaymentFailedIntegrationEventHandler(
             _db,
             _eventBus,
             crm,
             Substitute.For<ILogger<GatewayPaymentFailedIntegrationEventHandler>>(),
-            new ConfigurationBuilder().AddInMemoryCollection().Build());
+            new ConfigurationBuilder().AddInMemoryCollection().Build(),
+            CommerceBillingStubs.NoSstBilling());
     }
 
     [TearDown]

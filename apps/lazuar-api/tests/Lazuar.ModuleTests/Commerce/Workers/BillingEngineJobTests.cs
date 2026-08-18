@@ -110,6 +110,10 @@ public class BillingEngineJobTests
         _db.Subscriptions.AddRange(subA, subB);
         await _db.SaveChangesAsync();
 
+        // Issue 168: reminder mint requires CRM email + workspace + checkout URL.
+        // Without ArrangeMint the job fail-closes and leaves the row ACTIVE.
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
+
         await _job.RunOnceAsync(CancellationToken.None);
 
         var a = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == subA.Id);
@@ -149,6 +153,9 @@ public class BillingEngineJobTests
         _db.Entry(pending).Property(s => s.NextBillingDate).CurrentValue = DateTime.UtcNow.AddDays(-1);
         await _db.SaveChangesAsync();
 
+        // Issue 168: so activeDue can mint and become PAST_DUE; skip-set rows never reach mint.
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
+
         await _job.RunOnceAsync(CancellationToken.None);
 
         (await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == pastDue.Id))
@@ -184,6 +191,9 @@ public class BillingEngineJobTests
         _db.Products.AddRange(billplz, reminder, noVault);
         _db.Subscriptions.AddRange(billplzSub, reminderSub, noVaultSub);
         await _db.SaveChangesAsync();
+
+        // Issue 168: so each no-off-session row can mint and become PAST_DUE.
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
 
         await _job.RunOnceAsync(CancellationToken.None);
 
@@ -510,6 +520,9 @@ public class BillingEngineJobTests
         _db.Subscriptions.AddRange(oneTimeSub, dueRecurring);
         await _db.SaveChangesAsync();
 
+        // Issue 168: one-time still skips before mint; recurring needs this to become PAST_DUE.
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
+
         await _job.RunOnceAsync(CancellationToken.None);
 
         (await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == oneTimeSub.Id))
@@ -535,6 +548,9 @@ public class BillingEngineJobTests
         _db.Products.Add(product);
         _db.Subscriptions.AddRange(orphan, sibling);
         await _db.SaveChangesAsync();
+
+        // Issue 168: orphan still has no product; sibling needs mint to become PAST_DUE.
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
 
         await _job.RunOnceAsync(CancellationToken.None);
 
@@ -683,6 +699,9 @@ public class BillingEngineJobTests
         _db.Entry(sub).Property(s => s.NextBillingDate).CurrentValue = due;
         _db.ChargeAttemptLogs.Add(new ChargeAttemptLog(sub.Id, due.Date, 1, ChargeAttemptLog.SourceBilling));
         await _db.SaveChangesAsync();
+
+        // Issue 168: after attempt 1 the trial falls through to mint; without this it stays TRIALING.
+        ArrangeMint("buyer@example.com", "https://pay.test/bills/renew-1");
 
         await _job.RunOnceAsync(CancellationToken.None);
 
@@ -981,6 +1000,8 @@ public class BillingEngineJobTests
             e.SubscriptionId == sub.Id && e.Amount == 108m));
     }
 
+    // CRM email + workspace slug + checkout URL — the 168 mint-path prerequisites.
+    // Passing tests already call this; do not put it in SetUp (generate-throws tests override Send).
     private void ArrangeMint(string email, string checkoutUrl)
     {
         _crm.GetClientProfileAsync(Arg.Any<Guid>(), Arg.Any<Guid>()).Returns(new ClientProfileDto
