@@ -56,6 +56,28 @@ public class MessageTemplateHydratorTests
     }
 
     [Test]
+    public void PopulateHtml_Encodes_Untrusted_Name_And_Drops_Javascript_Url()
+    {
+        var ctx = Sample with
+        {
+            CustomerName = "Jane <img src=x onerror=alert(1)>",
+            RenewalLink = "javascript:alert(1)",
+            PortalMagicLink = "](https://evil.example)",
+            UpdatePaymentLink = "https://portal.test/acme/update-payment/sub-1"
+        };
+
+        var html = MessageTemplateHydrator.PopulateHtml(
+            "{{customer_name}} [pay]({{renewal_link}}) {{portal_magic_link}} {{update_payment_link}}",
+            ctx);
+
+        html.Should().NotContain("<img");
+        html.Should().Contain("&lt;img");
+        html.Should().NotContain("javascript:");
+        html.Should().NotContain("https://evil.example");
+        html.Should().Contain("https://portal.test/acme/update-payment/sub-1");
+    }
+
+    [Test]
     public void Populate_UnknownTag_IsNotStripped()
     {
         MessageTemplateHydrator.Populate("See {{garbage}} please", Sample)

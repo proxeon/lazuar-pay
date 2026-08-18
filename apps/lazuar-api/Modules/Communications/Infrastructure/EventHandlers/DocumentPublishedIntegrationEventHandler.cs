@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using BuildingBlocks.Infrastructure;
+using Modules.Communications.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,9 +65,9 @@ public class DocumentPublishedIntegrationEventHandler : IIntegrationEventHandler
         var businessName = string.IsNullOrEmpty(@event.BusinessName) ? "Business" : @event.BusinessName;
 
         var htmlBody = (template.EmailBody ?? "")
-            .Replace("{{customer_name}}", customerName, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{business_name}}", businessName, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{document_link}}", documentLink, StringComparison.OrdinalIgnoreCase);
+            .Replace("{{customer_name}}", MessageTemplateHydrator.HtmlEncode(customerName), StringComparison.OrdinalIgnoreCase)
+            .Replace("{{business_name}}", MessageTemplateHydrator.HtmlEncode(businessName), StringComparison.OrdinalIgnoreCase)
+            .Replace("{{document_link}}", MessageTemplateHydrator.SafeHttpUrl(documentLink), StringComparison.OrdinalIgnoreCase);
 
         var whatsappBody = (template.WhatsAppBody ?? "")
             .Replace("{{customer_name}}", customerName, StringComparison.OrdinalIgnoreCase)

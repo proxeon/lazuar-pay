@@ -84,7 +84,7 @@ public class LifecycleEventHandlers : IIntegrationEventHandler<SubscriptionCance
             toEmail,
             profile.Phone,
             MessageTemplateHydrator.Populate(template.Subject, ctx),
-            MarkdownParser.ToHtml(MessageTemplateHydrator.Populate(template.EmailBody, ctx)),
+            MarkdownParser.ToHtml(MessageTemplateHydrator.PopulateHtml(template.EmailBody, ctx)),
             string.IsNullOrEmpty(whatsapp) ? null : whatsapp,
             template.Channel
         ));

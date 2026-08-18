@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Modules.Communications.Application;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -73,24 +74,29 @@ public class OrderCompletedDigitalDeliveryHandler : IIntegrationEventHandler<Ord
         // No dedicated digital asset URL on products yet — portal is the best available fulfillment surface.
         var fulfillmentUrl = portalLink;
 
-        string Populate(string text)
+        string Populate(string text, bool htmlEncode)
         {
             if (string.IsNullOrEmpty(text)) return text;
+            var name = htmlEncode
+                ? MessageTemplateHydrator.HtmlEncode(profile.Full_name ?? "Customer")
+                : (profile.Full_name ?? "Customer");
+            var business = htmlEncode ? MessageTemplateHydrator.HtmlEncode(businessName) : businessName;
+            var plan = htmlEncode ? MessageTemplateHydrator.HtmlEncode("your purchase") : "your purchase";
             return text
-                .Replace("{{customer_name}}", profile.Full_name ?? "Customer", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{business_name}}", businessName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{plan_name}}", "your purchase", StringComparison.OrdinalIgnoreCase)
-                .Replace("{{fulfillment_url}}", fulfillmentUrl, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{portal_magic_link}}", portalLink, StringComparison.OrdinalIgnoreCase);
+                .Replace("{{customer_name}}", name, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{business_name}}", business, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{plan_name}}", plan, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{fulfillment_url}}", htmlEncode ? MessageTemplateHydrator.SafeHttpUrl(fulfillmentUrl) : fulfillmentUrl, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{portal_magic_link}}", htmlEncode ? MessageTemplateHydrator.SafeHttpUrl(portalLink) : portalLink, StringComparison.OrdinalIgnoreCase);
         }
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
             @event.OrganizationId,
             profile.Email,
             profile.Phone,
-            Populate(template.Subject),
-            MarkdownParser.ToHtml(Populate(template.EmailBody)),
-            Populate(template.WhatsAppBody),
+            Populate(template.Subject, htmlEncode: false),
+            MarkdownParser.ToHtml(Populate(template.EmailBody, htmlEncode: true)),
+            Populate(template.WhatsAppBody, htmlEncode: false),
             template.Channel));
     }
 }

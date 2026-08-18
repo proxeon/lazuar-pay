@@ -6,6 +6,7 @@ public static class MarkdownParser
 {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
+        .DisableHtml()
         .UseSoftlineBreakAsHardlineBreak()
         .Build();
 

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
+using Modules.Communications.Application;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts;
@@ -77,21 +78,24 @@ public class PortalAccessEmailHandlers :
         var token = _tokenService.GenerateToken(subscriptionId);
         var portalMagicLink = $"{portalBase}/{slug}/portal?token={token}";
 
-        string Populate(string text)
+        string Populate(string text, bool htmlEncode)
         {
             if (string.IsNullOrEmpty(text)) return text;
+            var name = htmlEncode ? MessageTemplateHydrator.HtmlEncode(customerName) : customerName;
+            var business = htmlEncode ? MessageTemplateHydrator.HtmlEncode(businessName) : businessName;
+            var link = htmlEncode ? MessageTemplateHydrator.SafeHttpUrl(portalMagicLink) : portalMagicLink;
             return text
-                .Replace("{{customer_name}}", customerName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{business_name}}", businessName, StringComparison.OrdinalIgnoreCase)
-                .Replace("{{portal_magic_link}}", portalMagicLink, StringComparison.OrdinalIgnoreCase);
+                .Replace("{{customer_name}}", name, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{business_name}}", business, StringComparison.OrdinalIgnoreCase)
+                .Replace("{{portal_magic_link}}", link, StringComparison.OrdinalIgnoreCase);
         }
 
         await _eventBus.PublishAsync(new DispatchMessageIntegrationEvent(
             organizationId,
             profile.Email,
             null,
-            Populate(template.Subject ?? ""),
-            MarkdownParser.ToHtml(Populate(template.EmailBody ?? "")),
+            Populate(template.Subject ?? "", htmlEncode: false),
+            MarkdownParser.ToHtml(Populate(template.EmailBody ?? "", htmlEncode: true)),
             null,
             template.Channel ?? "EMAIL"));
         await _dbContext.SaveChangesAsync();

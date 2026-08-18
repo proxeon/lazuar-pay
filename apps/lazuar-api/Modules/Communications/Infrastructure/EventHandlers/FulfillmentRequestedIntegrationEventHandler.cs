@@ -187,7 +187,7 @@ public class FulfillmentRequestedIntegrationEventHandler : IIntegrationEventHand
             UpdatePaymentLink: links.UpdatePaymentLink);
 
         var populatedSubject = MessageTemplateHydrator.Populate(subject, templateContext);
-        var populatedHtml = MarkdownParser.ToHtml(MessageTemplateHydrator.Populate(emailBody, templateContext));
+        var populatedHtml = MarkdownParser.ToHtml(MessageTemplateHydrator.PopulateHtml(emailBody, templateContext));
         var emailChannel = channel is "EMAIL" or "ALL";
 
         if (isDunning &&

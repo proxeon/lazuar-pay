@@ -62,30 +62,57 @@ public static class MessageTemplateHydrator
         PortalMagicLink: "https://portal.lazuar.com/acme/portal?token=test_token",
         UpdatePaymentLink: "https://portal.lazuar.com/acme/update-payment/11111111-1111-1111-1111-111111111111");
 
-    public static string Populate(string? text, MessageTemplateContext ctx)
+    public static string Populate(string? text, MessageTemplateContext ctx, bool htmlEncode = false)
     {
         if (string.IsNullOrEmpty(text)) return text ?? "";
 
+        var name = htmlEncode ? HtmlEncode(ctx.CustomerName) : ctx.CustomerName;
+        var email = htmlEncode ? HtmlEncode(ctx.CustomerEmail) : ctx.CustomerEmail;
+        var phone = htmlEncode ? HtmlEncode(ctx.CustomerPhone) : ctx.CustomerPhone;
+        var business = htmlEncode ? HtmlEncode(ctx.BusinessName) : ctx.BusinessName;
+        var plan = htmlEncode ? HtmlEncode(ctx.PlanName) : ctx.PlanName;
+        var renewal = htmlEncode ? SafeHttpUrl(ctx.RenewalLink) : ctx.RenewalLink;
+        var portal = htmlEncode ? SafeHttpUrl(ctx.PortalMagicLink) : ctx.PortalMagicLink;
+        var update = htmlEncode ? SafeHttpUrl(ctx.UpdatePaymentLink) : ctx.UpdatePaymentLink;
+
         return text
-            .Replace("{{customer_name}}", ctx.CustomerName, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{customer_email}}", ctx.CustomerEmail, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{customer_phone}}", ctx.CustomerPhone, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{business_name}}", ctx.BusinessName, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{plan_name}}", ctx.PlanName, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{customer_name}}", name, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{customer_email}}", email, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{customer_phone}}", phone, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{business_name}}", business, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{plan_name}}", plan, StringComparison.OrdinalIgnoreCase)
             .Replace("{{amount}}", ctx.Amount, StringComparison.OrdinalIgnoreCase)
             .Replace("{{total_price}}", ctx.TotalPrice, StringComparison.OrdinalIgnoreCase)
             .Replace("{{currency}}", ctx.Currency, StringComparison.OrdinalIgnoreCase)
             .Replace("{{days_overdue}}", ctx.DaysOverdue, StringComparison.OrdinalIgnoreCase)
             .Replace("{{current_period_end}}", ctx.CurrentPeriodEnd, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{renewal_link}}", ctx.RenewalLink, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{checkout_url}}", ctx.RenewalLink, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{portal_magic_link}}", ctx.PortalMagicLink, StringComparison.OrdinalIgnoreCase)
-            .Replace("{{update_payment_link}}", ctx.UpdatePaymentLink, StringComparison.OrdinalIgnoreCase);
+            .Replace("{{renewal_link}}", renewal, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{checkout_url}}", renewal, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{portal_magic_link}}", portal, StringComparison.OrdinalIgnoreCase)
+            .Replace("{{update_payment_link}}", update, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string PopulateHtml(string? text, MessageTemplateContext ctx) =>
+        Populate(text, ctx, htmlEncode: true);
+
+    public static string HtmlEncode(string? value) =>
+        System.Net.WebUtility.HtmlEncode(value ?? "");
+
+    public static string SafeHttpUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return "";
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
+        {
+            return url;
+        }
+
+        return "";
     }
 
     public static string PopulatePreview(string? text)
     {
-        var populated = Populate(text, Preview);
+        var populated = Populate(text, Preview, htmlEncode: true);
         if (string.IsNullOrEmpty(populated)) return populated;
         return populated.Replace("{{fulfillment_url}}", PreviewFulfillmentUrl, StringComparison.OrdinalIgnoreCase);
     }

@@ -25,7 +25,7 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
 
     public async Task<Guid> Handle(CreateMessageTemplateCommand request, CancellationToken cancellationToken)
     {
-        ValidateTemplateVariables(request.Channel, request.Subject, request.EmailBody, request.WhatsAppBody, request.RequiredVariables, request.OptionalVariables);
+        Validate(request.Channel, request.Subject, request.EmailBody, request.WhatsAppBody, request.RequiredVariables, request.OptionalVariables);
 
         var template = new MessageTemplate(
             request.OrganizationId,
@@ -44,7 +44,7 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
         return template.Id;
     }
 
-    private void ValidateTemplateVariables(
+    internal static void Validate(
         string channel,
         string subject, 
         string emailBody, 
@@ -63,7 +63,7 @@ public class CreateMessageTemplateCommandHandler : ICommandHandler<CreateMessage
         }
     }
 
-    private void CheckVariables(string content, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables, string contextName)
+    private static void CheckVariables(string content, IEnumerable<string> requiredVariables, IEnumerable<string> optionalVariables, string contextName)
     {
         var extractedTags = Regex.Matches(content, @"\{\{([a-zA-Z0-9_]+)\}\}")
             .Select(m => m.Value)
@@ -101,6 +101,14 @@ public class UpdateMessageTemplateCommandHandler : ICommandHandler<UpdateMessage
         var template = await _repository.GetTemplateByIdAsync(request.OrganizationId, request.TemplateId, cancellationToken);
 
         if (template == null) throw new InvalidOperationException("Template not found.");
+
+        CreateMessageTemplateCommandHandler.Validate(
+            template.Channel,
+            request.Subject,
+            request.EmailBody,
+            request.WhatsAppBody,
+            template.RequiredVariables,
+            template.OptionalVariables);
 
         template.UpdateContent(request.Subject, request.EmailBody, request.WhatsAppBody);
 
