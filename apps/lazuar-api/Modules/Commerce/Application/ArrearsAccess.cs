@@ -2,11 +2,12 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Modules.Commerce.Contracts;
+using Modules.One.Contracts;
 
 namespace Modules.Commerce.Application;
 
 /// <summary>
-/// Portal HMAC gate for public arrears / update-payment: valid token and same sub, or same org + client.
+/// Portal HMAC gate for public arrears / update-payment: valid token, workspace slug, and same sub or same org + client.
 /// </summary>
 public static class ArrearsAccess
 {
@@ -15,9 +16,11 @@ public static class ArrearsAccess
         ICommerceRepository repository,
         string? token,
         Guid pathSubscriptionId,
+        string? tenantSlug,
+        IOneQueryService one,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(tenantSlug))
         {
             return false;
         }
@@ -28,19 +31,25 @@ public static class ArrearsAccess
             return false;
         }
 
+        var tenantId = await one.GetTenantIdBySlugAsync(tenantSlug);
+        if (!tenantId.HasValue)
+        {
+            return false;
+        }
+
+        var tokenSubscription = await repository.GetSubscriptionByIdForPortalTokenAsync(tokenSubscriptionId.Value, ct);
+        if (tokenSubscription == null || tokenSubscription.OrganizationId != tenantId.Value)
+        {
+            return false;
+        }
+
         if (tokenSubscriptionId.Value == pathSubscriptionId)
         {
             return true;
         }
 
-        var tokenSubscription = await repository.GetSubscriptionByIdForPortalTokenAsync(tokenSubscriptionId.Value, ct);
-        if (tokenSubscription == null)
-        {
-            return false;
-        }
-
         var pathSubscription = await repository.GetSubscriptionByIdAsync(
-            tokenSubscription.OrganizationId, pathSubscriptionId, ct);
+            tenantId.Value, pathSubscriptionId, ct);
         if (pathSubscription == null)
         {
             return false;

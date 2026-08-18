@@ -22,7 +22,7 @@ export default async function UpdatePaymentPage({
   const branding = await fetchWorkspaceBranding(tenantSlug);
 
   const { data, error } = await serverClient.GET("/public/commerce/checkout/{subId}/arrears", {
-    params: { path: { subId }, query: { token } },
+    params: { path: { subId }, query: { token, slug: tenantSlug } as { token: string } },
     next: { revalidate: 0 }
   });
 
@@ -39,7 +39,7 @@ export default async function UpdatePaymentPage({
     "use server";
     const { data: checkoutData } = await serverClient.POST(
       "/public/commerce/checkout/{subId}/update-payment",
-      { params: { path: { subId }, query: { token } } },
+      { params: { path: { subId }, query: { token, slug: tenantSlug } as { token: string } } },
     );
 
     if (checkoutData?.url) {

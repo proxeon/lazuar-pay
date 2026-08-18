@@ -28,12 +28,14 @@ public static class PublicArrearsEndpoints
         group.MapGet("/checkout/{subId:guid}/arrears", async Task<Results<Ok<ArrearsSummaryDto>, NotFound, UnauthorizedHttpResult>> (
             Guid subId,
             [FromQuery] string token,
+            [FromQuery] string? slug,
             HttpContext http,
             IMagicLinkTokenService tokenService,
             ICommerceRepository repository,
+            IOneQueryService oneQueryService,
             [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory sqlFactory) =>
         {
-            if (!await ArrearsAccess.IsAuthorizedAsync(tokenService, repository, token, subId))
+            if (!await ArrearsAccess.IsAuthorizedAsync(tokenService, repository, token, subId, slug, oneQueryService))
             {
                 return TypedResults.Unauthorized();
             }
@@ -70,6 +72,7 @@ public static class PublicArrearsEndpoints
         group.MapPost("/checkout/{subId:guid}/update-payment", async Task<Results<Ok<CheckoutResponse>, BadRequest<string>, UnauthorizedHttpResult>> (
             Guid subId,
             [FromQuery] string token,
+            [FromQuery] string? slug,
             [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory sqlFactory,
             ICrmQueryService crmQueryService,
             IOneQueryService oneQueryService,
@@ -79,7 +82,7 @@ public static class PublicArrearsEndpoints
             IConfiguration config,
             HttpContext http) =>
         {
-            if (!await ArrearsAccess.IsAuthorizedAsync(tokenService, repository, token, subId))
+            if (!await ArrearsAccess.IsAuthorizedAsync(tokenService, repository, token, subId, slug, oneQueryService))
             {
                 return TypedResults.Unauthorized();
             }
