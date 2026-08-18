@@ -237,6 +237,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 225 | B04-P24 | `fix/225-payments-dead-code-honesty` | Payments README lists five adapters + M2M sessions; unused CHIP/Billplz symbols gone |
 | 226 | B04-P25 | `fix/226-expired-then-completed` | Expired M2M session still completes on late pay; GET expire stays open-only |
 | 227 | B04-P26 | `fix/227-placeholder-pii-fail-closed` | Blank / customer@example.com refused on generate; Razorpay omits dummy phone |
+| 228 | B05-L24 | `fix/228-validate-balanced` | ValidateBalanced rejects empty and per-currency imbalance; $0 header is not saved |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

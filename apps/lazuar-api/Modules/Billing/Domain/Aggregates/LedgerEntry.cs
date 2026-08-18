@@ -147,18 +147,36 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
         LhdnValidationStatus = status;
     }
 
-    // This guarantees that it is impossible for Lazuar to lose track of a
-    // single cent.
-    //
-    // NOTE: Double-entry bookkeeping is a 500-year-old accounting rule: Every
-    // financial transaction has equal and opposite reactions. Debits and
-    // Credits must always equal zero.
+    /// <summary>
+    /// Each native currency and each base-currency group must net to zero.
+    /// An empty line list is not a journal (see ZeroAmountCheckout skip).
+    /// Wrong-but-cancelling accounts still pass — handlers own that class of bug.
+    /// </summary>
     public void ValidateBalanced()
     {
-        var netBaseAmount = _lines.Sum(l => l.BaseCurrencyAmount);
-        if (netBaseAmount != 0)
+        if (_lines.Count == 0)
         {
-            throw new InvalidOperationException($"Ledger entry {Id} is unbalanced. Net base currency amount: {netBaseAmount}");
+            throw new InvalidOperationException($"Ledger entry {Id} has no lines.");
+        }
+
+        foreach (var group in _lines.GroupBy(l => l.Currency, StringComparer.OrdinalIgnoreCase))
+        {
+            var net = group.Sum(l => l.Amount);
+            if (net != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ledger entry {Id} is unbalanced in {group.Key}. Net amount: {net}");
+            }
+        }
+
+        foreach (var group in _lines.GroupBy(l => l.BaseCurrency, StringComparer.OrdinalIgnoreCase))
+        {
+            var net = group.Sum(l => l.BaseCurrencyAmount);
+            if (net != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ledger entry {Id} is unbalanced in base {group.Key}. Net base amount: {net}");
+            }
         }
     }
 }
