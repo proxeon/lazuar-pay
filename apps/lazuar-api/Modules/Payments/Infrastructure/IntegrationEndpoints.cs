@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using BuildingBlocks.Application;
 using Lazuar.ApiTypes;
 using MediatR;
@@ -24,7 +25,7 @@ public static class IntegrationEndpoints
             .RequireCors();
 
         group.MapPost("/checkouts", async (
-            CreateIntegrationCheckoutRequestDto body,
+            JsonElement bodyJson,
             HttpContext http,
             IExecutionContextAccessor ctx,
             IMediator mediator) =>
@@ -36,13 +37,28 @@ public static class IntegrationEndpoints
                     statusCode: 401);
             }
 
+            var body = bodyJson.Deserialize<CreateIntegrationCheckoutRequestDto>();
+            if (body is null)
+            {
+                return Results.Json(
+                    Problem(PaymentErrorCodes.InvalidRequest, "Request body is required.", 400),
+                    statusCode: 400);
+            }
+
+            if (!IntegrationCheckoutAmount.TryRead(bodyJson, body.Currency, out var amount, out var amountError))
+            {
+                return Results.Json(
+                    Problem(PaymentErrorCodes.AmountInvalid, amountError ?? "Amount is invalid.", 400),
+                    statusCode: 400);
+            }
+
             var idempotencyKey = ResolveIdempotencyKey(http, body.Idempotency_key);
 
             try
             {
                 var result = await mediator.Send(new CreateIntegrationCheckoutCommand(
                     OrganizationId: ctx.TenantId,
-                    Amount: (decimal)body.Amount,
+                    Amount: amount,
                     Currency: body.Currency ?? string.Empty,
                     Description: body.Description ?? string.Empty,
                     CustomerEmail: body.Customer_email ?? string.Empty,

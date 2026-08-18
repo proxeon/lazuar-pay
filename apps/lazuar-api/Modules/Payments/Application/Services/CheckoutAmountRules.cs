@@ -27,6 +27,11 @@ public static class CheckoutAmountRules
         }
 
         var code = currency.Trim().ToUpperInvariant();
+        if (string.Equals(code, "MYR", StringComparison.Ordinal)
+            && decimal.Round(amount, 2, MidpointRounding.AwayFromZero) != amount)
+        {
+            throw PaymentIntegrationException.AmountInvalid("Amount must have at most 2 decimal places.");
+        }
         var min = MinimumFor(code);
         if (amount < min)
         {
