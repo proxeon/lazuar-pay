@@ -273,6 +273,59 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public void ResolvePreDunningClaimWindowDays_UsesMaxNegativeOffset_FloorsAt14_CapsAt90()
+    {
+        DunningEngineJob.ResolvePreDunningClaimWindowDays(Array.Empty<DunningCampaign>()).Should().Be(14);
+
+        var onlyPastDue = new DunningCampaign(_orgId, "Past", "CANCEL", 7, 1);
+        onlyPastDue.AddStep(0, "EMAIL", "Due", "Pay", null);
+        DunningEngineJob.ResolvePreDunningClaimWindowDays(new[] { onlyPastDue }).Should().Be(14);
+
+        var minus3 = new DunningCampaign(_orgId, "Default", "CANCEL", 7, 1);
+        minus3.AddStep(-3, "EMAIL", "Soon", "Renews", null);
+        DunningEngineJob.ResolvePreDunningClaimWindowDays(new[] { minus3 }).Should().Be(14);
+
+        var minus21 = new DunningCampaign(_orgId, "Long", "CANCEL", 7, 1);
+        minus21.AddStep(-21, "EMAIL", "Soon", "Renews", null);
+        minus21.AddStep(-3, "EMAIL", "Sooner", "Renews", null);
+        DunningEngineJob.ResolvePreDunningClaimWindowDays(new[] { minus21 }).Should().Be(21);
+
+        var minus120 = new DunningCampaign(_orgId, "Huge", "CANCEL", 7, 1);
+        minus120.AddStep(-120, "EMAIL", "Far", "Renews", null);
+        DunningEngineJob.ResolvePreDunningClaimWindowDays(new[] { minus120 }).Should().Be(90);
+    }
+
+    [Test]
+    public async Task PreDunning_Minus21Email_FiresAtTwentyOneDays_NotThirty()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var tooEarly = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        tooEarly.Activate(DateTime.UtcNow.AddDays(30), DateTime.UtcNow.Date.AddDays(30));
+        var dueSoon = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        dueSoon.Activate(DateTime.UtcNow.AddDays(21), DateTime.UtcNow.Date.AddDays(21));
+        var campaign = new DunningCampaign(_orgId, "Long pre", "CANCEL", gracePeriodDays: 7, priorityOrder: 1);
+        campaign.AddStep(-21, "EMAIL", "Renews in 3 weeks", "Your plan renews. {{update_payment_link}}", null);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.AddRange(tooEarly, dueSoon);
+        _db.DunningCampaigns.Add(campaign);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var earlyReloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == tooEarly.Id);
+        var dueReloaded = await _db.Subscriptions.IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs).SingleAsync(s => s.Id == dueSoon.Id);
+
+        earlyReloaded.ReminderLogs.Should().BeEmpty();
+        dueReloaded.ReminderLogs.Should().ContainSingle(l => l.DayOffset == -21);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<FulfillmentRequestedIntegrationEvent>(e =>
+            e.EventType == "reminder.dunning"
+            && e.Payload.GetProperty("subscription_id").GetString() == dueSoon.Id.ToString()));
+    }
+
+    [Test]
     public async Task PreDunning_PausedUntilFuture_NotClaimed()
     {
         var product = CreateProduct(_orgId, "STRIPE");
