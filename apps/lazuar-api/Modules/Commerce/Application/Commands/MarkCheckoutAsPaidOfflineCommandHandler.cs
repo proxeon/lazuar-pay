@@ -100,11 +100,12 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
             unitNet, quantity, product.SstTaxType, product.SstRatePercent, merchantHasSst);
         var totalAmount = breakdown.Gross;
         var currency = product.Currency;
+        var interval = chosen?.Interval ?? product.Interval;
 
         Guid entitlementId;
         Guid? subscriptionId = null;
 
-        if (product.Interval == "one_time")
+        if (interval == "one_time")
         {
             var order = new Order(
                 session.OrganizationId,
@@ -128,7 +129,6 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         else
         {
             var subscription = new Subscription(session.OrganizationId, session.ClientProfileId, product.Id);
-            var interval = chosen?.Interval ?? product.Interval;
             SubscriptionActivation.Start(
                 subscription,
                 product,

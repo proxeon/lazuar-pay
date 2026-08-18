@@ -72,7 +72,8 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
             lineDiscount = lineGross;
         }
 
-        if (product.Interval == "one_time")
+        var interval = chosen?.Interval ?? product.Interval;
+        if (interval == "one_time")
         {
             var order = new Domain.Aggregates.Order(
                 session.OrganizationId,
@@ -90,7 +91,6 @@ public class ProcessZeroAmountCheckoutCommandHandler : ICommandHandler<ProcessZe
         else
         {
             var subscription = new Domain.Aggregates.Subscription(session.OrganizationId, session.ClientProfileId, product.Id);
-            var interval = chosen?.Interval ?? product.Interval;
             SubscriptionActivation.Start(
                 subscription,
                 product,

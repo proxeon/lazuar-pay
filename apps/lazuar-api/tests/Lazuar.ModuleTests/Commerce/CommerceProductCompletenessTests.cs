@@ -1380,6 +1380,44 @@ public class CommerceProductCompletenessTests
     }
 
     [Test]
+    public async Task MarkCheckoutAsPaidOffline_OneTimePriceOnMonthlyProduct_WritesOrderNotSubscription()
+    {
+        var orgId = Guid.CreateVersion7();
+        var product = CreateProduct(orgId, interval: "mo");
+        product.UpsertPrice("one_time", 50m, isDefault: false);
+        var oneTime = product.GetPrice("one_time")!;
+        var clientId = Guid.CreateVersion7();
+        var session = new CheckoutSession(
+            orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1), 1, oneTime.Id);
+
+        var orders = new List<Order>();
+        var subscriptions = new List<Subscription>();
+        var repository = Substitute.For<ICommerceRepository>();
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.When(r => r.AddOrder(Arg.Any<Order>())).Do(ci => orders.Add(ci.Arg<Order>()));
+        repository.When(r => r.AddSubscription(Arg.Any<Subscription>())).Do(ci => subscriptions.Add(ci.Arg<Subscription>()));
+
+        var eventBus = Substitute.For<IEventBus>();
+        var crm = Substitute.For<ICrmQueryService>();
+        crm.GetClientProfileAsync(Arg.Any<Guid>(), clientId).Returns(new ClientProfileDto
+        {
+            Id = clientId.ToString(),
+            Full_name = "Offline Buyer",
+            Email = "offline@example.com"
+        });
+
+        var handler = CreateMarkPaidHandler(repository, eventBus, crm);
+        await handler.Handle(new MarkCheckoutAsPaidOfflineCommand(orgId, session.Id), CancellationToken.None);
+
+        subscriptions.Should().BeEmpty();
+        orders.Should().HaveCount(1);
+        orders[0].AmountPaid.Should().Be(50m);
+        await eventBus.Received().PublishAsync(Arg.Any<OrderCompletedIntegrationEvent>());
+        await eventBus.DidNotReceive().PublishAsync(Arg.Any<SubscriptionActivatedIntegrationEvent>());
+    }
+
+    [Test]
     public async Task GatewayPaymentCompleted_OneTime_Qty3_WritesOrderQuantity()
     {
         using var db = CreateDb(out var orgId);

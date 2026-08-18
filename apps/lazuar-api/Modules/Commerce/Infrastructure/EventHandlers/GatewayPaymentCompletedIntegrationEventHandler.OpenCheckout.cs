@@ -79,17 +79,16 @@ public partial class GatewayPaymentCompletedIntegrationEventHandler
         }
 
         Guid? subscriptionId = null;
-        if (product.Interval != "one_time")
+        var chosen = product.Prices.FirstOrDefault(p => p.Id == session.PriceId);
+        var unitAmount = chosen?.Amount ?? product.Price;
+        var interval = chosen?.Interval ?? product.Interval;
+        if (interval != "one_time")
         {
             var subscription = new Subscription(
                 session.OrganizationId,
                 session.ClientProfileId,
                 product.Id
             );
-
-            var chosen = product.Prices.FirstOrDefault(p => p.Id == session.PriceId);
-            var unitAmount = chosen?.Amount ?? product.Price;
-            var interval = chosen?.Interval ?? product.Interval;
             var hasVault = TryVaultIds(product.GatewayName, @event.GatewayCustomerId, @event.GatewayTokenId, out var vaultCustomerId, out var vaultTokenId);
             Modules.Commerce.Application.SubscriptionActivation.Start(
                 subscription,
