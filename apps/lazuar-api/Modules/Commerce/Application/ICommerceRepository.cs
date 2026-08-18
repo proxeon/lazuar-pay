@@ -9,21 +9,26 @@ namespace Modules.Commerce.Application;
 
 public interface ICommerceRepository
 {
-    Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Product?> GetProductByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<Product>> GetProductsByIdsAsync(Guid organizationId, IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default);
-    Task<Coupon?> GetCouponByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Coupon?> GetCouponByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default);
     Task<Coupon?> GetCouponByCodeWithLockAsync(Guid organizationId, string code, CancellationToken ct = default);
-    Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default);
+    Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<CheckoutSession?> GetCheckoutSessionByIdempotencyKeyAsync(
         Guid organizationId,
         string idempotencyKey,
         CancellationToken ct = default);
-    Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Subscription?> GetSubscriptionByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
+    /// <summary>
+    /// Capability load for a portal/arrears HMAC token. The token is the secret; the caller
+    /// must then scope every later read with <see cref="GetSubscriptionByIdAsync(Guid, Guid, CancellationToken)"/>.
+    /// </summary>
+    Task<Subscription?> GetSubscriptionByIdForPortalTokenAsync(Guid id, CancellationToken ct = default);
     Task<Subscription?> GetNewestSubscriptionForClientAsync(Guid organizationId, Guid clientProfileId, CancellationToken ct = default);
-    Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default);
-    Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Order?> GetOrderByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
+    Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<CommerceTransactionLog>> GetTransactionLogsByCustomerEmailAsync(
         Guid organizationId,
         string customerEmail,
@@ -42,7 +47,7 @@ public interface ICommerceRepository
     
     Task<DunningCampaign?> GetDunningCampaignByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<bool> HasAnyDunningCampaignAsync(Guid organizationId, CancellationToken ct = default);
-    Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid campaignId, CancellationToken ct = default);
+    Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid organizationId, Guid campaignId, CancellationToken ct = default);
 
     void AddProduct(Product product);
     void AddSubscription(Subscription subscription);

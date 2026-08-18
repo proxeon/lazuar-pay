@@ -28,7 +28,8 @@ public class ArrearsAccessTests
             .Should().BeFalse();
 
         tokens.DidNotReceive().ValidateToken(Arg.Any<string>());
-        await repo.DidNotReceive().GetSubscriptionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await repo.DidNotReceive().GetSubscriptionByIdForPortalTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await repo.DidNotReceive().GetSubscriptionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -42,8 +43,8 @@ public class ArrearsAccessTests
         tokens.ValidateToken("tok-a").Returns(a.Id);
 
         var repo = Substitute.For<ICommerceRepository>();
-        repo.GetSubscriptionByIdAsync(a.Id, Arg.Any<CancellationToken>()).Returns(a);
-        repo.GetSubscriptionByIdAsync(b.Id, Arg.Any<CancellationToken>()).Returns(b);
+        repo.GetSubscriptionByIdForPortalTokenAsync(a.Id, Arg.Any<CancellationToken>()).Returns(a);
+        repo.GetSubscriptionByIdAsync(org, b.Id, Arg.Any<CancellationToken>()).Returns(b);
 
         (await ArrearsAccess.IsAuthorizedAsync(tokens, repo, "tok-a", b.Id, CancellationToken.None))
             .Should().BeFalse();
@@ -60,7 +61,8 @@ public class ArrearsAccessTests
         (await ArrearsAccess.IsAuthorizedAsync(tokens, repo, "tok-a", a.Id, CancellationToken.None))
             .Should().BeTrue();
 
-        await repo.DidNotReceive().GetSubscriptionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await repo.DidNotReceive().GetSubscriptionByIdForPortalTokenAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await repo.DidNotReceive().GetSubscriptionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -75,8 +77,8 @@ public class ArrearsAccessTests
         tokens.ValidateToken("tok-a").Returns(a.Id);
 
         var repo = Substitute.For<ICommerceRepository>();
-        repo.GetSubscriptionByIdAsync(a.Id, Arg.Any<CancellationToken>()).Returns(a);
-        repo.GetSubscriptionByIdAsync(sibling.Id, Arg.Any<CancellationToken>()).Returns(sibling);
+        repo.GetSubscriptionByIdForPortalTokenAsync(a.Id, Arg.Any<CancellationToken>()).Returns(a);
+        repo.GetSubscriptionByIdAsync(org, sibling.Id, Arg.Any<CancellationToken>()).Returns(sibling);
 
         (await ArrearsAccess.IsAuthorizedAsync(tokens, repo, "tok-a", sibling.Id, CancellationToken.None))
             .Should().BeTrue();

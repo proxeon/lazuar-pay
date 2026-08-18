@@ -49,7 +49,7 @@ public class ChangePortalPlanCommandHandler : ICommandHandler<ChangePortalPlanCo
 
         PlanChangePolicy.GuardLiveStatus(subscription);
 
-        var current = await _repository.GetProductByIdAsync(subscription.ProductId, ct)
+        var current = await _repository.GetProductByIdAsync(subscription.OrganizationId, subscription.ProductId, ct)
             ?? throw new InvalidOperationException("Associated product catalog entry not found.");
 
         if (request.ProductId is null || request.ProductId == subscription.ProductId)
@@ -59,7 +59,7 @@ public class ChangePortalPlanCommandHandler : ICommandHandler<ChangePortalPlanCo
             return PlanChangePolicy.Preview(subscription, current, current, subscription.Quantity);
         }
 
-        var target = await _repository.GetProductByIdAsync(request.ProductId.Value, ct);
+        var target = await _repository.GetProductByIdAsync(subscription.OrganizationId, request.ProductId.Value, ct);
         if (target == null || target.OrganizationId != subscription.OrganizationId)
         {
             throw new InvalidOperationException("Target product not found.");

@@ -41,7 +41,7 @@ public class CrossTenantIdorTests
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
 
         var handler = new CancelAdminSubscriptionCommandHandler(
             repository, Substitute.For<IEventBus>());
@@ -65,7 +65,7 @@ public class CrossTenantIdorTests
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
 
         var handler = new CancelAdminSubscriptionCommandHandler(
             repository, Substitute.For<IEventBus>());
@@ -92,7 +92,7 @@ public class CrossTenantIdorTests
         sub.ScheduleCancelAtPeriodEnd();
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
 
         var handler = new KeepAdminSubscriptionCommandHandler(repository);
 
@@ -115,7 +115,7 @@ public class CrossTenantIdorTests
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
 
         var mediator = Substitute.For<IMediator>();
         var handler = new AnonymizeSubscriberCommandHandler(
@@ -152,7 +152,7 @@ public class CrossTenantIdorTests
             externalReference: "pi_idor");
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetTransactionLogByIdAsync(log.Id, Arg.Any<CancellationToken>()).Returns(log);
+        repository.GetTransactionLogByIdAsync(Arg.Any<Guid>(), log.Id, Arg.Any<CancellationToken>()).Returns(log);
 
         var handler = new RecordRefundCommandHandler(repository, Substitute.For<IEventBus>());
 
@@ -172,7 +172,7 @@ public class CrossTenantIdorTests
         var coupon = new Coupon(ownerOrg, "SAVE", "PERCENTAGE", 10m, 100, null);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
 
         var handler = new UpdateCouponCommandHandler(repository);
 
@@ -203,7 +203,7 @@ public class CrossTenantIdorTests
         var coupon = new Coupon(ownerOrg, "SAVE", "PERCENTAGE", 10m, 100, null);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
 
         var handler = new DeleteCouponCommandHandler(repository);
 

@@ -34,7 +34,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
 
     public async Task Handle(MarkCheckoutAsPaidOfflineCommand request, CancellationToken ct)
     {
-        var session = await _repository.GetCheckoutSessionByIdAsync(request.SessionId, ct);
+        var session = await _repository.GetCheckoutSessionByIdAsync(request.OrganizationId, request.SessionId, ct);
 
         if (session == null || session.OrganizationId != request.OrganizationId)
         {
@@ -73,7 +73,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         string customerEmail,
         CancellationToken ct)
     {
-        var product = await _repository.GetProductByIdAsync(session.ProductId!.Value, ct);
+        var product = await _repository.GetProductByIdAsync(session.OrganizationId, session.ProductId!.Value, ct);
         if (product == null || product.OrganizationId != session.OrganizationId)
         {
             throw new InvalidOperationException("Associated product not found.");
@@ -85,7 +85,7 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         var unitDiscount = 0m;
         if (session.CouponId.HasValue)
         {
-            var coupon = await _repository.GetCouponByIdAsync(session.CouponId.Value, ct);
+            var coupon = await _repository.GetCouponByIdAsync(session.OrganizationId, session.CouponId.Value, ct);
             if (coupon != null)
             {
                 unitDiscount = coupon.CalculateDiscount(unitAmount);

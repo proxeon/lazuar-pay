@@ -58,7 +58,7 @@ public class ChangePlanCommandHandlerTests
     {
         var fx = Arrange();
         var foreign = Product(Guid.CreateVersion7(), "Other", 30m);
-        fx.Repo.GetProductByIdAsync(foreign.Id, Arg.Any<CancellationToken>()).Returns(foreign);
+        fx.Repo.GetProductByIdAsync(Arg.Any<Guid>(), foreign.Id, Arg.Any<CancellationToken>()).Returns(foreign);
 
         var act = () => fx.Handler.Handle(
             new ChangePlanCommand(fx.OrgId, fx.Sub.Id, foreign.Id),
@@ -72,7 +72,7 @@ public class ChangePlanCommandHandlerTests
         var fx = Arrange();
         var oneTime = new Product(fx.OrgId, "Once", "once", 5m, "FIXED", 0m, "MYR", "one_time", "STRIPE",
             new CheckoutConfiguration(false, false, false), Array.Empty<string>());
-        fx.Repo.GetProductByIdAsync(oneTime.Id, Arg.Any<CancellationToken>()).Returns(oneTime);
+        fx.Repo.GetProductByIdAsync(Arg.Any<Guid>(), oneTime.Id, Arg.Any<CancellationToken>()).Returns(oneTime);
 
         var act = () => fx.Handler.Handle(
             new ChangePlanCommand(fx.OrgId, fx.Sub.Id, oneTime.Id),
@@ -89,9 +89,9 @@ public class ChangePlanCommandHandlerTests
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddDays(14), false, 1, 40m);
 
         var repo = Substitute.For<ICommerceRepository>();
-        repo.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repo.GetProductByIdAsync(current.Id, Arg.Any<CancellationToken>()).Returns(current);
-        repo.GetProductByIdAsync(target.Id, Arg.Any<CancellationToken>()).Returns(target);
+        repo.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repo.GetProductByIdAsync(Arg.Any<Guid>(), current.Id, Arg.Any<CancellationToken>()).Returns(current);
+        repo.GetProductByIdAsync(Arg.Any<Guid>(), target.Id, Arg.Any<CancellationToken>()).Returns(target);
 
         return new Fx(org, sub, current, target, repo, new ChangePlanCommandHandler(repo));
     }

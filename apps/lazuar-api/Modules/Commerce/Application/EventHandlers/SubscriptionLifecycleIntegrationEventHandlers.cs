@@ -82,7 +82,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         bool? isFirstPayment)
     {
         var payloadElement = await BuildPayloadAsync(
-            subscriptionId, clientProfileId, productId, status, eventType, isFirstPayment);
+            organizationId, subscriptionId, clientProfileId, productId, status, eventType, isFirstPayment);
 
         await _eventBus.PublishAsync(new OutboundWebhookRequestedIntegrationEvent(
             organizationId, TargetUrl: null, eventType, payloadElement));
@@ -90,6 +90,7 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
     }
 
     private async Task<JsonElement> BuildPayloadAsync(
+        Guid organizationId,
         Guid subscriptionId,
         Guid clientProfileId,
         Guid productId,
@@ -97,10 +98,10 @@ public class SubscriptionLifecycleIntegrationEventHandlers :
         string eventType,
         bool? isFirstPayment)
     {
-        var sub = await _repository.GetSubscriptionByIdAsync(subscriptionId);
+        var sub = await _repository.GetSubscriptionByIdAsync(organizationId, subscriptionId);
         var product = sub != null
-            ? await _repository.GetProductByIdAsync(sub.ProductId)
-            : await _repository.GetProductByIdAsync(productId);
+            ? await _repository.GetProductByIdAsync(sub.OrganizationId, sub.ProductId)
+            : await _repository.GetProductByIdAsync(organizationId, productId);
         var profile = await _crmQueryService.GetClientProfileAsync(clientProfileId);
         var email = profile?.Email;
 

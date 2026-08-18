@@ -24,7 +24,7 @@ public class UpdateProductCommandHandler : ICommandHandler<UpdateProductCommand>
 
     public async Task Handle(UpdateProductCommand request, CancellationToken ct)
     {
-        var product = await _repository.GetProductByIdAsync(request.ProductId, ct);
+        var product = await _repository.GetProductByIdAsync(request.OrganizationId, request.ProductId, ct);
 
         if (product == null || product.OrganizationId != request.OrganizationId)
         {

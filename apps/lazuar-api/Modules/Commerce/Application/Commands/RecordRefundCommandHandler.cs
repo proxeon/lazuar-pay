@@ -29,7 +29,7 @@ public class RecordRefundCommandHandler : ICommandHandler<RecordRefundCommand, s
 
     public async Task<string> Handle(RecordRefundCommand request, CancellationToken ct)
     {
-        var log = await _repository.GetTransactionLogByIdAsync(request.TransactionLogId, ct);
+        var log = await _repository.GetTransactionLogByIdAsync(request.OrganizationId, request.TransactionLogId, ct);
         if (log == null || log.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Transaction log not found.");

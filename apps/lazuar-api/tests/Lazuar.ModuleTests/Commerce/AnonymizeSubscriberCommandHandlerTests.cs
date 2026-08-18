@@ -83,7 +83,7 @@ public class AnonymizeSubscriberCommandHandlerTests
         sub.Activate(DateTime.UtcNow.AddMonths(1), DateTime.UtcNow.AddMonths(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
 
         var crm = Substitute.For<ICrmQueryService>();
         crm.GetClientProfileAsync(profileId).Returns(new ClientProfileDto
@@ -115,7 +115,7 @@ public class AnonymizeSubscriberCommandHandlerTests
         sub.Activate(DateTime.UtcNow.AddMonths(1), DateTime.UtcNow.AddMonths(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
         var mediator = Substitute.For<IMediator>();
         var handler = new AnonymizeSubscriberCommandHandler(
             repository, Substitute.For<ICrmQueryService>(), mediator);
@@ -133,7 +133,7 @@ public class AnonymizeSubscriberCommandHandlerTests
     {
         var orgId = Guid.CreateVersion7();
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns((Subscription?)null);
         var mediator = Substitute.For<IMediator>();
         var handler = new AnonymizeSubscriberCommandHandler(

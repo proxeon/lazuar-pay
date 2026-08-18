@@ -92,7 +92,7 @@ public class CheckoutB2bIdentityTests
             isB2bRequired: true);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
 
         var mediator = Substitute.For<IMediator>();
         mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
@@ -141,7 +141,7 @@ public class CheckoutB2bIdentityTests
             isB2bRequired: true);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
 
         var handler = CreateHandler(orgId, repository, Substitute.For<IMediator>());
         var act = async () => await handler.Handle(
@@ -164,7 +164,7 @@ public class CheckoutB2bIdentityTests
             isB2bRequired: true);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
 
         var mediator = Substitute.For<IMediator>();
         mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())

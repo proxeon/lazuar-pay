@@ -17,7 +17,7 @@ public class RestoreProductCommandHandler : ICommandHandler<RestoreProductComman
 
     public async Task Handle(RestoreProductCommand request, CancellationToken ct)
     {
-        var product = await _repository.GetProductByIdAsync(request.ProductId, ct);
+        var product = await _repository.GetProductByIdAsync(request.OrganizationId, request.ProductId, ct);
 
         if (product == null || product.OrganizationId != request.OrganizationId)
         {

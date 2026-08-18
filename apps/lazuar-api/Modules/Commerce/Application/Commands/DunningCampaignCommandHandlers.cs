@@ -107,7 +107,7 @@ public class DeleteDunningCampaignCommandHandler : ICommandHandler<DeleteDunning
         var campaign = await _repository.GetDunningCampaignByIdAsync(request.OrganizationId, request.CampaignId, ct);
         if (campaign == null) throw new InvalidOperationException("Dunning campaign not found.");
 
-        if (await _repository.HasSubscriptionsAssignedToCampaignAsync(request.CampaignId, ct))
+        if (await _repository.HasSubscriptionsAssignedToCampaignAsync(request.OrganizationId, request.CampaignId, ct))
         {
             throw new InvalidOperationException(
                 "Cannot delete a dunning campaign while subscriptions are assigned to it. Archive the campaign instead.");

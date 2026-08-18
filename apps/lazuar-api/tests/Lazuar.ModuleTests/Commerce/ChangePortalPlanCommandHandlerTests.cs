@@ -24,7 +24,7 @@ public class ChangePortalPlanCommandHandlerTests
         var otherClient = Guid.CreateVersion7();
         var foreign = new Subscription(fx.OrgId, otherClient, fx.Current.Id);
         foreign.Activate(DateTime.UtcNow, DateTime.UtcNow.AddDays(14), false, 1, 40m);
-        fx.Repo.GetSubscriptionByIdAsync(foreign.Id, Arg.Any<CancellationToken>()).Returns(foreign);
+        fx.Repo.GetSubscriptionByIdAsync(Arg.Any<Guid>(), foreign.Id, Arg.Any<CancellationToken>()).Returns(foreign);
 
         var act = () => fx.Handler.Handle(
             new ChangePortalPlanCommand("acme", "tok", foreign.Id, fx.Target.Id),
@@ -59,9 +59,9 @@ public class ChangePortalPlanCommandHandlerTests
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddDays(14), false, 1, 40m);
 
         var repo = Substitute.For<ICommerceRepository>();
-        repo.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repo.GetProductByIdAsync(current.Id, Arg.Any<CancellationToken>()).Returns(current);
-        repo.GetProductByIdAsync(target.Id, Arg.Any<CancellationToken>()).Returns(target);
+        repo.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repo.GetProductByIdAsync(Arg.Any<Guid>(), current.Id, Arg.Any<CancellationToken>()).Returns(current);
+        repo.GetProductByIdAsync(Arg.Any<Guid>(), target.Id, Arg.Any<CancellationToken>()).Returns(target);
 
         var one = Substitute.For<IOneQueryService>();
         one.GetTenantIdBySlugAsync("acme").Returns(org);

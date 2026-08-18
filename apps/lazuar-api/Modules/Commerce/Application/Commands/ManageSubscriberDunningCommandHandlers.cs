@@ -17,7 +17,7 @@ public class PauseSubscriberDunningCommandHandler : ICommandHandler<PauseSubscri
 
     public async Task Handle(PauseSubscriberDunningCommand request, CancellationToken ct)
     {
-        var subscription = await _repository.GetSubscriptionByIdAsync(request.SubscriptionId, ct);
+        var subscription = await _repository.GetSubscriptionByIdAsync(request.OrganizationId, request.SubscriptionId, ct);
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Subscription not found.");
@@ -39,7 +39,7 @@ public class ResumeSubscriberDunningCommandHandler : ICommandHandler<ResumeSubsc
 
     public async Task Handle(ResumeSubscriberDunningCommand request, CancellationToken ct)
     {
-        var subscription = await _repository.GetSubscriptionByIdAsync(request.SubscriptionId, ct);
+        var subscription = await _repository.GetSubscriptionByIdAsync(request.OrganizationId, request.SubscriptionId, ct);
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Subscription not found.");

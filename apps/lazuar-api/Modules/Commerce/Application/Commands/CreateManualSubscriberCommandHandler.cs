@@ -57,7 +57,7 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
             request.Email,
             request.Phone), ct);
 
-        var product = await _repository.GetProductByIdAsync(request.ProductId, ct);
+        var product = await _repository.GetProductByIdAsync(request.OrganizationId, request.ProductId, ct);
         if (product == null || product.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Associated product catalog entry not found.");

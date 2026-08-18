@@ -175,7 +175,7 @@ public class CreateManualSubscriberCommandHandlerTests
         var subscriptions = new List<Subscription>();
         var logs = new List<CommerceTransactionLog>();
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.HasActiveSubscriptionAsync(orgId, clientId, product.Id, Arg.Any<CancellationToken>())
             .Returns(alreadyActive);
         repository.When(r => r.AddSubscription(Arg.Any<Subscription>())).Do(ci => subscriptions.Add(ci.Arg<Subscription>()));

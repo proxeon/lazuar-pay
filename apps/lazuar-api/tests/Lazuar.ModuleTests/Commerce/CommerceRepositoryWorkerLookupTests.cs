@@ -43,10 +43,11 @@ public class CommerceRepositoryWorkerLookupTests
 
         Assert.That(await db.Orders.CountAsync(), Is.EqualTo(0), "empty ambient must hide filtered sets");
 
-        Assert.That((await repo.GetOrderByIdAsync(order.Id))?.Quantity, Is.EqualTo(3));
-        Assert.That((await repo.GetCouponByIdAsync(coupon.Id))?.Id, Is.EqualTo(coupon.Id));
-        Assert.That((await repo.GetCheckoutSessionByIdAsync(session.Id))?.Id, Is.EqualTo(session.Id));
+        Assert.That((await repo.GetOrderByIdAsync(orgId, order.Id))?.Quantity, Is.EqualTo(3));
+        Assert.That((await repo.GetCouponByIdAsync(orgId, coupon.Id))?.Id, Is.EqualTo(coupon.Id));
+        Assert.That((await repo.GetCheckoutSessionByIdAsync(orgId, session.Id))?.Id, Is.EqualTo(session.Id));
         Assert.That(await repo.HasAnyDunningCampaignAsync(orgId), Is.True);
-        Assert.That(await repo.HasSubscriptionsAssignedToCampaignAsync(campaign.Id), Is.True);
+        Assert.That(await repo.HasSubscriptionsAssignedToCampaignAsync(orgId, campaign.Id), Is.True);
+        Assert.That(await repo.GetOrderByIdAsync(Guid.CreateVersion7(), order.Id), Is.Null);
     }
 }

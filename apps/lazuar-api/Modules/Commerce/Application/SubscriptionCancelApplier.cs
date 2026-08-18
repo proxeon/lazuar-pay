@@ -28,7 +28,7 @@ internal static class SubscriptionCancelApplier
             return "scheduled";
         }
 
-        var product = await repository.GetProductByIdAsync(subscription.ProductId, ct);
+        var product = await repository.GetProductByIdAsync(subscription.OrganizationId, subscription.ProductId, ct);
         var fulfillmentTargets = product?.FulfillmentTargets.ToList() ?? [];
 
         await eventBus.PublishAsync(new SubscriptionCanceledIntegrationEvent(

@@ -33,7 +33,7 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
 
     public async Task Handle(RecordSubscriberPaymentCommand request, CancellationToken ct)
     {
-        var subscription = await _repository.GetSubscriptionByIdAsync(request.SubscriptionId, ct);
+        var subscription = await _repository.GetSubscriptionByIdAsync(request.OrganizationId, request.SubscriptionId, ct);
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Subscription not found.");
@@ -44,7 +44,7 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
             throw new InvalidOperationException($"Cannot record payment for subscription in status '{subscription.Status}'.");
         }
 
-        var product = await _repository.GetProductByIdAsync(subscription.ProductId, ct);
+        var product = await _repository.GetProductByIdAsync(subscription.OrganizationId, subscription.ProductId, ct);
         if (product == null || product.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Associated product not found.");

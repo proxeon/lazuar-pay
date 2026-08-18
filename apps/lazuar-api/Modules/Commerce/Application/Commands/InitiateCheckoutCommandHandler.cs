@@ -104,7 +104,7 @@ public class InitiateCheckoutCommandHandler : ICommandHandler<InitiateCheckoutCo
 
         if (request.SessionId.HasValue)
         {
-            var existingSession = await _repository.GetCheckoutSessionByIdAsync(request.SessionId.Value, ct);
+            var existingSession = await _repository.GetCheckoutSessionByIdAsync(tenantId.Value, request.SessionId.Value, ct);
             if (existingSession == null || existingSession.OrganizationId != tenantId.Value || existingSession.Status != "OPEN")
             {
                 throw new InvalidOperationException("Invalid or completed custom checkout session.");

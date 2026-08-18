@@ -17,7 +17,7 @@ public class ArchiveProductCommandHandler : ICommandHandler<ArchiveProductComman
 
     public async Task Handle(ArchiveProductCommand request, CancellationToken ct)
     {
-        var product = await _repository.GetProductByIdAsync(request.ProductId, ct);
+        var product = await _repository.GetProductByIdAsync(request.OrganizationId, request.ProductId, ct);
 
         if (product == null || product.OrganizationId != request.OrganizationId)
         {

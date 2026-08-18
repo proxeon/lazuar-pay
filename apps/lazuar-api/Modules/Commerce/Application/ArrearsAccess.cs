@@ -33,14 +33,19 @@ public static class ArrearsAccess
             return true;
         }
 
-        var tokenSubscription = await repository.GetSubscriptionByIdAsync(tokenSubscriptionId.Value, ct);
-        var pathSubscription = await repository.GetSubscriptionByIdAsync(pathSubscriptionId, ct);
-        if (tokenSubscription == null || pathSubscription == null)
+        var tokenSubscription = await repository.GetSubscriptionByIdForPortalTokenAsync(tokenSubscriptionId.Value, ct);
+        if (tokenSubscription == null)
         {
             return false;
         }
 
-        return tokenSubscription.OrganizationId == pathSubscription.OrganizationId
-            && tokenSubscription.ClientProfileId == pathSubscription.ClientProfileId;
+        var pathSubscription = await repository.GetSubscriptionByIdAsync(
+            tokenSubscription.OrganizationId, pathSubscriptionId, ct);
+        if (pathSubscription == null)
+        {
+            return false;
+        }
+
+        return tokenSubscription.ClientProfileId == pathSubscription.ClientProfileId;
     }
 }

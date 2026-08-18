@@ -111,6 +111,19 @@ public class TenantIsolationArchitectureTests
     }
 
     [Test]
+    public void CommerceRepository_IgnoreQueryFilters_Id_Lookups_Require_OrganizationId()
+    {
+        var path = FindRepoFile(
+            "Modules", "Commerce", "Infrastructure", "Repositories", "CommerceRepository.cs");
+        var source = File.ReadAllText(path);
+
+        Assert.That(source, Does.Contain("p.OrganizationId == organizationId && p.Id == id"));
+        Assert.That(source, Does.Contain("s.OrganizationId == organizationId && s.Id == id"));
+        Assert.That(source, Does.Contain("t.OrganizationId == organizationId && t.Id == id"));
+        Assert.That(source, Does.Contain("GetSubscriptionByIdForPortalTokenAsync"));
+    }
+
+    [Test]
     public void DocumentLinkSigner_Draft_And_Final_Payloads_Differ()
     {
         var exp = 1_700_000_000L;

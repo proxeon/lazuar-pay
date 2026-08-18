@@ -252,8 +252,8 @@ public class CommerceProductCompletenessTests
         sub.Activate(DateTime.UtcNow, DateTime.UtcNow.AddMonths(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
 
         var eventBus = Substitute.For<IEventBus>();
         var handler = new CancelAdminSubscriptionCommandHandler(repository, eventBus);
@@ -277,8 +277,8 @@ public class CommerceProductCompletenessTests
         var logs = new List<CommerceTransactionLog>();
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.When(r => r.AddSubscription(Arg.Any<Subscription>())).Do(ci => subscriptions.Add(ci.Arg<Subscription>()));
         repository.When(r => r.AddTransactionLog(Arg.Any<CommerceTransactionLog>())).Do(ci => logs.Add(ci.Arg<CommerceTransactionLog>()));
 
@@ -315,8 +315,8 @@ public class CommerceProductCompletenessTests
         var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
 
         var eventBus = Substitute.For<IEventBus>();
         var crm = Substitute.For<ICrmQueryService>();
@@ -350,7 +350,7 @@ public class CommerceProductCompletenessTests
         var logs = new List<CommerceTransactionLog>();
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
         repository.When(r => r.AddSubscription(Arg.Any<Subscription>())).Do(ci => subscriptions.Add(ci.Arg<Subscription>()));
         repository.When(r => r.AddTransactionLog(Arg.Any<CommerceTransactionLog>())).Do(ci => logs.Add(ci.Arg<CommerceTransactionLog>()));
 
@@ -431,8 +431,8 @@ public class CommerceProductCompletenessTests
 
         var logs = new List<CommerceTransactionLog>();
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.GetDunningCampaignByIdAsync(orgId, campaign.Id, Arg.Any<CancellationToken>()).Returns(campaign);
         repository.When(r => r.AddTransactionLog(Arg.Any<CommerceTransactionLog>())).Do(ci => logs.Add(ci.Arg<CommerceTransactionLog>()));
 
@@ -472,8 +472,8 @@ public class CommerceProductCompletenessTests
         sub.AssignDunningCampaign(campaign.Id);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.GetDunningCampaignByIdAsync(orgId, campaign.Id, Arg.Any<CancellationToken>()).Returns(campaign);
 
         var handler = new RecordSubscriberPaymentCommandHandler(
@@ -503,8 +503,8 @@ public class CommerceProductCompletenessTests
         sub.AssignDunningCampaign(campaign.Id);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.GetDunningCampaignByIdAsync(orgId, campaign.Id, Arg.Any<CancellationToken>()).Returns(campaign);
 
         var handler = new RecordSubscriberPaymentCommandHandler(
@@ -668,10 +668,10 @@ public class CommerceProductCompletenessTests
         repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
             .Do(ci => session = ci.Arg<CheckoutSession>());
-        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
-        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
 
         var eventBus = Substitute.For<IEventBus>();
         var zeroHandler = new ProcessZeroAmountCheckoutCommandHandler(repository, eventBus);
@@ -709,10 +709,10 @@ public class CommerceProductCompletenessTests
         repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
             .Do(ci => session = ci.Arg<CheckoutSession>());
-        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
-        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
 
         var one = Substitute.For<IOneQueryService>();
         one.GetTenantIdBySlugAsync("acme").Returns(orgId);
@@ -970,8 +970,8 @@ public class CommerceProductCompletenessTests
 
         Subscription? created = null;
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.When(r => r.AddSubscription(Arg.Any<Subscription>()))
             .Do(ci => created = ci.Arg<Subscription>());
 
@@ -994,8 +994,8 @@ public class CommerceProductCompletenessTests
         var session = new CheckoutSession(orgId, clientId, product.Id, couponId: null, DateTime.UtcNow.AddHours(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
 
         var eventBus = Substitute.For<IEventBus>();
         var handler = new ProcessZeroAmountCheckoutCommandHandler(repository, eventBus);
@@ -1229,7 +1229,7 @@ public class CommerceProductCompletenessTests
             isB2bRequired: false);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
 
         var mediator = Substitute.For<IMediator>();
         mediator.Send(Arg.Any<GenerateCheckoutSessionQuery>(), Arg.Any<CancellationToken>())
@@ -1281,10 +1281,10 @@ public class CommerceProductCompletenessTests
         repository.GetCouponByCodeWithLockAsync(orgId, "FREE100", Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddCheckoutSession(Arg.Any<CheckoutSession>()))
             .Do(ci => session = ci.Arg<CheckoutSession>());
-        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(ci => session != null && session.Id == ci.Arg<Guid>() ? session : null);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
-        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddOrder(Arg.Any<Order>())).Do(ci => orders.Add(ci.Arg<Order>()));
 
         var eventBus = Substitute.For<IEventBus>();
@@ -1323,8 +1323,8 @@ public class CommerceProductCompletenessTests
 
         var orders = new List<Order>();
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.When(r => r.AddOrder(Arg.Any<Order>())).Do(ci => orders.Add(ci.Arg<Order>()));
 
         var eventBus = Substitute.For<IEventBus>();

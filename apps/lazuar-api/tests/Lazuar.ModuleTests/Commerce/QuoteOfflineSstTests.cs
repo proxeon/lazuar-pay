@@ -39,7 +39,7 @@ public class QuoteOfflineSstTests
             "BILLPLZ");
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
 
         var one = Substitute.For<IOneQueryService>();
         one.GetTenantIdBySlugAsync("acme").Returns(orgId);
@@ -83,8 +83,8 @@ public class QuoteOfflineSstTests
 
         CommerceTransactionLog? log = null;
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.When(r => r.AddTransactionLog(Arg.Any<CommerceTransactionLog>()))
             .Do(ci => log = ci.Arg<CommerceTransactionLog>());
 
@@ -117,7 +117,7 @@ public class QuoteOfflineSstTests
 
         CommerceTransactionLog? log = null;
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
         repository.When(r => r.AddTransactionLog(Arg.Any<CommerceTransactionLog>()))
             .Do(ci => log = ci.Arg<CommerceTransactionLog>());
 

@@ -255,8 +255,8 @@ public class RecordSubscriberPaymentCommandHandlerTests
         var activatedEvents = new List<SubscriptionActivatedIntegrationEvent>();
         var resumedEvents = new List<SubscriptionResumedIntegrationEvent>();
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
         repository.GetDunningCampaignByIdAsync(orgId, campaign.Id, Arg.Any<CancellationToken>()).Returns(campaign);
         repository.GetConfirmedTransactionLogByReferenceAsync(
                 orgId, sub.Id, Arg.Any<string>(), Arg.Any<CancellationToken>())

@@ -296,7 +296,7 @@ public class SubscriptionCancelAtPeriodEndTests
     {
         var (orgId, _, ownerSub, repository, eventBus) = ArrangeAdmin();
         var foreign = ActiveSub(DateTime.UtcNow.AddDays(10), orgId);
-        repository.GetSubscriptionByIdAsync(foreign.Id, Arg.Any<CancellationToken>()).Returns(foreign);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), foreign.Id, Arg.Any<CancellationToken>()).Returns(foreign);
 
         var (one, tokens) = ArrangePortal("acme", orgId, ownerSub);
         var handler = new CancelPortalSubscriptionCommandHandler(one, tokens, repository, eventBus);
@@ -331,8 +331,8 @@ public class SubscriptionCancelAtPeriodEndTests
         sub.Activate(DateTime.UtcNow, nextBilling ?? DateTime.UtcNow.AddMonths(1));
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
 
         return (orgId, product, sub, repository, Substitute.For<IEventBus>());
     }
@@ -348,8 +348,8 @@ public class SubscriptionCancelAtPeriodEndTests
         sub.ActivateTrial(DateTime.UtcNow.AddDays(14), reminderOnly: false);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
 
         return (orgId, product, sub, repository, Substitute.For<IEventBus>());
     }
@@ -364,8 +364,8 @@ public class SubscriptionCancelAtPeriodEndTests
         var sub = new Subscription(orgId, Guid.CreateVersion7(), product.Id);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetSubscriptionByIdAsync(sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetSubscriptionByIdAsync(Arg.Any<Guid>(), sub.Id, Arg.Any<CancellationToken>()).Returns(sub);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
 
         return (orgId, product, sub, repository, Substitute.For<IEventBus>());
     }

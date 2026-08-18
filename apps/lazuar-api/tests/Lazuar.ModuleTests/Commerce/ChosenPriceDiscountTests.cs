@@ -32,9 +32,9 @@ public class ChosenPriceDiscountTests
             orgId, Guid.CreateVersion7(), product.Id, coupon.Id, DateTime.UtcNow.AddHours(1), 1, yearly.Id);
 
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
-        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
 
         var handler = new ProcessZeroAmountCheckoutCommandHandler(repository, Substitute.For<IEventBus>());
         await handler.Handle(new ProcessZeroAmountCheckoutCommand(orgId, session.Id), CancellationToken.None);
@@ -56,9 +56,9 @@ public class ChosenPriceDiscountTests
 
         CommerceTransactionLog? log = null;
         var repository = Substitute.For<ICommerceRepository>();
-        repository.GetCheckoutSessionByIdAsync(session.Id, Arg.Any<CancellationToken>()).Returns(session);
-        repository.GetProductByIdAsync(product.Id, Arg.Any<CancellationToken>()).Returns(product);
-        repository.GetCouponByIdAsync(coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
+        repository.GetCheckoutSessionByIdAsync(Arg.Any<Guid>(), session.Id, Arg.Any<CancellationToken>()).Returns(session);
+        repository.GetProductByIdAsync(Arg.Any<Guid>(), product.Id, Arg.Any<CancellationToken>()).Returns(product);
+        repository.GetCouponByIdAsync(Arg.Any<Guid>(), coupon.Id, Arg.Any<CancellationToken>()).Returns(coupon);
         repository.When(r => r.AddTransactionLog(Arg.Any<CommerceTransactionLog>()))
             .Do(ci => log = ci.Arg<CommerceTransactionLog>());
 

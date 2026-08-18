@@ -47,7 +47,7 @@ public class UpdateCouponCommandHandler : ICommandHandler<UpdateCouponCommand>
 
     public async Task Handle(UpdateCouponCommand request, CancellationToken ct)
     {
-        var coupon = await _repository.GetCouponByIdAsync(request.CouponId, ct);
+        var coupon = await _repository.GetCouponByIdAsync(request.OrganizationId, request.CouponId, ct);
         if (coupon == null || coupon.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Coupon not found.");
 
@@ -82,7 +82,7 @@ public class DeleteCouponCommandHandler : ICommandHandler<DeleteCouponCommand>
 
     public async Task Handle(DeleteCouponCommand request, CancellationToken ct)
     {
-        var coupon = await _repository.GetCouponByIdAsync(request.CouponId, ct);
+        var coupon = await _repository.GetCouponByIdAsync(request.OrganizationId, request.CouponId, ct);
         if (coupon == null || coupon.OrganizationId != request.OrganizationId)
             throw new InvalidOperationException("Coupon not found.");
 

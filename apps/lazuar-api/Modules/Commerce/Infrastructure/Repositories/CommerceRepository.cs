@@ -40,12 +40,12 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
         }
     }
 
-    public async Task<Product?> GetProductByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Product?> GetProductByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
     {
         return await _context.Products
             .IgnoreQueryFilters()
             .Include(p => p.Prices)
-            .FirstOrDefaultAsync(p => p.Id == id, ct);
+            .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Id == id, ct);
     }
 
     public async Task<IReadOnlyList<Product>> GetProductsByIdsAsync(Guid organizationId, IEnumerable<Guid> ids, CancellationToken ct = default)
@@ -71,11 +71,11 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
             .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Slug == slug && p.IsActive, ct);
     }
 
-    public async Task<Coupon?> GetCouponByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Coupon?> GetCouponByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
     {
         return await _context.Coupons
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(c => c.Id == id, ct);
+            .FirstOrDefaultAsync(c => c.OrganizationId == organizationId && c.Id == id, ct);
     }
 
     public async Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default)
@@ -98,11 +98,11 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<CheckoutSession?> GetCheckoutSessionByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
     {
         return await _context.CheckoutSessions
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.Id == id, ct);
+            .FirstOrDefaultAsync(s => s.OrganizationId == organizationId && s.Id == id, ct);
     }
 
     public async Task<CheckoutSession?> GetCheckoutSessionByIdempotencyKeyAsync(
@@ -117,7 +117,18 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
                 ct);
     }
 
-    public async Task<Subscription?> GetSubscriptionByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Subscription?> GetSubscriptionByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
+    {
+        var local = _context.Subscriptions.Local.FirstOrDefault(s => s.OrganizationId == organizationId && s.Id == id);
+        if (local != null) return local;
+
+        return await _context.Subscriptions
+            .IgnoreQueryFilters()
+            .Include(s => s.ReminderLogs)
+            .FirstOrDefaultAsync(s => s.OrganizationId == organizationId && s.Id == id, ct);
+    }
+
+    public async Task<Subscription?> GetSubscriptionByIdForPortalTokenAsync(Guid id, CancellationToken ct = default)
     {
         var local = _context.Subscriptions.Local.FirstOrDefault(s => s.Id == id);
         if (local != null) return local;
@@ -141,18 +152,18 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<Order?> GetOrderByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<Order?> GetOrderByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
     {
         return await _context.Orders
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(o => o.Id == id, ct);
+            .FirstOrDefaultAsync(o => o.OrganizationId == organizationId && o.Id == id, ct);
     }
 
-    public async Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<CommerceTransactionLog?> GetTransactionLogByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default)
     {
         return await _context.TransactionLogs
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(t => t.Id == id, ct);
+            .FirstOrDefaultAsync(t => t.OrganizationId == organizationId && t.Id == id, ct);
     }
 
     public async Task<IReadOnlyList<CommerceTransactionLog>> GetTransactionLogsByCustomerEmailAsync(
@@ -224,11 +235,15 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
             .AnyAsync(c => c.OrganizationId == organizationId, ct);
     }
 
-    public async Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid campaignId, CancellationToken ct = default)
+    public async Task<bool> HasSubscriptionsAssignedToCampaignAsync(Guid organizationId, Guid campaignId, CancellationToken ct = default)
     {
         return await _context.Subscriptions
             .IgnoreQueryFilters()
-            .AnyAsync(s => s.CurrentDunningCampaignId == campaignId && s.Status == "PAST_DUE", ct);
+            .AnyAsync(
+                s => s.OrganizationId == organizationId
+                    && s.CurrentDunningCampaignId == campaignId
+                    && s.Status == "PAST_DUE",
+                ct);
     }
 
     public void AddProduct(Product product) => _context.Products.Add(product);

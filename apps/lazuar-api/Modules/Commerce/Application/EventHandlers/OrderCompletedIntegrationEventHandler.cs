@@ -21,7 +21,7 @@ public class OrderCompletedIntegrationEventHandler : IIntegrationEventHandler<Or
 
     public async Task HandleAsync(OrderCompletedIntegrationEvent @event)
     {
-        var order = await _repository.GetOrderByIdAsync(@event.OrderId);
+        var order = await _repository.GetOrderByIdAsync(@event.OrganizationId, @event.OrderId);
         var payloadObj = new
         {
             order_id = @event.OrderId.ToString(),

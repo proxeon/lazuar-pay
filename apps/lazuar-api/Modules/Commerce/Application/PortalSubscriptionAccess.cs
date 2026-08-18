@@ -30,13 +30,13 @@ internal static class PortalSubscriptionAccess
             throw new InvalidOperationException($"Workspace with slug '{tenantSlug}' not found.");
         }
 
-        var tokenSubscription = await repository.GetSubscriptionByIdAsync(tokenSubscriptionId.Value, ct);
+        var tokenSubscription = await repository.GetSubscriptionByIdAsync(tenantId.Value, tokenSubscriptionId.Value, ct);
         if (tokenSubscription == null || tokenSubscription.OrganizationId != tenantId.Value)
         {
             throw new InvalidOperationException("Portal session subscription not found for this workspace.");
         }
 
-        var subscription = await repository.GetSubscriptionByIdAsync(subscriptionId, ct);
+        var subscription = await repository.GetSubscriptionByIdAsync(tenantId.Value, subscriptionId, ct);
         if (subscription == null || subscription.OrganizationId != tenantId.Value)
         {
             throw new InvalidOperationException("Subscription not found.");

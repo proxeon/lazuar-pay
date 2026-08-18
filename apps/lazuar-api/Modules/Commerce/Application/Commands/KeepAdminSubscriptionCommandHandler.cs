@@ -17,7 +17,7 @@ public class KeepAdminSubscriptionCommandHandler : ICommandHandler<KeepAdminSubs
 
     public async Task Handle(KeepAdminSubscriptionCommand request, CancellationToken ct)
     {
-        var subscription = await _repository.GetSubscriptionByIdAsync(request.SubscriptionId, ct);
+        var subscription = await _repository.GetSubscriptionByIdAsync(request.OrganizationId, request.SubscriptionId, ct);
         if (subscription == null || subscription.OrganizationId != request.OrganizationId)
         {
             throw new InvalidOperationException("Subscription not found.");
