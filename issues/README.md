@@ -149,6 +149,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 137 | B09-U08 | `fix/137-portal-cancel-errors` | Portal cancel/keep surface API errors instead of silently revalidating |
 | 138 | B09-U09 | `fix/138-quote-success-token` | Settled quote CTA uses minted portal token; expired custom success is not portal |
 | 139 | B09-U10 | `fix/139-update-payment-err` | update-payment shows err=1; missing checkout URL is treated as failure |
+| 140 | B09-U11 | `fix/140-buyer-dashboard-header` | Header is /portal?token=; /{slug} redirects to the same |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
