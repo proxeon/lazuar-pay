@@ -94,7 +94,7 @@ public class GetPublicPricingQueryHandlerTests
         Assert.That(dto.Checkout_is_free, Is.False);
         Assert.That(dto.Hub_plan.Code, Is.EqualTo("hub_starter"));
         Assert.That(dto.Hub_plan.Amount_myr, Is.EqualTo(0));
-        Assert.That(dto.Lhdn_credits_live, Is.False);
+        Assert.That(dto.Lhdn_credits_live, Is.True);
         Assert.That(dto.Whatsapp_credits_live, Is.False);
         Assert.That(dto.Sst_rate, Is.EqualTo(0));
         Assert.That(dto.Sst_note, Does.Contain("SST 0%"));

@@ -157,6 +157,8 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 145 | B09-U16 | `fix/145-tin-copy` | Ops and checkout say TIN is validated at pay when MyInvois is connected |
 | 146 | B09-U17 | `fix/146-invite-signup-no-dummy` | Invite signup creates an account only; empty state can accept a token |
 | 147 | B09-U18 | `fix/147-entitlements-error` | Entitlements 500 shows retry, not a 403 chrome with a stale workspace |
+| 148 | B09-U19 | `fix/148-pricing-lhdn-live` | Pricing no longer says LHDN merchant UI is not live |
+| 149 | B09-U20 | `fix/149-legal-copy` | Legal, privacy, and landing no longer sell WhatsApp, communities, or courses |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

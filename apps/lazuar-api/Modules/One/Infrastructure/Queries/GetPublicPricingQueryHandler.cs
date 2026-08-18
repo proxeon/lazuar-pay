@@ -55,7 +55,7 @@ public sealed class GetPublicPricingQueryHandler : IQueryHandler<GetPublicPricin
             Sst_rate = (double)sstRate,
             Sst_note = sstNote,
             Checkout_is_free = false,
-            Lhdn_credits_live = false,
+            Lhdn_credits_live = true,
             Whatsapp_credits_live = false,
             Lhdn_submit_credits = _credits.GetCost(CreditAction.LhdnSubmit),
             Whatsapp_send_credits = _credits.GetCost(CreditAction.WhatsAppSend),

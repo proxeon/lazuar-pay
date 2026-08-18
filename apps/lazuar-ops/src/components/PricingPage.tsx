@@ -17,7 +17,7 @@ const FALLBACK_PRICING: PublicPricingDto = {
   sst_note:
     "SST 0% — Supplier not SST-registered. Confirm with your accountant. We do not add SST at checkout today.",
   checkout_is_free: false,
-  lhdn_credits_live: false,
+  lhdn_credits_live: true,
   whatsapp_credits_live: false,
   lhdn_submit_credits: 3,
   whatsapp_send_credits: 0,
