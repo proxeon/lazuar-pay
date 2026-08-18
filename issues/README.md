@@ -222,6 +222,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 210 | B03-C22 | `fix/210-autocharge-billplz-orgwide` | Org-wide AUTO_CHARGE refused when every product is reminder-only |
 | 211 | B03-C23 | `fix/211-newest-sub-status-filter` | Magic-link subject prefers live seats over newer CANCELED/PENDING |
 | 212 | B03-C24 | `fix/212-dunning-batch-size` | Dunning claims 200 seats per mode per hour (Workers:DunningEngineBatchSize) |
+| 213 | B03-C25 | `fix/213-portal-docs-profile-scope` | Portal documents list only the token profile, not sibling emails |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

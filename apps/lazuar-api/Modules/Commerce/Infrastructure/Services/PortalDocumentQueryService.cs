@@ -10,25 +10,21 @@ using Lazuar.ApiTypes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Modules.Billing.Contracts;
-using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Infrastructure.Services;
 
 public class PortalDocumentQueryService
 {
     private readonly ISqlConnectionFactory _connectionFactory;
-    private readonly ICrmQueryService _crmQueryService;
     private readonly IBillingQueryService _billingQueryService;
     private readonly IConfiguration _configuration;
 
     public PortalDocumentQueryService(
         [FromKeyedServices("CommerceSqlConnectionFactory")] ISqlConnectionFactory connectionFactory,
-        ICrmQueryService crmQueryService,
         IBillingQueryService billingQueryService,
         IConfiguration configuration)
     {
         _connectionFactory = connectionFactory;
-        _crmQueryService = crmQueryService;
         _billingQueryService = billingQueryService;
         _configuration = configuration;
     }
@@ -51,36 +47,22 @@ public class PortalDocumentQueryService
         if (clientProfileId == null)
             return new PortalDocumentsResponse { Items = new List<PortalDocumentDto>() };
 
-        var profile = await _crmQueryService.GetClientProfileAsync(organizationId, clientProfileId.Value);
-        var email = profile?.Email ?? "";
-
-        var profileIds = new HashSet<Guid> { clientProfileId.Value };
-        if (!string.IsNullOrWhiteSpace(email))
-        {
-            var byEmail = await _crmQueryService.GetClientProfileByEmailAsync(organizationId, email);
-            if (byEmail != null && Guid.TryParse(byEmail.Id, out var emailProfileId))
-                profileIds.Add(emailProfileId);
-        }
-
-        var profileIdArray = profileIds.ToArray();
+        // Token subject is this profile only. Do not merge sibling CRM rows that share an inbox (B03-C25).
+        var profileId = clientProfileId.Value;
 
         const string refsSql = @"
             SELECT ""ExternalReference"", ""Id""::text AS LogId, ""SubscriptionId""
             FROM commerce.""TransactionLogs""
             WHERE ""OrganizationId"" = @OrgId
-              AND (
-                    ""CustomerEmail"" = @Email
-                 OR ""SubscriptionId"" IN (
-                        SELECT ""Id"" FROM commerce.""Subscriptions""
-                        WHERE ""OrganizationId"" = @OrgId AND ""ClientProfileId"" = ANY(@ProfileIds)
-                    )
+              AND ""SubscriptionId"" IN (
+                    SELECT ""Id"" FROM commerce.""Subscriptions""
+                    WHERE ""OrganizationId"" = @OrgId AND ""ClientProfileId"" = @ProfileId
               )";
 
         var refs = (await connection.QueryAsync<RawTxRef>(refsSql, new
         {
             OrgId = organizationId,
-            Email = email,
-            ProfileIds = profileIdArray
+            ProfileId = profileId
         })).ToList();
 
         var referenceIds = refs
@@ -136,14 +118,14 @@ public class PortalDocumentQueryService
             FROM commerce.""CheckoutSessions"" c
             WHERE c.""OrganizationId"" = @OrgId
               AND c.""ProductId"" IS NULL
-              AND c.""ClientProfileId"" = ANY(@ProfileIds)
+              AND c.""ClientProfileId"" = @ProfileId
               AND c.""DocumentNumber"" IS NOT NULL
             ORDER BY c.""CreatedAt"" DESC";
 
         var quotes = (await connection.QueryAsync<RawQuote>(quotesSql, new
         {
             OrgId = organizationId,
-            ProfileIds = profileIdArray
+            ProfileId = profileId
         })).ToList();
 
         foreach (var quote in quotes)

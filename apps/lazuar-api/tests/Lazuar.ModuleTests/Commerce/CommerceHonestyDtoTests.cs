@@ -124,6 +124,18 @@ public class CommerceHonestyDtoTests
     }
 
     [Test]
+    public void PortalDocuments_DoNotMergeSiblingProfilesByEmail()
+    {
+        var root = FindRepoRoot();
+        var src = File.ReadAllText(Path.Combine(
+            root,
+            "apps/lazuar-api/Modules/Commerce/Infrastructure/Services/PortalDocumentQueryService.cs"));
+        src.Should().Contain("Token subject is this profile only");
+        src.Should().NotContain("GetClientProfileByEmailAsync");
+        src.Should().NotContain("CustomerEmail");
+    }
+
+    [Test]
     public void IntegrationCancel_ContractAndEndpoint_AreImmediateOnly()
     {
         var root = FindRepoRoot();
