@@ -2,7 +2,8 @@
 number: "239"
 id: B05-L35
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/239-billplz-fee-honesty
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 239 — B05-L35 — Billplz fee is always 0 in the journal
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/239-billplz-fee-honesty`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
