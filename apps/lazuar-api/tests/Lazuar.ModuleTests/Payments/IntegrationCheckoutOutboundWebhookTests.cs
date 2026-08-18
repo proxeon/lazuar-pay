@@ -319,6 +319,30 @@ public class IntegrationCheckoutOutboundWebhookTests
     }
 
     [Test]
+    public async Task Expired_ThenCompleted_MarksCompleted_AndPublishesPaymentCompleted()
+    {
+        var session = AddOpenSession();
+        session.TryExpireIfPast(session.ExpiresAt.AddMinutes(1)).Should().BeTrue();
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusExpired);
+
+        await _handler.HandleAsync(CompletedEvent(OrgId, session.Id, gatewayTxId: "pi_late_pay"));
+
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusCompleted);
+        session.GatewayTransactionId.Should().Be("pi_late_pay");
+        await _eventBus.Received(1).PublishAsync(Arg.Is<OutboundWebhookRequestedIntegrationEvent>(e =>
+            e.EventType == IntegrationCheckoutGatewayEventsHandler.EventTypeCompleted));
+    }
+
+    [Test]
+    public void TryExpireIfPast_FailedSession_StaysFailed()
+    {
+        var session = AddOpenSession();
+        session.MarkFailed();
+        session.TryExpireIfPast(session.ExpiresAt.AddDays(2)).Should().BeFalse();
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusFailed);
+    }
+
+    [Test]
     public async Task Failed_MissingCheckoutId_NoPublish()
     {
         AddOpenSession();

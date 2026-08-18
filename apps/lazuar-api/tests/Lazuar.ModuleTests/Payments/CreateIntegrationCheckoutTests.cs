@@ -336,6 +336,24 @@ public class CreateIntegrationCheckoutTests
     }
 
     [Test]
+    public async Task Get_OpenPastTtl_ReturnsExpired()
+    {
+        var session = new IntegrationCheckoutSession(
+            OrgId, 50m, "MYR", "Stale", "a@b.com",
+            "https://ok", "https://cancel", "STRIPE", "{}",
+            setupFutureUsage: false,
+            expiresAt: DateTime.UtcNow.AddHours(-25));
+        session.MarkProviderIssued("https://pay.example/cs", "cs_stale");
+        _sessions.Add(session);
+
+        var got = await _get.Handle(new GetIntegrationCheckoutQuery(OrgId, session.Id), CancellationToken.None);
+
+        got.Should().NotBeNull();
+        got!.Status.Should().Be(IntegrationCheckoutSession.StatusExpired);
+        session.Status.Should().Be(IntegrationCheckoutSession.StatusExpired);
+    }
+
+    [Test]
     public async Task StringQueryWrapper_StillReturnsUrlOnly_WithLegacyFallbackPath()
     {
         // Commerce path: requireActiveGateway=false, BILLPLZ fallback when no config then throws free-text.

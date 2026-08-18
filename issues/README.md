@@ -235,6 +235,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 223 | B04-P22 | `fix/223-leftover-event-maps` | CHIP payment.refunded maps REFUND_COMPLETED; unusable payload is HTTP 400 |
 | 224 | B04-P23 | `fix/224-m2m-amount-decimal` | M2M checkout amount binds as decimal JSON, not (decimal)double |
 | 225 | B04-P24 | `fix/225-payments-dead-code-honesty` | Payments README lists five adapters + M2M sessions; unused CHIP/Billplz symbols gone |
+| 226 | B04-P25 | `fix/226-expired-then-completed` | Expired M2M session still completes on late pay; GET expire stays open-only |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
