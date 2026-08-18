@@ -245,36 +245,44 @@ public class BillingEngineJob : BackgroundService
 
         if (sub.PendingProductId is Guid pendingId && pendingId != Guid.Empty)
         {
-            var pendingProduct = await db.Products
-                .IgnoreQueryFilters()
-                .Include(p => p.Prices)
-                .FirstOrDefaultAsync(p => p.Id == pendingId, ct);
-            if (pendingProduct == null)
+            // Stuck PendingProductId == ProductId: clear only. Do not re-snapshot (B02-C22).
+            if (pendingId == sub.ProductId)
             {
-                failedIds.Add(sub.Id);
-                _logger.LogWarning(
-                    "Billing skipped subscription {Id}: pending product {ProductId} is missing.",
-                    sub.Id, pendingId);
-                return;
+                sub.ApplyPendingPlanChange();
             }
-
-            var interval = SubscriptionBillingAmount.ResolveInterval(sub, product);
-            if (!PlanChangePolicy.TryResolvePrice(pendingProduct, interval, out var unit, out var billedInterval, out var priceId))
+            else
             {
-                failedIds.Add(sub.Id);
-                _logger.LogWarning(
-                    "Billing skipped subscription {Id}: pending product {ProductId} has no {Interval} price.",
-                    sub.Id, pendingId, interval);
-                return;
-            }
+                var pendingProduct = await db.Products
+                    .IgnoreQueryFilters()
+                    .Include(p => p.Prices)
+                    .FirstOrDefaultAsync(p => p.Id == pendingId, ct);
+                if (pendingProduct == null)
+                {
+                    failedIds.Add(sub.Id);
+                    _logger.LogWarning(
+                        "Billing skipped subscription {Id}: pending product {ProductId} is missing.",
+                        sub.Id, pendingId);
+                    return;
+                }
 
-            sub.ApplyPendingPlanChange();
-            product = pendingProduct;
-            sub.SetSnapshot(unit, sub.Quantity);
-            sub.SetBillingInterval(billedInterval);
-            if (priceId.HasValue)
-            {
-                sub.SetPriceId(priceId);
+                var interval = SubscriptionBillingAmount.ResolveInterval(sub, product);
+                if (!PlanChangePolicy.TryResolvePrice(pendingProduct, interval, out var unit, out var billedInterval, out var priceId))
+                {
+                    failedIds.Add(sub.Id);
+                    _logger.LogWarning(
+                        "Billing skipped subscription {Id}: pending product {ProductId} has no {Interval} price.",
+                        sub.Id, pendingId, interval);
+                    return;
+                }
+
+                sub.ApplyPendingPlanChange();
+                product = pendingProduct;
+                sub.SetSnapshot(unit, sub.Quantity);
+                sub.SetBillingInterval(billedInterval);
+                if (priceId.HasValue)
+                {
+                    sub.SetPriceId(priceId);
+                }
             }
         }
 

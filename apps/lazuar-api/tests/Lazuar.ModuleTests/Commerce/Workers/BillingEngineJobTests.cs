@@ -1000,6 +1000,30 @@ public class BillingEngineJobTests
             e.SubscriptionId == sub.Id && e.Amount == 108m));
     }
 
+    [Test]
+    public async Task RunOnce_StuckPendingEqualsCurrentProduct_DoesNotResnapshot()
+    {
+        var product = CreateProduct(_orgId, "STRIPE");
+        var sub = new Subscription(_orgId, Guid.CreateVersion7(), product.Id);
+        sub.Activate(DateTime.UtcNow.AddDays(-40), DateTime.UtcNow.AddDays(-1), false, 1, 40m);
+        sub.StoreVaultedToken("cus", "pm");
+        typeof(Subscription).GetProperty(nameof(Subscription.PendingProductId))!
+            .SetValue(sub, product.Id);
+
+        _db.Products.Add(product);
+        _db.Subscriptions.Add(sub);
+        await _db.SaveChangesAsync();
+
+        await _job.RunOnceAsync(CancellationToken.None);
+
+        var reloaded = await _db.Subscriptions.IgnoreQueryFilters().SingleAsync(s => s.Id == sub.Id);
+        reloaded.ProductId.Should().Be(product.Id);
+        reloaded.PendingProductId.Should().BeNull();
+        reloaded.UnitAmount.Should().Be(40m);
+        await _eventBus.Received(1).PublishAsync(Arg.Is<ExecuteOffSessionChargeIntegrationEvent>(e =>
+            e.SubscriptionId == sub.Id && e.Amount == 40m));
+    }
+
     // CRM email + workspace slug + checkout URL — the 168 mint-path prerequisites.
     // Passing tests already call this; do not put it in SetUp (generate-throws tests override Send).
     private void ArrangeMint(string email, string checkoutUrl)

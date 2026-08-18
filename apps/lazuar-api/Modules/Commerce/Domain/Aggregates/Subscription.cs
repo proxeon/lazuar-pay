@@ -260,6 +260,16 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
             return false;
         }
 
+        // Same-product pending is a no-op (SchedulePlanChange already refuses this).
+        // A SQL-stuck PendingProductId == ProductId must not look like a plan change
+        // or the billing job will RefreshSnapshot from catalog (B02-C22 / cousin of C04).
+        if (pending == ProductId)
+        {
+            PendingProductId = null;
+            UpdatedAt = DateTime.UtcNow;
+            return false;
+        }
+
         ProductId = pending;
         PendingProductId = null;
         UpdatedAt = DateTime.UtcNow;
