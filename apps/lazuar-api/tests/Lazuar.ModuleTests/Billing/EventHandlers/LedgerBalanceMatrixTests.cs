@@ -160,7 +160,7 @@ public class LedgerBalanceMatrixTests
             AssertEntryBalanced(e);
 
         var summary = ComputeSummary(entries);
-        // Gross 100, full contra 100 → gross-contra = 0; tax reversed to 0; fee remains 3 → net -3
+        // Policy: gateway fees are not reversed on refund. Gross-contra = 0; tax 0; fee remains 3 → net -3.
         Assert.That(summary.gross, Is.EqualTo(100m));
         Assert.That(summary.contra, Is.EqualTo(100m));
         Assert.That(summary.tax, Is.EqualTo(0m));

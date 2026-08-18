@@ -241,6 +241,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 229 | B05-L25 | `fix/229-document-year-myt` | Receipt/invoice/CN year uses MYT, same clock as B2C consolidation |
 | 230 | B05-L26 | `fix/230-summary-cash-label` | Summary/dashboard/agent label net revenue, not cash in bank; math unchanged |
 | 231 | B05-L27 | `fix/231-ledger-type-filter` | reversals include chargeback/dispute; sales is payment + manual enroll only |
+| 232 | B05-L28 | `fix/232-refunded-fee-honesty` | RefundedFee stays 0 by policy; fees are not reversed on refund |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

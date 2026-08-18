@@ -48,7 +48,7 @@ public class GatewayRefundRequestedIntegrationEventHandler : IIntegrationEventHa
         var success = await adapter.IssueRefundAsync(plainApiKey, @event.GatewayTransactionId, @event.Amount);
         if (success)
         {
-            // Gateway adapters currently do not return reclaimed fee; treat fee as 0 until webhook enrichment exists.
+            // Policy: gateway fees stay with us. Publishers do not reclaim MDR.
             var refundedFee = 0m;
             var netRefunded = @event.Amount - refundedFee;
 

@@ -249,7 +249,7 @@ public partial class ProcessGatewayWebhookCommandHandler : ICommandHandler<Proce
                 GatewayTransactionId: parsedResult.GatewayTransactionId ?? parsedResult.EventId,
                 RefundedAmount: refunded,
                 Currency: parsedResult.Currency,
-                RefundedFee: 0m,
+                RefundedFee: 0m, // Policy: do not reverse EXPENSE_GATEWAY_FEE on refund.
                 NetRefundedAmount: refunded,
                 TaxAmount: 0m,
                 IsFullRefund: false,
