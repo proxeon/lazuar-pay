@@ -94,7 +94,7 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
         }
         else
         {
-            subscription.Activate(start, nextBillingDate, isReminderOnly: true, quantity: 1, unitAmount: product.Price);
+            subscription.Activate(nextBillingDate, nextBillingDate, isReminderOnly: true, quantity: 1, unitAmount: product.Price);
             subscription.SetBillingInterval(product.Interval);
         }
 

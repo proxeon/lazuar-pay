@@ -204,6 +204,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 192 | B01-C22 | `fix/192-quote-refuse-placeholder-email` | QuoteView already rejects customer@example.com (158) |
 | 193 | B02-C13 | `fix/193-excludeids-parameterized` | Billing/dunning excludeIds already use parameterized ALL() (178) |
 | 194 | B02-C14 | `fix/194-clear-trial-ends-at` | Activate / recover / resume / cancel clear TrialEndsAt |
+| 195 | B02-C16 | `fix/195-period-end-is-next` | Paid Activate writes CurrentPeriodEnd = next billing date |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

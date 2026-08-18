@@ -28,7 +28,8 @@ public static class SubscriptionActivation
         else
         {
             var next = SubscriptionBillingAmount.AdvanceFrom(instant, interval);
-            subscription.Activate(instant, next, reminderOnly, quantity, unitAmount);
+            // Paid-through is the next bill, not the activation instant (B02-C16).
+            subscription.Activate(next, next, reminderOnly, quantity, unitAmount);
         }
 
         subscription.SetBillingInterval(interval);

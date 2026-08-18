@@ -30,7 +30,7 @@ public class CreateManualSubscriberCommandHandlerTests
         fx.Subscription.Should().NotBeNull();
         fx.Subscription!.Status.Should().Be("ACTIVE");
         fx.Subscription.IsReminderOnly.Should().BeTrue();
-        fx.Subscription.CurrentPeriodEnd.Should().Be(fx.Start);
+        fx.Subscription.CurrentPeriodEnd.Should().BeCloseTo(fx.Start.AddMonths(1), TimeSpan.FromSeconds(1));
         fx.Subscription.NextBillingDate.Should().BeCloseTo(fx.Start.AddMonths(1), TimeSpan.FromSeconds(1));
         fx.Logs.Should().HaveCount(1);
         fx.Logs[0].Amount.Should().Be(150m);
@@ -96,13 +96,13 @@ public class CreateManualSubscriberCommandHandlerTests
     }
 
     [Test]
-    public async Task C8_NextBillingOverride_UsesThatDate_PeriodEndIsStart()
+    public async Task C8_NextBillingOverride_UsesThatDate_PeriodEndIsNext()
     {
         var start = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
         var next = new DateTime(2026, 6, 15, 0, 0, 0, DateTimeKind.Utc);
         var fx = await ActAsync(amount: 150m, method: "BANK_TRANSFER", start: start, nextBilling: next);
 
-        fx.Subscription!.CurrentPeriodEnd.Should().Be(start);
+        fx.Subscription!.CurrentPeriodEnd.Should().Be(next);
         fx.Subscription.NextBillingDate.Should().Be(next);
     }
 
