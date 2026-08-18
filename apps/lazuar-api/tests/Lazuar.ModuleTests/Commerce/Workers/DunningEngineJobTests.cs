@@ -273,6 +273,12 @@ public class DunningEngineJobTests
     }
 
     [Test]
+    public void DunningEngineBatchSize_DefaultIs200()
+    {
+        new BackgroundWorkerOptions().DunningEngineBatchSize.Should().Be(200);
+    }
+
+    [Test]
     public void ResolvePreDunningClaimWindowDays_UsesMaxNegativeOffset_FloorsAt14_CapsAt90()
     {
         DunningEngineJob.ResolvePreDunningClaimWindowDays(Array.Empty<DunningCampaign>()).Should().Be(14);

@@ -29,6 +29,12 @@ public sealed class BackgroundWorkerOptions
     /// <summary>Commerce dunning engine cycle interval.</summary>
     public TimeSpan DunningEngineInterval { get; set; } = TimeSpan.FromHours(1);
 
+    /// <summary>
+    /// Seats claimed per pre-dunning pass and per past-due pass each hour (B03-C24).
+    /// 50 left a 2 000-row PAST_DUE queue ~40 hours behind.
+    /// </summary>
+    public int DunningEngineBatchSize { get; set; } = 200;
+
     /// <summary>How long a claimed LHDN/webhook lease hides a row from other workers.</summary>
     public TimeSpan ClaimLeaseDuration { get; set; } = TimeSpan.FromMinutes(2);
 }

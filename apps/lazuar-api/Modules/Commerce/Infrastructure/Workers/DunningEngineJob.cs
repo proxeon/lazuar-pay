@@ -23,7 +23,7 @@ public partial class DunningEngineJob : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<DunningEngineJob> _logger;
     private readonly BackgroundWorkerOptions _options;
-    private const int BatchSize = 50;
+    private readonly int _batchSize;
 
     public DunningEngineJob(
         IServiceScopeFactory scopeFactory,
@@ -35,6 +35,7 @@ public partial class DunningEngineJob : BackgroundService
         _configuration = configuration;
         _logger = logger;
         _options = options.Value;
+        _batchSize = Math.Clamp(_options.DunningEngineBatchSize, 1, 1000);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

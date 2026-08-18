@@ -31,7 +31,7 @@ public partial class DunningEngineJob
         var failedIds = new HashSet<Guid>();
         var processedIds = new HashSet<Guid>();
 
-        for (var i = 0; i < BatchSize; i++)
+        for (var i = 0; i < _batchSize; i++)
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
