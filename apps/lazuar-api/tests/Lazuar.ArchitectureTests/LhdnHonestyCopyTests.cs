@@ -33,4 +33,19 @@ public class LhdnHonestyCopyTests
         Assert.That(text, Does.Not.Contain("✅ **Debit Note (03):** Supported"));
         Assert.That(text, Does.Not.Contain("✅ **Self-Billed Invoice (11):** Supported"));
     }
+
+    [Test]
+    public void InvoiceIssuedHandler_NamesLiveB2bHook_NotMissingTypes()
+    {
+        var path = Path.GetFullPath(Path.Combine(
+            TestContext.CurrentContext.TestDirectory,
+            "..", "..", "..", "..", "..",
+            "Modules", "Lhdn", "Infrastructure", "EventHandlers",
+            "InvoiceIssuedIntegrationEventHandler.cs"));
+        Assert.That(File.Exists(path), Is.True, path);
+        var text = File.ReadAllText(path);
+        Assert.That(text, Does.Contain("B2bTaxInvoiceRequested"));
+        Assert.That(text, Does.Not.Contain("B2bSaleSubmitHandler"));
+        Assert.That(text, Does.Not.Contain("B2bSaleReadyForEinvoice"));
+    }
 }

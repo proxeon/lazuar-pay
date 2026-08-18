@@ -2,7 +2,8 @@
 number: "247"
 id: B06-D27
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/247-invoiceissued-comments
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -84,4 +85,8 @@ Rewrite the comment and log to `B2bTaxInvoiceRequestedIntegrationEventHandler`. 
 
 ### Evaluation notes
 Overlaps **234** (dead InvoiceIssuedHandler) and Billing README §5 in **244**. The no-op itself is the 161–200-era fail-closed leftover (do not file stub TIN) and should stay. Still P2 (stale names, not a live submit). Do not change YAML status.
+
+## Resolution
+
+Comments and log name `B2bTaxInvoiceRequested`. Handler stays a no-op. Locked by `InvoiceIssuedHandler_NamesLiveB2bHook_NotMissingTypes`.
 
