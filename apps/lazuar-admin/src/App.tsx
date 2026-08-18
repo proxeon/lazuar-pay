@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
 import { client, type AuthUser } from "./lib/api-client";
@@ -92,6 +92,18 @@ function SuperadminLayout() {
   );
 }
 
+function NotFoundPage() {
+  return (
+    <div className="flex h-screen w-full flex-col items-center justify-center bg-[#f5f5f5] gap-3 px-6">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">404</p>
+      <p className="text-[13px] text-[#52525b]">That page is not here.</p>
+      <Link to="/platform/gateways" className="text-[11px] font-bold uppercase tracking-widest underline">
+        Gateways
+      </Link>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
@@ -100,7 +112,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/platform/gateways" replace />} />
         <Route path="/platform/gateways" element={<PlatformPaymentSettingsPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/platform/gateways" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

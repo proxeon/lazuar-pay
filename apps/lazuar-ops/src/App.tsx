@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from "./components/Sidebar";
 import LoginPage from "./components/LoginPage";
@@ -251,6 +251,18 @@ function HomeRedirect() {
   return <Navigate to={dest} replace />;
 }
 
+function NotFoundPage() {
+  return (
+    <div className="flex h-screen w-full flex-col items-center justify-center bg-[#f5f5f5] gap-3 px-6">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-[#71717a]">404</p>
+      <p className="text-[13px] text-[#52525b]">That page is not here.</p>
+      <Link to="/commerce/dashboard" className="text-[11px] font-bold uppercase tracking-widest underline">
+        Dashboard
+      </Link>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
@@ -296,7 +308,7 @@ export default function App() {
         */}
       </Route>
       
-      <Route path="*" element={<Navigate to="/commerce/dashboard" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
