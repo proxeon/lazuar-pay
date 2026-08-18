@@ -179,6 +179,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 167 | B10-X11 | `fix/167-sst-fail-closed` | Missing IBillingQueryService refuses to undercharge instead of dropping SST |
 | 168 | B10-X12 | `fix/168-comms-fail-closed` | Reminder jobs require One/CRM; no slug or email means no dispatch and no PAST_DUE |
 | 169 | B10-X13 | `fix/169-clienturl-fallback` | App:ClientUrl default and missing-config fallbacks are localhost:3004 |
+| 170 | B10-X14 | `fix/170-jwt-document-secret` | Document HMAC rejects empty/default Jwt:Secret; Staging matches Production |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

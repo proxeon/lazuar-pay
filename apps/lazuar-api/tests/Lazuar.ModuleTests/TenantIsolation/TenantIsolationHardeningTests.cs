@@ -309,6 +309,29 @@ public class TenantIsolationHardeningTests
     }
 
     [Test]
+    public void DocumentLinkSigner_Allows_One_Minute_Clock_Skew()
+    {
+        const string secret = "test_secret_key_minimum_32_characters_xx";
+        var exp = DateTimeOffset.UtcNow.AddSeconds(-30).ToUnixTimeSeconds();
+        var payload = DocumentLinkSigner.DraftDocumentPayload("acme", Guid.CreateVersion7(), exp);
+        var sig = DocumentLinkSigner.Sign(secret, payload);
+
+        DocumentLinkSigner.TryValidate(secret, payload, sig, exp, out var error)
+            .Should().BeTrue();
+        error.Should().BeNull();
+    }
+
+    [Test]
+    public void DocumentLinkSigner_ResolveSecret_Rejects_Empty_And_Well_Known_Default()
+    {
+        Assert.Throws<InvalidOperationException>(() => DocumentLinkSigner.ResolveSecret(null));
+        Assert.Throws<InvalidOperationException>(() => DocumentLinkSigner.ResolveSecret(""));
+        Assert.Throws<InvalidOperationException>(() =>
+            DocumentLinkSigner.ResolveSecret("secure_development_key_minimum_32_characters_long"));
+        DocumentLinkSigner.ResolveSecret("a-real-secret-at-least-32-characters!").Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Test]
     public void Presigned_Storage_Rejects_Empty_Tenant_Contract()
     {
         // Endpoint guard: empty TenantId must not build vault/{empty}/... keys.

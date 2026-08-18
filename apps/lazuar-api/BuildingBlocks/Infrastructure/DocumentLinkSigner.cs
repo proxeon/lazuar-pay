@@ -20,11 +20,13 @@ public static class DocumentLinkSigner
         return Convert.ToHexString(HMACSHA256.HashData(keyBytes, payloadBytes)).ToLowerInvariant();
     }
 
+    public const int ClockSkewSeconds = 60;
+
     public static bool TryValidate(string secret, string payload, string? sig, long exp, out string? error)
     {
         error = null;
 
-        if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > exp)
+        if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > exp + ClockSkewSeconds)
         {
             error = "This secure document link has expired.";
             return false;
@@ -37,7 +39,21 @@ public static class DocumentLinkSigner
         }
 
         var expected = Sign(secret, payload);
-        if (!string.Equals(sig, expected, StringComparison.OrdinalIgnoreCase))
+        byte[] expectedBytes;
+        byte[] actualBytes;
+        try
+        {
+            expectedBytes = Convert.FromHexString(expected);
+            actualBytes = Convert.FromHexString(sig);
+        }
+        catch (FormatException)
+        {
+            error = "Invalid document signature.";
+            return false;
+        }
+
+        if (expectedBytes.Length != actualBytes.Length
+            || !CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes))
         {
             error = "Invalid document signature.";
             return false;
@@ -54,8 +70,15 @@ public static class DocumentLinkSigner
     public static string DraftDocumentPayload(string tenantSlug, Guid sessionId, long exp) =>
         $"{tenantSlug}:draft:{sessionId}:{exp}";
 
-    public static string ResolveSecret(string? configuredSecret) =>
-        string.IsNullOrWhiteSpace(configuredSecret)
-            ? "secure_development_key_minimum_32_characters_long"
-            : configuredSecret;
+    public static string ResolveSecret(string? configuredSecret)
+    {
+        if (string.IsNullOrWhiteSpace(configuredSecret)
+            || configuredSecret == "secure_development_key_minimum_32_characters_long")
+        {
+            throw new InvalidOperationException(
+                "Jwt:Secret is required to sign document links and must not be the well-known development default.");
+        }
+
+        return configuredSecret;
+    }
 }

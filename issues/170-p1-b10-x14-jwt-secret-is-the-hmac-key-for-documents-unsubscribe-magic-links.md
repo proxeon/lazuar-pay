@@ -2,7 +2,8 @@
 number: "170"
 id: B10-X14
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/170-jwt-document-secret
 source: plans/009-bugs/10-tenancy-workers-contracts-tests.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 170 — B10-X14 — JWT secret is the HMAC key for documents, unsubscribe, magic links, and (fallback) vault
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/10-tenancy-workers-contracts-tests.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/170-jwt-document-secret`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

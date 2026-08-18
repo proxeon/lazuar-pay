@@ -19,12 +19,12 @@ public static class AuthAndCorsExtensions
         IHostEnvironment environment)
     {
         var jwtSecret = configuration["Jwt:Secret"];
-        if (environment.IsProduction())
+        if (environment.IsProduction() || environment.IsStaging())
         {
             if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret == DefaultDevJwtSecret)
             {
                 throw new InvalidOperationException(
-                    "Jwt:Secret must be configured to a non-default value in Production.");
+                    "Jwt:Secret must be configured to a non-default value in Production and Staging.");
             }
         }
 
