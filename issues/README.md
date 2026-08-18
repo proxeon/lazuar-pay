@@ -127,6 +127,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 115 | B07-I05 | `fix/115-accept-audit` | Accept pre-checks membership and writes member.accepted |
 | 116 | B07-I06 | `fix/116-logout-cookie-domain` | Logout/stamp delete uses the same Domain/Path as set |
 | 117 | B07-I07 | `fix/117-security-stamp-middleware` | JWT stamp is checked on every cookie request, not only /auth/me |
+| 118 | B07-I10 | `fix/118-last-admin` | Last admin cannot be removed; Team hides that action |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

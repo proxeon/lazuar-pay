@@ -68,6 +68,16 @@ public class OneRepository : IOneRepository
             .FirstOrDefaultAsync(m => m.GlobalUserId == globalUserId && m.OrganizationId == organizationId, ct);
     }
 
+    public async Task<int> CountManagingMembersAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.TenantMemberships
+            .IgnoreQueryFilters()
+            .CountAsync(m =>
+                m.OrganizationId == organizationId
+                && (m.Role == WorkspaceStaffRoles.Admin || m.Role == WorkspaceStaffRoles.SuperAdmin),
+                ct);
+    }
+
     public async Task<GlobalUser?> GetUserByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.GlobalUsers.FirstOrDefaultAsync(u => u.Id == id, ct);

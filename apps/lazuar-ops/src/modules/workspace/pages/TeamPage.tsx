@@ -103,7 +103,11 @@ export default function TeamPage() {
               <Loader2 size={16} className="animate-spin" />
             </div>
           )}
-          {members?.map((m) => (
+          {members?.map((m) => {
+            const managerCount = (members ?? []).filter((row) =>
+              row.role === "ADMIN" || row.role === "SUPER_ADMIN").length;
+            const isLastManager = managerCount <= 1 && (m.role === "ADMIN" || m.role === "SUPER_ADMIN");
+            return (
             <div key={m.id} className="px-5 py-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-[13px] font-medium text-[#09090b] truncate">{m.name || m.email}</div>
@@ -111,6 +115,7 @@ export default function TeamPage() {
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#71717a]">{m.role}</span>
+                {!isLastManager && (
                 <button
                   type="button"
                   onClick={() => removeMutation.mutate(m.global_user_id)}
@@ -120,9 +125,11 @@ export default function TeamPage() {
                 >
                   <UserMinus size={14} />
                 </button>
+                )}
               </div>
             </div>
-          ))}
+            );
+          })}
           {!isLoading && (members?.length ?? 0) === 0 && (
             <div className="p-8 text-center text-[12px] text-[#71717a]">No members yet.</div>
           )}

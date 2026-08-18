@@ -39,6 +39,13 @@ public class RemoveWorkspaceMemberCommandHandler : ICommandHandler<RemoveWorkspa
         var membership = await _repository.GetMembershipAsync(request.TargetUserId, request.OrganizationId, ct);
         if (membership == null) throw new InvalidOperationException("User is not a member of this workspace.");
 
+        if (WorkspaceStaffRoles.CanManageMembers(membership.Role))
+        {
+            var managers = await _repository.CountManagingMembersAsync(request.OrganizationId, ct);
+            if (managers <= 1)
+                throw new InvalidOperationException("Cannot remove the last admin.");
+        }
+
         _repository.RemoveTenantMembership(membership);
         await _repository.SaveChangesAsync(ct);
 
