@@ -291,6 +291,7 @@ public class BillingEngineJob : BackgroundService
 
         if (canCharge)
         {
+            // Cycle key is UTC .Date (B02-C18). Claim uses full timestamptz; the log key does not convert to MYT.
             var targetDate = sub.NextBillingDate!.Value.Date;
             // Billing owns attempt 1 only; subsequent retries are owned by dunning AUTO_CHARGE.
             var attemptCount = await db.ChargeAttemptLogs

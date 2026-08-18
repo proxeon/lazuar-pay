@@ -206,6 +206,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 194 | B02-C14 | `fix/194-clear-trial-ends-at` | Activate / recover / resume / cancel clear TrialEndsAt |
 | 195 | B02-C16 | `fix/195-period-end-is-next` | Paid Activate writes CurrentPeriodEnd = next billing date |
 | 196 | B02-C17 | `fix/196-resume-period-end` | Resume sets CurrentPeriodEnd to the new next billing date |
+| 197 | B02-C18 | `fix/197-cycle-key-utc` | Cycle key / renewal checkout date are UTC calendar dates (documented SSoT) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

@@ -360,6 +360,7 @@ public class Subscription : Entity, IAggregateRoot, IMustHaveTenant
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(url);
         CurrentRenewalCheckoutUrl = url.Trim();
+        // Cycle key is the UTC calendar date. Merchant-local "1st of the month" is not used.
         CurrentRenewalCheckoutForDate = DateTime.SpecifyKind(forDate.Date, DateTimeKind.Utc);
         UpdatedAt = DateTime.UtcNow;
     }
