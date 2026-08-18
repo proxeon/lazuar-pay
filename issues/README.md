@@ -185,6 +185,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 173 | B10-X17 | `fix/173-trialing-catalog` | Catalog and lifecycle tests document TRIALING on subscription.activated |
 | 174 | B10-X18 | `fix/174-dead-letter-redrive` | Ready fails on lag/dead letters; SUPER_ADMIN can redrive Dead rows |
 | 175 | B10-X19 | `fix/175-migrate-pending-model` | Boot rethrows PendingModelChanges instead of coming up without tables |
+| 176 | B10-X20 | `fix/176-accept-invite-membership` | Accept-invite already checks membership and writes member.accepted (115) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
