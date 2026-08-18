@@ -36,36 +36,39 @@ public class ApiKeyAuthenticationMiddleware
             var keyHash = _tokenGenerator.HashToken(token);
             var cacheKey = $"ApiKey_{keyHash}";
 
-            if (!_cache.TryGetValue(cacheKey, out ApiKeyCacheEntry? entry) || entry is null)
+            // Cache is a hint only. Revoke must win even if the outbox never evicts
+            // this replica — re-read IsActive=true on every request.
+            var lookup = context.RequestServices.GetService<IApiKeyCredentialLookup>();
+            var entry = lookup is not null
+                ? await lookup.FindActiveAsync(context.RequestServices, keyHash)
+                : await LookupCredentialAsync(context.RequestServices, keyHash);
+
+            if (entry is null || entry.OrganizationId == Guid.Empty)
             {
-                entry = await LookupCredentialAsync(context.RequestServices, keyHash);
-
-                if (entry is null || entry.OrganizationId == Guid.Empty)
-                {
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    context.Response.ContentType = "application/json";
-                    await context.Response.WriteAsJsonAsync(new { error = "Invalid or revoked API Key." });
-                    return;
-                }
-
-                _cache.Set(cacheKey, entry, TimeSpan.FromMinutes(5));
-
-                var tenantKeysKey = $"TenantKeys_{entry.OrganizationId}";
-                if (!_cache.TryGetValue(tenantKeysKey, out List<string>? keyHashes) || keyHashes is null)
-                {
-                    keyHashes = new List<string>();
-                }
-
-                lock (keyHashes)
-                {
-                    if (!keyHashes.Contains(keyHash))
-                    {
-                        keyHashes.Add(keyHash);
-                    }
-                }
-
-                _cache.Set(tenantKeysKey, keyHashes, TimeSpan.FromMinutes(10));
+                _cache.Remove(cacheKey);
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { error = "Invalid or revoked API Key." });
+                return;
             }
+
+            _cache.Set(cacheKey, entry, TimeSpan.FromMinutes(5));
+
+            var tenantKeysKey = $"TenantKeys_{entry.OrganizationId}";
+            if (!_cache.TryGetValue(tenantKeysKey, out List<string>? keyHashes) || keyHashes is null)
+            {
+                keyHashes = new List<string>();
+            }
+
+            lock (keyHashes)
+            {
+                if (!keyHashes.Contains(keyHash))
+                {
+                    keyHashes.Add(keyHash);
+                }
+            }
+
+            _cache.Set(tenantKeysKey, keyHashes, TimeSpan.FromMinutes(10));
 
             var claims = new List<Claim>
             {
@@ -165,8 +168,10 @@ public class ApiKeyAuthenticationMiddleware
         return false;
     }
 
+    public static string CacheKey(string keyHash) => $"ApiKey_{keyHash}";
+
     /// <summary>Cached principal material for an active developer API key.</summary>
-    internal sealed class ApiKeyCacheEntry
+    public sealed class ApiKeyCacheEntry
     {
         public Guid CredentialId { get; init; }
         public Guid OrganizationId { get; init; }

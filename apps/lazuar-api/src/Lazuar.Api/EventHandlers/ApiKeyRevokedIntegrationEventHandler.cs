@@ -29,6 +29,6 @@ public class ApiKeyRevokedIntegrationEventHandler :
 
     private void Evict(string keyHash)
     {
-        _cache.Remove($"ApiKey_{keyHash}");
+        _cache.Remove(Lazuar.Api.Middleware.ApiKeyAuthenticationMiddleware.CacheKey(keyHash));
     }
 }

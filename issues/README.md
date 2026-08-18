@@ -134,6 +134,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 122 | B07-I19 | `fix/122-exception-message-500` | 500 ProblemDetails no longer echo exception.Message |
 | 123 | B07-I20 | `fix/123-provision-membership-superadmin` | Provision JWT requires is_system_admin; membership SUPER_ADMIN is 403 |
 | 124 | B07-I25 | `fix/124-cors-fail-closed` | Empty App:CorsOrigins fails boot in Production/Staging |
+| 125 | B07-I26 | `fix/125-apikey-cache-revoke` | Revoke evicts the API-key cache; middleware re-checks IsActive |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

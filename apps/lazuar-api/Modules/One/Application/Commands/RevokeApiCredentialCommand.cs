@@ -18,15 +18,18 @@ public class RevokeApiCredentialCommandHandler : ICommandHandler<RevokeApiCreden
     private readonly IOneRepository _repository;
     private readonly IEventBus _eventBus;
     private readonly IAuditRecorder? _auditRecorder;
+    private readonly IApiKeyAuthCache? _authCache;
 
     public RevokeApiCredentialCommandHandler(
         IOneRepository repository,
         [FromKeyedServices("OneEventBus")] IEventBus eventBus,
-        IAuditRecorder? auditRecorder = null)
+        IAuditRecorder? auditRecorder = null,
+        IApiKeyAuthCache? authCache = null)
     {
         _repository = repository;
         _eventBus = eventBus;
         _auditRecorder = auditRecorder;
+        _authCache = authCache;
     }
 
     public async Task Handle(RevokeApiCredentialCommand request, CancellationToken ct)
@@ -44,6 +47,7 @@ public class RevokeApiCredentialCommandHandler : ICommandHandler<RevokeApiCreden
         }
 
         credential.Revoke();
+        _authCache?.Evict(credential.KeyHash);
 
         await _eventBus.PublishAsync(new ApiKeyRevokedIntegrationEvent(credential.OrganizationId, credential.KeyHash));
         await _repository.SaveChangesAsync(ct);

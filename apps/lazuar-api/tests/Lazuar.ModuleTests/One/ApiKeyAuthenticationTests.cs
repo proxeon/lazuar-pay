@@ -32,16 +32,22 @@ public class ApiKeyAuthenticationTests
         tokens.HashToken(plainKey).Returns(keyHash);
 
         var cache = new MemoryCache(new MemoryCacheOptions());
-        cache.Set($"ApiKey_{keyHash}", new ApiKeyAuthenticationMiddleware.ApiKeyCacheEntry
+        var entry = new ApiKeyAuthenticationMiddleware.ApiKeyCacheEntry
         {
             CredentialId = credentialId,
             OrganizationId = orgId,
             Scopes = PlatformApiScopes.DefaultDocumentScopes
-        });
+        };
+        cache.Set($"ApiKey_{keyHash}", entry);
 
+        var lookup = Substitute.For<IApiKeyCredentialLookup>();
+        lookup.FindActiveAsync(Arg.Any<IServiceProvider>(), keyHash).Returns(entry);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(lookup);
         var context = new DefaultHttpContext
         {
-            RequestServices = new ServiceCollection().BuildServiceProvider()
+            RequestServices = services.BuildServiceProvider()
         };
         context.Request.Headers.Authorization = $"Bearer {plainKey}";
 
@@ -82,16 +88,22 @@ public class ApiKeyAuthenticationTests
         tokens.HashToken(plainKey).Returns(keyHash);
 
         var cache = new MemoryCache(new MemoryCacheOptions());
-        cache.Set($"ApiKey_{keyHash}", new ApiKeyAuthenticationMiddleware.ApiKeyCacheEntry
+        var entry = new ApiKeyAuthenticationMiddleware.ApiKeyCacheEntry
         {
             CredentialId = credentialId,
             OrganizationId = orgId,
             Scopes = PlatformApiScopes.DefaultAuraIntegratorScopes
-        });
+        };
+        cache.Set($"ApiKey_{keyHash}", entry);
 
+        var lookup = Substitute.For<IApiKeyCredentialLookup>();
+        lookup.FindActiveAsync(Arg.Any<IServiceProvider>(), keyHash).Returns(entry);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(lookup);
         var context = new DefaultHttpContext
         {
-            RequestServices = new ServiceCollection().BuildServiceProvider()
+            RequestServices = services.BuildServiceProvider()
         };
         context.Request.Headers.Authorization = $"Bearer {plainKey}";
 
@@ -198,24 +210,30 @@ public class ApiKeyAuthenticationTests
     }
 
     [Test]
-    public async Task Revoked_Key_After_Cache_Eviction_Returns_401()
+    public async Task Warm_Cache_Still_401s_When_Lookup_Says_Inactive()
     {
-        // Mirrors production: revoke removes ApiKey_{hash} from cache; next request re-looks up
-        // IsActive=true row and fails closed when missing (revoked keys are inactive).
+        // Outbox stall / other replica: cache still warm, SQL IsActive=false.
         var tokens = Substitute.For<ITokenGeneratorService>();
         const string plainKey = "sk_live_revokedkeyxyz";
         const string keyHash = "hash:revoked";
         tokens.HashToken(plainKey).Returns(keyHash);
 
         var cache = new MemoryCache(new MemoryCacheOptions());
-        // Simulate post-revoke eviction (ApiKeyRevokedIntegrationEventHandler).
-        Assert.That(cache.TryGetValue($"ApiKey_{keyHash}", out _), Is.False);
-
-        var context = new DefaultHttpContext
+        cache.Set($"ApiKey_{keyHash}", new ApiKeyAuthenticationMiddleware.ApiKeyCacheEntry
         {
-            RequestServices = new ServiceCollection().BuildServiceProvider()
-        };
-        context.Request.Headers.Authorization = plainKey; // raw sk_ form also accepted
+            CredentialId = Guid.CreateVersion7(),
+            OrganizationId = Guid.CreateVersion7(),
+            Scopes = PlatformApiScopes.DefaultDocumentScopes
+        });
+
+        var lookup = Substitute.For<IApiKeyCredentialLookup>();
+        lookup.FindActiveAsync(Arg.Any<IServiceProvider>(), keyHash)
+            .Returns((ApiKeyAuthenticationMiddleware.ApiKeyCacheEntry?)null);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(lookup);
+        var context = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        context.Request.Headers.Authorization = plainKey;
 
         var nextCalled = false;
         var middleware = new ApiKeyAuthenticationMiddleware(
@@ -231,6 +249,7 @@ public class ApiKeyAuthenticationTests
 
         Assert.That(nextCalled, Is.False);
         Assert.That(context.Response.StatusCode, Is.EqualTo(StatusCodes.Status401Unauthorized));
+        Assert.That(cache.TryGetValue($"ApiKey_{keyHash}", out _), Is.False);
     }
 
     [Test]

@@ -205,6 +205,8 @@ else
     builder.Services.AddSingleton<IR2StorageService, DisabledR2StorageService>();
 }
 
+builder.Services.AddSingleton<Modules.One.Application.IApiKeyAuthCache, Lazuar.Api.Middleware.MemoryApiKeyAuthCache>();
+builder.Services.AddSingleton<Lazuar.Api.Middleware.IApiKeyCredentialLookup, Lazuar.Api.Middleware.SqlApiKeyCredentialLookup>();
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.ApiKeyRevokedIntegrationEventHandler>();
 builder.Services.AddTransient<Lazuar.Api.EventHandlers.WorkspaceUpdatedIntegrationEventHandler>();
 

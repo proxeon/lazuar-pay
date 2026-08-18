@@ -158,10 +158,12 @@ public class GenerateAndListApiCredentialsTests
             .Returns(Task.FromResult<ApiCredential?>(credential));
 
         var bus = Substitute.For<IEventBus>();
-        var handler = new RevokeApiCredentialCommandHandler(repo, bus);
+        var cache = Substitute.For<IApiKeyAuthCache>();
+        var handler = new RevokeApiCredentialCommandHandler(repo, bus, authCache: cache);
         await handler.Handle(new RevokeApiCredentialCommand(orgId, credential.Id), CancellationToken.None);
 
         Assert.That(credential.IsActive, Is.False);
+        cache.Received(1).Evict("hash-to-evict");
         await bus.Received(1).PublishAsync(Arg.Is<ApiKeyRevokedIntegrationEvent>(e =>
             e.OrganizationId == orgId && e.KeyHash == "hash-to-evict"));
         await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
