@@ -33,7 +33,7 @@ public class CreditHoldTests
         var hold = new CreditHold(Guid.NewGuid(), 50, "broadcast-1", "broadcast");
         hold.Consume(50);
         hold.RemainingAmount.Should().Be(0);
-        hold.Status.Should().Be("HELD");
+        hold.Status.Should().Be("SETTLED");
     }
 
     [Test]
@@ -52,7 +52,7 @@ public class CreditHoldTests
         var released = hold.ReleaseRemaining();
         released.Should().Be(60);
         hold.RemainingAmount.Should().Be(0);
-        hold.Status.Should().Be("SETTLED");
+        hold.Status.Should().Be("RELEASED");
     }
 
     [Test]
@@ -60,6 +60,7 @@ public class CreditHoldTests
     {
         var hold = new CreditHold(Guid.NewGuid(), 100, "broadcast-1", "broadcast");
         hold.ReleaseRemaining().Should().Be(100);
+        hold.Status.Should().Be("RELEASED");
     }
 
     [Test]

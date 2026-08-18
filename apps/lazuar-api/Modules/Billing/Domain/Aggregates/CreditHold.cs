@@ -55,17 +55,22 @@ public class CreditHold : Entity, IAggregateRoot, IMustHaveTenant
                 new GenericBusinessRule($"402: Insufficient held credits. Remaining: {RemainingAmount}, requested: {amount}."));
 
         RemainingAmount -= amount;
+        if (RemainingAmount == 0)
+        {
+            Status = "SETTLED";
+        }
+
         UpdatedAt = DateTime.UtcNow;
     }
 
-    /// <summary>Release all remaining credits. Returns the amount released (to be refunded to the wallet).</summary>
+    /// <summary>Release remaining credits. RELEASED when remainder was returned; SETTLED when already exhausted.</summary>
     public int ReleaseRemaining()
     {
         if (Status != "HELD") throw new InvalidOperationException("Hold is no longer active.");
 
         var released = RemainingAmount;
         RemainingAmount = 0;
-        Status = "SETTLED";
+        Status = released > 0 ? "RELEASED" : "SETTLED";
         UpdatedAt = DateTime.UtcNow;
         return released;
     }

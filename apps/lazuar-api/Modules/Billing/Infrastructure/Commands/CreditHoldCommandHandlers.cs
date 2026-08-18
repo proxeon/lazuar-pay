@@ -24,6 +24,14 @@ public class ReserveCreditsCommandHandler : ICommandHandler<ReserveCreditsComman
         if (request.Amount <= 0)
             throw new ArgumentException("Reserve amount must be positive.");
 
+        var existing = await _dbContext.CreditHolds
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                h => h.OrganizationId == request.OrganizationId && h.CorrelationId == request.CorrelationId,
+                ct);
+        if (existing != null)
+            return existing.Id;
+
         for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
             var wallet = await _dbContext.TenantCreditBalances
@@ -45,6 +53,18 @@ public class ReserveCreditsCommandHandler : ICommandHandler<ReserveCreditsComman
             {
                 _dbContext.ChangeTracker.Clear();
                 if (attempt == MaxAttempts - 1) throw;
+            }
+            catch (DbUpdateException)
+            {
+                _dbContext.ChangeTracker.Clear();
+                var raced = await _dbContext.CreditHolds
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(
+                        h => h.OrganizationId == request.OrganizationId && h.CorrelationId == request.CorrelationId,
+                        ct);
+                if (raced != null)
+                    return raced.Id;
+                throw;
             }
         }
 

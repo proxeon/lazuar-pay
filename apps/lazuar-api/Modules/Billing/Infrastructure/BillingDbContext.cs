@@ -116,7 +116,7 @@ public class BillingDbContext : PlatformDbContext
         {
             builder.ToTable("CreditHolds");
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.OrganizationId, x.CorrelationId });
+            builder.HasIndex(x => new { x.OrganizationId, x.CorrelationId }).IsUnique();
             builder.Property<uint>("xmin")
                 .HasColumnType("xid")
                 .ValueGeneratedOnAddOrUpdate()

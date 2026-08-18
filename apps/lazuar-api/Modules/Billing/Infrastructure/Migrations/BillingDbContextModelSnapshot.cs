@@ -148,7 +148,8 @@ namespace Modules.Billing.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "CorrelationId");
+                    b.HasIndex("OrganizationId", "CorrelationId")
+                        .IsUnique();
 
                     b.ToTable("CreditHolds", "billing");
                 });

@@ -2,7 +2,8 @@
 number: "235"
 id: B05-L31
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/235-credit-hold-unique
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 235 — B05-L31 — Credit hold: no unique correlation; `RELEASED` never written; exhaust stays `HELD`
 
 - **Severity:** P2
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/05-billing-ledger-refunds-disputes.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/235-credit-hold-unique`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 
