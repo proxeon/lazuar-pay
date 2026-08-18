@@ -208,6 +208,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 196 | B02-C17 | `fix/196-resume-period-end` | Resume sets CurrentPeriodEnd to the new next billing date |
 | 197 | B02-C18 | `fix/197-cycle-key-utc` | Cycle key / renewal checkout date are UTC calendar dates (documented SSoT) |
 | 198 | B02-C19 | `fix/198-no-plan-change-on-flagged` | Admin plan/qty change is refused when CancelAtPeriodEnd is set |
+| 199 | B02-C20 | `fix/199-sst-line-tax-ssot` | Same per-unit SST SSoT as 182 (33.33 × 3 tax 8.01, not 8.00) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
