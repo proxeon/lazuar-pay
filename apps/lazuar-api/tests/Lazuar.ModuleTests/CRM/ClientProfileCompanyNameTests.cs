@@ -49,7 +49,7 @@ public class ClientProfileCompanyNameTests
             OrganizationId = orgId,
             FullName = "Ada Buyer",
             Email = "ada@example.com",
-            Phone = "",
+            Phone = "60111111111",
             Tin = "IG999",
             CompanyName = null
         });
@@ -71,6 +71,43 @@ public class ClientProfileCompanyNameTests
     }
 
     [Test]
+    public async Task Resolve_SameEmail_DifferentPhone_KeepsTaxIdentitySeparate()
+    {
+        var orgId = Guid.CreateVersion7();
+        await using var db = CreateDb();
+        db.ClientProfiles.Add(new ClientProfileEntity
+        {
+            OrganizationId = orgId,
+            FullName = "First Buyer",
+            Email = "shared@example.com",
+            Phone = "60111111111",
+            Tin = "IG999",
+            IdType = "NRIC",
+            IdValue = "900101145678"
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new ResolveClientProfileCommandHandler(db);
+        var secondId = await handler.Handle(new ResolveClientProfileCommand(
+            orgId,
+            "Second Buyer",
+            "shared@example.com",
+            "60122222222",
+            Tin: "C111",
+            IdType: "BRN",
+            IdValue: "202401001234",
+            CompanyName: "Other Sdn Bhd"), CancellationToken.None);
+
+        var rows = await db.ClientProfiles.IgnoreQueryFilters().OrderBy(p => p.Phone).ToListAsync();
+        rows.Should().HaveCount(2);
+        rows[0].Tin.Should().Be("IG999");
+        rows[0].IdValue.Should().Be("900101145678");
+        rows[1].Id.Should().Be(secondId);
+        rows[1].Tin.Should().Be("C111");
+        rows[1].IdValue.Should().Be("202401001234");
+    }
+
+    [Test]
     public async Task Resolve_OverwritesPoisonedIdValue_WhenRequestProvidesIdPair()
     {
         var orgId = Guid.CreateVersion7();
@@ -80,7 +117,7 @@ public class ClientProfileCompanyNameTests
             OrganizationId = orgId,
             FullName = "Ada Buyer",
             Email = "ada@example.com",
-            Phone = "",
+            Phone = "60111111111",
             Tin = "C12345678901",
             CompanyName = "Acme Sdn Bhd",
             IdType = null,

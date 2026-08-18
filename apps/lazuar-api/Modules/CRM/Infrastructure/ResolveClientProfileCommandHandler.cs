@@ -22,21 +22,20 @@ public class ResolveClientProfileCommandHandler : ICommandHandler<ResolveClientP
         var emailNormalized = request.Email.Trim().ToLowerInvariant();
         var phoneNormalized = NormalizePhone(request.Phone);
 
-        // Retrieve existing profile across global filters using tenant isolation bypass
+        // Match the unique key (org, email, phone). Same inbox + different phone is
+        // a different buyer — do not merge tax identity onto the first TIN.
         var existingProfile = await _dbContext.ClientProfiles
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(p => p.OrganizationId == request.OrganizationId && p.Email == emailNormalized, cancellationToken);
+            .FirstOrDefaultAsync(
+                p => p.OrganizationId == request.OrganizationId
+                     && p.Email == emailNormalized
+                     && p.Phone == phoneNormalized,
+                cancellationToken);
 
         if (existingProfile != null)
         {
             bool isModified = false;
 
-            // Enrich existing profile with richer data provided during checkout
-            if (string.IsNullOrWhiteSpace(existingProfile.Phone) && !string.IsNullOrWhiteSpace(phoneNormalized))
-            {
-                existingProfile.Phone = phoneNormalized;
-                isModified = true;
-            }
             if (string.IsNullOrWhiteSpace(existingProfile.CompanyName) && !string.IsNullOrWhiteSpace(request.CompanyName))
             {
                 existingProfile.CompanyName = request.CompanyName.Trim();
@@ -47,18 +46,28 @@ public class ResolveClientProfileCommandHandler : ICommandHandler<ResolveClientP
                 existingProfile.Tin = request.Tin.Trim();
                 isModified = true;
             }
+
+            var incomingIdValue = string.IsNullOrWhiteSpace(request.IdValue) ? null : request.IdValue.Trim();
+            var poisonedIdValue = string.IsNullOrWhiteSpace(existingProfile.IdValue)
+                || (!string.IsNullOrWhiteSpace(existingProfile.CompanyName)
+                    && string.Equals(existingProfile.IdValue, existingProfile.CompanyName, StringComparison.Ordinal));
+
+            if (incomingIdValue is not null
+                && !string.Equals(existingProfile.IdValue, incomingIdValue, StringComparison.Ordinal)
+                && poisonedIdValue)
+            {
+                existingProfile.IdValue = incomingIdValue;
+                isModified = true;
+            }
+
             if (!string.IsNullOrWhiteSpace(request.IdType)
-                && !string.Equals(existingProfile.IdType, request.IdType, StringComparison.Ordinal))
+                && !string.Equals(existingProfile.IdType, request.IdType, StringComparison.Ordinal)
+                && (string.IsNullOrWhiteSpace(existingProfile.IdType) || poisonedIdValue))
             {
                 existingProfile.IdType = request.IdType;
                 isModified = true;
             }
-            if (!string.IsNullOrWhiteSpace(request.IdValue)
-                && !string.Equals(existingProfile.IdValue, request.IdValue, StringComparison.Ordinal))
-            {
-                existingProfile.IdValue = request.IdValue;
-                isModified = true;
-            }
+
             if (existingProfile.Address == null && request.BillingAddress != null)
             {
                 existingProfile.Address = new BillingAddress(

@@ -34,14 +34,16 @@ internal static class LhdnBuyerMapper
             Country_code = "MYS"
         };
 
-        var tin = FirstNonEmpty(profile?.Tin, display?.Tin);
+        // Checkout snapshot wins over a live CRM row that may belong to another
+        // buyer who previously used the same inbox.
+        var tin = FirstNonEmpty(display?.Tin, profile?.Tin);
         if (string.IsNullOrWhiteSpace(tin) || IsStubTin(tin))
             return false;
 
         buyerTin = tin;
-        buyerName = FirstNonEmpty(profile?.Company_name, display?.CompanyName, profile?.Full_name, display?.Name, "Customer");
+        buyerName = FirstNonEmpty(display?.CompanyName, display?.Name, profile?.Company_name, profile?.Full_name, "Customer");
 
-        var rawIdType = FirstNonEmpty(profile?.Id_type, display?.IdType);
+        var rawIdType = FirstNonEmpty(display?.IdType, profile?.Id_type);
         idType = rawIdType?.ToUpperInvariant() switch
         {
             "NRIC" => SubmitDocumentRequestDtoBuyer_id_type.NRIC,
@@ -49,27 +51,27 @@ internal static class LhdnBuyerMapper
             "ARMY" => SubmitDocumentRequestDtoBuyer_id_type.ARMY,
             _ => SubmitDocumentRequestDtoBuyer_id_type.BRN
         };
-        idValue = FirstNonEmpty(profile?.Id_value, display?.IdValue);
+        idValue = FirstNonEmpty(display?.IdValue, profile?.Id_value);
         if (string.IsNullOrWhiteSpace(idValue) || string.Equals(idValue, "NA", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var line1 = FirstNonEmpty(profile?.Billing_address?.Line1, display?.AddressLine1);
+        var line1 = FirstNonEmpty(display?.AddressLine1, profile?.Billing_address?.Line1);
         if (!string.IsNullOrWhiteSpace(line1))
         {
-            var state = FirstNonEmpty(profile?.Billing_address?.State_code, display?.StateCode) ?? "17";
+            var state = FirstNonEmpty(display?.StateCode, profile?.Billing_address?.State_code) ?? "17";
             if (!Enum.TryParse<LhdnAddressDtoState_code>("_" + state, out var stateCode))
                 stateCode = LhdnAddressDtoState_code._17;
 
             address = new LhdnAddressDto
             {
                 Line1 = line1,
-                Line2 = FirstNonEmpty(profile?.Billing_address?.Line2, display?.AddressLine2),
+                Line2 = FirstNonEmpty(display?.AddressLine2, profile?.Billing_address?.Line2),
                 Line3 = profile?.Billing_address?.Line3,
-                City = FirstNonEmpty(profile?.Billing_address?.City, display?.City, "NA"),
-                Postal_code = FirstNonEmpty(profile?.Billing_address?.Postal_code, display?.PostalCode, "00000"),
+                City = FirstNonEmpty(display?.City, profile?.Billing_address?.City, "NA"),
+                Postal_code = FirstNonEmpty(display?.PostalCode, profile?.Billing_address?.Postal_code, "00000"),
                 State_code = stateCode,
                 Country_code = Iso3166Country.NormalizeToAlpha3(
-                    FirstNonEmpty(profile?.Billing_address?.Country_code, display?.CountryCode, "MYS"))
+                    FirstNonEmpty(display?.CountryCode, profile?.Billing_address?.Country_code, "MYS"))
             };
         }
 
