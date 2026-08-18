@@ -133,6 +133,18 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
                                 _logger.LogWarning(ex, "Failed to fetch Stripe SetupIntent for payment method extraction.");
                             }
                         }
+
+                        // B04-P20: do not tell Commerce the seat is vaulted when we have no PM.
+                        // Verified=false so Stripe retries checkout.session.completed.
+                        if (string.IsNullOrWhiteSpace(paymentMethodId))
+                        {
+                            return RefuseSetupSessionWithoutToken(
+                                stripeEvent.Id,
+                                sessionCurrency,
+                                session.SetupIntentId ?? session.Id,
+                                meta,
+                                customerId);
+                        }
                     }
 
                     decimal netAmount = amount - gatewayFee;
@@ -292,6 +304,9 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
 
             if (TryMapRefundCompleted(stripeEvent) is { } refundParsed)
                 return refundParsed;
+
+            if (TryMapSetupIntentSucceeded(stripeEvent) is { } setupParsed)
+                return setupParsed;
 
             return new GatewayWebhookParsedResult(true, stripeEvent.Type, stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "", null);
         }
@@ -610,6 +625,46 @@ public class StripeGatewayAdapter : IPaymentGatewayAdapter
     /// Setup-mode <c>checkout.session.completed</c> has a SetupIntent and no PaymentIntent.
     /// Customer + PM may already be expanded on the event object.
     /// </summary>
+    internal static GatewayWebhookParsedResult? TryMapSetupIntentSucceeded(Event stripeEvent)
+    {
+        if (stripeEvent.Type != "setup_intent.succeeded")
+        {
+            return null;
+        }
+
+        if (stripeEvent.Data.Object is not SetupIntent si)
+        {
+            return new GatewayWebhookParsedResult(
+                false, "PAYMENT_COMPLETED", stripeEvent.Id, 0, "", null, new(), 0, 0, 0, 1, "",
+                "setup_intent.succeeded without a SetupIntent object.");
+        }
+
+        var token = si.PaymentMethodId;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return new GatewayWebhookParsedResult(
+                false, "PAYMENT_COMPLETED", stripeEvent.Id, 0, "", si.Id, new(), 0, 0, 0, 1, "",
+                "setup_intent.succeeded missing payment method.",
+                si.CustomerId, null);
+        }
+
+        var meta = si.Metadata != null ? new Dictionary<string, string>(si.Metadata) : new Dictionary<string, string>();
+        return new GatewayWebhookParsedResult(
+            true, "PAYMENT_COMPLETED", stripeEvent.Id, 0, "", si.Id, meta, 0, 0, 0, 1, "",
+            null, si.CustomerId, token);
+    }
+
+    internal static GatewayWebhookParsedResult RefuseSetupSessionWithoutToken(
+        string eventId,
+        string? currency,
+        string? transactionId,
+        Dictionary<string, string> meta,
+        string? customerId) =>
+        new(
+            false, "PAYMENT_COMPLETED", eventId, 0, currency ?? "", transactionId, meta, 0, 0, 0, 1, currency ?? "",
+            "Setup session missing payment method.",
+            customerId, null);
+
     internal static void ReadSetupSessionVaultIds(
         Session session,
         ref string? customerId,

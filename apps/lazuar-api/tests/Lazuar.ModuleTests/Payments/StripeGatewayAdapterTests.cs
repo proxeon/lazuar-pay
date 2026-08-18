@@ -472,6 +472,74 @@ public class StripeGatewayAdapterTests
     }
 
     [Test]
+    public void ReadSetupSessionVaultIds_UnexpandedSetupIntent_LeavesPaymentMethodEmpty()
+    {
+        var session = new Session
+        {
+            Id = "cs_setup_str",
+            CustomerId = null,
+            SetupIntentId = "seti_unexpanded",
+            SetupIntent = null
+        };
+
+        string? customerId = session.CustomerId;
+        string? paymentMethodId = null;
+        StripeGatewayAdapter.ReadSetupSessionVaultIds(session, ref customerId, ref paymentMethodId);
+
+        paymentMethodId.Should().BeNull();
+        var refused = StripeGatewayAdapter.RefuseSetupSessionWithoutToken(
+            "evt_cs_setup_str", "MYR", session.SetupIntentId, new Dictionary<string, string>(), customerId);
+
+        refused.Verified.Should().BeFalse();
+        refused.EventType.Should().Be("PAYMENT_COMPLETED");
+        refused.GatewayTokenId.Should().BeNull();
+        refused.Error.Should().Contain("payment method");
+    }
+
+    [Test]
+    public async Task ParseWebhook_SetupIntentSucceeded_ExtractsPaymentMethod()
+    {
+        var json = SetupIntentSucceededJson("evt_seti_ok", "seti_ok", "cus_ok", "pm_ok");
+        var adapter = new StripeGatewayAdapter(NullLogger<StripeGatewayAdapter>.Instance);
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Stripe-Signature"] = SignStripe(json, WebhookSecret)
+        };
+
+        var result = await adapter.ParseWebhookAsync("sk_test", WebhookSecret, json, headers);
+
+        result.Verified.Should().BeTrue();
+        result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.EventId.Should().Be("evt_seti_ok");
+        result.GatewayTransactionId.Should().Be("seti_ok");
+        result.AmountPaid.Should().Be(0m);
+        result.GatewayCustomerId.Should().Be("cus_ok");
+        result.GatewayTokenId.Should().Be("pm_ok");
+    }
+
+    [Test]
+    public void TryMapSetupIntentSucceeded_MissingPaymentMethod_IsNotVerified()
+    {
+        var stripeEvent = new Event
+        {
+            Id = "evt_seti_bare",
+            Type = "setup_intent.succeeded",
+            Data = new EventData
+            {
+                Object = new SetupIntent { Id = "seti_bare", CustomerId = "cus_bare" }
+            }
+        };
+
+        var result = StripeGatewayAdapter.TryMapSetupIntentSucceeded(stripeEvent);
+
+        result.Should().NotBeNull();
+        result!.Verified.Should().BeFalse();
+        result.EventType.Should().Be("PAYMENT_COMPLETED");
+        result.GatewayTokenId.Should().BeNull();
+        result.Error.Should().Contain("payment method");
+    }
+
+    [Test]
     public void ReadSetupSessionVaultIds_WhenSetupIntentAndNoPi_ExtractsCustomerAndPaymentMethod()
     {
         var session = new Session
@@ -609,6 +677,32 @@ public class StripeGatewayAdapterTests
                 "payment_method": "{{paymentMethodId}}",
                 "status": "succeeded"
               },
+              "metadata": {}
+            }
+          }
+        }
+        """;
+
+    private static string SetupIntentSucceededJson(
+        string eventId,
+        string setupIntentId,
+        string customerId,
+        string paymentMethodId) =>
+        $$"""
+        {
+          "id": "{{eventId}}",
+          "object": "event",
+          "api_version": "{{StripeApiVersion}}",
+          "request": null,
+          "type": "setup_intent.succeeded",
+          "data": {
+            "object": {
+              "id": "{{setupIntentId}}",
+              "object": "setup_intent",
+              "customer": "{{customerId}}",
+              "payment_method": "{{paymentMethodId}}",
+              "status": "succeeded",
+              "currency": "myr",
               "metadata": {}
             }
           }
