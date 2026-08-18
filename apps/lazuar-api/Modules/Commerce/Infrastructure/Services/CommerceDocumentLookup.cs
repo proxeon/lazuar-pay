@@ -67,7 +67,7 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
 
         // L-05: commerce-owned SQL only; CRM name/email via ICrmQueryService (no crm JOIN).
         const string sql = @"
-            SELECT c.""AdHocLineItems"", c.""ClientProfileId"", c.""DocumentNumber""
+            SELECT c.""AdHocLineItems"", c.""ClientProfileId"", c.""DocumentNumber"", c.""CreatedAt""
             FROM commerce.""CheckoutSessions"" c
             WHERE c.""Id"" = @SessionId AND c.""OrganizationId"" = @OrgId
             LIMIT 1";
@@ -77,16 +77,18 @@ public class CommerceDocumentLookup : ICommerceDocumentLookup
         if (sessionData == null) return null;
 
         Guid clientProfileId = sessionData.ClientProfileId;
-        var profile = clientProfileId != Guid.Empty
-            ? await _crmQueryService.GetClientProfileAsync(organizationId, clientProfileId)
+        var customer = clientProfileId != Guid.Empty
+            ? await FromCrmAsync(organizationId, clientProfileId)
             : null;
 
         // Former LEFT JOIN semantics: missing profile → defaults.
         return new DraftCheckoutSessionDisplay(
-            CustomerName: profile?.Full_name ?? "Customer",
-            CustomerEmail: profile?.Email ?? "",
+            CustomerName: customer?.Name ?? "Customer",
+            CustomerEmail: customer?.Email ?? "",
             AdHocLineItemsJson: (string?)sessionData.AdHocLineItems,
-            DocumentNumber: (string?)sessionData.DocumentNumber);
+            DocumentNumber: (string?)sessionData.DocumentNumber,
+            CreatedAt: (DateTime?)sessionData.CreatedAt,
+            Customer: customer);
     }
 
     public async Task<CommerceCustomerDisplay?> GetCustomerForDocumentAsync(

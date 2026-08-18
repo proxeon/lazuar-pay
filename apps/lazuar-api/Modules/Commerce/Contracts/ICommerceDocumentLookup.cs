@@ -69,4 +69,6 @@ public record DraftCheckoutSessionDisplay(
     string CustomerName,
     string CustomerEmail,
     string? AdHocLineItemsJson,
-    string? DocumentNumber = null);
+    string? DocumentNumber = null,
+    DateTime? CreatedAt = null,
+    CommerceCustomerDisplay? Customer = null);

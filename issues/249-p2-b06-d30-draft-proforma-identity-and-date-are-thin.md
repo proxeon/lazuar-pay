@@ -2,7 +2,8 @@
 number: "249"
 id: B06-D30
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/249-draft-proforma-identity
 source: plans/009-bugs/06-lhdn-invoices-documents.md
 head: "297ba98"
 ---
@@ -92,4 +93,8 @@ Widen `DraftCheckoutSessionDisplay` to pass CRM TIN/company/address already load
 
 ### Evaluation notes
 034 fixed QuoteView/hop-2 SST, not this PDF. 013 is the paid-document identity sibling. 229 is UTC numbering, not draft issue date. Still P2 as a thin proforma; SST draft mismatch is the sharpest leftover. Not blocked.
+
+## Resolution
+
+Draft DTO carries CRM identity + session `CreatedAt`. Proforma date is session created-at. Exclusive 8% SST applies when the merchant billing profile has an SST id (same as hop-2 custom quote). Currency stays MYR. CreateQuoteModal remains net.
 

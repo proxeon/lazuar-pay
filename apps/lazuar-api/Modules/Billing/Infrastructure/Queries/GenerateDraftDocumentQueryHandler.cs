@@ -9,6 +9,7 @@ using BuildingBlocks.Application;
 using Microsoft.EntityFrameworkCore;
 using Modules.Billing.Application.Queries;
 using Modules.Billing.Contracts;
+using Modules.Billing.Domain.Aggregates;
 using Modules.Billing.Infrastructure.Documents;
 using Modules.Commerce.Contracts;
 using Modules.One.Contracts;
@@ -63,27 +64,46 @@ public class GenerateDraftDocumentQueryHandler : IQueryHandler<GenerateDraftDocu
             ? sessionData.DocumentNumber
             : DocumentSeries.CustomerFacingNumber(null, null);
 
-        var customer = new CommerceCustomerDisplay(
+        var customer = sessionData.Customer ?? new CommerceCustomerDisplay(
             sessionData.CustomerName ?? "Customer",
             sessionData.CustomerEmail ?? "");
 
         var model = InvoiceDocumentFactory.CreateHeader(
             "Proforma Invoice",
             quoteNumber,
-            DateTime.UtcNow,
+            ResolveDraftIssueDate(sessionData.CreatedAt, DateTime.UtcNow),
             profile,
             workspace,
             customer,
             logoBytes);
+        // Quotes are MYR-only today; do not invent FX on the draft.
         model.Currency = "MYR";
         model.LineItems = lineItems
             .Select(li => new InvoiceLineItemModel { Description = li.Description, Amount = li.UnitPrice * li.Quantity })
             .ToList();
 
-        model.Subtotal = model.LineItems.Sum(x => x.Amount);
-        model.Total = model.Subtotal;
+        ApplyDraftTotals(model, MerchantHasSst(profile));
 
         var pdfDocument = new BaseInvoiceDocument(model);
         return pdfDocument.GeneratePdf();
+    }
+
+    internal static DateTime ResolveDraftIssueDate(DateTime? sessionCreatedAt, DateTime utcNow) =>
+        sessionCreatedAt ?? utcNow;
+
+    internal static bool MerchantHasSst(TenantBillingProfile? profile) =>
+        !string.IsNullOrWhiteSpace(profile?.SstRegistrationNumber);
+
+    /// <summary>Same exclusive 8% SST as hop-2 <c>CustomQuoteBreakdown</c> (one unit = quote net).</summary>
+    internal static void ApplyDraftTotals(InvoiceDocumentModel model, bool merchantHasSst)
+    {
+        model.Subtotal = model.LineItems.Sum(x => x.Amount);
+        if (merchantHasSst && model.Subtotal > 0)
+        {
+            model.Tax = Math.Round(model.Subtotal * 0.08m, 2, MidpointRounding.AwayFromZero);
+            model.TaxLabel = "SST (8%):";
+        }
+
+        model.Total = model.Subtotal + model.Tax;
     }
 }
