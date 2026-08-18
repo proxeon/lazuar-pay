@@ -269,6 +269,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 257 | B07-I09 | `fix/257-team-pending-invites` | Team page lists and revokes pending invitations |
 | 258 | B07-I14 | `fix/258-register-invite-copy` | Invite signup no longer says Create workspace (user-only register stays) |
 | 259 | B07-I15 | `fix/259-register-role-honesty` | Register JSON role is JWT CLIENT, not membership ADMIN |
+| 260 | B07-I16 | `fix/260-slug-unique-update` | Workspace slug update checks uniqueness; unique races are 400 taken |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

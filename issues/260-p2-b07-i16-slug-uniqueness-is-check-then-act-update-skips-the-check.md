@@ -2,7 +2,8 @@
 number: "260"
 id: B07-I16
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/260-slug-unique-update
 source: plans/009-bugs/07-one-identity-invites-keys.md
 head: "297ba98"
 ---
@@ -96,4 +97,8 @@ Merchants renaming or signing up for a popular slug. Not IDOR, not PII. After **
 
 ### Evaluation notes
 Still P2. **122** removed the leak the audit paired with this (B07-I19); the race and the update hole remain. Provision slug loop is a sibling, not a fix. Not blocked. Not 161–200 fail-closed.
+
+## Resolution
+
+`UpdateWorkspace` checks uniqueness ignoring this org before SaveChanges. Unique-index races on slug map to the same “already taken” InvalidOperation (400), not a generic 500. Unique index stays.
 

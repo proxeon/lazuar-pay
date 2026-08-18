@@ -41,6 +41,11 @@ public class OneRepository : IOneRepository
         return !await _context.Organizations.AnyAsync(o => o.Slug == slug, ct);
     }
 
+    public async Task<bool> IsSlugUniqueExceptAsync(string slug, Guid organizationId, CancellationToken ct = default)
+    {
+        return !await _context.Organizations.AnyAsync(o => o.Slug == slug && o.Id != organizationId, ct);
+    }
+
     public void AddTenantMembership(TenantMembership membership) => _context.TenantMemberships.Add(membership);
 
     public void RemoveTenantMembership(TenantMembership membership) => _context.TenantMemberships.Remove(membership);
@@ -189,6 +194,13 @@ public class OneRepository : IOneRepository
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (WorkspaceSlug.LooksLikeUniqueViolation(ex))
+        {
+            throw new InvalidOperationException(WorkspaceSlug.TakenMessage, ex);
+        }
     }
 }

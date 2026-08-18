@@ -13,6 +13,7 @@ public interface IOneRepository
     Task<Organization?> GetOrganizationByIdAsync(Guid id, CancellationToken ct = default);
     Task<Organization?> GetByExternalRefAsync(string product, string externalOrgId, CancellationToken ct = default);
     Task<bool> IsSlugUniqueAsync(string slug, CancellationToken ct = default);
+    Task<bool> IsSlugUniqueExceptAsync(string slug, Guid organizationId, CancellationToken ct = default);
 
     void AddTenantMembership(TenantMembership membership);
     void RemoveTenantMembership(TenantMembership membership);

@@ -43,4 +43,24 @@ public class UpdateWorkspaceCommandHandlerTests
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.Handle(new UpdateWorkspaceCommand(orgId, userId, "Nope", "nope"), CancellationToken.None));
     }
+
+    [Test]
+    public void Taken_Slug_Throws_Before_Save()
+    {
+        var orgId = Guid.CreateVersion7();
+        var userId = Guid.CreateVersion7();
+        var org = new Organization("Acme", "acme-own");
+        var repo = Substitute.For<IOneRepository>();
+        repo.GetMembershipAsync(userId, orgId, Arg.Any<CancellationToken>())
+            .Returns(new TenantMembership(userId, orgId, "ADMIN"));
+        repo.GetOrganizationByIdAsync(orgId, Arg.Any<CancellationToken>()).Returns(org);
+        repo.IsSlugUniqueExceptAsync("taken", org.Id, Arg.Any<CancellationToken>()).Returns(false);
+
+        var handler = new UpdateWorkspaceCommandHandler(repo);
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(() =>
+            handler.Handle(new UpdateWorkspaceCommand(orgId, userId, "Acme", "taken"), CancellationToken.None));
+
+        Assert.That(ex!.Message, Does.Contain("already taken"));
+        repo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
 }

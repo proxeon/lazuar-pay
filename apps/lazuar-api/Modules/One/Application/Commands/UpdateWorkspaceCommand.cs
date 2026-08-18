@@ -43,6 +43,13 @@ public class UpdateWorkspaceCommandHandler : ICommandHandler<UpdateWorkspaceComm
             throw new InvalidOperationException("Workspace not found.");
         }
 
+        var nextSlug = request.Slug.Trim().ToLowerInvariant();
+        if (!string.Equals(organization.Slug, nextSlug, StringComparison.Ordinal)
+            && !await _repository.IsSlugUniqueExceptAsync(nextSlug, organization.Id, ct))
+        {
+            throw new InvalidOperationException("The requested workspace slug is already taken. Please choose another.");
+        }
+
         organization.UpdateDetails(request.Name, request.Slug);
         if (request.UpdateBranding)
         {
