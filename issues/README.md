@@ -198,6 +198,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 186 | B01-C16 | `fix/186-custom-quote-currency` | Custom quotes persist ISO currency and pass it to hop-2 / mark-paid |
 | 187 | B01-C17 | `fix/187-release-coupon-on-fail` | Hop-2 PAYMENT_FAILED releases the coupon and expires the OPEN session |
 | 188 | B01-C18 | `fix/188-onetime-price-not-catalog-interval` | Open checkout / mark-paid / zero-amount key off the paid price interval |
+| 189 | B01-C19 | `fix/189-session-coupon-ignore-filters` | Session/coupon by-id already IgnoreQueryFilters + org (163/164) |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
