@@ -63,6 +63,15 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Product>> ListProductsAsync(Guid organizationId, CancellationToken ct = default)
+    {
+        return await _context.Products
+            .IgnoreQueryFilters()
+            .Include(p => p.Prices)
+            .Where(p => p.OrganizationId == organizationId)
+            .ToListAsync(ct);
+    }
+
     public async Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default)
     {
         return await _context.Products

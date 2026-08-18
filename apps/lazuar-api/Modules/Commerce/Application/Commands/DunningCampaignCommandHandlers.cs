@@ -157,9 +157,16 @@ public class GenerateDefaultDunningCampaignsCommandHandler : ICommandHandler<Gen
             "Still unpaid. [Pay this cycle]({{renewal_link}})",
             null);
 
-        // Billing owns attempt 1; dunning retries before grace 7. Billplz products skip via capabilities.
-        campaign.AddStep(1, "AUTO_CHARGE", null, null, null);
-        campaign.AddStep(5, "AUTO_CHARGE", null, null, null);
+        // Billing owns attempt 1; dunning retries before grace 7.
+        // Billplz-only catalogs must not seed AUTO_CHARGE (B03-C22).
+        var products = await _repository.ListProductsAsync(request.OrganizationId, ct);
+        var canAutoCharge = products.Count == 0
+            || products.Any(p => Modules.Payments.Contracts.PaymentGatewayCapabilities.SupportsOffSession(p.GatewayName));
+        if (canAutoCharge)
+        {
+            campaign.AddStep(1, "AUTO_CHARGE", null, null, null);
+            campaign.AddStep(5, "AUTO_CHARGE", null, null, null);
+        }
 
         _repository.AddDunningCampaign(campaign);
         await _repository.SaveChangesAsync(ct);

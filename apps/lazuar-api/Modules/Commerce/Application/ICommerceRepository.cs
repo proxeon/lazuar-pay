@@ -11,6 +11,7 @@ public interface ICommerceRepository
 {
     Task<Product?> GetProductByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<Product>> GetProductsByIdsAsync(Guid organizationId, IEnumerable<Guid> ids, CancellationToken ct = default);
+    Task<IReadOnlyList<Product>> ListProductsAsync(Guid organizationId, CancellationToken ct = default);
     Task<Product?> GetProductBySlugAsync(Guid organizationId, string slug, CancellationToken ct = default);
     Task<Coupon?> GetCouponByIdAsync(Guid organizationId, Guid id, CancellationToken ct = default);
     Task<Coupon?> GetCouponByCodeAsync(Guid organizationId, string code, CancellationToken ct = default);

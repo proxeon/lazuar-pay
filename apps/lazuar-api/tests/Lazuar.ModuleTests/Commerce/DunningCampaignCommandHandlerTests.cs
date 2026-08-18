@@ -76,12 +76,29 @@ public class DunningCampaignCommandHandlerTests
     {
         var orgId = Guid.CreateVersion7();
         var repo = Substitute.For<ICommerceRepository>();
+        repo.ListProductsAsync(orgId, Arg.Any<CancellationToken>()).Returns(new List<Product>());
         var handler = new CreateDunningCampaignCommandHandler(repo);
 
         await handler.Handle(CreateCommand(orgId, null, null), CancellationToken.None);
 
         repo.Received(1).AddDunningCampaign(Arg.Any<DunningCampaign>());
-        await repo.DidNotReceive().GetProductsByIdsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>());
+        await repo.Received(1).ListProductsAsync(orgId, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task Create_AutoCharge_NoProductFilter_AllBillplz_Throws()
+    {
+        var orgId = Guid.CreateVersion7();
+        var billplz = Product(orgId, "BILLPLZ");
+        var repo = Substitute.For<ICommerceRepository>();
+        repo.ListProductsAsync(orgId, Arg.Any<CancellationToken>()).Returns(new List<Product> { billplz });
+        var handler = new CreateDunningCampaignCommandHandler(repo);
+
+        var act = () => handler.Handle(CreateCommand(orgId, null, null), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<BusinessRuleValidationException>())
+            .WithMessage("*AUTO_CHARGE is not available*");
+        repo.DidNotReceive().AddDunningCampaign(Arg.Any<DunningCampaign>());
     }
 
     [Test]
@@ -90,6 +107,7 @@ public class DunningCampaignCommandHandlerTests
         var orgId = Guid.CreateVersion7();
         var repo = Substitute.For<ICommerceRepository>();
         repo.HasAnyDunningCampaignAsync(orgId, Arg.Any<CancellationToken>()).Returns(false, true);
+        repo.ListProductsAsync(orgId, Arg.Any<CancellationToken>()).Returns(new List<Product>());
 
         DunningCampaign? saved = null;
         repo.When(r => r.AddDunningCampaign(Arg.Any<DunningCampaign>()))
@@ -123,6 +141,27 @@ public class DunningCampaignCommandHandlerTests
         saved.Steps.Should().Contain(s => s.DayOffset == 5 && s.ActionType == "AUTO_CHARGE");
         repo.Received(1).AddDunningCampaign(Arg.Any<DunningCampaign>());
         await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task GenerateDefaults_BillplzOnlyOrg_OmitsAutoCharge()
+    {
+        var orgId = Guid.CreateVersion7();
+        var repo = Substitute.For<ICommerceRepository>();
+        repo.HasAnyDunningCampaignAsync(orgId, Arg.Any<CancellationToken>()).Returns(false);
+        repo.ListProductsAsync(orgId, Arg.Any<CancellationToken>())
+            .Returns(new List<Product> { Product(orgId, "BILLPLZ") });
+
+        DunningCampaign? saved = null;
+        repo.When(r => r.AddDunningCampaign(Arg.Any<DunningCampaign>()))
+            .Do(ci => saved = ci.Arg<DunningCampaign>());
+
+        var handler = new GenerateDefaultDunningCampaignsCommandHandler(repo);
+        await handler.Handle(new GenerateDefaultDunningCampaignsCommand(orgId), CancellationToken.None);
+
+        saved.Should().NotBeNull();
+        saved!.Steps.Should().NotContain(s => s.ActionType == "AUTO_CHARGE");
+        saved.Steps.Should().Contain(s => s.ActionType == "EMAIL");
     }
 
     [Test]
