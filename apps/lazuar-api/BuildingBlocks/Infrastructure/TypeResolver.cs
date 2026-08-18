@@ -4,31 +4,36 @@ namespace BuildingBlocks.Infrastructure;
 
 public static class TypeResolver
 {
-    private static readonly ConcurrentDictionary<string, Type?> TypeCache = new();
+    private static readonly ConcurrentDictionary<string, Type> TypeCache = new();
 
     public static Type? Resolve(string typeName)
     {
-        return TypeCache.GetOrAdd(typeName, name =>
+        if (TypeCache.TryGetValue(typeName, out var cached))
         {
-            // Attempt standard type resolution (works for AssemblyQualifiedName)
-            var resolvedType = Type.GetType(name);
-            if (resolvedType != null)
-            {
-                return resolvedType;
-            }
+            return cached;
+        }
 
-            // Fallback: search loaded assemblies for full name or short name match
-            var cleanName = name.Split(',')[0].Trim(); // Strip assembly details
+        var resolvedType = Type.GetType(typeName);
+        if (resolvedType == null)
+        {
+            var cleanName = typeName.Split(',')[0].Trim();
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 resolvedType = assembly.GetType(cleanName);
                 if (resolvedType != null)
                 {
-                    return resolvedType;
+                    break;
                 }
             }
+        }
 
-            return null;
-        });
+        if (resolvedType != null)
+        {
+            TypeCache.TryAdd(typeName, resolvedType);
+        }
+
+        return resolvedType;
     }
+
+    internal static bool IsCached(string typeName) => TypeCache.ContainsKey(typeName);
 }

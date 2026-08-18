@@ -2,7 +2,8 @@
 number: "162"
 id: B10-X06
 severity: P1
-status: open
+status: resolved
+resolved_branch: fix/162-typeresolver-null-cache
 source: plans/009-bugs/10-tenancy-workers-contracts-tests.md
 head: "297ba98"
 ---
@@ -10,9 +11,10 @@ head: "297ba98"
 # 162 — B10-X06 — `TypeResolver` caches null for the process lifetime
 
 - **Severity:** P1
-- **Status:** open
+- **Status:** resolved
 - **Source:** `plans/009-bugs/10-tenancy-workers-contracts-tests.md`
 - **HEAD:** `297ba98` (`feat/007-waves-1-4-implement`)
+- **Resolved on:** `fix/162-typeresolver-null-cache`
 
 Extracted from the 17 August 2026 bug audit. Resolve this issue on its own. Do not edit other issue files while fixing this one.
 

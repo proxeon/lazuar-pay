@@ -171,6 +171,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 159 | B09-U30 | `fix/159-accept-invite-5xx` | Accept-invite 5xx is a retry, not “already accepted” |
 | 160 | B10-X04 | `fix/160-inbox-non-notification` | Inbox fails a row that is not INotification instead of marking success |
 | 161 | B10-X05 | `fix/161-eventbus-no-handlers` | Outbox publish throws when an event has no Subscribe handlers |
+| 162 | B10-X06 | `fix/162-typeresolver-null-cache` | TypeResolver does not cache a miss for the process lifetime |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
