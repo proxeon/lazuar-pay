@@ -50,4 +50,32 @@ public class CommerceRepositoryWorkerLookupTests
         Assert.That(await repo.HasSubscriptionsAssignedToCampaignAsync(orgId, campaign.Id), Is.True);
         Assert.That(await repo.GetOrderByIdAsync(Guid.CreateVersion7(), order.Id), Is.Null);
     }
+
+    [Test]
+    public async Task NewestSubscriptionForClient_PrefersLiveOverNewerCanceled_AndSkipsPending()
+    {
+        var orgId = Guid.CreateVersion7();
+        var clientId = Guid.CreateVersion7();
+        var options = new DbContextOptionsBuilder<CommerceDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var ctx = new FakeExecutionContextAccessor { TenantId = Guid.Empty };
+        await using var db = new CommerceDbContext(options, ctx, Substitute.For<IMediator>(), new DatabaseJobTrigger());
+        var repo = new CommerceRepository(db);
+
+        var live = new Subscription(orgId, clientId, Guid.CreateVersion7());
+        live.Activate(DateTime.UtcNow, DateTime.UtcNow.AddDays(30));
+        var canceled = new Subscription(orgId, clientId, Guid.CreateVersion7());
+        canceled.Activate(DateTime.UtcNow, DateTime.UtcNow.AddDays(30));
+        canceled.Cancel();
+        var pending = new Subscription(orgId, clientId, Guid.CreateVersion7());
+
+        db.Subscriptions.AddRange(live, canceled, pending);
+        await db.SaveChangesAsync();
+
+        var newest = await repo.GetNewestSubscriptionForClientAsync(orgId, clientId);
+        Assert.That(newest, Is.Not.Null);
+        Assert.That(newest!.Id, Is.EqualTo(live.Id));
+        Assert.That(newest.Status, Is.EqualTo("ACTIVE"));
+    }
 }

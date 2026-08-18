@@ -220,6 +220,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 208 | B03-C20 | `fix/208-expired-card-is-hard` | expired_card / invalid expiry are HARD; CHIP-shaped codes stay soft |
 | 209 | B03-C21 | `fix/209-pending-charge-timeout` | PENDING ChargeAttempt older than 24h times out so AUTO_CHARGE can retry |
 | 210 | B03-C22 | `fix/210-autocharge-billplz-orgwide` | Org-wide AUTO_CHARGE refused when every product is reminder-only |
+| 211 | B03-C23 | `fix/211-newest-sub-status-filter` | Magic-link subject prefers live seats over newer CANCELED/PENDING |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

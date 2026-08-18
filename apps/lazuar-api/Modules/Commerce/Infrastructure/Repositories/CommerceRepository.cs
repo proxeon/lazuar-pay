@@ -153,10 +153,14 @@ public class CommerceRepository : ICommerceRepository, ICommerceTransactional
         Guid clientProfileId,
         CancellationToken ct = default)
     {
+        // PENDING is not a seat. Prefer live statuses over a newer CANCELED row (B03-C23).
         return await _context.Subscriptions
             .IgnoreQueryFilters()
-            .Where(s => s.OrganizationId == organizationId && s.ClientProfileId == clientProfileId)
-            .OrderByDescending(s => s.CreatedAt)
+            .Where(s => s.OrganizationId == organizationId
+                && s.ClientProfileId == clientProfileId
+                && s.Status != "PENDING")
+            .OrderByDescending(s => s.Status != "CANCELED")
+            .ThenByDescending(s => s.CreatedAt)
             .ThenByDescending(s => s.Id)
             .FirstOrDefaultAsync(ct);
     }
