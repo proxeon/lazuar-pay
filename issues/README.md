@@ -166,6 +166,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 154 | B09-U25 | `fix/154-role-gated-buttons` | Anonymize, Invite, and Save credentials only show for ADMIN |
 | 155 | B09-U26 | `fix/155-subscribers-pagination` | Subscribers have Prev/Next; status is filtered server-side |
 | 156 | B09-U27 | `fix/156-catchall-404` | Unknown ops/admin paths are 404, not a silent dashboard redirect |
+| 157 | B09-U28 | `fix/157-portal-plan-trialing` | Trial buyers can change plan on the portal, same as ops |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

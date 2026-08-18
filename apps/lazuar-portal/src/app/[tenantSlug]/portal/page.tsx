@@ -140,10 +140,10 @@ export default async function AggregatedPortalPage({
                         Cancel at period end keeps access until {paidThrough}. No further charges after that.
                       </p>
                     )}
-                    {isHealthyActive && token && (
+                    {isActiveOrTrialing && !sub.cancel_at_period_end && (
                       <PortalPlanChange
                         tenantSlug={tenantSlug}
-                        token={token}
+                        token={accessToken}
                         subscriptionId={sub.id}
                         paidThrough={sub.current_period_end}
                         pendingProductName={sub.pending_product_name}
