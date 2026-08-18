@@ -116,20 +116,11 @@ public class CommunicationsQueryService : ICommunicationsQueryService
 
     public async Task<bool> HasValidEmailConfigAsync(Guid tenantId)
     {
-        using var connection = _connectionFactory.CreateConnection();
-        if (connection.State != ConnectionState.Open) connection.Open();
-
-        const string sql = @"
-            SELECT 1 
-            FROM communications.""TenantEmailConfigurations"" 
-            WHERE ""OrganizationId"" = @TenantId 
-              AND ""IsActive"" = true 
-              AND ""ApiKey"" IS NOT NULL AND ""ApiKey"" != ''
-              AND ""SenderEmail"" IS NOT NULL AND ""SenderEmail"" != ''
-            LIMIT 1";
-
-        var result = await connection.QuerySingleOrDefaultAsync<int?>(sql, new { TenantId = tenantId });
-        return result.HasValue;
+        var creds = await GetEmailConfigCredentialsAsync(tenantId);
+        return creds is not null
+            && creds.IsActive
+            && !string.IsNullOrWhiteSpace(creds.SenderEmail)
+            && !string.IsNullOrWhiteSpace(creds.ApiKey);
     }
 
     public async Task<EmailConfigDto?> GetEmailConfigAsync(Guid tenantId)
@@ -186,15 +177,9 @@ public class CommunicationsQueryService : ICommunicationsQueryService
         var result = await connection.QuerySingleOrDefaultAsync<RawEmailConfig>(sql, new { TenantId = tenantId });
         if (result == null || string.IsNullOrWhiteSpace(result.ApiKey)) return null;
 
-        string plainKey;
-        try
+        if (!TenantEmailKey.TryResolve(_secretVault, result.ApiKey, out var plainKey))
         {
-            plainKey = _secretVault.Decrypt(result.ApiKey);
-        }
-        catch
-        {
-            // Backward-compat: treat unencrypted legacy rows as plaintext until re-saved.
-            plainKey = result.ApiKey;
+            return null;
         }
 
         return new TenantEmailCredentials(plainKey, result.SenderEmail, result.IsActive);
