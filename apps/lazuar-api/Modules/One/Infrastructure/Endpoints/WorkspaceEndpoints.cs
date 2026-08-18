@@ -48,9 +48,11 @@ public static class WorkspaceEndpoints
         }).RequireAuthorization();
 
         group.MapPut("/workspaces/{id:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (
-            Guid id, UpdateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+            Guid id, UpdateWorkspaceRequestDto req, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
 
             await mediator.Send(new UpdateWorkspaceCommand(
                 id,
@@ -64,9 +66,11 @@ public static class WorkspaceEndpoints
         }).RequireAuthorization();
 
         group.MapDelete("/workspaces/{id:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (
-            Guid id, IExecutionContextAccessor ctx, IMediator mediator) =>
+            Guid id, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
         {
             if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
 
             await mediator.Send(new ArchiveWorkspaceCommand(id, ctx.UserId));
             return TypedResults.Ok(new StatusResponse { Status = "archived" });
@@ -90,8 +94,11 @@ public static class WorkspaceEndpoints
             return TypedResults.Ok((ICollection<WorkspaceMemberDto>)dtos);
         }).RequireAuthorization();
 
-        group.MapPost("/workspaces/{id:guid}/invites", async Task<Ok<IdResponse>> (Guid id, CreateWorkspaceInvitationDto req, IExecutionContextAccessor ctx, IMediator mediator) =>
+        group.MapPost("/workspaces/{id:guid}/invites", async Task<Results<Ok<IdResponse>, UnauthorizedHttpResult>> (Guid id, CreateWorkspaceInvitationDto req, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
         {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
             var inviteId = await mediator.Send(new InviteUserToWorkspaceCommand(id, ctx.UserId, req.Email, req.Role));
             return TypedResults.Ok(new IdResponse { Id = inviteId.ToString() });
         }).RequireAuthorization("OrgAdmin");
@@ -106,14 +113,20 @@ public static class WorkspaceEndpoints
             return TypedResults.Ok((ICollection<WorkspaceInvitationDto>)dtos);
         }).RequireAuthorization();
 
-        group.MapDelete("/workspaces/{id:guid}/invites/{inviteId:guid}", async Task<Ok<StatusResponse>> (Guid id, Guid inviteId, IExecutionContextAccessor ctx, IMediator mediator) =>
+        group.MapDelete("/workspaces/{id:guid}/invites/{inviteId:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, Guid inviteId, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
         {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
             await mediator.Send(new RevokeWorkspaceInvitationCommand(id, ctx.UserId, inviteId));
             return TypedResults.Ok(new StatusResponse { Status = "revoked" });
         }).RequireAuthorization("OrgAdmin");
 
-        group.MapDelete("/workspaces/{id:guid}/members/{userId:guid}", async Task<Ok<StatusResponse>> (Guid id, Guid userId, IExecutionContextAccessor ctx, IMediator mediator) =>
+        group.MapDelete("/workspaces/{id:guid}/members/{userId:guid}", async Task<Results<Ok<StatusResponse>, UnauthorizedHttpResult>> (Guid id, Guid userId, IExecutionContextAccessor ctx, IMediator mediator, IOneQueryService queryService) =>
         {
+            if (ctx.UserId == Guid.Empty) return TypedResults.Unauthorized();
+            var hasAccess = await queryService.HasTenantAccessAsync(ctx.UserId, id);
+            if (!hasAccess && !ctx.IsSystemAdmin) return TypedResults.Unauthorized();
             await mediator.Send(new RemoveWorkspaceMemberCommand(id, ctx.UserId, userId));
             return TypedResults.Ok(new StatusResponse { Status = "removed" });
         }).RequireAuthorization("OrgAdmin");

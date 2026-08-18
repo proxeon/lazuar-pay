@@ -101,6 +101,8 @@ public class TenantIsolationArchitectureTests
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/auth/login")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/public/register")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/public/pricing")), Is.True);
+        // Prefix exemption is required for create/list/accept-invite (empty ambient).
+        // Id-scoped maps must still call HasTenantAccessAsync (see WorkspaceEndpoints scrape).
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/workspaces")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/me/entitlements")), Is.True);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/integrations/workspaces/provision")), Is.True);
@@ -108,6 +110,20 @@ public class TenantIsolationArchitectureTests
         // Tenant-scoped One routes are not exempt from require-tenant when not listed above.
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/storage/presigned-url")), Is.False);
         Assert.That(TenantSecurityMiddleware.IsTenantExemptPath(new PathString("/api/v1/one/api-keys")), Is.False);
+    }
+
+    [Test]
+    public void WorkspaceEndpoints_Id_Scoped_Maps_Check_HasTenantAccess()
+    {
+        var path = FindRepoFile(
+            "Modules", "One", "Infrastructure", "Endpoints", "WorkspaceEndpoints.cs");
+        var source = File.ReadAllText(path);
+        Assert.That(source, Does.Contain("HasTenantAccessAsync"));
+        Assert.That(source, Does.Contain("MapPost(\"/workspaces/{id:guid}/invites\""));
+        Assert.That(
+            source.Contains("HasTenantAccessAsync(ctx.UserId, id)", StringComparison.Ordinal),
+            Is.True,
+            "Invite/remove/update/archive must check HasTenantAccessAsync before the handler.");
     }
 
     [Test]

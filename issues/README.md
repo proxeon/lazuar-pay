@@ -186,6 +186,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 174 | B10-X18 | `fix/174-dead-letter-redrive` | Ready fails on lag/dead letters; SUPER_ADMIN can redrive Dead rows |
 | 175 | B10-X19 | `fix/175-migrate-pending-model` | Boot rethrows PendingModelChanges instead of coming up without tables |
 | 176 | B10-X20 | `fix/176-accept-invite-membership` | Accept-invite already checks membership and writes member.accepted (115) |
+| 177 | B10-X21 | `fix/177-workspaces-has-tenant-access` | Invite/remove/update/archive check HasTenantAccess before the handler |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|
