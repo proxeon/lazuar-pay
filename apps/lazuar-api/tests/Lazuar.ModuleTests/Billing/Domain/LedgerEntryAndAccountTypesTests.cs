@@ -47,7 +47,7 @@ public class LedgerEntryAndAccountTypesTests
 
         entry.UpdateLhdnStatus("uuid-from-myinvois", LhdnValidationStatuses.Valid);
 
-        Assert.That(entry.TaxInvoiceId, Is.EqualTo("B2C-CONS-202607-abc"));
+        Assert.That(entry.TaxInvoiceId, Is.EqualTo("RCPT-KEEP"));
         Assert.That(entry.LhdnDocumentUuid, Is.EqualTo("uuid-from-myinvois"));
     }
 
@@ -62,7 +62,7 @@ public class LedgerEntryAndAccountTypesTests
         Assert.That(entry.CustomerDocumentNumber, Is.EqualTo("RCPT-KEEP"));
         Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
         Assert.That(entry.LhdnValidationStatus, Is.EqualTo(LhdnValidationStatuses.ConsolidatedPending));
-        Assert.That(entry.TaxInvoiceId, Is.EqualTo("B2C-CONS-202607-abc"));
+        Assert.That(entry.TaxInvoiceId, Is.EqualTo("RCPT-KEEP"));
     }
 
     [Test]

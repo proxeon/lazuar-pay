@@ -107,7 +107,7 @@ public class B2cConsolidationJobTests
         Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
         Assert.That(entry.LhdnValidationStatus, Is.EqualTo(LhdnValidationStatuses.ConsolidatedPending));
         Assert.That(entry.CustomerDocumentNumber, Does.StartWith("RCPT-"));
-        Assert.That(entry.TaxInvoiceId, Does.StartWith("B2C-CONS-"));
+        Assert.That(entry.TaxInvoiceId, Does.StartWith("RCPT-"));
 
         await _eventBus.Received(1).PublishAsync(Arg.Any<ConsolidatedInvoiceIssuedIntegrationEvent>());
     }
@@ -179,7 +179,7 @@ public class B2cConsolidationJobTests
 
         var entry = await _db.LedgerEntries.IgnoreQueryFilters().SingleAsync(e => e.ReferenceId == "tx_old_month");
         Assert.That(entry.ConsolidationStatus, Is.EqualTo(ConsolidationStatuses.Consolidated));
-        Assert.That(entry.TaxInvoiceId, Does.StartWith("B2C-CONS-"));
+        Assert.That(entry.TaxInvoiceId, Does.StartWith("RCPT-"));
 
         await _eventBus.Received(1).PublishAsync(Arg.Any<ConsolidatedInvoiceIssuedIntegrationEvent>());
     }

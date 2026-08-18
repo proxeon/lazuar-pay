@@ -173,7 +173,8 @@ public class B2cConsolidationJob : BackgroundService
         {
             try
             {
-                await ProcessOrgPeriodAsync(db, eventBus, orgGroup.Key, orgGroup.ToList(), periodKey, ct);
+                await ProcessOrgPeriodAsync(
+                    db, eventBus, orgGroup.Key, orgGroup.ToList(), periodKey, periodStartUtc, periodEndUtc, ct);
                 await db.SaveChangesAsync(ct);
             }
             catch (Exception ex)
@@ -208,17 +209,23 @@ public class B2cConsolidationJob : BackgroundService
         Guid orgId,
         List<LedgerEntry> entries,
         string periodKey,
+        DateTime periodStartUtc,
+        DateTime periodEndUtc,
         CancellationToken ct)
     {
         var consolidationRef = $"B2C-CONS-{periodKey}-{orgId:N}";
         // Workers run with empty ambient TenantId. IgnoreQueryFilters so this
-        // short-circuit can see the issued B2C-CONS row (026 / 078).
+        // short-circuit can see the issued B2C-CONS row (026 / 078) and period
+        // children marked CONSOLIDATED (TaxInvoiceId is no longer overwritten).
         var alreadyConsolidated = await db.LedgerEntries
             .IgnoreQueryFilters()
             .AnyAsync(e =>
                 e.OrganizationId == orgId
                 && (e.TaxInvoiceId == consolidationRef
-                    || e.CustomerDocumentNumber == consolidationRef), ct);
+                    || e.CustomerDocumentNumber == consolidationRef
+                    || (e.ConsolidationStatus == ConsolidationStatuses.Consolidated
+                        && e.Timestamp >= periodStartUtc
+                        && e.Timestamp < periodEndUtc)), ct);
 
         if (alreadyConsolidated)
         {

@@ -124,14 +124,16 @@ public class LedgerEntry : Entity, IAggregateRoot, IMustHaveTenant
 
     /// <summary>
     /// Marks this B2C receipt as included in a consolidation batch.
-    /// Does not overwrite <see cref="CustomerDocumentNumber"/>.
+    /// Does not overwrite <see cref="CustomerDocumentNumber"/> or <see cref="TaxInvoiceId"/>
+    /// (legacy rows may still hold a B2C-CONS ref; new writes keep the commercial number).
     /// </summary>
     public void MarkConsolidatedPending(string consolidationRef)
     {
+        if (string.IsNullOrWhiteSpace(consolidationRef))
+            throw new ArgumentException("Consolidation reference is required.", nameof(consolidationRef));
+
         ConsolidationStatus = ConsolidationStatuses.Consolidated;
         LhdnValidationStatus = LhdnValidationStatuses.ConsolidatedPending;
-        // Legacy correlation: batch internal ref still stored on TaxInvoiceId for LHDN linkage.
-        TaxInvoiceId = consolidationRef;
     }
 
     /// <summary>

@@ -2,7 +2,8 @@
 number: "242"
 id: B05-L38
 severity: P2
-status: open
+status: resolved
+resolved_branch: fix/242-taxinvoiceid-lookup
 source: plans/009-bugs/05-billing-ledger-refunds-disputes.md
 head: "297ba98"
 ---
@@ -97,4 +98,8 @@ Stop treating `TaxInvoiceId` as a write target in new code. Keep reading it for 
 
 ### Evaluation notes
 009 “UUID overwrite after validate” is **false** now. “Consolidation ref overwrite” is **true**. “FirstOrDefault no type preference” is **false** on the cancel caller, **true** on the helper. Residual after **007 / 107** fail-closed money work. Still P2. Do not reopen L01. Pair with README §4 (already more honest than 009).
+
+## Resolution
+
+`MarkConsolidatedPending` no longer writes `B2C-CONS-…` onto `TaxInvoiceId`. Period idempotency uses `ConsolidationStatus` + timestamp (legacy cons-ref rows still short-circuit). `LedgerLhdnLookup` matches `LhdnDocumentUuid` and ranks `GATEWAY_PAYMENT` first. README §4 documents the write stop.
 

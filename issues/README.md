@@ -251,6 +251,7 @@ Resolve them one at a time. Status lives in each file’s front matter.
 | 239 | B05-L35 | `fix/239-billplz-fee-honesty` | Billplz journals stay gross-only; estimated fee knobs stay unused |
 | 240 | B05-L36 | `fix/240-saas-dispute-reverse-fee` | Hub SaaS dispute marks PAST_DUE and idempotently reverses SYSTEM_SAAS_FEE |
 | 241 | B05-L37 | `fix/241-platform-invoice-guid-fallback` | Hub SaaS PDF number uses CustomerFacingNumber (PENDING, never a Guid slice) |
+| 242 | B05-L38 | `fix/242-taxinvoiceid-lookup` | Consolidation no longer dumps B2C-CONS onto TaxInvoiceId; lookup ranks payment + Lhdn UUID |
 
 | # | Sev | ID | Title | File |
 |---|-----|----|-------|------|

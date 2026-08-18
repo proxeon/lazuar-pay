@@ -28,7 +28,7 @@ This is a known inversion vs Commerce/Lhdn (Application-owned handlers). A full 
   * **`LhdnDocumentUuid`**: MyInvois UUID after submit/validate.
   * **`ConsolidationStatus`**: `PENDING` / `CONSOLIDATED` / `NOT_REQUIRED` / `IGNORED` (B2C monthly consolidation eligibility).
   * **`LhdnValidationStatus`**: LHDN lifecycle (`B2C_RECEIPT`, `CONSOLIDATED_PENDING`, `VALID`, `CANCELLED`, …).
-  * **`TaxInvoiceId`**: Legacy dual-use field kept for back-compat; new writers prefer the fields above.
+  * **`TaxInvoiceId`**: Legacy dual-use field kept for back-compat reads. New writers prefer the fields above. B2C consolidation no longer overwrites this with `B2C-CONS-…` — batch correlation is `ConsolidationStatus` + period.
 * **`LedgerLine`**: Debit/credit line with `AccountType` constants from `Modules.Billing.Domain.AccountTypes` (e.g. `ASSET_CASH`, `REVENUE_GROSS`, `EXPENSE_GATEWAY_FEE`, `LIABILITY_TAX_PAYABLE`).
 * **`DeferredRevenueSchedule`**: Table/entity retained for future amortization; recognition job is **not registered** until product-period schedules are created.
 
