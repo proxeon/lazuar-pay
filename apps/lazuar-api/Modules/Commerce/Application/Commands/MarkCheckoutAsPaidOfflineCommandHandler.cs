@@ -179,7 +179,8 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
                 "MANUAL_OFFLINE",
                 $"Manual settlement for session {session.Id}",
                 txLog.Id,
-                session.IsB2bRequired || product.CheckoutConfiguration.RequiresTaxId));
+                session.IsB2bRequired || product.CheckoutConfiguration.RequiresTaxId,
+                SubscriptionBillingAmount.LineTax(breakdown)));
         }
 
         await _repository.SaveChangesAsync(ct);
@@ -194,7 +195,8 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
         var customNet = session.AdHocLineItems.Sum(x => x.UnitPrice * x.Quantity);
         var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
             _billingQueryService, session.OrganizationId);
-        var totalAmount = SubscriptionBillingAmount.CustomQuoteBreakdown(customNet, merchantHasSst).Gross;
+        var customBreakdown = SubscriptionBillingAmount.CustomQuoteBreakdown(customNet, merchantHasSst);
+        var totalAmount = customBreakdown.Gross;
         var currency = session.Currency;
 
         var externalRef = $"OFFLINE-{session.Id:N}"[..36];
@@ -225,7 +227,8 @@ public class MarkCheckoutAsPaidOfflineCommandHandler : ICommandHandler<MarkCheck
                 "MANUAL_OFFLINE",
                 $"Manual settlement for session {session.Id}",
                 txLog.Id,
-                session.IsB2bRequired));
+                session.IsB2bRequired,
+                SubscriptionBillingAmount.LineTax(customBreakdown)));
         }
 
         await _repository.SaveChangesAsync(ct);

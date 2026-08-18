@@ -31,6 +31,8 @@ public class SubscriptionBillingAmountTests
         breakdown.Gross.Should().Be(108m);
         breakdown.TaxType.Should().Be("02");
         sub.UnitAmount.Should().Be(100m);
+        SubscriptionBillingAmount.TaxFromInclusiveGross(108m, true, "02", 8m).Should().Be(8m);
+        SubscriptionBillingAmount.TaxFromInclusiveGross(108m, false, "02", 8m).Should().Be(0m);
     }
 
     [Test]

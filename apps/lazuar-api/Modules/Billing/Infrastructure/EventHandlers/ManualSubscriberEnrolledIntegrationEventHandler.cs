@@ -54,8 +54,21 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
             $"{@event.PaymentMethod} payment logged for customer: {@event.ClientProfileId}",
             isB2b ? "B2B" : "B2C");
 
-        entry.AddLine(AccountTypes.AssetCash, @event.AmountPaid, @event.Currency, @event.AmountPaid, @event.Currency);
-        entry.AddLine(AccountTypes.RevenueGross, -@event.AmountPaid, @event.Currency, -@event.AmountPaid, @event.Currency);
+        var tax = Math.Max(0m, @event.TaxAmount);
+        if (tax > @event.AmountPaid)
+        {
+            tax = @event.AmountPaid;
+        }
+
+        var cash = @event.AmountPaid;
+        var revenue = cash - tax;
+        entry.AddLine(AccountTypes.AssetCash, cash, @event.Currency, cash, @event.Currency);
+        if (tax > 0)
+        {
+            entry.AddLine(AccountTypes.LiabilityTaxPayable, -tax, @event.Currency, -tax, @event.Currency);
+        }
+
+        entry.AddLine(AccountTypes.RevenueGross, -revenue, @event.Currency, -revenue, @event.Currency);
 
         entry.ValidateBalanced();
         _repository.Add(entry);
@@ -99,7 +112,7 @@ public class ManualSubscriberEnrolledIntegrationEventHandler : IIntegrationEvent
                     booked.CustomerDocumentNumber ?? "",
                     booked.ReferenceId,
                     @event.AmountPaid,
-                    0m,
+                    @event.TaxAmount,
                     @event.Currency,
                     correlation));
             }

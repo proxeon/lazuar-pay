@@ -116,6 +116,42 @@ public class ManualSubscriberEnrolledHandlerTests
         repository.Received(1).Add(Arg.Any<LedgerEntry>());
     }
 
+    [Test]
+    public async Task HandleAsync_SplitsInclusiveSst_AndPublishesB2bTax()
+    {
+        var repository = Substitute.For<ILedgerRepository>();
+        var mediator = Substitute.For<IMediator>();
+        var eventBus = Substitute.For<IEventBus>();
+        var handler = new ManualSubscriberEnrolledIntegrationEventHandler(repository, mediator, eventBus);
+        LedgerEntry? booked = null;
+        repository.When(r => r.Add(Arg.Any<LedgerEntry>())).Do(ci => booked = ci.Arg<LedgerEntry>());
+        repository.HasEntryBeenProcessedAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        mediator.Send(Arg.Any<GenerateNextSequenceNumberCommand>(), Arg.Any<CancellationToken>())
+            .Returns("INV-2026");
+
+        var @event = new ManualSubscriberEnrolledIntegrationEvent(
+            OrganizationId: Guid.CreateVersion7(),
+            SubscriptionId: Guid.CreateVersion7(),
+            ClientProfileId: Guid.CreateVersion7(),
+            ProductId: Guid.CreateVersion7(),
+            AmountPaid: 108m,
+            Currency: "MYR",
+            PaymentMethod: "BANK_TRANSFER",
+            ReferenceNumber: "REF-SST",
+            TransactionLogId: Guid.CreateVersion7(),
+            IsB2bRequired: true,
+            TaxAmount: 8m);
+
+        await handler.HandleAsync(@event);
+
+        booked.Should().NotBeNull();
+        booked!.Lines.Should().Contain(l => l.AccountType == AccountTypes.LiabilityTaxPayable && l.Amount == -8m);
+        booked.Lines.Should().Contain(l => l.AccountType == AccountTypes.RevenueGross && l.Amount == -100m);
+        booked.Lines.Should().Contain(l => l.AccountType == AccountTypes.AssetCash && l.Amount == 108m);
+        await eventBus.Received(1).PublishAsync(Arg.Is<Modules.Billing.Contracts.Events.B2bTaxInvoiceRequestedIntegrationEvent>(e =>
+            e.TaxAmount == 8m));
+    }
+
     private static ManualSubscriberEnrolledIntegrationEvent Event(Guid subscriptionId, Guid transactionLogId) =>
         new(
             OrganizationId: Guid.CreateVersion7(),

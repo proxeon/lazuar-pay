@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Entities;
+using Modules.Billing.Contracts;
 using Modules.CRM.Contracts;
 using Modules.One.Contracts;
 
@@ -18,17 +19,20 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
     private readonly IEventBus _eventBus;
     private readonly ICrmQueryService _crmQueryService;
     private readonly IAuditRecorder? _auditRecorder;
+    private readonly IBillingQueryService? _billingQueryService;
 
     public RecordSubscriberPaymentCommandHandler(
         ICommerceRepository repository,
         [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
         ICrmQueryService crmQueryService,
-        IAuditRecorder? auditRecorder = null)
+        IAuditRecorder? auditRecorder = null,
+        IBillingQueryService? billingQueryService = null)
     {
         _repository = repository;
         _eventBus = eventBus;
         _crmQueryService = crmQueryService;
         _auditRecorder = auditRecorder;
+        _billingQueryService = billingQueryService;
     }
 
     public async Task Handle(RecordSubscriberPaymentCommand request, CancellationToken ct)
@@ -129,6 +133,15 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
 
         if (amount > 0 && method != OfflinePaymentMethods.Comped)
         {
+            var taxAmount = 0m;
+            if (_billingQueryService is not null)
+            {
+                var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+                    _billingQueryService, subscription.OrganizationId);
+                taxAmount = SubscriptionBillingAmount.TaxFromInclusiveGross(
+                    amount, merchantHasSst, product.SstTaxType, product.SstRatePercent);
+            }
+
             await _eventBus.PublishAsync(new ManualSubscriberEnrolledIntegrationEvent(
                 subscription.OrganizationId,
                 subscription.Id,
@@ -138,7 +151,9 @@ public class RecordSubscriberPaymentCommandHandler : ICommandHandler<RecordSubsc
                 product.Currency,
                 method,
                 clerkRef,
-                txLog.Id));
+                txLog.Id,
+                IsB2bRequired: false,
+                TaxAmount: taxAmount));
         }
 
         if (wasSuspended)

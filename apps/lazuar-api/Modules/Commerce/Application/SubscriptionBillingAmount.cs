@@ -80,6 +80,28 @@ public static class SubscriptionBillingAmount
 
     public static decimal LineTax(Breakdown breakdown) => breakdown.UnitTax * breakdown.Seats;
 
+    /// <summary>
+    /// Clerk/offline cash is the inclusive gross. Extract exclusive SST so
+    /// Billing can split LIABILITY_TAX_PAYABLE without changing cash collected.
+    /// </summary>
+    public static decimal TaxFromInclusiveGross(
+        decimal gross,
+        bool merchantHasSst,
+        string? sstTaxType,
+        decimal sstRatePercent)
+    {
+        if (!merchantHasSst
+            || sstRatePercent <= 0
+            || gross <= 0
+            || !string.Equals(sstTaxType, SstTaxMath.ServiceTax, StringComparison.OrdinalIgnoreCase))
+        {
+            return 0m;
+        }
+
+        var net = Math.Round(gross / (1m + sstRatePercent / 100m), 2, MidpointRounding.AwayFromZero);
+        return Math.Max(0m, gross - net);
+    }
+
     public static void StampSstMetadata(IDictionary<string, string> metadata, Breakdown breakdown)
     {
         ArgumentNullException.ThrowIfNull(metadata);

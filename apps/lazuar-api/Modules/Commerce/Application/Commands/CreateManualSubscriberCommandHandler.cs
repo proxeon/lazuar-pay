@@ -9,6 +9,7 @@ using Modules.Commerce.Contracts.Commands;
 using Modules.Commerce.Contracts.Events;
 using Modules.Commerce.Domain.Aggregates;
 using Modules.Commerce.Domain.Entities;
+using Modules.Billing.Contracts;
 using Modules.CRM.Contracts;
 
 namespace Modules.Commerce.Application.Commands;
@@ -19,17 +20,20 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
     private readonly IMediator _mediator;
     private readonly IEventBus _eventBus;
     private readonly ICrmQueryService _crmQueryService;
+    private readonly IBillingQueryService? _billingQueryService;
 
     public CreateManualSubscriberCommandHandler(
         ICommerceRepository repository,
         IMediator mediator,
         [FromKeyedServices("CommerceEventBus")] IEventBus eventBus,
-        ICrmQueryService crmQueryService)
+        ICrmQueryService crmQueryService,
+        IBillingQueryService? billingQueryService = null)
     {
         _repository = repository;
         _mediator = mediator;
         _eventBus = eventBus;
         _crmQueryService = crmQueryService;
+        _billingQueryService = billingQueryService;
     }
 
     public async Task<Guid> Handle(CreateManualSubscriberCommand request, CancellationToken ct)
@@ -119,6 +123,15 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
 
         if (amount > 0)
         {
+            var taxAmount = 0m;
+            if (_billingQueryService is not null)
+            {
+                var merchantHasSst = await SubscriptionBillingAmount.MerchantHasSstAsync(
+                    _billingQueryService, request.OrganizationId);
+                taxAmount = SubscriptionBillingAmount.TaxFromInclusiveGross(
+                    amount, merchantHasSst, product.SstTaxType, product.SstRatePercent);
+            }
+
             await _eventBus.PublishAsync(new ManualSubscriberEnrolledIntegrationEvent(
                 request.OrganizationId,
                 subscription.Id,
@@ -128,7 +141,9 @@ public class CreateManualSubscriberCommandHandler : ICommandHandler<CreateManual
                 product.Currency,
                 method,
                 clerkRef,
-                txLog.Id));
+                txLog.Id,
+                IsB2bRequired: false,
+                TaxAmount: taxAmount));
         }
 
         if (request.SendWelcomeEmail)
