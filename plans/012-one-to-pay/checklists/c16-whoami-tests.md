@@ -8,28 +8,28 @@
 
 ## C16.1 Factory
 
-- [ ] `WebApplicationFactory<Program>` replaces One `HttpMessageHandler`
-- [ ] Fake inspects method/path: `GET` … `/me` (or `/api/v1/me` consistent with C10)
-- [ ] Fake asserts incoming `Authorization` equals what the test sent
+- [x] `WebApplicationFactory<Program>` replaces One `HttpMessageHandler`
+- [x] Fake inspects method/path: `GET` … `/me` (or `/api/v1/me` consistent with C10)
+- [x] Fake asserts incoming `Authorization` equals what the test sent
 
 ## C16.2 Cases (one test each)
 
-- [ ] 200: One returns a fixture `/me` → Pay whoami maps `active_org_id` and `tenants[].id`
-- [ ] 200: One returns empty `tenants` → Pay 200 with empty list
-- [ ] 401: no Authorization → Pay 401; fake must **not** be called
-- [ ] 401: One returns 401 → Pay 401
-- [ ] 503: One handler throws / delays past timeout → Pay 503
-- [ ] 503: One returns 500 → Pay 503
-- [ ] Health: `/health` 200 while fake throws if called (may live in C15)
+- [x] 200: One returns a fixture `/me` → Pay whoami maps `active_org_id` and `tenants[].id`
+- [x] 200: One returns empty `tenants` → Pay 200 with empty list
+- [x] 401: no Authorization → Pay 401; fake must **not** be called
+- [x] 401: One returns 401 → Pay 401
+- [x] 503: One handler throws / delays past timeout → Pay 503
+- [x] 503: One returns 500 → Pay 503
+- [x] Health: `/health` 200 while fake throws if called (may live in C15)
 
 ## C16.3 Hygiene
 
-- [ ] Tests do not read live network
-- [ ] Tests do not skip on “One not running”
-- [ ] `task pay:test` runs them
+- [x] Tests do not read live network
+- [x] Tests do not skip on “One not running”
+- [x] `task pay:test` runs them
 
 ## C16.4 Exit
 
-- [ ] All C16.2 cases green
-- [ ] Authz track (C20) unblocked
-- [ ] Unblocked for C17
+- [x] All C16.2 cases green
+- [x] Authz track (C20) unblocked
+- [x] Unblocked for C17

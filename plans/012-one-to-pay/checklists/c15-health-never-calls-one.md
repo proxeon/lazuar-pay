@@ -8,21 +8,21 @@
 
 ## C15.1 Routes
 
-- [ ] `GET /health` still `{ status: "ok" }` without Authorization
-- [ ] `GET /v1/health` still `{ status: "ok" }` without Authorization
-- [ ] Neither handler uses `IHttpClientFactory` / One client
+- [x] `GET /health` still `{ status: "ok" }` without Authorization
+- [x] `GET /v1/health` still `{ status: "ok" }` without Authorization
+- [x] Neither handler uses `IHttpClientFactory` / One client
 
 ## C15.2 Middleware
 
-- [ ] No global “call `/me` on every request” middleware
-- [ ] If auth middleware exists, it **must skip** `/health` and `/v1/health`
+- [x] No global “call `/me` on every request” middleware
+- [x] If auth middleware exists, it **must skip** `/health` and `/v1/health`
 
 ## C15.3 Test
 
-- [ ] Existing HealthTests still pass
-- [ ] New test: health handlers succeed even when the One `HttpClient` is configured to throw if used (handler that fails on any send)
+- [x] Existing HealthTests still pass
+- [x] New test: health handlers succeed even when the One `HttpClient` is configured to throw if used (handler that fails on any send)
 
 ## C15.4 Exit
 
-- [ ] C15.3 test exists
-- [ ] Unblocked for C16
+- [x] C15.3 test exists
+- [x] Unblocked for C16
