@@ -1,0 +1,16 @@
+{
+  "name": "@repo/pay-spec",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsp compile .",
+    "watch": "tsp compile . --watch"
+  },
+  "dependencies": {
+    "@typespec/compiler": "~1.13",
+    "@typespec/http": "~1.13",
+    "@typespec/openapi": "~1.13",
+    "@typespec/openapi3": "~1.13"
+  }
+}

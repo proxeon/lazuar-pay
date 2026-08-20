@@ -112,6 +112,12 @@ tasks:
     cmds:
       - dotnet watch run --project src/Lazuar.Pay/Lazuar.Pay.csproj
 
+  pay:spec:
+    desc: Compile focused Pay TypeSpec to OpenAPI (packages/pay-spec, not api-spec)
+    dir: packages/pay-spec
+    cmds:
+      - pnpm exec tsp compile .
+
   # ==========================================
   # .NET API Tasks (apps/lazuar-api — old modular monolith)
   # ==========================================

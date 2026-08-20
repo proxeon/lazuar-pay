@@ -16,4 +16,6 @@ task pay:dev          # http://localhost:8081/health  and  /v1/health
 pnpm --filter lazuar-pay dev
 ```
 
+TypeSpec: [`packages/pay-spec`](../../packages/pay-spec/) (`task pay:spec`). Not `packages/api-spec`.
+
 Compose still points at `apps/lazuar-api`. Swap later when S1 dogfood is real.
