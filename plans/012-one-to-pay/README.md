@@ -25,3 +25,5 @@ Binding from [011](../011-new-lazuar-pay/README.md): Pay is Consumer-0. Merchant
 Implementation of whoami / `authz/check` is a later step on this branch (or a follow-up). Do not flip [011/12](../011-new-lazuar-pay/12-first-slice-tracker.md) cells to `done` from the analysis papers.
 
 **Implement against:** [checklists/](./checklists/README.md) (small phases, one intent each). Freeze: [checklists/decisions.md](./checklists/decisions.md). Analyses `01`–`10` stay the evidence; do not condense them into the checklists.
+
+**Connected (C99) on `feat/012-connect-one`:** `GET /v1/whoami` and `GET /v1/orgs/{orgId}/ready` on 8081. SPA, machine keys, webhooks, money, and ops-on-8081 stay parked (P10–P60).

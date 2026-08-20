@@ -13,15 +13,15 @@ Columns: **ID** · **Feature** · **Wave** · **Owner** · **Dogfood** · **Stat
 
 | Wave | Rows | todo | doing | done | blocked | refuse | n/a |
 |------|------|------|-------|------|---------|--------|-----|
-| S0 | 22 | 22 | 0 | 0 | 0 | 0 | 0 |
+| S0 | 22 | 17 | 0 | 5 | 0 | 0 | 0 |
 | S1 | 42 | 42 | 0 | 0 | 0 | 0 | 0 |
 | V1 | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
 | soon | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | later | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | refuse | 24 | 0 | 0 | 0 | 0 | 24 | 0 |
-| **Total** | **115** | **91** | **0** | **0** | **0** | **24** | **0** |
+| **Total** | **115** | **86** | **0** | **5** | **0** | **24** | **0** |
 
-Dogfood path (`Dogfood = Y`): **43** rows, all `todo`. Count includes every S0/S1 job the [01](./01-product.md) dogfood sentence fails without — not only the 12 slice steps.
+Dogfood path (`Dogfood = Y`): **43** rows; S0 whoami/authz subset `done` on focused Pay. Remaining dogfood jobs still `todo`. Count includes every S0/S1 job the [01](./01-product.md) dogfood sentence fails without — not only the 12 slice steps.
 
 ---
 
@@ -33,19 +33,19 @@ Pay is Consumer-0. Do not rebuild `Modules/One`. Detail: [02-one-integration.md]
 |----|---------|------|-------|---------|--------|-------|
 | NP-ONE-001 | Register Pay SPA via One `POST /tenants/{id}/apps` (or seed like `lazuar-app`) | S0 | both | Y | todo | Not a Zitadel Console click |
 | NP-ONE-002 | OIDC code + PKCE; Pay `client_id`; Zitadel authority | S0 | both | Y | todo | Env like `lazuar-app` |
-| NP-ONE-003 | Send **access_token** as `Authorization: Bearer` | S0 | Pay | Y | todo | Never `id_token` as Bearer |
+| NP-ONE-003 | Send **access_token** as `Authorization: Bearer` | S0 | Pay | Y | done | `GET /v1/whoami` forwards Bearer; never `id_token` as Bearer |
 | NP-ONE-004 | Register Pay redirects on One app + login `REDIRECT_ALLOWLIST` | S0 | both | Y | todo | Not Console-only |
 | NP-ONE-005 | Product login via `:5175`; never ship `:3005` or `:5173` | S0 | both | Y | todo | `:5175` is not Pay’s homepage |
-| NP-ONE-006 | `GET /me` for user, tenants, roles, `active_tenant_id` | S0 | both | Y | todo | Can write (JIT); do not hammer from a hot loop |
-| NP-ONE-007 | Path `{tenantId}` + membership is authz SoT | S0 | Pay | Y | todo | `X-Lazuar-Tenant-Id` is a hint only |
-| NP-ONE-008 | Roles from `/me` + `authz/check`, not Zitadel project-role claims | S0 | Pay | — | todo | Do not parse `urn:zitadel:iam:org:project:roles` |
+| NP-ONE-006 | `GET /me` for user, tenants, roles, `active_tenant_id` | S0 | both | Y | done | Pay `GET /v1/whoami` calls One `/me` once; not middleware |
+| NP-ONE-007 | Path `{tenantId}` + membership is authz SoT | S0 | Pay | Y | done | `GET /v1/orgs/{orgId}/ready`; header is hint only |
+| NP-ONE-008 | Roles from `/me` + `authz/check`, not Zitadel project-role claims | S0 | Pay | — | done | Projection copies One `role`; no Zitadel claim parse |
 | NP-ONE-009 | Create workspace = `POST /tenants`; One tenant id **is** Pay `org_id` | S0 | both | Y | todo | No second org table |
 | NP-ONE-010 | `GET` / `PATCH` tenant profile (name, metadata, logo) | S0 | both | — | todo | Not `POST /platform/tenants` |
 | NP-ONE-011 | Copy-link invite + pending list + revoke + resend | S0 | both | Y | todo | One membership is SoT |
 | NP-ONE-012 | Accept-invite; keep a **non-email** accept path | S0 | both | Y | todo | Deep-link `lazuar-app` or post same API |
 | NP-ONE-013 | Roster; change role; remove member; `GET /me/invites` | S0 | both | — | todo | |
 | NP-ONE-014 | Mint / list / revoke `lzr_sk_` with **explicit** scopes | S0 | both | Y | todo | No `*` / empty scopes |
-| NP-ONE-015 | `authz/check` `member` / `admin` / `owner` before merchant admin routes | S0 | both | Y | todo | Allow-list `{ tenant, app }` only |
+| NP-ONE-015 | `authz/check` `member` / `admin` / `owner` before merchant admin routes | S0 | both | Y | done | Dummy `/v1/orgs/{orgId}/ready` checks `member` on `tenant` |
 | NP-ONE-016 | `authz/batch-check` for permission chrome | S0 | both | — | todo | No `authz/write` |
 | NP-ONE-017 | HMAC webhooks: `member.*`, `tenant.created` / `suspended` / `reactivated`, `ownership.transferred`, `api_key.revoked` | S0 | both | Y | todo | Pull events if no push; do not tail Zitadel |
 | NP-ONE-018 | Stop charges (and staff access) on `tenant.suspended` | S0 | Pay | Y | todo | Money in Pay stays true if webhook is late |
