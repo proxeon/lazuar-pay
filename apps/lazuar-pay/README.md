@@ -11,11 +11,28 @@ Plan: [`plans/011-new-lazuar-pay`](../../plans/011-new-lazuar-pay/README.md). Tr
 
 ```bash
 task pay:test
-task pay:dev          # http://localhost:8081/health  and  /v1/health
+task pay:dev          # http://localhost:8081/health, /v1/health, /v1/whoami
 # or
 pnpm --filter lazuar-pay dev
 ```
 
 TypeSpec: [`packages/pay-spec`](../../packages/pay-spec/) (`task pay:spec`). Not `packages/api-spec`.
 
-Compose still points at `apps/lazuar-api`. Swap later when S1 dogfood is real.
+Compose still points at `apps/lazuar-api`. Swap later when S1 dogfood is real. Do not set ops/portal `VITE_API_URL` to 8081.
+
+## Live whoami (not CI)
+
+One API and old Hub both want **8080**. For this proof, run **One** (API 8080, login 5175) and **Pay** (8081). Leave Hub `task dev` / compose `lazuar-api` **off**.
+
+Fingerprint One: `GET http://localhost:8080/api/v1/` should name `lazuar-one-api` (Hub `/health` can also look like `{status:ok}`).
+
+Log in at `http://localhost:5175` (product login). Demo user is whatever One README lists (often `ada@acme.test` / `Password1!`). Copy the **access_token**, not the `id_token`.
+
+```bash
+curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8081/v1/whoami
+# no header → 401
+```
+
+Pay never holds a Zitadel PAT. Staff **VIEWER** is not a One tenant role (`owner` / `admin` / `member` only); `/v1/orgs/{orgId}/ready` checks `member`, not “cannot charge”.
+
+Do not send merchants to `lazuar-admin` (`:5173`).
