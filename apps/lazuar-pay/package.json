@@ -1,0 +1,13 @@
+{
+  "name": "lazuar-pay",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "dotnet build Lazuar.Pay.slnx",
+    "test": "dotnet test Lazuar.Pay.slnx --nologo --verbosity minimal",
+    "dev": "dotnet watch run --project src/Lazuar.Pay/Lazuar.Pay.csproj",
+    "lint": "dotnet format Lazuar.Pay.slnx --verify-no-changes",
+    "format": "dotnet format Lazuar.Pay.slnx",
+    "check-types": "dotnet build Lazuar.Pay.slnx --no-incremental"
+  }
+}

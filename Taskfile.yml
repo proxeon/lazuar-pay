@@ -85,7 +85,35 @@ tasks:
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
   # ==========================================
-  # .NET API Tasks
+  # Focused Pay (apps/lazuar-pay) — not the old modular API
+  # ==========================================
+  pay:restore:
+    desc: Restore the focused Pay solution
+    dir: apps/lazuar-pay
+    cmds:
+      - dotnet restore Lazuar.Pay.slnx
+
+  pay:build:
+    desc: Build the focused Pay solution
+    deps: [pay:restore]
+    dir: apps/lazuar-pay
+    cmds:
+      - dotnet build Lazuar.Pay.slnx --nologo --verbosity minimal
+
+  pay:test:
+    desc: Test the focused Pay host (health + isolation)
+    dir: apps/lazuar-pay
+    cmds:
+      - dotnet test Lazuar.Pay.slnx --nologo --verbosity minimal
+
+  pay:dev:
+    desc: Run focused Pay on http://localhost:8081 (old API stays on 8080)
+    dir: apps/lazuar-pay
+    cmds:
+      - dotnet watch run --project src/Lazuar.Pay/Lazuar.Pay.csproj
+
+  # ==========================================
+  # .NET API Tasks (apps/lazuar-api — old modular monolith)
   # ==========================================
   api:restore:
     desc: Restore the .NET API solution dependencies

@@ -359,6 +359,8 @@ importers:
         specifier: ~5.8.2
         version: 5.8.3
 
+  apps/lazuar-pay: {}
+
   apps/lazuar-portal:
     dependencies:
       '@base-ui/react':
