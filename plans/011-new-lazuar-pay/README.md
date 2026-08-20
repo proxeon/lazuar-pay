@@ -26,6 +26,8 @@ New Pay is **money + catalog + buyer checkout**. Merchant identity lives in **la
 | [10-tracker-schema.md](./10-tracker-schema.md) | How to read the build tracker (rows, columns, `NP-*` IDs, waves) |
 | [11-checklist.md](./11-checklist.md) | Living feature × status matrix — flip Status here |
 | [12-first-slice-tracker.md](./12-first-slice-tracker.md) | Ordered S0/S1 dogfood steps mapped to IDs |
+| [13-monolith-vs-services.md](./13-monolith-vs-services.md) | Before development: one mega-monolith vs five services vs One+Pay |
+| [14-google-aws-microsoft.md](./14-google-aws-microsoft.md) | How Google, AWS, Microsoft actually decide split vs together |
 
 One’s own program for this sibling is `lazuar-one/plans/017-evals/08-dogfood-then-serve.md` §6 (Pay as Consumer-0). [02](./02-one-integration.md) restates that contract from Pay’s side.
 
@@ -44,6 +46,7 @@ Platform map (catalog, not day-one deploys): `/Users/akmalfirdaus/Code/dump/lazu
 7. Notify and audit for **Pay writes** stay in Pay v1 (same process / same DB transaction). Do not stand up `lazuar-notify` / `lazuar-audit` as processes until a second caller exists.
 8. Language for a new kernel, if we rewrite: **Go**. Not because C# cannot do it — because C#’s default toolkit rebuilt the museum.
 9. Do not copy per-module schemas, in-process event bus as the way Pay talks to itself, or `twitter-spring-reactjs` (seven DBs, Eureka, start-order).
+10. **Do not mega-merge One+Pay+Notify+Media into one binary, and do not five-deploy.** Ship existing One + one Pay process. Notify/Audit stay in Pay; Media later. How Google/AWS/Microsoft decide: [14](./14-google-aws-microsoft.md). Why C beats A and B: [13](./13-monolith-vs-services.md).
 
 ---
 
@@ -56,6 +59,8 @@ The 20 August thread changed the kernel once, on purpose.
 **Second cut (One already exists as a sibling repo):** One is the **justified extract** — a different product (WorkOS-shaped), already a process. New Pay does **not** absorb it and does **not** reimplement `Modules/One`. Pay is Consumer-0 over HTTP. Buyers stay in Pay (checkout profile / magic link). Mail and audit for Pay’s own writes still live **in Pay**, not as two more services.
 
 Both cuts agree on: one Pay process, `/v1` as the sold door, no homemade LHDN, no four-service day one for Notify/Audit.
+
+**Third cut (before development, 20 Aug):** explicitly reject a mega-monolith that absorbs One and Media, and reject five greenfield services. Google/AWS/Microsoft split by ownership, blast radius, and whether a stranger can buy the door — not by a platform slide. [13](./13-monolith-vs-services.md), [14](./14-google-aws-microsoft.md).
 
 ---
 

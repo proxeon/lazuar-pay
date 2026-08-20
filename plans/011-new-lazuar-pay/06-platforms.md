@@ -5,6 +5,8 @@
 
 Four names on paper is a **platform map**. Four processes on day one is the expensive shape again.
 
+Before-development verdict (mega-monolith vs five services vs One+Pay): [13-monolith-vs-services.md](./13-monolith-vs-services.md). How Google / AWS / Microsoft decide: [14-google-aws-microsoft.md](./14-google-aws-microsoft.md).
+
 The platform README already says the right sequence: prove One with **one app**, extract when pain is real. Principle 4 (“separate codebases”) is the target *catalog*, not the first deploy. Pay → event → One for entitlements is exactly the seam that produced “paid but no access” and “access without a second look at money” in the old tree.
 
 ---

@@ -92,3 +92,5 @@ Amazon’s ugliness is **too many doors between their own teams**. AWS’s succe
 **For us:** Bezos applies to **what a stranger may call** (`/v1/pay`) and to **Pay ↔ One**. Linux applies to **what Pay runs this year** (one binary). Pretending we are AWS — four fleets, four SLAs — before a second team or a paying integrator is the Twitter clone. Pretending we are Linux **forever**, with no HTTP door, means we never have an AWS-shaped product to sell.
 
 AWS did not stay a monolith because **the product is the split**. Pay should stay a monolith until **someone else** needs a split they can buy. One already had that someone (Pay, as Consumer-0) — that is why One is a process.
+
+How Google and Microsoft turn the same knobs (repo ≠ process ≠ SKU): [14-google-aws-microsoft.md](./14-google-aws-microsoft.md). Before-development choice: [13-monolith-vs-services.md](./13-monolith-vs-services.md).
