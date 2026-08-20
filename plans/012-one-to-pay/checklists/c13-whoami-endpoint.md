@@ -8,27 +8,27 @@
 
 ## C13.1 Route
 
-- [ ] `GET /v1/whoami` on the focused host
-- [ ] **Not** `GET /v1/me`, **not** `GET /one/auth/me`, **not** `GET /api/v1/me`
-- [ ] Require `Authorization` header; if missing/blank → 401 (detail in C14)
+- [x] `GET /v1/whoami` on the focused host
+- [x] **Not** `GET /v1/me`, **not** `GET /one/auth/me`, **not** `GET /api/v1/me`
+- [x] Require `Authorization` header; if missing/blank → 401 (detail in C14)
 
 ## C13.2 Forward
 
-- [ ] HTTP to One: `GET {BaseUrl}/me` (if BaseUrl already includes `/api/v1`) or `GET {BaseUrl}/api/v1/me` — must match C10 lock
-- [ ] Copy `Authorization` verbatim
-- [ ] If request has `X-Lazuar-Tenant-Id`, forward as hint only (do not authorize from it)
-- [ ] One 200 + body → map via C12 → Pay 200 JSON
-- [ ] Do not persist users/tenants to a Pay database
+- [x] HTTP to One: `GET {BaseUrl}/me` (if BaseUrl already includes `/api/v1`) or `GET {BaseUrl}/api/v1/me` — must match C10 lock
+- [x] Copy `Authorization` verbatim
+- [x] If request has `X-Lazuar-Tenant-Id`, forward as hint only (do not authorize from it)
+- [x] One 200 + body → map via C12 → Pay 200 JSON
+- [x] Do not persist users/tenants to a Pay database
 
 ## C13.3 What the handler must not do
 
-- [ ] No password lookup
-- [ ] No JWT signature validation of Zitadel keys in Pay (One already did; Pay trusts One’s 200/401)
-- [ ] No calling `/me` more than **once** per whoami request
-- [ ] No logging the full Bearer token
+- [x] No password lookup
+- [x] No JWT signature validation of Zitadel keys in Pay (One already did; Pay trusts One’s 200/401)
+- [x] No calling `/me` more than **once** per whoami request
+- [x] No logging the full Bearer token
 
 ## C13.4 Exit
 
-- [ ] Happy path implemented
-- [ ] Error mapping may still be stubby if C14 is the next commit — **prefer C13+C14 same commit** if small
-- [ ] Unblocked for C14 (or C14 done in same tip)
+- [x] Happy path implemented
+- [x] Error mapping may still be stubby if C14 is the next commit — **prefer C13+C14 same commit** if small
+- [x] Unblocked for C14 (or C14 done in same tip)
