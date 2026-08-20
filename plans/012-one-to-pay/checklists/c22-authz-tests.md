@@ -8,18 +8,18 @@
 
 ## C22.1 Fake
 
-- [ ] Handler distinguishes `GET /me` vs `POST …/authz/check` if both used
-- [ ] Assert check body: `relation=member`, `object.type=tenant`, `object.id` equals path `orgId`
+- [x] Handler distinguishes `GET /me` vs `POST …/authz/check` if both used
+- [x] Assert check body: `relation=member`, `object.type=tenant`, `object.id` equals path `orgId`
 
 ## C22.2 Cases (one test each)
 
-- [ ] Allow: One 200 `{allowed:true}` → Pay 200 `ready: true` and `org_id`
-- [ ] Deny allowed false: One 200 `{allowed:false}` → Pay 403
-- [ ] Deny 403: One 403 → Pay 403
-- [ ] One 500 → Pay 503
-- [ ] No bearer → Pay 401; check endpoint **not** called
+- [x] Allow: One 200 `{allowed:true}` → Pay 200 `ready: true` and `org_id`
+- [x] Deny allowed false: One 200 `{allowed:false}` → Pay 403
+- [x] Deny 403: One 403 → Pay 403
+- [x] One 500 → Pay 503
+- [x] No bearer → Pay 401; check endpoint **not** called
 
 ## C22.3 Exit
 
-- [ ] `task pay:test` green
-- [ ] Unblocked for C23
+- [x] `task pay:test` green
+- [x] Unblocked for C23

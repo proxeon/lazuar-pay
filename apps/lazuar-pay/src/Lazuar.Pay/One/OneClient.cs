@@ -66,6 +66,49 @@ public sealed class OneClient
         }, cancellationToken);
     }
 
+    internal async Task<OneCallResult<bool>> CheckMemberAsync(
+        string authorization,
+        string orgId,
+        string? tenantHint,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"tenants/{Uri.EscapeDataString(orgId)}/authz/check");
+        request.Headers.TryAddWithoutValidation("Authorization", authorization);
+        if (!string.IsNullOrWhiteSpace(tenantHint))
+        {
+            request.Headers.TryAddWithoutValidation("X-Lazuar-Tenant-Id", tenantHint);
+        }
+
+        request.Content = JsonContent.Create(
+            new OneAuthzCheckRequest
+            {
+                Relation = "member",
+                Object = new OneAuthzObject { Type = "tenant", Id = orgId }
+            },
+            options: Json);
+
+        return await SendAsync(request, async (response, ct) =>
+        {
+            OneAuthzCheckResponse? body;
+            try
+            {
+                body = await response.Content.ReadFromJsonAsync<OneAuthzCheckResponse>(Json, ct);
+            }
+            catch (JsonException)
+            {
+                return new OneCallResult<bool> { StatusCode = 503 };
+            }
+
+            return new OneCallResult<bool>
+            {
+                Value = body?.Allowed == true,
+                StatusCode = 200
+            };
+        }, cancellationToken);
+    }
+
     private async Task<OneCallResult<T>> SendAsync<T>(
         HttpRequestMessage request,
         Func<HttpResponseMessage, CancellationToken, Task<OneCallResult<T>>> onOk,
