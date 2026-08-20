@@ -5,8 +5,8 @@ New money process. Not the modular monolith in `apps/lazuar-api/`.
 Plan: [`plans/011-new-lazuar-pay`](../../plans/011-new-lazuar-pay/README.md). Tracker: [`11-checklist.md`](../../plans/011-new-lazuar-pay/11-checklist.md).
 
 - One solution, one host, one test project.
-- Listen on **8081** so the old API can keep **8080**.
-- Merchants come from **lazuar-one** (not yet wired). Do not copy `Modules/One`.
+- Listen on **8081**. Never bind 8080 (One and old Hub use it).
+- Merchants come from **lazuar-one**. Local One API: `One__BaseUrl=http://localhost:8080/api/v1` (see `.env.example`). Do not copy `Modules/One`.
 - Do not add MediatR, per-module DbContexts, or a project reference into `apps/lazuar-api`.
 
 ```bash
