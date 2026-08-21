@@ -7,8 +7,8 @@
 
 ## P50.1 Door
 
-- [ ] `POST /v1/checkouts` and status GET on **Pay** `/v1`, not Hub `/public/commerce/*`
-- [ ] Tenant/org is One tenant id from whoami/authz
+- [x] `POST /v1/checkouts` and status GET on **Pay** `/v1`, not Hub `/public/commerce/*` (fixture, `status: open`)
+- [x] Tenant/org is One tenant id from whoami/authz
 - [ ] Buyer pays **without** a One account
 
 ## P50.2 Still out
@@ -20,4 +20,4 @@
 
 ## P50.3 Fixtures
 
-- [ ] If stubbing first: JSON fixtures on `/v1/checkouts`, not 100 Hub paths
+- [x] If stubbing first: JSON fixtures on `/v1/checkouts`, not 100 Hub paths. Hosted page, rails, journal, `RCPT-` still out.

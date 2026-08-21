@@ -4,7 +4,7 @@ import "@typespec/openapi";
 using Http;
 using OpenAPI;
 
-/** Focused Pay HTTP contract. Not packages/api-spec. Grow when POST /v1/checkouts exists. */
+/** Focused Pay HTTP contract. Not packages/api-spec. Checkout is a fixture (open session), not a charge. */
 @service(#{ title: "Lazuar Pay" })
 @info(#{ version: "0.1.0" })
 @server("http://localhost:8081", "Local focused Pay host")
@@ -35,6 +35,26 @@ model OrgReadyResponse {
   ready: boolean;
 }
 
+model CreateCheckoutRequest {
+  org_id: string;
+  amount: decimal;
+  currency?: string;
+  success_url?: string;
+  cancel_url?: string;
+  idempotency_key?: string;
+}
+
+model CheckoutSession {
+  id: string;
+  org_id: string;
+  amount: decimal;
+  currency: string;
+  status: string;
+  success_url?: string;
+  cancel_url?: string;
+  created_at: utcDateTime;
+}
+
 @route("/v1")
 @tag("Health")
 interface Health {
@@ -60,4 +80,21 @@ interface Orgs {
   @get
   @route("/orgs/{orgId}/ready")
   ready(@path orgId: string): OrgReadyResponse;
+}
+
+@route("/v1")
+@tag("Checkouts")
+interface Checkouts {
+  /** Merchant creates a fixture checkout. org_id is the One tenant id. Requires Bearer + member. */
+  @post
+  @route("/checkouts")
+  create(
+    @header("Idempotency-Key") idempotencyKey?: string,
+    @body body: CreateCheckoutRequest,
+  ): CheckoutSession;
+
+  /** Merchant reads a checkout they are a member of. */
+  @get
+  @route("/checkouts/{id}")
+  get(@path id: string): CheckoutSession;
 }

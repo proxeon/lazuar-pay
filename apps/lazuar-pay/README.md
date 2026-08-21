@@ -11,7 +11,7 @@ Plan: [`plans/011-new-lazuar-pay`](../../plans/011-new-lazuar-pay/README.md). Tr
 
 ```bash
 task pay:test
-task pay:dev          # http://localhost:8081/health, /v1/health, /v1/whoami
+task pay:dev          # :8081 health, whoami, checkouts
 # or
 pnpm --filter lazuar-pay dev
 ```
@@ -32,6 +32,18 @@ Log in at `http://localhost:5175` (product login). Demo user is whatever One REA
 curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8081/v1/whoami
 # no header → 401
 ```
+
+Create a workspace in **lazuar-app** (`:5174`) first if `tenants` is empty, then:
+
+```bash
+curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"org_id":"'"$ORG_ID"'","amount":10.00,"currency":"MYR","success_url":"https://example.test/ok","cancel_url":"https://example.test/no"}' \
+  http://localhost:8081/v1/checkouts
+# GET /v1/checkouts/{id} with the same Bearer
+```
+
+Checkout is an in-memory fixture (`status: open`). Not a real charge. Buyer has no One account.
 
 Pay never holds a Zitadel PAT. Staff **VIEWER** is not a One tenant role (`owner` / `admin` / `member` only); `/v1/orgs/{orgId}/ready` checks `member`, not “cannot charge”.
 

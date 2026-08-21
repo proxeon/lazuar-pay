@@ -13,34 +13,12 @@ internal static class OrgReadyEndpoints
         OneClient one,
         CancellationToken cancellationToken)
     {
-        if (!Bearer.TryGet(request, out var authorization))
+        var denied = await MemberGate.RequireMemberAsync(request, one, orgId, cancellationToken);
+        if (denied is not null)
         {
-            return PayErrors.Status(401, "Unauthorized", "Missing bearer token");
+            return denied;
         }
 
-        request.Headers.TryGetValue("X-Lazuar-Tenant-Id", out var hint);
-        var result = await one.CheckMemberAsync(authorization, orgId, hint.ToString(), cancellationToken);
-        return Map(orgId, result);
-    }
-
-    internal static IResult Map(string orgId, OneCallResult<bool> result)
-    {
-        if (result.StatusCode == 200 && result.Value)
-        {
-            return Results.Json(new OrgReadyResponse { OrgId = orgId, Ready = true }, OneClient.Json);
-        }
-
-        if (result.TimedOut || result.TransportFailed)
-        {
-            return PayErrors.Status(503, "Service Unavailable", "Identity provider unreachable");
-        }
-
-        return result.StatusCode switch
-        {
-            401 => PayErrors.Status(401, "Unauthorized", "Identity provider rejected the token"),
-            403 => PayErrors.Status(403, "Forbidden", "Not a member of this org"),
-            200 => PayErrors.Status(403, "Forbidden", "Not a member of this org"),
-            _ => PayErrors.Status(503, "Service Unavailable", "Identity provider failed")
-        };
+        return Results.Json(new OrgReadyResponse { OrgId = orgId, Ready = true }, OneClient.Json);
     }
 }

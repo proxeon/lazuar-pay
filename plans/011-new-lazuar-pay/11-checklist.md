@@ -14,14 +14,14 @@ Columns: **ID** · **Feature** · **Wave** · **Owner** · **Dogfood** · **Stat
 | Wave | Rows | todo | doing | done | blocked | refuse | n/a |
 |------|------|------|-------|------|---------|--------|-----|
 | S0 | 22 | 17 | 0 | 5 | 0 | 0 | 0 |
-| S1 | 42 | 42 | 0 | 0 | 0 | 0 | 0 |
+| S1 | 42 | 37 | 0 | 5 | 0 | 0 | 0 |
 | V1 | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
 | soon | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | later | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | refuse | 24 | 0 | 0 | 0 | 0 | 24 | 0 |
-| **Total** | **115** | **86** | **0** | **5** | **0** | **24** | **0** |
+| **Total** | **115** | **81** | **0** | **10** | **0** | **24** | **0** |
 
-Dogfood path (`Dogfood = Y`): **43** rows; S0 whoami/authz subset `done` on focused Pay. Remaining dogfood jobs still `todo`. Count includes every S0/S1 job the [01](./01-product.md) dogfood sentence fails without — not only the 12 slice steps.
+Dogfood path (`Dogfood = Y`): **43** rows; S0 whoami/authz and S1 fixture checkout (`POST`/`GET /v1/checkouts`) subset `done` on focused Pay. Remaining dogfood jobs still `todo`. Count includes every S0/S1 job the [01](./01-product.md) dogfood sentence fails without — not only the 12 slice steps.
 
 ---
 
@@ -72,9 +72,9 @@ Pay is Consumer-0. Do not rebuild `Modules/One`. Detail: [02-one-integration.md]
 
 | ID | Feature | Wave | Owner | Dogfood | Status | Notes |
 |----|---------|------|-------|---------|--------|-------|
-| NP-CHK-001 | Checkout session: amount, currency, tenant | S1 | Pay | Y | todo | |
-| NP-CHK-002 | Success and cancel URLs | S1 | Pay | — | todo | Fulfillment is the webhook, not `success_url` alone |
-| NP-CHK-003 | Idempotency key on create | S1 | Pay | — | todo | |
+| NP-CHK-001 | Checkout session: amount, currency, tenant | S1 | Pay | Y | done | Fixture `POST /v1/checkouts`; org_id is One tenant |
+| NP-CHK-002 | Success and cancel URLs | S1 | Pay | — | done | Stored on the fixture session; not fulfillment |
+| NP-CHK-003 | Idempotency key on create | S1 | Pay | — | done | `Idempotency-Key` header (or body) per org |
 | NP-CHK-004 | States: open → paid / expired | S1 | Pay | Y | todo | |
 | NP-CHK-005 | Hosted buyer pay page (cash register) | S1 | Pay | Y | todo | |
 | NP-CHK-006 | Shareable pay link | S1 | Pay | Y | todo | |
@@ -178,9 +178,9 @@ Bezos door: [08-bezos-door.md](./08-bezos-door.md).
 
 | ID | Feature | Wave | Owner | Dogfood | Status | Notes |
 |----|---------|------|-------|---------|--------|-------|
-| NP-API-001 | `POST /v1/checkouts` | S1 | Pay | Y | todo | Versioned HTTP from day one |
+| NP-API-001 | `POST /v1/checkouts` | S1 | Pay | Y | done | Fixture session; member of `org_id` |
 | NP-API-002 | Provider webhook URL (Stripe / CHIP / Billplz) | S1 | Pay | Y | todo | |
-| NP-API-003 | `GET` payment status | S1 | Pay | — | todo | |
+| NP-API-003 | `GET` payment status | S1 | Pay | — | done | `GET /v1/checkouts/{id}`; other org 403 |
 | NP-API-004 | Merchant ops is a client of `/v1` (One user JWT or `lzr_sk_`) | S1 | Pay | Y | todo | No back-door table reads |
 | NP-API-005 | Tenant isolation on every route | S1 | Pay | — | todo | |
 | NP-API-006 | Idempotency on money POSTs | S1 | Pay | — | todo | Aligns with [NP-CHK-003](#c-checkout-np-chk--wave-s1) / [NP-GW-006](#d-gateways-np-gw--wave-s1) |
