@@ -9,6 +9,7 @@ internal static class PaymentQueryEndpoints
     public static void MapPaymentQueries(this WebApplication app)
     {
         app.MapGet("/v1/orgs/{orgId}/payments", List);
+        app.MapGet("/v1/orgs/{orgId}/receipts", ListReceipts);
         app.MapGet("/v1/orgs/{orgId}/receipts/{id}", Receipt);
     }
 
@@ -30,6 +31,26 @@ internal static class PaymentQueryEndpoints
             amount = c.Amount,
             currency = c.Currency,
             status = c.Status
+        }), OneClient.Json);
+    }
+
+    static async Task<IResult> ListReceipts(
+        string orgId,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        CancellationToken ct)
+    {
+        var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
+        if (denied is not null) return denied;
+        var rows = await db.Documents.AsNoTracking().Where(d => d.OrgId == orgId).ToListAsync(ct);
+        return Results.Json(rows.Select(d => new
+        {
+            id = d.Id,
+            org_id = d.OrgId,
+            number = d.Number ?? "PENDING",
+            title = d.Title,
+            checkout_id = d.CheckoutId
         }), OneClient.Json);
     }
 

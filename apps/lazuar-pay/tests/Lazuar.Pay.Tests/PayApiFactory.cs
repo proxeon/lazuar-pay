@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -15,9 +16,12 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
     public FakeOneHandler One { get; } = new();
     readonly string _dbName = "pay-" + Guid.NewGuid().ToString("N");
 
+    public string StripeWebhookSecret { get; init; } = "whsec_test_local";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting("Pay:StripeWebhookSecret", StripeWebhookSecret);
         builder.ConfigureTestServices(services =>
         {
             foreach (var d in services.Where(s => s.ServiceType == typeof(OneClient)).ToList())
@@ -25,7 +29,8 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
                 services.Remove(d);
             }
 
-            services.AddDbContext<PayDbContext>(o => o.UseInMemoryDatabase(_dbName));
+            services.AddDbContext<PayDbContext>(o => o.UseInMemoryDatabase(_dbName)
+                .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
             services.AddTransient(_ =>
             {
                 var http = new HttpClient(One, disposeHandler: false)

@@ -27,6 +27,13 @@ internal static class CheckoutEndpoints
         }
 
         var settings = orgId is null ? null : await db.OrgSettings.FindAsync([orgId], cancellationToken);
+        if (settings is null && orgId is not null)
+        {
+            settings = new OrgSettingsRow { OrgId = orgId, SstRegistered = false };
+            db.OrgSettings.Add(settings);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         if (settings?.ChargesPaused == true)
         {
             return PayErrors.Status(403, "Forbidden", "Org charges are paused");

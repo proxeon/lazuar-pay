@@ -73,6 +73,10 @@ internal static class PublicPayEndpoints
         {
             return PayErrors.Status(503, "Service Unavailable", ex.Message);
         }
+        catch (Stripe.StripeException)
+        {
+            return PayErrors.Status(503, "Service Unavailable", "Stripe rejected the org key");
+        }
     }
 }
 

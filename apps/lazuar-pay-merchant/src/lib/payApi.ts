@@ -38,4 +38,16 @@ export async function getWhoami(
   return (await response.json()) as Whoami
 }
 
+export async function payFetch(
+  accessToken: string,
+  path: string,
+  init?: RequestInit & { orgHint?: string },
+): Promise<Response> {
+  const headers = new Headers(init?.headers)
+  headers.set('Authorization', `Bearer ${accessToken}`)
+  headers.set('Accept', 'application/json')
+  if (init?.orgHint) headers.set('X-Lazuar-Tenant-Id', init.orgHint)
+  return fetch(`${payApi}${path}`, { ...init, headers })
+}
+
 export { payApi }

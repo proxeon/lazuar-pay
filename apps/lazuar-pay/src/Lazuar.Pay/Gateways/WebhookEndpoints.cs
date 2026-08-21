@@ -2,7 +2,6 @@ using System.Text;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
 using Lazuar.Pay.One;
-using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 
@@ -20,7 +19,7 @@ internal static class WebhookEndpoints
         string orgId,
         HttpRequest request,
         PayDbContext db,
-        SecretBox box,
+        IConfiguration config,
         Fulfillment fulfillment,
         CancellationToken ct)
     {
@@ -36,24 +35,37 @@ internal static class WebhookEndpoints
             return PayErrors.Status(400, "Bad Request", "empty body");
         }
 
-        var cred = await db.GatewayCredentials.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == StripeHosted.Provider, ct);
-        if (cred is null)
+        var configured = await db.GatewayCredentials.AsNoTracking()
+            .AnyAsync(x => x.OrgId == orgId && x.Provider == StripeHosted.Provider, ct);
+        if (!configured)
         {
             return PayErrors.Status(400, "Bad Request", "rail not configured");
+        }
+
+        var whsec = config["Pay:StripeWebhookSecret"];
+        if (string.IsNullOrWhiteSpace(whsec))
+        {
+            return PayErrors.Status(503, "Service Unavailable", "Pay:StripeWebhookSecret missing");
         }
 
         request.Headers.TryGetValue("Stripe-Signature", out var sig);
         Event stripeEvent;
         try
         {
-            // Webhook signing secret is stored as the BYOK secret for local dogfood
-            // when the merchant pastes whsec_…; sk_ keys cannot verify signatures.
-            stripeEvent = EventUtility.ConstructEvent(json, sig.ToString(), box.Unprotect(cred.Ciphertext), throwOnApiVersionMismatch: false);
+            EventUtility.ValidateSignature(json, sig.ToString(), whsec);
+        }
+        catch (StripeException)
+        {
+            return PayErrors.Status(400, "Bad Request", "invalid signature");
+        }
+
+        try
+        {
+            stripeEvent = EventUtility.ConstructEvent(json, sig.ToString(), whsec, throwOnApiVersionMismatch: false);
         }
         catch (Exception)
         {
-            return PayErrors.Status(400, "Bad Request", "invalid signature");
+            return PayErrors.Status(400, "Bad Request", "invalid event");
         }
 
         if (await db.PspWebhookEvents.FindAsync([orgId, StripeHosted.Provider, stripeEvent.Id], ct) is not null)
