@@ -9,22 +9,22 @@
 
 ## M18.1 Selection
 
-- [ ] Selecting a tenant sets the path (`org` id in the URL)
-- [ ] May set `X-Lazuar-Tenant-Id` as a **hint only** (One name, not Hub `X-Tenant-Id`)
-- [ ] Subsequent money routes use org id in **path/body**
+- [x] Selecting a tenant sets the path (`org` id in the URL)
+- [x] May set `X-Lazuar-Tenant-Id` as a **hint only** (One name, not Hub `X-Tenant-Id`)
+- [x] Subsequent money routes use org id in **path/body**
 
 ## M18.2 Authz
 
-- [ ] Header must **not** authorize (already host C23)
-- [ ] No cookie as authz (`lazuar_auth`, `lazuar_active_tenant`, or a new Pay cookie)
-- [ ] Path + One membership remain SoT
+- [x] Header must **not** authorize (already host C23)
+- [x] No cookie as authz (`lazuar_auth`, `lazuar_active_tenant`, or a new Pay cookie)
+- [x] Path + One membership remain SoT
 
 ## M18.3 Persistence
 
-- [ ] Active-org hint may live in `sessionStorage` as UX only
-- [ ] Do not treat a stored id as membership
+- [x] Active-org hint may live in `sessionStorage` as UX only
+- [x] Do not treat a stored id as membership
 
 ## M18.4 Exit
 
-- [ ] Picker navigates by org id; header is optional and non-authorizing
-- [ ] Unblocked for M19
+- [x] Picker navigates by org id; header is optional and non-authorizing
+- [x] Unblocked for M19

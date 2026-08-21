@@ -9,22 +9,22 @@
 
 ## M15.1 CTA
 
-- [ ] Sign-in button calls `signinRedirect()` (oidc-client / react-oidc-context)
-- [ ] Copy: no password form on this app
-- [ ] User types password on **`:5175`**, not on the `:5178` homepage
+- [x] Sign-in button calls `signinRedirect()` (oidc-client / react-oidc-context)
+- [x] Copy: no password form on this app
+- [x] User types password on **`:5175`**, not on the `:5178` homepage
 
 ## M15.2 Destinations
 
-- [ ] Homepage remains `http://localhost:5178` after callback
-- [ ] Never link merchants to `:5173` (One admin) or `:3005` (Login V2 / Hub admin)
-- [ ] Do not `window.location = 'http://localhost:5175/'` as the product URL
+- [x] Homepage remains `http://localhost:5178` after callback
+- [x] Never link merchants to `:5173` (One admin) or `:3005` (Login V2 / Hub admin)
+- [x] Do not `window.location = 'http://localhost:5175/'` as the product URL
 
 ## M15.3 Chrome
 
-- [ ] `index.html` title remains **Lazuar Pay — merchant**
-- [ ] Not “Lazuar Console”; not ops branding
+- [x] `index.html` title remains **Lazuar Pay — merchant**
+- [x] Not “Lazuar Console”; not ops branding
 
 ## M15.4 Exit
 
-- [ ] Unauthenticated visit → Sign in → Zitadel → `:5175` → back to `:5178`
-- [ ] Unblocked for M16
+- [x] Unauthenticated visit → Sign in → Zitadel → `:5175` → back to `:5178`
+- [x] Unblocked for M16

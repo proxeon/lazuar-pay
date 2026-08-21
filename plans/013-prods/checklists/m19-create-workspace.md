@@ -9,22 +9,22 @@
 
 ## M19.1 Button
 
-- [ ] Create-workspace button calls One `POST /api/v1/tenants` with Ada Bearer
-- [ ] **Or** deep-link `lazuar-app` `:5174` (honest smaller path)
-- [ ] Caller becomes **owner**. One tenant id **is** Pay `org_id` (same bytes)
+- [x] Create-workspace button calls One `POST /api/v1/tenants` with Ada Bearer
+- [x] **Or** deep-link `lazuar-app` `:5174` (honest smaller path)
+- [x] Caller becomes **owner**. One tenant id **is** Pay `org_id` (same bytes)
 
 ## M19.2 After create
 
-- [ ] Refresh Pay whoami (do not cache stale `tenants[]`)
-- [ ] Then pick the new tenant (M18 path)
+- [x] Refresh Pay whoami (do not cache stale `tenants[]`)
+- [x] Then pick the new tenant (M18 path)
 
 ## M19.3 Must not
 
-- [ ] No `INSERT` into Pay `organizations` / `users` / mapping tables
-- [ ] No `POST /platform/tenants` (staff directory)
-- [ ] No Pay BFF re-export of One tenant routes; no Hub `provision_apps`
+- [x] No `INSERT` into Pay `organizations` / `users` / mapping tables
+- [x] No `POST /platform/tenants` (staff directory)
+- [x] No Pay BFF re-export of One tenant routes; no Hub `provision_apps`
 
 ## M19.4 Exit
 
-- [ ] Empty Ada can obtain a tenant id without a Pay org table
-- [ ] Unblocked for M20
+- [x] Empty Ada can obtain a tenant id without a Pay org table
+- [x] Unblocked for M20

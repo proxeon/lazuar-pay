@@ -30,3 +30,16 @@ dt {
 dd {
   margin: 0;
 }
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+ul {
+  padding-left: 1.2rem;
+}

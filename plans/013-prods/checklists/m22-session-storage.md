@@ -8,22 +8,22 @@
 
 ## M22.1 Store
 
-- [ ] `WebStorageStateStore` uses `window.sessionStorage` (copy `lazuar-app`)
-- [ ] Do not fork to `localStorage` “so Ada stays logged in”
-- [ ] Do not invent a Pay session cookie
+- [x] `WebStorageStateStore` uses `window.sessionStorage` (copy `lazuar-app`)
+- [x] Do not fork to `localStorage` “so Ada stays logged in”
+- [x] Do not invent a Pay session cookie
 
 ## M22.2 Fetch
 
-- [ ] `fetch` to Pay: credentials **omit** (the default for this cross-origin call)
-- [ ] Never `credentials: "include"`
-- [ ] Comment: **localhost cookies are not port-scoped** (Hub `lazuar_auth` would ride along)
+- [x] `fetch` to Pay: credentials **omit** (the default for this cross-origin call)
+- [x] Never `credentials: "include"`
+- [x] Comment: **localhost cookies are not port-scoped** (Hub `lazuar_auth` would ride along)
 
 ## M22.3 Must not
 
-- [ ] Do not add `AllowCredentials` on Pay CORS “to match One”
-- [ ] Do not read `document.cookie` to find the login session
+- [x] Do not add `AllowCredentials` on Pay CORS “to match One”
+- [x] Do not read `document.cookie` to find the login session
 
 ## M22.4 Exit
 
-- [ ] OIDC user is in sessionStorage; Pay calls are header-only
-- [ ] Unblocked for M23
+- [x] OIDC user is in sessionStorage; Pay calls are header-only
+- [x] Unblocked for M23

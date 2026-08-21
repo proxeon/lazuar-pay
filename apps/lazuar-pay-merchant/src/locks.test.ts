@@ -1,0 +1,37 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+function walkSrc(): string[] {
+  const out: string[] = []
+  function walk(dir: string) {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name)
+      if (statSync(p).isDirectory()) walk(p)
+      else if (/\.(ts|tsx|css)$/.test(name) && !name.includes('.test.'))
+        out.push(p)
+    }
+  }
+  walk(join(root, 'src'))
+  return out
+}
+
+describe('merchant honesty locks', () => {
+  it('has no password form or Hub login', () => {
+    const blob = walkSrc()
+      .map((p) => readFileSync(p, 'utf8'))
+      .join('\n')
+    expect(blob).not.toMatch(/type=["']password["']/)
+    expect(blob).not.toContain('/one/auth/login')
+    expect(blob).not.toContain('lazuar_auth')
+  })
+
+  it('package.json does not depend on Hub types', () => {
+    const pkg = readFileSync(join(root, 'package.json'), 'utf8')
+    expect(pkg).not.toContain('@repo/api-types-ts')
+    expect(pkg).not.toContain('lazuar-ops')
+  })
+})

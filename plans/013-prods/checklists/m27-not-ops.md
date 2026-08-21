@@ -8,28 +8,28 @@
 
 ## M27.1 Must not port from ops
 
-- [ ] LHDN / MyInvois / Tax Invoice / VALID
-- [ ] Ops AI chat
-- [ ] WhatsApp dunning / WhatsApp-required fields
-- [ ] Hub CRM
-- [ ] Quotes-as-tax / credit notes
-- [ ] Hub credits / utility ledger / Hub pricing
-- [ ] Password pages (forgot / reset / verify)
-- [ ] `Sidebar` module catalog (Commerce / Invoicing / Developer cathedral)
+- [x] LHDN / MyInvois / Tax Invoice / VALID
+- [x] Ops AI chat
+- [x] WhatsApp dunning / WhatsApp-required fields
+- [x] Hub CRM
+- [x] Quotes-as-tax / credit notes
+- [x] Hub credits / utility ledger / Hub pricing
+- [x] Password pages (forgot / reset / verify)
+- [x] `Sidebar` module catalog (Commerce / Invoicing / Developer cathedral)
 
 ## M27.2 Must not retarget
 
-- [ ] Do **not** set ops `VITE_API_URL` to **8081**
-- [ ] Ops stays on Hub `http://localhost:8080/api/v1` until kill
-- [ ] Pay CORS still denies `:3003`
+- [x] Do **not** set ops `VITE_API_URL` to **8081**
+- [x] Ops stays on Hub `http://localhost:8080/api/v1` until kill
+- [x] Pay CORS still denies `:3003`
 
 ## M27.3 Steal judgment only
 
-- [ ] New files in `lazuar-pay-merchant`; no import from `apps/lazuar-ops`
-- [ ] Nav stays Products | Keys | Payments (+ receipt, workspace switcher)
+- [x] New files in `lazuar-pay-merchant`; no import from `apps/lazuar-ops`
+- [x] Nav stays Products | Keys | Payments (+ receipt, workspace switcher)
 
 ## M27.4 Exit
 
-- [ ] Merchant README / this phase notes the refuse list
-- [ ] M track complete for Bar B chrome; money screens wait CAT / G / F
-- [ ] Unblocked for B99 when other tracks catch up
+- [x] Merchant README / this phase notes the refuse list
+- [x] M track complete for Bar B chrome; money screens wait CAT / G / F
+- [x] Unblocked for B99 when other tracks catch up

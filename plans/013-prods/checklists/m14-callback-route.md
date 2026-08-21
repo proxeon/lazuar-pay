@@ -8,22 +8,22 @@
 
 ## M14.1 Router (One app pattern, not ops)
 
-- [ ] Add `react-router-dom` from **One** `lazuar-app`, not from `lazuar-ops`
-- [ ] Route `/callback` for the OIDC code exchange
-- [ ] `AuthProvider` from `react-oidc-context` **wraps** the router
+- [x] Add `react-router-dom` from **One** `lazuar-app`, not from `lazuar-ops`
+- [x] Route `/callback` for the OIDC code exchange
+- [x] `AuthProvider` from `react-oidc-context` **wraps** the router
 
 ## M14.2 Exact match
 
-- [ ] Callback URL is exactly the app `redirect_uris` (`http://localhost:5178/callback`)
-- [ ] Do not use a different path (`/auth/callback`, `/oidc`, preview `:4178`) as dogfood
-- [ ] Friendly errors on the callback page; never print tokens
+- [x] Callback URL is exactly the app `redirect_uris` (`http://localhost:5178/callback`)
+- [x] Do not use a different path (`/auth/callback`, `/oidc`, preview `:4178`) as dogfood
+- [x] Friendly errors on the callback page; never print tokens
 
 ## M14.3 Must not
 
-- [ ] Do not copy ops `LoginPage` / forgot / reset / verify routes
-- [ ] Do not treat `/callback` as the product homepage
+- [x] Do not copy ops `LoginPage` / forgot / reset / verify routes
+- [x] Do not treat `/callback` as the product homepage
 
 ## M14.4 Exit
 
-- [ ] Browser can land on `/callback?code&state` and complete the exchange
-- [ ] Unblocked for M15
+- [x] Browser can land on `/callback?code&state` and complete the exchange
+- [x] Unblocked for M15
