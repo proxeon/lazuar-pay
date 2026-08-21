@@ -41,4 +41,4 @@ Binding from [011](../011-new-lazuar-pay/README.md) and [012](../012-one-to-pay/
 | [09-data-migration.md](./09-data-migration.md) | Data | What to migrate vs greenfield; no second org table |
 | [10-ci-observability-decommission.md](./10-ci-observability-decommission.md) | CI / ops / kill | Tests, staging, compose, when Hub goes dark |
 
-Implementation of these papers is a later program (checklists, not this folder). Analyses `01`–`10` stay the evidence; do not condense them into an index or a mega-PR plan in this README.
+**Implement against:** [checklists/](./checklists/README.md) (small phases, one intent each). Freeze: [checklists/decisions.md](./checklists/decisions.md). Analyses `01`–`10` stay the evidence; do not condense them into the checklists.
