@@ -27,7 +27,7 @@
 | CORS | 5178 + 5179 (+ 127.0.0.1 twins). Never 3003/3004/5173. |
 | DB | Greenfield Postgres, published **5435** locally. DB name `lazuar_pay`. One schema. One migrator. Not Hub `lazuar_mvp`. Not One `lazuar`. |
 | Persistence shape | SQL or **one** `PayDbContext`. Concrete stores. No MediatR, no nine contexts, no outbox-to-self. |
-| Rails | **Stripe XOR CHIP** for first dogfood (fill `First rail` below). Not five adapters. Billplz-class never silent debit. |
+| Rails | **Stripe** for first dogfood (CHIP parked until Bar C / second rail). Not five adapters. Billplz-class never silent debit. |
 | Webhook PSP | `POST /v1/webhooks/{provider}/{orgId}`. Signature, empty 400, unique `(org_id, provider, event_id)`. |
 | Fulfillment | Same HTTP request, one DB transaction: paid + seat/one-off + journal + `RCPT-` + audit. |
 | Receipt | Official Receipt `RCPT-{MYT year}-#####`. Never UUID. Never Tax Invoice. Never VALID. |
@@ -43,7 +43,7 @@
 
 | Topic | Value | Notes |
 |-------|-------|-------|
-| First rail | _Stripe XOR CHIP — write here in B00_ | 011/01 “CHIP or Stripe”. Billplz not first if you need auto-charge honesty. |
+| First rail | **Stripe** | Hosted Checkout `mode=payment`. CHIP is the next Malaysian rail, not this Bar B. Billplz is reminder-only — not first. |
 | Public pay identifier | `token` on `/v1/pay/{token}` | Paper 05 option B. Merchant GET stays member-gated. |
-| Migrator | _SQL files **or** one EF context — write here in B00_ | Paper 03 allows either. Not nine. |
+| Migrator | **One EF `PayDbContext`**, one migrations folder | Not nine contexts. Tests may use EF InMemory; prod is Npgsql on **5435**. |
 | Connection string name | `ConnectionStrings:Pay` | Locked in [D12](./d12-connection-string.md). Not Hub’s trio. |
