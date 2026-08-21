@@ -12,13 +12,15 @@ Plan: [`plans/011-new-lazuar-pay`](../../plans/011-new-lazuar-pay/README.md). Tr
 ```bash
 task pay:test
 task pay:dev          # :8081 health, whoami, checkouts
+task pay:merchant     # :5178 staff shell (not lazuar-ops :3003)
+task pay:checkout     # :5179 hosted pay page (not lazuar-portal :3004)
 # or
 pnpm --filter lazuar-pay dev
 ```
 
 TypeSpec: [`packages/pay-spec`](../../packages/pay-spec/) (`task pay:spec`). Not `packages/api-spec`.
 
-Compose still points at `apps/lazuar-api`. Swap later when S1 dogfood is real. Do not set ops/portal `VITE_API_URL` to 8081.
+Compose still points at `apps/lazuar-api`. Swap later when S1 dogfood is real. Do not set ops/portal `VITE_API_URL` to 8081. New UIs are `lazuar-pay-merchant` (`:5178`) and `lazuar-pay-checkout` (`:5179`).
 
 ## Live whoami (not CI)
 

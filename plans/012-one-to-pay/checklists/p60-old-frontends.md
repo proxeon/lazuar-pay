@@ -19,6 +19,7 @@
 
 ## P60.3 Later (new clients)
 
-- [ ] New merchant UI: OIDC to One (P10) + Pay `/v1` (whoami, then money)
-- [ ] Generate `@repo/pay-types-ts` only when that UI exists
+- [ ] New merchant UI: OIDC to One (P10) + Pay `/v1` (whoami, then money). Origin is `lazuar-pay-merchant` `:5178` (scaffold; OIDC unwired)
+- [ ] Hosted checkout origin is `lazuar-pay-checkout` `:5179` (not `lazuar-portal`)
+- [ ] Generate `@repo/pay-types-ts` only when that UI calls `/v1` for real
 - [ ] Do not mix Hub OpenAPI honesty CI with Pay

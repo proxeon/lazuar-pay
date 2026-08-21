@@ -8,7 +8,7 @@
 
 ## P10.1 When this becomes real
 
-- [ ] There is a Pay UI origin (new merchant shell or rewritten ops) — not Hub `:3003` pointed at 8081
+- [x] Pay UI origins exist: `lazuar-pay-merchant` `:5178` and `lazuar-pay-checkout` `:5179`. Not Hub `:3003` / `:3004` pointed at 8081. OIDC still unwired.
 
 ## P10.2 One-side (API already exists; prefer Pay calling it)
 

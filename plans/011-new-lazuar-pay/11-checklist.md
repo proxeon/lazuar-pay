@@ -35,7 +35,7 @@ Pay is Consumer-0. Do not rebuild `Modules/One`. Detail: [02-one-integration.md]
 | NP-ONE-002 | OIDC code + PKCE; Pay `client_id`; Zitadel authority | S0 | both | Y | todo | Env like `lazuar-app` |
 | NP-ONE-003 | Send **access_token** as `Authorization: Bearer` | S0 | Pay | Y | done | `GET /v1/whoami` forwards Bearer; never `id_token` as Bearer |
 | NP-ONE-004 | Register Pay redirects on One app + login `REDIRECT_ALLOWLIST` | S0 | both | Y | todo | Not Console-only |
-| NP-ONE-005 | Product login via `:5175`; never ship `:3005` or `:5173` | S0 | both | Y | todo | `:5175` is not Pay’s homepage |
+| NP-ONE-005 | Product login via `:5175`; never ship `:3005` or `:5173` | S0 | both | Y | todo | `:5175` is not Pay’s homepage; merchant Vite is `:5178` |
 | NP-ONE-006 | `GET /me` for user, tenants, roles, `active_tenant_id` | S0 | both | Y | done | Pay `GET /v1/whoami` calls One `/me` once; not middleware |
 | NP-ONE-007 | Path `{tenantId}` + membership is authz SoT | S0 | Pay | Y | done | `GET /v1/orgs/{orgId}/ready`; header is hint only |
 | NP-ONE-008 | Roles from `/me` + `authz/check`, not Zitadel project-role claims | S0 | Pay | — | done | Projection copies One `role`; no Zitadel claim parse |

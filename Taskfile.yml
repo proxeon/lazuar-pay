@@ -118,6 +118,16 @@ tasks:
     cmds:
       - pnpm exec tsp compile .
 
+  pay:merchant:
+    desc: Merchant Vite shell on http://localhost:5178 (not lazuar-ops)
+    cmds:
+      - pnpm --filter lazuar-pay-merchant dev
+
+  pay:checkout:
+    desc: Hosted buyer pay page on http://localhost:5179 (not lazuar-portal)
+    cmds:
+      - pnpm --filter lazuar-pay-checkout dev
+
   # ==========================================
   # .NET API Tasks (apps/lazuar-api — old modular monolith)
   # ==========================================
