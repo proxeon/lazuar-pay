@@ -9,24 +9,24 @@
 
 ## K19.1 Copy
 
-- [ ] After PSP return: wait for **payment confirmation** (verifying spinner)
-- [ ] Poll public `GET /v1/pay/{token}` until `status=paid` **or** timeout
-- [ ] Timeout: retry / “still confirming” — **not** “you’re in” / member / download unlocked
-- [ ] Paid pixel only when public GET says `paid`
+- [x] After PSP return: wait for **payment confirmation** (verifying spinner)
+- [x] Poll public `GET /v1/pay/{token}` until `status=paid` **or** timeout
+- [x] Timeout: retry / “still confirming” — **not** “you’re in” / member / download unlocked
+- [x] Paid pixel only when public GET says `paid`
 
 ## K19.2 Contract
 
-- [ ] `success_url` must **not** grant access (NP-FUL-002 is the Pay row, F11+)
-- [ ] Query `?payment=success` / Stripe session id is **not** paid
-- [ ] Steal `examples/hub-cashier-next` judgment: success_url is not paid — do not copy the app
+- [x] `success_url` must **not** grant access (NP-FUL-002 is the Pay row, F11+)
+- [x] Query `?payment=success` / Stripe session id is **not** paid
+- [x] Steal `examples/hub-cashier-next` judgment: success_url is not paid — do not copy the app
 
 ## K19.3 Must not
 
-- [ ] No Hub portal redirect that drops tokens
-- [ ] No treating `mode=setup` / amount 0 as paid (NP-GW-008) if that session appears
+- [x] No Hub portal redirect that drops tokens
+- [x] No treating `mode=setup` / amount 0 as paid (NP-GW-008) if that session appears
 
 ## K19.4 Exit
 
-- [ ] Verifying → paid | timeout pixels exist
-- [ ] Do not re-flip NP-CHK-002 (already stored on fixture); this phase is honesty of the page
-- [ ] Buyer track UI honesty unblocked for B99
+- [x] Verifying → paid | timeout pixels exist
+- [x] Do not re-flip NP-CHK-002 (already stored on fixture); this phase is honesty of the page
+- [x] Buyer track UI honesty unblocked for B99

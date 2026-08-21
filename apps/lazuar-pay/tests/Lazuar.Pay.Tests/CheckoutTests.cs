@@ -9,6 +9,11 @@ public class CheckoutTests
     static HttpResponseMessage Allow(string orgId, HttpRequestMessage req)
     {
         var path = req.RequestUri?.AbsolutePath ?? "";
+        if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+        {
+            return FakeOneHandler.Json(HttpStatusCode.OK, $$"""{"user_id":"u1","email":"ada@acme.test","is_platform_admin":false,"tenants":[{"id":"{{orgId}}","role":"owner","status":"active"}]}""");
+        }
+
         if (req.Method == HttpMethod.Post && path.Contains($"/tenants/{orgId}/authz/check"))
         {
             return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");

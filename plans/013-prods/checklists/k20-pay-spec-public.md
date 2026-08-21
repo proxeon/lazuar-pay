@@ -8,25 +8,25 @@
 
 ## K20.1 Add
 
-- [ ] Interface e.g. `PayPublic`: `GET /v1/pay/{token}` and `POST /v1/pay/{token}/start`
-- [ ] Buyer DTO + `{ redirect_url }` (and start body name/email if K18 landed)
-- [ ] Namespace `LazuarPay`; server still `http://localhost:8081`
-- [ ] snake_case matches host; document public (no Bearer) vs merchant checkouts
+- [x] Interface e.g. `PayPublic`: `GET /v1/pay/{token}` and `POST /v1/pay/{token}/start`
+- [x] Buyer DTO + `{ redirect_url }` (and start body name/email if K18 landed)
+- [x] Namespace `LazuarPay`; server still `http://localhost:8081`
+- [x] snake_case matches host; document public (no Bearer) vs merchant checkouts
 
 ## K20.2 Must not
 
-- [ ] No Hub `/public/commerce` import or clone
-- [ ] No `packages/api-spec` import
-- [ ] Do **not** mark merchant `GET /v1/checkouts/{id}` as unauthenticated in the spec
-- [ ] No `task gen` / Hub honesty allowlist / NSwag into `@repo/api-types-ts`
+- [x] No Hub `/public/commerce` import or clone
+- [x] No `packages/api-spec` import
+- [x] Do **not** mark merchant `GET /v1/checkouts/{id}` as unauthenticated in the spec
+- [x] No `task gen` / Hub honesty allowlist / NSwag into `@repo/api-types-ts`
 
 ## K20.3 Compile
 
-- [ ] `task pay:spec` succeeds
-- [ ] Dist stays gitignored
+- [x] `task pay:spec` succeeds
+- [x] Dist stays gitignored
 
 ## K20.4 Exit
 
-- [ ] Spec and host public paths match
-- [ ] May same-tip with K10/K12 if small
-- [ ] Unblocked for later `@repo/pay-types-ts` on checkout (not this phase)
+- [x] Spec and host public paths match
+- [x] May same-tip with K10/K12 if small
+- [x] Unblocked for later `@repo/pay-types-ts` on checkout (not this phase)

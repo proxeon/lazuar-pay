@@ -112,6 +112,18 @@ tasks:
     cmds:
       - dotnet watch run --project src/Lazuar.Pay/Lazuar.Pay.csproj
 
+  pay:db:up:
+    desc: Start greenfield Pay Postgres on localhost:5435
+    dir: apps/lazuar-pay
+    cmds:
+      - docker compose -f docker-compose.pay.yml up -d
+
+  pay:db:migrate:
+    desc: Apply PayDbContext migrations (one context)
+    dir: apps/lazuar-pay
+    cmds:
+      - dotnet ef database update --project src/Lazuar.Pay/Lazuar.Pay.csproj --context PayDbContext
+
   pay:spec:
     desc: Compile focused Pay TypeSpec to OpenAPI (packages/pay-spec, not api-spec)
     dir: packages/pay-spec

@@ -9,25 +9,25 @@
 
 ## G26.1 Add
 
-- [ ] `POST /v1/webhooks/{provider}/{orgId}` on namespace `LazuarPay`
-- [ ] Anonymous POST — document: **no** Bearer; PSP signature is auth
-- [ ] `{provider}` allow-list is the G10 rail (do not publish five Hub names)
-- [ ] Server remains `http://localhost:8081`
+- [x] `POST /v1/webhooks/{provider}/{orgId}` on namespace `LazuarPay`
+- [x] Anonymous POST — document: **no** Bearer; PSP signature is auth
+- [x] `{provider}` allow-list is the G10 rail (do not publish five Hub names)
+- [x] Server remains `http://localhost:8081`
 
 ## G26.2 Must not add
 
-- [ ] No Hub `/api/v1/webhooks/payments/…`
-- [ ] No `/one/*`, no Plane A One HMAC, no Plane C merchant outbound
-- [ ] No `packages/api-spec` import. No `task gen` / NSwag / honesty-allowlist
+- [x] No Hub `/api/v1/webhooks/payments/…`
+- [x] No `/one/*`, no Plane A One HMAC, no Plane C merchant outbound
+- [x] No `packages/api-spec` import. No `task gen` / NSwag / honesty-allowlist
 
 ## G26.3 Compile
 
-- [ ] `task pay:spec` succeeds
-- [ ] OpenAPI shows the webhook op and still `/v1/health`
-- [ ] Dist stays gitignored
+- [x] `task pay:spec` succeeds
+- [x] OpenAPI shows the webhook op and still `/v1/health`
+- [x] Dist stays gitignored
 
 ## G26.4 Exit
 
-- [ ] Spec path matches G18
-- [ ] `NP-API-002` may move if the host + spec agree
-- [ ] Unblocked for F10 / B99 (rails door exists)
+- [x] Spec path matches G18
+- [x] `NP-API-002` may move if the host + spec agree
+- [x] Unblocked for F10 / B99 (rails door exists)

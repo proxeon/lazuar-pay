@@ -9,25 +9,25 @@
 
 ## D11.1 Publish
 
-- [ ] Local Postgres published **`5435:5432`** (host 5435)
-- [ ] Database name **`lazuar_pay`**
-- [ ] User and password documented in `apps/lazuar-pay/.env.example`
-- [ ] Image `postgres:16` / `postgres:16-alpine` is OK (repo already uses it)
+- [x] Local Postgres published **`5435:5432`** (host 5435)
+- [x] Database name **`lazuar_pay`**
+- [x] User and password documented in `apps/lazuar-pay/.env.example`
+- [x] Image `postgres:16` / `postgres:16-alpine` is OK (repo already uses it)
 
 ## D11.2 Not these worlds
 
-- [ ] **Not** host **5432** (One / Hub fight)
-- [ ] **Not** database **`lazuar`** (One) or **`lazuar_mvp`** (Hub)
-- [ ] Do **not** start Hub compose `db` / `task infra:up` for this
-- [ ] Do **not** attach Pay to One’s cluster even if a laptop once remapped One to 5435
-- [ ] Service / container must **not** be Hub `lazuar-db`
+- [x] **Not** host **5432** (One / Hub fight)
+- [x] **Not** database **`lazuar`** (One) or **`lazuar_mvp`** (Hub)
+- [x] Do **not** start Hub compose `db` / `task infra:up` for this
+- [x] Do **not** attach Pay to One’s cluster even if a laptop once remapped One to 5435
+- [x] Service / container must **not** be Hub `lazuar-db`
 
 ## D11.3 Init
 
-- [ ] Do not copy Hub nine schemas (`commerce`, `billing`, `payments`, `lhdn`, `crm`, `one`, `ops`, `messaging`, `communications`)
-- [ ] Do not `CREATE DATABASE lazuar` / `zitadel` / `openfga` in Pay’s init
+- [x] Do not copy Hub nine schemas (`commerce`, `billing`, `payments`, `lhdn`, `crm`, `one`, `ops`, `messaging`, `communications`)
+- [x] Do not `CREATE DATABASE lazuar` / `zitadel` / `openfga` in Pay’s init
 
 ## D11.4 Exit
 
-- [ ] `psql` (or equivalent) to `localhost:5435` / `lazuar_pay` works with the `.env.example` user
-- [ ] Unblocked for D12
+- [x] `psql` (or equivalent) to `localhost:5435` / `lazuar_pay` works with the `.env.example` user
+- [x] Unblocked for D12

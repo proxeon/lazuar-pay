@@ -8,18 +8,18 @@
 
 ## Q12.1 Commands
 
-- [ ] CI `pnpm --filter lazuar-pay-merchant build` (or `check-types` + `build`)
-- [ ] CI `pnpm --filter lazuar-pay-checkout build`
-- [ ] Filter those two packages only
-- [ ] Job may share Node/pnpm setup with Q11; it is not Hub `ghcr.yml` ops/portal bake
+- [x] CI `pnpm --filter lazuar-pay-merchant build` (or `check-types` + `build`)
+- [x] CI `pnpm --filter lazuar-pay-checkout build`
+- [x] Filter those two packages only
+- [x] Job may share Node/pnpm setup with Q11; it is not Hub `ghcr.yml` ops/portal bake
 
 ## Q12.2 Must not
 
-- [ ] `pnpm build` / turbo whole workspace as the Pay gate
-- [ ] `pnpm --filter lazuar-ops` / portal / admin as a Pay gate
-- [ ] Playwright as the first frontend lock
+- [x] `pnpm build` / turbo whole workspace as the Pay gate
+- [x] `pnpm --filter lazuar-ops` / portal / admin as a Pay gate
+- [x] Playwright as the first frontend lock
 
 ## Q12.3 Exit
 
-- [ ] Both Vite apps typecheck/build on PR
-- [ ] Unblocked for Q13
+- [x] Both Vite apps typecheck/build on PR
+- [x] Unblocked for Q13

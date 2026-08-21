@@ -9,25 +9,25 @@
 
 ## G25.1 Factory
 
-- [ ] Hermetic `FakeHttp` **or** stub signature — no network to Stripe/CHIP
-- [ ] Fixture wrap key + fixture webhook secret (G11)
-- [ ] Health still 200 if the PSP handler would throw
+- [x] Hermetic `FakeHttp` **or** stub signature — no network to Stripe/CHIP
+- [x] Fixture wrap key + fixture webhook secret (G11)
+- [x] Health still 200 if the PSP handler would throw
 
 ## G25.2 Cases (one test each)
 
-- [ ] Bad / missing signature → **4xx** (G19)
-- [ ] Empty body → **400** (G20)
-- [ ] Two posts, same `event_id` → second **200** no-op; fulfill once (G21)
-- [ ] Setup-intent / amount≤0 / skip_capture-without-token → fulfill **not** called (G22)
+- [x] Bad / missing signature → **4xx** (G19)
+- [x] Empty body → **400** (G20)
+- [x] Two posts, same `event_id` → second **200** no-op; fulfill once (G21)
+- [x] Setup-intent / amount≤0 / skip_capture-without-token → fulfill **not** called (G22)
 
 ## G25.3 Hygiene
 
-- [ ] Tests do not skip on “Stripe not configured”
-- [ ] No live Stripe/CHIP keys in CI
-- [ ] `task pay:test` runs them. IsolationTests still green
+- [x] Tests do not skip on “Stripe not configured”
+- [x] No live Stripe/CHIP keys in CI
+- [x] `task pay:test` runs them. IsolationTests still green
 
 ## G25.4 Exit
 
-- [ ] All G25.2 cases green
-- [ ] `NP-GW-004` / `005` / `006` / `008` may move if not already
-- [ ] Unblocked for F10 (if still open) and G26
+- [x] All G25.2 cases green
+- [x] `NP-GW-004` / `005` / `006` / `008` may move if not already
+- [x] Unblocked for F10 (if still open) and G26

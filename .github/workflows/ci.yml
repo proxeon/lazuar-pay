@@ -92,3 +92,27 @@ jobs:
         run: dotnet test tests/Modules.Billing.Tests/Modules.Billing.Tests.csproj --no-build --verbosity normal
       - name: Test (Ops)
         run: dotnet test tests/Modules.Ops.Tests/Modules.Ops.Tests.csproj --no-build --verbosity normal
+
+  pay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.2
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+      - name: Test focused Pay host
+        run: dotnet test apps/lazuar-pay/Lazuar.Pay.slnx --nologo --verbosity minimal
+      - name: Build merchant and checkout
+        run: |
+          pnpm --filter lazuar-pay-merchant build
+          pnpm --filter lazuar-pay-checkout build
+      - name: Compile pay-spec
+        run: pnpm --filter @repo/pay-spec exec tsp compile .

@@ -9,22 +9,22 @@
 
 ## O12.1 Allowed
 
-- [ ] Invited user role `member` can `GET` payments (F19) and receipt (F20)
-- [ ] `:5178` shows the payment + `RCPT-` (F21) for that member
-- [ ] `authz/check` `member` on the path org allows the read
+- [x] Invited user role `member` can `GET` payments (F19) and receipt (F20)
+- [x] `:5178` shows the payment + `RCPT-` (F21) for that member
+- [x] `authz/check` `member` on the path org allows the read
 
 ## O12.2 Forbidden for member
 
-- [ ] Cannot G12 `PUT` keys — already G14 (`member` 403 on write)
-- [ ] Do not invent VIEWER; do not mark NP-ONE-021 done via `check(member)`
+- [x] Cannot G12 `PUT` keys — already G14 (`member` 403 on write)
+- [x] Do not invent VIEWER; do not mark NP-ONE-021 done via `check(member)`
 
 ## O12.3 Proof
 
-- [ ] Live **or** hermetic with **two** tokens (owner/admin vs invited member)
-- [ ] Hermetic: fake One allows member on GET payments/receipt; PUT keys still 403
-- [ ] Prefer hermetic as the merge gate; live is M26-class runbook
+- [x] Live **or** hermetic with **two** tokens (owner/admin vs invited member)
+- [x] Hermetic: fake One allows member on GET payments/receipt; PUT keys still 403
+- [x] Prefer hermetic as the merge gate; live is M26-class runbook
 
 ## O12.4 Exit
 
-- [ ] Two-token proof exists
-- [ ] Unblocked for B99 member sentence
+- [x] Two-token proof exists
+- [x] Unblocked for B99 member sentence

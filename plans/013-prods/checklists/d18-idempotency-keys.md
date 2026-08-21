@@ -8,23 +8,23 @@
 
 ## D18.1 Shape
 
-- [ ] Unique `(org_id, key)` maps to the checkout `id`
-- [ ] Table `idempotency_keys` **or** unique on `checkouts` where the key is present — pick one
-- [ ] Replaces `CheckoutStore._idempotency` (`orgId + "\n" + key` in memory)
-- [ ] Not an outbox. Not PSP `(org_id, provider, event_id)` (D23)
+- [x] Unique `(org_id, key)` maps to the checkout `id`
+- [x] Table `idempotency_keys` **or** unique on `checkouts` where the key is present — pick one
+- [x] Replaces `CheckoutStore._idempotency` (`orgId + "\n" + key` in memory)
+- [x] Not an outbox. Not PSP `(org_id, provider, event_id)` (D23)
 
 ## D18.2 Behavior
 
-- [ ] Second `POST /v1/checkouts` with the same `Idempotency-Key` + `org_id` returns the first session
-- [ ] Survives process restart / new replica (shared DB)
-- [ ] Existing `CheckoutTests.Create_idempotent_on_key` still holds
+- [x] Second `POST /v1/checkouts` with the same `Idempotency-Key` + `org_id` returns the first session
+- [x] Survives process restart / new replica (shared DB)
+- [x] Existing `CheckoutTests.Create_idempotent_on_key` still holds
 
 ## D18.3 Refuse
 
-- [ ] No MediatR inbox “to record the key”
-- [ ] Do not reuse this key as the journal / webhook event id
+- [x] No MediatR inbox “to record the key”
+- [x] Do not reuse this key as the journal / webhook event id
 
 ## D18.4 Exit
 
-- [ ] `Create_idempotent_on_key` green against the durable store
-- [ ] Unblocked for D19
+- [x] `Create_idempotent_on_key` green against the durable store
+- [x] Unblocked for D19

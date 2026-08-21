@@ -9,23 +9,23 @@
 
 ## F20.1 Route
 
-- [ ] `GET /v1/orgs/{orgId}/receipts/{receiptId}` (name illustrative) on 8081
-- [ ] Member of that org. Other org → 403. Missing Bearer → 401
-- [ ] JSON of the header is enough (PDF not required for Bar B)
+- [x] `GET /v1/orgs/{orgId}/receipts/{receiptId}` (name illustrative) on 8081
+- [x] Member of that org. Other org → 403. Missing Bearer → 401
+- [x] JSON of the header is enough (PDF not required for Bar B)
 
 ## F20.2 Number
 
-- [ ] `number` is `RCPT-` + MYT year + digits, **or** the string `PENDING`
-- [ ] Not `Guid.ToString`. Not journal id. Not checkout id
-- [ ] Title Official Receipt. No VALID
+- [x] `number` is `RCPT-` + MYT year + digits, **or** the string `PENDING`
+- [x] Not `Guid.ToString`. Not journal id. Not checkout id
+- [x] Title Official Receipt. No VALID
 
 ## F20.3 Must not
 
-- [ ] Not Hub `GET /admin/billing/ledger/{id}/document`
-- [ ] Not ops `:3003`. Not R2 required to GET
-- [ ] Buyer public download is Bar C (`NP-BUY-005`)
+- [x] Not Hub `GET /admin/billing/ledger/{id}/document`
+- [x] Not ops `:3003`. Not R2 required to GET
+- [x] Buyer public download is Bar C (`NP-BUY-005`)
 
 ## F20.4 Exit
 
-- [ ] Member GET 200 with `RCPT-` or `PENDING`
-- [ ] Unblocked for F21 and F23
+- [x] Member GET 200 with `RCPT-` or `PENDING`
+- [x] Unblocked for F21 and F23

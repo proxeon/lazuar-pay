@@ -9,24 +9,24 @@
 
 ## G14.1 Law
 
-- [ ] One membership is `owner` \| `admin` \| `member` only. Do not invent Pay `VIEWER`
-- [ ] Dummy `/v1/orgs/{orgId}/ready` `check(member)` is **not** this gate
-- [ ] PUT keys = `authz/check` **admin** (owner has admin)
+- [x] One membership is `owner` \| `admin` \| `member` only. Do not invent Pay `VIEWER`
+- [x] Dummy `/v1/orgs/{orgId}/ready` `check(member)` is **not** this gate
+- [x] PUT keys = `authz/check` **admin** (owner has admin)
 
 ## G14.2 Test (one each)
 
-- [ ] `member` Bearer on G12 PUT → **403**. Secret not stored
-- [ ] `owner` or `admin` Bearer → **204** or **200**
-- [ ] Missing Bearer → **401**; One `authz/check` **not** called
-- [ ] Fake One: assert relation is **admin**, `object.type=tenant`, `object.id` = path `orgId`
+- [x] `member` Bearer on G12 PUT → **403**. Secret not stored
+- [x] `owner` or `admin` Bearer → **204** or **200**
+- [x] Missing Bearer → **401**; One `authz/check` **not** called
+- [x] Fake One: assert relation is **admin**, `object.type=tenant`, `object.id` = path `orgId`
 
 ## G14.3 Must not
 
-- [ ] Must not treat `check(member)` as VIEWER-cannot-charge and tick `NP-ONE-021` done
-- [ ] Must not add FGA type `payment`
+- [x] Must not treat `check(member)` as VIEWER-cannot-charge and tick `NP-ONE-021` done
+- [x] Must not add FGA type `payment`
 
 ## G14.4 Exit
 
-- [ ] Cases in G14.2 green under `task pay:test`
-- [ ] `NP-ONE-021` may move **for key paste only** (charge/refund still paper 07 / O)
-- [ ] Unblocked for G16
+- [x] Cases in G14.2 green under `task pay:test`
+- [x] `NP-ONE-021` may move **for key paste only** (charge/refund still paper 07 / O)
+- [x] Unblocked for G16

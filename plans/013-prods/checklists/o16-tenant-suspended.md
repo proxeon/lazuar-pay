@@ -9,29 +9,29 @@
 
 ## O16.1 Flag
 
-- [ ] On verified `tenant.suspended`, set `org_settings.charges_paused` (D19 row keyed by One tenant id)
-- [ ] `tenant.reactivated` clears the pause
-- [ ] Persist with the processed event — not in-memory-only for live
+- [x] On verified `tenant.suspended`, set `org_settings.charges_paused` (D19 row keyed by One tenant id)
+- [x] `tenant.reactivated` clears the pause
+- [x] Persist with the processed event — not in-memory-only for live
 
 ## O16.2 Fail closed (new attempts)
 
-- [ ] `POST /v1/checkouts` fails closed while paused
-- [ ] `POST /v1/pay/{token}/start` fails closed while paused
-- [ ] PSP fulfill of **new** attempts fails closed while paused
-- [ ] Do not fail open on the **start** path because One is down
+- [x] `POST /v1/checkouts` fails closed while paused
+- [x] `POST /v1/pay/{token}/start` fails closed while paused
+- [x] PSP fulfill of **new** attempts fails closed while paused
+- [x] Do not fail open on the **start** path because One is down
 
 ## O16.3 Money already true
 
-- [ ] Already-paid journals stay
-- [ ] Late webhook does **not** unwind cash
-- [ ] In-flight PSP capture of an already-open attempt may still commit (G/F plane)
+- [x] Already-paid journals stay
+- [x] Late webhook does **not** unwind cash
+- [x] In-flight PSP capture of an already-open attempt may still commit (G/F plane)
 
 ## O16.4 Must not
 
-- [ ] Reverse journal / void `RCPT-` on suspend
-- [ ] Put buyer entitlement in One
+- [x] Reverse journal / void `RCPT-` on suspend
+- [x] Put buyer entitlement in One
 
 ## O16.5 Exit
 
-- [ ] Pause + reactivate proven hermetically
-- [ ] Unblocked for B99 live-charge honesty (O17 table if not already)
+- [x] Pause + reactivate proven hermetically
+- [x] Unblocked for B99 live-charge honesty (O17 table if not already)

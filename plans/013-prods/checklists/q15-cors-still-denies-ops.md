@@ -8,19 +8,19 @@
 
 ## Q15.1 CorsTests
 
-- [ ] `http://localhost:5178` allowed
-- [ ] `http://localhost:5179` allowed
-- [ ] `http://localhost:3003` **denied** (ops)
-- [ ] `http://localhost:3004` **denied** (portal) — add if missing
-- [ ] Existing Health allow tests still pass
+- [x] `http://localhost:5178` allowed
+- [x] `http://localhost:5179` allowed
+- [x] `http://localhost:3003` **denied** (ops)
+- [x] `http://localhost:3004` **denied** (portal) — add if missing
+- [x] Existing Health allow tests still pass
 
 ## Q15.2 Must not
 
-- [ ] Do not “temporarily” add ops `:3003` to demo
-- [ ] Do not add `:3004` / `:5173` / `:3005`
-- [ ] Do not `AllowCredentials` for a Hub cookie
+- [x] Do not “temporarily” add ops `:3003` to demo
+- [x] Do not add `:3004` / `:5173` / `:3005`
+- [x] Do not `AllowCredentials` for a Hub cookie
 
 ## Q15.3 Exit
 
-- [ ] CorsTests cover 5178/5179 allow and 3003/3004 deny
-- [ ] Q track complete; **unblocked for B99**
+- [x] CorsTests cover 5178/5179 allow and 3003/3004 deny
+- [x] Q track complete; **unblocked for B99**

@@ -8,23 +8,23 @@
 
 ## D23.1 Table
 
-- [ ] `psp_webhook_events` (or equivalent name, **this** table)
-- [ ] Unique `(org_id, provider, event_id)`
-- [ ] `org_id` is One tenant id
+- [x] `psp_webhook_events` (or equivalent name, **this** table)
+- [x] Unique `(org_id, provider, event_id)`
+- [x] `org_id` is One tenant id
 
 ## D23.2 Not One HMAC
 
-- [ ] **Not** One HMAC delivery rows — that is **O17** (`one_webhook_events`)
-- [ ] Different secret, different route later; different table now
-- [ ] Do not share this unique key with D18 checkout idempotency
+- [x] **Not** One HMAC delivery rows — that is **O17** (`one_webhook_events`)
+- [x] Different secret, different route later; different table now
+- [x] Do not share this unique key with D18 checkout idempotency
 
 ## D23.3 Refuse
 
-- [ ] No `payments.PaymentWebhookLogs` copy
-- [ ] No nine `InboxMessages` pairs
-- [ ] Handler / signature verify is G18–G21, not this file
+- [x] No `payments.PaymentWebhookLogs` copy
+- [x] No nine `InboxMessages` pairs
+- [x] Handler / signature verify is G18–G21, not this file
 
 ## D23.4 Exit
 
-- [ ] Unique constraint exists on a clean migrate
-- [ ] Unblocked for D24
+- [x] Unique constraint exists on a clean migrate
+- [x] Unblocked for D24

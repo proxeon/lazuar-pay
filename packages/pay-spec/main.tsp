@@ -53,6 +53,24 @@ model CheckoutSession {
   success_url?: string;
   cancel_url?: string;
   created_at: utcDateTime;
+  public_token?: string;
+}
+
+model PublicPay {
+  token: string;
+  amount: decimal;
+  currency: string;
+  status: string;
+}
+
+model Product {
+  id: string;
+  org_id: string;
+  name: string;
+}
+
+model StartPayResponse {
+  redirect_url: string;
 }
 
 @route("/v1")
@@ -97,4 +115,40 @@ interface Checkouts {
   @get
   @route("/checkouts/{id}")
   get(@path id: string): CheckoutSession;
+}
+
+@route("/v1")
+@tag("Pay")
+interface PublicPayApi {
+  @get
+  @route("/pay/{token}")
+  get(@path token: string): PublicPay;
+
+  @post
+  @route("/pay/{token}/start")
+  start(@path token: string): StartPayResponse;
+}
+
+@route("/v1")
+@tag("Catalog")
+interface Catalog {
+  @post
+  @route("/orgs/{orgId}/products")
+  createProduct(@path orgId: string): Product;
+
+  @get
+  @route("/orgs/{orgId}/products")
+  listProducts(@path orgId: string): Product[];
+}
+
+@route("/v1")
+@tag("Webhooks")
+interface Webhooks {
+  @post
+  @route("/webhooks/{provider}/{orgId}")
+  psp(@path provider: string, @path orgId: string): { ok: boolean };
+
+  @post
+  @route("/one/webhooks")
+  one(): { ok: boolean };
 }

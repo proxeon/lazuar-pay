@@ -33,6 +33,38 @@ public class IsolationTests
     }
 
     [Test]
+    public void Source_does_not_create_org_or_user_tables()
+    {
+        var src = Path.Combine(FindPayRoot(), "src");
+        foreach (var file in Directory.GetFiles(src, "*.cs", SearchOption.AllDirectories))
+        {
+            var text = File.ReadAllText(file);
+            Assert.That(text, Does.Not.Contain("ToTable(\"organizations\")"), file);
+            Assert.That(text, Does.Not.Contain("ToTable(\"users\")"), file);
+            Assert.That(text, Does.Not.Contain("ToTable(\"members\")"), file);
+        }
+    }
+
+    [Test]
+    public void Vite_apps_do_not_use_hub_types()
+    {
+        var repo = FindPayRoot();
+        while (repo is not null && !Directory.Exists(Path.Combine(repo, "apps", "lazuar-pay-merchant")))
+        {
+            repo = Directory.GetParent(repo)?.FullName;
+        }
+
+        Assert.That(repo, Is.Not.Null);
+        foreach (var name in new[] { "lazuar-pay-merchant", "lazuar-pay-checkout" })
+        {
+            var pkg = Path.Combine(repo, "apps", name, "package.json");
+            Assert.That(File.Exists(pkg), Is.True, pkg);
+            var text = File.ReadAllText(pkg);
+            Assert.That(text, Does.Not.Contain("@repo/api-types-ts"), pkg);
+        }
+    }
+
+    [Test]
     public void No_csproj_references_apps_lazuar_api()
     {
         var root = FindPayRoot();

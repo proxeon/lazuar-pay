@@ -8,23 +8,23 @@
 
 ## F22.1 Behaviour
 
-- [ ] Replay of the same `(org_id, provider, event_id)` after commit: **HTTP 200**
-- [ ] Journal line count unchanged
-- [ ] Exactly one `RCPT-` (sequence does not increment again)
-- [ ] One ACTIVE (or one paid one-off), not two
+- [x] Replay of the same `(org_id, provider, event_id)` after commit: **HTTP 200**
+- [x] Journal line count unchanged
+- [x] Exactly one `RCPT-` (sequence does not increment again)
+- [x] One ACTIVE (or one paid one-off), not two
 
 ## F22.2 Test (required)
 
-- [ ] Hermetic: POST twice with the same `event_id`
-- [ ] Assert status 200, line count stable, receipt count = 1
-- [ ] Fake PSP; no live Stripe/CHIP network
-- [ ] Runs under `task pay:test`
+- [x] Hermetic: POST twice with the same `event_id`
+- [x] Assert status 200, line count stable, receipt count = 1
+- [x] Fake PSP; no live Stripe/CHIP network
+- [x] Runs under `task pay:test`
 
 ## F22.3 Must not
 
-- [ ] Do not return 500 after commit (PSP would retry; unique keys still no-op, but 200 is the contract)
-- [ ] Do not allocate a second number because PDF failed (number is in the TX)
+- [x] Do not return 500 after commit (PSP would retry; unique keys still no-op, but 200 is the contract)
+- [x] Do not allocate a second number because PDF failed (number is in the TX)
 
 ## F22.4 Exit
 
-- [ ] Replay test green
+- [x] Replay test green

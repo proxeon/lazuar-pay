@@ -1,33 +1,79 @@
-using System.Collections.Concurrent;
+using Lazuar.Pay.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Checkouts;
 
-/// <summary>In-memory fixture store. Not a ledger. Replace when money is real.</summary>
-public sealed class CheckoutStore
+/// <summary>Postgres-backed checkouts. Not a ledger.</summary>
+public sealed class CheckoutStore(PayDbContext db)
 {
-    readonly ConcurrentDictionary<string, CheckoutSession> _byId = new(StringComparer.Ordinal);
-    readonly ConcurrentDictionary<string, string> _idempotency = new(StringComparer.Ordinal);
-
-    public CheckoutSession Create(CheckoutSession session, string? idempotencyKey)
+    public async Task<CheckoutSession> CreateAsync(CheckoutSession session, string? idempotencyKey, CancellationToken ct)
     {
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            var key = session.OrgId + "\n" + idempotencyKey;
-            if (_idempotency.TryGetValue(key, out var existingId) &&
-                _byId.TryGetValue(existingId, out var existing))
+            var existingKey = await db.IdempotencyKeys.FindAsync([session.OrgId, idempotencyKey], ct);
+            if (existingKey is not null)
             {
-                return existing;
+                var existing = await db.Checkouts.FindAsync([existingKey.CheckoutId], ct);
+                if (existing is not null)
+                {
+                    return Map(existing);
+                }
             }
-
-            _byId[session.Id] = session;
-            _idempotency.TryAdd(key, session.Id);
-            return session;
         }
 
-        _byId[session.Id] = session;
-        return session;
+        var row = new CheckoutRow
+        {
+            Id = session.Id,
+            OrgId = session.OrgId,
+            PublicToken = session.PublicToken ?? Convert.ToHexString(Guid.NewGuid().ToByteArray()),
+            Amount = session.Amount,
+            Currency = session.Currency,
+            Status = session.Status,
+            Interval = session.Interval ?? "one_off",
+            SuccessUrl = session.SuccessUrl,
+            CancelUrl = session.CancelUrl,
+            CreatedAt = session.CreatedAt
+        };
+        db.Checkouts.Add(row);
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            db.IdempotencyKeys.Add(new IdempotencyKeyRow
+            {
+                OrgId = session.OrgId,
+                Key = idempotencyKey,
+                CheckoutId = session.Id
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
+        return Map(row);
     }
 
-    public CheckoutSession? Get(string id) =>
-        _byId.TryGetValue(id, out var session) ? session : null;
+    public async Task<CheckoutSession?> GetAsync(string id, CancellationToken ct)
+    {
+        var row = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        return row is null ? null : Map(row);
+    }
+
+    public async Task<CheckoutSession?> GetByPublicTokenAsync(string token, CancellationToken ct)
+    {
+        var row = await db.Checkouts.AsNoTracking().FirstOrDefaultAsync(x => x.PublicToken == token, ct);
+        return row is null ? null : Map(row);
+    }
+
+    public static CheckoutSession Map(CheckoutRow row) => new()
+    {
+        Id = row.Id,
+        OrgId = row.OrgId,
+        PublicToken = row.PublicToken,
+        Amount = row.Amount,
+        Currency = row.Currency,
+        Status = row.Status,
+        Interval = row.Interval,
+        SuccessUrl = row.SuccessUrl,
+        CancelUrl = row.CancelUrl,
+        CreatedAt = row.CreatedAt,
+        PayerName = row.PayerName,
+        PayerEmail = row.PayerEmail
+    };
 }

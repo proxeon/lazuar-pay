@@ -1,0 +1,94 @@
+using Lazuar.Pay.Data;
+using Lazuar.Pay.One;
+using Microsoft.EntityFrameworkCore;
+
+namespace Lazuar.Pay.Catalog;
+
+internal static class CatalogEndpoints
+{
+    public static void MapCatalog(this WebApplication app)
+    {
+        app.MapPost("/v1/orgs/{orgId}/products", Create);
+        app.MapGet("/v1/orgs/{orgId}/products", List);
+    }
+
+    static async Task<IResult> Create(
+        string orgId,
+        CreateProductRequest? body,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        CancellationToken ct)
+    {
+        var denied = await MemberGate.RequireWriterAsync(request, one, orgId, ct);
+        if (denied is not null) return denied;
+        var name = body?.Name?.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return PayErrors.Status(400, "Bad Request", "name is required");
+        }
+
+        var currency = string.IsNullOrWhiteSpace(body?.Currency) ? "MYR" : body!.Currency!.Trim().ToUpperInvariant();
+        if (currency != "MYR")
+        {
+            return PayErrors.Status(400, "Bad Request", "Bar B currency is MYR");
+        }
+
+        if (body?.Amount is null || body.Amount <= 0)
+        {
+            return PayErrors.Status(400, "Bad Request", "amount must be greater than 0");
+        }
+
+        var product = new ProductRow
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            OrgId = orgId,
+            Name = name,
+            Description = body.Description,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        var price = new PriceRow
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            ProductId = product.Id,
+            Currency = currency,
+            Amount = body.Amount.Value,
+            Interval = string.IsNullOrWhiteSpace(body.Interval) ? "one_off" : body.Interval.Trim()
+        };
+        db.Products.Add(product);
+        db.Prices.Add(price);
+        await db.SaveChangesAsync(ct);
+        return Results.Json(new { id = product.Id, org_id = orgId, name = product.Name, price_id = price.Id, amount = price.Amount, currency, interval = price.Interval }, OneClient.Json, statusCode: 201);
+    }
+
+    static async Task<IResult> List(
+        string orgId,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        CancellationToken ct)
+    {
+        var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
+        if (denied is not null) return denied;
+        var products = await db.Products.AsNoTracking().Where(p => p.OrgId == orgId).ToListAsync(ct);
+        var ids = products.Select(p => p.Id).ToList();
+        var prices = await db.Prices.AsNoTracking().Where(p => ids.Contains(p.ProductId)).ToListAsync(ct);
+        var payload = products.Select(p => new
+        {
+            id = p.Id,
+            org_id = p.OrgId,
+            name = p.Name,
+            prices = prices.Where(x => x.ProductId == p.Id).Select(x => new { x.Id, x.Amount, x.Currency, x.Interval })
+        });
+        return Results.Json(payload, OneClient.Json);
+    }
+}
+
+public sealed class CreateProductRequest
+{
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public decimal? Amount { get; set; }
+    public string? Currency { get; set; }
+    public string? Interval { get; set; }
+}

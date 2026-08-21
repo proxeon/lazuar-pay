@@ -8,22 +8,22 @@
 
 ## D28.1 Table
 
-- [ ] `payers`: `email`, `name`, `org_id` (merchant’s One tenant id)
-- [ ] Small profile. Optional phone is fine
-- [ ] **Not** `zitadel_user_id` / `one_user_id` / `global_user_id`
+- [x] `payers`: `email`, `name`, `org_id` (merchant’s One tenant id)
+- [x] Small profile. Optional phone is fine
+- [x] **Not** `zitadel_user_id` / `one_user_id` / `global_user_id`
 
 ## D28.2 Legal / tax
 
-- [ ] TIN / IdType / address as **legal** columns are **not** required
-- [ ] Do not copy Hub `crm.ClientProfiles` TIN theatre
+- [x] TIN / IdType / address as **legal** columns are **not** required
+- [x] Do not copy Hub `crm.ClientProfiles` TIN theatre
 
 ## D28.3 Refuse
 
-- [ ] Do not create Zitadel humans from payers
-- [ ] Do not store a password
-- [ ] Buyers are not One members
+- [x] Do not create Zitadel humans from payers
+- [x] Do not store a password
+- [x] Buyers are not One members
 
 ## D28.4 Exit
 
-- [ ] Table exists; identity columns for One/Zitadel are absent
-- [ ] Unblocked for D29
+- [x] Table exists; identity columns for One/Zitadel are absent
+- [x] Unblocked for D29

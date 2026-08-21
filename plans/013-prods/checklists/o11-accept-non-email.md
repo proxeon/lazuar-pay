@@ -9,23 +9,23 @@
 
 ## O11.1 Non-email path (keep)
 
-- [ ] Accept remains One `POST /tenants/{tenantId}/members/accept-invite` `{ token }` after a human JWT
-- [ ] Deep-link to `lazuar-app` `/invites/accept?tenant_id=&token=` is enough for Bar B
-- [ ] Optional Pay accept page that posts the **same** One API — not required if deep-link works
-- [ ] `GET /me/invites` is discovery only (no token); inbox cannot join
+- [x] Accept remains One `POST /tenants/{tenantId}/members/accept-invite` `{ token }` after a human JWT
+- [x] Deep-link to `lazuar-app` `/invites/accept?tenant_id=&token=` is enough for Bar B
+- [x] Optional Pay accept page that posts the **same** One API — not required if deep-link works
+- [x] `GET /me/invites` is discovery only (no token); inbox cannot join
 
 ## O11.2 SMTP honesty
 
-- [ ] If One staging email never arrives, copy-link still joins
-- [ ] Do **not** block Bar B on One `prove-smtp.sh` / MEM-10 / STAGING-PROOF
-- [ ] Do **not** paper over SMTP with Pay-sent mail
+- [x] If One staging email never arrives, copy-link still joins
+- [x] Do **not** block Bar B on One `prove-smtp.sh` / MEM-10 / STAGING-PROOF
+- [x] Do **not** paper over SMTP with Pay-sent mail
 
 ## O11.3 Must not
 
-- [ ] No Pay mail outbox as invite SoT
-- [ ] No rename of copy-link query keys (`tenant_id`, `token`) without a migration
+- [x] No Pay mail outbox as invite SoT
+- [x] No rename of copy-link query keys (`tenant_id`, `token`) without a migration
 
 ## O11.4 Exit
 
-- [ ] Non-email accept is the documented Bar B path
-- [ ] Unblocked for O12
+- [x] Non-email accept is the documented Bar B path
+- [x] Unblocked for O12

@@ -7,6 +7,7 @@
     "dev": "vite --port=5179 --host=0.0.0.0 --strictPort",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "vitest run",
     "check-types": "tsc -b",
     "preview": "vite preview --port=4179 --strictPort",
     "clean": "rm -rf dist"
@@ -21,6 +22,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
+    "vitest": "^3.2.4",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
   }

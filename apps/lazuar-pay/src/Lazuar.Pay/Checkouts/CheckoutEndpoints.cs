@@ -1,3 +1,4 @@
+using Lazuar.Pay.Data;
 using Lazuar.Pay.One;
 
 namespace Lazuar.Pay.Checkouts;
@@ -15,6 +16,7 @@ internal static class CheckoutEndpoints
         HttpRequest request,
         OneClient one,
         CheckoutStore store,
+        PayDbContext db,
         CancellationToken cancellationToken)
     {
         var orgId = body?.OrgId?.Trim();
@@ -22,6 +24,12 @@ internal static class CheckoutEndpoints
         if (denied is not null)
         {
             return denied;
+        }
+
+        var settings = orgId is null ? null : await db.OrgSettings.FindAsync([orgId], cancellationToken);
+        if (settings?.ChargesPaused == true)
+        {
+            return PayErrors.Status(403, "Forbidden", "Org charges are paused");
         }
 
         if (body?.Amount is null || body.Amount <= 0)
@@ -40,15 +48,17 @@ internal static class CheckoutEndpoints
         {
             Id = Guid.NewGuid().ToString("N"),
             OrgId = orgId!,
+            PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
             Amount = body.Amount.Value,
             Currency = currency,
             Status = "open",
+            Interval = "one_off",
             SuccessUrl = body.SuccessUrl,
             CancelUrl = body.CancelUrl,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        session = store.Create(session, idempotency);
+        session = await store.CreateAsync(session, idempotency, cancellationToken);
         return Results.Json(session, OneClient.Json, statusCode: 201);
     }
 
@@ -59,7 +69,7 @@ internal static class CheckoutEndpoints
         CheckoutStore store,
         CancellationToken cancellationToken)
     {
-        var session = store.Get(id);
+        var session = await store.GetAsync(id, cancellationToken);
         if (session is null)
         {
             return PayErrors.Status(404, "Not Found", "Checkout not found");

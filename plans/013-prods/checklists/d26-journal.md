@@ -8,24 +8,24 @@
 
 ## D26.1 Tables
 
-- [ ] `journal_entries` + `journal_lines` in the D14 schema (same database as checkouts)
-- [ ] Header has `org_id` (One tenant id)
-- [ ] Lines are double-entry shaped (enough for F13 to balance). Insert-only is fine
+- [x] `journal_entries` + `journal_lines` in the D14 schema (same database as checkouts)
+- [x] Header has `org_id` (One tenant id)
+- [x] Lines are double-entry shaped (enough for F13 to balance). Insert-only is fine
 
 ## D26.2 Refuse
 
-- [ ] **No** `TaxInvoiceId` dual-use column
-- [ ] **No** `billing` schema / `BillingDbContext`
-- [ ] No LHDN UUID / VALID / consolidation columns
-- [ ] No copy of `billing.LedgerEntries` row-for-row
+- [x] **No** `TaxInvoiceId` dual-use column
+- [x] **No** `billing` schema / `BillingDbContext`
+- [x] No LHDN UUID / VALID / consolidation columns
+- [x] No copy of `billing.LedgerEntries` row-for-row
 
 ## D26.3 Not this file
 
-- [ ] Balanced check in **F13** (`ValidateBalanced` **judgment**, not the module)
-- [ ] Same TX as paid + `RCPT-` is F, not D26
-- [ ] Do not add nine outboxes so “billing can subscribe”
+- [x] Balanced check in **F13** (`ValidateBalanced` **judgment**, not the module)
+- [x] Same TX as paid + `RCPT-` is F, not D26
+- [x] Do not add nine outboxes so “billing can subscribe”
 
 ## D26.4 Exit
 
-- [ ] Both tables exist on `lazuar_pay`
-- [ ] Unblocked for D27
+- [x] Both tables exist on `lazuar_pay`
+- [x] Unblocked for D27

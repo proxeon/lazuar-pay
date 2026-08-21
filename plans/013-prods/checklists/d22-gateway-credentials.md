@@ -8,23 +8,23 @@
 
 ## D22.1 Table
 
-- [ ] `gateway_credentials`: `org_id` + `provider`, `ciphertext`, last4 / metadata, `updated_at`
-- [ ] Unique enough to rotate/disable without a second org table
-- [ ] Never store plaintext `sk_live_` / CHIP Bearer / Billplz secret in this table
+- [x] `gateway_credentials`: `org_id` + `provider`, `ciphertext`, last4 / metadata, `updated_at`
+- [x] Unique enough to rotate/disable without a second org table
+- [x] Never store plaintext `sk_live_` / CHIP Bearer / Billplz secret in this table
 
 ## D22.2 Encryption
 
-- [ ] This phase is the **column**. Encryption helper is **G11** — do not invent Hub `AesSecretVault` here
-- [ ] Do not copy Hub `Kms__MasterKey` / `Jwt:Secret` fallback
-- [ ] GET later returns last4 / provider only (G13). Column shape must allow that
+- [x] This phase is the **column**. Encryption helper is **G11** — do not invent Hub `AesSecretVault` here
+- [x] Do not copy Hub `Kms__MasterKey` / `Jwt:Secret` fallback
+- [x] GET later returns last4 / provider only (G13). Column shape must allow that
 
 ## D22.3 Refuse
 
-- [ ] Not One `lzr_sk_`
-- [ ] Not `payments.TenantPaymentConfigurations` ciphertext copied across
-- [ ] No Vite env for these secrets
+- [x] Not One `lzr_sk_`
+- [x] Not `payments.TenantPaymentConfigurations` ciphertext copied across
+- [x] No Vite env for these secrets
 
 ## D22.4 Exit
 
-- [ ] Table exists; no plaintext live key column
-- [ ] Unblocked for D23
+- [x] Table exists; no plaintext live key column
+- [x] Unblocked for D23

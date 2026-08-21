@@ -9,23 +9,23 @@
 
 ## F15.1 Title
 
-- [ ] Stored / printed title: **Official Receipt** or **payment receipt**
-- [ ] Disclaimer: payment receipt, not a validated MyInvois tax invoice / not an LHDN e-invoice
-- [ ] Do not use H1 `Invoice` as a compromise
+- [x] Stored / printed title: **Official Receipt** or **payment receipt**
+- [x] Disclaimer: payment receipt, not a validated MyInvois tax invoice / not an LHDN e-invoice
+- [x] Do not use H1 `Invoice` as a compromise
 
 ## F15.2 Grep lock (this path)
 
-- [ ] Grep `Tax Invoice` on the fulfillment / receipt path must be **absent**
-- [ ] Grep `VALID` on this path must be **absent** (also no `INVALID` / `SUBMITTED` badges)
-- [ ] No MyInvois UUID, QR, `B2C_RECEIPT`, `NEEDS_BUYER_TIN`
+- [x] Grep `Tax Invoice` on the fulfillment / receipt path must be **absent**
+- [x] Grep `VALID` on this path must be **absent** (also no `INVALID` / `SUBMITTED` badges)
+- [x] No MyInvois UUID, QR, `B2C_RECEIPT`, `NEEDS_BUYER_TIN`
 
 ## F15.3 Must not
 
-- [ ] No LHDN submit (UBL, XAdES, consolidation, `SubmitTaxDocument`)
-- [ ] No `B2bTaxInvoiceRequestedIntegrationEvent`
-- [ ] No `InvoiceIssuedIntegrationEvent`
+- [x] No LHDN submit (UBL, XAdES, consolidation, `SubmitTaxDocument`)
+- [x] No `B2bTaxInvoiceRequestedIntegrationEvent`
+- [x] No `InvoiceIssuedIntegrationEvent`
 
 ## F15.4 Exit
 
-- [ ] Grep lock holds on this path
-- [ ] Unblocked for F21 chrome (receipt JSON already honest)
+- [x] Grep lock holds on this path
+- [x] Unblocked for F21 chrome (receipt JSON already honest)

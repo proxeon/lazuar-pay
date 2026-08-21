@@ -8,22 +8,22 @@
 
 ## Q13.1 Grep
 
-- [ ] `Taskfile.yml` `gen` / `gen:*` sources stay `packages/api-spec/**/*.tsp` — **no** `pay-spec`
-- [ ] `contracts:honesty` still Hub OpenAPI ↔ Minimal (`scripts/check-openapi-minimal-honesty.mjs`)
-- [ ] `ci.yml` `contracts` dirty-check paths do **not** include `packages/pay-spec`
+- [x] `Taskfile.yml` `gen` / `gen:*` sources stay `packages/api-spec/**/*.tsp` — **no** `pay-spec`
+- [x] `contracts:honesty` still Hub OpenAPI ↔ Minimal (`scripts/check-openapi-minimal-honesty.mjs`)
+- [x] `ci.yml` `contracts` dirty-check paths do **not** include `packages/pay-spec`
 
 ## Q13.2 Pay contract stays separate
 
-- [ ] `task pay:spec` remains the Pay compile
-- [ ] Optional later PR job for `pay:spec` must **not** merge with `contracts`
+- [x] `task pay:spec` remains the Pay compile
+- [x] Optional later PR job for `pay:spec` must **not** merge with `contracts`
 
 ## Q13.3 Must not
 
-- [ ] Add pay-spec to `honesty-allowlist.yaml`
-- [ ] NSwag / Kiota Pay DTOs from Hub yaml
-- [ ] `task gen` compiling pay-spec “so one pipeline”
+- [x] Add pay-spec to `honesty-allowlist.yaml`
+- [x] NSwag / Kiota Pay DTOs from Hub yaml
+- [x] `task gen` compiling pay-spec “so one pipeline”
 
 ## Q13.4 Exit
 
-- [ ] Grep still clean
-- [ ] Unblocked for Q14
+- [x] Grep still clean
+- [x] Unblocked for Q14

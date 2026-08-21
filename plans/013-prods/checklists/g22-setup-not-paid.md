@@ -9,22 +9,22 @@
 
 ## G22.1 Do not call fulfill
 
-- [ ] Stripe `setup_intent` / Checkout `mode=setup` → **not** paid
-- [ ] `amount <= 0` → **not** paid (no `RCPT-`, no seat)
-- [ ] CHIP `skip_capture` **without** a token → **not** paid
-- [ ] CHIP `purchase.preauthorized` (even with token) is **vaulted**, not captured — do not copy Hub `PAYMENT_COMPLETED`
+- [x] Stripe `setup_intent` / Checkout `mode=setup` → **not** paid
+- [x] `amount <= 0` → **not** paid (no `RCPT-`, no seat)
+- [x] CHIP `skip_capture` **without** a token → **not** paid
+- [x] CHIP `purchase.preauthorized` (even with token) is **vaulted**, not captured — do not copy Hub `PAYMENT_COMPLETED`
 
 ## G22.2 HTTP
 
-- [ ] Verified setup/vault → **200** with `vaulted` / ignored — **not** 400 retry storm
-- [ ] Do not mint session `paid`. Do not call F10 fulfill
+- [x] Verified setup/vault → **200** with `vaulted` / ignored — **not** 400 retry storm
+- [x] Do not mint session `paid`. Do not call F10 fulfill
 
 ## G22.3 Test
 
-- [ ] Fixture payload for setup-intent **or** amount 0 **or** skip_capture-without-token: fulfill **not** called
-- [ ] Hermetic. This commit or G25
+- [x] Fixture payload for setup-intent **or** amount 0 **or** skip_capture-without-token: fulfill **not** called
+- [x] Hermetic. This commit or G25
 
 ## G22.4 Exit
 
-- [ ] `NP-GW-008` may move when the test is green
-- [ ] Unblocked for G25 / F10 (F17 still owns zero-amount `RCPT-`)
+- [x] `NP-GW-008` may move when the test is green
+- [x] Unblocked for G25 / F10 (F17 still owns zero-amount `RCPT-`)

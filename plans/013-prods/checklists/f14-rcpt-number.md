@@ -9,24 +9,24 @@
 
 ## F14.1 Allocate
 
-- [ ] Read `apps/lazuar-api/Modules/Billing/Contracts/DocumentSeries.cs` and `…/MalaysiaTime.cs` — **read, do not copy project**
-- [ ] Year from MalaysiaTime (`Asia/Kuala_Lumpur` / Windows `Singapore Standard Time`), not UTC, not machine local
-- [ ] Pin NYE: `2025-12-31 18:00 UTC` → prefix `RCPT-2026`
-- [ ] Format `{prefix}-{value:D5}` e.g. `RCPT-2026-00001`. Per `(org_id, prefix)`
-- [ ] Increment in the **same** transaction as the journal (failed persist rolls the increment back)
+- [x] Read `apps/lazuar-api/Modules/Billing/Contracts/DocumentSeries.cs` and `…/MalaysiaTime.cs` — **read, do not copy project**
+- [x] Year from MalaysiaTime (`Asia/Kuala_Lumpur` / Windows `Singapore Standard Time`), not UTC, not machine local
+- [x] Pin NYE: `2025-12-31 18:00 UTC` → prefix `RCPT-2026`
+- [x] Format `{prefix}-{value:D5}` e.g. `RCPT-2026-00001`. Per `(org_id, prefix)`
+- [x] Increment in the **same** transaction as the journal (failed persist rolls the increment back)
 
 ## F14.2 Never UUID
 
-- [ ] Never `Guid.ToString` / `ToString("N")` / slice of journal id as the number
-- [ ] If allocate fails: leave the string **`PENDING`**, not a UUID
-- [ ] `PENDING` is a bug fallback, not the happy path
+- [x] Never `Guid.ToString` / `ToString("N")` / slice of journal id as the number
+- [x] If allocate fails: leave the string **`PENDING`**, not a UUID
+- [x] `PENDING` is a bug fallback, not the happy path
 
 ## F14.3 Must not
 
-- [ ] No `INV-` / `CN-` / `QT-` / `SAAS-` in this handler
-- [ ] No MediatR `GenerateNextSequenceNumberCommand`
+- [x] No `INV-` / `CN-` / `QT-` / `SAAS-` in this handler
+- [x] No MediatR `GenerateNextSequenceNumberCommand`
 
 ## F14.4 Exit
 
-- [ ] Happy path number is `RCPT-` + MYT year + 5 digits
-- [ ] Unblocked for F15 and F20
+- [x] Happy path number is `RCPT-` + MYT year + 5 digits
+- [x] Unblocked for F15 and F20

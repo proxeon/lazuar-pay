@@ -38,4 +38,33 @@ internal static class MemberGate
             _ => PayErrors.Status(503, "Service Unavailable", "Identity provider failed")
         };
     }
+
+    public static async Task<IResult?> RequireWriterAsync(
+        HttpRequest request,
+        OneClient one,
+        string orgId,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireMemberAsync(request, one, orgId, cancellationToken);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        Bearer.TryGet(request, out var authorization);
+        request.Headers.TryGetValue("X-Lazuar-Tenant-Id", out var hint);
+        var who = await one.GetWhoamiAsync(authorization, hint.ToString(), cancellationToken);
+        if (who.Value is null)
+        {
+            return PayErrors.Status(503, "Service Unavailable", "Identity provider failed");
+        }
+
+        var role = who.Value.Tenants.FirstOrDefault(t => t.Id == orgId)?.Role;
+        if (role is not ("owner" or "admin"))
+        {
+            return PayErrors.Status(403, "Forbidden", "Writer role required");
+        }
+
+        return null;
+    }
 }

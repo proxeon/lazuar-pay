@@ -8,25 +8,25 @@
 
 ## D17.1 Table
 
-- [ ] Table `checkouts` in the D14 schema
-- [ ] Columns at least: `id`, `org_id`, `amount`, `currency`, `status`, `success_url`, `cancel_url`, `created_at`, `public_token` (nullable until K10)
-- [ ] `org_id` is One tenant id (copy of the uuid/text). No FK to `organizations`
-- [ ] `status` still **`open`** until F11 — do not add paid/expire here
-- [ ] Do not port Hub `commerce.CheckoutSessions` / `payments.IntegrationCheckoutSessions`
+- [x] Table `checkouts` in the D14 schema
+- [x] Columns at least: `id`, `org_id`, `amount`, `currency`, `status`, `success_url`, `cancel_url`, `created_at`, `public_token` (nullable until K10)
+- [x] `org_id` is One tenant id (copy of the uuid/text). No FK to `organizations`
+- [x] `status` still **`open`** until F11 — do not add paid/expire here
+- [x] Do not port Hub `commerce.CheckoutSessions` / `payments.IntegrationCheckoutSessions`
 
 ## D17.2 Store
 
-- [ ] Replace `_byId` `ConcurrentDictionary` with this table (concrete class, not MediatR)
-- [ ] Class comment stays honest: **not a ledger**
-- [ ] DI: not a process-local dictionary of sessions
+- [x] Replace `_byId` `ConcurrentDictionary` with this table (concrete class, not MediatR)
+- [x] Class comment stays honest: **not a ledger**
+- [x] DI: not a process-local dictionary of sessions
 
 ## D17.3 Tests
 
-- [ ] Existing `CheckoutTests` pass against a **test double** or **Testcontainers**
-- [ ] If Testcontainers: add the package on **Pay test csproj only**. Do **not** import Hub `Directory.Packages.props`
-- [ ] IsolationTests still ban MediatR
+- [x] Existing `CheckoutTests` pass against a **test double** or **Testcontainers**
+- [x] If Testcontainers: add the package on **Pay test csproj only**. Do **not** import Hub `Directory.Packages.props`
+- [x] IsolationTests still ban MediatR
 
 ## D17.4 Exit
 
-- [ ] Create/get still 201/200; restart no longer wipes `_byId`
-- [ ] Unblocked for D18
+- [x] Create/get still 201/200; restart no longer wipes `_byId`
+- [x] Unblocked for D18
