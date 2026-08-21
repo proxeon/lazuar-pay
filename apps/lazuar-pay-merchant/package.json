@@ -7,13 +7,17 @@
     "dev": "vite --port=5178 --host=0.0.0.0 --strictPort",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "vitest run",
     "check-types": "tsc -b",
     "preview": "vite preview --port=4178 --strictPort",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "oidc-client-ts": "^3.4.1",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-oidc-context": "^3.3.0",
+    "react-router-dom": "^7.15.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
@@ -22,6 +26,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "vitest": "^3.2.4"
   }
 }
