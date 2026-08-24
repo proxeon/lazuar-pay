@@ -9,10 +9,10 @@
 
 ## B27.1
 
-- [ ] PUT without `public_merchant_id` → 400
-- [ ] Start with empty Collection ID → 503 incomplete rail
-- [ ] Create JSON always includes `collection_id`
+- [x] PUT without `public_merchant_id` → 400
+- [x] Start with empty Collection ID → 503 incomplete rail
+- [x] Create JSON always includes `collection_id`
 
 ## B27.2 Exit
 
-- [ ] Tests green
+- [x] Tests green

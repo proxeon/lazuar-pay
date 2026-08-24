@@ -9,17 +9,17 @@
 
 ## S15.1 Column
 
-- [ ] Add nullable `ProviderSessionId` on `CheckoutRow`
-- [ ] Set when `CreateHostedUrl` returns
-- [ ] Values: Stripe `cs_…`, CHIP purchase id, Billplz bill id, Xendit invoice id, Razorpay `plink_…`
-- [ ] Keep existing `PspRedirectUrl`
+- [x] Add nullable `ProviderSessionId` on `CheckoutRow`
+- [x] Set when `CreateHostedUrl` returns
+- [x] Values: Stripe `cs_…`, CHIP purchase id, Billplz bill id, Xendit invoice id, Razorpay `plink_…`
+- [x] Keep existing `PspRedirectUrl`
 
 ## S15.2 Why
 
-- [ ] Billplz merge-by-bill-id if `checkout_id` query is lost
-- [ ] Support / replay without scraping metadata
+- [x] Billplz merge-by-bill-id if `checkout_id` query is lost
+- [x] Support / replay without scraping metadata
 
 ## S15.3 Exit
 
-- [ ] Column on the row type
-- [ ] Unblocked for P18
+- [x] Column on the row type
+- [x] Unblocked for P18

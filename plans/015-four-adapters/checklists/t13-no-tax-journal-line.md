@@ -9,21 +9,21 @@
 
 ## T13.1 Live
 
-- [ ] Confirm `Fulfillment` still adds exactly two lines: account `cash` Dc `D` and account `revenue` Dc `C`, both `checkout.Amount`
-- [ ] Do not add `tax` / `sst` / `fee` accounts
-- [ ] Do not port Hub `taxRate` / `TaxAmount` into `PaidWebhook` or journal
-- [ ] Do not book Razorpay webhook JSON `tax` or `fee` as lines (`unknown ≠ 0`)
+- [x] Confirm `Fulfillment` still adds exactly two lines: account `cash` Dc `D` and account `revenue` Dc `C`, both `checkout.Amount`
+- [x] Do not add `tax` / `sst` / `fee` accounts
+- [x] Do not port Hub `taxRate` / `TaxAmount` into `PaidWebhook` or journal
+- [x] Do not book Razorpay webhook JSON `tax` or `fee` as lines (`unknown ≠ 0`)
 
 ## T13.2 Honesty
 
-- [ ] A test name or comment may say “GMV two-line; tax out of program”
-- [ ] Omitting the fee line is correct; booking fee 0 is not
+- [x] A test name or comment may say “GMV two-line; tax out of program”
+- [x] Omitting the fee line is correct; booking fee 0 is not
 
 ## T13.3 Must not
 
-- [ ] Do not add a third line “tax 0” to look complete
+- [x] Do not add a third line “tax 0” to look complete
 
 ## T13.4 Exit
 
-- [ ] Paid path still balances at two lines
-- [ ] Unblocked for T16
+- [x] Paid path still balances at two lines
+- [x] Unblocked for T16

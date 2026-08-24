@@ -9,14 +9,14 @@
 
 ## Q13.1
 
-- [ ] Replace “Checkout is an in-memory fixture (`status: open`). Not a real charge.”
-- [ ] Say: Postgres `lazuar_pay` :5435, Stripe + CHIP + Billplz + Xendit + Razorpay hosted_link, webhook fulfills `RCPT-`
-- [ ] Tax out: Official Receipt, not e-invoice
-- [ ] One active provider per org
-- [ ] `Pay:PublicBaseUrl` for Billplz (B29)
-- [ ] `Pay:WrapKey`, per-org `whsec_` / PEM
-- [ ] Listen 8081; Hub off when One uses 8080
+- [x] Replace “Checkout is an in-memory fixture (`status: open`). Not a real charge.”
+- [x] Say: Postgres `lazuar_pay` :5435, Stripe + CHIP + Billplz + Xendit + Razorpay hosted_link, webhook fulfills `RCPT-`
+- [x] Tax out: Official Receipt, not e-invoice
+- [x] One active provider per org
+- [x] `Pay:PublicBaseUrl` for Billplz (B29)
+- [x] `Pay:WrapKey`, per-org `whsec_` / PEM
+- [x] Listen 8081; Hub off when One uses 8080
 
 ## Q13.2 Exit
 
-- [ ] README sentences a file-open can defend
+- [x] README sentences a file-open can defend

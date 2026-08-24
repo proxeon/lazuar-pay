@@ -9,14 +9,14 @@
 
 ## R11.1
 
-- [ ] Accept either `secret` = `key_id:key_secret` **or** two fields `key_id` + `key_secret` joined with `:` before Protect
-- [ ] Require `webhook_secret` (Razorpay dashboard webhook secret)
-- [ ] Reject `public_merchant_id`
-- [ ] `active_provider=razorpay`
-- [ ] Writer only
-- [ ] last4 = last4 of key_id (or of secret) — document which
+- [x] Accept either `secret` = `key_id:key_secret` **or** two fields `key_id` + `key_secret` joined with `:` before Protect
+- [x] Require `webhook_secret` (Razorpay dashboard webhook secret)
+- [x] Reject `public_merchant_id`
+- [x] `active_provider=razorpay`
+- [x] Writer only
+- [x] last4 = last4 of key_id (or of secret) — document which
 
 ## R11.2 Exit
 
-- [ ] PUT round-trip
-- [ ] Unblocked for R12
+- [x] PUT round-trip
+- [x] Unblocked for R12

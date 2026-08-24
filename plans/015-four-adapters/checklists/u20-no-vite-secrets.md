@@ -9,10 +9,10 @@
 
 ## U20.1
 
-- [ ] Grep `apps/lazuar-pay-merchant` for `sk_live`, `whsec_`, `CHIP`, PEM, `VITE_STRIPE_SECRET` — none as defaults
-- [ ] IsolationTests already ban Hub types
-- [ ] Secrets only in PUT body from user input
+- [x] Grep `apps/lazuar-pay-merchant` for `sk_live`, `whsec_`, `CHIP`, PEM, `VITE_STRIPE_SECRET` — none as defaults
+- [x] IsolationTests already ban Hub types
+- [x] Secrets only in PUT body from user input
 
 ## U20.2 Exit
 
-- [ ] Grep clean
+- [x] Grep clean

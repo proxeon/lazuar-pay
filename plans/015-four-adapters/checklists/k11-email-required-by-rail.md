@@ -9,11 +9,11 @@
 
 ## K11.1
 
-- [ ] Public GET may return `email_required: true` based on `checkout.Provider` or org `active_provider` — add if cheap
-- [ ] If email required, disable Pay until email non-empty (and not placeholder)
-- [ ] Stripe may keep email optional
-- [ ] Still no TIN field
+- [x] Public GET may return `email_required: true` based on `checkout.Provider` or org `active_provider` — add if cheap
+- [x] If email required, disable Pay until email non-empty (and not placeholder)
+- [x] Stripe may keep email optional
+- [x] Still no TIN field
 
 ## K11.2 Exit
 
-- [ ] UI matches P19
+- [x] UI matches P19

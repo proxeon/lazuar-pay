@@ -9,16 +9,16 @@
 
 ## R17.1
 
-- [ ] Read `event`
-- [ ] `payload.payment.entity` amount cents / 100, currency, notes, id `pay_`
-- [ ] `FulfillPaidAsync(..., "razorpay", paymentId)`
-- [ ] H13 org bind; H14 amount match
+- [x] Read `event`
+- [x] `payload.payment.entity` amount cents / 100, currency, notes, id `pay_`
+- [x] `FulfillPaidAsync(..., "razorpay", paymentId)`
+- [x] H13 org bind; H14 amount match
 
 ## R17.2 Must not
 
-- [ ] Do not fulfill `order.paid` in this program unless A00 amended (stick to payment.captured)
-- [ ] Do not book `fee` / `tax` JSON (R21)
+- [x] Do not fulfill `order.paid` in this program unless A00 amended (stick to payment.captured)
+- [x] Do not book `fee` / `tax` JSON (R21)
 
 ## R17.3 Exit
 
-- [ ] Fixture → `RCPT-`
+- [x] Fixture → `RCPT-`

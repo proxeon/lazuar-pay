@@ -9,10 +9,10 @@
 
 ## X17.1
 
-- [ ] PENDING, EXPIRED, FAILED, `invoice.expired`, `invoice.failed` → 200 ignored
-- [ ] No `RCPT-`
-- [ ] Do not consume `paid:{id}` grain
+- [x] PENDING, EXPIRED, FAILED, `invoice.expired`, `invoice.failed` → 200 ignored
+- [x] No `RCPT-`
+- [x] Do not consume `paid:{id}` grain
 
 ## X17.2 Exit
 
-- [ ] One fixture (EXPIRED) green
+- [x] One fixture (EXPIRED) green

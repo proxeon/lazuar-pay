@@ -9,10 +9,10 @@
 
 ## Q12.1
 
-- [ ] `packages/pay-spec/main.tsp` service comment: checkout is persisted Postgres, paid via webhook — not “fixture (open session), not a charge”
-- [ ] `packages/pay-spec/README.md` “when POST checkouts exists” is stale — fix
-- [ ] GET checkout status includes `paid`
+- [x] `packages/pay-spec/main.tsp` service comment: checkout is persisted Postgres, paid via webhook — not “fixture (open session), not a charge”
+- [x] `packages/pay-spec/README.md` “when POST checkouts exists” is stale — fix
+- [x] GET checkout status includes `paid`
 
 ## Q12.2 Exit
 
-- [ ] No “in-memory fixture” in pay-spec
+- [x] No “in-memory fixture” in pay-spec

@@ -9,14 +9,14 @@
 
 ## X16.1
 
-- [ ] Do **not** copy Hub mapping SETTLED → PAYMENT_COMPLETED
-- [ ] SETTLED / `invoice.settled` → `{ ignored: "settled" }`
-- [ ] If PAID already inserted `paid:{invoiceId}`, SETTLED must not mint a second receipt even if you mistakenly fulfill — unique + status≠open saves you; still do not call fulfill
+- [x] Do **not** copy Hub mapping SETTLED → PAYMENT_COMPLETED
+- [x] SETTLED / `invoice.settled` → `{ ignored: "settled" }`
+- [x] If PAID already inserted `paid:{invoiceId}`, SETTLED must not mint a second receipt even if you mistakenly fulfill — unique + status≠open saves you; still do not call fulfill
 
 ## X16.2 Test
 
-- [ ] PAID then SETTLED → still one document
+- [x] PAID then SETTLED → still one document
 
 ## X16.3 Exit
 
-- [ ] Test green
+- [x] Test green

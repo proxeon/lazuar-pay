@@ -9,22 +9,22 @@
 
 ## H17.1 Live today
 
-- [ ] `CheckoutEndpoints.Create` uses `MemberGate.RequireMemberAsync`
-- [ ] Catalog create and gateway PUT already use `RequireWriterAsync` (`owner` | `admin` after member check)
+- [x] `CheckoutEndpoints.Create` uses `MemberGate.RequireMemberAsync`
+- [x] Catalog create and gateway PUT already use `RequireWriterAsync` (`owner` | `admin` after member check)
 
 ## H17.2 Change
 
-- [ ] Switch create to `RequireWriterAsync`
-- [ ] GET `/v1/checkouts/{id}` stays `RequireMemberAsync`
-- [ ] Public `POST /v1/pay/{token}/start` stays **unauthenticated** (buyer)
+- [x] Switch create to `RequireWriterAsync`
+- [x] GET `/v1/checkouts/{id}` stays `RequireMemberAsync`
+- [x] Public `POST /v1/pay/{token}/start` stays **unauthenticated** (buyer)
 
 ## H17.3 Test
 
-- [ ] Next to `CatalogTests.Member_cannot_create_product`: member Bearer `POST /v1/checkouts` → **403**
-- [ ] Owner/admin still 201
-- [ ] Fake One: member `authz/check` allowed but whoami role `member`
+- [x] Next to `CatalogTests.Member_cannot_create_product`: member Bearer `POST /v1/checkouts` → **403**
+- [x] Owner/admin still 201
+- [x] Fake One: member `authz/check` allowed but whoami role `member`
 
 ## H17.4 Exit
 
-- [ ] Member 403 on create
-- [ ] Unblocked for H18
+- [x] Member 403 on create
+- [x] Unblocked for H18

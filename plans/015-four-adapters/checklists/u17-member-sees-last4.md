@@ -9,10 +9,10 @@
 
 ## U17.1
 
-- [ ] GET gateway: provider, last4, configured, capability
-- [ ] No secret fields
-- [ ] Member can still see payments/receipts (existing)
+- [x] GET gateway: provider, last4, configured, capability
+- [x] No secret fields
+- [x] Member can still see payments/receipts (existing)
 
 ## U17.2 Exit
 
-- [ ] Member view without inputs
+- [x] Member view without inputs

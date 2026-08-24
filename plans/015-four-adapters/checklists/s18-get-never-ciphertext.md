@@ -9,17 +9,17 @@
 
 ## S18.1 JSON
 
-- [ ] `GET /v1/orgs/{orgId}/gateway` has **no** `secret`, `ciphertext`, `webhook_secret`, PEM, `sk_`, Bearer token
-- [ ] May include: `org_id`, `provider`, `last4`, `configured`, `capability`, `public_merchant_id`, `environment`, `webhook_configured` (boolean)
-- [ ] Member can GET (`RequireMemberAsync`)
-- [ ] Writer PUT (`RequireWriterAsync`)
+- [x] `GET /v1/orgs/{orgId}/gateway` has **no** `secret`, `ciphertext`, `webhook_secret`, PEM, `sk_`, Bearer token
+- [x] May include: `org_id`, `provider`, `last4`, `configured`, `capability`, `public_merchant_id`, `environment`, `webhook_configured` (boolean)
+- [x] Member can GET (`RequireMemberAsync`)
+- [x] Writer PUT (`RequireWriterAsync`)
 
 ## S18.2 Test
 
-- [ ] Hermetic GET after PUT asserts the body does not contain the plaintext secret or `whsec_`
-- [ ] Assert `last4` is API key last4
+- [x] Hermetic GET after PUT asserts the body does not contain the plaintext secret or `whsec_`
+- [x] Assert `last4` is API key last4
 
 ## S18.3 Exit
 
-- [ ] GET assertion green
-- [ ] Unblocked for P14
+- [x] GET assertion green
+- [x] Unblocked for P14

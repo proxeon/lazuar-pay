@@ -9,10 +9,10 @@
 
 ## X18.1
 
-- [ ] Invoice `id` required
-- [ ] Paid EventId `paid:{invoiceId}`
-- [ ] Missing id → 400 unusable
+- [x] Invoice `id` required
+- [x] Paid EventId `paid:{invoiceId}`
+- [x] Missing id → 400 unusable
 
 ## X18.2 Exit
 
-- [ ] Covered by X15
+- [x] Covered by X15

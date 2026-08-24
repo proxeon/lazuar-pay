@@ -9,10 +9,10 @@
 
 ## Q11.1
 
-- [ ] Comment or enum: `stripe` | `chip` | `billplz` | `xendit` | `razorpay`
-- [ ] Keep Plane A `POST /v1/one/webhooks` separate
-- [ ] Do not import Hub 152-op catalog
+- [x] Comment or enum: `stripe` | `chip` | `billplz` | `xendit` | `razorpay`
+- [x] Keep Plane A `POST /v1/one/webhooks` separate
+- [x] Do not import Hub 152-op catalog
 
 ## Q11.2 Exit
 
-- [ ] Spec comment matches P10
+- [x] Spec comment matches P10

@@ -9,10 +9,10 @@
 
 ## B26.1
 
-- [ ] Missing email → 400
-- [ ] Placeholder email → 400
-- [ ] Name: Hub used local-part of email — acceptable fallback if name blank
+- [x] Missing email → 400
+- [x] Placeholder email → 400
+- [x] Name: Hub used local-part of email — acceptable fallback if name blank
 
 ## B26.2 Exit
 
-- [ ] Test on start
+- [x] Test on start

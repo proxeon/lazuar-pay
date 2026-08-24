@@ -9,15 +9,15 @@
 
 ## C16.1
 
-- [ ] `success_redirect` = checkout `SuccessUrl` or default `http://localhost:5179/c/{publicToken}?status=verifying` (same idea as StripeHosted)
-- [ ] `cancel_redirect` and `failure_redirect` = `CancelUrl` or `/c/{token}`
-- [ ] Success URL is **not** fulfillment (K14)
+- [x] `success_redirect` = checkout `SuccessUrl` or default `http://localhost:5179/c/{publicToken}?status=verifying` (same idea as StripeHosted)
+- [x] `cancel_redirect` and `failure_redirect` = `CancelUrl` or `/c/{token}`
+- [x] Success URL is **not** fulfillment (K14)
 
 ## C16.2 Must not
 
-- [ ] Do not point success at Hub `/api/v1/...`
-- [ ] Do not mark paid on redirect
+- [x] Do not point success at Hub `/api/v1/...`
+- [x] Do not mark paid on redirect
 
 ## C16.3 Exit
 
-- [ ] URLs in mocked body
+- [x] URLs in mocked body

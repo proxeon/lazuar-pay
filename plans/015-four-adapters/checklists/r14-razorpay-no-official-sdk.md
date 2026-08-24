@@ -9,10 +9,10 @@
 
 ## R14.1
 
-- [ ] `Lazuar.Pay.csproj` has no `Razorpay.Api`
-- [ ] IsolationTests may grep `Razorpay.Api` in csproj
-- [ ] If HTTP is blocked in real dogfood, **amend A00** before adding the package
+- [x] `Lazuar.Pay.csproj` has no `Razorpay.Api`
+- [x] IsolationTests may grep `Razorpay.Api` in csproj
+- [x] If HTTP is blocked in real dogfood, **amend A00** before adding the package
 
 ## R14.2 Exit
 
-- [ ] csproj clean
+- [x] csproj clean

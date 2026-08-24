@@ -9,17 +9,17 @@
 
 ## X14.1
 
-- [ ] Header `x-callback-token` (case-insensitive)
-- [ ] Unprotect org `WebhookCiphertext`
-- [ ] UTF-8 bytes, length check, `CryptographicOperations.FixedTimeEquals`
-- [ ] Missing / mismatch → 400
-- [ ] Empty body still 400 first (P23)
+- [x] Header `x-callback-token` (case-insensitive)
+- [x] Unprotect org `WebhookCiphertext`
+- [x] UTF-8 bytes, length check, `CryptographicOperations.FixedTimeEquals`
+- [x] Missing / mismatch → 400
+- [x] Empty body still 400 first (P23)
 
 ## X14.2 Must not
 
-- [ ] Do not 500
-- [ ] Do not use Stripe EventUtility
+- [x] Do not 500
+- [x] Do not use Stripe EventUtility
 
 ## X14.3 Exit
 
-- [ ] Tests: good token continues; bad token 400
+- [x] Tests: good token continues; bad token 400

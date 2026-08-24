@@ -9,20 +9,20 @@
 
 ## C21.1
 
-- [ ] `event_type == purchase.preauthorized` → 200 `{ ignored: "preauthorized" }`
-- [ ] Zero documents, checkout remains `open`
-- [ ] Even if JSON contains `recurring_token` / `is_recurring_token`
-- [ ] Do not call `FulfillPaidAsync`
+- [x] `event_type == purchase.preauthorized` → 200 `{ ignored: "preauthorized" }`
+- [x] Zero documents, checkout remains `open`
+- [x] Even if JSON contains `recurring_token` / `is_recurring_token`
+- [x] Do not call `FulfillPaidAsync`
 
 ## C21.2 Test
 
-- [ ] Signed preauthorized fixture with a token field still does not mint `RCPT-`
+- [x] Signed preauthorized fixture with a token field still does not mint `RCPT-`
 
 ## C21.3 Must not
 
-- [ ] Do not copy Hub `ExtractVaultIds` into a paid path
-- [ ] Off-session stays parked
+- [x] Do not copy Hub `ExtractVaultIds` into a paid path
+- [x] Off-session stays parked
 
 ## C21.4 Exit
 
-- [ ] Test green
+- [x] Test green

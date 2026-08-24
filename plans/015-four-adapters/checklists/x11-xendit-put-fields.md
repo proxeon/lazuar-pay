@@ -9,13 +9,13 @@
 
 ## X11.1
 
-- [ ] Require `secret` (Xendit secret key) and `webhook_secret` (`x-callback-token` value)
-- [ ] Reject `public_merchant_id` if sent (P11)
-- [ ] Encrypt both
-- [ ] `active_provider=xendit`
-- [ ] Writer only
+- [x] Require `secret` (Xendit secret key) and `webhook_secret` (`x-callback-token` value)
+- [x] Reject `public_merchant_id` if sent (P11)
+- [x] Encrypt both
+- [x] `active_provider=xendit`
+- [x] Writer only
 
 ## X11.2 Exit
 
-- [ ] PUT round-trip
-- [ ] Unblocked for X12
+- [x] PUT round-trip
+- [x] Unblocked for X12

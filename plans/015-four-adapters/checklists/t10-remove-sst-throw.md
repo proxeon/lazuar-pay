@@ -9,19 +9,19 @@
 
 ## T10.1 Live
 
-- [ ] Open `apps/lazuar-pay/src/Lazuar.Pay/Money/Fulfillment.cs`
-- [ ] Delete the block `if (settings?.SstRegistered is null) throw new InvalidOperationException("SST registration unknown; fail closed")`
-- [ ] Do not call `settings.SstRegistered` on the pay path after this
-- [ ] Keep cash debit + revenue credit for `checkout.Amount`
-- [ ] Keep amount≤0 early return and `status != "open"` no-op
+- [x] Open `apps/lazuar-pay/src/Lazuar.Pay/Money/Fulfillment.cs`
+- [x] Delete the block `if (settings?.SstRegistered is null) throw new InvalidOperationException("SST registration unknown; fail closed")`
+- [x] Do not call `settings.SstRegistered` on the pay path after this
+- [x] Keep cash debit + revenue credit for `checkout.Amount`
+- [x] Keep amount≤0 early return and `status != "open"` no-op
 
 ## T10.2 Must not
 
-- [ ] Do not replace the throw with `SstTaxMath` or a hard-coded 8%
-- [ ] Do not add a tax journal line “for later”
-- [ ] Do not title the document Tax Invoice
+- [x] Do not replace the throw with `SstTaxMath` or a hard-coded 8%
+- [x] Do not add a tax journal line “for later”
+- [x] Do not title the document Tax Invoice
 
 ## T10.3 Exit
 
-- [ ] Fulfillment compiles with no SST throw
-- [ ] Unblocked for T11, T16
+- [x] Fulfillment compiles with no SST throw
+- [x] Unblocked for T11, T16

@@ -9,17 +9,17 @@
 
 ## H23.1 Live
 
-- [ ] `Fulfillment` already inserts `audit_events` `checkout.paid` in its TX
-- [ ] `GatewayEndpoints.Put` currently does not
-- [ ] After successful Protect + SaveChanges, insert `AuditEventRow` `{ Action = "gateway.credentials.upsert", OrgId, At = UtcNow }`
-- [ ] Same SaveChanges as the credential row (one commit)
-- [ ] Do **not** put last4 or secret in the audit row
+- [x] `Fulfillment` already inserts `audit_events` `checkout.paid` in its TX
+- [x] `GatewayEndpoints.Put` currently does not
+- [x] After successful Protect + SaveChanges, insert `AuditEventRow` `{ Action = "gateway.credentials.upsert", OrgId, At = UtcNow }`
+- [x] Same SaveChanges as the credential row (one commit)
+- [x] Do **not** put last4 or secret in the audit row
 
 ## H23.2 Must not
 
-- [ ] Do not stand up `lazuar-audit` as a process
-- [ ] Do not log ciphertext
+- [x] Do not stand up `lazuar-audit` as a process
+- [x] Do not log ciphertext
 
 ## H23.3 Exit
 
-- [ ] Hermetic: PUT then `AuditEvents` contains `gateway.credentials.upsert` for that org
+- [x] Hermetic: PUT then `AuditEvents` contains `gateway.credentials.upsert` for that org

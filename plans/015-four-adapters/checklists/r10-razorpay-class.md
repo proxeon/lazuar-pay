@@ -9,13 +9,13 @@
 
 ## R10.1
 
-- [ ] `Gateways/RazorpayHosted.cs`, `Provider = "razorpay"`
-- [ ] HttpClient to `https://api.razorpay.com`
-- [ ] `CreateHostedUrlAsync` returns `short_url`
-- [ ] No `Razorpay.Api` package (R14)
-- [ ] No `ChargeOffSession` (R23)
+- [x] `Gateways/RazorpayHosted.cs`, `Provider = "razorpay"`
+- [x] HttpClient to `https://api.razorpay.com`
+- [x] `CreateHostedUrlAsync` returns `short_url`
+- [x] No `Razorpay.Api` package (R14)
+- [x] No `ChargeOffSession` (R23)
 
 ## R10.2 Exit
 
-- [ ] Class compiles
-- [ ] Unblocked for R11
+- [x] Class compiles
+- [x] Unblocked for R11

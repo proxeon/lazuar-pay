@@ -9,10 +9,10 @@
 
 ## U21.1
 
-- [ ] After GET, show `Active: chip` (or stripe/…) and last4
-- [ ] `configured: false` empty state
-- [ ] Saving a different rail updates the label (P13)
+- [x] After GET, show `Active: chip` (or stripe/…) and last4
+- [x] `configured: false` empty state
+- [x] Saving a different rail updates the label (P13)
 
 ## U21.2 Exit
 
-- [ ] Label matches GET
+- [x] Label matches GET

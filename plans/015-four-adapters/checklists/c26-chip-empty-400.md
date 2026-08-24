@@ -9,10 +9,10 @@
 
 ## C26.1
 
-- [ ] `POST /v1/webhooks/chip/{orgId}` empty / whitespace → 400 `"empty body"`
-- [ ] Rail configured (C11 seed)
-- [ ] Shared P23 check is enough if it runs before provider switch
+- [x] `POST /v1/webhooks/chip/{orgId}` empty / whitespace → 400 `"empty body"`
+- [x] Rail configured (C11 seed)
+- [x] Shared P23 check is enough if it runs before provider switch
 
 ## C26.2 Exit
 
-- [ ] Test green
+- [x] Test green

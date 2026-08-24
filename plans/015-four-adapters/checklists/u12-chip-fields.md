@@ -9,12 +9,12 @@
 
 ## U12.1
 
-- [ ] Secret key (Bearer)
-- [ ] Brand ID (`public_merchant_id`)
-- [ ] Webhook public key PEM (textarea)
-- [ ] Copy: paste PEM from CHIP dashboard; Pay does not auto-register webhooks
-- [ ] Webhook URL to copy: `https://{public}/v1/webhooks/chip/{orgId}` (use `Pay` origin, not Hub)
+- [x] Secret key (Bearer)
+- [x] Brand ID (`public_merchant_id`)
+- [x] Webhook public key PEM (textarea)
+- [x] Copy: paste PEM from CHIP dashboard; Pay does not auto-register webhooks
+- [x] Webhook URL to copy: `https://{public}/v1/webhooks/chip/{orgId}` (use `Pay` origin, not Hub)
 
 ## U12.2 Exit
 
-- [ ] Three fields + URL hint
+- [x] Three fields + URL hint

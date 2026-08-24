@@ -9,10 +9,10 @@
 
 ## U18.1
 
-- [ ] No row of GrabPay / TnG / Boost / FPX / DuitNow logos that implies Pay draws those rails
-- [ ] A `<select>` of five **processor names** is allowed (U10)
-- [ ] Do not clone Hub ops “wallets” matrix as icons
+- [x] No row of GrabPay / TnG / Boost / FPX / DuitNow logos that implies Pay draws those rails
+- [x] A `<select>` of five **processor names** is allowed (U10)
+- [x] Do not clone Hub ops “wallets” matrix as icons
 
 ## U18.2 Exit
 
-- [ ] Visual grep of WorkspacePage
+- [x] Visual grep of WorkspacePage

@@ -9,10 +9,10 @@
 
 ## B21.1
 
-- [ ] HMAC valid, `paid=false` and state not paid → 200 `{ ignored: "unpaid" }`
-- [ ] No `RCPT-`, checkout `open`
-- [ ] Unique grain if inserted must not be `paid:{billId}` (use `unpaid:{billId}` or do not insert)
+- [x] HMAC valid, `paid=false` and state not paid → 200 `{ ignored: "unpaid" }`
+- [x] No `RCPT-`, checkout `open`
+- [x] Unique grain if inserted must not be `paid:{billId}` (use `unpaid:{billId}` or do not insert)
 
 ## B21.2 Exit
 
-- [ ] Test green
+- [x] Test green

@@ -9,11 +9,11 @@
 
 ## B23.1
 
-- [ ] Grep Pay src for `PublicDnsFallback`, `lazuar-local-dev.com`, custom `Dns.GetHostEntry` — none
-- [ ] Standard `HttpClient` to `www.billplz.com` / sandbox
-- [ ] If DNS actually fails in dogfood, **amend A00** before adding a tiny handler — do not sneak it into B13
+- [x] Grep Pay src for `PublicDnsFallback`, `lazuar-local-dev.com`, custom `Dns.GetHostEntry` — none
+- [x] Standard `HttpClient` to `www.billplz.com` / sandbox
+- [x] If DNS actually fails in dogfood, **amend A00** before adding a tiny handler — do not sneak it into B13
 
 ## B23.2 Exit
 
-- [ ] Grep clean
-- [ ] parked-dns-fallback remains parked
+- [x] Grep clean
+- [x] parked-dns-fallback remains parked

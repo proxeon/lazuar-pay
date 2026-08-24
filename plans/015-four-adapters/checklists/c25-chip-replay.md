@@ -9,10 +9,10 @@
 
 ## C25.1
 
-- [ ] POST signed `purchase.paid` twice
-- [ ] First: 200, one document
-- [ ] Second: 200 `{ duplicate: true }`, still one document, debit==credit unchanged
+- [x] POST signed `purchase.paid` twice
+- [x] First: 200, one document
+- [x] Second: 200 `{ duplicate: true }`, still one document, debit==credit unchanged
 
 ## C25.2 Exit
 
-- [ ] Test green
+- [x] Test green

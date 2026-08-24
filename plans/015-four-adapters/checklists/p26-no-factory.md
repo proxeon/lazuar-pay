@@ -9,17 +9,17 @@
 
 ## P26.1
 
-- [ ] Do not add `PaymentGatewayFactory` / `IPaymentGatewayFactory`
-- [ ] Do not `GetAdapter(string)` over a DI list
-- [ ] `Program.cs` may `AddScoped<StripeHosted>()` and later `AddScoped<ChipHosted>()` **concrete**
-- [ ] Webhook/start `switch` is the dispatch
+- [x] Do not add `PaymentGatewayFactory` / `IPaymentGatewayFactory`
+- [x] Do not `GetAdapter(string)` over a DI list
+- [x] `Program.cs` may `AddScoped<StripeHosted>()` and later `AddScoped<ChipHosted>()` **concrete**
+- [x] Webhook/start `switch` is the dispatch
 
 ## P26.2 Must not
 
-- [ ] Do not register Billplz “disabled” while implementing CHIP
-- [ ] Do not add keyed services for unused names
+- [x] Do not register Billplz “disabled” while implementing CHIP
+- [x] Do not add keyed services for unused names
 
 ## P26.3 Exit
 
-- [ ] H21 grep includes `PaymentGatewayFactory`
-- [ ] Unblocked for P27
+- [x] H21 grep includes `PaymentGatewayFactory`
+- [x] Unblocked for P27

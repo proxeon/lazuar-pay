@@ -9,18 +9,18 @@
 
 ## T12.1 Live
 
-- [ ] Open `apps/lazuar-pay/src/Lazuar.Pay/One/OneWebhookEndpoints.cs`
-- [ ] On new `OrgSettingsRow` for `tenant.suspended`, remove `SstRegistered = false`
-- [ ] Keep `ChargesPaused = true` on suspend
-- [ ] Keep `ChargesPaused = false` on `tenant.reactivated`
-- [ ] Do not set SST on either event
+- [x] Open `apps/lazuar-pay/src/Lazuar.Pay/One/OneWebhookEndpoints.cs`
+- [x] On new `OrgSettingsRow` for `tenant.suspended`, remove `SstRegistered = false`
+- [x] Keep `ChargesPaused = true` on suspend
+- [x] Keep `ChargesPaused = false` on `tenant.reactivated`
+- [x] Do not set SST on either event
 
 ## T12.2 Must not
 
-- [ ] Do not mix Plane A pause with tax
-- [ ] Do not “fix” One HMAC dialect in this tax track (out of T)
+- [x] Do not mix Plane A pause with tax
+- [x] Do not “fix” One HMAC dialect in this tax track (out of T)
 
 ## T12.3 Exit
 
-- [ ] One webhook insert does not write SST
-- [ ] Unblocked for T13
+- [x] One webhook insert does not write SST
+- [x] Unblocked for T13

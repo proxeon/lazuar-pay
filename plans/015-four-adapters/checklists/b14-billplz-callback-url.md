@@ -9,17 +9,17 @@
 
 ## B14.1
 
-- [ ] `callback_url` = `{Pay:PublicBaseUrl}/v1/webhooks/billplz/{orgId}?checkout_id={checkout.Id}`
-- [ ] `Pay:PublicBaseUrl` absolute, no trailing slash issues
-- [ ] Not Hub `/api/v1/webhooks/payments/billplz/{tenantId}`
-- [ ] `redirect_url` is buyer success/cancel on `:5179`, not callback
+- [x] `callback_url` = `{Pay:PublicBaseUrl}/v1/webhooks/billplz/{orgId}?checkout_id={checkout.Id}`
+- [x] `Pay:PublicBaseUrl` absolute, no trailing slash issues
+- [x] Not Hub `/api/v1/webhooks/payments/billplz/{tenantId}`
+- [x] `redirect_url` is buyer success/cancel on `:5179`, not callback
 
 ## B14.2 Must not
 
-- [ ] Do not put secrets in the query string
-- [ ] Do not omit `checkout_id` (B16)
+- [x] Do not put secrets in the query string
+- [x] Do not omit `checkout_id` (B16)
 
 ## B14.3 Exit
 
-- [ ] Mocked create body contains the query
-- [ ] Unblocked for B15
+- [x] Mocked create body contains the query
+- [x] Unblocked for B15

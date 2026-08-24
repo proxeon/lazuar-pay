@@ -9,25 +9,25 @@
 
 ## C11.1
 
-- [ ] `provider=chip`: require `secret` (Bearer / secret key), `public_merchant_id` (Brand ID), `webhook_secret` (PEM including headers)
-- [ ] Encrypt secret + PEM (S16)
-- [ ] Store Brand ID in `PublicMerchantId` plaintext
-- [ ] Writer only (H18)
-- [ ] Sets `active_provider=chip` (P13)
-- [ ] GET may show Brand ID + last4 of API key + `webhook_configured`
+- [x] `provider=chip`: require `secret` (Bearer / secret key), `public_merchant_id` (Brand ID), `webhook_secret` (PEM including headers)
+- [x] Encrypt secret + PEM (S16)
+- [x] Store Brand ID in `PublicMerchantId` plaintext
+- [x] Writer only (H18)
+- [x] Sets `active_provider=chip` (P13)
+- [x] GET may show Brand ID + last4 of API key + `webhook_configured`
 
 ## C11.2 Test
 
-- [ ] PUT chip missing Brand ID → 400 (C31)
-- [ ] PUT chip missing PEM → 400
-- [ ] Member PUT → 403
+- [x] PUT chip missing Brand ID → 400 (C31)
+- [x] PUT chip missing PEM → 400
+- [x] Member PUT → 403
 
 ## C11.3 Must not
 
-- [ ] Do not auto-register webhooks (C28)
-- [ ] Do not treat Brand ID as a secret
+- [x] Do not auto-register webhooks (C28)
+- [x] Do not treat Brand ID as a secret
 
 ## C11.4 Exit
 
-- [ ] Chip row round-trips
-- [ ] Unblocked for C12
+- [x] Chip row round-trips
+- [x] Unblocked for C12

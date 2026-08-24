@@ -9,10 +9,10 @@
 
 ## C31.1
 
-- [ ] PUT chip without `public_merchant_id` → 400
-- [ ] Start with chip row whose Brand ID is empty → 503 rail not configured (treat as incomplete creds)
-- [ ] Do not call CHIP API without `brand_id`
+- [x] PUT chip without `public_merchant_id` → 400
+- [x] Start with chip row whose Brand ID is empty → 503 rail not configured (treat as incomplete creds)
+- [x] Do not call CHIP API without `brand_id`
 
 ## C31.2 Exit
 
-- [ ] Tests green
+- [x] Tests green

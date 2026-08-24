@@ -9,9 +9,9 @@
 
 ## R15.1
 
-- [ ] Do not send `max_amount` 10× tricks or card-registration payloads
-- [ ] Always payment link for hosted_link
+- [x] Do not send `max_amount` 10× tricks or card-registration payloads
+- [x] Always payment link for hosted_link
 
 ## R15.2 Exit
 
-- [ ] Payload is a payment link
+- [x] Payload is a payment link

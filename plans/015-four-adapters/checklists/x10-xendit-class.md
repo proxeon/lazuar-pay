@@ -9,12 +9,12 @@
 
 ## X10.1
 
-- [ ] `Gateways/XenditHosted.cs`, `Provider = "xendit"`
-- [ ] HttpClient to `https://api.xendit.co`
-- [ ] `CreateHostedUrlAsync` returns `invoice_url`
-- [ ] No xenPlatform, no off-session, no refunds this program
+- [x] `Gateways/XenditHosted.cs`, `Provider = "xendit"`
+- [x] HttpClient to `https://api.xendit.co`
+- [x] `CreateHostedUrlAsync` returns `invoice_url`
+- [x] No xenPlatform, no off-session, no refunds this program
 
 ## X10.2 Exit
 
-- [ ] Class compiles
-- [ ] Unblocked for X11
+- [x] Class compiles
+- [x] Unblocked for X11

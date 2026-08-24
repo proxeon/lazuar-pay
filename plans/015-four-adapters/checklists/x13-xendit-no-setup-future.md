@@ -9,9 +9,9 @@
 
 ## X13.1
 
-- [ ] Do not send Xendit recurrences / payment methods vault flags
-- [ ] Capability `hosted_link`
+- [x] Do not send Xendit recurrences / payment methods vault flags
+- [x] Capability `hosted_link`
 
 ## X13.2 Exit
 
-- [ ] Payload has no vault flags
+- [x] Payload has no vault flags

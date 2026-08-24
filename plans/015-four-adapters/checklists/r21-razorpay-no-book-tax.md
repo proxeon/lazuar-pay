@@ -9,10 +9,10 @@
 
 ## R21.1
 
-- [ ] Entity may contain `tax` and `fee` — **do not** add journal lines
-- [ ] Two-line cash/revenue for checkout.Amount only
-- [ ] Do not port Hub `TaxAmount` into Fulfillment
+- [x] Entity may contain `tax` and `fee` — **do not** add journal lines
+- [x] Two-line cash/revenue for checkout.Amount only
+- [x] Do not port Hub `TaxAmount` into Fulfillment
 
 ## R21.2 Exit
 
-- [ ] Paid test journal still two lines even if fixture includes `"tax": 12`
+- [x] Paid test journal still two lines even if fixture includes `"tax": 12`

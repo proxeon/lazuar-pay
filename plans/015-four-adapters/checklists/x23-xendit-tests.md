@@ -9,15 +9,15 @@
 
 ## X23.1 Must exist
 
-- [ ] Empty body 400
-- [ ] Bad callback token 400
-- [ ] PAID → `RCPT-` + replay
-- [ ] SETTLED after PAID still one doc (X16)
-- [ ] EXPIRED ignore
-- [ ] Mocked create invoice → `redirect_url`
-- [ ] Missing email 400
+- [x] Empty body 400
+- [x] Bad callback token 400
+- [x] PAID → `RCPT-` + replay
+- [x] SETTLED after PAID still one doc (X16)
+- [x] EXPIRED ignore
+- [x] Mocked create invoice → `redirect_url`
+- [x] Missing email 400
 
 ## X23.2 Exit
 
-- [ ] `task pay:test` green
-- [ ] Unblocked for U14
+- [x] `task pay:test` green
+- [x] Unblocked for U14

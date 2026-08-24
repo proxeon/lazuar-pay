@@ -9,16 +9,16 @@
 
 ## H20.1 Fixture
 
-- [ ] Signed `checkout.session.completed` with `mode=payment` and `amount_total: 0` (or null)
-- [ ] Open checkout with amount > 0 exists (must **not** be paid from this event)
-- [ ] Assert ignored, zero documents, checkout still `open`
+- [x] Signed `checkout.session.completed` with `mode=payment` and `amount_total: 0` (or null)
+- [x] Open checkout with amount > 0 exists (must **not** be paid from this event)
+- [x] Assert ignored, zero documents, checkout still `open`
 
 ## H20.2 Belt
 
-- [ ] `Fulfillment` already returns early if `checkout.Amount <= 0` — keep
-- [ ] This test is the **PSP** zero, not the checkout-row zero
+- [x] `Fulfillment` already returns early if `checkout.Amount <= 0` — keep
+- [x] This test is the **PSP** zero, not the checkout-row zero
 
 ## H20.3 Exit
 
-- [ ] Test green
-- [ ] Unblocked for C21 (CHIP preauthorized uses the same “not paid” idea)
+- [x] Test green
+- [x] Unblocked for C21 (CHIP preauthorized uses the same “not paid” idea)

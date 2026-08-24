@@ -9,17 +9,17 @@
 
 ## P15.1
 
-- [ ] `GET /v1/orgs/{orgId}/gateway?provider=chip` loads that PK if present
-- [ ] Unknown provider query → 400 (P10 allow-list)
-- [ ] Missing row → `{ configured: false, provider }`
-- [ ] Does **not** change `active_provider`
-- [ ] Still never returns ciphertext
+- [x] `GET /v1/orgs/{orgId}/gateway?provider=chip` loads that PK if present
+- [x] Unknown provider query → 400 (P10 allow-list)
+- [x] Missing row → `{ configured: false, provider }`
+- [x] Does **not** change `active_provider`
+- [x] Still never returns ciphertext
 
 ## P15.2 Must not
 
-- [ ] Do not list all five rails in one payload in this program (optional later). Default GET is **active** only (P14)
+- [x] Do not list all five rails in one payload in this program (optional later). Default GET is **active** only (P14)
 
 ## P15.3 Exit
 
-- [ ] Query param works
-- [ ] Unblocked for U21
+- [x] Query param works
+- [x] Unblocked for U21

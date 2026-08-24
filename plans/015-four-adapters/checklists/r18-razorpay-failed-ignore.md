@@ -9,10 +9,10 @@
 
 ## R18.1
 
-- [ ] `payment.failed` → 200 ignored
-- [ ] If unique inserted, use failed-namespace (R19), never bare `pay_`
-- [ ] Later `payment.captured` for the same pay_ **must still fulfill** if Razorpay can emit both — namespace protects
+- [x] `payment.failed` → 200 ignored
+- [x] If unique inserted, use failed-namespace (R19), never bare `pay_`
+- [x] Later `payment.captured` for the same pay_ **must still fulfill** if Razorpay can emit both — namespace protects
 
 ## R18.2 Exit
 
-- [ ] Test ignore
+- [x] Test ignore

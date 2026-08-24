@@ -9,15 +9,15 @@
 
 ## P22.1
 
-- [ ] PUT unknown provider → 400
-- [ ] POST `/v1/webhooks/fiuu/{orgId}` → 400 `"unknown provider"` even with a body
-- [ ] Empty body still 400 (P23) — either unknown or empty; unknown can win first
-- [ ] Do not 401 this route
+- [x] PUT unknown provider → 400
+- [x] POST `/v1/webhooks/fiuu/{orgId}` → 400 `"unknown provider"` even with a body
+- [x] Empty body still 400 (P23) — either unknown or empty; unknown can win first
+- [x] Do not 401 this route
 
 ## P22.2 Test
 
-- [ ] Hermetic POST webhook path `paypal` → 400
+- [x] Hermetic POST webhook path `paypal` → 400
 
 ## P22.3 Exit
 
-- [ ] Test green
+- [x] Test green

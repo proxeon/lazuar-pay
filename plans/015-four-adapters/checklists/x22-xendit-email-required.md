@@ -9,9 +9,9 @@
 
 ## X22.1
 
-- [ ] Missing / placeholder email → 400
-- [ ] Do not send `customer@example.com`
+- [x] Missing / placeholder email → 400
+- [x] Do not send `customer@example.com`
 
 ## X22.2 Exit
 
-- [ ] Test on start
+- [x] Test on start

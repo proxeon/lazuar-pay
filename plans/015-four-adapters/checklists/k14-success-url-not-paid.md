@@ -9,10 +9,10 @@
 
 ## K14.1
 
-- [ ] Query `status=verifying` → verifying UI, not paid
-- [ ] Paid UI only when GET returns `status=paid`
-- [ ] Copy already: completing on the processor ≠ success URL — keep
+- [x] Query `status=verifying` → verifying UI, not paid
+- [x] Paid UI only when GET returns `status=paid`
+- [x] Copy already: completing on the processor ≠ success URL — keep
 
 ## K14.2 Exit
 
-- [ ] Cannot get paid UI from query alone
+- [x] Cannot get paid UI from query alone

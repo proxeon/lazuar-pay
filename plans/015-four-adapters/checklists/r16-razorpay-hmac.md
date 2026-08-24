@@ -9,17 +9,17 @@
 
 ## R16.1
 
-- [ ] Header `X-Razorpay-Signature`
-- [ ] Missing → 400
-- [ ] HMAC-SHA256(rawBody, webhookSecret) hex compare fixed-time
-- [ ] Invalid → 400
-- [ ] Then JSON parse
+- [x] Header `X-Razorpay-Signature`
+- [x] Missing → 400
+- [x] HMAC-SHA256(rawBody, webhookSecret) hex compare fixed-time
+- [x] Invalid → 400
+- [x] Then JSON parse
 
 ## R16.2 Must not
 
-- [ ] Do not use Razorpay.Api `Utils` (that **is** the SDK)
-- [ ] Implement HMAC yourself (like Billplz)
+- [x] Do not use Razorpay.Api `Utils` (that **is** the SDK)
+- [x] Implement HMAC yourself (like Billplz)
 
 ## R16.3 Exit
 
-- [ ] Good sig continues; bad sig 400
+- [x] Good sig continues; bad sig 400

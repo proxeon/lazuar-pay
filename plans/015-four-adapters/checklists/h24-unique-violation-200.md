@@ -9,19 +9,19 @@
 
 ## H24.1 Live
 
-- [ ] PK is already `(OrgId, Provider, EventId)` on `psp_webhook_events`
-- [ ] Catch unique violation (Postgres `23505`; InMemory may throw differently)
-- [ ] Return 200 `{ duplicate: true }`
-- [ ] Do not fulfill on unique violation
-- [ ] First winner fulfills once (H12)
+- [x] PK is already `(OrgId, Provider, EventId)` on `psp_webhook_events`
+- [x] Catch unique violation (Postgres `23505`; InMemory may throw differently)
+- [x] Return 200 `{ duplicate: true }`
+- [x] Do not fulfill on unique violation
+- [x] First winner fulfills once (H12)
 
 ## H24.2 Must not
 
-- [ ] Do not 500 on duplicate
-- [ ] Do not delete the unique index to “fix” races
+- [x] Do not 500 on duplicate
+- [x] Do not delete the unique index to “fix” races
 
 ## H24.3 Exit
 
-- [ ] Comment names 23505
-- [ ] Replay test still green (serial duplicate)
-- [ ] Concurrent test optional if InMemory cannot provoke 23505
+- [x] Comment names 23505
+- [x] Replay test still green (serial duplicate)
+- [x] Concurrent test optional if InMemory cannot provoke 23505

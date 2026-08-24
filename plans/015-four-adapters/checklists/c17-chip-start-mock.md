@@ -9,14 +9,14 @@
 
 ## C17.1
 
-- [ ] Test HttpMessageHandler stubs `POST …/purchases/` → 201 JSON `{ "id": "purch_1", "checkout_url": "https://gate.chip-in.asia/p/…" }`
-- [ ] Seed writer PUT chip creds + product/checkout + org_settings active_provider=chip
-- [ ] Start with name+email → 200 `{ redirect_url }` matching stub
-- [ ] Assert checkout.Provider=`chip`, ProviderSessionId=`purch_1`
-- [ ] Missing email → 400 (C30)
-- [ ] Do not use live network
+- [x] Test HttpMessageHandler stubs `POST …/purchases/` → 201 JSON `{ "id": "purch_1", "checkout_url": "https://gate.chip-in.asia/p/…" }`
+- [x] Seed writer PUT chip creds + product/checkout + org_settings active_provider=chip
+- [x] Start with name+email → 200 `{ redirect_url }` matching stub
+- [x] Assert checkout.Provider=`chip`, ProviderSessionId=`purch_1`
+- [x] Missing email → 400 (C30)
+- [x] Do not use live network
 
 ## C17.2 Exit
 
-- [ ] Test green
-- [ ] Unblocked for C18
+- [x] Test green
+- [x] Unblocked for C18

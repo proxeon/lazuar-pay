@@ -9,22 +9,22 @@
 
 ## P23.1
 
-- [ ] Read raw body **before** JSON/form parse
-- [ ] Whitespace-only → 400 `"empty body"`
-- [ ] Do this **before** signature verify (no 500 on empty + missing sig)
-- [ ] Same status for all five names on the allow-list
+- [x] Read raw body **before** JSON/form parse
+- [x] Whitespace-only → 400 `"empty body"`
+- [x] Do this **before** signature verify (no 500 on empty + missing sig)
+- [x] Same status for all five names on the allow-list
 
 ## P23.2 Tests
 
-- [ ] Keep existing empty-body test for stripe
-- [ ] When each rail lands, add empty-body 400 (C26, B28, X23, R25)
+- [x] Keep existing empty-body test for stripe
+- [x] When each rail lands, add empty-body 400 (C26, B28, X23, R25)
 
 ## P23.3 Must not
 
-- [ ] Do not 500 (Hub history)
-- [ ] Do not 200 ignore empty
+- [x] Do not 500 (Hub history)
+- [x] Do not 200 ignore empty
 
 ## P23.4 Exit
 
-- [ ] Shared empty-body check in the webhook handler
-- [ ] Unblocked for C26
+- [x] Shared empty-body check in the webhook handler
+- [x] Unblocked for C26

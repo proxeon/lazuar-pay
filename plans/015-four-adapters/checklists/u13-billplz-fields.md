@@ -9,13 +9,13 @@
 
 ## U13.1
 
-- [ ] API secret
-- [ ] Collection ID
-- [ ] X-Signature secret
-- [ ] Environment select `test` | `live`
-- [ ] Copy: callback must be public https; localhost will fail (B15/B29)
-- [ ] Webhook URL hint: `/v1/webhooks/billplz/{orgId}`
+- [x] API secret
+- [x] Collection ID
+- [x] X-Signature secret
+- [x] Environment select `test` | `live`
+- [x] Copy: callback must be public https; localhost will fail (B15/B29)
+- [x] Webhook URL hint: `/v1/webhooks/billplz/{orgId}`
 
 ## U13.2 Exit
 
-- [ ] Fields match B11
+- [x] Fields match B11

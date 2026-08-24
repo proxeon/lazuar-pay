@@ -9,10 +9,10 @@
 
 ## Q15.1
 
-- [ ] Tests use HttpMessageHandler / signed fixtures
-- [ ] No live `gate.chip-in.asia` in CI
-- [ ] IsolationTests still run
+- [x] Tests use HttpMessageHandler / signed fixtures
+- [x] No live `gate.chip-in.asia` in CI
+- [x] IsolationTests still run
 
 ## Q15.2 Exit
 
-- [ ] CI green without PSP credentials
+- [x] CI green without PSP credentials

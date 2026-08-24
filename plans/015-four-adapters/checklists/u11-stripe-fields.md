@@ -9,11 +9,11 @@
 
 ## U11.1
 
-- [ ] Inputs: API key (`sk_test_` / `sk_live_`), webhook signing secret (`whsec_`)
-- [ ] Labels say Dashboard **endpoint** signing secret, not the API key
-- [ ] `autoComplete="off"`
-- [ ] Save calls PUT `{ provider: "stripe", secret, webhook_secret }`
+- [x] Inputs: API key (`sk_test_` / `sk_live_`), webhook signing secret (`whsec_`)
+- [x] Labels say Dashboard **endpoint** signing secret, not the API key
+- [x] `autoComplete="off"`
+- [x] Save calls PUT `{ provider: "stripe", secret, webhook_secret }`
 
 ## U11.2 Exit
 
-- [ ] Two fields visible for stripe
+- [x] Two fields visible for stripe

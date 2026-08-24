@@ -9,17 +9,17 @@
 
 ## T11.1 Live
 
-- [ ] Open `apps/lazuar-pay/src/Lazuar.Pay/Checkouts/CheckoutEndpoints.cs`
-- [ ] Find `new OrgSettingsRow { OrgId = orgId, SstRegistered = false }`
-- [ ] If org_settings is created for pause/currency, **omit** `SstRegistered` (leave null) and **do not read it** on pay
-- [ ] Do not keep `false` as a fake “known unregistered” signal
+- [x] Open `apps/lazuar-pay/src/Lazuar.Pay/Checkouts/CheckoutEndpoints.cs`
+- [x] Find `new OrgSettingsRow { OrgId = orgId, SstRegistered = false }`
+- [x] If org_settings is created for pause/currency, **omit** `SstRegistered` (leave null) and **do not read it** on pay
+- [x] Do not keep `false` as a fake “known unregistered” signal
 
 ## T11.2 Must not
 
-- [ ] Do not add a merchant SST yes/no field in this program (T15)
-- [ ] Do not fail checkout create because SST is null
+- [x] Do not add a merchant SST yes/no field in this program (T15)
+- [x] Do not fail checkout create because SST is null
 
 ## T11.3 Exit
 
-- [ ] Checkout create no longer writes SST as a business signal
-- [ ] Unblocked for T12
+- [x] Checkout create no longer writes SST as a business signal
+- [x] Unblocked for T12

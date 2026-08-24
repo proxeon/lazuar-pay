@@ -9,10 +9,10 @@
 
 ## R24.1
 
-- [ ] Open Hub `BuildPaymentLinkRequest` and match whether `customer` / email is required
-- [ ] If Hub sent customer email → we require email (400 if missing / placeholder)
-- [ ] Include name when present
+- [x] Open Hub `BuildPaymentLinkRequest` and match whether `customer` / email is required
+- [x] If Hub sent customer email → we require email (400 if missing / placeholder)
+- [x] Include name when present
 
 ## R24.2 Exit
 
-- [ ] Start test
+- [x] Start test

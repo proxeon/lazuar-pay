@@ -9,21 +9,21 @@
 
 ## T16.1 Test
 
-- [ ] Add a test (extend `WebhookTests` or new `FulfillmentTests`)
-- [ ] Seed org_settings **without** `SstRegistered` (null), or skip the row entirely
-- [ ] `POST` a signed Stripe `checkout.session.completed` with `mode=payment` and `amount_total` > 0
-- [ ] Assert HTTP 200
-- [ ] Assert one `documents` row, `Number` starts with `RCPT-`, `Title` is Official Receipt
-- [ ] Assert journal debit sum equals credit sum
-- [ ] Assert checkout `status` is `paid`
-- [ ] Assert response/logs do not contain `SST registration unknown`
+- [x] Add a test (extend `WebhookTests` or new `FulfillmentTests`)
+- [x] Seed org_settings **without** `SstRegistered` (null), or skip the row entirely
+- [x] `POST` a signed Stripe `checkout.session.completed` with `mode=payment` and `amount_total` > 0
+- [x] Assert HTTP 200
+- [x] Assert one `documents` row, `Number` starts with `RCPT-`, `Title` is Official Receipt
+- [x] Assert journal debit sum equals credit sum
+- [x] Assert checkout `status` is `paid`
+- [x] Assert response/logs do not contain `SST registration unknown`
 
 ## T16.2 Must not
 
-- [ ] Do not call live Stripe
-- [ ] Do not use Hub module test helpers or `Modules.Payments`
+- [x] Do not call live Stripe
+- [x] Do not use Hub module test helpers or `Modules.Payments`
 
 ## T16.3 Exit
 
-- [ ] `task pay:test` includes T16 and is green
-- [ ] Unblocked for T18
+- [x] `task pay:test` includes T16 and is green
+- [x] Unblocked for T18

@@ -9,9 +9,9 @@
 
 ## C29.1
 
-- [ ] No CHIP / ChipIn package on `Lazuar.Pay.csproj`
-- [ ] Use `HttpClient` / `IHttpClientFactory`
+- [x] No CHIP / ChipIn package on `Lazuar.Pay.csproj`
+- [x] Use `HttpClient` / `IHttpClientFactory`
 
 ## C29.2 Exit
 
-- [ ] csproj diff has no CHIP package
+- [x] csproj diff has no CHIP package

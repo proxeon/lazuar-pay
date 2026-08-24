@@ -9,10 +9,10 @@
 
 ## Q16.1
 
-- [ ] `task pay:spec` only
-- [ ] Do not add pay-spec to Hub OpenAPI honesty gate
-- [ ] Do not generate Hub 152 ops into Pay
+- [x] `task pay:spec` only
+- [x] Do not add pay-spec to Hub OpenAPI honesty gate
+- [x] Do not generate Hub 152 ops into Pay
 
 ## Q16.2 Exit
 
-- [ ] Taskfile split remains
+- [x] Taskfile split remains

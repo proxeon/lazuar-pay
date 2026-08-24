@@ -9,15 +9,15 @@
 
 ## Q10.1
 
-- [ ] `packages/pay-spec/main.tsp` models for gateway PUT/GET (provider, last4, capability, configured, public_merchant_id, environment, webhook_configured)
-- [ ] PUT body: secret, webhook_secret, optional public_merchant_id, environment
-- [ ] Do not publish ciphertext in GET model
-- [ ] `task pay:spec` regenerates OpenAPI
+- [x] `packages/pay-spec/main.tsp` models for gateway PUT/GET (provider, last4, capability, configured, public_merchant_id, environment, webhook_configured)
+- [x] PUT body: secret, webhook_secret, optional public_merchant_id, environment
+- [x] Do not publish ciphertext in GET model
+- [x] `task pay:spec` regenerates OpenAPI
 
 ## Q10.2 Must not
 
-- [ ] Do not add pay-spec to Hub `task gen` (Q16)
+- [x] Do not add pay-spec to Hub `task gen` (Q16)
 
 ## Q10.3 Exit
 
-- [ ] Spec lists the gateway ops
+- [x] Spec lists the gateway ops

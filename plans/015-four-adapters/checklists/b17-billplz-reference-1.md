@@ -9,15 +9,15 @@
 
 ## B17.1
 
-- [ ] `reference_1` = `checkout.Id`
-- [ ] `reference_1_label` = `Checkout` or `Reference`
-- [ ] Optional `reference_2` unused or `one_off` — do not invent Hub `type=commerce_subscription`
-- [ ] Webhook may use `reference_1` as fallback join (B16)
+- [x] `reference_1` = `checkout.Id`
+- [x] `reference_1_label` = `Checkout` or `Reference`
+- [x] Optional `reference_2` unused or `one_off` — do not invent Hub `type=commerce_subscription`
+- [x] Webhook may use `reference_1` as fallback join (B16)
 
 ## B17.2 Must not
 
-- [ ] Do not put One tenant id as the only reference (org is in the path)
+- [x] Do not put One tenant id as the only reference (org is in the path)
 
 ## B17.3 Exit
 
-- [ ] Create body has checkout id
+- [x] Create body has checkout id

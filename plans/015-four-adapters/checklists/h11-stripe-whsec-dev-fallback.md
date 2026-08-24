@@ -9,22 +9,22 @@
 
 ## H11.1 Rules
 
-- [ ] If org `WebhookCiphertext` is present → **always** use it
-- [ ] If missing and environment is `Testing` or `Development` → may use `Pay:StripeWebhookSecret`
-- [ ] If missing and environment is `Production` → **503** `"webhook secret missing"` (do not verify with a platform secret)
-- [ ] Empty process env + empty row → 503 when the rail is configured (keep today’s “missing secret 503” for the no-fallback case)
+- [x] If org `WebhookCiphertext` is present → **always** use it
+- [x] If missing and environment is `Testing` or `Development` → may use `Pay:StripeWebhookSecret`
+- [x] If missing and environment is `Production` → **503** `"webhook secret missing"` (do not verify with a platform secret)
+- [x] Empty process env + empty row → 503 when the rail is configured (keep today’s “missing secret 503” for the no-fallback case)
 
 ## H11.2 Test
 
-- [ ] Testing factory can still set `Pay:StripeWebhookSecret` for hermetic tests **or** PUT a `whsec_` on the row (prefer the row after P12)
-- [ ] Document in host README: Production requires per-org `whsec_`
+- [x] Testing factory can still set `Pay:StripeWebhookSecret` for hermetic tests **or** PUT a `whsec_` on the row (prefer the row after P12)
+- [x] Document in host README: Production requires per-org `whsec_`
 
 ## H11.3 Must not
 
-- [ ] Do not 200 unsigned events when secret is missing
-- [ ] Do not 500 on missing secret (503 or 400 only)
+- [x] Do not 200 unsigned events when secret is missing
+- [x] Do not 500 on missing secret (503 or 400 only)
 
 ## H11.4 Exit
 
-- [ ] Production path cannot verify with only process env
-- [ ] Unblocked for H12
+- [x] Production path cannot verify with only process env
+- [x] Unblocked for H12

@@ -9,15 +9,15 @@
 
 ## C14.1
 
-- [ ] `purchase.metadata.checkout_id` = `checkout.Id`
-- [ ] `purchase.metadata.org_id` = `checkout.OrgId`
-- [ ] Do not stamp Hub `platform_tenant_id` / `hub_payment_environment`
-- [ ] Webhook parse reads those keys (C19)
+- [x] `purchase.metadata.checkout_id` = `checkout.Id`
+- [x] `purchase.metadata.org_id` = `checkout.OrgId`
+- [x] Do not stamp Hub `platform_tenant_id` / `hub_payment_environment`
+- [x] Webhook parse reads those keys (C19)
 
 ## C14.2 Must not
 
-- [ ] Do not rely only on CHIP’s purchase id without storing `ProviderSessionId` (P18)
+- [x] Do not rely only on CHIP’s purchase id without storing `ProviderSessionId` (P18)
 
 ## C14.3 Exit
 
-- [ ] Mocked POST body includes both keys
+- [x] Mocked POST body includes both keys

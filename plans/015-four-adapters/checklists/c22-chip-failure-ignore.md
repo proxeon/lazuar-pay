@@ -9,11 +9,11 @@
 
 ## C22.1
 
-- [ ] `purchase.payment_failure` → 200 `{ ignored: "payment_failure" }` (or equivalent)
-- [ ] No `RCPT-`
-- [ ] If you insert unique, use `failed:{purchaseId}` not `paid:{purchaseId}`
-- [ ] A later `purchase.paid` for the same purchase **must still be able to fulfill** (namespace)
+- [x] `purchase.payment_failure` → 200 `{ ignored: "payment_failure" }` (or equivalent)
+- [x] No `RCPT-`
+- [x] If you insert unique, use `failed:{purchaseId}` not `paid:{purchaseId}`
+- [x] A later `purchase.paid` for the same purchase **must still be able to fulfill** (namespace)
 
 ## C22.2 Exit
 
-- [ ] Test: failure then paid still mints one receipt (if you can send two events)
+- [x] Test: failure then paid still mints one receipt (if you can send two events)

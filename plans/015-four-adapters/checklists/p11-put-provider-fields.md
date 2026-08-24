@@ -9,25 +9,25 @@
 
 ## P11.1 Request JSON (snake_case)
 
-- [ ] `provider` (required)
-- [ ] `secret` (API key; required for all five)
-- [ ] `webhook_secret` (required for all five in this program — Stripe `whsec_`, CHIP PEM, Billplz X-Signature, Xendit callback token, Razorpay webhook secret)
-- [ ] `public_merchant_id` (required for `chip` and `billplz`; forbidden/ignored for others)
-- [ ] `environment` (`test`|`live`; required for `billplz`; optional others, default `test`)
+- [x] `provider` (required)
+- [x] `secret` (API key; required for all five)
+- [x] `webhook_secret` (required for all five in this program — Stripe `whsec_`, CHIP PEM, Billplz X-Signature, Xendit callback token, Razorpay webhook secret)
+- [x] `public_merchant_id` (required for `chip` and `billplz`; forbidden/ignored for others)
+- [x] `environment` (`test`|`live`; required for `billplz`; optional others, default `test`)
 
 ## P11.2 Validation (per name, even if class lands later)
 
-- [ ] `chip`: `public_merchant_id` required (C31)
-- [ ] `billplz`: `public_merchant_id` + `environment` required (B27, B12)
-- [ ] `stripe` / `xendit` / `razorpay`: reject non-empty `public_merchant_id` **or** ignore — pick reject (400) so merchants do not think Brand ID applies
-- [ ] Empty `secret` or empty `webhook_secret` → 400
+- [x] `chip`: `public_merchant_id` required (C31)
+- [x] `billplz`: `public_merchant_id` + `environment` required (B27, B12)
+- [x] `stripe` / `xendit` / `razorpay`: reject non-empty `public_merchant_id` **or** ignore — pick reject (400) so merchants do not think Brand ID applies
+- [x] Empty `secret` or empty `webhook_secret` → 400
 
 ## P11.3 Must not
 
-- [ ] Do not accept Hub `gatewayType` uppercase-only
-- [ ] Do not put these fields in Vite env
+- [x] Do not accept Hub `gatewayType` uppercase-only
+- [x] Do not put these fields in Vite env
 
 ## P11.4 Exit
 
-- [ ] Request type exists
-- [ ] Unblocked for P12, C11, B11, X11, R11
+- [x] Request type exists
+- [x] Unblocked for P12, C11, B11, X11, R11

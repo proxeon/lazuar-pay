@@ -9,10 +9,10 @@
 
 ## X21.1
 
-- [ ] No `for-user-id` / xenPlatform headers
-- [ ] No application fee fields
-- [ ] Grep Pay Gateways for `xen` / `for-user-id` — none
+- [x] No `for-user-id` / xenPlatform headers
+- [x] No application fee fields
+- [x] Grep Pay Gateways for `xen` / `for-user-id` — none
 
 ## X21.2 Exit
 
-- [ ] Grep clean
+- [x] Grep clean

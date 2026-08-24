@@ -9,18 +9,18 @@
 
 ## S13.1 Column
 
-- [ ] Add nullable `ActiveProvider` on `OrgSettingsRow`
-- [ ] Values: `stripe` | `chip` | `billplz` | `xendit` | `razorpay` or null (not configured)
-- [ ] PUT `/v1/orgs/{orgId}/gateway` **sets** this to the provider just saved (P13)
-- [ ] Public start **reads** this (P17) unless the checkout already has `Provider` from a previous start
+- [x] Add nullable `ActiveProvider` on `OrgSettingsRow`
+- [x] Values: `stripe` | `chip` | `billplz` | `xendit` | `razorpay` or null (not configured)
+- [x] PUT `/v1/orgs/{orgId}/gateway` **sets** this to the provider just saved (P13)
+- [x] Public start **reads** this (P17) unless the checkout already has `Provider` from a previous start
 
 ## S13.2 Must not
 
-- [ ] Do not pick `stripe` in code when the org only configured CHIP
-- [ ] Do not store five “active” flags
-- [ ] Do not put the picker on `:5179`
+- [x] Do not pick `stripe` in code when the org only configured CHIP
+- [x] Do not store five “active” flags
+- [x] Do not put the picker on `:5179`
 
 ## S13.3 Exit
 
-- [ ] Column on the row type
-- [ ] Unblocked for P13
+- [x] Column on the row type
+- [x] Unblocked for P13

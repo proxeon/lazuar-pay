@@ -9,10 +9,10 @@
 
 ## C27.1
 
-- [ ] Valid JSON body, garbage `X-Signature` → 400
-- [ ] Missing header → 400
-- [ ] No `RCPT-`
+- [x] Valid JSON body, garbage `X-Signature` → 400
+- [x] Missing header → 400
+- [x] No `RCPT-`
 
 ## C27.2 Exit
 
-- [ ] Test green
+- [x] Test green

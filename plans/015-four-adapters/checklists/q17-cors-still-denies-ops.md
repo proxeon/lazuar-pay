@@ -9,11 +9,11 @@
 
 ## Q17.1
 
-- [ ] `CorsTests` still deny `http://localhost:3003` and `:3004`
-- [ ] Allow-list remains 5178 + 5179 (+ 127.0.0.1 twins)
-- [ ] Do not add admin `:5173`
+- [x] `CorsTests` still deny `http://localhost:3003` and `:3004`
+- [x] Allow-list remains 5178 + 5179 (+ 127.0.0.1 twins)
+- [x] Do not add admin `:5173`
 
 ## Q17.2 Exit
 
-- [ ] Tests green
-- [ ] Unblocked for A99
+- [x] Tests green
+- [x] Unblocked for A99

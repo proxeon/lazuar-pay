@@ -9,18 +9,18 @@
 
 ## B29.1 Host README
 
-- [ ] Document `Pay__PublicBaseUrl` = Cloudflare tunnel (or similar) https origin that forwards to `:8081`
-- [ ] Billplz dashboard / collection callback is that origin + `/v1/webhooks/billplz/{orgId}`
-- [ ] Hub off; One on 8080; Pay 8081
-- [ ] Sandbox `environment=test` + sandbox API key
-- [ ] Explicit: localhost will 400 (B15)
+- [x] Document `Pay__PublicBaseUrl` = Cloudflare tunnel (or similar) https origin that forwards to `:8081`
+- [x] Billplz dashboard / collection callback is that origin + `/v1/webhooks/billplz/{orgId}`
+- [x] Hub off; One on 8080; Pay 8081
+- [x] Sandbox `environment=test` + sandbox API key
+- [x] Explicit: localhost will 400 (B15)
 
 ## B29.2 Must not
 
-- [ ] Do not add `lazuar-local-dev.com` to `/etc/hosts` as a “fix”
-- [ ] Do not claim CI talks to Billplz
+- [x] Do not add `lazuar-local-dev.com` to `/etc/hosts` as a “fix”
+- [x] Do not claim CI talks to Billplz
 
 ## B29.3 Exit
 
-- [ ] README section exists
-- [ ] A99 lived sentence for Billplz is possible
+- [x] README section exists
+- [x] A99 lived sentence for Billplz is possible

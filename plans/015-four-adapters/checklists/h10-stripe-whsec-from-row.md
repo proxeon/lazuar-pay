@@ -9,24 +9,24 @@
 
 ## H10.1 Live today (must change)
 
-- [ ] `WebhookEndpoints.cs` currently reads `config["Pay:StripeWebhookSecret"]` for every org
-- [ ] Load `GatewayCredentialRow` for `(orgId, "stripe")`
-- [ ] `SecretBox.Unprotect(row.WebhookCiphertext)` → `EventUtility.ValidateSignature` / `ConstructEvent`
-- [ ] Missing org webhook secret: follow H11 (dev fallback vs Production 503)
-- [ ] Missing Stripe-Signature header → 400
+- [x] `WebhookEndpoints.cs` currently reads `config["Pay:StripeWebhookSecret"]` for every org
+- [x] Load `GatewayCredentialRow` for `(orgId, "stripe")`
+- [x] `SecretBox.Unprotect(row.WebhookCiphertext)` → `EventUtility.ValidateSignature` / `ConstructEvent`
+- [x] Missing org webhook secret: follow H11 (dev fallback vs Production 503)
+- [x] Missing Stripe-Signature header → 400
 
 ## H10.2 Must not
 
-- [ ] Do not verify with `sk_` (`COMMIT_EDITMSG` on `ee2db8e5` was right: `sk_` is not a signing secret)
-- [ ] Do not use Hub tenant `DecryptOrPlaintext`
-- [ ] Do not share one `whsec_` across orgs in Production
+- [x] Do not verify with `sk_` (`COMMIT_EDITMSG` on `ee2db8e5` was right: `sk_` is not a signing secret)
+- [x] Do not use Hub tenant `DecryptOrPlaintext`
+- [x] Do not share one `whsec_` across orgs in Production
 
 ## H10.3 Test
 
-- [ ] Existing `WebhookTests` seed PUT must also send `webhook_secret` (P12) or tests break — update factory seed
-- [ ] Signed event still 200 + `RCPT-`
+- [x] Existing `WebhookTests` seed PUT must also send `webhook_secret` (P12) or tests break — update factory seed
+- [x] Signed event still 200 + `RCPT-`
 
 ## H10.4 Exit
 
-- [ ] Org row is the SoT for Stripe verify
-- [ ] Unblocked for H11, H19
+- [x] Org row is the SoT for Stripe verify
+- [x] Unblocked for H11, H19

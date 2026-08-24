@@ -9,12 +9,12 @@
 
 ## C20.1
 
-- [ ] Paid unique id = `paid:{purchaseId}` (or `PAYMENT_COMPLETED:{id}` — pick **one** prefix and stick; prefer `paid:`)
-- [ ] Purchase id from C23
-- [ ] Do **not** use bare purchase id as EventId (008/009 history)
-- [ ] Failure events if inserted must use `failed:{purchaseId}` — this program **ignores** failure (C22) so prefer **not** to consume `paid:` grain
+- [x] Paid unique id = `paid:{purchaseId}` (or `PAYMENT_COMPLETED:{id}` — pick **one** prefix and stick; prefer `paid:`)
+- [x] Purchase id from C23
+- [x] Do **not** use bare purchase id as EventId (008/009 history)
+- [x] Failure events if inserted must use `failed:{purchaseId}` — this program **ignores** failure (C22) so prefer **not** to consume `paid:` grain
 
 ## C20.2 Exit
 
-- [ ] Unique key uses namespaced id
-- [ ] Unblocked for C25
+- [x] Unique key uses namespaced id
+- [x] Unblocked for C25

@@ -9,10 +9,10 @@
 
 ## B24.1
 
-- [ ] Do not add `IssueRefund` on BillplzHosted
-- [ ] Do not POST Billplz payment orders
-- [ ] Merchant copy may say refunds are later / mark in dashboard (U19)
+- [x] Do not add `IssueRefund` on BillplzHosted
+- [x] Do not POST Billplz payment orders
+- [x] Merchant copy may say refunds are later / mark in dashboard (U19)
 
 ## B24.2 Exit
 
-- [ ] No refund method
+- [x] No refund method

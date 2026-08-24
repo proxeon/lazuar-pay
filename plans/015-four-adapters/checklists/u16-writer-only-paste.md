@@ -9,10 +9,10 @@
 
 ## U16.1
 
-- [ ] `canWriteMoney(role)` owner|admin
-- [ ] Member sees U17 metadata, not inputs
-- [ ] API still 403 if they curl (H18)
+- [x] `canWriteMoney(role)` owner|admin
+- [x] Member sees U17 metadata, not inputs
+- [x] API still 403 if they curl (H18)
 
 ## U16.2 Exit
 
-- [ ] Chrome matches H18
+- [x] Chrome matches H18

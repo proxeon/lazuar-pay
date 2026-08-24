@@ -9,17 +9,17 @@
 
 ## S11.1 Column
 
-- [ ] Add nullable `PublicMerchantId` string on `GatewayCredentialRow`
-- [ ] Map `public_merchant_id`
-- [ ] GET **may** return it (the merchant’s own Brand/Collection id)
-- [ ] Null for `stripe` / `xendit` / `razorpay`
+- [x] Add nullable `PublicMerchantId` string on `GatewayCredentialRow`
+- [x] Map `public_merchant_id`
+- [x] GET **may** return it (the merchant’s own Brand/Collection id)
+- [x] Null for `stripe` / `xendit` / `razorpay`
 
 ## S11.2 Must not
 
-- [ ] Do not encrypt Brand/Collection (not a secret; encrypting hides support)
-- [ ] Do not reuse this column for PEM or `whsec_`
+- [x] Do not encrypt Brand/Collection (not a secret; encrypting hides support)
+- [x] Do not reuse this column for PEM or `whsec_`
 
 ## S11.3 Exit
 
-- [ ] Column on the row type
-- [ ] Unblocked for C11 / B11 PUT fields
+- [x] Column on the row type
+- [x] Unblocked for C11 / B11 PUT fields

@@ -9,22 +9,22 @@
 
 ## H16.1 Live today
 
-- [ ] `SecretBox.cs` hashes `"lazuar-pay-dev-wrap-key"` when `Pay:WrapKey` is missing
-- [ ] Comment already says “Dev/test only”
+- [x] `SecretBox.cs` hashes `"lazuar-pay-dev-wrap-key"` when `Pay:WrapKey` is missing
+- [x] Comment already says “Dev/test only”
 
 ## H16.2 Change
 
-- [ ] `Testing` environment: keep a deterministic test key (factory may set `Pay:WrapKey` or allow the hash)
-- [ ] `Development`: may keep the hash **or** require `.env` — pick require `Pay:WrapKey` if `.env.example` already documents it
-- [ ] `Production`: missing or not 32-byte base64 → **throw at Protect/Unprotect** (or fail boot). Do not encrypt with the git string
-- [ ] `.env.example` documents `Pay__WrapKey` 32-byte base64
+- [x] `Testing` environment: keep a deterministic test key (factory may set `Pay:WrapKey` or allow the hash)
+- [x] `Development`: may keep the hash **or** require `.env` — pick require `Pay:WrapKey` if `.env.example` already documents it
+- [x] `Production`: missing or not 32-byte base64 → **throw at Protect/Unprotect** (or fail boot). Do not encrypt with the git string
+- [x] `.env.example` documents `Pay__WrapKey` 32-byte base64
 
 ## H16.3 Must not
 
-- [ ] Do not commit a real wrap key
-- [ ] Do not use Hub `Jwt:Secret` as KMS
+- [x] Do not commit a real wrap key
+- [x] Do not use Hub `Jwt:Secret` as KMS
 
 ## H16.4 Exit
 
-- [ ] Production path cannot use the git string
-- [ ] Tests still green
+- [x] Production path cannot use the git string
+- [x] Tests still green

@@ -9,10 +9,10 @@
 
 ## K17.1
 
-- [ ] No `input` autocomplete cc-number / cvc
-- [ ] No Stripe.js card element on 5179 in this program
-- [ ] Name + email only (plus Pay button)
+- [x] No `input` autocomplete cc-number / cvc
+- [x] No Stripe.js card element on 5179 in this program
+- [x] Name + email only (plus Pay button)
 
 ## K17.2 Exit
 
-- [ ] Grep `autocomplete="cc` none
+- [x] Grep `autocomplete="cc` none

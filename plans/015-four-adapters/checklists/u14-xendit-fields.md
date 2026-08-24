@@ -9,12 +9,12 @@
 
 ## U14.1
 
-- [ ] Secret key
-- [ ] Callback token (`x-callback-token`)
-- [ ] Webhook URL hint: `/v1/webhooks/xendit/{orgId}`
-- [ ] Copy: wallets/DuitNow appear on Xendit’s page if you enabled them there; Pay does not draw them
-- [ ] Copy: we do not auto-debit (U19)
+- [x] Secret key
+- [x] Callback token (`x-callback-token`)
+- [x] Webhook URL hint: `/v1/webhooks/xendit/{orgId}`
+- [x] Copy: wallets/DuitNow appear on Xendit’s page if you enabled them there; Pay does not draw them
+- [x] Copy: we do not auto-debit (U19)
 
 ## U14.2 Exit
 
-- [ ] Two secrets + copy
+- [x] Two secrets + copy

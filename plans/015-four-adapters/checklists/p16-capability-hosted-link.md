@@ -9,16 +9,16 @@
 
 ## P16.1
 
-- [ ] PUT and GET return `capability: "hosted_link"` for stripe, chip, billplz, xendit, razorpay
-- [ ] Do not return `vaulted` / `off_session` / `emandate` in this program
-- [ ] Merchant copy (U19) explains Billplz/Xendit/Razorpay = reminder + hosted page; CHIP vault is later
+- [x] PUT and GET return `capability: "hosted_link"` for stripe, chip, billplz, xendit, razorpay
+- [x] Do not return `vaulted` / `off_session` / `emandate` in this program
+- [x] Merchant copy (U19) explains Billplz/Xendit/Razorpay = reminder + hosted page; CHIP vault is later
 
 ## P16.2 Must not
 
-- [ ] Do not port `PaymentGatewayCapabilities.SupportsOffSession` as a live JSON flag that implies auto-debit works
-- [ ] Do not set `SupportsEmandate` true
+- [x] Do not port `PaymentGatewayCapabilities.SupportsOffSession` as a live JSON flag that implies auto-debit works
+- [x] Do not set `SupportsEmandate` true
 
 ## P16.3 Exit
 
-- [ ] Capability string locked
-- [ ] Unblocked for U19
+- [x] Capability string locked
+- [x] Unblocked for U19

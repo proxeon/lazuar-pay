@@ -9,27 +9,27 @@
 
 ## P12.1 Live today
 
-- [ ] PUT only stores `secret` as API key
-- [ ] Webhook verify uses process env
+- [x] PUT only stores `secret` as API key
+- [x] Webhook verify uses process env
 
 ## P12.2 Change
 
-- [ ] `provider=stripe`: require `secret` (sk_test_ / sk_live_) and `webhook_secret` (whsec_)
-- [ ] Protect both (S16)
-- [ ] `last4` = API key last4
-- [ ] Rotate: sending a new `webhook_secret` updates ciphertext; omit vs empty — empty 400; omit-on-update may keep existing (document). Prefer **require both on every PUT** for Bar-size honesty (simpler)
+- [x] `provider=stripe`: require `secret` (sk_test_ / sk_live_) and `webhook_secret` (whsec_)
+- [x] Protect both (S16)
+- [x] `last4` = API key last4
+- [x] Rotate: sending a new `webhook_secret` updates ciphertext; omit vs empty — empty 400; omit-on-update may keep existing (document). Prefer **require both on every PUT** for Bar-size honesty (simpler)
 
 ## P12.3 Test
 
-- [ ] PUT stripe without `webhook_secret` → 400
-- [ ] PUT both → GET `webhook_configured: true`, no plaintext
+- [x] PUT stripe without `webhook_secret` → 400
+- [x] PUT both → GET `webhook_configured: true`, no plaintext
 
 ## P12.4 Must not
 
-- [ ] Do not store `whsec_` in `Ciphertext` mixed with `sk_`
-- [ ] Do not accept a `whsec_` pasted into the sk_ box as if it were a key
+- [x] Do not store `whsec_` in `Ciphertext` mixed with `sk_`
+- [x] Do not accept a `whsec_` pasted into the sk_ box as if it were a key
 
 ## P12.5 Exit
 
-- [ ] Stripe PUT writes both columns
-- [ ] Unblocked for U11; update `WebhookTests` seed
+- [x] Stripe PUT writes both columns
+- [x] Unblocked for U11; update `WebhookTests` seed

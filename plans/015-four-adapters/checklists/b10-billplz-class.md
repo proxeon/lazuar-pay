@@ -9,19 +9,19 @@
 
 ## B10.1
 
-- [ ] `apps/lazuar-pay/src/Lazuar.Pay/Gateways/BillplzHosted.cs`
-- [ ] `Provider = "billplz"`
-- [ ] `CreateHostedUrlAsync` returns bill `url`
-- [ ] `AddScoped<BillplzHosted>()` + HttpClient
-- [ ] No `IPaymentGatewayAdapter`
+- [x] `apps/lazuar-pay/src/Lazuar.Pay/Gateways/BillplzHosted.cs`
+- [x] `Provider = "billplz"`
+- [x] `CreateHostedUrlAsync` returns bill `url`
+- [x] `AddScoped<BillplzHosted>()` + HttpClient
+- [x] No `IPaymentGatewayAdapter`
 
 ## B10.2 Must not
 
-- [ ] Do not port `ChargeOffSessionAsync` (Hub returns false)
-- [ ] Do not port `IssueRefundAsync` (Hub returns false — Payment Order is a disbursement)
-- [ ] Do not port `PublicDnsFallback`
+- [x] Do not port `ChargeOffSessionAsync` (Hub returns false)
+- [x] Do not port `IssueRefundAsync` (Hub returns false — Payment Order is a disbursement)
+- [x] Do not port `PublicDnsFallback`
 
 ## B10.3 Exit
 
-- [ ] Class compiles
-- [ ] Unblocked for B11
+- [x] Class compiles
+- [x] Unblocked for B11

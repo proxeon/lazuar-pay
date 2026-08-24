@@ -9,9 +9,9 @@
 
 ## Q14.1
 
-- [ ] `Taskfile.yml` `pay:test` desc includes webhooks / rails hermetic tests
-- [ ] Do not require network in the task
+- [x] `Taskfile.yml` `pay:test` desc includes webhooks / rails hermetic tests
+- [x] Do not require network in the task
 
 ## Q14.2 Exit
 
-- [ ] Blurb updated
+- [x] Blurb updated

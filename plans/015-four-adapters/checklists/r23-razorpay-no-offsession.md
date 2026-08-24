@@ -9,9 +9,9 @@
 
 ## R23.1
 
-- [ ] No `ChargeOffSession` method on RazorpayHosted
-- [ ] parked-offsession remains parked
+- [x] No `ChargeOffSession` method on RazorpayHosted
+- [x] parked-offsession remains parked
 
 ## R23.2 Exit
 
-- [ ] No method
+- [x] No method

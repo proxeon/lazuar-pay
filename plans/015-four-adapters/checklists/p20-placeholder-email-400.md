@@ -9,17 +9,17 @@
 
 ## P20.1
 
-- [ ] Treat `customer@example.com` (trim, case-insensitive) as unusable
-- [ ] CHIP / Billplz / Xendit / Razorpay start → 400 `"Customer email is required."` (or same as missing)
-- [ ] Do not substitute a generated email
-- [ ] Steal the **decision** from `GatewayCommon.IsUsableBuyerEmail`, not the class file
+- [x] Treat `customer@example.com` (trim, case-insensitive) as unusable
+- [x] CHIP / Billplz / Xendit / Razorpay start → 400 `"Customer email is required."` (or same as missing)
+- [x] Do not substitute a generated email
+- [x] Steal the **decision** from `GatewayCommon.IsUsableBuyerEmail`, not the class file
 
 ## P20.2 Must not
 
-- [ ] Do not ProjectReference Hub
-- [ ] Do not send the placeholder “to get a URL”
+- [x] Do not ProjectReference Hub
+- [x] Do not send the placeholder “to get a URL”
 
 ## P20.3 Exit
 
-- [ ] Hermetic 400
-- [ ] Unblocked for C30
+- [x] Hermetic 400
+- [x] Unblocked for C30

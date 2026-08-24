@@ -9,10 +9,10 @@
 
 ## X20.1
 
-- [ ] Checkout Vite has no GrabPay / TnG / Boost / DuitNow / FPX buttons
-- [ ] Merchant copy may say “wallets on Xendit hosted page”
-- [ ] Do not port `SupportsHostedWallet` as pixels
+- [x] Checkout Vite has no GrabPay / TnG / Boost / DuitNow / FPX buttons
+- [x] Merchant copy may say “wallets on Xendit hosted page”
+- [x] Do not port `SupportsHostedWallet` as pixels
 
 ## X20.2 Exit
 
-- [ ] K12 grep + this copy
+- [x] K12 grep + this copy

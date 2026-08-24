@@ -9,10 +9,10 @@
 
 ## X19.1
 
-- [ ] Missing `currency` → do not fulfill
-- [ ] Must match checkout currency
-- [ ] Do not invent MYR
+- [x] Missing `currency` → do not fulfill
+- [x] Must match checkout currency
+- [x] Do not invent MYR
 
 ## X19.2 Exit
 
-- [ ] Test fixture
+- [x] Test fixture

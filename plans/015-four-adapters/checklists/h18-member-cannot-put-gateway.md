@@ -9,17 +9,17 @@
 
 ## H18.1 Live
 
-- [ ] `GatewayEndpoints.Put` already calls `RequireWriterAsync`
-- [ ] Add hermetic test: role `member` PUT `/v1/orgs/t1/gateway` → **403**
-- [ ] Owner PUT still 200
-- [ ] Member GET still 200 metadata (S18)
+- [x] `GatewayEndpoints.Put` already calls `RequireWriterAsync`
+- [x] Add hermetic test: role `member` PUT `/v1/orgs/t1/gateway` → **403**
+- [x] Owner PUT still 200
+- [x] Member GET still 200 metadata (S18)
 
 ## H18.2 Must not
 
-- [ ] Do not invent One role `viewer`
-- [ ] Do not check `authz/check` relation that One does not have
+- [x] Do not invent One role `viewer`
+- [x] Do not check `authz/check` relation that One does not have
 
 ## H18.3 Exit
 
-- [ ] Test green
-- [ ] Unblocked for U16
+- [x] Test green
+- [x] Unblocked for U16

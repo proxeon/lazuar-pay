@@ -9,12 +9,12 @@
 
 ## B12.1
 
-- [ ] `test` → `https://www.billplz-sandbox.com/api/v3/`
-- [ ] `live` → `https://www.billplz.com/api/v3/`
-- [ ] POST bills to `{host}bills` (Hub concatenated `endpoint + "bills"`)
-- [ ] Do not use `Contains("lazuar.com")` to pick live
+- [x] `test` → `https://www.billplz-sandbox.com/api/v3/`
+- [x] `live` → `https://www.billplz.com/api/v3/`
+- [x] POST bills to `{host}bills` (Hub concatenated `endpoint + "bills"`)
+- [x] Do not use `Contains("lazuar.com")` to pick live
 
 ## B12.2 Exit
 
-- [ ] Host selection unit-testable
-- [ ] Unblocked for B13
+- [x] Host selection unit-testable
+- [x] Unblocked for B13

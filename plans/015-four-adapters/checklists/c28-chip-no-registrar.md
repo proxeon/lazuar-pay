@@ -9,12 +9,12 @@
 
 ## C28.1
 
-- [ ] Grep Pay src for `/webhooks/` toward `gate.chip-in.asia` — none
-- [ ] Do not port `ChipWebhookRegistrar.cs`
-- [ ] Merchant pastes PEM from CHIP dashboard (U12 copy)
-- [ ] Optional later: explicit “register webhook” **button** that the merchant clicks — **not this program** (parked-chip-registrar)
+- [x] Grep Pay src for `/webhooks/` toward `gate.chip-in.asia` — none
+- [x] Do not port `ChipWebhookRegistrar.cs`
+- [x] Merchant pastes PEM from CHIP dashboard (U12 copy)
+- [x] Optional later: explicit “register webhook” **button** that the merchant clicks — **not this program** (parked-chip-registrar)
 
 ## C28.2 Exit
 
-- [ ] Grep clean
-- [ ] Unblocked for parked-chip-registrar to remain parked
+- [x] Grep clean
+- [x] Unblocked for parked-chip-registrar to remain parked

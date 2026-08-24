@@ -9,10 +9,10 @@
 
 ## R12.1
 
-- [ ] Unprotect ciphertext, split on first `:`
-- [ ] Missing secret part → 503 incomplete rail (do not call Razorpay)
-- [ ] `Authorization: Basic base64(key_id + ":" + key_secret)`
+- [x] Unprotect ciphertext, split on first `:`
+- [x] Missing secret part → 503 incomplete rail (do not call Razorpay)
+- [x] `Authorization: Basic base64(key_id + ":" + key_secret)`
 
 ## R12.2 Exit
 
-- [ ] Helper unit test
+- [x] Helper unit test

@@ -9,22 +9,22 @@
 
 ## T14.1 Live
 
-- [ ] `Fulfillment` still sets `Title = "Official Receipt"`
-- [ ] `PaymentQueryEndpoints` missing number still serializes `"PENDING"`
-- [ ] Series remains `RCPT` / `RCPT-{MYT year}-#####` (`MalaysiaTime.Year`)
-- [ ] Number is never the checkout Guid
+- [x] `Fulfillment` still sets `Title = "Official Receipt"`
+- [x] `PaymentQueryEndpoints` missing number still serializes `"PENDING"`
+- [x] Series remains `RCPT` / `RCPT-{MYT year}-#####` (`MalaysiaTime.Year`)
+- [x] Number is never the checkout Guid
 
 ## T14.2 Grep
 
-- [ ] Grep `apps/lazuar-pay` src + merchant + checkout for a **document title** `Tax Invoice` / `MyInvois` / `VALID` — none
-- [ ] Honesty copy “not an e-invoice” on UI is allowed (T18)
+- [x] Grep `apps/lazuar-pay` src + merchant + checkout for a **document title** `Tax Invoice` / `MyInvois` / `VALID` — none
+- [x] Honesty copy “not an e-invoice” on UI is allowed (T18)
 
 ## T14.3 Must not
 
-- [ ] Do not rename series to `INV-`
-- [ ] Do not print a MyInvois-looking QR
+- [x] Do not rename series to `INV-`
+- [x] Do not print a MyInvois-looking QR
 
 ## T14.4 Exit
 
-- [ ] No Tax Invoice string on money documents
-- [ ] Unblocked for T18
+- [x] No Tax Invoice string on money documents
+- [x] Unblocked for T18

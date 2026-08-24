@@ -9,11 +9,11 @@
 
 ## R19.1
 
-- [ ] Prefer header `X-Razorpay-Event-Id` if non-empty
-- [ ] Else `captured:{paymentId}` for paid, `failed:{paymentId}` for failed
-- [ ] Missing both header and payment id → 400 unusable
-- [ ] Do not use checkout id as EventId
+- [x] Prefer header `X-Razorpay-Event-Id` if non-empty
+- [x] Else `captured:{paymentId}` for paid, `failed:{paymentId}` for failed
+- [x] Missing both header and payment id → 400 unusable
+- [x] Do not use checkout id as EventId
 
 ## R19.2 Exit
 
-- [ ] Covered by R17/R18 fixtures
+- [x] Covered by R17/R18 fixtures

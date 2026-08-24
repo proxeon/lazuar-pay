@@ -9,11 +9,11 @@
 
 ## B25.1
 
-- [ ] No off-session method
-- [ ] Capability stays `hosted_link`
-- [ ] U19 copy: “We email / send a Billplz link. We do not auto-debit FPX.”
-- [ ] Do not port Agreements v5
+- [x] No off-session method
+- [x] Capability stays `hosted_link`
+- [x] U19 copy: “We email / send a Billplz link. We do not auto-debit FPX.”
+- [x] Do not port Agreements v5
 
 ## B25.2 Exit
 
-- [ ] Copy + no off-session code
+- [x] Copy + no off-session code

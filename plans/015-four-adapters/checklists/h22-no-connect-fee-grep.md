@@ -9,13 +9,13 @@
 
 ## H22.1 Grep
 
-- [ ] `apps/lazuar-pay/src/Lazuar.Pay/Gateways` must not contain `ApplicationFeeAmount`, `application_fee`, `TransferData`, `transfer_data`
-- [ ] Add Isolation-style or source grep test (Hub already has `PaymentAdapters_DoNotSetConnectApplicationFeeOrTransfer` — steal the idea, not the project)
+- [x] `apps/lazuar-pay/src/Lazuar.Pay/Gateways` must not contain `ApplicationFeeAmount`, `application_fee`, `TransferData`, `transfer_data`
+- [x] Add Isolation-style or source grep test (Hub already has `PaymentAdapters_DoNotSetConnectApplicationFeeOrTransfer` — steal the idea, not the project)
 
 ## H22.2 StripeHosted
 
-- [ ] Live `SessionCreateOptions` already has no Connect fields — keep it that way when the file grows
+- [x] Live `SessionCreateOptions` already has no Connect fields — keep it that way when the file grows
 
 ## H22.3 Exit
 
-- [ ] Grep test green
+- [x] Grep test green

@@ -9,15 +9,15 @@
 
 ## C23.1
 
-- [ ] Steal Hub order: `purchase.id` if object, else root `id`
-- [ ] Missing → 400 (or 200 ignored **without** unique-as-paid — prefer 400 unusable so CHIP retries)
-- [ ] Persist as `ProviderRef` / `ProviderSessionId`
+- [x] Steal Hub order: `purchase.id` if object, else root `id`
+- [x] Missing → 400 (or 200 ignored **without** unique-as-paid — prefer 400 unusable so CHIP retries)
+- [x] Persist as `ProviderRef` / `ProviderSessionId`
 
 ## C23.2 Must not
 
-- [ ] Do not invent a Guid event id
-- [ ] Do not use `EventId = checkout.Id`
+- [x] Do not invent a Guid event id
+- [x] Do not use `EventId = checkout.Id`
 
 ## C23.3 Exit
 
-- [ ] Helper covered by C19 fixture using nested id
+- [x] Helper covered by C19 fixture using nested id

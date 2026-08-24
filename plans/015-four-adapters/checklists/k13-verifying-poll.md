@@ -9,22 +9,22 @@
 
 ## K13.1 Live today
 
-- [ ] `StripeHosted` success URL appends `?status=verifying`
-- [ ] `App.tsx` never reads the query and GETs once
+- [x] `StripeHosted` success URL appends `?status=verifying`
+- [x] `App.tsx` never reads the query and GETs once
 
 ## K13.2 Change
 
-- [ ] If `status=verifying` **or** after redirect, poll `GET /v1/pay/{token}` every ~2s, cap ~30s
-- [ ] States: loading / open (Pay) / verifying / paid / expired / missing / error
-- [ ] Paid copy already honest (Official Receipt, not membership)
-- [ ] Stop polling on paid/expired/missing
+- [x] If `status=verifying` **or** after redirect, poll `GET /v1/pay/{token}` every ~2s, cap ~30s
+- [x] States: loading / open (Pay) / verifying / paid / expired / missing / error
+- [x] Paid copy already honest (Official Receipt, not membership)
+- [x] Stop polling on paid/expired/missing
 
 ## K13.3 Must not
 
-- [ ] Do not treat query param as paid (K14)
-- [ ] Do not add OIDC to poll
+- [x] Do not treat query param as paid (K14)
+- [x] Do not add OIDC to poll
 
 ## K13.4 Exit
 
-- [ ] Verifying UI exists
-- [ ] Unblocked for K14
+- [x] Verifying UI exists
+- [x] Unblocked for K14

@@ -9,11 +9,11 @@
 
 ## B22.1
 
-- [ ] Form field `id` = bill id
-- [ ] Missing → 400 unusable, no fulfill
-- [ ] Paid EventId = `paid:{billId}`
-- [ ] Persist `ProviderSessionId` if empty
+- [x] Form field `id` = bill id
+- [x] Missing → 400 unusable, no fulfill
+- [x] Paid EventId = `paid:{billId}`
+- [x] Persist `ProviderSessionId` if empty
 
 ## B22.2 Exit
 
-- [ ] Covered by B20 fixture
+- [x] Covered by B20 fixture

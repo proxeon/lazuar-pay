@@ -9,16 +9,16 @@
 
 ## T17.1 Grep
 
-- [ ] Grep `apps/lazuar-pay/src` for `Lhdn`, `MyInvois`, `UBL`, `XAdES`, `Irbm` — no matches
-- [ ] `Lazuar.Pay.csproj` has no LHDN SDK package
-- [ ] IsolationTests still ban `Modules.` (covers `Modules.Lhdn`)
+- [x] Grep `apps/lazuar-pay/src` for `Lhdn`, `MyInvois`, `UBL`, `XAdES`, `Irbm` — no matches
+- [x] `Lazuar.Pay.csproj` has no LHDN SDK package
+- [x] IsolationTests still ban `Modules.` (covers `Modules.Lhdn`)
 
 ## T17.2 Must not
 
-- [ ] Do not add a `tax_documents` table that pretends to be LHDN
-- [ ] Do not ProjectReference `packages/lhdn-sdk-dotnet`
+- [x] Do not add a `tax_documents` table that pretends to be LHDN
+- [x] Do not ProjectReference `packages/lhdn-sdk-dotnet`
 
 ## T17.3 Exit
 
-- [ ] Grep clean
-- [ ] Unblocked for A99 tax clause
+- [x] Grep clean
+- [x] Unblocked for A99 tax clause
