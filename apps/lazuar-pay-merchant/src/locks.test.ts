@@ -55,6 +55,13 @@ describe('merchant honesty locks', () => {
     expect(src).toContain('does not pick the rail for pay links')
   })
 
+  it('processor secrets open from Edit into a dialog', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    expect(src).toContain('Edit')
+    expect(src).toContain('DialogContent')
+    expect(src).toContain('openEdit')
+  })
+
   it('pay links send a chosen provider', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
     expect(src).toContain('provider')
