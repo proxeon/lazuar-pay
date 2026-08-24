@@ -12,4 +12,10 @@ describe('checkout honesty', () => {
     expect(pkg).not.toContain('react-oidc-context')
     expect(pkg).not.toContain('@repo/api-types-ts')
   })
+
+  it('does not render wallet tiles or card PAN', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src.toLowerCase()).not.toMatch(/grabpay|tng|touchngo|boost|duitnow|fpx|shopee/)
+    expect(src).not.toContain('autocomplete="cc-number"')
+  })
 })

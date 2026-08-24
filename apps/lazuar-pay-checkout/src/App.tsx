@@ -8,11 +8,16 @@ type PayView = {
   amount: number
   currency: string
   status: string
+  email_required?: boolean
 }
 
 function tokenFromPath(): string | null {
   const m = window.location.pathname.match(/^\/c\/([^/]+)/)
   return m ? decodeURIComponent(m[1]) : null
+}
+
+function verifyingQuery(): boolean {
+  return new URLSearchParams(window.location.search).get('status') === 'verifying'
 }
 
 function App() {
@@ -22,26 +27,53 @@ function App() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
+  const [verifying, setVerifying] = useState(verifyingQuery())
 
   useEffect(() => {
     if (!token) {
       setError('missing')
       return
     }
-    fetch(`${payApi}/v1/pay/${token}`)
-      .then((r) => {
-        if (r.status === 404) throw new Error('missing')
-        if (!r.ok) throw new Error(`status ${r.status}`)
-        return r.json()
+    let stop = false
+    async function load() {
+      const r = await fetch(`${payApi}/v1/pay/${token}`)
+      if (r.status === 404) throw new Error('missing')
+      if (!r.ok) throw new Error(`status ${r.status}`)
+      return (await r.json()) as PayView
+    }
+    void load()
+      .then((body) => {
+        if (!stop) setPay(body)
       })
-      .then((body: PayView) => setPay(body))
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : 'error'),
-      )
+      .catch((err: unknown) => {
+        if (!stop) setError(err instanceof Error ? err.message : 'error')
+      })
+    return () => {
+      stop = true
+    }
   }, [token])
+
+  useEffect(() => {
+    if (!token || !verifying || pay?.status === 'paid' || pay?.status === 'expired') return
+    let n = 0
+    const id = window.setInterval(() => {
+      n += 1
+      void fetch(`${payApi}/v1/pay/${token}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body: PayView | null) => {
+          if (body) setPay(body)
+        })
+      if (n >= 15) window.clearInterval(id)
+    }, 2000)
+    return () => window.clearInterval(id)
+  }, [token, verifying, pay?.status])
 
   async function startPay() {
     if (!token) return
+    if (pay?.email_required && !email.trim()) {
+      setError('email is required')
+      return
+    }
     setBusy(true)
     try {
       const response = await fetch(`${payApi}/v1/pay/${token}/start`, {
@@ -51,6 +83,10 @@ function App() {
       })
       if (response.status === 503) {
         setError('rail not configured')
+        return
+      }
+      if (response.status === 400) {
+        setError('callback base not public or email required')
         return
       }
       if (!response.ok) {
@@ -86,7 +122,7 @@ function App() {
         <h1>Paid</h1>
         <p>
           Thank you. This page is not a membership login. The merchant will see
-          an Official Receipt.
+          an Official Receipt, not an e-invoice.
         </p>
       </main>
     )
@@ -100,6 +136,18 @@ function App() {
       </main>
     )
   }
+
+  if (verifying && pay.status !== 'paid') {
+    return (
+      <main>
+        <p className="kicker">Lazuar Pay</p>
+        <h1>Verifying…</h1>
+        <p>The processor success URL is not paid. Waiting for the webhook.</p>
+      </main>
+    )
+  }
+
+  const emailBlocked = Boolean(pay.email_required && !email.trim())
 
   return (
     <main>
@@ -122,7 +170,7 @@ function App() {
           <input value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
       </p>
-      <button type="button" disabled={busy} onClick={() => void startPay()}>
+      <button type="button" disabled={busy || emailBlocked} onClick={() => void startPay()}>
         Pay
       </button>
     </main>
