@@ -9,6 +9,23 @@ Plan: [`plans/011-new-lazuar-pay`](../../plans/011-new-lazuar-pay/README.md). Tr
 - Merchants come from **lazuar-one**. Local One API: `One__BaseUrl=http://localhost:8080/api/v1` (see `.env.example`). Do not copy `Modules/One`.
 - Do not add MediatR, per-module DbContexts, or a project reference into `apps/lazuar-api`.
 
+## Source layout
+
+One `Lazuar.Pay.csproj`, one `PayDbContext`. Folders are jobs, not Hub modules. Namespaces follow folders. `Program.cs` is the composition root (`Map*`, DI). Do not add `IEnumerable<IHostedRail>`.
+
+| Folder | Job |
+|--------|-----|
+| `Hosting/` | health/ready and problem JSON |
+| `Identity/` | One HTTP client, whoami, org ready, One webhooks |
+| `Credentials/` | PUT/GET `/v1/orgs/{id}/gateway` |
+| `Rails/` | one folder per PSP (`CreateHostedUrl` + webhook parse) |
+| `Webhooks/` | shared Plane B pipeline (verify → unique event → fulfill TX) |
+| `PublicPay/` | buyer GET/start (no Bearer) |
+| `Money/` | fulfill + Official Receipt; `Queries/` merchant reads |
+| `Catalog/`, `Checkouts/`, `Secrets/`, `Data/` | products, merchant mint, wrap, EF |
+
+A sixth hosted rail is `Rails/Foo/` plus two switch arms and tests under `tests/.../Rails/Foo/`. New verbs (refunds, pause mail, PDF) get their own folder; they do not hang extra methods on `IHostedRail`. Tests mirror `src/` except `IsolationTests.cs` at the test root.
+
 ```bash
 task pay:test
 task pay:dev          # :8081 health, whoami, checkouts

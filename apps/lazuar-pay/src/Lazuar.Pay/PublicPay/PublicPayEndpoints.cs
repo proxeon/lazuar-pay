@@ -1,7 +1,13 @@
 using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
-using Lazuar.Pay.Gateways;
-using Lazuar.Pay.One;
+using Lazuar.Pay.Hosting;
+using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Rails;
+using Lazuar.Pay.Rails.Billplz;
+using Lazuar.Pay.Rails.Chip;
+using Lazuar.Pay.Rails.Razorpay;
+using Lazuar.Pay.Rails.Stripe;
+using Lazuar.Pay.Rails.Xendit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.PublicPay;

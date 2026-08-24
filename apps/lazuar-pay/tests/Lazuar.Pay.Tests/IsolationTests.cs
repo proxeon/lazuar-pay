@@ -10,7 +10,10 @@ public class IsolationTests
         "ApplicationFeeAmount", "Razorpay.Api",
         "application_fee", "TransferData", "transfer_data",
         "ChipWebhookRegistrar", "PublicDnsFallback",
-        "Lhdn", "MyInvois", "UBL", "XAdES", "Irbm"
+        "Lhdn", "MyInvois", "UBL", "XAdES", "Irbm",
+        "IEnumerable<IHostedRail>",
+        "namespace Lazuar.Pay.Gateways",
+        "namespace Lazuar.Pay.One;"
     ];
 
     [Test]

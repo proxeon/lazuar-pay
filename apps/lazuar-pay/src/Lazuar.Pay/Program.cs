@@ -1,11 +1,20 @@
 using System.Text.Json;
 using Lazuar.Pay.Catalog;
 using Lazuar.Pay.Checkouts;
+using Lazuar.Pay.Credentials;
 using Lazuar.Pay.Data;
-using Lazuar.Pay.Gateways;
+using Lazuar.Pay.Hosting;
+using Lazuar.Pay.Identity;
+using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Identity.OneWebhooks;
 using Lazuar.Pay.Money;
-using Lazuar.Pay.One;
+using Lazuar.Pay.Money.Queries;
 using Lazuar.Pay.PublicPay;
+using Lazuar.Pay.Rails.Billplz;
+using Lazuar.Pay.Rails.Chip;
+using Lazuar.Pay.Rails.Razorpay;
+using Lazuar.Pay.Rails.Stripe;
+using Lazuar.Pay.Rails.Xendit;
 using Lazuar.Pay.Secrets;
 using Lazuar.Pay.Webhooks;
 using Microsoft.EntityFrameworkCore;
@@ -56,20 +65,7 @@ builder.Services.AddCors(o =>
 var app = builder.Build();
 app.UseCors();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
-app.MapGet("/v1/health", () => Results.Ok(new { status = "ok" }));
-app.MapGet("/ready", async (PayDbContext db, CancellationToken ct) =>
-{
-    try
-    {
-        await db.Database.CanConnectAsync(ct);
-        return Results.Ok(new { status = "ready" });
-    }
-    catch
-    {
-        return Results.Json(new { status = "not_ready" }, statusCode: 503);
-    }
-});
+app.MapHealth();
 app.MapWhoami();
 app.MapOrgReady();
 app.MapCheckouts();
