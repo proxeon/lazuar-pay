@@ -60,7 +60,7 @@ internal static class OneWebhookEndpoints
             var settings = await db.OrgSettings.FindAsync([orgId], ct);
             if (settings is null)
             {
-                db.OrgSettings.Add(new OrgSettingsRow { OrgId = orgId, ChargesPaused = true, SstRegistered = false });
+                db.OrgSettings.Add(new OrgSettingsRow { OrgId = orgId, ChargesPaused = true });
             }
             else
             {

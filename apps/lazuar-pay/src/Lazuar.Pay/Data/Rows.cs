@@ -5,8 +5,9 @@ public sealed class OrgSettingsRow
     public required string OrgId { get; set; }
     public string Currency { get; set; } = "MYR";
     public bool ChargesPaused { get; set; }
-    /// <summary>null = unknown (fail closed for SST). true/false when merchant set it.</summary>
+    /// <summary>Unused. Tax is out of this program. Column kept; do not read on the pay path.</summary>
     public bool? SstRegistered { get; set; }
+    public string? ActiveProvider { get; set; }
 }
 
 public sealed class CheckoutRow
@@ -24,6 +25,8 @@ public sealed class CheckoutRow
     public string? PayerName { get; set; }
     public string? PayerEmail { get; set; }
     public string? ProductId { get; set; }
+    public string? Provider { get; set; }
+    public string? ProviderSessionId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 
@@ -58,6 +61,9 @@ public sealed class GatewayCredentialRow
     public required string Provider { get; set; }
     public required string Ciphertext { get; set; }
     public string? Last4 { get; set; }
+    public string? WebhookCiphertext { get; set; }
+    public string? PublicMerchantId { get; set; }
+    public string Environment { get; set; } = "test";
     public DateTimeOffset UpdatedAt { get; set; }
 }
 

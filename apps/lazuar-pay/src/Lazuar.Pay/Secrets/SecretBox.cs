@@ -1,11 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Secrets;
 
 /// <summary>AES-GCM wrap for BYOK. Key from Pay:WrapKey (32-byte base64). Never log plaintext.</summary>
-public sealed class SecretBox(IConfiguration config)
+public sealed class SecretBox(IConfiguration config, IHostEnvironment env)
 {
     public string Protect(string plaintext)
     {
@@ -37,7 +38,11 @@ public sealed class SecretBox(IConfiguration config)
         var b64 = config["Pay:WrapKey"];
         if (string.IsNullOrWhiteSpace(b64))
         {
-            // Dev/test only. Production must set Pay:WrapKey.
+            if (env.IsProduction())
+            {
+                throw new InvalidOperationException("Pay:WrapKey is required in Production");
+            }
+
             return SHA256.HashData("lazuar-pay-dev-wrap-key"u8.ToArray());
         }
 
