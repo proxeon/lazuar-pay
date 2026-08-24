@@ -35,7 +35,8 @@ Hub (steal HTTP; do not copy):
 | [08-razorpay-crosscheck.md](./08-razorpay-crosscheck.md) | Razorpay | Hub payment links vs HTTP + HMAC |
 | [09-tests-inventory.md](./09-tests-inventory.md) | Tests | What `WebhookTests`/`RailTests`/`GatewayTests` lock; gaps to write |
 | [10-honesty-frontend-risks.md](./10-honesty-frontend-risks.md) | Honesty | Ranked bugs, frontend/host mismatches, refuse list |
+| [11-hub-vs-pay-features.md](./11-hub-vs-pay-features.md) | Feature matrix | Hub cathedral vs Pay cashier after 016 harden (`69454123`) |
 
-Write uncondensed. Do not summarize a report into a bullet list and delete the evidence.
+Write uncondensed. Do not summarize a report into a bullet list and delete the evidence. The feature matrix does **not** replace [04](./04-stripe-crosscheck.md)–[08](./08-razorpay-crosscheck.md).
 
 **Implementation (after this eval):** many small phases in [`checklist/`](./checklist/README.md). Freeze [`checklist/decisions.md`](./checklist/decisions.md). Product money first, then tests, then SPA. Not a sixth rail.
