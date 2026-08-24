@@ -34,4 +34,15 @@ describe('merchant honesty locks', () => {
     expect(pkg).not.toContain('@repo/api-types-ts')
     expect(pkg).not.toContain('lazuar-ops')
   })
+
+  it('CHIP PEM uses a textarea', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'WorkspacePage.tsx'), 'utf8')
+    expect(src).toContain('<textarea')
+    expect(src).toContain('PEM from CHIP dashboard')
+  })
+
+  it('hydrates environment from GET', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'WorkspacePage.tsx'), 'utf8')
+    expect(src).toContain('setEnvironment(body.environment)')
+  })
 })

@@ -68,6 +68,10 @@ export function WorkspacePage() {
       if (body.provider && rails.includes(body.provider as (typeof rails)[number])) {
         setProvider(body.provider as (typeof rails)[number])
       }
+      if (body.environment === 'test' || body.environment === 'live') {
+        setEnvironment(body.environment)
+      }
+      if (body.public_merchant_id) setPublicMerchantId(body.public_merchant_id)
     }
   }
 
@@ -109,7 +113,7 @@ export function WorkspacePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!response.ok) setError(`keys ${response.status}`)
+    if (!response.ok) setError(await problemDetail(response, `keys ${response.status}`))
     else {
       setError(null)
       setSecret('')
@@ -128,7 +132,7 @@ export function WorkspacePage() {
       body: JSON.stringify({ name: productName, amount: Number(amount), currency: 'MYR' }),
     })
     if (!created.ok) {
-      setError(`product ${created.status}`)
+      setError(await problemDetail(created, `product ${created.status}`))
       return
     }
     const checkout = await payFetch(token, '/v1/checkouts', {
@@ -142,11 +146,12 @@ export function WorkspacePage() {
       }),
     })
     if (!checkout.ok) {
-      setError(`checkout ${checkout.status}`)
+      setError(await problemDetail(checkout, `checkout ${checkout.status}`))
       return
     }
     const body = (await checkout.json()) as { public_token?: string }
-    if (body.public_token) setPayUrl(`http://localhost:5179/c/${body.public_token}`)
+    const checkoutOrigin = (import.meta.env.VITE_CHECKOUT_ORIGIN as string | undefined) ?? 'http://localhost:5179'
+    if (body.public_token) setPayUrl(`${checkoutOrigin.replace(/\/$/, '')}/c/${body.public_token}`)
     await refresh(token)
   }
 
@@ -211,23 +216,32 @@ export function WorkspacePage() {
             </p>
           )}
           <p>
-            <input
-              value={webhookSecret}
-              onChange={(e) => setWebhookSecret(e.target.value)}
-              autoComplete="off"
-              placeholder={
-                provider === 'stripe'
-                  ? 'whsec_… (endpoint signing secret)'
-                  : provider === 'chip'
-                    ? 'PEM from CHIP dashboard'
+            {provider === 'chip' ? (
+              <textarea
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+                autoComplete="off"
+                rows={6}
+                placeholder="PEM from CHIP dashboard"
+              />
+            ) : (
+              <input
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+                autoComplete="off"
+                placeholder={
+                  provider === 'stripe'
+                    ? 'whsec_… (endpoint signing secret)'
                     : provider === 'billplz'
                       ? 'X-Signature secret'
                       : provider === 'xendit'
                         ? 'x-callback-token'
                         : 'webhook secret'
-              }
-            />
+                }
+              />
+            )}
           </p>
+          {gateway?.webhook_configured ? <p>Webhook secret on file.</p> : null}
           {(provider === 'chip' || provider === 'billplz') && (
             <p>
               <input
@@ -252,12 +266,19 @@ export function WorkspacePage() {
               {payApi}/v1/webhooks/{provider}/{orgId}
             </code>
           </p>
+          {provider === 'billplz' ? (
+            <p>
+              Dashboard callback is registered at start from Pay:PublicBaseUrl (public
+              https). This path is the shape; localhost will fail.
+            </p>
+          ) : null}
           <p>
             <button type="button" onClick={() => void pasteKey()}>
               Save key
             </button>
           </p>
           <h2>Product + pay link</h2>
+          <p>Amount is typed here. Catalog row is a label, not this charge.</p>
           <p>
             <input value={productName} onChange={(e) => setProductName(e.target.value)} />
             <input value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -306,4 +327,14 @@ export function WorkspacePage() {
       </p>
     </main>
   )
+}
+
+async function problemDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await response.json()) as { detail?: string }
+    if (body.detail && body.detail.trim()) return body.detail
+  } catch {
+    /* ignore */
+  }
+  return fallback
 }

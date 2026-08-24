@@ -18,4 +18,29 @@ describe('checkout honesty', () => {
     expect(src.toLowerCase()).not.toMatch(/grabpay|tng|touchngo|boost|duitnow|fpx|shopee/)
     expect(src).not.toContain('autocomplete="cc-number"')
   })
+
+  it('verifying query is not paid', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain("=== 'verifying'")
+    expect(src).toContain("pay.status === 'paid'")
+  })
+
+  it('polls public GET while verifying', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain('/v1/pay/')
+    expect(src).toContain('setInterval')
+  })
+
+  it('does not treat customer@example.com as satisfying email_required', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain('customer@example.com')
+    expect(src).toContain('usableEmail')
+  })
+
+  it('maps start 400 without calling it paid', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain('response.status === 400')
+    expect(src).not.toContain("status: 'paid'")
+    expect(src).not.toContain('callback base not public or email required')
+  })
 })

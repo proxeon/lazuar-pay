@@ -9,6 +9,8 @@ type PayView = {
   currency: string
   status: string
   email_required?: boolean
+  started?: boolean
+  redirect_url?: string | null
 }
 
 function tokenFromPath(): string | null {
@@ -28,6 +30,7 @@ function App() {
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [verifying, setVerifying] = useState(verifyingQuery())
+  const [verifyTimedOut, setVerifyTimedOut] = useState(false)
 
   useEffect(() => {
     if (!token) {
@@ -63,15 +66,22 @@ function App() {
         .then((body: PayView | null) => {
           if (body) setPay(body)
         })
-      if (n >= 15) window.clearInterval(id)
+      if (n >= 15) {
+        window.clearInterval(id)
+        setVerifyTimedOut(true)
+      }
     }, 2000)
     return () => window.clearInterval(id)
   }, [token, verifying, pay?.status])
 
   async function startPay() {
     if (!token) return
-    if (pay?.email_required && !email.trim()) {
+    if (pay?.email_required && !usableEmail(email)) {
       setError('email is required')
+      return
+    }
+    if (pay?.started && pay.redirect_url) {
+      window.location.assign(pay.redirect_url)
       return
     }
     setBusy(true)
@@ -81,16 +91,17 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email }),
       })
+      const detail = await readDetail(response)
       if (response.status === 503) {
-        setError('rail not configured')
+        setError(detail ?? 'rail not configured')
         return
       }
       if (response.status === 400) {
-        setError('callback base not public or email required')
+        setError(detail ?? `start ${response.status}`)
         return
       }
       if (!response.ok) {
-        setError(`start ${response.status}`)
+        setError(detail ?? `start ${response.status}`)
         return
       }
       const body = (await response.json()) as { redirect_url?: string }
@@ -143,11 +154,30 @@ function App() {
         <p className="kicker">Lazuar Pay</p>
         <h1>Verifying…</h1>
         <p>The processor success URL is not paid. Waiting for the webhook.</p>
+        {verifyTimedOut ? (
+          <>
+            <p>Not paid yet. The success URL is not paid.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setVerifyTimedOut(false)
+                void fetch(`${payApi}/v1/pay/${token}`)
+                  .then((r) => (r.ok ? r.json() : null))
+                  .then((body: PayView | null) => {
+                    if (body) setPay(body)
+                  })
+              }}
+            >
+              Refresh status
+            </button>
+          </>
+        ) : null}
       </main>
     )
   }
 
-  const emailBlocked = Boolean(pay.email_required && !email.trim())
+  const emailBlocked = Boolean(pay.email_required && !usableEmail(email))
+  const started = Boolean(pay.started)
 
   return (
     <main>
@@ -170,11 +200,27 @@ function App() {
           <input value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
       </p>
+      {started ? <p>You already started this payment.</p> : null}
       <button type="button" disabled={busy || emailBlocked} onClick={() => void startPay()}>
-        Pay
+        {started ? 'Continue to processor' : 'Pay'}
       </button>
     </main>
   )
+}
+
+function usableEmail(value: string): boolean {
+  const trimmed = value.trim()
+  return trimmed.length > 0 && trimmed.toLowerCase() !== 'customer@example.com'
+}
+
+async function readDetail(response: Response): Promise<string | null> {
+  try {
+    const clone = response.clone()
+    const body = (await clone.json()) as { detail?: string }
+    return body.detail?.trim() || null
+  } catch {
+    return null
+  }
 }
 
 export default App
