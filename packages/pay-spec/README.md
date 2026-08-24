@@ -10,4 +10,4 @@ task pay:spec
 pnpm --filter @repo/pay-spec build
 ```
 
-OpenAPI lands in `dist/openapi.yaml` (gitignored). Grow `main.tsp` when `POST /v1/checkouts` exists.
+OpenAPI lands in `dist/openapi.yaml` (gitignored). Grow `main.tsp` when a Pay `/v1` door exists. Not Hub `task gen`.

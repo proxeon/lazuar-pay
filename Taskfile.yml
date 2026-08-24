@@ -101,7 +101,7 @@ tasks:
       - dotnet build Lazuar.Pay.slnx --nologo --verbosity minimal
 
   pay:test:
-    desc: Test the focused Pay host (health + isolation)
+    desc: Test the focused Pay host (hermetic whoami, checkouts, rails, webhooks)
     dir: apps/lazuar-pay
     cmds:
       - dotnet test Lazuar.Pay.slnx --nologo --verbosity minimal
