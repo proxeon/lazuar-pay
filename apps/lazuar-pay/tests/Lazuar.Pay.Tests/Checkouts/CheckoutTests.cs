@@ -51,16 +51,18 @@ public class CheckoutTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = req => Allow("t1", req);
         var client = factory.CreateClient();
-        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":12.50,"currency":"myr","success_url":"https://ok.test","cancel_url":"https://no.test"}""");
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":12.50,"currency":"myr","provider":"stripe","success_url":"https://ok.test","cancel_url":"https://no.test"}""");
         create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var created = await client.SendAsync(create);
-        Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created), await created.Content.ReadAsStringAsync());
         using var doc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
         var id = doc.RootElement.GetProperty("id").GetString();
         Assert.That(doc.RootElement.GetProperty("org_id").GetString(), Is.EqualTo("t1"));
         Assert.That(doc.RootElement.GetProperty("amount").GetDecimal(), Is.EqualTo(12.50m));
         Assert.That(doc.RootElement.GetProperty("currency").GetString(), Is.EqualTo("MYR"));
         Assert.That(doc.RootElement.GetProperty("status").GetString(), Is.EqualTo("open"));
+        Assert.That(doc.RootElement.GetProperty("provider").GetString(), Is.EqualTo("stripe"));
         Assert.That(doc.RootElement.GetProperty("success_url").GetString(), Is.EqualTo("https://ok.test"));
         Assert.That(doc.RootElement.GetProperty("cancel_url").GetString(), Is.EqualTo("https://no.test"));
 
@@ -102,7 +104,8 @@ public class CheckoutTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = req => Allow("t1", req);
         var client = factory.CreateClient();
-        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10}""");
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10,"provider":"stripe"}""");
         create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var created = await client.SendAsync(create);
         using var doc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
@@ -121,10 +124,11 @@ public class CheckoutTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = req => Allow("t1", req);
         var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
 
         async Task<string> Post()
         {
-            using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10}""");
+            using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10,"provider":"stripe"}""");
             create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
             create.Headers.TryAddWithoutValidation("Idempotency-Key", "k1");
             var response = await client.SendAsync(create);
@@ -144,12 +148,54 @@ public class CheckoutTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = req => Allow("t1", req);
         var client = factory.CreateClient();
-        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10}""");
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10,"provider":"stripe"}""");
         create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var response = await client.SendAsync(create);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.That(doc.RootElement.GetProperty("currency").GetString(), Is.EqualTo("MYR"));
+    }
+
+    [Test]
+    public async Task Create_without_provider_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("unknown provider"));
+    }
+
+    [Test]
+    public async Task Create_unknown_provider_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10,"provider":"paypal"}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("unknown provider"));
+    }
+
+    [Test]
+    public async Task Create_unconfigured_rail_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10,"provider":"chip"}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("rail not configured"));
     }
 
     [Test]

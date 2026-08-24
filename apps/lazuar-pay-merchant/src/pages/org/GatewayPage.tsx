@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { payApi, payFetch } from '../../lib/payApi'
+import { railCopy, railLabel, rails, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Button } from '../../ui/components/button'
@@ -16,57 +17,54 @@ import {
   SelectValue,
 } from '../../ui/components/select'
 import { Textarea } from '../../ui/components/textarea'
-
-const rails = ['stripe', 'chip', 'billplz', 'xendit', 'razorpay'] as const
-
-const copy: Record<(typeof rails)[number], string> = {
-  stripe: 'Hosted Checkout on Stripe. Cards on Stripe’s page. Official Receipt, not an e-invoice.',
-  chip: 'Hosted CHIP page (FPX/wallets if enabled on the brand). Auto-debit later, not this program. Paste PEM from the CHIP dashboard — Pay does not register webhooks.',
-  billplz: 'Reminder + hosted bill. We do not auto-debit. Callback must be public https (localhost will fail).',
-  xendit: 'Hosted invoice. Wallets on Xendit’s page if you enabled them there. We do not auto-debit.',
-  razorpay: 'Hosted payment link. Not e-mandate. We do not auto-debit.',
-}
-
-type Gateway = {
-  provider?: string
-  last4?: string
-  configured?: boolean
-  capability?: string
-  public_merchant_id?: string
-  environment?: string
-  webhook_configured?: boolean
-}
+import { cn } from '../../ui/lib/utils'
 
 export function GatewayPage() {
   const { orgId, token, write } = useOutletContext<OrgOutletContext>()
   const [error, setError] = useState<string | null>(null)
-  const [provider, setProvider] = useState<(typeof rails)[number]>('stripe')
+  const [provider, setProvider] = useState<Rail>('stripe')
   const [secret, setSecret] = useState('')
   const [webhookSecret, setWebhookSecret] = useState('')
   const [publicMerchantId, setPublicMerchantId] = useState('')
   const [environment, setEnvironment] = useState('test')
   const [keyId, setKeyId] = useState('')
   const [keySecret, setKeySecret] = useState('')
-  const [gateway, setGateway] = useState<Gateway | null>(null)
+  const [processors, setProcessors] = useState<Processor[]>([])
   const [saving, setSaving] = useState(false)
 
+  const selected = processors.find((p) => p.provider === provider)
+
   async function refresh() {
-    const gw = await payFetch(token, `/v1/orgs/${orgId}/gateway`, { orgHint: orgId })
+    const gw = await payFetch(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
     if (!gw.ok) return
-    const body = (await gw.json()) as Gateway
-    setGateway(body)
-    if (body.provider && rails.includes(body.provider as (typeof rails)[number])) {
-      setProvider(body.provider as (typeof rails)[number])
+    const body = (await gw.json()) as { processors?: Processor[] }
+    const list = body.processors ?? []
+    setProcessors(list)
+    const row = list.find((p) => p.provider === provider)
+    if (row?.environment === 'test' || row?.environment === 'live') {
+      setEnvironment(row.environment)
     }
-    if (body.environment === 'test' || body.environment === 'live') {
-      setEnvironment(body.environment)
-    }
-    if (body.public_merchant_id) setPublicMerchantId(body.public_merchant_id)
+    setPublicMerchantId(row?.public_merchant_id ?? '')
   }
 
   useEffect(() => {
     void refresh()
   }, [orgId, token])
+
+  function selectRail(next: Rail) {
+    setProvider(next)
+    setSecret('')
+    setWebhookSecret('')
+    setKeyId('')
+    setKeySecret('')
+    const row = processors.find((p) => p.provider === next)
+    if (row?.environment === 'test' || row?.environment === 'live') {
+      setEnvironment(row.environment)
+    } else {
+      setEnvironment('test')
+    }
+    setPublicMerchantId(row?.public_merchant_id ?? '')
+  }
 
   async function pasteKey() {
     if (!write) return
@@ -107,39 +105,52 @@ export function GatewayPage() {
     <PageCanvas>
       <PageHeader
         title="Processor"
-        subtitle="BYOK wrap. GET never echoes the secret. One active rail per org."
+        subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links."
       />
       {error ? (
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
       ) : null}
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {rails.map((r) => {
+          const row = processors.find((p) => p.provider === r)
+          const on = Boolean(row?.configured)
+          const selectedCard = provider === r
+          return (
+            <button
+              type="button"
+              key={r}
+              onClick={() => selectRail(r)}
+              className={cn(
+                'aspect-square rounded-xl border bg-white p-4 text-left shadow-sm transition',
+                selectedCard
+                  ? 'border-slate-900 ring-2 ring-slate-900'
+                  : 'border-slate-200 hover:border-slate-400',
+              )}
+            >
+              <p className="text-sm font-semibold tracking-tight">{railLabel[r]}</p>
+              <p className="mt-2 text-xs text-slate-500">{on ? 'On file' : 'Empty'}</p>
+              {on && row?.last4 ? (
+                <p className="mt-1 font-mono text-xs text-slate-600">…{row.last4}</p>
+              ) : null}
+              {on ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  {row?.webhook_configured ? 'Webhook on file' : 'No webhook'}
+                </p>
+              ) : null}
+            </button>
+          )
+        })}
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Keys</CardTitle>
-          <CardDescription>{copy[provider]}</CardDescription>
+          <CardTitle>{railLabel[provider]}</CardTitle>
+          <CardDescription>{railCopy[provider]}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="provider">Provider</Label>
-            <Select
-              value={provider}
-              onValueChange={(v) => setProvider(v as (typeof rails)[number])}
-              disabled={!write}
-            >
-              <SelectTrigger id="provider" className="w-full max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {rails.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {provider === 'razorpay' ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
@@ -209,7 +220,7 @@ export function GatewayPage() {
                 disabled={!write}
               />
             )}
-            {gateway?.webhook_configured ? (
+            {selected?.webhook_configured ? (
               <p className="text-xs text-slate-500">Webhook secret on file. Saving again requires a fresh value.</p>
             ) : null}
           </div>

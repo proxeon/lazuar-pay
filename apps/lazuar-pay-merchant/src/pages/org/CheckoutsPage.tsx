@@ -1,24 +1,50 @@
-import { useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { payFetch } from '../../lib/payApi'
+import { isRail, railLabel, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Button } from '../../ui/components/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/components/card'
 import { Input } from '../../ui/components/input'
 import { Label } from '../../ui/components/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/components/select'
 
 export function CheckoutsPage() {
   const { orgId, token, write } = useOutletContext<OrgOutletContext>()
   const [productName, setProductName] = useState('Dogfood')
   const [amount, setAmount] = useState('10')
+  const [provider, setProvider] = useState<Rail | ''>('')
+  const [configured, setConfigured] = useState<Processor[]>([])
   const [payUrl, setPayUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  useEffect(() => {
+    payFetch(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
+      .then(async (r) => {
+        if (!r.ok) return
+        const body = (await r.json()) as { processors?: Processor[] }
+        const ready = (body.processors ?? []).filter((p) => p.configured && isRail(p.provider))
+        setConfigured(ready)
+        setProvider((prev) => {
+          if (prev && ready.some((p) => p.provider === prev)) return prev
+          const first = ready[0]?.provider
+          return isRail(first) ? first : ''
+        })
+      })
+      .catch(() => undefined)
+  }, [orgId, token])
+
   async function createProductAndLink() {
-    if (!write) return
+    if (!write || !provider) return
     setBusy(true)
     setError(null)
     const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
@@ -40,6 +66,7 @@ export function CheckoutsPage() {
         org_id: orgId,
         amount: Number(amount),
         currency: 'MYR',
+        provider,
       }),
     })
     setBusy(false)
@@ -56,7 +83,7 @@ export function CheckoutsPage() {
     <PageCanvas>
       <PageHeader
         title="Pay links"
-        subtitle="Amount is typed here. Catalog row is a label, not this charge. Buyer has no One account."
+        subtitle="Pick a processor for this link. Buyer has no One account and no PSP picker."
       />
       {error ? (
         <p role="alert" className="text-sm text-red-600">
@@ -70,25 +97,51 @@ export function CheckoutsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {write ? (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="product_name">Label</Label>
-                  <Input
-                    id="product_name"
-                    value={productName}
-                    onChange={(e) => setProductName(e.target.value)}
-                  />
+            configured.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No processors on file.{' '}
+                <Link className="text-sky-700 underline-offset-2 hover:underline" to={`/o/${orgId}/gateway`}>
+                  Paste keys
+                </Link>{' '}
+                first, then pick a rail here.
+              </p>
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="product_name">Label</Label>
+                    <Input
+                      id="product_name"
+                      value={productName}
+                      onChange={(e) => setProductName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount (MYR)</Label>
+                    <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (MYR)</Label>
-                  <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                  <Label htmlFor="provider">Processor</Label>
+                  <Select value={provider} onValueChange={(v) => setProvider(v as Rail)}>
+                    <SelectTrigger id="provider" className="w-full max-w-xs">
+                      <SelectValue placeholder="Select a rail" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {configured.map((p) => (
+                        <SelectItem key={p.provider} value={p.provider!}>
+                          {isRail(p.provider) ? railLabel[p.provider] : p.provider}
+                          {p.last4 ? ` · …${p.last4}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <Button type="button" onClick={() => void createProductAndLink()} disabled={busy}>
-                Create pay link
-              </Button>
-            </>
+                <Button type="button" onClick={() => void createProductAndLink()} disabled={busy || !provider}>
+                  Create pay link
+                </Button>
+              </>
+            )
           ) : (
             <p className="text-sm text-slate-500">Member cannot create charges.</p>
           )}

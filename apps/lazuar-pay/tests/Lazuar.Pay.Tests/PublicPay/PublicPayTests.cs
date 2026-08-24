@@ -14,15 +14,8 @@ public class PublicPayTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
-        {
-            Content = new StringContent("""{"org_id":"t1","amount":10}""", Encoding.UTF8, "application/json")
-        };
-        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var created = await client.SendAsync(create);
-        Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created));
-        using var doc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        var token = doc.RootElement.GetProperty("public_token").GetString();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec"}""");
+        var (token, _) = await PayTest.SeedCheckout(client);
         var get = await client.GetAsync($"/v1/pay/{token}");
         Assert.That(get.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(factory.One.SendCount, Is.GreaterThan(0));
@@ -61,15 +54,7 @@ public class PublicPayTests
         keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         Assert.That((await client.SendAsync(keys)).IsSuccessStatusCode, Is.True);
 
-        using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
-        {
-            Content = new StringContent("""{"org_id":"t1","amount":10}""", Encoding.UTF8, "application/json")
-        };
-        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var created = await client.SendAsync(create);
-        using var createdDoc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        var token = createdDoc.RootElement.GetProperty("public_token").GetString();
-        var checkoutId = createdDoc.RootElement.GetProperty("id").GetString();
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "chip");
 
         using var start1 = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
@@ -118,14 +103,7 @@ public class PublicPayTests
         keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         Assert.That((await client.SendAsync(keys)).IsSuccessStatusCode, Is.True);
 
-        using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
-        {
-            Content = new StringContent("""{"org_id":"t1","amount":10}""", Encoding.UTF8, "application/json")
-        };
-        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var created = await client.SendAsync(create);
-        using var createdDoc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        var token = createdDoc.RootElement.GetProperty("public_token").GetString();
+        var (token, _) = await PayTest.SeedCheckout(client, "chip");
 
         var before = await client.GetAsync($"/v1/pay/{token}");
         using var beforeDoc = JsonDocument.Parse(await before.Content.ReadAsStringAsync());
@@ -150,15 +128,8 @@ public class PublicPayTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
-        {
-            Content = new StringContent("""{"org_id":"t1","amount":10}""", Encoding.UTF8, "application/json")
-        };
-        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var created = await client.SendAsync(create);
-        using var createdDoc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        var token = createdDoc.RootElement.GetProperty("public_token").GetString();
-        var checkoutId = createdDoc.RootElement.GetProperty("id").GetString()!;
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec"}""");
+        var (token, checkoutId) = await PayTest.SeedCheckout(client);
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
@@ -181,15 +152,8 @@ public class PublicPayTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
-        {
-            Content = new StringContent("""{"org_id":"t1","amount":10}""", Encoding.UTF8, "application/json")
-        };
-        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
-        var created = await client.SendAsync(create);
-        using var createdDoc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        var token = createdDoc.RootElement.GetProperty("public_token").GetString();
-        var checkoutId = createdDoc.RootElement.GetProperty("id").GetString()!;
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec"}""");
+        var (token, checkoutId) = await PayTest.SeedCheckout(client);
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
@@ -215,7 +179,7 @@ public class PublicPayTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = "pem", public_merchant_id = "brand_1" }));
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "chip");
         var get = await client.GetAsync($"/v1/pay/{token}");
         using var doc = JsonDocument.Parse(await get.Content.ReadAsStringAsync());
         Assert.That(doc.RootElement.GetProperty("email_required").GetBoolean());
@@ -238,9 +202,24 @@ public class PublicPayTests
     public async Task Start_without_rail_is_503()
     {
         await using var factory = new PayApiFactory();
-        factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
-        var (token, _) = await PayTest.SeedCheckout(client);
+        const string token = "legacyopen";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Checkouts.Add(new CheckoutRow
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                OrgId = "t1",
+                PublicToken = token,
+                Amount = 10m,
+                Currency = "MYR",
+                Status = "open",
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")

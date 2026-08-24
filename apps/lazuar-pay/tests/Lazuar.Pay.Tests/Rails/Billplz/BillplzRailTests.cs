@@ -19,7 +19,7 @@ public class BillplzRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"billplz","secret":"bp_sk","webhook_secret":"xsig","public_merchant_id":"col_1","environment":"test"}""");
-        var (token, checkoutId) = await PayTest.SeedCheckout(client);
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "billplz");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
@@ -60,7 +60,7 @@ public class BillplzRailTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"billplz","secret":"bp","webhook_secret":"x","public_merchant_id":"col","environment":"test"}""");
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "billplz");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"customer@example.com"}""", Encoding.UTF8, "application/json")
@@ -76,7 +76,7 @@ public class BillplzRailTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"billplz","secret":"bp","webhook_secret":"x","public_merchant_id":"col","environment":"test"}""");
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "billplz");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
@@ -98,7 +98,7 @@ public class BillplzRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"billplz","secret":"bp","webhook_secret":"xsig","public_merchant_id":"col","environment":"test"}""");
-        var (token, checkoutId) = await PayTest.SeedCheckout(client);
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "billplz");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")

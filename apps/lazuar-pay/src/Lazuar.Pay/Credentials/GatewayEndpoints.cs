@@ -14,6 +14,7 @@ internal static class GatewayEndpoints
     {
         app.MapPut("/v1/orgs/{orgId}/gateway", Put);
         app.MapGet("/v1/orgs/{orgId}/gateway", Get);
+        app.MapGet("/v1/orgs/{orgId}/gateways", List);
     }
 
     static async Task<IResult> Put(
@@ -93,7 +94,7 @@ internal static class GatewayEndpoints
         var row = await db.GatewayCredentials.FindAsync([orgId, provider], ct);
         if (row is null)
         {
-            db.GatewayCredentials.Add(new GatewayCredentialRow
+            row = new GatewayCredentialRow
             {
                 OrgId = orgId,
                 Provider = provider,
@@ -103,7 +104,8 @@ internal static class GatewayEndpoints
                 Environment = environment,
                 Last4 = last4,
                 UpdatedAt = DateTimeOffset.UtcNow
-            });
+            };
+            db.GatewayCredentials.Add(row);
         }
         else
         {
@@ -115,15 +117,9 @@ internal static class GatewayEndpoints
             row.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
-        var settings = await db.OrgSettings.FindAsync([orgId], ct);
-        if (settings is null)
+        if (await db.OrgSettings.FindAsync([orgId], ct) is null)
         {
-            settings = new OrgSettingsRow { OrgId = orgId, ActiveProvider = provider };
-            db.OrgSettings.Add(settings);
-        }
-        else
-        {
-            settings.ActiveProvider = provider;
+            db.OrgSettings.Add(new OrgSettingsRow { OrgId = orgId });
         }
 
         db.AuditEvents.Add(new AuditEventRow
@@ -135,16 +131,7 @@ internal static class GatewayEndpoints
         });
 
         await db.SaveChangesAsync(ct);
-        return Results.Json(GatewayJson(orgId, row ?? await db.GatewayCredentials.FindAsync([orgId, provider], ct) ?? new GatewayCredentialRow
-        {
-            OrgId = orgId,
-            Provider = provider,
-            Ciphertext = wrapped,
-            Last4 = last4,
-            PublicMerchantId = publicId,
-            Environment = environment,
-            WebhookCiphertext = wrappedWh
-        }, configured: true), OneClient.Json);
+        return Results.Json(GatewayJson(orgId, row, configured: true), OneClient.Json);
     }
 
     static async Task<IResult> Get(
@@ -161,24 +148,14 @@ internal static class GatewayEndpoints
             return denied;
         }
 
-        string? name = provider;
-        if (string.IsNullOrWhiteSpace(name))
+        if (string.IsNullOrWhiteSpace(provider))
         {
-            var settings = await db.OrgSettings.AsNoTracking().FirstOrDefaultAsync(x => x.OrgId == orgId, ct);
-            name = settings?.ActiveProvider;
-        }
-        else if (!PayProviders.TryNormalize(name, out var normalized))
-        {
-            return PayErrors.Status(400, "Bad Request", "unknown provider");
-        }
-        else
-        {
-            name = normalized;
+            return await List(orgId, request, one, db, ct);
         }
 
-        if (string.IsNullOrWhiteSpace(name))
+        if (!PayProviders.TryNormalize(provider, out var name))
         {
-            return Results.Json(new { org_id = orgId, configured = false }, OneClient.Json);
+            return PayErrors.Status(400, "Bad Request", "unknown provider");
         }
 
         var row = await db.GatewayCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == name, ct);
@@ -188,6 +165,46 @@ internal static class GatewayEndpoints
         }
 
         return Results.Json(GatewayJson(orgId, row, configured: true), OneClient.Json);
+    }
+
+    static async Task<IResult> List(
+        string orgId,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        CancellationToken ct)
+    {
+        var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var rows = await db.GatewayCredentials.AsNoTracking()
+            .Where(x => x.OrgId == orgId)
+            .ToListAsync(ct);
+        var processors = PayProviders.All.Select(name =>
+        {
+            var row = rows.FirstOrDefault(x => x.Provider == name);
+            if (row is null)
+            {
+                return (object)new
+                {
+                    org_id = orgId,
+                    provider = name,
+                    configured = false,
+                    last4 = (string?)null,
+                    capability = PayProviders.Capability,
+                    public_merchant_id = (string?)null,
+                    environment = (string?)null,
+                    webhook_configured = false
+                };
+            }
+
+            return GatewayJson(orgId, row, configured: true);
+        });
+
+        return Results.Json(new { org_id = orgId, processors }, OneClient.Json);
     }
 
     static object GatewayJson(string orgId, GatewayCredentialRow row, bool configured) => new

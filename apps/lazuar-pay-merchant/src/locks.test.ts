@@ -44,7 +44,29 @@ describe('merchant honesty locks', () => {
 
   it('hydrates environment from GET', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
-    expect(src).toContain('setEnvironment(body.environment)')
+    expect(src).toContain('setEnvironment(row.environment)')
+    expect(src).toContain('/gateways')
+  })
+
+  it('processor vault is cards not an org default rail', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    expect(src).toContain('aspect-square')
+    expect(src).not.toContain('One active rail')
+    expect(src).toContain('does not pick the rail for pay links')
+  })
+
+  it('pay links send a chosen provider', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
+    expect(src).toContain('provider')
+    expect(src).toContain('/gateways')
+    expect(src).toContain('Paste keys')
+  })
+
+  it('overview lists processors not a single active rail', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'OverviewPage.tsx'), 'utf8')
+    expect(src).toContain('/gateways')
+    expect(src).not.toContain('Active rail')
+    expect(src).toContain('On file')
   })
 
   it('org shell uses copied AppSidebar not Aura ops nav', () => {

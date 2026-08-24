@@ -29,8 +29,7 @@ internal static class PublicPayEndpoints
         }
 
         var row = await db.Checkouts.AsNoTracking().FirstAsync(x => x.Id == session.Id, ct);
-        var settings = await db.OrgSettings.AsNoTracking().FirstOrDefaultAsync(x => x.OrgId == session.OrgId, ct);
-        var provider = row.Provider ?? settings?.ActiveProvider;
+        var provider = row.Provider;
         var emailRequired = PayProviders.TryNormalize(provider, out var p) && PayProviders.RequiresEmail(p);
         var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl);
         return Results.Json(new
@@ -87,7 +86,7 @@ internal static class PublicPayEndpoints
             row.PayerEmail = body.Email.Trim();
         }
 
-        var provider = row.Provider ?? settings?.ActiveProvider;
+        var provider = row.Provider;
         if (!PayProviders.TryNormalize(provider, out var name))
         {
             return PayErrors.Status(503, "Service Unavailable", "rail not configured");

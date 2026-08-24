@@ -7,6 +7,7 @@ public sealed class OrgSettingsRow
     public bool ChargesPaused { get; set; }
     /// <summary>Unused. Tax is out of this program. Column kept; do not read on the pay path.</summary>
     public bool? SstRegistered { get; set; }
+    /// <summary>Unused. Vault save does not pick a default rail. Column kept; do not read on the pay path.</summary>
     public string? ActiveProvider { get; set; }
 }
 

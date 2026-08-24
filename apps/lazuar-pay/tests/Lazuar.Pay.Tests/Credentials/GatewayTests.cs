@@ -65,7 +65,7 @@ public class GatewayTests
         var putBody = await put.Content.ReadAsStringAsync();
         Assert.That(putBody, Does.Not.Contain("sk_test_dummy"));
         Assert.That(putBody, Does.Not.Contain("whsec_abc"));
-        using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway");
+        using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway?provider=stripe");
         get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var got = await client.SendAsync(get);
         var json = await got.Content.ReadAsStringAsync();
@@ -79,7 +79,7 @@ public class GatewayTests
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
         Assert.That(db.AuditEvents.Any(a => a.Action == "gateway.credentials.upsert" && a.OrgId == "t1"));
-        Assert.That(db.OrgSettings.Single().ActiveProvider, Is.EqualTo("stripe"));
+        Assert.That(db.OrgSettings.Single().ActiveProvider, Is.Null);
     }
 
     [Test]
@@ -124,7 +124,7 @@ public class GatewayTests
         keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         Assert.That((await client.SendAsync(keys)).IsSuccessStatusCode);
         factory.One.Responder = req => Role("member", req);
-        using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway");
+        using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway?provider=stripe");
         get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var got = await client.SendAsync(get);
         Assert.That(got.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -134,6 +134,52 @@ public class GatewayTests
         using var doc = JsonDocument.Parse(json);
         Assert.That(doc.RootElement.GetProperty("provider").GetString(), Is.EqualTo("stripe"));
         Assert.That(doc.RootElement.GetProperty("capability").GetString(), Is.EqualTo("hosted_link"));
+    }
+
+    [Test]
+    public async Task List_returns_all_five_and_put_does_not_default_pay_links()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Role("owner", req);
+        var client = factory.CreateClient();
+        await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_abc"}""");
+        await PayTest.Put(client, """{"provider":"chip","secret":"chip_sk","webhook_secret":"pem","public_merchant_id":"brand_1"}""");
+
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateways");
+        list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var got = await client.SendAsync(list);
+        Assert.That(got.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var doc = JsonDocument.Parse(await got.Content.ReadAsStringAsync());
+        var processors = doc.RootElement.GetProperty("processors");
+        Assert.That(processors.GetArrayLength(), Is.EqualTo(5));
+        var stripe = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "stripe");
+        var chip = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "chip");
+        var xendit = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "xendit");
+        Assert.That(stripe.GetProperty("configured").GetBoolean());
+        Assert.That(chip.GetProperty("configured").GetBoolean());
+        Assert.That(xendit.GetProperty("configured").GetBoolean(), Is.False);
+
+        using var bare = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway");
+        bare.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var bareGot = await client.SendAsync(bare);
+        using var bareDoc = JsonDocument.Parse(await bareGot.Content.ReadAsStringAsync());
+        Assert.That(bareDoc.RootElement.GetProperty("processors").GetArrayLength(), Is.EqualTo(5));
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.OrgSettings.Single().ActiveProvider, Is.Null);
+        Assert.That(db.GatewayCredentials.Count(), Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Get_unknown_provider_query_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Role("owner", req);
+        var client = factory.CreateClient();
+        using var get = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway?provider=paypal");
+        get.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        Assert.That((await client.SendAsync(get)).StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]

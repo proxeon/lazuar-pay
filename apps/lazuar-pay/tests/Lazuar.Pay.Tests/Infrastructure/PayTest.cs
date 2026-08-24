@@ -28,11 +28,14 @@ internal static class PayTest
         Assert.That(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
     }
 
-    public static async Task<(string Token, string CheckoutId)> SeedCheckout(HttpClient client)
+    public static async Task<(string Token, string CheckoutId)> SeedCheckout(HttpClient client, string provider = "stripe")
     {
         using var create = new HttpRequestMessage(HttpMethod.Post, "/v1/checkouts")
         {
-            Content = new StringContent("""{"org_id":"t1","amount":10}""", Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                $$"""{"org_id":"t1","amount":10,"provider":"{{provider}}"}""",
+                Encoding.UTF8,
+                "application/json")
         };
         create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var created = await client.SendAsync(create);

@@ -17,14 +17,6 @@ public class FillTests
     static string StripePaid(string eventId, string checkoutId, string extra = "\"amount_total\":1000,\"currency\":\"myr\"") =>
         "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_x\",\"object\":\"checkout.session\",\"mode\":\"payment\"," + extra + ",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"paid\",\"status\":\"complete\",\"metadata\":{\"checkout_id\":\"" + checkoutId + "\"}}}}";
 
-    static async Task BindStripe(PayApiFactory factory, string checkoutId)
-    {
-        using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
-        db.Checkouts.Single(x => x.Id == checkoutId).Provider = "stripe";
-        await db.SaveChangesAsync();
-    }
-
     [Test]
     public async Task Fulfill_throw_returns_5xx_event_not_committed_retry_pays()
     {
@@ -34,7 +26,6 @@ public class FillTests
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""");
         var (_, checkoutId) = await PayTest.SeedCheckout(client);
-        await BindStripe(factory, checkoutId);
 
         var eventId = "evt_throw_" + Guid.NewGuid().ToString("N");
         var payload = StripePaid(eventId, checkoutId);
@@ -72,7 +63,6 @@ public class FillTests
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""");
         var (_, checkoutId) = await PayTest.SeedCheckout(client);
-        await BindStripe(factory, checkoutId);
 
         var eventId = "evt_mm_" + Guid.NewGuid().ToString("N");
         var payload = StripePaid(eventId, checkoutId, "\"amount_total\":999,\"currency\":\"myr\"");
@@ -99,7 +89,6 @@ public class FillTests
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""");
         var (_, checkoutId) = await PayTest.SeedCheckout(client);
-        await BindStripe(factory, checkoutId);
 
         var eventId = "evt_ccy_" + Guid.NewGuid().ToString("N");
         var payload = StripePaid(eventId, checkoutId, "\"amount_total\":1000,\"currency\":\"usd\"");
@@ -136,6 +125,13 @@ public class FillTests
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""");
         var (_, checkoutId) = await PayTest.SeedCheckout(client);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Checkouts.Single(x => x.Id == checkoutId).Provider = null;
+            await db.SaveChangesAsync();
+        }
+
         var eventId = "evt_nostart_" + Guid.NewGuid().ToString("N");
         var payload = StripePaid(eventId, checkoutId);
         var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

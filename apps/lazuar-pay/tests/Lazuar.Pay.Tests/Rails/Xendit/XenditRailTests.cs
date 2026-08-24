@@ -18,7 +18,7 @@ public class XenditRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"xendit","secret":"xnd_sk","webhook_secret":"tok_1"}""");
-        var (token, checkoutId) = await PayTest.SeedCheckout(client);
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "xendit");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
@@ -58,7 +58,7 @@ public class XenditRailTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"xendit","secret":"xnd","webhook_secret":"tok"}""");
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "xendit");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"customer@example.com"}""", Encoding.UTF8, "application/json")

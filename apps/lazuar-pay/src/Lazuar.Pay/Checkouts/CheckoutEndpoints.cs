@@ -1,6 +1,8 @@
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.Rails;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Checkouts;
 
@@ -45,6 +47,18 @@ internal static class CheckoutEndpoints
             return PayErrors.Status(400, "Bad Request", "amount must be greater than 0");
         }
 
+        if (!PayProviders.TryNormalize(body.Provider, out var provider))
+        {
+            return PayErrors.Status(400, "Bad Request", "unknown provider");
+        }
+
+        var cred = await db.GatewayCredentials.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == provider, cancellationToken);
+        if (cred is null)
+        {
+            return PayErrors.Status(400, "Bad Request", "rail not configured");
+        }
+
         var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();
         var idempotency = request.Headers["Idempotency-Key"].ToString();
         if (string.IsNullOrWhiteSpace(idempotency))
@@ -56,6 +70,7 @@ internal static class CheckoutEndpoints
         {
             Id = Guid.NewGuid().ToString("N"),
             OrgId = orgId!,
+            Provider = provider,
             PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
             Amount = body.Amount.Value,
             Currency = currency,

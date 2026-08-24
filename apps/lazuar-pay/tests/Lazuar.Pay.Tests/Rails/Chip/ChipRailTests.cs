@@ -22,7 +22,7 @@ public class ChipRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = pem, public_merchant_id = "brand_1" }));
-        var (token, checkoutId) = await PayTest.SeedCheckout(client);
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "chip");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"name":"Ada","email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
@@ -72,7 +72,7 @@ public class ChipRailTests
         var pem = rsa.ExportSubjectPublicKeyInfoPem();
         var client = factory.CreateClient();
         await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = pem, public_merchant_id = "brand_1" }));
-        var (_, checkoutId) = await PayTest.SeedCheckout(client);
+        var (_, checkoutId) = await PayTest.SeedCheckout(client, "chip");
         var payload = "{\"event_type\":\"purchase.preauthorized\",\"id\":\"purch_1\",\"purchase\":{\"id\":\"purch_1\",\"total\":0,\"currency\":\"MYR\",\"metadata\":{\"checkout_id\":\"" + checkoutId + "\"}},\"recurring_token\":\"tok\"}";
         var sig = Convert.ToBase64String(rsa.SignData(Encoding.UTF8.GetBytes(payload), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
         using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/chip/t1")
@@ -94,7 +94,7 @@ public class ChipRailTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = "pem", public_merchant_id = "brand_1" }));
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "chip");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"name":"Ada"}""", Encoding.UTF8, "application/json")
@@ -124,7 +124,7 @@ public class ChipRailTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, JsonSerializer.Serialize(new { provider = "chip", secret = "chip_sk", webhook_secret = "pem", public_merchant_id = "brand_1" }));
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "chip");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"name":"Ada","email":"customer@example.com"}""", Encoding.UTF8, "application/json")

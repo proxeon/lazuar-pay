@@ -25,6 +25,7 @@ public sealed class CheckoutStore(PayDbContext db)
         {
             Id = session.Id,
             OrgId = session.OrgId,
+            Provider = session.Provider,
             PublicToken = session.PublicToken ?? Convert.ToHexString(Guid.NewGuid().ToByteArray()),
             Amount = session.Amount,
             Currency = session.Currency,
@@ -65,6 +66,7 @@ public sealed class CheckoutStore(PayDbContext db)
     {
         Id = row.Id,
         OrgId = row.OrgId,
+        Provider = row.Provider,
         PublicToken = row.PublicToken,
         Amount = row.Amount,
         Currency = row.Currency,

@@ -19,7 +19,7 @@ public class RazorpayRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh_rzp"}""");
-        var (token, checkoutId) = await PayTest.SeedCheckout(client);
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "razorpay");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
@@ -52,7 +52,7 @@ public class RazorpayRailTests
         factory.One.Responder = PayTest.Owner;
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh"}""");
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "razorpay");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"customer@example.com"}""", Encoding.UTF8, "application/json")
@@ -85,7 +85,7 @@ public class RazorpayRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh_rzp"}""");
-        var (token, checkoutId) = await PayTest.SeedCheckout(client);
+        var (token, checkoutId) = await PayTest.SeedCheckout(client, "razorpay");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
@@ -116,7 +116,7 @@ public class RazorpayRailTests
         };
         var client = factory.CreateClient();
         await PayTest.Put(client, """{"provider":"razorpay","secret":"rzp_test:secret","webhook_secret":"wh_rzp"}""");
-        var (token, _) = await PayTest.SeedCheckout(client);
+        var (token, _) = await PayTest.SeedCheckout(client, "razorpay");
         using var start = new HttpRequestMessage(HttpMethod.Post, $"/v1/pay/{token}/start")
         {
             Content = new StringContent("""{"email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
