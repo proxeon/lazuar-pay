@@ -18,10 +18,18 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 });
 builder.Services.AddOptions<OneOptions>().BindConfiguration(OneOptions.Section);
 builder.Services.AddHttpClient<OneClient>();
+builder.Services.AddHttpClient("chip");
+builder.Services.AddHttpClient("billplz");
+builder.Services.AddHttpClient("xendit");
+builder.Services.AddHttpClient("razorpay");
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<SecretBox>();
 builder.Services.AddScoped<CheckoutStore>();
 builder.Services.AddScoped<StripeHosted>();
+builder.Services.AddScoped<ChipHosted>();
+builder.Services.AddScoped<BillplzHosted>();
+builder.Services.AddScoped<XenditHosted>();
+builder.Services.AddScoped<RazorpayHosted>();
 builder.Services.AddScoped<Fulfillment>();
 if (!builder.Environment.IsEnvironment("Testing"))
 {
