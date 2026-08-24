@@ -20,7 +20,7 @@ internal static class CheckoutEndpoints
         CancellationToken cancellationToken)
     {
         var orgId = body?.OrgId?.Trim();
-        var denied = await MemberGate.RequireMemberAsync(request, one, orgId ?? "", cancellationToken);
+        var denied = await MemberGate.RequireWriterAsync(request, one, orgId ?? "", cancellationToken);
         if (denied is not null)
         {
             return denied;
@@ -29,7 +29,7 @@ internal static class CheckoutEndpoints
         var settings = orgId is null ? null : await db.OrgSettings.FindAsync([orgId], cancellationToken);
         if (settings is null && orgId is not null)
         {
-            settings = new OrgSettingsRow { OrgId = orgId, SstRegistered = false };
+            settings = new OrgSettingsRow { OrgId = orgId };
             db.OrgSettings.Add(settings);
             await db.SaveChangesAsync(cancellationToken);
         }

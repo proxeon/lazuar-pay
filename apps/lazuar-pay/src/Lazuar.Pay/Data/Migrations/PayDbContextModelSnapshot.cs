@@ -117,6 +117,12 @@ namespace Lazuar.Pay.Data.Migrations
                     b.Property<string>("ProductId")
                         .HasColumnType("text");
 
+                    b.Property<string>("Provider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderSessionId")
+                        .HasColumnType("text");
+
                     b.Property<string>("PspRedirectUrl")
                         .HasColumnType("text");
 
@@ -200,11 +206,21 @@ namespace Lazuar.Pay.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Last4")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PublicMerchantId")
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WebhookCiphertext")
+                        .HasColumnType("text");
 
                     b.HasKey("OrgId", "Provider");
 
@@ -330,6 +346,9 @@ namespace Lazuar.Pay.Data.Migrations
             modelBuilder.Entity("Lazuar.Pay.Data.OrgSettingsRow", b =>
                 {
                     b.Property<string>("OrgId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ActiveProvider")
                         .HasColumnType("text");
 
                     b.Property<bool>("ChargesPaused")

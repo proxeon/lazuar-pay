@@ -4,7 +4,7 @@ import "@typespec/openapi";
 using Http;
 using OpenAPI;
 
-/** Focused Pay HTTP contract. Not packages/api-spec. Checkout is a fixture (open session), not a charge. */
+/** Focused Pay HTTP contract. Not packages/api-spec. Checkouts persist in Postgres; paid via verified PSP webhook. */
 @service(#{ title: "Lazuar Pay" })
 @info(#{ version: "0.1.0" })
 @server("http://localhost:8081", "Local focused Pay host")
@@ -61,6 +61,33 @@ model PublicPay {
   amount: decimal;
   currency: string;
   status: string;
+  email_required?: boolean;
+  started?: boolean;
+  redirect_url?: string;
+}
+
+model StartPayRequest {
+  name?: string;
+  email?: string;
+}
+
+model GatewayView {
+  org_id: string;
+  provider?: string;
+  last4?: string;
+  configured: boolean;
+  capability?: string;
+  public_merchant_id?: string;
+  environment?: string;
+  webhook_configured?: boolean;
+}
+
+model PutGateway {
+  provider: string;
+  secret: string;
+  webhook_secret: string;
+  public_merchant_id?: string;
+  environment?: string;
 }
 
 model Product {
@@ -103,7 +130,7 @@ interface Orgs {
 @route("/v1")
 @tag("Checkouts")
 interface Checkouts {
-  /** Merchant creates a fixture checkout. org_id is the One tenant id. Requires Bearer + member. */
+  /** Merchant creates a checkout. org_id is the One tenant id. Requires Bearer + writer. */
   @post
   @route("/checkouts")
   create(
@@ -126,7 +153,7 @@ interface PublicPayApi {
 
   @post
   @route("/pay/{token}/start")
-  start(@path token: string): StartPayResponse;
+  start(@path token: string, @body body?: StartPayRequest): StartPayResponse;
 }
 
 @route("/v1")
@@ -142,8 +169,22 @@ interface Catalog {
 }
 
 @route("/v1")
+@tag("Gateways")
+interface Gateways {
+  /** BYOK keys. provider is stripe|chip|billplz|xendit|razorpay. Writer only. */
+  @put
+  @route("/orgs/{orgId}/gateway")
+  put(@path orgId: string, @body body: PutGateway): GatewayView;
+
+  @get
+  @route("/orgs/{orgId}/gateway")
+  get(@path orgId: string): GatewayView;
+}
+
+@route("/v1")
 @tag("Webhooks")
 interface Webhooks {
+  /** Plane B. provider is stripe|chip|billplz|xendit|razorpay. */
   @post
   @route("/webhooks/{provider}/{orgId}")
   psp(@path provider: string, @path orgId: string): { ok: boolean };

@@ -3,11 +3,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Money;
 
-public sealed class Fulfillment(PayDbContext db)
+public interface IFulfillPaid
+{
+    Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct);
+}
+
+public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
 {
     public async Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
         var checkout = await db.Checkouts.FirstOrDefaultAsync(x => x.Id == checkoutId, ct);
         if (checkout is null)
         {
@@ -21,14 +25,13 @@ public sealed class Fulfillment(PayDbContext db)
 
         if (checkout.Status != "open")
         {
-            await tx.CommitAsync(ct);
             return;
         }
 
         var settings = await db.OrgSettings.FindAsync([checkout.OrgId], ct);
-        if (settings?.SstRegistered is null)
+        if (settings?.ChargesPaused == true)
         {
-            throw new InvalidOperationException("SST registration unknown; fail closed");
+            throw new ChargesPausedException();
         }
 
         checkout.Status = "paid";
@@ -124,9 +127,10 @@ public sealed class Fulfillment(PayDbContext db)
         });
 
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
     }
 }
+
+public sealed class ChargesPausedException() : InvalidOperationException("Org charges are paused");
 
 public static class MalaysiaTime
 {

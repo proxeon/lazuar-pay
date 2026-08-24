@@ -45,8 +45,10 @@ curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
 # GET /v1/checkouts/{id} with the same Bearer
 ```
 
-Checkout is an in-memory fixture (`status: open`). Not a real charge. Buyer has no One account.
+Checkouts persist in Postgres `lazuar_pay` on **5435**. `owner`/`admin` paste **one** processor (stripe, chip, billplz, xendit, razorpay). Capability is `hosted_link`. A verified PSP webhook writes an Official Receipt `RCPT-…` and a two-line journal. Pay does not compute SST or file e-invoices. Buyers have no One account (`:5179/c/{token}`).
 
-Pay never holds a Zitadel PAT. Staff **VIEWER** is not a One tenant role (`owner` / `admin` / `member` only); `/v1/orgs/{orgId}/ready` checks `member`, not “cannot charge”.
+Per-org `webhook_secret` (Stripe `whsec_`, CHIP PEM, Billplz X-Signature, Xendit callback token, Razorpay HMAC). Process `Pay__StripeWebhookSecret` is a **Testing-only** fallback. Billplz needs `Pay__PublicBaseUrl` as public **https** (localhost callbacks 400). Buyer return URLs use `Pay__CheckoutBaseUrl` (not the Billplz callback). `Pay__WrapKey` is required outside Testing. A second `POST /v1/pay/{token}/start` on an open checkout returns the stored hosted URL (no second processor session). Success URL is not paid; `:5179` polls `?status=verifying`.
+
+Pay never holds a Zitadel PAT. Staff **VIEWER** is not a One tenant role (`owner` / `admin` / `member` only); `/v1/orgs/{orgId}/ready` checks `member`. `POST /v1/checkouts` requires writer.
 
 Do not send merchants to `lazuar-admin` (`:5173`).
