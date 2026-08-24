@@ -51,8 +51,22 @@ describe('merchant honesty locks', () => {
     const layout = readFileSync(join(root, 'src', 'layout', 'OrgLayout.tsx'), 'utf8')
     const nav = readFileSync(join(root, 'src', 'layout', 'nav.ts'), 'utf8')
     expect(layout).toContain('AppSidebar')
+    expect(layout).toContain('WorkspaceSwitcher')
     expect(nav).toContain('Processor')
     expect(nav).not.toContain('Appointments')
+  })
+
+  it('sidebar header can switch or create workspace', () => {
+    const src = readFileSync(join(root, 'src', 'layout', 'WorkspaceSwitcher.tsx'), 'utf8')
+    expect(src).toContain('Create workspace')
+    expect(src).toContain('Switch workspace')
+    expect(src).toContain('/workspaces/new')
+  })
+
+  it('home redirects into last org dashboard', () => {
+    const src = readFileSync(join(root, 'src', 'lib', 'homePath.ts'), 'utf8')
+    expect(src).toContain('/overview')
+    expect(src).toContain('/workspaces/new')
   })
 
   it('slug pattern escapes hyphen for unicode-sets HTML pattern', () => {

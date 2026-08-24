@@ -22,5 +22,5 @@ export function CallbackPage() {
   }
 
   const returnTo = takeReturnTo()
-  return <Navigate to={returnTo || '/'} replace />
+  return <Navigate to={returnTo ?? '/'} replace />
 }

@@ -6,10 +6,8 @@ import { pickApiBearerToken } from '../auth/bearerToken'
 import { getWhoami, type Whoami, type WhoamiTenant } from '../lib/payApi'
 import { canWriteMoney } from '../lib/roles'
 import { setOrgHint } from '../lib/sessionKeys'
-import {
-  AppSidebar,
-  AppSidebarLocationHeader,
-} from '../ui/components/app-sidebar'
+import { AppSidebar } from '../ui/components/app-sidebar'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import { useIsMobile } from '../ui/hooks/use-mobile'
 import { getPayNavGroups } from './nav'
 
@@ -100,12 +98,7 @@ export function OrgLayout() {
         }}
         onLogout={() => void auth.signoutRedirect()}
         onSettingsClick={() => navigate(`/o/${orgId}/gateway`)}
-        header={
-          <AppSidebarLocationHeader
-            orgName="Lazuar Pay"
-            locationName={tenant.name ?? tenant.slug ?? orgId}
-          />
-        }
+        header={<WorkspaceSwitcher orgId={orgId} tenants={who.tenants} />}
       />
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">

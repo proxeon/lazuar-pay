@@ -78,11 +78,7 @@ export function OverviewPage() {
             <p>
               <code>{tenant.role}</code> · {tenant.status}
             </p>
-            <p>
-              <Link className="text-sky-700 underline-offset-2 hover:underline" to="/">
-                All workspaces
-              </Link>
-            </p>
+            <p className="text-slate-500">Switch or create a workspace from the sidebar header.</p>
           </CardContent>
         </Card>
       </div>
