@@ -165,6 +165,27 @@ public class CheckoutTests
     }
 
     [Test]
+    public async Task Member_cannot_create_checkout()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK, """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t1","role":"member","status":"active"}]}""");
+            }
+
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+        };
+        var client = factory.CreateClient();
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
     public async Task Health_still_skips_one()
     {
         await using var factory = new PayApiFactory();

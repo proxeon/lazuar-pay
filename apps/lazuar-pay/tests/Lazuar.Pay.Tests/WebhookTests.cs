@@ -30,7 +30,7 @@ public class WebhookTests
     {
         using var keys = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
         {
-            Content = new StringContent("""{"provider":"stripe","secret":"sk_test_dummy"}""", Encoding.UTF8, "application/json")
+            Content = new StringContent("""{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""", Encoding.UTF8, "application/json")
         };
         keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         Assert.That((await client.SendAsync(keys)).IsSuccessStatusCode, Is.True);
@@ -53,6 +53,14 @@ public class WebhookTests
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
         await SeedRailAndCheckout(client);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            var row = db.GatewayCredentials.Single();
+            row.WebhookCiphertext = null;
+            await db.SaveChangesAsync();
+        }
+
         using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
         {
             Content = new StringContent("""{"id":"evt_x"}""", Encoding.UTF8, "application/json")
@@ -113,5 +121,104 @@ public class WebhookTests
         Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(await second.Content.ReadAsStringAsync(), Does.Contain("duplicate"));
         Assert.That(db.Documents.Count(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Setup_mode_is_ignored()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = Owner;
+        var client = factory.CreateClient();
+        var checkoutId = await SeedRailAndCheckout(client);
+        var eventId = "evt_setup_" + Guid.NewGuid().ToString("N");
+        var payload =
+            "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_setup\",\"object\":\"checkout.session\",\"mode\":\"setup\",\"amount_total\":0,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"unpaid\",\"status\":\"complete\"}}}";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Stripe-Signature", Sign(factory.StripeWebhookSecret, payload, t));
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("ignored"));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("open"));
+    }
+
+    [Test]
+    public async Task Zero_amount_session_is_ignored()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = Owner;
+        var client = factory.CreateClient();
+        var checkoutId = await SeedRailAndCheckout(client);
+        var eventId = "evt_zero_" + Guid.NewGuid().ToString("N");
+        var payload =
+            "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_zero\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":0,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"paid\",\"status\":\"complete\"}}}";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Stripe-Signature", Sign(factory.StripeWebhookSecret, payload, t));
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var scope = factory.Services.CreateScope();
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Cross_org_checkout_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = Owner;
+        var client = factory.CreateClient();
+        var checkoutId = await SeedRailAndCheckout(client);
+        using var keys2 = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t2/gateway")
+        {
+            Content = new StringContent("""{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""", Encoding.UTF8, "application/json")
+        };
+        keys2.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        factory.One.Responder = req =>
+        {
+            var path = req.RequestUri?.AbsolutePath ?? "";
+            if (req.Method == HttpMethod.Get && path.EndsWith("/me"))
+            {
+                return FakeOneHandler.Json(HttpStatusCode.OK, """{"user_id":"u1","is_platform_admin":false,"tenants":[{"id":"t2","role":"owner","status":"active"}]}""");
+            }
+
+            return FakeOneHandler.Json(HttpStatusCode.OK, """{"allowed":true}""");
+        };
+        Assert.That((await client.SendAsync(keys2)).IsSuccessStatusCode);
+        factory.One.Responder = Owner;
+        var eventId = "evt_xorg_" + Guid.NewGuid().ToString("N");
+        var payload =
+            "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_x\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":1000,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"paid\",\"status\":\"complete\"}}}";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t2")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        req.Headers.TryAddWithoutValidation("Stripe-Signature", Sign(factory.StripeWebhookSecret, payload, t));
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        using var scope = factory.Services.CreateScope();
+        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task Unknown_provider_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        var client = factory.CreateClient();
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/paypal/t1")
+        {
+            Content = new StringContent("""{"id":"x"}""", Encoding.UTF8, "application/json")
+        };
+        var response = await client.SendAsync(req);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 }

@@ -3,6 +3,12 @@ namespace Lazuar.Pay.Tests;
 public class IsolationTests
 {
     static readonly string[] Banned = ["lazuar-api", "Modules.", "BuildingBlocks", "MediatR", "Lazuar.Api"];
+    static readonly string[] BannedSrc =
+    [
+        "MediatR", "Modules.One", "BuildingBlocks", "IPaymentGatewayAdapter", "PaymentGatewayFactory",
+        "IPaymentGatewayFactory", "AddPaymentsModule", "GatewayPaymentCompletedIntegrationEvent", "Modules.Payments",
+        "ApplicationFeeAmount", "Razorpay.Api"
+    ];
 
     [Test]
     public void Host_csproj_does_not_reference_the_old_api()
@@ -26,9 +32,10 @@ public class IsolationTests
         foreach (var file in Directory.GetFiles(src, "*.cs", SearchOption.AllDirectories))
         {
             var text = File.ReadAllText(file);
-            Assert.That(text, Does.Not.Contain("MediatR"), file);
-            Assert.That(text, Does.Not.Contain("Modules.One"), file);
-            Assert.That(text, Does.Not.Contain("BuildingBlocks"), file);
+            foreach (var token in BannedSrc)
+            {
+                Assert.That(text, Does.Not.Contain(token), file);
+            }
         }
     }
 
@@ -72,6 +79,7 @@ public class IsolationTests
         {
             Assert.That(File.ReadAllText(file), Does.Not.Contain("apps/lazuar-api"), file);
             Assert.That(File.ReadAllText(file), Does.Not.Contain(@"apps\lazuar-api"), file);
+            Assert.That(File.ReadAllText(file), Does.Not.Contain("Razorpay.Api"), file);
         }
     }
 

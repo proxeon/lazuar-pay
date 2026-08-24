@@ -14,6 +14,7 @@ namespace Lazuar.Pay.Tests;
 public sealed class PayApiFactory : WebApplicationFactory<Program>
 {
     public FakeOneHandler One { get; } = new();
+    public FakePspHandler Psp { get; } = new();
     readonly string _dbName = "pay-" + Guid.NewGuid().ToString("N");
 
     public string StripeWebhookSecret { get; init; } = "whsec_test_local";
@@ -22,6 +23,7 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("Pay:StripeWebhookSecret", StripeWebhookSecret);
+        builder.UseSetting("Pay:PublicBaseUrl", "https://pay.test.example");
         builder.ConfigureTestServices(services =>
         {
             foreach (var d in services.Where(s => s.ServiceType == typeof(OneClient)).ToList())
@@ -29,6 +31,12 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
                 services.Remove(d);
             }
 
+            foreach (var d in services.Where(s => s.ServiceType == typeof(IHttpClientFactory)).ToList())
+            {
+                services.Remove(d);
+            }
+
+            services.AddSingleton<IHttpClientFactory>(new StaticHttpFactory(Psp));
             services.AddDbContext<PayDbContext>(o => o.UseInMemoryDatabase(_dbName)
                 .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
             services.AddTransient(_ =>
