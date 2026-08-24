@@ -45,4 +45,9 @@ describe('merchant honesty locks', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'WorkspacePage.tsx'), 'utf8')
     expect(src).toContain('setEnvironment(body.environment)')
   })
+
+  it('slug pattern escapes hyphen for unicode-sets HTML pattern', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'CreateWorkspacePage.tsx'), 'utf8')
+    expect(src).toContain('pattern="[a-z0-9\\\\-]{1,64}"')
+  })
 })

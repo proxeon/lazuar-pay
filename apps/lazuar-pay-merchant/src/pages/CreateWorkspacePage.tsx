@@ -60,7 +60,7 @@ export function CreateWorkspacePage() {
               value={slug}
               onChange={(ev) => setSlug(ev.target.value)}
               required
-              pattern="[a-z0-9-]{1,64}"
+              pattern="[a-z0-9\\-]{1,64}"
             />
           </label>
         </p>
