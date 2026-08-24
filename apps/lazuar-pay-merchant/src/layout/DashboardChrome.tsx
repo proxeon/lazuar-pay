@@ -3,6 +3,7 @@ import { Menu } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import type { Whoami, WhoamiTenant } from '../lib/payApi'
+import { staffDisplay } from '../lib/staffDisplay'
 import { AppSidebar } from '../ui/components/app-sidebar'
 import { useIsMobile } from '../ui/hooks/use-mobile'
 import { getPayNavGroups } from './nav'
@@ -47,8 +48,7 @@ export function DashboardChrome({
         onNavigate={(path) => navigate(path)}
         navGroups={getPayNavGroups(orgId)}
         user={{
-          name: who.email ?? who.user_id,
-          email: who.email ?? null,
+          ...staffDisplay(who, auth.user),
           roleLabel: tenant.role ?? 'member',
         }}
         onLogout={() => void auth.signoutRedirect()}

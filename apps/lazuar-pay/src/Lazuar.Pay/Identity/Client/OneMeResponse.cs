@@ -4,6 +4,7 @@ internal sealed class OneMeResponse
 {
     public string? UserId { get; set; }
     public string? Email { get; set; }
+    public string? Name { get; set; }
     public bool IsPlatformAdmin { get; set; }
     public string? ActiveTenantId { get; set; }
     public string? ActiveRole { get; set; }

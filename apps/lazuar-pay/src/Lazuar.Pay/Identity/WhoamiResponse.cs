@@ -4,6 +4,7 @@ public sealed class WhoamiResponse
 {
     public required string UserId { get; init; }
     public string? Email { get; init; }
+    public string? Name { get; init; }
     public bool IsPlatformAdmin { get; init; }
     public string? ActiveOrgId { get; init; }
     public IReadOnlyList<WhoamiTenant> Tenants { get; init; } = [];

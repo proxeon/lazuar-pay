@@ -31,6 +31,7 @@ internal static class OneMeMapper
         {
             UserId = me.UserId,
             Email = me.Email,
+            Name = me.Name,
             IsPlatformAdmin = me.IsPlatformAdmin,
             ActiveOrgId = me.ActiveTenantId,
             Tenants = tenants

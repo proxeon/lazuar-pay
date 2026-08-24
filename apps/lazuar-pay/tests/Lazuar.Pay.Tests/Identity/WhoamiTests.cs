@@ -6,7 +6,7 @@ namespace Lazuar.Pay.Tests;
 public class WhoamiTests
 {
     const string MeJson =
-        """{"user_id":"u1","email":"ada@acme.test","is_platform_admin":false,"active_tenant_id":"t1","active_role":"owner","tenants":[{"id":"t1","slug":"acme","name":"Acme","role":"owner","status":"active"}]}""";
+        """{"user_id":"u1","email":"ada@acme.test","name":"Ada Lovelace","is_platform_admin":false,"active_tenant_id":"t1","active_role":"owner","tenants":[{"id":"t1","slug":"acme","name":"Acme","role":"owner","status":"active"}]}""";
 
     const string EmptyTenantsJson =
         """{"user_id":"u1","email":"ada@acme.test","is_platform_admin":false,"tenants":[]}""";
@@ -31,6 +31,8 @@ public class WhoamiTests
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = doc.RootElement;
         Assert.That(root.GetProperty("user_id").GetString(), Is.EqualTo("u1"));
+        Assert.That(root.GetProperty("email").GetString(), Is.EqualTo("ada@acme.test"));
+        Assert.That(root.GetProperty("name").GetString(), Is.EqualTo("Ada Lovelace"));
         Assert.That(root.GetProperty("active_org_id").GetString(), Is.EqualTo("t1"));
         Assert.That(root.GetProperty("tenants")[0].GetProperty("id").GetString(), Is.EqualTo("t1"));
         Assert.That(factory.One.SendCount, Is.EqualTo(1));

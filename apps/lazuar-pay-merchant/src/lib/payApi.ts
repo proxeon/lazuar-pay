@@ -11,6 +11,7 @@ export type WhoamiTenant = {
 export type Whoami = {
   user_id: string
   email?: string
+  name?: string
   is_platform_admin: boolean
   active_org_id?: string
   tenants: WhoamiTenant[]
