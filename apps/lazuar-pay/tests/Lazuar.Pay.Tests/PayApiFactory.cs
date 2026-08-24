@@ -19,10 +19,13 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public string StripeWebhookSecret { get; init; } = "whsec_test_local";
 
+    public string OneWebhookSecret { get; init; } = "";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("Pay:StripeWebhookSecret", StripeWebhookSecret);
+        builder.UseSetting("Pay:OneWebhookSecret", OneWebhookSecret);
         builder.UseSetting("Pay:PublicBaseUrl", "https://pay.test.example");
         builder.ConfigureTestServices(services =>
         {

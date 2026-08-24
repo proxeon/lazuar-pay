@@ -89,6 +89,12 @@ internal static class WebhookEndpoints
             return PayErrors.Status(400, "Bad Request", "checkout not found");
         }
 
+        var orgSettings = await db.OrgSettings.FindAsync([orgId], ct);
+        if (orgSettings?.ChargesPaused == true)
+        {
+            return PayErrors.Status(409, "Conflict", "Org charges are paused");
+        }
+
         if (parsed.Currency is not null
             && !string.Equals(parsed.Currency, checkout.Currency, StringComparison.OrdinalIgnoreCase))
         {
@@ -118,6 +124,11 @@ internal static class WebhookEndpoints
         {
             await tx.RollbackAsync(ct);
             return Results.Ok(new { duplicate = true });
+        }
+        catch (ChargesPausedException)
+        {
+            await tx.RollbackAsync(ct);
+            return PayErrors.Status(409, "Conflict", "Org charges are paused");
         }
 
         return Results.Json(new { ok = true }, OneClient.Json);

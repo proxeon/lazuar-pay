@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.One;
@@ -29,11 +27,7 @@ internal static class OneWebhookEndpoints
         }
 
         var provided = request.Headers["X-Lazuar-Signature"].ToString().Trim();
-        var expected = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(json)));
-        var providedBytes = Encoding.UTF8.GetBytes(provided);
-        var expectedBytes = Encoding.UTF8.GetBytes(expected);
-        if (providedBytes.Length != expectedBytes.Length ||
-            !CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes))
+        if (!OneWebhookSignature.TryVerify(secret, json, provided))
         {
             return PayErrors.Status(401, "Unauthorized", "Invalid HMAC");
         }
@@ -41,7 +35,7 @@ internal static class OneWebhookEndpoints
         using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json);
         var type = doc.RootElement.TryGetProperty("type", out var t) ? t.GetString() : null;
         var delivery = doc.RootElement.TryGetProperty("id", out var idEl) ? idEl.GetString() : Guid.NewGuid().ToString("N");
-        var orgId = doc.RootElement.TryGetProperty("org_id", out var o) ? o.GetString() : null;
+        var orgId = ReadOrgId(doc.RootElement);
         if (await db.OneWebhookEvents.AnyAsync(x => x.DeliveryId == delivery, ct))
         {
             return Results.Ok(new { duplicate = true });
@@ -76,5 +70,28 @@ internal static class OneWebhookEndpoints
 
         await db.SaveChangesAsync(ct);
         return Results.Json(new { ok = true }, OneClient.Json);
+    }
+
+    static string? ReadOrgId(JsonElement root)
+    {
+        if (root.TryGetProperty("org_id", out var o))
+        {
+            var orgId = o.GetString();
+            if (!string.IsNullOrWhiteSpace(orgId))
+            {
+                return orgId;
+            }
+        }
+
+        if (root.TryGetProperty("tenant_id", out var tenant))
+        {
+            var tenantId = tenant.GetString();
+            if (!string.IsNullOrWhiteSpace(tenantId))
+            {
+                return tenantId;
+            }
+        }
+
+        return null;
     }
 }

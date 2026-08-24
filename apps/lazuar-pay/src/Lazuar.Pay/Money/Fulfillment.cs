@@ -23,6 +23,12 @@ public sealed class Fulfillment(PayDbContext db)
             return;
         }
 
+        var settings = await db.OrgSettings.FindAsync([checkout.OrgId], ct);
+        if (settings?.ChargesPaused == true)
+        {
+            throw new ChargesPausedException();
+        }
+
         checkout.Status = "paid";
         db.Charges.Add(new ChargeRow
         {
@@ -118,6 +124,8 @@ public sealed class Fulfillment(PayDbContext db)
         await db.SaveChangesAsync(ct);
     }
 }
+
+public sealed class ChargesPausedException() : InvalidOperationException("Org charges are paused");
 
 public static class MalaysiaTime
 {
