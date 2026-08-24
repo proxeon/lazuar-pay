@@ -73,11 +73,12 @@ public class GatewayTests
         Assert.That(doc.RootElement.GetProperty("configured").GetBoolean());
         Assert.That(doc.RootElement.GetProperty("provider").GetString(), Is.EqualTo("stripe"));
         Assert.That(doc.RootElement.GetProperty("capability").GetString(), Is.EqualTo("hosted_link"));
+        Assert.That(doc.RootElement.GetProperty("webhook_configured").GetBoolean());
         Assert.That(json, Does.Not.Contain("sk_test"));
         Assert.That(json, Does.Not.Contain("whsec_abc"));
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
-        Assert.That(db.AuditEvents.Any(a => a.Action == "gateway.credentials.upsert"));
+        Assert.That(db.AuditEvents.Any(a => a.Action == "gateway.credentials.upsert" && a.OrgId == "t1"));
         Assert.That(db.OrgSettings.Single().ActiveProvider, Is.EqualTo("stripe"));
     }
 

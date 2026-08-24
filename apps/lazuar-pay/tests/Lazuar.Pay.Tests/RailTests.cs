@@ -64,9 +64,13 @@ public class RailTests
             Content = new StringContent("""{"name":"Ada","email":"ada@acme.test"}""", Encoding.UTF8, "application/json")
         };
         var started = await client.SendAsync(start);
-        Assert.That(started.StatusCode, Is.EqualTo(HttpStatusCode.OK), await started.Content.ReadAsStringAsync());
+        var startedBody = await started.Content.ReadAsStringAsync();
+        Assert.That(started.StatusCode, Is.EqualTo(HttpStatusCode.OK), startedBody);
+        using var startDoc = JsonDocument.Parse(startedBody);
+        Assert.That(startDoc.RootElement.GetProperty("redirect_url").GetString(), Is.EqualTo("https://gate.chip-in.asia/p/x"));
         Assert.That(factory.Psp.LastBody, Does.Not.Contain("force_recurring"));
         Assert.That(factory.Psp.LastBody, Does.Contain("checkout_id"));
+        Assert.That(factory.Psp.LastBody, Does.Contain("org_id"));
 
         var payload = "{\"event_type\":\"purchase.paid\",\"id\":\"purch_1\",\"purchase\":{\"id\":\"purch_1\",\"total\":1000,\"currency\":\"MYR\",\"metadata\":{\"checkout_id\":\"" + checkoutId + "\",\"org_id\":\"t1\"}}}";
         var sig = Convert.ToBase64String(rsa.SignData(Encoding.UTF8.GetBytes(payload), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
@@ -79,6 +83,8 @@ public class RailTests
         Assert.That(paid.StatusCode, Is.EqualTo(HttpStatusCode.OK), await paid.Content.ReadAsStringAsync());
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Checkouts.Single().Provider, Is.EqualTo("chip"));
+        Assert.That(db.Checkouts.Single().ProviderSessionId, Is.EqualTo("purch_1"));
         Assert.That(db.Documents.Count(), Is.EqualTo(1));
         Assert.That(db.Documents.Single().Number, Does.StartWith("RCPT-"));
         Assert.That(db.JournalLines.Where(l => l.Dc == "D").Sum(l => l.Amount), Is.EqualTo(db.JournalLines.Where(l => l.Dc == "C").Sum(l => l.Amount)));
@@ -165,7 +171,17 @@ public class RailTests
         var paid = await client.SendAsync(wh);
         Assert.That(paid.StatusCode, Is.EqualTo(HttpStatusCode.OK), await paid.Content.ReadAsStringAsync());
         using var scope = factory.Services.CreateScope();
-        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(1));
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(1));
+        Assert.That(db.Documents.Single().Number, Does.StartWith("RCPT-"));
+
+        using var replay = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/billplz/t1?checkout_id=" + checkoutId)
+        {
+            Content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded")
+        };
+        var second = await client.SendAsync(replay);
+        Assert.That(await second.Content.ReadAsStringAsync(), Does.Contain("duplicate"));
+        Assert.That(db.Documents.Count(), Is.EqualTo(1));
     }
 
     [Test]
@@ -204,8 +220,12 @@ public class RailTests
         wh2.Headers.TryAddWithoutValidation("x-callback-token", "tok_1");
         var second = await client.SendAsync(wh2);
         Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(await second.Content.ReadAsStringAsync(), Does.Contain("settled").Or.Contain("ignored"));
         using var scope = factory.Services.CreateScope();
-        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(1));
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(1));
+        Assert.That(db.Documents.Single().Number, Does.StartWith("RCPT-"));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("paid"));
     }
 
     [Test]
@@ -240,7 +260,9 @@ public class RailTests
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
         Assert.That(db.Documents.Count(), Is.EqualTo(1));
+        Assert.That(db.Documents.Single().Number, Does.StartWith("RCPT-"));
         Assert.That(db.JournalLines.Count(), Is.EqualTo(2));
+        Assert.That(db.JournalLines.Where(l => l.Dc == "D").Sum(l => l.Amount), Is.EqualTo(db.JournalLines.Where(l => l.Dc == "C").Sum(l => l.Amount)));
     }
 
     [Test]

@@ -7,7 +7,10 @@ public class IsolationTests
     [
         "MediatR", "Modules.One", "BuildingBlocks", "IPaymentGatewayAdapter", "PaymentGatewayFactory",
         "IPaymentGatewayFactory", "AddPaymentsModule", "GatewayPaymentCompletedIntegrationEvent", "Modules.Payments",
-        "ApplicationFeeAmount", "Razorpay.Api"
+        "ApplicationFeeAmount", "Razorpay.Api",
+        "application_fee", "TransferData", "transfer_data",
+        "ChipWebhookRegistrar", "PublicDnsFallback",
+        "Lhdn", "MyInvois", "UBL", "XAdES", "Irbm"
     ];
 
     [Test]

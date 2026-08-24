@@ -1,4 +1,5 @@
 using Lazuar.Pay.Data;
+using Lazuar.Pay.Money;
 using Lazuar.Pay.One;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -21,12 +22,20 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
 
     public string OneWebhookSecret { get; init; } = "";
 
+    public string PublicBaseUrl { get; init; } = "https://pay.test.example";
+
+    /// <summary>
+    /// InMemory BeginTransaction is a no-op. H25/G12 proof uses FulfillmentProbe,
+    /// which throws before Fulfillment.SaveChanges so the event row is not committed.
+    /// </summary>
+    public FulfillmentProbe Probe { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("Pay:StripeWebhookSecret", StripeWebhookSecret);
         builder.UseSetting("Pay:OneWebhookSecret", OneWebhookSecret);
-        builder.UseSetting("Pay:PublicBaseUrl", "https://pay.test.example");
+        builder.UseSetting("Pay:PublicBaseUrl", PublicBaseUrl);
         builder.UseSetting("Pay:CheckoutBaseUrl", "http://pay-checkout.test.example");
         builder.ConfigureTestServices(services =>
         {
@@ -43,6 +52,9 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IHttpClientFactory>(new StaticHttpFactory(Psp));
             services.AddDbContext<PayDbContext>(o => o.UseInMemoryDatabase(_dbName)
                 .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+            services.AddSingleton(Probe);
+            services.AddScoped<IFulfillPaid>(sp =>
+                new ProbingFulfillment(sp.GetRequiredService<Fulfillment>(), Probe));
             services.AddTransient(_ =>
             {
                 var http = new HttpClient(One, disposeHandler: false)

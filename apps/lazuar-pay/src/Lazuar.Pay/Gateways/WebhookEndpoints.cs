@@ -23,7 +23,7 @@ internal static class WebhookEndpoints
         IConfiguration config,
         IHostEnvironment env,
         SecretBox box,
-        Fulfillment fulfillment,
+        IFulfillPaid fulfillment,
         CancellationToken ct)
     {
         if (!PayProviders.TryNormalize(provider, out var name))
@@ -130,7 +130,6 @@ internal static class WebhookEndpoints
                 EventId = parsed.EventId,
                 ReceivedAt = DateTimeOffset.UtcNow
             });
-            await db.SaveChangesAsync(ct);
             await fulfillment.FulfillPaidAsync(checkout.Id, name, parsed.ProviderRef, ct);
             await tx.CommitAsync(ct);
         }
@@ -143,6 +142,11 @@ internal static class WebhookEndpoints
         {
             await tx.RollbackAsync(ct);
             return PayErrors.Status(409, "Conflict", "Org charges are paused");
+        }
+        catch (InvalidOperationException)
+        {
+            await tx.RollbackAsync(ct);
+            return PayErrors.Status(500, "Internal Server Error", "fulfill failed");
         }
 
         return Results.Json(new { ok = true }, OneClient.Json);

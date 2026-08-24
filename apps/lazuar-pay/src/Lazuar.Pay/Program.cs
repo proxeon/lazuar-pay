@@ -31,6 +31,7 @@ builder.Services.AddScoped<BillplzHosted>();
 builder.Services.AddScoped<XenditHosted>();
 builder.Services.AddScoped<RazorpayHosted>();
 builder.Services.AddScoped<Fulfillment>();
+builder.Services.AddScoped<IFulfillPaid>(sp => sp.GetRequiredService<Fulfillment>());
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     var payCs = builder.Configuration.GetConnectionString("Pay")

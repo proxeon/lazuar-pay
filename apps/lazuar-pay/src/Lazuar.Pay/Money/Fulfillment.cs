@@ -3,7 +3,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lazuar.Pay.Money;
 
-public sealed class Fulfillment(PayDbContext db)
+public interface IFulfillPaid
+{
+    Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct);
+}
+
+public sealed class Fulfillment(PayDbContext db) : IFulfillPaid
 {
     public async Task FulfillPaidAsync(string checkoutId, string provider, string? providerRef, CancellationToken ct)
     {

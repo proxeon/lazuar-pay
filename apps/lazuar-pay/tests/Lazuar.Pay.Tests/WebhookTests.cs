@@ -116,6 +116,10 @@ public class WebhookTests
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
         Assert.That(db.Documents.Count(), Is.EqualTo(1));
         Assert.That(db.Documents.Single().Number, Does.StartWith("RCPT-"));
+        Assert.That(db.Documents.Single().Title, Is.EqualTo("Official Receipt"));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("paid"));
+        Assert.That(db.OrgSettings.Single().SstRegistered, Is.Null);
+        Assert.That(await first.Content.ReadAsStringAsync(), Does.Not.Contain("SST registration unknown"));
         var debit = db.JournalLines.Where(l => l.Dc == "D").Sum(l => l.Amount);
         var credit = db.JournalLines.Where(l => l.Dc == "C").Sum(l => l.Amount);
         Assert.That(debit, Is.EqualTo(credit));
@@ -150,6 +154,7 @@ public class WebhookTests
         var response = await client.SendAsync(req);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
         Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("ignored"));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("setup"));
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
         Assert.That(db.Documents.Count(), Is.EqualTo(0));
@@ -174,8 +179,11 @@ public class WebhookTests
         req.Headers.TryAddWithoutValidation("Stripe-Signature", Sign(factory.StripeWebhookSecret, payload, t));
         var response = await client.SendAsync(req);
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("ignored"));
         using var scope = factory.Services.CreateScope();
-        Assert.That(scope.ServiceProvider.GetRequiredService<PayDbContext>().Documents.Count(), Is.EqualTo(0));
+        var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+        Assert.That(db.Documents.Count(), Is.EqualTo(0));
+        Assert.That(db.Checkouts.Single().Status, Is.EqualTo("open"));
     }
 
     [Test]
