@@ -26,6 +26,7 @@ internal static class PublicPayEndpoints
         var settings = await db.OrgSettings.AsNoTracking().FirstOrDefaultAsync(x => x.OrgId == session.OrgId, ct);
         var provider = row.Provider ?? settings?.ActiveProvider;
         var emailRequired = PayProviders.TryNormalize(provider, out var p) && PayProviders.RequiresEmail(p);
+        var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl);
         return Results.Json(new
         {
             token,
@@ -34,7 +35,9 @@ internal static class PublicPayEndpoints
             status = session.Status,
             payer_name = session.PayerName,
             payer_email = session.PayerEmail,
-            email_required = emailRequired
+            email_required = emailRequired,
+            started,
+            redirect_url = started && session.Status == "open" ? row.PspRedirectUrl : null
         }, OneClient.Json);
     }
 
@@ -89,6 +92,12 @@ internal static class PublicPayEndpoints
             return PayErrors.Status(400, "Bad Request", "email is required");
         }
 
+        if (!string.IsNullOrWhiteSpace(row.PspRedirectUrl))
+        {
+            await db.SaveChangesAsync(ct);
+            return Results.Json(new { redirect_url = row.PspRedirectUrl }, OneClient.Json);
+        }
+
         IHostedRail rail = name switch
         {
             PayProviders.Stripe => stripe,
@@ -96,11 +105,13 @@ internal static class PublicPayEndpoints
             PayProviders.Billplz => billplz,
             PayProviders.Xendit => xendit,
             PayProviders.Razorpay => razorpay,
-            _ => stripe
+            _ => throw new InvalidOperationException("rail not configured")
         };
 
         try
         {
+            // PSP HTTP then persist. A SaveChanges failure after the processor
+            // already created a session may mint a second session on retry.
             var hosted = await rail.CreateHostedUrlAsync(row, ct);
             row.Provider = name;
             row.PspRedirectUrl = hosted.RedirectUrl;

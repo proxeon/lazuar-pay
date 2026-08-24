@@ -43,7 +43,7 @@ public sealed class StripeHosted(PayDbContext db, SecretBox box) : IHostedRail
                     }
                 }
             ]
-        }, cancellationToken: ct);
+        }, new RequestOptions { IdempotencyKey = "lazuar-checkout:" + checkout.Id }, cancellationToken: ct);
         var url = session.Url ?? throw new InvalidOperationException("Stripe returned no URL");
         return new HostedSession(url, session.Id);
     }

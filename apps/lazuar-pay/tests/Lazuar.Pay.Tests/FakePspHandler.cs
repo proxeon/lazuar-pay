@@ -11,8 +11,11 @@ public sealed class FakePspHandler : HttpMessageHandler
 
     public Uri? LastUri { get; private set; }
 
+    public int SendCount { get; private set; }
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        SendCount++;
         LastUri = request.RequestUri;
         LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
         if (Responder is not null)
