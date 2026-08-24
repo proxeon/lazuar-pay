@@ -53,9 +53,11 @@ internal static class RazorpayWebhook
             return new PspParseResult { EventId = failedId, Ignored = true, IgnoreReason = "payment_failed" };
         }
 
-        if (eventType != "payment.captured")
+        if (eventType is "payment_link.paid" or "payment_link.expired" or "order.paid"
+            || eventType != "payment.captured")
         {
-            var otherId = headerEventId ?? eventType ?? "razorpay";
+            var otherId = headerEventId
+                          ?? (string.IsNullOrWhiteSpace(paymentId) ? (eventType ?? "razorpay") + ":none" : eventType + ":" + paymentId);
             return new PspParseResult { EventId = otherId, Ignored = true, IgnoreReason = eventType };
         }
 
@@ -71,6 +73,7 @@ internal static class RazorpayWebhook
             throw new PspVerifyException("missing currency");
         }
 
+        // Payment entity amount is already minor (paise/sen). RM10.00 → 1000.
         var amount = entity.TryGetProperty("amount", out var amt) && amt.ValueKind == JsonValueKind.Number
             ? amt.GetInt64()
             : 0L;
@@ -82,11 +85,21 @@ internal static class RazorpayWebhook
             checkoutId = cid.GetString();
         }
 
+        string? hostedSessionId = null;
+        if (doc.RootElement.TryGetProperty("payload", out var pl)
+            && pl.TryGetProperty("payment_link", out var link)
+            && link.TryGetProperty("entity", out var linkEntity)
+            && linkEntity.TryGetProperty("id", out var linkId))
+        {
+            hostedSessionId = linkId.GetString();
+        }
+
         var eventId = !string.IsNullOrWhiteSpace(headerEventId) ? headerEventId : "captured:" + paymentId;
         return new PspParseResult
         {
             EventId = eventId,
             CheckoutId = checkoutId,
+            HostedSessionId = hostedSessionId,
             ProviderRef = paymentId,
             AmountMinor = amount,
             Currency = currency

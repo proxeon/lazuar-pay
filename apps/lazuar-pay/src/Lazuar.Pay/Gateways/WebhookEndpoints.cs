@@ -78,15 +78,29 @@ internal static class WebhookEndpoints
             return Results.Json(new { ignored = parsed.IgnoreReason }, OneClient.Json);
         }
 
-        if (string.IsNullOrWhiteSpace(parsed.CheckoutId))
+        string? checkoutId = parsed.CheckoutId;
+        if (string.IsNullOrWhiteSpace(checkoutId) && !string.IsNullOrWhiteSpace(parsed.HostedSessionId))
+        {
+            var bySession = await db.Checkouts.FirstOrDefaultAsync(
+                x => x.OrgId == orgId && x.Provider == name && x.ProviderSessionId == parsed.HostedSessionId, ct);
+            checkoutId = bySession?.Id;
+        }
+
+        if (string.IsNullOrWhiteSpace(checkoutId))
         {
             return PayErrors.Status(400, "Bad Request", "checkout not found");
         }
 
-        var checkout = await db.Checkouts.FirstOrDefaultAsync(x => x.Id == parsed.CheckoutId, ct);
+        var checkout = await db.Checkouts.FirstOrDefaultAsync(x => x.Id == checkoutId, ct);
         if (checkout is null || checkout.OrgId != orgId)
         {
             return PayErrors.Status(400, "Bad Request", "checkout not found");
+        }
+
+        if (string.IsNullOrWhiteSpace(checkout.Provider)
+            || !string.Equals(checkout.Provider, name, StringComparison.OrdinalIgnoreCase))
+        {
+            return PayErrors.Status(400, "Bad Request", "provider mismatch");
         }
 
         var orgSettings = await db.OrgSettings.FindAsync([orgId], ct);

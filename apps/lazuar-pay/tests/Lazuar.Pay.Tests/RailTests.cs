@@ -153,11 +153,11 @@ public class RailTests
         Assert.That(started.IsSuccessStatusCode, await started.Content.ReadAsStringAsync());
         Assert.That(factory.Psp.LastUri!.ToString(), Does.Contain("billplz-sandbox"));
 
-        var form = "id=bill_1&paid=true&state=paid&paid_amount=1000&x_signature=pending&checkout_id=" + checkoutId;
+        var form = "id=bill_1&paid=true&state=paid&paid_amount=1000&currency=MYR&x_signature=pending&checkout_id=" + checkoutId;
         var fields = BillplzWebhook.ParseForm(form);
         fields["x_signature"] = "pending";
         var mac = BillplzWebhook.ComputeHmac(fields, "xsig", excludeExtra: false);
-        form = "id=bill_1&paid=true&state=paid&paid_amount=1000&x_signature=" + mac + "&checkout_id=" + checkoutId;
+        form = "id=bill_1&paid=true&state=paid&paid_amount=1000&currency=MYR&x_signature=" + mac + "&checkout_id=" + checkoutId;
         using var wh = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/billplz/t1?checkout_id=" + checkoutId)
         {
             Content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded")

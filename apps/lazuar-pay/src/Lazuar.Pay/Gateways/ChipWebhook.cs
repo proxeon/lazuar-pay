@@ -74,6 +74,7 @@ internal static class ChipWebhook
         }
 
         var purchase = root.TryGetProperty("purchase", out var p) && p.ValueKind == JsonValueKind.Object ? p : default;
+        // CHIP purchase.total is sen/cents. RM10.00 → 1000. Do not divide by 100.
         var total = purchase.ValueKind == JsonValueKind.Object && purchase.TryGetProperty("total", out var t) ? t.GetDecimal() : 0m;
         var rawCurrency = purchase.ValueKind == JsonValueKind.Object && purchase.TryGetProperty("currency", out var c)
             ? c.GetString()

@@ -27,9 +27,10 @@ internal static class XenditWebhook
             }
         }
 
-        var left = Encoding.UTF8.GetBytes(provided);
-        var right = Encoding.UTF8.GetBytes(expected);
-        if (left.Length != right.Length || !CryptographicOperations.FixedTimeEquals(left, right))
+        // Hash first so token length is not a timing oracle (Hub 073 judgment).
+        var left = SHA256.HashData(Encoding.UTF8.GetBytes(provided));
+        var right = SHA256.HashData(Encoding.UTF8.GetBytes(expected));
+        if (!CryptographicOperations.FixedTimeEquals(left, right))
         {
             throw new PspVerifyException("invalid signature");
         }
@@ -67,6 +68,7 @@ internal static class XenditWebhook
             throw new PspVerifyException("missing currency");
         }
 
+        // Invoice paid_amount is major units (10.00), then ToMinor for match.
         decimal amount = 0;
         if (invoice.TryGetProperty("paid_amount", out var paidAmt) && paidAmt.ValueKind == JsonValueKind.Number)
         {

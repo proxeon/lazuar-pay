@@ -38,9 +38,9 @@ public sealed class SecretBox(IConfiguration config, IHostEnvironment env)
         var b64 = config["Pay:WrapKey"];
         if (string.IsNullOrWhiteSpace(b64))
         {
-            if (env.IsProduction())
+            if (!env.IsEnvironment("Testing"))
             {
-                throw new InvalidOperationException("Pay:WrapKey is required in Production");
+                throw new InvalidOperationException("Pay:WrapKey is required");
             }
 
             return SHA256.HashData("lazuar-pay-dev-wrap-key"u8.ToArray());

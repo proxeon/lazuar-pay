@@ -55,7 +55,11 @@ internal static class StripeWebhook
         }
 
         var checkoutId = session.ClientReferenceId ?? session.Metadata?.GetValueOrDefault("checkout_id");
-        MoneyMath.TryNormalizeCurrency(session.Currency, out var currency);
+        // AmountTotal is Stripe cents (minor). Do not ToMinor again.
+        if (!MoneyMath.TryNormalizeCurrency(session.Currency, out var currency))
+        {
+            throw new PspVerifyException("missing currency");
+        }
 
         return new PspParseResult
         {
@@ -63,7 +67,7 @@ internal static class StripeWebhook
             CheckoutId = checkoutId,
             ProviderRef = session.Id,
             AmountMinor = session.AmountTotal,
-            Currency = string.IsNullOrEmpty(currency) ? null : currency
+            Currency = currency
         };
     }
 
@@ -74,7 +78,7 @@ internal static class StripeWebhook
             return box.Unprotect(cred.WebhookCiphertext);
         }
 
-        if (!env.IsProduction())
+        if (env.IsEnvironment("Testing"))
         {
             return config["Pay:StripeWebhookSecret"];
         }

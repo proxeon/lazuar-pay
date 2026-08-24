@@ -6,7 +6,7 @@ namespace Lazuar.Pay.One;
 
 /// <summary>
 /// Standard Webhooks–style verify: header t={unix},v1={lowercase hex} over {unix}.{body}.
-/// Judgment stolen from One's signer. Not Modules.One.
+/// Judgment stolen from One's signer. Do not import the Hub worker type.
 /// </summary>
 internal static class OneWebhookSignature
 {

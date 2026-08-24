@@ -26,7 +26,7 @@ public class WebhookTests
         return $"t={t},v1={Convert.ToHexString(mac).ToLowerInvariant()}";
     }
 
-    static async Task<string> SeedRailAndCheckout(HttpClient client)
+    static async Task<string> SeedRailAndCheckout(PayApiFactory factory, HttpClient client)
     {
         using var keys = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
         {
@@ -43,7 +43,15 @@ public class WebhookTests
         var created = await client.SendAsync(create);
         Assert.That(created.StatusCode, Is.EqualTo(HttpStatusCode.Created));
         using var doc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
-        return doc.RootElement.GetProperty("id").GetString()!;
+        var checkoutId = doc.RootElement.GetProperty("id").GetString()!;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
+            db.Checkouts.Single(x => x.Id == checkoutId).Provider = "stripe";
+            await db.SaveChangesAsync();
+        }
+
+        return checkoutId;
     }
 
     [Test]
@@ -52,7 +60,7 @@ public class WebhookTests
         await using var factory = new PayApiFactory { StripeWebhookSecret = "" };
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
-        await SeedRailAndCheckout(client);
+        await SeedRailAndCheckout(factory, client);
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
@@ -75,7 +83,7 @@ public class WebhookTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
-        await SeedRailAndCheckout(client);
+        await SeedRailAndCheckout(factory, client);
         using var req = new HttpRequestMessage(HttpMethod.Post, "/v1/webhooks/stripe/t1")
         {
             Content = new StringContent("""{"id":"evt_x","type":"checkout.session.completed"}""", Encoding.UTF8, "application/json")
@@ -91,7 +99,7 @@ public class WebhookTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
-        var checkoutId = await SeedRailAndCheckout(client);
+        var checkoutId = await SeedRailAndCheckout(factory, client);
         var eventId = "evt_test_" + Guid.NewGuid().ToString("N");
         var payload =
             "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_test_1\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":1000,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"paid\",\"status\":\"complete\",\"metadata\":{\"checkout_id\":\"" + checkoutId + "\",\"org_id\":\"t1\"}}}}";
@@ -129,7 +137,7 @@ public class WebhookTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
-        var checkoutId = await SeedRailAndCheckout(client);
+        var checkoutId = await SeedRailAndCheckout(factory, client);
         var eventId = "evt_setup_" + Guid.NewGuid().ToString("N");
         var payload =
             "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_setup\",\"object\":\"checkout.session\",\"mode\":\"setup\",\"amount_total\":0,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"unpaid\",\"status\":\"complete\"}}}";
@@ -154,7 +162,7 @@ public class WebhookTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
-        var checkoutId = await SeedRailAndCheckout(client);
+        var checkoutId = await SeedRailAndCheckout(factory, client);
         var eventId = "evt_zero_" + Guid.NewGuid().ToString("N");
         var payload =
             "{\"id\":\"" + eventId + "\",\"object\":\"event\",\"api_version\":\"2024-06-20\",\"created\":1700000000,\"livemode\":false,\"pending_webhooks\":1,\"request\":{\"id\":null},\"type\":\"checkout.session.completed\",\"data\":{\"object\":{\"id\":\"cs_zero\",\"object\":\"checkout.session\",\"mode\":\"payment\",\"amount_total\":0,\"currency\":\"myr\",\"client_reference_id\":\"" + checkoutId + "\",\"payment_status\":\"paid\",\"status\":\"complete\"}}}";
@@ -176,7 +184,7 @@ public class WebhookTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
-        var checkoutId = await SeedRailAndCheckout(client);
+        var checkoutId = await SeedRailAndCheckout(factory, client);
         using var keys2 = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t2/gateway")
         {
             Content = new StringContent("""{"provider":"stripe","secret":"sk_test_dummy","webhook_secret":"whsec_test_local"}""", Encoding.UTF8, "application/json")
@@ -228,7 +236,7 @@ public class WebhookTests
         await using var factory = new PayApiFactory();
         factory.One.Responder = Owner;
         var client = factory.CreateClient();
-        var checkoutId = await SeedRailAndCheckout(client);
+        var checkoutId = await SeedRailAndCheckout(factory, client);
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();

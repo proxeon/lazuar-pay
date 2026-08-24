@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Lazuar.Pay.Data;
+using Lazuar.Pay.Money;
 using Lazuar.Pay.Secrets;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -67,7 +68,12 @@ internal static class BillplzWebhook
             checkoutId = form.GetValueOrDefault("reference_1", "");
         }
 
+        // Form paid_amount is sen (minor). RM10.00 → 1000.
         var paidCents = long.TryParse(form.GetValueOrDefault("paid_amount", "0"), out var pac) ? pac : 0L;
+        if (!MoneyMath.TryNormalizeCurrency(form.GetValueOrDefault("currency", ""), out var currency))
+        {
+            throw new PspVerifyException("missing currency");
+        }
 
         return new PspParseResult
         {
@@ -75,7 +81,7 @@ internal static class BillplzWebhook
             CheckoutId = string.IsNullOrWhiteSpace(checkoutId) ? null : checkoutId,
             ProviderRef = billId,
             AmountMinor = paidCents,
-            Currency = "MYR"
+            Currency = currency
         };
     }
 
