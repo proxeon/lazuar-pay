@@ -1,13 +1,15 @@
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
+using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Stripe;
 using Stripe.Checkout;
 
 namespace Lazuar.Pay.Gateways;
 
-public sealed class StripeHosted(PayDbContext db, SecretBox box) : IHostedRail
+public sealed class StripeHosted(PayDbContext db, SecretBox box, IConfiguration config, IHostEnvironment env) : IHostedRail
 {
     public string Provider => PayProviders.Stripe;
 
@@ -27,8 +29,8 @@ public sealed class StripeHosted(PayDbContext db, SecretBox box) : IHostedRail
         {
             Mode = "payment",
             ClientReferenceId = checkout.Id,
-            SuccessUrl = checkout.SuccessUrl ?? "http://localhost:5179/c/" + checkout.PublicToken + "?status=verifying",
-            CancelUrl = checkout.CancelUrl ?? "http://localhost:5179/c/" + checkout.PublicToken,
+            SuccessUrl = CheckoutUrls.Success(checkout, config, env),
+            CancelUrl = CheckoutUrls.Cancel(checkout, config, env),
             Metadata = new Dictionary<string, string> { ["checkout_id"] = checkout.Id, ["org_id"] = checkout.OrgId },
             LineItems =
             [

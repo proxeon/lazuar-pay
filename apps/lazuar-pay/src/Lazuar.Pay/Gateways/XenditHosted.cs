@@ -4,12 +4,14 @@ using System.Text;
 using System.Text.Json;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
+using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Gateways;
 
-public sealed class XenditHosted(PayDbContext db, SecretBox box, IHttpClientFactory http) : IHostedRail
+public sealed class XenditHosted(PayDbContext db, SecretBox box, IHttpClientFactory http, IConfiguration config, IHostEnvironment env) : IHostedRail
 {
     public const string ApiBase = "https://api.xendit.co";
 
@@ -41,8 +43,8 @@ public sealed class XenditHosted(PayDbContext db, SecretBox box, IHttpClientFact
             ["currency"] = currency,
             ["description"] = "Pay",
             ["payer_email"] = checkout.PayerEmail!.Trim(),
-            ["success_redirect_url"] = checkout.SuccessUrl ?? "http://localhost:5179/c/" + checkout.PublicToken + "?status=verifying",
-            ["failure_redirect_url"] = checkout.CancelUrl ?? "http://localhost:5179/c/" + checkout.PublicToken,
+            ["success_redirect_url"] = CheckoutUrls.Success(checkout, config, env),
+            ["failure_redirect_url"] = CheckoutUrls.Cancel(checkout, config, env),
             ["metadata"] = new Dictionary<string, string>
             {
                 ["checkout_id"] = checkout.Id,

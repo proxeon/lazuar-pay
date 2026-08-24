@@ -3,12 +3,14 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
+using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Gateways;
 
-public sealed class ChipHosted(PayDbContext db, SecretBox box, IHttpClientFactory http) : IHostedRail
+public sealed class ChipHosted(PayDbContext db, SecretBox box, IHttpClientFactory http, IConfiguration config, IHostEnvironment env) : IHostedRail
 {
     public const string ApiBase = "https://gate.chip-in.asia/api/v1/";
 
@@ -48,9 +50,9 @@ public sealed class ChipHosted(PayDbContext db, SecretBox box, IHttpClientFactor
                     ["org_id"] = checkout.OrgId
                 }
             },
-            ["success_redirect"] = checkout.SuccessUrl ?? "http://localhost:5179/c/" + checkout.PublicToken + "?status=verifying",
-            ["failure_redirect"] = checkout.CancelUrl ?? "http://localhost:5179/c/" + checkout.PublicToken,
-            ["cancel_redirect"] = checkout.CancelUrl ?? "http://localhost:5179/c/" + checkout.PublicToken
+            ["success_redirect"] = CheckoutUrls.Success(checkout, config, env),
+            ["failure_redirect"] = CheckoutUrls.Cancel(checkout, config, env),
+            ["cancel_redirect"] = CheckoutUrls.Cancel(checkout, config, env)
         };
 
         var client = http.CreateClient("chip");

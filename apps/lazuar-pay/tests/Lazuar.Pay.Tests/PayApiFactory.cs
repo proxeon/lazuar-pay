@@ -27,6 +27,7 @@ public sealed class PayApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Pay:StripeWebhookSecret", StripeWebhookSecret);
         builder.UseSetting("Pay:OneWebhookSecret", OneWebhookSecret);
         builder.UseSetting("Pay:PublicBaseUrl", "https://pay.test.example");
+        builder.UseSetting("Pay:CheckoutBaseUrl", "http://pay-checkout.test.example");
         builder.ConfigureTestServices(services =>
         {
             foreach (var d in services.Where(s => s.ServiceType == typeof(OneClient)).ToList())

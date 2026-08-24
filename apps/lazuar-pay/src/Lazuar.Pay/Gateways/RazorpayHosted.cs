@@ -4,12 +4,14 @@ using System.Text;
 using System.Text.Json;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
+using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Gateways;
 
-public sealed class RazorpayHosted(PayDbContext db, SecretBox box, IHttpClientFactory http) : IHostedRail
+public sealed class RazorpayHosted(PayDbContext db, SecretBox box, IHttpClientFactory http, IConfiguration config, IHostEnvironment env) : IHostedRail
 {
     public const string ApiBase = "https://api.razorpay.com/v1/";
 
@@ -50,7 +52,7 @@ public sealed class RazorpayHosted(PayDbContext db, SecretBox box, IHttpClientFa
                 ["checkout_id"] = checkout.Id,
                 ["org_id"] = checkout.OrgId
             },
-            ["callback_url"] = checkout.SuccessUrl ?? "http://localhost:5179/c/" + checkout.PublicToken + "?status=verifying",
+            ["callback_url"] = CheckoutUrls.Success(checkout, config, env),
             ["callback_method"] = "get"
         };
 

@@ -4,12 +4,14 @@ using System.Text;
 using System.Text.Json;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Money;
+using Lazuar.Pay.PublicPay;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Gateways;
 
-public sealed class BillplzHosted(PayDbContext db, SecretBox box, IHttpClientFactory http, IConfiguration config) : IHostedRail
+public sealed class BillplzHosted(PayDbContext db, SecretBox box, IHttpClientFactory http, IConfiguration config, IHostEnvironment env) : IHostedRail
 {
     public string Provider => PayProviders.Billplz;
 
@@ -44,7 +46,7 @@ public sealed class BillplzHosted(PayDbContext db, SecretBox box, IHttpClientFac
             ["amount"] = MoneyMath.ToMinor(checkout.Amount),
             ["description"] = "Pay",
             ["callback_url"] = callback,
-            ["redirect_url"] = checkout.SuccessUrl ?? "http://localhost:5179/c/" + checkout.PublicToken + "?status=verifying",
+            ["redirect_url"] = CheckoutUrls.Success(checkout, config, env),
             ["reference_1_label"] = "Checkout",
             ["reference_1"] = checkout.Id
         };
