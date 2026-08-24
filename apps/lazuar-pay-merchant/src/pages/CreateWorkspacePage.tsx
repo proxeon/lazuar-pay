@@ -25,7 +25,7 @@ export function CreateWorkspacePage() {
     try {
       const tenant = await createTenant(token, name.trim(), slug.trim())
       setOrgHint(tenant.id)
-      void navigate(`/o/${tenant.id}`)
+      void navigate(`/o/${tenant.id}/overview`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'create failed')
     } finally {
@@ -34,14 +34,14 @@ export function CreateWorkspacePage() {
   }
 
   return (
-    <main>
-      <p className="kicker">Lazuar Pay</p>
-      <h1>Create workspace</h1>
-      <p>
+    <main className="mx-auto max-w-lg space-y-4 p-6">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Lazuar Pay</p>
+      <h1 className="text-2xl font-semibold tracking-tight">Create workspace</h1>
+      <p className="text-sm text-slate-600">
         Calls One <code>POST /tenants</code>. The tenant id becomes Pay{' '}
         <code>org_id</code>. No Pay organizations table.
       </p>
-      <form onSubmit={(e) => void onSubmit(e)}>
+      <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
         <p>
           <label>
             Name{' '}

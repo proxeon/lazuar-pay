@@ -32,18 +32,27 @@ describe('merchant honesty locks', () => {
   it('package.json does not depend on Hub types', () => {
     const pkg = readFileSync(join(root, 'package.json'), 'utf8')
     expect(pkg).not.toContain('@repo/api-types-ts')
+    expect(pkg).not.toContain('@repo/aura-ui')
     expect(pkg).not.toContain('lazuar-ops')
   })
 
   it('CHIP PEM uses a textarea', () => {
-    const src = readFileSync(join(root, 'src', 'pages', 'WorkspacePage.tsx'), 'utf8')
-    expect(src).toContain('<textarea')
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    expect(src).toContain('Textarea')
     expect(src).toContain('PEM from CHIP dashboard')
   })
 
   it('hydrates environment from GET', () => {
-    const src = readFileSync(join(root, 'src', 'pages', 'WorkspacePage.tsx'), 'utf8')
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
     expect(src).toContain('setEnvironment(body.environment)')
+  })
+
+  it('org shell uses copied AppSidebar not Aura ops nav', () => {
+    const layout = readFileSync(join(root, 'src', 'layout', 'OrgLayout.tsx'), 'utf8')
+    const nav = readFileSync(join(root, 'src', 'layout', 'nav.ts'), 'utf8')
+    expect(layout).toContain('AppSidebar')
+    expect(nav).toContain('Processor')
+    expect(nav).not.toContain('Appointments')
   })
 
   it('slug pattern escapes hyphen for unicode-sets HTML pattern', () => {

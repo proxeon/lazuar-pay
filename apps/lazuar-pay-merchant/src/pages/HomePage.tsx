@@ -49,38 +49,50 @@ export function HomePage() {
 
   function openOrg(id: string) {
     setOrgHint(id)
-    void navigate(`/o/${id}`)
+    void navigate(`/o/${id}/overview`)
   }
 
   return (
-    <main>
-      <p className="kicker">Lazuar Pay</p>
-      <h1>Workspaces</h1>
-      <p>
+    <main className="mx-auto max-w-lg space-y-4 p-6">
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Lazuar Pay</p>
+      <h1 className="text-2xl font-semibold tracking-tight">Workspaces</h1>
+      <p className="text-sm text-slate-600">
         {who.email ?? who.user_id}. One tenant id is Pay <code>org_id</code>.
       </p>
       {who.tenants.length === 0 ? (
-        <p>
+        <p className="text-sm">
           No workspaces yet.{' '}
-          <Link to="/workspaces/new">Create one in One</Link> (not a Pay org
-          table).
+          <Link className="text-sky-700 underline-offset-2 hover:underline" to="/workspaces/new">
+            Create one in One
+          </Link>{' '}
+          (not a Pay org table).
         </p>
       ) : (
-        <ul>
+        <ul className="space-y-2">
           {who.tenants.map((t) => (
             <li key={t.id}>
-              <button type="button" onClick={() => openOrg(t.id)}>
+              <button
+                type="button"
+                className="text-left text-sky-800 underline-offset-2 hover:underline"
+                onClick={() => openOrg(t.id)}
+              >
                 {t.name ?? t.slug ?? t.id}
               </button>{' '}
-              <code>{t.role}</code> {t.status}
+              <code className="text-xs">{t.role}</code> {t.status}
             </li>
           ))}
         </ul>
       )}
       <p>
-        <Link to="/workspaces/new">Create workspace</Link>
+        <Link className="text-sm text-sky-700 underline-offset-2 hover:underline" to="/workspaces/new">
+          Create workspace
+        </Link>
       </p>
-      <button type="button" onClick={() => void auth.signoutRedirect()}>
+      <button
+        type="button"
+        className="text-sm text-red-600"
+        onClick={() => void auth.signoutRedirect()}
+      >
         Sign out
       </button>
     </main>

@@ -1,11 +1,15 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from './auth/RequireAuth'
+import { OrgLayout } from './layout/OrgLayout'
 import { CallbackPage } from './pages/CallbackPage'
 import { CreateWorkspacePage } from './pages/CreateWorkspacePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
-import { WorkspacePage } from './pages/WorkspacePage'
-import './App.css'
+import { CheckoutsPage } from './pages/org/CheckoutsPage'
+import { GatewayPage } from './pages/org/GatewayPage'
+import { OverviewPage } from './pages/org/OverviewPage'
+import { PaymentsPage } from './pages/org/PaymentsPage'
+import { ReceiptsPage } from './pages/org/ReceiptsPage'
 
 export default function App() {
   return (
@@ -32,10 +36,17 @@ export default function App() {
         path="/o/:orgId"
         element={
           <RequireAuth>
-            <WorkspacePage />
+            <OrgLayout />
           </RequireAuth>
         }
-      />
+      >
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<OverviewPage />} />
+        <Route path="gateway" element={<GatewayPage />} />
+        <Route path="checkouts" element={<CheckoutsPage />} />
+        <Route path="payments" element={<PaymentsPage />} />
+        <Route path="receipts" element={<ReceiptsPage />} />
+      </Route>
     </Routes>
   )
 }
