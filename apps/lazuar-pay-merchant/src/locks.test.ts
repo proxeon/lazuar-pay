@@ -48,10 +48,10 @@ describe('merchant honesty locks', () => {
   })
 
   it('org shell uses copied AppSidebar not Aura ops nav', () => {
-    const layout = readFileSync(join(root, 'src', 'layout', 'OrgLayout.tsx'), 'utf8')
+    const chrome = readFileSync(join(root, 'src', 'layout', 'DashboardChrome.tsx'), 'utf8')
     const nav = readFileSync(join(root, 'src', 'layout', 'nav.ts'), 'utf8')
-    expect(layout).toContain('AppSidebar')
-    expect(layout).toContain('WorkspaceSwitcher')
+    expect(chrome).toContain('AppSidebar')
+    expect(chrome).toContain('WorkspaceSwitcher')
     expect(nav).toContain('Processor')
     expect(nav).not.toContain('Appointments')
   })
@@ -60,7 +60,7 @@ describe('merchant honesty locks', () => {
     const src = readFileSync(join(root, 'src', 'layout', 'WorkspaceSwitcher.tsx'), 'utf8')
     expect(src).toContain('Create workspace')
     expect(src).toContain('Switch workspace')
-    expect(src).toContain('/workspaces/new')
+    expect(src).toContain('/new')
   })
 
   it('home redirects into last org dashboard', () => {
@@ -70,7 +70,13 @@ describe('merchant honesty locks', () => {
   })
 
   it('slug pattern escapes hyphen for unicode-sets HTML pattern', () => {
-    const src = readFileSync(join(root, 'src', 'pages', 'CreateWorkspacePage.tsx'), 'utf8')
+    const src = readFileSync(join(root, 'src', 'pages', 'CreateWorkspaceForm.tsx'), 'utf8')
     expect(src).toContain('pattern="[a-z0-9\\\\-]{1,64}"')
+  })
+
+  it('create workspace form uses card chrome', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'CreateWorkspaceForm.tsx'), 'utf8')
+    expect(src).toContain('Card')
+    expect(src).toContain('workspace_name')
   })
 })

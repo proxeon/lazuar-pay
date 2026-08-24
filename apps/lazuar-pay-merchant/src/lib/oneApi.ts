@@ -1,3 +1,5 @@
+import { problemDetail } from './http'
+
 const oneApi =
   import.meta.env.VITE_ONE_API_URL ?? 'http://localhost:8080/api/v1'
 
@@ -16,7 +18,7 @@ export async function createTenant(
     body: JSON.stringify({ name, slug }),
   })
   if (!response.ok) {
-    throw new Error(`create tenant ${response.status}`)
+    throw new Error(await problemDetail(response, `create tenant ${response.status}`))
   }
   return (await response.json()) as { id: string; slug: string; name: string }
 }

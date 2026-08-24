@@ -69,7 +69,7 @@ export function WorkspaceSwitcher({
         <DropdownMenuSeparator className="my-1.5" />
         <DropdownMenuItem
           className="cursor-pointer rounded-md px-2.5 py-2 text-sm font-medium"
-          onClick={() => navigate('/workspaces/new')}
+          onClick={() => navigate(`/o/${orgId}/new`)}
         >
           <Plus className="mr-2 h-4 w-4 text-slate-400" />
           Create workspace

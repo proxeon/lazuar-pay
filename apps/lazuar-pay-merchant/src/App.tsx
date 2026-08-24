@@ -6,6 +6,7 @@ import { CreateWorkspacePage } from './pages/CreateWorkspacePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { CheckoutsPage } from './pages/org/CheckoutsPage'
+import { OrgCreateWorkspacePage } from './pages/org/CreateWorkspacePage'
 import { GatewayPage } from './pages/org/GatewayPage'
 import { OverviewPage } from './pages/org/OverviewPage'
 import { PaymentsPage } from './pages/org/PaymentsPage'
@@ -42,6 +43,7 @@ export default function App() {
       >
         <Route index element={<Navigate to="overview" replace />} />
         <Route path="overview" element={<OverviewPage />} />
+        <Route path="new" element={<OrgCreateWorkspacePage />} />
         <Route path="gateway" element={<GatewayPage />} />
         <Route path="checkouts" element={<CheckoutsPage />} />
         <Route path="payments" element={<PaymentsPage />} />
