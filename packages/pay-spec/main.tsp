@@ -62,6 +62,13 @@ model PublicPay {
   currency: string;
   status: string;
   email_required?: boolean;
+  started?: boolean;
+  redirect_url?: string;
+}
+
+model StartPayRequest {
+  name?: string;
+  email?: string;
 }
 
 model GatewayView {
@@ -146,7 +153,7 @@ interface PublicPayApi {
 
   @post
   @route("/pay/{token}/start")
-  start(@path token: string): StartPayResponse;
+  start(@path token: string, @body body?: StartPayRequest): StartPayResponse;
 }
 
 @route("/v1")
