@@ -2,6 +2,7 @@ using Lazuar.Pay.Checkouts;
 using Lazuar.Pay.Data;
 using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
+using Lazuar.Pay.PaymentLinks;
 using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
@@ -11,6 +12,7 @@ using Lazuar.Pay.Rails.Stripe;
 using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.PublicPay;
 
@@ -22,8 +24,19 @@ internal static class PublicPayEndpoints
         app.MapPost("/v1/pay/{token}/start", Start);
     }
 
-    static async Task<IResult> Get(string token, CheckoutStore store, PayDbContext db, CancellationToken ct)
+    static async Task<IResult> Get(
+        string token,
+        string? slot_key,
+        CheckoutStore store,
+        PayDbContext db,
+        CancellationToken ct)
     {
+        var link = await db.PaymentLinks.AsNoTracking().FirstOrDefaultAsync(x => x.PublicToken == token, ct);
+        if (link is not null)
+        {
+            return await GetLink(link, slot_key, db, ct);
+        }
+
         var session = await store.GetByPublicTokenAsync(token, ct);
         if (session is null)
         {
@@ -31,22 +44,37 @@ internal static class PublicPayEndpoints
         }
 
         var row = await db.Checkouts.AsNoTracking().FirstAsync(x => x.Id == session.Id, ct);
-        var provider = row.Provider;
-        var emailRequired = PayProviders.TryNormalize(provider, out var p) && PayProviders.RequiresEmail(p);
-        var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl);
-        return Results.Json(new
+        return CheckoutView(token, row);
+    }
+
+    static async Task<IResult> GetLink(PaymentLinkRow link, string? slotKey, PayDbContext db, CancellationToken ct)
+    {
+        var children = await db.Checkouts.AsNoTracking()
+            .Where(x => x.PaymentLinkId == link.Id)
+            .ToListAsync(ct);
+        var taken = children.Count(c => PaymentLinkOccupancy.CountsTowardCapacity(c.Status));
+        var paid = children.Count(c => c.Status == "paid");
+        var remaining = PaymentLinkOccupancy.Remaining(link.MaxPayers, taken);
+        var slot = NormalizeSlotKey(slotKey);
+        var mine = slot is null ? null : children.FirstOrDefault(c => c.SlotKey == slot);
+
+        if (mine is not null)
         {
-            token,
-            amount = session.Amount,
-            currency = session.Currency,
-            status = session.Status,
-            payer_name = session.PayerName,
-            payer_email = session.PayerEmail,
-            email_required = emailRequired,
-            started,
-            provider,
-            redirect_url = started && session.Status == "open" ? row.PspRedirectUrl : null
-        }, OneClient.Json);
+            return CheckoutView(link.PublicToken, mine, remaining, link.MaxPayers, paid, taken);
+        }
+
+        if (PaymentLinkOccupancy.IsFull(link.MaxPayers, taken))
+        {
+            if (link.MaxPayers == 1 && paid >= 1)
+            {
+                var paidRow = children.First(c => c.Status == "paid");
+                return CheckoutView(link.PublicToken, paidRow, remaining, link.MaxPayers, paid, taken);
+            }
+
+            return LinkView(link, "full", remaining, paid, taken, started: false, redirectUrl: null);
+        }
+
+        return LinkView(link, "open", remaining, paid, taken, started: false, redirectUrl: null);
     }
 
     static async Task<IResult> Start(
@@ -61,26 +89,44 @@ internal static class PublicPayEndpoints
         RazorpayHosted razorpay,
         TestHosted test,
         IFulfillPaid fulfillment,
+        IConfiguration config,
+        IHostEnvironment env,
         CancellationToken ct)
     {
-        var session = await store.GetByPublicTokenAsync(token, ct);
-        if (session is null)
+        var link = await db.PaymentLinks.FirstOrDefaultAsync(x => x.PublicToken == token, ct);
+        CheckoutRow row;
+        if (link is not null)
         {
-            return PayErrors.Status(404, "Not Found", "Checkout not found");
+            var minted = await MintOrResume(link, body, db, config, env, ct);
+            if (minted.Error is not null)
+            {
+                return minted.Error;
+            }
+
+            row = minted.Row!;
+        }
+        else
+        {
+            var session = await store.GetByPublicTokenAsync(token, ct);
+            if (session is null)
+            {
+                return PayErrors.Status(404, "Not Found", "Checkout not found");
+            }
+
+            if (session.Status is "paid" or "expired")
+            {
+                return PayErrors.Status(409, "Conflict", "Checkout is not open");
+            }
+
+            var settings = await db.OrgSettings.FindAsync([session.OrgId], ct);
+            if (settings?.ChargesPaused == true)
+            {
+                return PayErrors.Status(403, "Forbidden", "Org charges are paused");
+            }
+
+            row = await db.Checkouts.FirstAsync(x => x.Id == session.Id, ct);
         }
 
-        if (session.Status is "paid" or "expired")
-        {
-            return PayErrors.Status(409, "Conflict", "Checkout is not open");
-        }
-
-        var settings = await db.OrgSettings.FindAsync([session.OrgId], ct);
-        if (settings?.ChargesPaused == true)
-        {
-            return PayErrors.Status(403, "Forbidden", "Org charges are paused");
-        }
-
-        var row = await db.Checkouts.FirstAsync(x => x.Id == session.Id, ct);
         if (!string.IsNullOrWhiteSpace(body?.Name))
         {
             row.PayerName = body.Name.Trim();
@@ -91,7 +137,7 @@ internal static class PublicPayEndpoints
             row.PayerEmail = body.Email.Trim();
         }
 
-        var provider = row.Provider;
+        var provider = row.Provider ?? link?.Provider;
         if (!PayProviders.TryNormalize(provider, out var name))
         {
             return PayErrors.Status(503, "Service Unavailable", "rail not configured");
@@ -155,10 +201,141 @@ internal static class PublicPayEndpoints
             return PayErrors.Status(503, "Service Unavailable", "Stripe rejected the org key");
         }
     }
+
+    static async Task<(CheckoutRow? Row, IResult? Error)> MintOrResume(
+        PaymentLinkRow link,
+        StartPayRequest? body,
+        PayDbContext db,
+        IConfiguration config,
+        IHostEnvironment env,
+        CancellationToken ct)
+    {
+        var settings = await db.OrgSettings.FindAsync([link.OrgId], ct);
+        if (settings?.ChargesPaused == true)
+        {
+            return (null, PayErrors.Status(403, "Forbidden", "Org charges are paused"));
+        }
+
+        var slot = NormalizeSlotKey(body?.SlotKey);
+        if (slot is null)
+        {
+            return (null, PayErrors.Status(400, "Bad Request", "slot_key is required"));
+        }
+
+        var existing = await db.Checkouts.FirstOrDefaultAsync(x => x.PaymentLinkId == link.Id && x.SlotKey == slot, ct);
+        if (existing is not null)
+        {
+            if (existing.Status is "paid" or "expired")
+            {
+                return (null, PayErrors.Status(409, "Conflict", "Checkout is not open"));
+            }
+
+            return (existing, null);
+        }
+
+        var taken = await db.Checkouts.CountAsync(
+            x => x.PaymentLinkId == link.Id && (x.Status == "open" || x.Status == "paid"),
+            ct);
+        if (PaymentLinkOccupancy.IsFull(link.MaxPayers, taken))
+        {
+            return (null, PayErrors.Status(409, "Conflict", "This pay link is full"));
+        }
+
+        var baseUrl = CheckoutUrls.Base(config, env);
+        var row = new CheckoutRow
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            OrgId = link.OrgId,
+            Provider = link.Provider,
+            ProductId = link.ProductId,
+            PaymentLinkId = link.Id,
+            SlotKey = slot,
+            PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
+            Amount = link.Amount,
+            Currency = link.Currency,
+            Status = "open",
+            Interval = "one_off",
+            SuccessUrl = baseUrl + "/c/" + link.PublicToken + "?status=verifying",
+            CancelUrl = baseUrl + "/c/" + link.PublicToken,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        db.Checkouts.Add(row);
+        await db.SaveChangesAsync(ct);
+        return (row, null);
+    }
+
+    static IResult CheckoutView(
+        string token,
+        CheckoutRow row,
+        int? remaining = null,
+        int? maxPayers = null,
+        int? paidCount = null,
+        int? takenCount = null)
+    {
+        var provider = row.Provider;
+        var emailRequired = PayProviders.TryNormalize(provider, out var p) && PayProviders.RequiresEmail(p);
+        var started = !string.IsNullOrWhiteSpace(row.PspRedirectUrl);
+        return Results.Json(new
+        {
+            token,
+            amount = row.Amount,
+            currency = row.Currency,
+            status = row.Status,
+            payer_name = row.PayerName,
+            payer_email = row.PayerEmail,
+            email_required = emailRequired,
+            started,
+            provider,
+            redirect_url = started && row.Status == "open" ? row.PspRedirectUrl : null,
+            remaining,
+            max_payers = maxPayers,
+            paid_count = paidCount,
+            taken_count = takenCount
+        }, OneClient.Json);
+    }
+
+    static IResult LinkView(
+        PaymentLinkRow link,
+        string status,
+        int? remaining,
+        int paid,
+        int taken,
+        bool started,
+        string? redirectUrl)
+    {
+        var emailRequired = PayProviders.TryNormalize(link.Provider, out var p) && PayProviders.RequiresEmail(p);
+        return Results.Json(new
+        {
+            token = link.PublicToken,
+            amount = link.Amount,
+            currency = link.Currency,
+            status,
+            email_required = emailRequired,
+            started,
+            provider = link.Provider,
+            redirect_url = redirectUrl,
+            remaining,
+            max_payers = link.MaxPayers,
+            paid_count = paid,
+            taken_count = taken
+        }, OneClient.Json);
+    }
+
+    static string? NormalizeSlotKey(string? raw)
+    {
+        var slot = raw?.Trim();
+        if (string.IsNullOrWhiteSpace(slot) || slot.Length is < 8 or > 128)
+        {
+            return null;
+        }
+
+        return slot;
+    }
 }
 
 public sealed class StartPayRequest
 {
     public string? Name { get; set; }
     public string? Email { get; set; }
+    public string? SlotKey { get; set; }
 }

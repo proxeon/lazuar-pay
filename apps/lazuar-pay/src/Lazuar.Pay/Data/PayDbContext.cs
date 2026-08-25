@@ -7,6 +7,7 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
 {
     public DbSet<OrgSettingsRow> OrgSettings => Set<OrgSettingsRow>();
     public DbSet<CheckoutRow> Checkouts => Set<CheckoutRow>();
+    public DbSet<PaymentLinkRow> PaymentLinks => Set<PaymentLinkRow>();
     public DbSet<IdempotencyKeyRow> IdempotencyKeys => Set<IdempotencyKeyRow>();
     public DbSet<ProductRow> Products => Set<ProductRow>();
     public DbSet<PriceRow> Prices => Set<PriceRow>();
@@ -35,6 +36,21 @@ public sealed class PayDbContext(DbContextOptions<PayDbContext> options) : DbCon
         model.Entity<CheckoutRow>(e =>
         {
             e.ToTable("checkouts");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.PublicToken).IsUnique();
+            e.HasIndex(x => x.OrgId);
+            e.HasIndex(x => x.PaymentLinkId);
+            if (Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true)
+            {
+                e.HasIndex(x => new { x.PaymentLinkId, x.SlotKey })
+                    .IsUnique()
+                    .HasFilter("\"SlotKey\" IS NOT NULL");
+            }
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+        });
+        model.Entity<PaymentLinkRow>(e =>
+        {
+            e.ToTable("payment_links");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.PublicToken).IsUnique();
             e.HasIndex(x => x.OrgId);

@@ -48,7 +48,16 @@ describe('checkout honesty', () => {
     expect(src).toContain('Card')
     expect(src).toContain('Payment received')
     expect(src).toContain('Link expired')
+    expect(src).toContain('Link is full')
     expect(src).not.toContain('lazuar-portal')
+  })
+
+  it('sends a local slot_key so one browser is one payer on a shared link', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain('lazuar-pay-slot:')
+    expect(src).toContain('localStorage')
+    expect(src).toContain('slot_key')
+    expect(src).toContain("pay.status === 'full'")
   })
 
   it('maps start 400 without calling it paid', () => {

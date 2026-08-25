@@ -6,6 +6,8 @@ public sealed class CheckoutSession
     public required string OrgId { get; init; }
     public string? Provider { get; init; }
     public string? ProductId { get; init; }
+    public string? PaymentLinkId { get; init; }
+    public string? SlotKey { get; init; }
     public required decimal Amount { get; init; }
     public required string Currency { get; init; }
     public required string Status { get; init; }

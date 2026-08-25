@@ -77,12 +77,35 @@ type PayLink = {
   public_token?: string | null
   created_at?: string
   label?: string | null
+  max_payers?: number | null
+  unlimited?: boolean
+  paid_count?: number
+  taken_count?: number
+  remaining?: number | null
+}
+
+type Capacity = 'one' | 'limited' | 'unlimited'
+
+function payersLabel(row: PayLink): string {
+  if (row.unlimited || row.max_payers == null) {
+    const paid = row.paid_count ?? 0
+    return paid === 0 ? 'Unlimited' : `${paid} paid · unlimited`
+  }
+  const taken = row.taken_count ?? 0
+  return `${taken} / ${row.max_payers}`
+}
+
+function statusLabel(row: PayLink): string {
+  if (row.status === 'full' && row.max_payers === 1 && (row.paid_count ?? 0) >= 1) return 'paid'
+  return row.status
 }
 
 export function CheckoutsPage() {
   const { orgId, token, write } = useOutletContext<OrgOutletContext>()
   const [productName, setProductName] = useState('Dogfood')
   const [amount, setAmount] = useState('10')
+  const [capacity, setCapacity] = useState<Capacity>('one')
+  const [maxPayers, setMaxPayers] = useState('2')
   const [provider, setProvider] = useState<Rail | ''>('test')
   const [configured, setConfigured] = useState<Processor[]>([testProcessor])
   const [links, setLinks] = useState<PayLink[]>([])
@@ -92,7 +115,7 @@ export function CheckoutsPage() {
   const [copied, setCopied] = useState<string | null>(null)
 
   async function loadLinks() {
-    const r = await payFetch(token, `/v1/orgs/${orgId}/checkouts`, { orgHint: orgId })
+    const r = await payFetch(token, `/v1/orgs/${orgId}/payment-links`, { orgHint: orgId })
     if (!r.ok) return
     setLinks((await r.json()) as PayLink[])
   }
@@ -128,6 +151,11 @@ export function CheckoutsPage() {
 
   async function createProductAndLink() {
     if (!write || !provider) return
+    const limited = Number(maxPayers)
+    if (capacity === 'limited' && (!Number.isInteger(limited) || limited < 2)) {
+      setError('Limited links need at least 2 people')
+      return
+    }
     setBusy(true)
     setError(null)
     const created = await payFetch(token, `/v1/orgs/${orgId}/products`, {
@@ -142,7 +170,7 @@ export function CheckoutsPage() {
       return
     }
     const product = (await created.json()) as { id?: string }
-    const checkout = await payFetch(token, '/v1/checkouts', {
+    const checkout = await payFetch(token, '/v1/payment-links', {
       method: 'POST',
       orgHint: orgId,
       headers: { 'Content-Type': 'application/json' },
@@ -152,11 +180,13 @@ export function CheckoutsPage() {
         currency: 'MYR',
         provider,
         product_id: product.id,
+        max_payers: capacity === 'one' ? 1 : capacity === 'limited' ? limited : undefined,
+        unlimited: capacity === 'unlimited',
       }),
     })
     setBusy(false)
     if (!checkout.ok) {
-      setError(await problemDetail(checkout, `checkout ${checkout.status}`))
+      setError(await problemDetail(checkout, `pay link ${checkout.status}`))
       return
     }
     closeCreate()
@@ -178,7 +208,7 @@ export function CheckoutsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader
           title="Pay links"
-          subtitle="Hosted links for this workspace. Buyer has no One account and no PSP picker."
+          subtitle="Hosted links for this workspace. Set how many people can pay. Buyer has no One account and no PSP picker."
         />
         {write ? (
           <Button type="button" onClick={() => setOpen(true)}>
@@ -209,6 +239,9 @@ export function CheckoutsPage() {
                   Processor
                 </TableHead>
                 <TableHead className="h-11 px-4 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+                  Payers
+                </TableHead>
+                <TableHead className="h-11 px-4 text-[11px] font-medium uppercase tracking-wider text-slate-500">
                   Status
                 </TableHead>
                 <TableHead className="h-11 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-slate-500">
@@ -221,6 +254,7 @@ export function CheckoutsPage() {
                 const url = row.public_token ? buyerUrl(row.public_token) : null
                 const rail = isRail(row.provider) ? railLabel[row.provider] : (row.provider ?? '—')
                 const when = formatWhen(row.created_at)
+                const status = statusLabel(row)
                 return (
                   <TableRow key={row.id} className="border-slate-100">
                     <TableCell className="max-w-[280px] px-4 py-3">
@@ -231,18 +265,21 @@ export function CheckoutsPage() {
                       {formatMoney(row.amount, row.currency)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-sm text-slate-600">{rail}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm tabular-nums text-slate-600">
+                      {payersLabel(row)}
+                    </TableCell>
                     <TableCell className="px-4 py-3">
                       <span
                         className={cn(
                           'inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium capitalize',
-                          row.status === 'paid'
+                          status === 'paid'
                             ? 'bg-emerald-50 text-emerald-800'
-                            : row.status === 'expired'
+                            : status === 'full' || status === 'expired'
                               ? 'bg-slate-100 text-slate-600'
                               : 'bg-amber-50 text-amber-800',
                         )}
                       >
-                        {row.status}
+                        {status}
                       </span>
                     </TableCell>
                     <TableCell className="px-4 py-3">
@@ -333,6 +370,36 @@ export function CheckoutsPage() {
                   for a live rail.
                 </p>
               ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="capacity">Who can pay</Label>
+              <Select value={capacity} onValueChange={(v) => setCapacity(v as Capacity)}>
+                <SelectTrigger id="capacity" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="one">1 person only</SelectItem>
+                  <SelectItem value="limited">Limited number</SelectItem>
+                  <SelectItem value="unlimited">Unlimited</SelectItem>
+                </SelectContent>
+              </Select>
+              {capacity === 'limited' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="max_payers">Number of people</Label>
+                  <Input
+                    id="max_payers"
+                    inputMode="numeric"
+                    value={maxPayers}
+                    onChange={(e) => setMaxPayers(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  {capacity === 'one'
+                    ? 'The link closes after one successful payment.'
+                    : 'Anyone with the URL can pay. It does not close on its own.'}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

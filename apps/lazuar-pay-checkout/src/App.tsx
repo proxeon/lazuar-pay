@@ -18,6 +18,23 @@ type PayView = {
   redirect_url?: string | null
 }
 
+function slotKey(token: string): string {
+  const key = `lazuar-pay-slot:${token}`
+  try {
+    const existing = localStorage.getItem(key)
+    if (existing) return existing
+    const next = crypto.randomUUID()
+    localStorage.setItem(key, next)
+    return next
+  } catch {
+    return crypto.randomUUID()
+  }
+}
+
+function payPath(token: string): string {
+  return `${payApi}/v1/pay/${token}?slot_key=${encodeURIComponent(slotKey(token))}`
+}
+
 function tokenFromPath(): string | null {
   const m = window.location.pathname.match(/^\/c\/([^/]+)/)
   return m ? decodeURIComponent(m[1]) : null
@@ -59,9 +76,10 @@ function App() {
       setError('missing')
       return
     }
+    const path = payPath(token)
     let stop = false
     async function load() {
-      const r = await fetch(`${payApi}/v1/pay/${token}`)
+      const r = await fetch(path)
       if (r.status === 404) throw new Error('missing')
       if (!r.ok) throw new Error(`status ${r.status}`)
       return (await r.json()) as PayView
@@ -79,11 +97,11 @@ function App() {
   }, [token])
 
   useEffect(() => {
-    if (!token || !verifying || pay?.status === 'paid' || pay?.status === 'expired') return
+    if (!token || !verifying || pay?.status === 'paid' || pay?.status === 'expired' || pay?.status === 'full') return
     let n = 0
     const id = window.setInterval(() => {
       n += 1
-      void fetch(`${payApi}/v1/pay/${token}`)
+      void fetch(payPath(token))
         .then((r) => (r.ok ? r.json() : null))
         .then((body: PayView | null) => {
           if (body) setPay(body)
@@ -111,9 +129,15 @@ function App() {
       const response = await fetch(`${payApi}/v1/pay/${token}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, slot_key: slotKey(token) }),
       })
       const detail = await readDetail(response)
+      if (response.status === 409) {
+        const again = await fetch(payPath(token))
+        if (again.ok) setPay((await again.json()) as PayView)
+        else setError(detail ?? 'This pay link is full')
+        return
+      }
       if (response.status === 503) {
         setError(detail ?? 'rail not configured')
         return
@@ -199,6 +223,22 @@ function App() {
     )
   }
 
+  if (pay.status === 'full') {
+    return (
+      <Shell>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <CircleAlert className="size-6" />
+            </div>
+            <CardTitle className="text-xl">Link is full</CardTitle>
+            <CardDescription>This pay link has no remaining payments.</CardDescription>
+          </CardHeader>
+        </Card>
+      </Shell>
+    )
+  }
+
   if (verifying && pay.status !== 'paid') {
     return (
       <Shell>
@@ -221,7 +261,7 @@ function App() {
                 className="w-full"
                 onClick={() => {
                   setVerifyTimedOut(false)
-                  void fetch(`${payApi}/v1/pay/${token}`)
+                  void fetch(payPath(token))
                     .then((r) => (r.ok ? r.json() : null))
                     .then((body: PayView | null) => {
                       if (body) setPay(body)

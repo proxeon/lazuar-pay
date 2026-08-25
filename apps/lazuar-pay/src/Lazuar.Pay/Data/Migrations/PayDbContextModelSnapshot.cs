@@ -114,6 +114,9 @@ namespace Lazuar.Pay.Data.Migrations
                     b.Property<string>("PayerName")
                         .HasColumnType("text");
 
+                    b.Property<string>("PaymentLinkId")
+                        .HasColumnType("text");
+
                     b.Property<string>("ProductId")
                         .HasColumnType("text");
 
@@ -130,6 +133,9 @@ namespace Lazuar.Pay.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("SlotKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -140,6 +146,12 @@ namespace Lazuar.Pay.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrgId");
+
+                    b.HasIndex("PaymentLinkId");
+
+                    b.HasIndex("PaymentLinkId", "SlotKey")
+                        .IsUnique()
+                        .HasFilter("\"SlotKey\" IS NOT NULL");
 
                     b.HasIndex("PublicToken")
                         .IsUnique();
@@ -384,6 +396,50 @@ namespace Lazuar.Pay.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("payers", "public");
+                });
+
+            modelBuilder.Entity("Lazuar.Pay.Data.PaymentLinkRow", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("MaxPayers")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OrgId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PublicToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrgId");
+
+                    b.HasIndex("PublicToken")
+                        .IsUnique();
+
+                    b.ToTable("payment_links", "public");
                 });
 
             modelBuilder.Entity("Lazuar.Pay.Data.PriceRow", b =>

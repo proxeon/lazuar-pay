@@ -28,6 +28,23 @@ public sealed class CheckoutRow
     public string? ProductId { get; set; }
     public string? Provider { get; set; }
     public string? ProviderSessionId { get; set; }
+    public string? PaymentLinkId { get; set; }
+    public string? SlotKey { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>Shared pay-link URL. MaxPayers null is unlimited. Each payer is a child checkout.</summary>
+public sealed class PaymentLinkRow
+{
+    public required string Id { get; set; }
+    public required string OrgId { get; set; }
+    public required string PublicToken { get; set; }
+    public required string Provider { get; set; }
+    public string? ProductId { get; set; }
+    public required decimal Amount { get; set; }
+    public required string Currency { get; set; }
+    /// <summary>Null means unlimited payers. 1 is one person. N is a cap.</summary>
+    public int? MaxPayers { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 

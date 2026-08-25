@@ -75,11 +75,14 @@ describe('merchant honesty locks', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
     expect(src).toContain('provider')
     expect(src).toContain('/gateways')
-    expect(src).toContain('/checkouts')
+    expect(src).toContain('/payment-links')
     expect(src).toContain("'test'")
     expect(src).toContain('Create pay link')
     expect(src).toContain('DialogContent')
     expect(src).toContain('Table')
+    expect(src).toContain('unlimited')
+    expect(src).toContain('max_payers')
+    expect(src).toContain('1 person only')
   })
 
   it('overview lists processors not a single active rail', () => {
