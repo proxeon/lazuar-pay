@@ -33,10 +33,14 @@ export function CheckoutsPage() {
         if (!r.ok) return
         const body = (await r.json()) as { processors?: Processor[] }
         const ready = (body.processors ?? []).filter((p) => p.configured && isRail(p.provider))
+        if (!ready.some((p) => p.provider === 'test')) {
+          ready.unshift({ provider: 'test', configured: true })
+        }
         setConfigured(ready)
         setProvider((prev) => {
           if (prev && ready.some((p) => p.provider === prev)) return prev
-          const first = ready[0]?.provider
+          const firstReal = ready.find((p) => p.provider !== 'test')?.provider
+          const first = firstReal ?? ready[0]?.provider
           return isRail(first) ? first : ''
         })
       })

@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { problemDetail } from '../../lib/http'
 import { payApi, payFetch } from '../../lib/payApi'
-import { railCopy, railLabel, rails, type Processor, type Rail } from '../../lib/processors'
+import { railBlurb, railCopy, railLabel, rails, type Processor, type Rail } from '../../lib/processors'
 import type { OrgOutletContext } from '../../layout/OrgLayout'
 import { PageCanvas, PageHeader } from '../../layout/PageHeader'
 import { Button } from '../../ui/components/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../ui/components/card'
 import {
   Dialog,
   DialogContent,
@@ -122,45 +123,56 @@ export function GatewayPage() {
         subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links."
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {rails
-          .filter((r) => r !== 'test' || processors.some((p) => p.provider === 'test'))
-          .map((r) => {
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {rails.map((r) => {
           const row = processors.find((p) => p.provider === r)
-          const on = Boolean(row?.configured)
           const isTest = r === 'test'
+          const on = isTest || Boolean(row?.configured)
           return (
-            <div
+            <Card
               key={r}
               className={cn(
-                'flex aspect-square flex-col rounded-xl border bg-white p-4 text-left shadow-sm',
-                isTest ? 'border-dashed border-slate-400' : 'border-slate-200',
+                'gap-3 py-4 shadow-none',
+                isTest ? 'border-dashed border-slate-300 bg-slate-50/80' : 'border-slate-200 bg-white',
               )}
             >
-              <p className="text-sm font-semibold tracking-tight">{railLabel[r]}</p>
-              <p className="mt-2 text-xs text-slate-500">{on ? 'On file' : 'Empty'}</p>
-              {on && row?.last4 ? (
-                <p className="mt-1 font-mono text-xs text-slate-600">…{row.last4}</p>
+              <CardHeader className="px-4">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-sm">{railLabel[r]}</CardTitle>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                      on ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600',
+                    )}
+                  >
+                    {isTest ? 'Ready' : on ? 'On file' : 'Empty'}
+                  </span>
+                </div>
+                <CardDescription className="text-xs leading-relaxed">{railBlurb[r]}</CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 text-xs text-slate-500">
+                {isTest ? (
+                  <p>No keys. Use this on Pay links.</p>
+                ) : (
+                  <p>
+                    {on && row?.last4 ? `…${row.last4}` : 'No key on file'}
+                    {' · '}
+                    {row?.webhook_configured ? 'webhook on file' : 'no webhook'}
+                  </p>
+                )}
+              </CardContent>
+              {write ? (
+                <CardFooter className="px-4">
+                  {isTest ? (
+                    <p className="text-xs text-slate-500">Edit is not used. Nothing to paste.</p>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" onClick={() => openEdit(r)}>
+                      Edit
+                    </Button>
+                  )}
+                </CardFooter>
               ) : null}
-              {isTest ? (
-                <p className="mt-1 text-xs text-slate-500">No keys. Pay links mark paid.</p>
-              ) : on ? (
-                <p className="mt-1 text-xs text-slate-500">
-                  {row?.webhook_configured ? 'Webhook on file' : 'No webhook'}
-                </p>
-              ) : null}
-              {write && !isTest ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-auto w-full"
-                  onClick={() => openEdit(r)}
-                >
-                  Edit
-                </Button>
-              ) : null}
-            </div>
+            </Card>
           )
         })}
       </div>

@@ -20,6 +20,15 @@ export const railCopy: Record<Rail, string> = {
   razorpay: 'Hosted payment link. Not e-mandate. We do not auto-debit.',
 }
 
+export const railBlurb: Record<Rail, string> = {
+  test: 'No secrets. Pay marks the link paid.',
+  stripe: 'Hosted Checkout. Cards on Stripe.',
+  chip: 'Hosted CHIP page. Paste PEM from their dashboard.',
+  billplz: 'Reminder + hosted bill. Public https callback.',
+  xendit: 'Hosted invoice. Wallets on Xendit.',
+  razorpay: 'Hosted payment link. Not e-mandate.',
+}
+
 export type Processor = {
   provider?: string
   last4?: string

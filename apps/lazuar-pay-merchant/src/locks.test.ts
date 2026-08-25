@@ -50,7 +50,8 @@ describe('merchant honesty locks', () => {
 
   it('processor vault is cards not an org default rail', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
-    expect(src).toContain('aspect-square')
+    expect(src).toContain('CardTitle')
+    expect(src).not.toContain('aspect-square')
     expect(src).not.toContain('One active rail')
     expect(src).toContain('does not pick the rail for pay links')
   })
@@ -65,7 +66,7 @@ describe('merchant honesty locks', () => {
   it('test processor has no secret editor', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
     expect(src).toContain("r === 'test'")
-    expect(src).toContain('No keys. Pay links mark paid.')
+    expect(src).toContain('No keys. Use this on Pay links.')
     const processors = readFileSync(join(root, 'src', 'lib', 'processors.ts'), 'utf8')
     expect(processors).toContain("'test'")
   })
