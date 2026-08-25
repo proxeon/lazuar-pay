@@ -43,6 +43,14 @@ describe('checkout honesty', () => {
     expect(src).toContain('No card, no secret')
   })
 
+  it('uses copied aura-ui card chrome not a Hub portal', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain('Card')
+    expect(src).toContain('Payment received')
+    expect(src).toContain('Link expired')
+    expect(src).not.toContain('lazuar-portal')
+  })
+
   it('maps start 400 without calling it paid', () => {
     const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
     expect(src).toContain('response.status === 400')

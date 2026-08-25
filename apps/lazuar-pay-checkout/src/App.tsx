@@ -1,5 +1,9 @@
-import { useEffect, useState } from 'react'
-import './App.css'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Check, CircleAlert, LoaderCircle } from 'lucide-react'
+import { Button } from './ui/components/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/components/card'
+import { Input } from './ui/components/input'
+import { Label } from './ui/components/label'
 
 const payApi = import.meta.env.VITE_PAY_API_URL ?? 'http://localhost:8081'
 
@@ -23,6 +27,23 @@ function verifyingQuery(): boolean {
   return new URLSearchParams(window.location.search).get('status') === 'verifying'
 }
 
+function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('en-MY', { style: 'currency', currency }).format(amount)
+  } catch {
+    return `${amount} ${currency}`
+  }
+}
+
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
+      <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">Lazuar Pay</p>
+      <div className="w-full max-w-md">{children}</div>
+    </div>
+  )
+}
+
 function App() {
   const token = tokenFromPath()
   const [pay, setPay] = useState<PayView | null>(null)
@@ -30,7 +51,7 @@ function App() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
-  const [verifying, setVerifying] = useState(verifyingQuery())
+  const verifying = verifyingQuery()
   const [verifyTimedOut, setVerifyTimedOut] = useState(false)
 
   useEffect(() => {
@@ -116,64 +137,103 @@ function App() {
 
   if (error === 'missing' || !token) {
     return (
-      <main>
-        <p className="kicker">Lazuar Pay</p>
-        <h1>Checkout</h1>
-        <p>This payment link is not valid. No sign-in.</p>
-      </main>
+      <Shell>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <CircleAlert className="size-6" />
+            </div>
+            <CardTitle className="text-xl">Link not found</CardTitle>
+            <CardDescription>This payment link is not valid. No sign-in.</CardDescription>
+          </CardHeader>
+        </Card>
+      </Shell>
     )
   }
 
   if (!pay) {
-    return <p>Loading…</p>
+    return (
+      <Shell>
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-slate-500">Loading…</CardContent>
+        </Card>
+      </Shell>
+    )
   }
 
   if (pay.status === 'paid') {
     return (
-      <main>
-        <h1>Paid</h1>
-        <p>
-          Thank you. This page is not a membership login. The merchant will see
-          an Official Receipt, not an e-invoice.
-        </p>
-      </main>
+      <Shell>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+              <Check className="size-6" />
+            </div>
+            <CardTitle className="text-xl">Payment received</CardTitle>
+            <p className="pt-2 text-2xl font-semibold tracking-tight text-slate-900">
+              {formatMoney(pay.amount, pay.currency)}
+            </p>
+            <CardDescription className="pt-1">
+              Thank you. The merchant will see an Official Receipt, not an e-invoice. This page is not a membership
+              login.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </Shell>
     )
   }
 
   if (pay.status === 'expired') {
     return (
-      <main>
-        <h1>Expired</h1>
-        <p>This payment link is no longer open.</p>
-      </main>
+      <Shell>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <CircleAlert className="size-6" />
+            </div>
+            <CardTitle className="text-xl">Link expired</CardTitle>
+            <CardDescription>This payment link is no longer open.</CardDescription>
+          </CardHeader>
+        </Card>
+      </Shell>
     )
   }
 
   if (verifying && pay.status !== 'paid') {
     return (
-      <main>
-        <p className="kicker">Lazuar Pay</p>
-        <h1>Verifying…</h1>
-        <p>The processor success URL is not paid. Waiting for the webhook.</p>
-        {verifyTimedOut ? (
-          <>
-            <p>Not paid yet. The success URL is not paid.</p>
-            <button
-              type="button"
-              onClick={() => {
-                setVerifyTimedOut(false)
-                void fetch(`${payApi}/v1/pay/${token}`)
-                  .then((r) => (r.ok ? r.json() : null))
-                  .then((body: PayView | null) => {
-                    if (body) setPay(body)
-                  })
-              }}
-            >
-              Refresh status
-            </button>
-          </>
-        ) : null}
-      </main>
+      <Shell>
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <LoaderCircle className="size-6 animate-spin" />
+            </div>
+            <CardTitle className="text-xl">Confirming payment</CardTitle>
+            <CardDescription>
+              The processor success URL is not paid. Waiting for the webhook.
+            </CardDescription>
+          </CardHeader>
+          {verifyTimedOut ? (
+            <CardFooter className="flex-col gap-3">
+              <p className="text-center text-sm text-slate-500">Not paid yet. The success URL is not paid.</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setVerifyTimedOut(false)
+                  void fetch(`${payApi}/v1/pay/${token}`)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((body: PayView | null) => {
+                      if (body) setPay(body)
+                    })
+                }}
+              >
+                Refresh status
+              </Button>
+            </CardFooter>
+          ) : null}
+        </Card>
+      </Shell>
     )
   }
 
@@ -181,33 +241,58 @@ function App() {
   const started = Boolean(pay.started)
 
   return (
-    <main>
-      <p className="kicker">Lazuar Pay</p>
-      <h1>Checkout</h1>
-      <p>
-        {pay.amount} {pay.currency}. Buyers have no One account.
-        {pay.provider === 'test'
-          ? ' Test processor: Pay marks this paid. No card, no secret.'
-          : ' Completing payment on the processor is not the same as a success URL.'}
-      </p>
-      {error && <p role="alert">{error}</p>}
-      <p>
-        <label>
-          Name{' '}
-          <input value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-      </p>
-      <p>
-        <label>
-          Email{' '}
-          <input value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-      </p>
-      {started ? <p>You already started this payment.</p> : null}
-      <button type="button" disabled={busy || emailBlocked} onClick={() => void startPay()}>
-        {started ? 'Continue to processor' : 'Pay'}
-      </button>
-    </main>
+    <Shell>
+      <Card>
+        <CardHeader>
+          <CardDescription>Amount due</CardDescription>
+          <CardTitle className="text-3xl tracking-tight">{formatMoney(pay.amount, pay.currency)}</CardTitle>
+          <p className="text-sm text-slate-500">
+            Buyers have no One account.
+            {pay.provider === 'test'
+              ? ' Test processor: Pay marks this paid. No card, no secret.'
+              : ' Completing payment on the processor is not the same as a success URL.'}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && error !== 'missing' ? (
+            <p role="alert" className="text-sm text-red-600">
+              {error}
+            </p>
+          ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="payer_name">Name</Label>
+            <Input
+              id="payer_name"
+              value={name}
+              autoComplete="name"
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="payer_email">Email</Label>
+            <Input
+              id="payer_email"
+              type="email"
+              value={email}
+              autoComplete="email"
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          {started ? <p className="text-sm text-slate-500">You already started this payment.</p> : null}
+        </CardContent>
+        <CardFooter>
+          <Button
+            type="button"
+            className="w-full"
+            size="lg"
+            disabled={busy || emailBlocked}
+            onClick={() => void startPay()}
+          >
+            {started ? 'Continue to processor' : 'Pay'}
+          </Button>
+        </CardFooter>
+      </Card>
+    </Shell>
   )
 }
 
