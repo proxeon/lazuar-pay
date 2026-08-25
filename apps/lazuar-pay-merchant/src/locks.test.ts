@@ -71,6 +71,15 @@ describe('merchant honesty locks', () => {
     expect(processors).toContain("'test'")
   })
 
+  it('payments table uses the same chrome as pay links', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'PaymentsPage.tsx'), 'utf8')
+    expect(src).toContain('rounded-xl border border-slate-200')
+    expect(src).toContain('uppercase tracking-wider')
+    expect(src).toContain('No payments yet')
+    expect(src).toContain('formatMoney')
+    expect(src).not.toContain('CardContent')
+  })
+
   it('pay links send a chosen provider', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
     expect(src).toContain('provider')

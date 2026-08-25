@@ -24,15 +24,41 @@ internal static class PaymentQueryEndpoints
         var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
         if (denied is not null) return denied;
         var rows = await db.Charges.AsNoTracking().Where(c => c.OrgId == orgId).ToListAsync(ct);
-        return Results.Json(rows.Select(c => new
-        {
-            id = c.Id,
-            org_id = c.OrgId,
-            checkout_id = c.CheckoutId,
-            amount = c.Amount,
-            currency = c.Currency,
-            status = c.Status
-        }), OneClient.Json);
+        var checkoutIds = rows.Select(c => c.CheckoutId).Distinct().ToList();
+        var checkouts = checkoutIds.Count == 0
+            ? []
+            : await db.Checkouts.AsNoTracking().Where(x => checkoutIds.Contains(x.Id)).ToListAsync(ct);
+        var byCheckout = checkouts.ToDictionary(x => x.Id);
+        var productIds = checkouts
+            .Select(x => x.ProductId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+        var names = productIds.Count == 0
+            ? new Dictionary<string, string>()
+            : await db.Products.AsNoTracking()
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+
+        return Results.Json(rows
+            .OrderByDescending(c => byCheckout.TryGetValue(c.CheckoutId, out var ch) ? ch.CreatedAt : DateTimeOffset.MinValue)
+            .Select(c =>
+            {
+                var ch = byCheckout.GetValueOrDefault(c.CheckoutId);
+                return new
+                {
+                    id = c.Id,
+                    org_id = c.OrgId,
+                    checkout_id = c.CheckoutId,
+                    amount = c.Amount,
+                    currency = c.Currency,
+                    status = c.Status,
+                    provider = c.Provider,
+                    payer_name = ch?.PayerName,
+                    created_at = ch?.CreatedAt,
+                    label = ch?.ProductId is string pid && names.TryGetValue(pid, out var name) ? name : null
+                };
+            }), OneClient.Json);
     }
 
     static async Task<IResult> ListReceipts(
