@@ -70,14 +70,50 @@ internal static class PaymentQueryEndpoints
     {
         var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
         if (denied is not null) return denied;
-        var rows = await db.Documents.AsNoTracking().Where(d => d.OrgId == orgId).ToListAsync(ct);
-        return Results.Json(rows.Select(d => new
+        var rows = await db.Documents.AsNoTracking()
+            .Where(d => d.OrgId == orgId)
+            .OrderByDescending(d => d.CreatedAt)
+            .ToListAsync(ct);
+        var checkoutIds = rows.Select(d => d.CheckoutId).Distinct().ToList();
+        var checkouts = checkoutIds.Count == 0
+            ? []
+            : await db.Checkouts.AsNoTracking().Where(x => checkoutIds.Contains(x.Id)).ToListAsync(ct);
+        var byCheckout = checkouts.ToDictionary(x => x.Id);
+        var charges = checkoutIds.Count == 0
+            ? []
+            : await db.Charges.AsNoTracking().Where(c => checkoutIds.Contains(c.CheckoutId)).ToListAsync(ct);
+        var byCharge = charges
+            .GroupBy(c => c.CheckoutId)
+            .ToDictionary(g => g.Key, g => g.First());
+        var productIds = checkouts
+            .Select(x => x.ProductId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+        var names = productIds.Count == 0
+            ? new Dictionary<string, string>()
+            : await db.Products.AsNoTracking()
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+
+        return Results.Json(rows.Select(d =>
         {
-            id = d.Id,
-            org_id = d.OrgId,
-            number = d.Number ?? "PENDING",
-            title = d.Title,
-            checkout_id = d.CheckoutId
+            var ch = byCheckout.GetValueOrDefault(d.CheckoutId);
+            var charge = byCharge.GetValueOrDefault(d.CheckoutId);
+            return new
+            {
+                id = d.Id,
+                org_id = d.OrgId,
+                number = d.Number ?? "PENDING",
+                title = d.Title,
+                checkout_id = d.CheckoutId,
+                amount = charge?.Amount ?? ch?.Amount,
+                currency = charge?.Currency ?? ch?.Currency,
+                payer_name = ch?.PayerName,
+                created_at = d.CreatedAt,
+                label = ch?.ProductId is string pid && names.TryGetValue(pid, out var name) ? name : null,
+                status = string.IsNullOrWhiteSpace(d.Number) ? "pending" : "issued"
+            };
         }), OneClient.Json);
     }
 
