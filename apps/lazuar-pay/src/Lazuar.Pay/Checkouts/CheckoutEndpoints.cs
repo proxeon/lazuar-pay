@@ -13,6 +13,7 @@ internal static class CheckoutEndpoints
     {
         app.MapPost("/v1/checkouts", Create);
         app.MapGet("/v1/checkouts/{id}", Get);
+        app.MapGet("/v1/orgs/{orgId}/checkouts", List);
     }
 
     static async Task<IResult> Create(
@@ -83,6 +84,7 @@ internal static class CheckoutEndpoints
             Id = Guid.NewGuid().ToString("N"),
             OrgId = orgId!,
             Provider = provider,
+            ProductId = string.IsNullOrWhiteSpace(body.ProductId) ? null : body.ProductId.Trim(),
             PublicToken = Convert.ToHexString(Guid.NewGuid().ToByteArray()) + Convert.ToHexString(Guid.NewGuid().ToByteArray()),
             Amount = body.Amount.Value,
             Currency = currency,
@@ -117,5 +119,47 @@ internal static class CheckoutEndpoints
         }
 
         return Results.Json(session, OneClient.Json);
+    }
+
+    static async Task<IResult> List(
+        string orgId,
+        HttpRequest request,
+        OneClient one,
+        PayDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var denied = await MemberGate.RequireMemberAsync(request, one, orgId, cancellationToken);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var rows = await db.Checkouts.AsNoTracking()
+            .Where(x => x.OrgId == orgId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var productIds = rows
+            .Select(x => x.ProductId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+        var names = productIds.Count == 0
+            ? new Dictionary<string, string>()
+            : await db.Products.AsNoTracking()
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
+
+        return Results.Json(rows.Select(r => new
+        {
+            id = r.Id,
+            org_id = r.OrgId,
+            provider = r.Provider,
+            amount = r.Amount,
+            currency = r.Currency,
+            status = r.Status,
+            public_token = r.PublicToken,
+            created_at = r.CreatedAt,
+            label = r.ProductId is not null && names.TryGetValue(r.ProductId, out var name) ? name : null
+        }), OneClient.Json);
     }
 }

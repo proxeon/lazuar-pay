@@ -246,6 +246,38 @@ public class CheckoutTests
     }
 
     [Test]
+    public async Task List_returns_org_checkouts_newest_first()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        await PayTest.SeedCheckout(client, "test");
+        await PayTest.SeedCheckout(client, "test");
+
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/checkouts");
+        list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(list);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), await response.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetArrayLength(), Is.EqualTo(2));
+        Assert.That(doc.RootElement[0].GetProperty("provider").GetString(), Is.EqualTo("test"));
+        Assert.That(doc.RootElement[0].GetProperty("status").GetString(), Is.EqualTo("open"));
+        Assert.That(doc.RootElement[0].GetProperty("public_token").GetString(), Is.Not.Null.And.Not.Empty);
+    }
+
+    [Test]
+    public async Task List_other_org_is_403()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        using var list = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t2/checkouts");
+        list.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(list);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
     public async Task Health_still_skips_one()
     {
         await using var factory = new PayApiFactory();
