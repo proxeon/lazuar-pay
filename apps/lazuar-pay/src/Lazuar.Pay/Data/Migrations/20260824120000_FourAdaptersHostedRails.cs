@@ -1,10 +1,13 @@
+using Lazuar.Pay.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Lazuar.Pay.Data.Migrations;
 
-/// <inheritdoc />
+[DbContext(typeof(PayDbContext))]
+[Migration("20260824120000_FourAdaptersHostedRails")]
 public partial class FourAdaptersHostedRails : Migration
 {
     /// <inheritdoc />

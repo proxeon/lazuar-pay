@@ -70,6 +70,12 @@ builder.Services.AddCors(o =>
             .AllowAnyMethod());
 });
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<PayDbContext>().Database.MigrateAsync();
+}
+
 app.UseCors();
 
 app.MapHealth();
