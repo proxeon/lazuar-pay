@@ -17,12 +17,22 @@ import {
   SelectValue,
 } from '../../ui/components/select'
 
+const testProcessor: Processor = { provider: 'test', configured: true }
+
+function withTest(list: Processor[]): Processor[] {
+  const ready = list.filter((p) => p.configured && isRail(p.provider))
+  if (!ready.some((p) => p.provider === 'test')) {
+    ready.unshift(testProcessor)
+  }
+  return ready
+}
+
 export function CheckoutsPage() {
   const { orgId, token, write } = useOutletContext<OrgOutletContext>()
   const [productName, setProductName] = useState('Dogfood')
   const [amount, setAmount] = useState('10')
-  const [provider, setProvider] = useState<Rail | ''>('')
-  const [configured, setConfigured] = useState<Processor[]>([])
+  const [provider, setProvider] = useState<Rail | ''>('test')
+  const [configured, setConfigured] = useState<Processor[]>([testProcessor])
   const [payUrl, setPayUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -30,21 +40,24 @@ export function CheckoutsPage() {
   useEffect(() => {
     payFetch(token, `/v1/orgs/${orgId}/gateways`, { orgHint: orgId })
       .then(async (r) => {
-        if (!r.ok) return
-        const body = (await r.json()) as { processors?: Processor[] }
-        const ready = (body.processors ?? []).filter((p) => p.configured && isRail(p.provider))
-        if (!ready.some((p) => p.provider === 'test')) {
-          ready.unshift({ provider: 'test', configured: true })
+        if (!r.ok) {
+          setConfigured(withTest([]))
+          return
         }
+        const body = (await r.json()) as { processors?: Processor[] }
+        const ready = withTest(body.processors ?? [])
         setConfigured(ready)
         setProvider((prev) => {
           if (prev && ready.some((p) => p.provider === prev)) return prev
           const firstReal = ready.find((p) => p.provider !== 'test')?.provider
           const first = firstReal ?? ready[0]?.provider
-          return isRail(first) ? first : ''
+          return isRail(first) ? first : 'test'
         })
       })
-      .catch(() => undefined)
+      .catch(() => {
+        setConfigured(withTest([]))
+        setProvider((prev) => prev || 'test')
+      })
   }, [orgId, token])
 
   async function createProductAndLink() {
@@ -101,51 +114,50 @@ export function CheckoutsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {write ? (
-            configured.length === 0 ? (
-              <p className="text-sm text-slate-500">
-                No processors on file.{' '}
-                <Link className="text-sky-700 underline-offset-2 hover:underline" to={`/o/${orgId}/gateway`}>
-                  Paste keys
-                </Link>{' '}
-                first, then pick a rail here.
-              </p>
-            ) : (
-              <>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="product_name">Label</Label>
-                    <Input
-                      id="product_name"
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Amount (MYR)</Label>
-                    <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                  </div>
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="product_name">Label</Label>
+                  <Input
+                    id="product_name"
+                    value={productName}
+                    onChange={(e) => setProductName(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="provider">Processor</Label>
-                  <Select value={provider} onValueChange={(v) => setProvider(v as Rail)}>
-                    <SelectTrigger id="provider" className="w-full max-w-xs">
-                      <SelectValue placeholder="Select a rail" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {configured.map((p) => (
-                        <SelectItem key={p.provider} value={p.provider!}>
-                          {isRail(p.provider) ? railLabel[p.provider] : p.provider}
-                          {p.last4 ? ` · …${p.last4}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="amount">Amount (MYR)</Label>
+                  <Input id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
                 </div>
-                <Button type="button" onClick={() => void createProductAndLink()} disabled={busy || !provider}>
-                  Create pay link
-                </Button>
-              </>
-            )
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="provider">Processor</Label>
+                <Select value={provider || 'test'} onValueChange={(v) => setProvider(v as Rail)}>
+                  <SelectTrigger id="provider" className="w-full max-w-xs">
+                    <SelectValue placeholder="Select a rail" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {configured.map((p) => (
+                      <SelectItem key={p.provider} value={p.provider!}>
+                        {isRail(p.provider) ? railLabel[p.provider] : p.provider}
+                        {p.last4 ? ` · …${p.last4}` : p.provider === 'test' ? ' · no keys' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {configured.every((p) => p.provider === 'test') ? (
+                  <p className="text-xs text-slate-500">
+                    Test needs no secrets.{' '}
+                    <Link className="text-sky-700 underline-offset-2 hover:underline" to={`/o/${orgId}/gateway`}>
+                      Paste keys
+                    </Link>{' '}
+                    for a live rail.
+                  </p>
+                ) : null}
+              </div>
+              <Button type="button" onClick={() => void createProductAndLink()} disabled={busy || !provider}>
+                Create pay link
+              </Button>
+            </>
           ) : (
             <p className="text-sm text-slate-500">Member cannot create charges.</p>
           )}

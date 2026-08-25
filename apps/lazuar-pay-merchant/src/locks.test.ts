@@ -75,7 +75,8 @@ describe('merchant honesty locks', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
     expect(src).toContain('provider')
     expect(src).toContain('/gateways')
-    expect(src).toContain('Paste keys')
+    expect(src).toContain("'test'")
+    expect(src).toContain('Create pay link')
   })
 
   it('overview lists processors not a single active rail', () => {
