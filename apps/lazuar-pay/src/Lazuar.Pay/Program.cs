@@ -45,8 +45,13 @@ builder.Services.AddScoped<Fulfillment>();
 builder.Services.AddScoped<IFulfillPaid>(sp => sp.GetRequiredService<Fulfillment>());
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    var payCs = builder.Configuration.GetConnectionString("Pay")
-        ?? "Host=localhost;Port=5435;Database=lazuar_pay;Username=postgres;Password=postgres";
+    var payCs = builder.Configuration.GetConnectionString("Pay");
+    if (string.IsNullOrWhiteSpace(payCs)
+        || payCs.IndexOf("Password=", StringComparison.OrdinalIgnoreCase) < 0)
+    {
+        payCs = "Host=localhost;Port=5435;Database=lazuar_pay;Username=postgres;Password=postgres";
+    }
+
     builder.Services.AddDbContext<PayDbContext>(o => o.UseNpgsql(payCs));
 }
 builder.Services.AddCors(o =>
