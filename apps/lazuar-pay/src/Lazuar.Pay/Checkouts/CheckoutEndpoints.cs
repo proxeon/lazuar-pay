@@ -3,6 +3,7 @@ using Lazuar.Pay.Hosting;
 using Lazuar.Pay.Identity.Client;
 using Lazuar.Pay.Rails;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Checkouts;
 
@@ -20,6 +21,7 @@ internal static class CheckoutEndpoints
         OneClient one,
         CheckoutStore store,
         PayDbContext db,
+        IHostEnvironment env,
         CancellationToken cancellationToken)
     {
         var orgId = body?.OrgId?.Trim();
@@ -52,11 +54,21 @@ internal static class CheckoutEndpoints
             return PayErrors.Status(400, "Bad Request", "unknown provider");
         }
 
-        var cred = await db.GatewayCredentials.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == provider, cancellationToken);
-        if (cred is null)
+        if (PayProviders.IsTest(provider))
         {
-            return PayErrors.Status(400, "Bad Request", "rail not configured");
+            if (!PayProviders.AllowsTest(env))
+            {
+                return PayErrors.Status(400, "Bad Request", "test processor is not enabled");
+            }
+        }
+        else
+        {
+            var cred = await db.GatewayCredentials.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == provider, cancellationToken);
+            if (cred is null)
+            {
+                return PayErrors.Status(400, "Bad Request", "rail not configured");
+            }
         }
 
         var currency = string.IsNullOrWhiteSpace(body.Currency) ? "MYR" : body.Currency.Trim().ToUpperInvariant();

@@ -1,8 +1,9 @@
-export const rails = ['stripe', 'chip', 'billplz', 'xendit', 'razorpay'] as const
+export const rails = ['test', 'stripe', 'chip', 'billplz', 'xendit', 'razorpay'] as const
 
 export type Rail = (typeof rails)[number]
 
 export const railLabel: Record<Rail, string> = {
+  test: 'Test',
   stripe: 'Stripe',
   chip: 'CHIP',
   billplz: 'Billplz',
@@ -11,6 +12,7 @@ export const railLabel: Record<Rail, string> = {
 }
 
 export const railCopy: Record<Rail, string> = {
+  test: 'Local only. No secrets. Pay on the hosted link marks the checkout paid and writes an Official Receipt.',
   stripe: 'Hosted Checkout on Stripe. Cards on Stripe’s page. Official Receipt, not an e-invoice.',
   chip: 'Hosted CHIP page (FPX/wallets if enabled on the brand). Auto-debit later, not this program. Paste PEM from the CHIP dashboard — Pay does not register webhooks.',
   billplz: 'Reminder + hosted bill. We do not auto-debit. Callback must be public https (localhost will fail).',

@@ -151,24 +151,42 @@ public class GatewayTests
         Assert.That(got.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         using var doc = JsonDocument.Parse(await got.Content.ReadAsStringAsync());
         var processors = doc.RootElement.GetProperty("processors");
-        Assert.That(processors.GetArrayLength(), Is.EqualTo(5));
+        Assert.That(processors.GetArrayLength(), Is.EqualTo(6));
         var stripe = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "stripe");
         var chip = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "chip");
         var xendit = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "xendit");
+        var test = processors.EnumerateArray().Single(p => p.GetProperty("provider").GetString() == "test");
         Assert.That(stripe.GetProperty("configured").GetBoolean());
         Assert.That(chip.GetProperty("configured").GetBoolean());
         Assert.That(xendit.GetProperty("configured").GetBoolean(), Is.False);
+        Assert.That(test.GetProperty("configured").GetBoolean());
 
         using var bare = new HttpRequestMessage(HttpMethod.Get, "/v1/orgs/t1/gateway");
         bare.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
         var bareGot = await client.SendAsync(bare);
         using var bareDoc = JsonDocument.Parse(await bareGot.Content.ReadAsStringAsync());
-        Assert.That(bareDoc.RootElement.GetProperty("processors").GetArrayLength(), Is.EqualTo(5));
+        Assert.That(bareDoc.RootElement.GetProperty("processors").GetArrayLength(), Is.EqualTo(6));
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PayDbContext>();
         Assert.That(db.OrgSettings.Single().ActiveProvider, Is.Null);
         Assert.That(db.GatewayCredentials.Count(), Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task Put_test_processor_is_400()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Role("owner", req);
+        var client = factory.CreateClient();
+        using var keys = new HttpRequestMessage(HttpMethod.Put, "/v1/orgs/t1/gateway")
+        {
+            Content = new StringContent("""{"provider":"test","secret":"x","webhook_secret":"y"}""", Encoding.UTF8, "application/json")
+        };
+        keys.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(keys);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("does not take secrets"));
     }
 
     [Test]

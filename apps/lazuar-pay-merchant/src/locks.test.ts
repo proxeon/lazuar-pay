@@ -62,6 +62,14 @@ describe('merchant honesty locks', () => {
     expect(src).toContain('openEdit')
   })
 
+  it('test processor has no secret editor', () => {
+    const src = readFileSync(join(root, 'src', 'pages', 'org', 'GatewayPage.tsx'), 'utf8')
+    expect(src).toContain("r === 'test'")
+    expect(src).toContain('No keys. Pay links mark paid.')
+    const processors = readFileSync(join(root, 'src', 'lib', 'processors.ts'), 'utf8')
+    expect(processors).toContain("'test'")
+  })
+
   it('pay links send a chosen provider', () => {
     const src = readFileSync(join(root, 'src', 'pages', 'org', 'CheckoutsPage.tsx'), 'utf8')
     expect(src).toContain('provider')

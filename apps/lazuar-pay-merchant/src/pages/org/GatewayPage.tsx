@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '../../ui/components/select'
 import { Textarea } from '../../ui/components/textarea'
+import { cn } from '../../ui/lib/utils'
 
 export function GatewayPage() {
   const { orgId, token, write } = useOutletContext<OrgOutletContext>()
@@ -121,26 +122,34 @@ export function GatewayPage() {
         subtitle="Vault keys per rail. Saving a secret does not pick the rail for pay links."
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {rails.map((r) => {
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {rails
+          .filter((r) => r !== 'test' || processors.some((p) => p.provider === 'test'))
+          .map((r) => {
           const row = processors.find((p) => p.provider === r)
           const on = Boolean(row?.configured)
+          const isTest = r === 'test'
           return (
             <div
               key={r}
-              className="flex aspect-square flex-col rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm"
+              className={cn(
+                'flex aspect-square flex-col rounded-xl border bg-white p-4 text-left shadow-sm',
+                isTest ? 'border-dashed border-slate-400' : 'border-slate-200',
+              )}
             >
               <p className="text-sm font-semibold tracking-tight">{railLabel[r]}</p>
               <p className="mt-2 text-xs text-slate-500">{on ? 'On file' : 'Empty'}</p>
               {on && row?.last4 ? (
                 <p className="mt-1 font-mono text-xs text-slate-600">…{row.last4}</p>
               ) : null}
-              {on ? (
+              {isTest ? (
+                <p className="mt-1 text-xs text-slate-500">No keys. Pay links mark paid.</p>
+              ) : on ? (
                 <p className="mt-1 text-xs text-slate-500">
                   {row?.webhook_configured ? 'Webhook on file' : 'No webhook'}
                 </p>
               ) : null}
-              {write ? (
+              {write && !isTest ? (
                 <Button
                   type="button"
                   variant="outline"

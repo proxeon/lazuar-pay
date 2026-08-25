@@ -8,6 +8,7 @@ using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
 using Lazuar.Pay.Rails.Razorpay;
 using Lazuar.Pay.Rails.Stripe;
+using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
@@ -45,11 +46,22 @@ internal static class WebhookEndpoints
             return PayErrors.Status(400, "Bad Request", "empty body");
         }
 
-        var cred = await db.GatewayCredentials.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == name, ct);
-        if (cred is null)
+        GatewayCredentialRow? cred = null;
+        if (PayProviders.IsTest(name))
         {
-            return PayErrors.Status(400, "Bad Request", "rail not configured");
+            if (!PayProviders.AllowsTest(env))
+            {
+                return PayErrors.Status(400, "Bad Request", "rail not configured");
+            }
+        }
+        else
+        {
+            cred = await db.GatewayCredentials.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == name, ct);
+            if (cred is null)
+            {
+                return PayErrors.Status(400, "Bad Request", "rail not configured");
+            }
         }
 
         PspParseResult parsed;
@@ -57,11 +69,12 @@ internal static class WebhookEndpoints
         {
             parsed = name switch
             {
-                PayProviders.Stripe => StripeWebhook.Parse(raw, request.Headers, cred, box, config, env),
-                PayProviders.Chip => ChipWebhook.Parse(raw, request.Headers, cred, box),
-                PayProviders.Billplz => BillplzWebhook.Parse(raw, request.Query, cred, box),
-                PayProviders.Xendit => XenditWebhook.Parse(raw, request.Headers, cred, box),
-                PayProviders.Razorpay => RazorpayWebhook.Parse(raw, request.Headers, cred, box),
+                PayProviders.Stripe => StripeWebhook.Parse(raw, request.Headers, cred!, box, config, env),
+                PayProviders.Chip => ChipWebhook.Parse(raw, request.Headers, cred!, box),
+                PayProviders.Billplz => BillplzWebhook.Parse(raw, request.Query, cred!, box),
+                PayProviders.Xendit => XenditWebhook.Parse(raw, request.Headers, cred!, box),
+                PayProviders.Razorpay => RazorpayWebhook.Parse(raw, request.Headers, cred!, box),
+                PayProviders.Test => TestWebhook.Parse(raw),
                 _ => throw new InvalidOperationException("unknown provider")
             };
         }

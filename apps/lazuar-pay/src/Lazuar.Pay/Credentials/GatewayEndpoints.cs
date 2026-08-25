@@ -5,6 +5,7 @@ using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Razorpay;
 using Lazuar.Pay.Secrets;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Lazuar.Pay.Credentials;
 
@@ -35,6 +36,11 @@ internal static class GatewayEndpoints
         if (!PayProviders.TryNormalize(body?.Provider, out var provider))
         {
             return PayErrors.Status(400, "Bad Request", "unknown provider");
+        }
+
+        if (PayProviders.IsTest(provider))
+        {
+            return PayErrors.Status(400, "Bad Request", "test processor does not take secrets");
         }
 
         var secret = body?.Secret?.Trim();
@@ -140,6 +146,7 @@ internal static class GatewayEndpoints
         HttpRequest request,
         OneClient one,
         PayDbContext db,
+        IHostEnvironment env,
         CancellationToken ct)
     {
         var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
@@ -150,12 +157,17 @@ internal static class GatewayEndpoints
 
         if (string.IsNullOrWhiteSpace(provider))
         {
-            return await List(orgId, request, one, db, ct);
+            return await List(orgId, request, one, db, env, ct);
         }
 
         if (!PayProviders.TryNormalize(provider, out var name))
         {
             return PayErrors.Status(400, "Bad Request", "unknown provider");
+        }
+
+        if (PayProviders.IsTest(name) && PayProviders.AllowsTest(env))
+        {
+            return Results.Json(TestGatewayJson(orgId), OneClient.Json);
         }
 
         var row = await db.GatewayCredentials.AsNoTracking().FirstOrDefaultAsync(x => x.OrgId == orgId && x.Provider == name, ct);
@@ -172,6 +184,7 @@ internal static class GatewayEndpoints
         HttpRequest request,
         OneClient one,
         PayDbContext db,
+        IHostEnvironment env,
         CancellationToken ct)
     {
         var denied = await MemberGate.RequireMemberAsync(request, one, orgId, ct);
@@ -183,8 +196,13 @@ internal static class GatewayEndpoints
         var rows = await db.GatewayCredentials.AsNoTracking()
             .Where(x => x.OrgId == orgId)
             .ToListAsync(ct);
-        var processors = PayProviders.All.Select(name =>
+        var processors = PayProviders.Listed(env).Select(name =>
         {
+            if (PayProviders.IsTest(name))
+            {
+                return TestGatewayJson(orgId);
+            }
+
             var row = rows.FirstOrDefault(x => x.Provider == name);
             if (row is null)
             {
@@ -217,6 +235,18 @@ internal static class GatewayEndpoints
         public_merchant_id = row.PublicMerchantId,
         environment = row.Environment,
         webhook_configured = !string.IsNullOrWhiteSpace(row.WebhookCiphertext)
+    };
+
+    static object TestGatewayJson(string orgId) => new
+    {
+        org_id = orgId,
+        provider = PayProviders.Test,
+        last4 = (string?)null,
+        configured = true,
+        capability = PayProviders.Capability,
+        public_merchant_id = (string?)null,
+        environment = "test",
+        webhook_configured = true
     };
 }
 

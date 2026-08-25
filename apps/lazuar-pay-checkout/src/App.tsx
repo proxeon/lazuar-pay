@@ -10,6 +10,7 @@ type PayView = {
   status: string
   email_required?: boolean
   started?: boolean
+  provider?: string | null
   redirect_url?: string | null
 }
 
@@ -184,8 +185,10 @@ function App() {
       <p className="kicker">Lazuar Pay</p>
       <h1>Checkout</h1>
       <p>
-        {pay.amount} {pay.currency}. Buyers have no One account. Completing
-        payment on the processor is not the same as a success URL.
+        {pay.amount} {pay.currency}. Buyers have no One account.
+        {pay.provider === 'test'
+          ? ' Test processor: Pay marks this paid. No card, no secret.'
+          : ' Completing payment on the processor is not the same as a success URL.'}
       </p>
       {error && <p role="alert">{error}</p>}
       <p>

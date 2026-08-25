@@ -199,6 +199,20 @@ public class CheckoutTests
     }
 
     [Test]
+    public async Task Create_test_without_vault_is_201()
+    {
+        await using var factory = new PayApiFactory();
+        factory.One.Responder = req => Allow("t1", req);
+        var client = factory.CreateClient();
+        using var create = JsonPost("/v1/checkouts", """{"org_id":"t1","amount":10,"provider":"test"}""");
+        create.Headers.TryAddWithoutValidation("Authorization", "Bearer tok");
+        var response = await client.SendAsync(create);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created), await response.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(doc.RootElement.GetProperty("provider").GetString(), Is.EqualTo("test"));
+    }
+
+    [Test]
     public async Task Create_rejects_non_positive_amount()
     {
         await using var factory = new PayApiFactory();

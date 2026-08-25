@@ -37,6 +37,12 @@ describe('checkout honesty', () => {
     expect(src).toContain('usableEmail')
   })
 
+  it('test processor copy is not a wallet tile', () => {
+    const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
+    expect(src).toContain("pay.provider === 'test'")
+    expect(src).toContain('No card, no secret')
+  })
+
   it('maps start 400 without calling it paid', () => {
     const src = readFileSync(join(root, 'src', 'App.tsx'), 'utf8')
     expect(src).toContain('response.status === 400')

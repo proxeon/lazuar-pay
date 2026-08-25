@@ -5,8 +5,10 @@ using Lazuar.Pay.Identity.Client;
 using Lazuar.Pay.Rails;
 using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
+using Lazuar.Pay.Money;
 using Lazuar.Pay.Rails.Razorpay;
 using Lazuar.Pay.Rails.Stripe;
+using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,6 +44,7 @@ internal static class PublicPayEndpoints
             payer_email = session.PayerEmail,
             email_required = emailRequired,
             started,
+            provider,
             redirect_url = started && session.Status == "open" ? row.PspRedirectUrl : null
         }, OneClient.Json);
     }
@@ -56,6 +59,8 @@ internal static class PublicPayEndpoints
         BillplzHosted billplz,
         XenditHosted xendit,
         RazorpayHosted razorpay,
+        TestHosted test,
+        IFulfillPaid fulfillment,
         CancellationToken ct)
     {
         var session = await store.GetByPublicTokenAsync(token, ct);
@@ -110,6 +115,7 @@ internal static class PublicPayEndpoints
             PayProviders.Billplz => billplz,
             PayProviders.Xendit => xendit,
             PayProviders.Razorpay => razorpay,
+            PayProviders.Test => test,
             _ => throw new InvalidOperationException("rail not configured")
         };
 
@@ -121,7 +127,22 @@ internal static class PublicPayEndpoints
             row.Provider = name;
             row.PspRedirectUrl = hosted.RedirectUrl;
             row.ProviderSessionId = hosted.ProviderSessionId;
-            await db.SaveChangesAsync(ct);
+            if (PayProviders.IsTest(name))
+            {
+                db.PspWebhookEvents.Add(new PspWebhookEventRow
+                {
+                    OrgId = row.OrgId,
+                    Provider = name,
+                    EventId = hosted.ProviderSessionId ?? "test:" + row.Id,
+                    ReceivedAt = DateTimeOffset.UtcNow
+                });
+                await fulfillment.FulfillPaidAsync(row.Id, name, hosted.ProviderSessionId, ct);
+            }
+            else
+            {
+                await db.SaveChangesAsync(ct);
+            }
+
             return Results.Json(new { redirect_url = hosted.RedirectUrl }, OneClient.Json);
         }
         catch (InvalidOperationException ex)

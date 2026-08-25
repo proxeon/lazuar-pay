@@ -14,6 +14,7 @@ using Lazuar.Pay.Rails.Billplz;
 using Lazuar.Pay.Rails.Chip;
 using Lazuar.Pay.Rails.Razorpay;
 using Lazuar.Pay.Rails.Stripe;
+using Lazuar.Pay.Rails.Test;
 using Lazuar.Pay.Rails.Xendit;
 using Lazuar.Pay.Secrets;
 using Lazuar.Pay.Webhooks;
@@ -39,6 +40,7 @@ builder.Services.AddScoped<ChipHosted>();
 builder.Services.AddScoped<BillplzHosted>();
 builder.Services.AddScoped<XenditHosted>();
 builder.Services.AddScoped<RazorpayHosted>();
+builder.Services.AddScoped<TestHosted>();
 builder.Services.AddScoped<Fulfillment>();
 builder.Services.AddScoped<IFulfillPaid>(sp => sp.GetRequiredService<Fulfillment>());
 if (!builder.Environment.IsEnvironment("Testing"))
